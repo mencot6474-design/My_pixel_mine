@@ -2,7 +2,7 @@
 
 3D voxel/chibi mining idle game built with **TypeScript + Vite + Three.js + Tailwind CSS v4** (`my_pixel_mine`).
 Read this map first to locate modules and line anchors quickly instead of reading large files end-to-end.
-Line numbers measured on **2026-11-16** after adding **Enchant Altar Auto Roll / Stop button & Outer Space + Distant Pitch-Black Black Hole (`HellAltarEye3D.ts`)**, **procedural Web Audio Mutation & Enchant Spin SFX (`AudioManager.ts`)**, **World 6 (`Starwell`, 8 ores + `starwell.jpg` banner + `STARWELL_NODES` research tree + 3D ore icons)**, **15 new sliced Chibis (30 total)**, **new `Exotic` & `Secret` rarity tiers (`W1–W6`, animated CSS cards)**, **buffed chibi drop trigger & `WORLD_MINERS` rates**, **Core `Vault Expansion I–II` up to `+300K` chest capacity**, **5-Weather System + GLSL Atmospheric Sky Shader + 3D HUD icons**, **Shop World Kenney 3D plaza buildings & elevated station badges**, **World Teleport full-bleed banners (`public/worlds/*.jpg`)**, **world- & chibi-scaled plot upgrade costs (`getChibiUpgradeCostMult`)**, **Frozen+ Mutation roll confirmation warning modal**, **Gem Tower 10-wave/floor (5 random ore rocks + Boss) + 5-floor checkpoints/milestones + real strike-only damage**, and **Core-only Tap Damage (`Strike I–VI`) + standardized World 1–6 `denseOreScale` (Ore HP ×10 / Drops ×3)**; re-measure with `Select-String` if files change.
+Line numbers measured on **2026-11-16** after replacing **World 1 & World 2 Chibis with non-pixel anime art + `smoothFilter: true` (`Mistveil Shinobi`, `Oni Brawler`, `Inkcloud`, `Ashenhorn`, `Ashflare`, `Blindveil`, `Chainwrath`, `Clops Blazing`)**, **2D fantasy PNG HUD/potion/weather/enchant/ore icons**, **Enchant Altar Auto Roll / Stop button & Outer Space + Distant Pitch-Black Black Hole (`HellAltarEye3D.ts`)**, **procedural Web Audio Mutation & Enchant Spin SFX (`AudioManager.ts`)**, **World 6 (`Starwell`, 8 ores + `starwell.jpg` banner + `STARWELL_NODES` research tree + 3D ore icons)**, **15 new sliced Chibis (30 total)**, **new `Exotic` & `Secret` rarity tiers (`W1–W6`, animated CSS cards)**, **buffed chibi drop trigger & `WORLD_MINERS` rates**, **Core `Vault Expansion I–II` up to `+300K` chest capacity**, **5-Weather System + GLSL Atmospheric Sky Shader + 3D HUD icons**, **Shop World Kenney 3D plaza buildings & elevated station badges**, **World Teleport full-bleed banners (`public/worlds/*.jpg`)**, **world- & chibi-scaled plot upgrade costs (`getChibiUpgradeCostMult`)**, **Frozen+ Mutation roll confirmation warning modal**, **Gem Tower 10-wave/floor (5 random ore rocks + Boss) + 5-floor checkpoints/milestones + real strike-only damage**, and **Core-only Tap Damage (`Strike I–VI`) + standardized World 1–6 `denseOreScale` (Ore HP ×10 / Drops ×3)**; re-measure with `Select-String` if files change.
 
 ## 1. ATURAN KERJA SINGKAT
 
@@ -78,10 +78,11 @@ src/ui/GameHud.ts             1.803 baris — `GameHud`: Thin UI coordinator; ma
                                             3D HUD (`renderWeatherHud`), hotbar 1..9 (click + drag reorder + plot drop),
                                             active potion pills, Shop Plaza HUD, Altar HUD + Auto Roll (`triggerSingleEnchantRoll`),
                                             100ms Tower timer tick (incl. 5s Blessing auto-pick) & real chibi strike dispatch
-src/ui/HudShared.ts             228 baris — Shared types (`ModalKind` 4, `ModalThemeId` 16, `InvTab` 18),
-                                            rarity/ring helpers (`rarityCardClasses` 21 incl. `exotic`/`secret`, `rarityVars`,
-                                            `applyInspectRing`), `refreshPotionTimersInDom`, dark-glass Tailwind `TW_*` constants,
-                                            shared shell builders (`renderModalShell` 136, `renderInspectorPanel` 172)
+src/ui/HudShared.ts             240 baris — `chibiPortraitHtml` 6 (smooth/pixel portrait), shared types (`ModalKind` 16,
+                                            `ModalThemeId` 28, `InvTab` 30), rarity/ring helpers (`rarityCardClasses` 33 incl.
+                                            `exotic`/`secret`, `rarityVars`, `applyInspectRing`), `refreshPotionTimersInDom`,
+                                            dark-glass Tailwind `TW_*` constants, shared shell builders (`renderModalShell` 148,
+                                            `renderInspectorPanel` 184)
 src/ui/CollectionModalsUi.ts    776 baris — `CollectionModalsUi` 33: Index modal (6 worlds + Inspector),
                                             Backpack/Inventory (Equip Best / Search / Inspect), Chest modal & live updaters
 src/ui/ShopModalsUi.ts          632 baris — `ShopModalsUi` 42: Pickaxe Shop, Gem Shop, Sell Shop + Inspectors & updaters
@@ -97,9 +98,9 @@ src/ui/HudIcons.ts              366 baris — SVG, 2D fantasy art (`public/{ench
                                             `weatherIconHtml`, `towerIconHtml`, `pickaxeIconHtml`, `gemPotionIconHtml`,
                                             `enchantAuraIconHtml`, `enchantDiceIconHtml`, `researchIconHtml`)
 src/styles/global.css            40 baris — Tailwind v4 entry (`@import "tailwindcss";`) + base font/reset
-src/styles/hud.css              931 baris — Modern Dark-Glass + Luminous Gradient Rail system (`[data-modal-theme]`,
-                                            `.mam-modal`, `.mam-modal-rails`, `.mam-no-scrollbar`, `.rarity-exotic`,
-                                            `.rarity-secret`, `.mam-hotbar-dragging` / `.mam-hotbar-drop-target`, keyframes, a11y)
+src/styles/hud.css              935 baris — Modern Dark-Glass + Luminous Gradient Rail system (`[data-modal-theme]`,
+                                            `.mam-modal`, `.mam-modal-rails`, `.mam-no-scrollbar`, `.mam-chibi-smooth`,
+                                            `.rarity-exotic`, `.rarity-secret`, `.mam-hotbar-dragging` / `.mam-hotbar-drop-target`, keyframes, a11y)
 
 === 3D WORLD & RENDERERS ===
 src/game3d/MineScene3D.ts       823 baris — Main Three.js scene controller: switches `mine` / `shop` / `altar` / `tower`,
@@ -116,8 +117,8 @@ src/game3d/OrePit3D.ts          724 baris — Pit floor, ore crystal/rock nodes 
                                             hit VFX (skipped when hidden) & `applyNodeDamagePure` 36
 src/game3d/PlotPedestal3D.ts    240 baris — Plot pedestals around the pit & visual upgrade rings
 src/game3d/FieldMiner3D.ts      194 baris — Active chibi miner placement, swing/background mining tick & movement in mine
-src/game3d/ChibiCatalog.ts      364 baris — `CHIBI_CATALOG` 49 (30 chibi spritesheets, poses, `ChibiRarity` `common`..`secret`, baseDps, world roster, `getChibiFrameUvOffset`)
-src/game3d/ChibiSprite3D.ts     365 baris — Animated 2D-in-3D upright billboard sprite (`triggerAttack`, camera-pitch tilt, normalized pose sizing, alpha-clipped directional shadow + soft AO contact shadow)
+src/game3d/ChibiCatalog.ts      375 baris — `CHIBI_CATALOG` 50 (30 chibi poses, `ChibiRarity` `common`..`secret`, baseDps, `smoothFilter` W1–W2, world roster, `getChibiFrameUvOffset`)
+src/game3d/ChibiSprite3D.ts     374 baris — Animated 2D-in-3D upright billboard sprite (`triggerAttack`, `smoothFilter` linear/mipmap vs nearest, camera-pitch tilt, normalized pose sizing, alpha-clipped directional shadow + soft AO contact shadow)
 src/game3d/ShopWorld3D.ts     1.243 baris — 3D Shop Plaza dengan aset Kenney (`fantasy-town/`, `castle/`, `nature/`):
                                             Pickaxe Shop, Sell Stall, Gem Tower Citadel, Enchant Altar medallion,
                                             floating station icons yang ditinggikan di atas atap, & Outer Space Altar clock room
@@ -129,14 +130,14 @@ src/game3d/AltarSpinFx3D.ts     529 baris — `createAltarClockDial` 34, `create
 src/game3d/HellAltarEye3D.ts    372 baris — `HellAltarEyeController` 151: Outer Space starfield, cosmic astrolabe floor ring,
                                             & distant Pitch-Black Black Hole (`#000000` event horizon, photon ring, lensing arches, accretion disk)
 src/game3d/AuraModels3D.ts      362 baris — `createEnchantAura3D` 275 & `createEnchantDice3D` 317
-src/game3d/HudIcon3DRenderer.ts 2.002 baris — Offscreen WebGL renderer generating cached data-URL 3D icons (`buildStarwellOreModel` 1334)
-                                            & 5 3D weather icons (`init3dHudIcons`)
+src/game3d/HudIcon3DRenderer.ts 2.002 baris — Offscreen WebGL renderer generating cached data-URL 3D icons (`buildStarwellOreModel` 1351)
+                                            & 5 3D weather icons (`init3dHudIcons` 1842)
 src/game3d/ProceduralTextures3D.ts 441 baris — Procedural canvas textures (sky dome, terrain, quarry floor, cobble, etc.)
 src/game3d/GlbAssets3D.ts       135 baris — Async GLTF/GLB loader & cache (`mountGlbProp` 45, `preloadCommonMineModels` 116)
 
 === ASSETS (`public/`) ===
-public/audio/                   CC0 BGM (`bgm/{mine,shop,tower,boss}.mp3`) & 24 SFX (`sfx/*.ogg|wav|mp3`) + `LICENSE.txt`
-public/chibi/                   30 chibi (`<id>/{attack,idle,pose,walk}.png` + 15 legacy `*-spritesheet-alpha.png`)
+public/audio/                   CC0 BGM (`bgm/bgm-{mine,shop,tower,boss}.mp3`) & 24 SFX (`sfx/*.ogg|wav|mp3`) + `LICENSE.txt`
+public/chibi/                   30 chibi (`<id>/{attack,idle,pose,walk}.png` W1–W2 non-pixel anime art + 9 legacy `*-spritesheet-alpha.png`)
 public/enchants/                11 transparent PNG fantasy aura & dice icons (`blazing`..`spellbound`, `enchant_dice`)
 public/hud/                     16 transparent PNG fantasy HUD & modal art icons (`shops`..`lock`)
 public/models/                  Kenney & fantasy `.glb` packs (`castle/`, `factory/`, `fantasy-town/`, `mini-dungeon/`,
