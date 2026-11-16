@@ -364,7 +364,7 @@ export class CollectionModalsUi {
             <div class="mam-card-art">
               ${chibiPortraitHtml(def)}
             </div>
-            <div class="mam-card-name mam-outline-sm">${def.name}</div>
+            <div class="mam-card-name mam-outline-sm truncate ${isEquipped ? '!text-left pl-1 pr-[24px]' : 'px-1'}">${def.name}</div>
             <div class="mam-card-bottom">
               <span class="mam-card-dps mam-outline-sm">${fmtShort(def.baseDps)}</span>
               <span class="mam-card-qty mam-outline-sm">x${fmtInt(qty)}</span>
@@ -384,7 +384,7 @@ export class CollectionModalsUi {
           <div class="${rarityCardClasses(pot.rarity, `${isInsp ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.4)]' : ''} [&.is-boost-active]:shadow-[inset_0_0_12px_rgba(74,222,128,0.35)]`.trim())}" style="${rarityVars(pot.rarity)}" data-inv-potion-card="true" data-inspect-inv-only="gem-item:${pot.id}" title="${pot.name} • ${pot.effectText} ${pot.durationLabel} — Click to Inspect, USE to Activate">
             <button type="button" class="absolute top-0.5 right-[3px] z-[4] px-1 py-px rounded bg-[#0284c7] border border-[#082f49] text-[9px] font-black text-white cursor-pointer hover:brightness-110" data-use-potion="${pot.id}">USE</button>
             <div class="mam-card-art">${gemPotionIconHtml(pot.id, 54, pot.name, pot.color)}</div>
-            <div class="mam-card-name mam-outline-sm">${pot.name}</div>
+            <div class="mam-card-name mam-outline-sm truncate !text-left pl-1 pr-[32px]">${pot.name}</div>
             <div class="mam-card-bottom">
               <span class="text-[10px] font-black tabular-nums text-[#4ade80] leading-[1.05] mam-outline-sm" data-gem-timer="${pot.id}" data-timer-compact="true"></span>
               <span class="mam-card-qty mam-outline-sm">x${fmtInt(qty)}</span>
@@ -409,7 +409,7 @@ export class CollectionModalsUi {
           <div class="${rarityCardClasses(def.rarity, isInsp ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.4)]' : '')}" style="${rarityVars(def.rarity)}" data-equip-ore="${def.id}" title="${def.name} (${fmtMoney(def.sellValue)}) — Click to Equip / Unequip">
             ${isEquipped ? '<span class="mam-equipped-tag">EQ</span>' : ''}
             <div class="mam-card-art">${oreIconSvg(def.color, def.secondaryColor, def.rarity, `inv_${def.id}`)}</div>
-            <div class="mam-card-name mam-outline-sm">${def.name}</div>
+            <div class="mam-card-name mam-outline-sm truncate ${isEquipped ? '!text-left pl-1 pr-[24px]' : 'px-1'}">${def.name}</div>
             <div class="mam-card-bottom">
               <span class="mam-card-val mam-outline-sm">${fmtMoney(def.sellValue)}</span>
               <span class="mam-card-qty mam-outline-sm">x${fmtInt(qty)}</span>

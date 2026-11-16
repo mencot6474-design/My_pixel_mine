@@ -307,6 +307,11 @@
   }
 
   /* Scrollbar-free modal grids/panels & default 1:1 card aspect */
+  .mam-grid {
+    grid-auto-rows: max-content;
+    align-items: start;
+  }
+
   .mam-grid,
   .mam-no-scrollbar {
     scrollbar-width: none;
@@ -319,7 +324,9 @@
   }
 
   .mam-grid .mam-card {
+    width: 100%;
     aspect-ratio: 1 / 1;
+    align-self: start;
   }
 
   /* Inspector strip card base (shared rarity radial background) */

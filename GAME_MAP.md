@@ -2,7 +2,7 @@
 
 3D voxel/chibi mining idle game built with **TypeScript + Vite + Three.js + Tailwind CSS v4** (`my_pixel_mine`).
 Read this map first to locate modules and line anchors quickly instead of reading large files end-to-end.
-Line numbers measured on **2026-11-17** after converting **Pit & Tower Wave Ores to 2D Index-art billboard sprites (`OreBillboard2D` with squash-on-hit "gepeng")**, **fixing `PlotPedestal3D` camera-aligned non-clipping enchant rings**, **pushing back & heightening Sanctuary pillars without banners**, **removing 3D head crests on `FieldMiner3D` & `TowerArena3D`**, and replacing **World 1 & World 2 Chibis with non-pixel anime art + `smoothFilter: true` (`Mistveil Shinobi`, `Oni Brawler`, `Inkcloud`, `Ashenhorn`, `Ashflare`, `Blindveil`, `Chainwrath`, `Clops Blazing`)**, **2D fantasy PNG HUD/potion/weather/enchant/ore icons**, **Enchant Altar Auto Roll / Stop button & Outer Space + Distant Pitch-Black Black Hole (`HellAltarEye3D.ts`)**, **procedural Web Audio Mutation & Enchant Spin SFX (`AudioManager.ts`)**, **World 6 (`Starwell`, 8 ores + `starwell.jpg` banner + `STARWELL_NODES` research tree + 3D ore icons)**, **15 new sliced Chibis (30 total)**, **new `Exotic` & `Secret` rarity tiers (`W1–W6`, animated CSS cards)**, **buffed chibi drop trigger & `WORLD_MINERS` rates**, **Core `Vault Expansion I–II` up to `+300K` chest capacity**, **5-Weather System + GLSL Atmospheric Sky Shader + 3D HUD icons**, **Shop World Kenney 3D plaza buildings & elevated station badges**, **World Teleport full-bleed banners (`public/worlds/*.jpg`)**, **world- & chibi-scaled plot upgrade costs (`getChibiUpgradeCostMult`)**, **Frozen+ Mutation roll confirmation warning modal**, **Gem Tower 10-wave/floor (5 random ore rocks + Boss) + 5-floor checkpoints/milestones + real strike-only damage**, and **Core-only Tap Damage (`Strike I–VI`) + standardized World 1–6 `denseOreScale` (Ore HP ×10 / Drops ×3)**; re-measure with `Select-String` if files change.
+Line numbers measured on **2026-11-17** after fixing **Backpack/Modal `.mam-grid` row overlap (`grid-auto-rows: max-content` + EQ/USE badge clearance)**, converting **World 3 (Magma Hollows) Chibis to non-pixel anime art + `smoothFilter: true` (`KuboJin`, `youngShine`, `holychill`, `lastmonk`, `MasterOgoy`)**, **Pit & Tower Wave Ores to 2D Index-art billboard sprites (`OreBillboard2D` with squash-on-hit "gepeng")**, **fixing `PlotPedestal3D` camera-aligned non-clipping enchant rings**, **pushing back & heightening Sanctuary pillars without banners**, **removing 3D head crests on `FieldMiner3D` & `TowerArena3D`**, and replacing **World 1 & World 2 Chibis with non-pixel anime art + `smoothFilter: true` (`Mistveil Shinobi`, `Oni Brawler`, `Inkcloud`, `Ashenhorn`, `Ashflare`, `Blindveil`, `Chainwrath`, `Clops Blazing`)**, **2D fantasy PNG HUD/potion/weather/enchant/ore icons**, **Enchant Altar Auto Roll / Stop button & Outer Space + Distant Pitch-Black Black Hole (`HellAltarEye3D.ts`)**, **procedural Web Audio Mutation & Enchant Spin SFX (`AudioManager.ts`)**, **World 6 (`Starwell`, 8 ores + `starwell.jpg` banner + `STARWELL_NODES` research tree + 3D ore icons)**, **15 new sliced Chibis (30 total)**, **new `Exotic` & `Secret` rarity tiers (`W1–W6`, animated CSS cards)**, **buffed chibi drop trigger & `WORLD_MINERS` rates**, **Core `Vault Expansion I–II` up to `+300K` chest capacity**, **5-Weather System + GLSL Atmospheric Sky Shader + 3D HUD icons**, **Shop World Kenney 3D plaza buildings & elevated station badges**, **World Teleport full-bleed banners (`public/worlds/*.jpg`)**, **world- & chibi-scaled plot upgrade costs (`getChibiUpgradeCostMult`)**, **Frozen+ Mutation roll confirmation warning modal**, **Gem Tower 10-wave/floor (5 random ore rocks + Boss) + 5-floor checkpoints/milestones + real strike-only damage**, and **Core-only Tap Damage (`Strike I–VI`) + standardized World 1–6 `denseOreScale` (Ore HP ×10 / Drops ×3)**; re-measure with `Select-String` if files change.
 
 ## 1. ATURAN KERJA SINGKAT
 
@@ -20,7 +20,7 @@ Line numbers measured on **2026-11-17** after converting **Pit & Tower Wave Ores
 index.html                      Entry HTML (Vite root)
 .gitignore                      Ignore `node_modules/`, `dist/`, `.vite/`, local/OS files
 .github/workflows/deploy.yml    GitHub Actions auto test, Vite build & deploy ke GitHub Pages (`main`)
-package.json                    Dependencies: three, vite, typescript, vitest, @tailwindcss/vite
+package.json                    Dependencies: three, vite, typescript, vitest, @tailwindcss/vite, @types/node
 vite.config.ts                  Standalone Vite + Tailwind CSS v4 config (`base: './'`)
 tsconfig.json                   TypeScript strict config
 GAME_MAP.md                     Peta struktur file & anchor (dokumen ini)
@@ -98,8 +98,8 @@ src/ui/HudIcons.ts              366 baris — SVG, 2D fantasy art (`public/{ench
                                             `weatherIconHtml`, `towerIconHtml`, `pickaxeIconHtml`, `gemPotionIconHtml`,
                                             `enchantAuraIconHtml`, `enchantDiceIconHtml`, `researchIconHtml`)
 src/styles/global.css            40 baris — Tailwind v4 entry (`@import "tailwindcss";`) + base font/reset
-src/styles/hud.css              935 baris — Modern Dark-Glass + Luminous Gradient Rail system (`[data-modal-theme]`,
-                                            `.mam-modal`, `.mam-modal-rails`, `.mam-no-scrollbar`, `.mam-chibi-smooth`,
+src/styles/hud.css              942 baris — Modern Dark-Glass + Luminous Gradient Rail system (`[data-modal-theme]`,
+                                            `.mam-modal`, `.mam-modal-rails`, `.mam-grid` `max-content` rows, `.mam-no-scrollbar`, `.mam-chibi-smooth`,
                                             `.rarity-exotic`, `.rarity-secret`, `.mam-hotbar-dragging` / `.mam-hotbar-drop-target`, keyframes, a11y)
 
 === 3D WORLD & RENDERERS ===
@@ -117,7 +117,7 @@ src/game3d/OrePit3D.ts          813 baris — Pit floor, shared `OreBillboard2D`
                                             hit VFX (skipped when hidden) & `applyNodeDamagePure` 39
 src/game3d/PlotPedestal3D.ts    263 baris — Plot pedestals around the pit & camera-aligned enchant rings
 src/game3d/FieldMiner3D.ts      178 baris — Active chibi miner placement, swing/background mining tick & movement in mine
-src/game3d/ChibiCatalog.ts      375 baris — `CHIBI_CATALOG` 50 (30 chibi poses, `ChibiRarity` `common`..`secret`, baseDps, `smoothFilter` W1–W2, world roster, `getChibiFrameUvOffset`)
+src/game3d/ChibiCatalog.ts      380 baris — `CHIBI_CATALOG` 50 (30 chibi poses, `ChibiRarity` `common`..`secret`, baseDps, `smoothFilter` W1–W3, world roster, `getChibiFrameUvOffset`)
 src/game3d/ChibiSprite3D.ts     374 baris — Animated 2D-in-3D upright billboard sprite (`triggerAttack`, `smoothFilter` linear/mipmap vs nearest, camera-pitch tilt, normalized pose sizing, alpha-clipped directional shadow + soft AO contact shadow)
 src/game3d/ShopWorld3D.ts     1.243 baris — 3D Shop Plaza dengan aset Kenney (`fantasy-town/`, `castle/`, `nature/`):
                                             Pickaxe Shop, Sell Stall, Gem Tower Citadel, Enchant Altar medallion,
@@ -137,7 +137,7 @@ src/game3d/GlbAssets3D.ts       135 baris — Async GLTF/GLB loader & cache (`mo
 
 === ASSETS (`public/`) ===
 public/audio/                   CC0 BGM (`bgm/bgm-{mine,shop,tower,boss}.mp3`) & 24 SFX (`sfx/*.ogg|wav|mp3`) + `LICENSE.txt`
-public/chibi/                   30 chibi (`<id>/{attack,idle,pose,walk}.png` W1–W2 non-pixel anime art + 9 legacy `*-spritesheet-alpha.png`)
+public/chibi/                   30 chibi (`<id>/{attack,idle,pose,walk}.png` W1–W3 non-pixel anime art + 6 legacy `*-spritesheet-alpha.png`)
 public/enchants/                11 transparent PNG fantasy aura & dice icons (`blazing`..`spellbound`, `enchant_dice`)
 public/hud/                     16 transparent PNG fantasy HUD & modal art icons (`shops`..`lock`)
 public/models/                  Kenney & fantasy `.glb` packs (`castle/`, `factory/`, `fantasy-town/`, `mini-dungeon/`,
