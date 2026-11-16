@@ -2,7 +2,7 @@
 
 3D voxel/chibi mining idle game built with **TypeScript + Vite + Three.js + Tailwind CSS v4** (`my_pixel_mine`).
 Read this map first to locate modules and line anchors quickly instead of reading large files end-to-end.
-Line numbers measured on **2026-11-16** after adding **World 6 (`Starwell`, 8 ores + `starwell.jpg` banner + `STARWELL_NODES` research tree + 3D ore icons)**, **15 new sliced Chibis (30 total)**, **new `Exotic` & `Secret` rarity tiers (`W1–W6`, animated CSS cards)**, **buffed chibi drop trigger & `WORLD_MINERS` rates**, **Core `Vault Expansion I–II` up to `+300K` chest capacity**, **5-Weather System + GLSL Atmospheric Sky Shader + 3D HUD icons**, **Shop World Kenney 3D plaza buildings & elevated station badges**, **World Teleport full-bleed banners (`public/worlds/*.jpg`)**, **world- & chibi-scaled plot upgrade costs (`getChibiUpgradeCostMult`)**, **Frozen+ Mutation roll confirmation warning modal**, **Gem Tower 10-wave/floor (5 random ore rocks + Boss) + 5-floor checkpoints/milestones + real strike-only damage**, and **Core-only Tap Damage (`Strike I–VI`) + standardized World 1–6 `denseOreScale` (Ore HP ×10 / Drops ×3)**; re-measure with `Select-String` if files change.
+Line numbers measured on **2026-11-16** after adding **Enchant Altar Auto Roll / Stop button & Outer Space + Distant Pitch-Black Black Hole (`HellAltarEye3D.ts`)**, **procedural Web Audio Mutation & Enchant Spin SFX (`AudioManager.ts`)**, **World 6 (`Starwell`, 8 ores + `starwell.jpg` banner + `STARWELL_NODES` research tree + 3D ore icons)**, **15 new sliced Chibis (30 total)**, **new `Exotic` & `Secret` rarity tiers (`W1–W6`, animated CSS cards)**, **buffed chibi drop trigger & `WORLD_MINERS` rates**, **Core `Vault Expansion I–II` up to `+300K` chest capacity**, **5-Weather System + GLSL Atmospheric Sky Shader + 3D HUD icons**, **Shop World Kenney 3D plaza buildings & elevated station badges**, **World Teleport full-bleed banners (`public/worlds/*.jpg`)**, **world- & chibi-scaled plot upgrade costs (`getChibiUpgradeCostMult`)**, **Frozen+ Mutation roll confirmation warning modal**, **Gem Tower 10-wave/floor (5 random ore rocks + Boss) + 5-floor checkpoints/milestones + real strike-only damage**, and **Core-only Tap Damage (`Strike I–VI`) + standardized World 1–6 `denseOreScale` (Ore HP ×10 / Drops ×3)**; re-measure with `Select-String` if files change.
 
 ## 1. ATURAN KERJA SINGKAT
 
@@ -118,9 +118,9 @@ src/game3d/PlotPedestal3D.ts    240 baris — Plot pedestals around the pit & vi
 src/game3d/FieldMiner3D.ts      175 baris — Active chibi miner placement, swing/background mining tick & movement in mine
 src/game3d/ChibiCatalog.ts      364 baris — `CHIBI_CATALOG` 49 (30 chibi spritesheets, poses, `ChibiRarity` `common`..`secret`, baseDps, world roster)
 src/game3d/ChibiSprite3D.ts     188 baris — Animated 2D-in-3D billboard sprite mesh (`getChibiFrameUvOffset`)
-src/game3d/ShopWorld3D.ts     1.252 baris — 3D Shop Plaza dengan aset Kenney (`fantasy-town/`, `castle/`, `nature/`):
+src/game3d/ShopWorld3D.ts     1.243 baris — 3D Shop Plaza dengan aset Kenney (`fantasy-town/`, `castle/`, `nature/`):
                                             Pickaxe Shop, Sell Stall, Gem Tower Citadel, Enchant Altar medallion,
-                                            floating station icons yang ditinggikan di atas atap, & Altar clock room
+                                            floating station icons yang ditinggikan di atas atap, & Outer Space Altar clock room
 src/game3d/TowerArena3D.ts    1.292 baris — Cosmic Void/Eclipse 3D Colosseum Arena: sky dome nebula/stars, Total Solar
                                             Eclipse corona, arcane rune deck, 8 obsidian pillars, 5 random wave ore rock slots
                                             (Waves 1–9), Boss Monolith (Wave 10), & Chibi Fighters (`dash` -> melee `attack` strike)
@@ -153,7 +153,7 @@ public/worlds/                  6 full-bleed teleport banner JPGs (`underground`
 | Gem Tower scaling, Anomalies, Blessings, Milestones | `src/game/TowerData.ts` (`getTowerFloorDef`, `TOWER_BLESSINGS`, `TOWER_MILESTONES`) |
 | Weather config, probabilities & multipliers | `src/game/WeatherData.ts` (`WEATHERS`, `WEATHER_DURATION_MS`, `rollWeatherDef`) |
 | State, Upgrade cost nerf, Save/Load, Hotbar/Plot, Weather | `src/game/GameState.ts` (`GameState`, `getChibiUpgradeCostMult`, `getOreHpScale`, `getOreOutputMult`, `rollPlotMutation`, `syncWeather`) |
-| Responsive HUD scale, Topbar, Weather HUD, Hotbar Drag/Drop | `src/ui/GameHud.ts` (`updateViewportScale`, `render`, `setSceneMode`) |
+| Responsive HUD scale, Topbar, Weather HUD, Altar Auto Roll, Hotbar | `src/ui/GameHud.ts` (`updateViewportScale`, `render`, `setSceneMode`, `triggerSingleEnchantRoll`) |
 | Shared Modal Shell, Inspector Shell, Tailwind `TW_*` | `src/ui/HudShared.ts` (`renderModalShell`, `renderInspectorPanel`, `TW_*`) |
 | Pickaxe Shop, Gem Shop, Sell Shop + Inspectors | `src/ui/ShopModalsUi.ts` (`ShopModalsUi`) |
 | Gem Tower Hub Modal, 3D Arena HUD, Blessings picker | `src/ui/TowerUi.ts` (`TowerUi`) |
@@ -161,6 +161,6 @@ public/worlds/                  6 full-bleed teleport banner JPGs (`underground`
 | Research/Upgrades Tree & World Teleport Banner Modal | `src/ui/UpgradesWorldsUi.ts` (`UpgradesWorldsUi`, `buildWorldsListHtml`) |
 | Plot Inspector Overlay & Frozen+ Mutation Confirm Modal | `src/ui/PlotInspectUi.ts` (`PlotInspectUi`, `renderMutationConfirmOverlay`) |
 | Modal/HUD CSS & Responsive Breakpoints | `src/styles/hud.css` + `src/ui/HudShared.ts` (`TW_*`) |
-| Audio (BGM switcher, SFX pool, Mute toggle) | `src/audio/AudioManager.ts` (`audio`, `playOreHit`, `playOreBreak`, `playSfx`) + `public/audio/` |
+| Audio (BGM switcher, Web Audio Synth Roll/Spin SFX, Mute toggle) | `src/audio/AudioManager.ts` (`audio`, `playMutationRoll`, `playEnchantSpinStart`, `playEnchantSpinLand`) + `public/audio/` |
 | 3D Sky Shader, Weather FX, Ore Pit & 3D HUD Icons | `src/game3d/WeatherSkyShader.ts`, `WeatherFx3D.ts`, `OrePit3D.ts`, `HudIcon3DRenderer.ts` |
-| 3D Shop Plaza (Kenney GLBs), Enchant Altar & Tower Arena | `src/game3d/ShopWorld3D.ts` + `src/game3d/TowerArena3D.ts` |
+| 3D Shop Plaza, Outer Space Enchant Altar + Black Hole & Tower Arena | `src/game3d/ShopWorld3D.ts`, `src/game3d/HellAltarEye3D.ts`, `src/game3d/AltarSpinFx3D.ts`, `src/game3d/TowerArena3D.ts` |
