@@ -939,4 +939,54 @@
   #hudRoot[data-hud-short="true"] .mam-active-pots.is-single {
     grid-template-columns: 132px;
   }
+
+  /* Native top-layer Chibi 4-pose Review Dialog */
+  dialog.mam-review-dialog {
+    margin: auto;
+    color: #f8fafc;
+  }
+
+  dialog.mam-review-dialog[open] {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(840px, calc(100vw - 24px));
+    max-width: min(840px, calc(100vw - 24px));
+    max-height: calc(100dvh - 36px);
+    padding: 18px 20px 20px;
+    overflow: visible;
+  }
+
+  dialog.mam-review-dialog:modal {
+    overscroll-behavior: contain;
+  }
+
+  dialog.mam-review-dialog::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
+    background: rgba(2, 6, 23, 0.78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .mam-review-pose-art .mam-chibi-portrait img {
+    max-width: 94%;
+    max-height: 94%;
+  }
+
+  @media (max-width: 720px) {
+    dialog.mam-review-dialog[open] {
+      padding: 14px 14px 16px;
+      gap: 10px;
+    }
+
+    .mam-review-poses-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .mam-review-pose-art {
+      height: 150px;
+    }
+  }
 }

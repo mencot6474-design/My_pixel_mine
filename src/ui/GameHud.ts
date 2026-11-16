@@ -492,6 +492,9 @@ export class GameHud {
   public openModal(kind: ModalKind): void {
     const prev = this.activeModal;
     this.activeModal = kind;
+    if (kind !== 'index') {
+      this.collectionUi.closeReviewDialog();
+    }
     if (kind !== prev) {
       audio.playSfx(kind === 'none' ? 'ui-close' : 'ui-open');
     }
@@ -501,6 +504,9 @@ export class GameHud {
   public toggleModal(kind: ModalKind): void {
     const next = this.activeModal === kind ? 'none' : kind;
     this.activeModal = next;
+    if (next !== 'index') {
+      this.collectionUi.closeReviewDialog();
+    }
     audio.playSfx(next === 'none' ? 'ui-close' : 'ui-open');
     this.render();
   }
@@ -524,6 +530,7 @@ export class GameHud {
     }
     this.sceneMode = mode;
     this.activeModal = 'none';
+    this.collectionUi.closeReviewDialog();
     this.inspectedSlot = null;
     this.onSetSceneMode?.(mode);
     if (mode === 'tower') {

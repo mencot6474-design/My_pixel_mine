@@ -1,4 +1,5 @@
 import { audio } from '../audio/AudioManager';
+import { assetUrl } from '../game/AssetUrl';
 import { CHIBI_CATALOG, getChibiById } from '../game3d/ChibiCatalog';
 import {
   GEM_SHOP_ITEMS,
@@ -9,6 +10,7 @@ import {
   getOreById,
   getOresByWorld,
   getWorldById,
+  RARITY_BORDER,
   WorldId,
   WORLDS,
 } from '../game/GameData';
@@ -25,6 +27,7 @@ import {
   renderEmptyInspectorPanel,
   renderInspectorPanel,
   renderModalShell,
+  TW_CLOSE_BTN,
   TW_MODAL_GRID_BASE,
   TW_SHOP_MODAL_RESP,
   TW_TAB_BTN,
@@ -103,6 +106,13 @@ export class CollectionModalsUi {
           ['Sell Value', fmtMoney(getMinerSellValue(chibi.id)), 'text-[#4ade80]'],
           ['Owned', `x${fmtInt(owned)} (${fmtInt(onPlot)} on Plot)`, 'text-white'],
         ],
+        actionHtml: `
+          <button
+            type="button"
+            class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border border-sky-300/60 bg-[linear-gradient(135deg,#38bdf8_0%,#6366f1_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_4px_12px_-2px_rgba(56,189,248,0.4)] text-white text-[13px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95 [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]"
+            data-review-chibi="${chibi.id}"
+          >Review</button>
+        `,
       });
     }
 
@@ -553,7 +563,10 @@ export class CollectionModalsUi {
     });
 
     const idxPanel = root.querySelector<HTMLElement>('[data-index-inspector="true"]');
-    if (idxPanel) this.lastIndexInspectorHtml = idxPanel.innerHTML;
+    if (idxPanel) {
+      this.lastIndexInspectorHtml = idxPanel.innerHTML;
+      this.bindIndexInspectorEvents(idxPanel);
+    }
 
     root.querySelectorAll('[data-inv-tab]').forEach((el) => {
       el.addEventListener('click', () => {
@@ -692,6 +705,119 @@ export class CollectionModalsUi {
     }
   }
 
+  public closeReviewDialog(): void {
+    if (typeof document === 'undefined') return;
+    document.querySelectorAll<HTMLDialogElement>('dialog[data-chibi-review-dialog="true"]').forEach((dlg) => {
+      if (dlg.open) dlg.close();
+      dlg.remove();
+    });
+  }
+
+  private openChibiReviewDialog(chibiId: string): void {
+    if (typeof document === 'undefined') return;
+    const chibi = getChibiById(chibiId);
+    if (!chibi) return;
+
+    this.closeReviewDialog();
+
+    const rarity = getMinerRarity(chibi.id);
+    const borderColor = RARITY_BORDER[rarity];
+    const rarityLabel = rarity.charAt(0).toUpperCase() + rarity.slice(1);
+    const unlocked = this.state.discovered.has(chibi.id);
+    const worldDef = getWorldById(this.indexWorldId);
+    const smoothCls = chibi.smoothFilter ? ' class="mam-chibi-smooth"' : '';
+    const poses: Array<[string, string]> = [
+      ['Idle', chibi.poses.idle],
+      ['Walk', chibi.poses.walk],
+      ['Attack', chibi.poses.attack],
+      ['Pose', chibi.poses.pose],
+    ];
+
+    const dialog = document.createElement('dialog');
+    dialog.className = 'mam-review-dialog mam-modal text-white';
+    dialog.dataset.modalTheme = 'index';
+    dialog.dataset.chibiReviewDialog = 'true';
+    dialog.setAttribute('closedby', 'any');
+    dialog.setAttribute('aria-labelledby', 'mam-review-title');
+
+    dialog.innerHTML = `
+      <div class="mam-modal-surface" aria-hidden="true"></div>
+      <div class="mam-modal-rails" aria-hidden="true">
+        <span class="mam-rail-stud is-tl"></span>
+        <span class="mam-rail-stud is-tr"></span>
+        <span class="mam-rail-stud is-bl"></span>
+        <span class="mam-rail-stud is-br"></span>
+      </div>
+      <div class="mam-modal-rail-head">
+        <div class="mam-title-plaque">
+          <span class="mam-title-plaque-icon shrink-0 [&>img]:w-5 [&>img]:h-5 [&>svg]:w-5 [&>svg]:h-5">${hudIconHtml('indexBook', 22, 'Review')}</span>
+          <span id="mam-review-title">${chibi.name} — Pose Review</span>
+        </div>
+        <form method="dialog" class="m-0 pointer-events-auto">
+          <button type="submit" class="${TW_CLOSE_BTN} mam-close-rail-btn" aria-label="Close Review" autofocus>✕</button>
+        </form>
+      </div>
+
+      <div class="flex items-center justify-between gap-2 flex-wrap px-1">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase border" style="color:${borderColor};border-color:${borderColor}88;background:${borderColor}20">${rarityLabel}</span>
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black border ${unlocked ? 'bg-[#14532d]/60 border-[#4ade80]/70 text-[#86efac]' : 'bg-[#1e293b] border-[#475569] text-[#94a3b8]'}">${unlocked ? 'Discovered' : 'Locked • Full Preview'}</span>
+          <span class="text-[12px] font-bold text-[#94a3b8]">${worldDef.name} • Base DPS <span class="text-[#facc15] font-black">${fmtShort(chibi.baseDps)}/s</span></span>
+        </div>
+      </div>
+
+      <div class="mam-review-poses-grid flex-1 min-h-0 grid grid-cols-4 gap-3 w-full overflow-y-auto mam-no-scrollbar">
+        ${poses
+          .map(
+            ([label, url]) => `
+            <div class="rounded-2xl border bg-[rgba(12,16,28,0.88)] p-2.5 flex flex-col items-center gap-2 shadow-[inset_0_2px_12px_rgba(0,0,0,0.45)]" style="border-color:${borderColor}66;background:radial-gradient(circle at 50% 44%,${borderColor}26,rgba(10,14,24,0.94) 80%)">
+              <div class="mam-review-pose-art w-full h-[210px] flex items-center justify-center overflow-hidden">
+                <div class="mam-chibi-portrait"><img src="${assetUrl(url)}" alt="${chibi.name} ${label}"${smoothCls} draggable="false" /></div>
+              </div>
+              <span class="px-3 py-0.5 rounded-full bg-white/[0.08] border border-white/15 text-[12px] font-black tracking-wide text-white uppercase mam-outline-sm">${label}</span>
+            </div>
+          `
+          )
+          .join('')}
+      </div>
+    `;
+
+    const isOutsideDialog = (e: PointerEvent): boolean => {
+      const r = dialog.getBoundingClientRect();
+      return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+    };
+
+    if (!('closedBy' in HTMLDialogElement.prototype)) {
+      let pressedOutside = false;
+      dialog.addEventListener('pointerdown', (e) => {
+        pressedOutside = isOutsideDialog(e);
+      });
+      dialog.addEventListener('pointerup', (e) => {
+        if (pressedOutside && isOutsideDialog(e)) dialog.close();
+        pressedOutside = false;
+      });
+    }
+
+    dialog.addEventListener('close', () => {
+      dialog.returnValue = '';
+      dialog.remove();
+    });
+
+    document.body.appendChild(dialog);
+    audio.playSfx('ui-open');
+    dialog.showModal();
+  }
+
+  private bindIndexInspectorEvents(scope: ParentNode): void {
+    scope.querySelectorAll<HTMLElement>('[data-review-chibi]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.reviewChibi;
+        if (!id) return;
+        this.openChibiReviewDialog(id);
+      });
+    });
+  }
+
   public refreshIndexInspectorLive(root: HTMLElement): void {
     const resolvedId = this.getResolvedIndexInspectId();
     root.querySelectorAll<HTMLElement>('[data-index-id]').forEach((card) => {
@@ -703,6 +829,7 @@ export class CollectionModalsUi {
     if (this.lastIndexInspectorHtml !== nextHtml) {
       this.lastIndexInspectorHtml = nextHtml;
       panel.innerHTML = nextHtml;
+      this.bindIndexInspectorEvents(panel);
     }
   }
 
