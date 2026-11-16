@@ -19,6 +19,7 @@ Line numbers measured on **2026-11-16** after adding **5-Weather System + GLSL A
 ```
 index.html                      Entry HTML (Vite root)
 .gitignore                      Ignore `node_modules/`, `dist/`, `.vite/`, local/OS files
+.github/workflows/deploy.yml    GitHub Actions auto test, Vite build & deploy ke GitHub Pages (`main`)
 package.json                    Dependencies: three, vite, typescript, vitest, @tailwindcss/vite
 vite.config.ts                  Standalone Vite + Tailwind CSS v4 config (`base: './'`)
 tsconfig.json                   TypeScript strict config
