@@ -162,12 +162,11 @@ export class ShopModalsUi {
       const canBuy = !soldOut && this.state.cash >= p.cost;
       const isInspected = this.shopInspectPickaxeId === p.id;
       const bgCls =
-        p.rarity === 'rainbow'
+        p.rarity === 'rainbow' || p.rarity === 'exotic' || p.rarity === 'secret'
           ? ''
           : 'bg-[radial-gradient(circle_at_50%_24%,var(--rarity-bg,rgba(71,85,105,0.28)),rgba(20,24,31,0.96)_72%)]';
       return `
         <div class="${rarityCardClasses(p.rarity, isInspected ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_14px_rgba(56,189,248,0.45)]' : '')} !aspect-auto min-h-[192px] pt-2.5 px-2 pb-[9px] gap-1.5 !justify-start ${bgCls}" style="${rarityVars(p.rarity)}" data-shop-item-card="true" data-inspect-pickaxe="${p.id}">
-          <span class="absolute top-1.5 right-1.5 z-[3] w-5 h-5 rounded-full bg-[#0f172a]/85 border border-[#38bdf8]/60 text-[#7dd3fc] text-[11px] font-black flex items-center justify-center pointer-events-none">i</span>
           <div class="mam-card-art !relative !inset-auto w-full h-[70px] shrink-0 flex items-center justify-center">${pickaxeIconHtml(p.id, 66, p.name)}</div>
           <div class="w-full flex flex-col items-center gap-0.5 min-h-0">
             <div class="w-full px-0.5 text-center text-[14px] font-black leading-[1.18] text-white whitespace-nowrap overflow-hidden text-ellipsis mam-outline-sm" title="${p.name}">${p.name}</div>
@@ -223,7 +222,6 @@ export class ShopModalsUi {
           : 'bg-[radial-gradient(circle_at_50%_24%,var(--rarity-bg,rgba(71,85,105,0.28)),rgba(20,24,31,0.96)_72%)]';
       return `
         <div class="${rarityCardClasses(item.rarity, isInspected ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_14px_rgba(56,189,248,0.45)]' : '')} !aspect-auto min-h-[214px] pt-2.5 px-2 pb-[9px] gap-1.5 !justify-start ${bgCls}" style="${rarityVars(item.rarity)}" data-inspect-gem="${item.id}">
-          <span class="absolute top-1.5 right-1.5 z-[3] w-5 h-5 rounded-full bg-[#0f172a]/85 border border-[#38bdf8]/60 text-[#7dd3fc] text-[11px] font-black flex items-center justify-center pointer-events-none">i</span>
           <div class="mam-card-art !relative !inset-auto w-full h-[70px] shrink-0 flex items-center justify-center">${gemPotionIconHtml(item.id, 68, item.name, item.color)}</div>
           <div class="w-full flex flex-col items-center gap-0.5 min-h-0">
             <div class="w-full px-0.5 text-center text-[14px] font-black leading-[1.18] text-white whitespace-nowrap overflow-hidden text-ellipsis mam-outline-sm" title="${item.name}">${item.name}</div>
@@ -352,7 +350,6 @@ export class ShopModalsUi {
             const inspCls = this.sellInspectKey === e.key ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.4)]' : '';
             return `
               <div class="${rarityCardClasses(e.rarity, `${sel} ${inspCls}`.trim())} !aspect-auto h-[142px] pt-1.5 px-[5px] pb-[5px] !justify-between gap-[3px]" style="${rarityVars(e.rarity)}" data-sell-key="${e.key}" title="${e.name} • ${fmtMoney(e.totalValue)} (x${fmtInt(e.qty)})">
-                <button type="button" class="absolute top-1 right-1 z-[4] w-4 h-4 rounded-full bg-[#0f172a]/90 border border-[#38bdf8]/70 text-[#7dd3fc] text-[10px] font-black flex items-center justify-center hover:scale-110" data-inspect-sell-only="${e.key}" title="Inspect ${e.name}">i</button>
                 <div class="w-full h-[26px] shrink-0 line-clamp-2 overflow-hidden text-center text-[11.5px] font-black leading-[1.1] text-white break-words mam-outline-sm">${e.name}</div>
                 <div class="mam-card-art !relative !inset-auto flex-1 min-h-0 w-full flex items-center justify-center p-0.5 [&>.mam-3d-icon]:max-w-[56px] [&>.mam-3d-icon]:max-h-[56px] [&>.mam-3d-icon]:w-auto [&>.mam-3d-icon]:h-auto [&_svg]:max-w-[56px] [&_svg]:max-h-[56px] [&_svg]:w-auto [&_svg]:h-auto [&_.mam-chibi-portrait_img]:max-w-[60px] [&_.mam-chibi-portrait_img]:max-h-[60px]">${e.artHtml}</div>
                 <div class="w-full shrink-0 flex flex-col items-center gap-px pt-[3px] px-0.5 pb-0.5 rounded bg-[rgba(10,14,22,0.52)] border-t border-white/10">

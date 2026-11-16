@@ -307,16 +307,33 @@ function buildSparkleModel(): THREE.Group {
   return g;
 }
 
-function buildPickaxeModel(headColor: THREE.ColorRepresentation = 0x38bdf8): THREE.Group {
+function buildPickaxeModel(headColor: THREE.ColorRepresentation = 0x38bdf8, rarity?: ItemRarity): THREE.Group {
   const g = new THREE.Group();
-  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 1.55, 10), toonMat(0x92400e, 0.6));
+  const isEndgame = rarity === 'exotic' || rarity === 'secret' || rarity === 'mythic';
+  const handleColor = isEndgame ? 0x1e293b : 0x92400e;
+  const handle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.09, 0.11, 1.55, 10),
+    toonMat(handleColor, isEndgame ? 0.35 : 0.6, isEndgame ? 0.5 : 0)
+  );
   handle.position.y = -0.1;
   g.add(handle);
 
-  const headMat = toonMat(headColor, 0.22, 0.72);
+  const emissiveHex = isEndgame || rarity === 'rainbow' ? headColor : 0x000000;
+  const emissiveInt = rarity === 'secret' ? 0.45 : isEndgame ? 0.3 : rarity === 'rainbow' ? 0.2 : 0;
+  const headMat = toonMat(headColor, 0.22, 0.72, emissiveHex, emissiveInt);
   const center = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.26, 0.28), headMat);
   center.position.y = 0.55;
   g.add(center);
+
+  if (isEndgame) {
+    const crest = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.15, 0),
+      toonMat(0xffffff, 0.1, 0.5, headColor, 0.7)
+    );
+    crest.position.set(0, 0.55, 0.16);
+    crest.scale.set(0.9, 1.15, 0.6);
+    g.add(crest);
+  }
 
   const leftBlade = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.72, 6), headMat);
   leftBlade.rotation.z = Math.PI / 2 + 0.28;
@@ -1898,7 +1915,7 @@ export function init3dHudIcons(): void {
     }
 
     for (const p of PICKAXES) {
-      renderAndCache(`pickaxe:${p.id}`, buildPickaxeModel(p.color));
+      renderAndCache(`pickaxe:${p.id}`, buildPickaxeModel(p.color, p.rarity));
     }
 
     for (const item of GEM_SHOP_ITEMS) {

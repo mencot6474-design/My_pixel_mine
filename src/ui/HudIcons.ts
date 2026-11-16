@@ -1,4 +1,5 @@
-import { ItemRarity } from '../game/GameData';
+import { assetUrl } from '../game/AssetUrl';
+import { ItemRarity, PICKAXES } from '../game/GameData';
 import type { ResearchIconKind } from '../game/ResearchData';
 import type { WeatherId } from '../game/WeatherData';
 import {
@@ -7,10 +8,11 @@ import {
   get3dGemPotionIconUrl,
   get3dHudIconUrl,
   get3dOreIconUrl,
-  get3dPickaxeIconUrl,
   get3dWeatherIconUrl,
   Hud3dIconKey,
 } from '../game3d/HudIcon3DRenderer';
+
+const PICKAXE_ART_IDS = new Set(PICKAXES.map((p) => p.id));
 
 export function oreIconSvg(
   color: string,
@@ -179,6 +181,9 @@ export function towerIconHtml(sizePx = 22): string {
 }
 
 export function hudIconHtml(key: keyof typeof HUD_ICONS & Hud3dIconKey, sizePx: number, alt = ''): string {
+  if (key === 'pickaxe') {
+    return pickaxeIconHtml('sunwheel', sizePx, alt || 'Pickaxe');
+  }
   const url3d = get3dHudIconUrl(key);
   if (url3d) {
     return `<img class="mam-3d-icon" src="${url3d}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
@@ -187,11 +192,9 @@ export function hudIconHtml(key: keyof typeof HUD_ICONS & Hud3dIconKey, sizePx: 
 }
 
 export function pickaxeIconHtml(pickaxeId: string, sizePx: number, alt = 'Pickaxe'): string {
-  const url3d = get3dPickaxeIconUrl(pickaxeId);
-  if (url3d) {
-    return `<img class="mam-3d-icon" src="${url3d}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
-  }
-  return HUD_ICONS.pickaxe;
+  const safeId = PICKAXE_ART_IDS.has(pickaxeId) ? pickaxeId : 'starter';
+  const artUrl = assetUrl(`/pickaxes/${safeId}.png`);
+  return `<img class="mam-3d-icon drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
 }
 
 export function gemPotionIconHtml(potionId: string, sizePx: number, alt = 'Potion', color = '#38bdf8'): string {

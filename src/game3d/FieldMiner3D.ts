@@ -24,7 +24,7 @@ export class FieldMiner3D {
     this.def = def;
     this.dmg = def.baseDps;
     this.slotIndex = slotIndex;
-    this.sprite = new ChibiSprite3D(def, 1.85, slotIndex * 1.1);
+    this.sprite = new ChibiSprite3D(def, 1.95, slotIndex * 1.1);
 
     const spreadX = (slotIndex - (STAGE_PEDESTAL_COUNT - 1) / 2) * 1.15;
     this.sprite.group.position.set(spreadX, PIT_FLOOR_Y, -1.05);
@@ -119,20 +119,33 @@ export class FieldMiner3D {
     }
 
     const pos = this.sprite.group.position;
-    // Stand in the front semicircle (+Z toward camera) around the ore node so the ore never blocks the chibi
-    const angle = (0.14 + (this.slotIndex / Math.max(1, STAGE_PEDESTAL_COUNT - 1)) * 0.72) * Math.PI;
-    const desiredX = target.worldX + Math.cos(angle) * 0.95;
-    const desiredZ = target.worldZ + Math.sin(angle) * 0.82;
+    // Stand on the left/right flanking edge of the ore so the chibi body stays cleanly outside
+    // the boulder mesh and only the horizontal slash arc enters the ore.
+    const flankSlots: readonly { side: 1 | -1; rx: number; oz: number }[] = [
+      { side: -1, rx: 1.26, oz: 0.36 },
+      { side: 1, rx: 1.26, oz: 0.36 },
+      { side: -1, rx: 1.32, oz: 0.54 },
+      { side: 1, rx: 1.32, oz: 0.54 },
+      { side: -1, rx: 1.44, oz: 0.22 },
+    ];
+    const flank = flankSlots[this.slotIndex % flankSlots.length];
+    const geodeExtra = target.variantKey === 'geode' ? 0.14 : 0;
+    const radiusX = flank.rx + geodeExtra;
+    let side = flank.side;
+    if (target.worldX + side * radiusX < -4.95 || target.worldX + side * radiusX > 4.95) {
+      side = (side * -1) as 1 | -1;
+    }
+    const desiredX = target.worldX + side * radiusX;
+    const desiredZ = target.worldZ + flank.oz + geodeExtra * 0.5;
 
     const dx = desiredX - pos.x;
     const dz = desiredZ - pos.z;
     const dist = Math.hypot(dx, dz);
 
-    if (renderVisuals && Math.abs(target.worldX - pos.x) > 0.05) {
-      this.sprite.setFacing(target.worldX >= pos.x ? 1 : -1);
-    }
-
     if (dist > 0.22) {
+      if (renderVisuals && Math.abs(dx) > 0.05) {
+        this.sprite.setFacing(dx >= 0 ? 1 : -1);
+      }
       const step = Math.min(dist, this.walkSpeed * dtSec);
       pos.x += (dx / dist) * step;
       pos.z += (dz / dist) * step;
@@ -141,12 +154,18 @@ export class FieldMiner3D {
         this.sprite.setAnimState('dash'); // walk.png
       }
     } else {
+      if (renderVisuals && Math.abs(target.worldX - pos.x) > 0.05) {
+        this.sprite.setFacing(target.worldX >= pos.x ? 1 : -1);
+      }
       if (renderVisuals) {
         this.sprite.setAnimState('attack'); // attack.png
       }
       this.attackCooldown -= dtSec;
       if (this.attackCooldown <= 0) {
         this.attackCooldown = this.attackInterval;
+        if (renderVisuals) {
+          this.sprite.triggerAttack(Math.min(0.44, this.attackInterval * 0.75));
+        }
         const res = pit.hitNode(target.id, this.dmg * this.attackInterval, false);
         if (res) {
           if (renderVisuals) {

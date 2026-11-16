@@ -1,16 +1,21 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_PICKAXE_STOCK,
   ENCHANT_DICE_GEM_COST,
   ENCHANTS,
   GEM_SHOP_ITEMS,
   getOresByWorld,
   getMinerRarity,
   getMinersByWorld,
+  getPickaxeSellValue,
   getWorldById,
   isHighTierMutation,
   MUTATIONS,
   ORES,
+  PICKAXES,
   RARITY_BORDER,
   WORLD_MINERS,
   WORLDS,
@@ -37,12 +42,14 @@ import {
   getChibiById,
   getChibiFrameUvOffset,
 } from '../src/game3d/ChibiCatalog';
+import { ChibiSprite3D } from '../src/game3d/ChibiSprite3D';
 import { FieldMiner3D } from '../src/game3d/FieldMiner3D';
 import { DEFAULT_WORLD_PALETTE, rollOreVariant, STAGE_PEDESTAL_COUNT } from '../src/game3d/MineWorldPalette';
 import { applyNodeDamagePure, BASE_ORE_RESPAWN_SEC, OrePit3D, PIT_NODE_COUNT } from '../src/game3d/OrePit3D';
 import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
 import { ShopWorld3D } from '../src/game3d/ShopWorld3D';
 import { TowerArena3D } from '../src/game3d/TowerArena3D';
+import { pickaxeIconHtml } from '../src/ui/HudIcons';
 import {
   getGlobalGemGainBonus,
   getTowerCheckpoints,
@@ -1175,5 +1182,107 @@ describe('Pure 3D Mine World', () => {
       }
     }
     expect(gs.getMaxChestCapacity()).toBe(305_000);
+  });
+
+  it('tilts ChibiSprite3D toward elevated camera and animates idle, walk, and attack swings without squashing', () => {
+    const sprite = new ChibiSprite3D(CHIBI_CATALOG[0], 1.95, 0);
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(0, 11.7, 15.6);
+
+    const pivot = sprite.group.children[0] as THREE.Group;
+    const animGroup = pivot.children[0] as THREE.Group;
+    const spriteMesh = animGroup.children[0] as THREE.Mesh;
+    const depthMat = spriteMesh.customDepthMaterial as THREE.MeshDepthMaterial;
+    expect(depthMat).toBeInstanceOf(THREE.MeshDepthMaterial);
+    expect(depthMat.alphaTest).toBe(0.15);
+    expect(depthMat.side).toBe(THREE.DoubleSide);
+
+    sprite.setAnimState('idle');
+    sprite.update(0.016, 0.8, cam);
+    expect(pivot.rotation.x).toBeLessThan(-0.2);
+    expect(animGroup.scale.y).toBeGreaterThanOrEqual(1);
+
+    sprite.setAnimState('dash');
+    sprite.update(0.016, 0.2, cam);
+    expect(animGroup.position.y).toBeGreaterThan(0);
+    expect(Math.abs(animGroup.rotation.z)).toBeGreaterThan(0.01);
+
+    sprite.setFacing(1);
+    sprite.setAnimState('attack');
+    sprite.triggerAttack(0.4);
+    // Advance into wind-up (p=0.1 -> t=0.04) then strike snap (p=0.35 -> t=0.14)
+    sprite.update(0.04, 1.0, cam);
+    expect(animGroup.position.x).toBeLessThan(0);
+    sprite.update(0.1, 1.1, cam);
+    expect(animGroup.position.x).toBeGreaterThan(0.05);
+    expect(animGroup.rotation.z).toBeLessThan(0);
+
+    sprite.dispose();
+  });
+
+  it('positions FieldMiner3D on the flanking edge of an ore node when attacking so the chibi body does not clip inside', () => {
+    const oreNode = {
+      id: 0,
+      hp: 5000,
+      maxHp: 5000,
+      alive: true,
+      worldX: 0,
+      worldY: 0,
+      worldZ: 0.65,
+      variantKey: 'common' as const,
+    };
+    const fakePit = {
+      getAliveNodesInfo: () => [oreNode],
+      hitNode: () => ({ broken: false, dmgDealt: 10, variantKey: 'common' as const }),
+    } as unknown as OrePit3D;
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(0, 11.7, 15.6);
+
+    for (let slot = 0; slot < STAGE_PEDESTAL_COUNT; slot++) {
+      const fm = new FieldMiner3D(CHIBI_CATALOG[0], slot);
+      for (let i = 0; i < 40; i++) {
+        fm.update(0.1, (i + 1) * 0.1, cam, fakePit, undefined, undefined, true);
+      }
+      expect(Math.abs(fm.sprite.group.position.x - oreNode.worldX)).toBeGreaterThanOrEqual(1.1);
+      expect(fm.sprite.group.position.z).toBeGreaterThan(oreNode.worldZ);
+      fm.dispose();
+    }
+  });
+
+  it('scales all 12 Shop Pickaxes monotonically in cost, DMG multiplier, and stock without exploits', () => {
+    expect(PICKAXES.length).toBe(12);
+    expect(PICKAXES.map((p) => p.id).slice(-5)).toEqual([
+      'cinderforge',
+      'runebreaker',
+      'voidcleaver',
+      'astralsiphon',
+      'starwellcrown',
+    ]);
+
+    let prevCostPerDmg = 0;
+    for (let i = 0; i < PICKAXES.length; i++) {
+      const p = PICKAXES[i];
+      expect(DEFAULT_PICKAXE_STOCK[p.id]).toBeGreaterThanOrEqual(1);
+      expect(existsSync(resolve(process.cwd(), 'public', 'pickaxes', `${p.id}.png`))).toBe(true);
+      expect(pickaxeIconHtml(p.id, 64, p.name)).toContain(`pickaxes/${p.id}.png`);
+      if (i > 0) {
+        const prev = PICKAXES[i - 1];
+        expect(p.cost).toBeGreaterThan(prev.cost);
+        expect(p.dmgMult).toBeGreaterThan(prev.dmgMult);
+        const stepRatio = p.dmgMult / prev.dmgMult;
+        expect(stepRatio).toBeGreaterThanOrEqual(1.8);
+        expect(stepRatio).toBeLessThanOrEqual(2.5);
+        const costPerDmg = p.cost / p.dmgMult;
+        expect(costPerDmg).toBeGreaterThan(prevCostPerDmg);
+        prevCostPerDmg = costPerDmg;
+        expect(getPickaxeSellValue(p.id)).toBeLessThan(p.cost);
+      }
+    }
+
+    const gs = new GameState();
+    gs.cash = 1e18;
+    expect(gs.buyPickaxe('starwellcrown')).toBe('bought');
+    expect(gs.ownedPickaxes.starwellcrown).toBe(1);
+    expect(gs.buyPickaxe('starwellcrown')).toBe('sold_out');
   });
 });

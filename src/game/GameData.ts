@@ -224,6 +224,11 @@ export const PICKAXES: readonly PickaxeDef[] = [
   { id: 'rhodolite', name: 'Rhodolite', dmgMult: 14.0, cost: 1_200_000, rarity: 'rare', color: '#818cf8' },
   { id: 'heartpiercer', name: 'Heartpiercer', dmgMult: 30.0, cost: 35_000_000, rarity: 'mythic', color: '#ec4899' },
   { id: 'anvilheart', name: 'Anvilheart', dmgMult: 65.0, cost: 1_500_000_000, rarity: 'rainbow', color: '#f97316' },
+  { id: 'cinderforge', name: 'Cinderforge', dmgMult: 140.0, cost: 55_000_000_000, rarity: 'legendary', color: '#fb7185' },
+  { id: 'runebreaker', name: 'Runebreaker', dmgMult: 310.0, cost: 2_500_000_000_000, rarity: 'epic', color: '#2dd4bf' },
+  { id: 'voidcleaver', name: 'Voidcleaver', dmgMult: 700.0, cost: 120_000_000_000_000, rarity: 'exotic', color: '#c084fc' },
+  { id: 'astralsiphon', name: 'Astralsiphon', dmgMult: 1_600.0, cost: 6_000_000_000_000_000, rarity: 'mythic', color: '#38bdf8' },
+  { id: 'starwellcrown', name: 'Starwell Crown', dmgMult: 3_800.0, cost: 350_000_000_000_000_000, rarity: 'secret', color: '#fde047' },
 ] as const;
 
 export const MUTATIONS: readonly MutationDef[] = [
@@ -273,6 +278,11 @@ export const DEFAULT_PICKAXE_STOCK: Record<string, number> = {
   rhodolite: 3,
   heartpiercer: 2,
   anvilheart: 1,
+  cinderforge: 1,
+  runebreaker: 1,
+  voidcleaver: 1,
+  astralsiphon: 1,
+  starwellcrown: 1,
 };
 
 export function getPickaxeSellValue(pickaxeId: string): number {

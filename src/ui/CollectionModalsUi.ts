@@ -359,9 +359,8 @@ export class CollectionModalsUi {
         const isEquipped = this.state.hotbar.includes(def.id);
         const isInsp = selTarget?.kind === 'miner' && selTarget.id === def.id;
         cards.push(`
-          <div class="${rarityCardClasses(rarity, isInsp ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.4)]' : '')}" style="${rarityVars(rarity)}" data-equip-miner="${def.id}" title="Click to Equip / Unequip • (i) to Inspect">
+          <div class="${rarityCardClasses(rarity, isInsp ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.4)]' : '')}" style="${rarityVars(rarity)}" data-equip-miner="${def.id}" title="Click to Equip / Unequip">
             ${isEquipped ? '<span class="mam-equipped-tag">EQ</span>' : ''}
-            <button type="button" class="absolute top-1 right-1 z-[4] w-4 h-4 rounded-full bg-[#0f172a]/90 border border-[#38bdf8]/70 text-[#7dd3fc] text-[10px] font-black flex items-center justify-center hover:scale-110" data-inspect-inv-only="miner:${def.id}" title="Inspect ${def.name}">i</button>
             <div class="mam-card-art">
               <div class="mam-chibi-portrait"><img src="${assetUrl(def.spriteUrl)}" alt="${def.name}" /></div>
             </div>
@@ -409,7 +408,6 @@ export class CollectionModalsUi {
         cards.push(`
           <div class="${rarityCardClasses(def.rarity, isInsp ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.4)]' : '')}" style="${rarityVars(def.rarity)}" data-equip-ore="${def.id}" title="${def.name} (${fmtMoney(def.sellValue)}) — Click to Equip / Unequip">
             ${isEquipped ? '<span class="mam-equipped-tag">EQ</span>' : ''}
-            <button type="button" class="absolute top-1 right-1 z-[4] w-4 h-4 rounded-full bg-[#0f172a]/90 border border-[#38bdf8]/70 text-[#7dd3fc] text-[10px] font-black flex items-center justify-center hover:scale-110" data-inspect-inv-only="ore:${def.id}" title="Inspect ${def.name}">i</button>
             <div class="mam-card-art">${oreIconSvg(def.color, def.secondaryColor, def.rarity, `inv_${def.id}`)}</div>
             <div class="mam-card-name mam-outline-sm">${def.name}</div>
             <div class="mam-card-bottom">

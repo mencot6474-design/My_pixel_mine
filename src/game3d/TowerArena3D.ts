@@ -1473,9 +1473,16 @@ export class TowerArena3D {
         if (!targetRock) {
           f.sprite.setAnimState('idle');
         } else {
-          const angle = (0.16 + (f.slotIndex / 4) * 0.68) * Math.PI;
-          const desiredX = targetRock.x + Math.cos(angle) * 1.05;
-          const desiredZ = targetRock.z + Math.sin(angle) * 0.95;
+          const flankSlots: readonly { side: 1 | -1; rx: number; oz: number }[] = [
+            { side: -1, rx: 1.28, oz: 0.34 },
+            { side: 1, rx: 1.28, oz: 0.34 },
+            { side: -1, rx: 1.34, oz: 0.52 },
+            { side: 1, rx: 1.34, oz: 0.52 },
+            { side: -1, rx: 1.44, oz: 0.22 },
+          ];
+          const flank = flankSlots[f.slotIndex % flankSlots.length];
+          const desiredX = targetRock.x + flank.side * flank.rx;
+          const desiredZ = targetRock.z + flank.oz;
           const dx = desiredX - pos.x;
           const dz = desiredZ - pos.z;
           const dist = Math.hypot(dx, dz);
@@ -1496,6 +1503,7 @@ export class TowerArena3D {
             if (f.attackCooldown <= 0) {
               f.attackCooldown = f.attackInterval;
               f.lungeTimer = 0.18;
+              f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75));
               onFighterStrike?.({
                 slotIndex: f.slotIndex,
                 targetOreIndex: targetRock.index,
@@ -1513,8 +1521,8 @@ export class TowerArena3D {
               const toRockX = targetRock.x - desiredX;
               const toRockZ = targetRock.z - desiredZ;
               const len = Math.max(0.01, Math.hypot(toRockX, toRockZ));
-              pos.x = desiredX + (toRockX / len) * t * 0.36;
-              pos.z = desiredZ + (toRockZ / len) * t * 0.36;
+              pos.x = desiredX + (toRockX / len) * t * 0.1;
+              pos.z = desiredZ + (toRockZ / len) * t * 0.1;
             } else {
               pos.x = desiredX;
               pos.z = desiredZ;
@@ -1542,6 +1550,7 @@ export class TowerArena3D {
           if (f.attackCooldown <= 0) {
             f.attackCooldown = f.attackInterval;
             f.lungeTimer = 0.18;
+            f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75));
             this.bounceTimer = Math.max(this.bounceTimer, 0.09);
             this.spawnSlashArc(
               this.bossMode ? '#facc15' : f.colorHex,
