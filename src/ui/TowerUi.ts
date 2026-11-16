@@ -279,6 +279,9 @@ export class TowerUi {
             <div class="text-center pt-1">
               <div class="text-[11px] font-black uppercase tracking-widest text-cyan-300">Floor ${run.floor} Boss Defeated!</div>
               <div class="text-[24px] font-black text-white">Choose 1 Spire Blessing</div>
+              <div class="mt-0.5 text-[12px] font-bold text-amber-300 tabular-nums" data-tower-blessing-timer="true">
+                Auto-pick random in ${(run.blessingTimerLeft ?? 5).toFixed(1)}s
+              </div>
             </div>
             <div class="grid grid-cols-3 @max-[720px]:grid-cols-1 gap-3">
               ${run.pendingBlessings
@@ -306,8 +309,11 @@ export class TowerUi {
           <span class="inline-flex items-center gap-1" data-tower-ore-pips="true">${this.renderOrePipsHtml()}</span>
         </span>`;
 
+    const invulLeft = run.isBossWave ? Math.max(0, run.bossInvulLeft ?? 0) : 0;
     const hpLabel = run.isBossWave
-      ? `BOSS • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`
+      ? invulLeft > 0
+        ? `🛡️ INVULNERABLE (${invulLeft.toFixed(1)}s) • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`
+        : `BOSS • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`
       : `WAVE ${run.wave}/9 (${aliveOres}/${TOWER_ORE_ROCKS_PER_WAVE} Rocks) • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`;
 
     return `
@@ -368,8 +374,11 @@ export class TowerUi {
     if (fill) fill.style.width = `${hpPct}%`;
     const hpText = root.querySelector<HTMLElement>('[data-tower-hp-text="true"]');
     if (hpText) {
+      const invulLeft = run.isBossWave ? Math.max(0, run.bossInvulLeft ?? 0) : 0;
       hpText.textContent = run.isBossWave
-        ? `BOSS • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`
+        ? invulLeft > 0
+          ? `🛡️ INVULNERABLE (${invulLeft.toFixed(1)}s) • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`
+          : `BOSS • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`
         : `WAVE ${run.wave}/9 (${aliveOres}/${TOWER_ORE_ROCKS_PER_WAVE} Rocks) • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`;
     }
     const oresBadge = root.querySelector<HTMLElement>('[data-tower-ores-badge="true"]');
@@ -389,6 +398,10 @@ export class TowerUi {
     if (gemsEl) gemsEl.textContent = `+${fmtInt(run.gemsEarned)} Gems`;
     const diceEl = root.querySelector<HTMLElement>('[data-tower-run-dice="true"]');
     if (diceEl) diceEl.textContent = `+${run.diceEarned} Dice`;
+    const blessingTimerEl = root.querySelector<HTMLElement>('[data-tower-blessing-timer="true"]');
+    if (blessingTimerEl && run.pendingBlessings) {
+      blessingTimerEl.textContent = `Auto-pick random in ${Math.max(0, run.blessingTimerLeft ?? 5).toFixed(1)}s`;
+    }
   }
 
   public bindHubEvents(root: HTMLElement): void {

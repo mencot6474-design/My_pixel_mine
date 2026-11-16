@@ -126,36 +126,54 @@ function createVoidEclipseSkyTexture(): THREE.Texture | null {
   const ctx = c.getContext('2d');
   if (!ctx) return null;
 
+  // Deep Megacorp Cyberspace gradient
   const grad = ctx.createLinearGradient(0, 0, 0, 512);
-  grad.addColorStop(0.0, '#020109');
-  grad.addColorStop(0.28, '#09031c');
-  grad.addColorStop(0.52, '#1e0b3e');
-  grad.addColorStop(0.68, '#3b0a45');
-  grad.addColorStop(0.8, '#17072c');
-  grad.addColorStop(1.0, '#04010c');
+  grad.addColorStop(0.0, '#01030a');
+  grad.addColorStop(0.28, '#030b1c');
+  grad.addColorStop(0.54, '#071736');
+  grad.addColorStop(0.72, '#0c1e42');
+  grad.addColorStop(0.86, '#050e24');
+  grad.addColorStop(1.0, '#01040c');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 1024, 512);
 
-  for (let i = 0; i < 6; i++) {
-    const nx = 140 + i * 165;
-    const ny = 240 + (i % 2) * 35;
-    const nGrad = ctx.createRadialGradient(nx, ny, 10, nx, ny, 130);
-    nGrad.addColorStop(0, i % 2 === 0 ? 'rgba(139, 92, 246, 0.14)' : 'rgba(244, 63, 94, 0.1)');
-    nGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = nGrad;
+  // Cyberspace wireframe latitude & meridian grid lines
+  ctx.strokeStyle = 'rgba(6, 182, 212, 0.22)';
+  ctx.lineWidth = 1.2;
+  for (let x = 0; x <= 1024; x += 32) {
     ctx.beginPath();
-    ctx.arc(nx, ny, 130, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, 420);
+    ctx.stroke();
+  }
+  for (let y = 24; y <= 400; y += 28) {
+    ctx.strokeStyle = y % 56 === 24 ? 'rgba(56, 189, 248, 0.26)' : 'rgba(217, 70, 239, 0.16)';
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(1024, y);
+    ctx.stroke();
   }
 
-  for (let i = 0; i < 240; i++) {
-    const sx = (i * 293 + 47) % 1024;
-    const sy = (i * 157 + 23) % 330;
-    const r = i % 9 === 0 ? 1.4 : 0.8;
-    ctx.fillStyle = i % 5 === 0 ? 'rgba(216,180,254,0.88)' : 'rgba(224,242,254,0.75)';
-    ctx.beginPath();
-    ctx.arc(sx, sy, r, 0, Math.PI * 2);
-    ctx.fill();
+  // Vertical digital data stream rain columns in the sky dome
+  for (let i = 0; i < 64; i++) {
+    const sx = (i * 173 + 19) % 1024;
+    const sy = (i * 97 + 14) % 300;
+    const sh = 45 + (i % 5) * 28;
+    const sGrad = ctx.createLinearGradient(sx, sy, sx, sy + sh);
+    const isMag = i % 4 === 0;
+    sGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    sGrad.addColorStop(0.7, isMag ? 'rgba(232, 121, 249, 0.45)' : 'rgba(34, 211, 238, 0.45)');
+    sGrad.addColorStop(1, isMag ? 'rgba(250, 232, 255, 0.9)' : 'rgba(207, 250, 254, 0.9)');
+    ctx.fillStyle = sGrad;
+    ctx.fillRect(sx - 1.5, sy, 3, sh);
+  }
+
+  // Glowing cyberspace data nodes at grid intersections
+  for (let i = 0; i < 180; i++) {
+    const sx = ((i * 293 + 47) % 32) * 32;
+    const sy = 24 + ((i * 157 + 23) % 13) * 28;
+    ctx.fillStyle = i % 4 === 0 ? 'rgba(244, 114, 182, 0.85)' : 'rgba(56, 189, 248, 0.85)';
+    ctx.fillRect(sx - 2, sy - 2, 4, 4);
   }
 
   const tex = new THREE.CanvasTexture(c);
@@ -172,13 +190,24 @@ function createEclipseCoronaGlowTexture(): THREE.Texture | null {
   const ctx = c.getContext('2d');
   if (!ctx) return null;
 
-  const grad = ctx.createRadialGradient(128, 128, 42, 128, 128, 126);
-  grad.addColorStop(0.0, 'rgba(255, 255, 255, 0.95)');
-  grad.addColorStop(0.24, 'rgba(255, 220, 180, 0.65)');
-  grad.addColorStop(0.55, 'rgba(217, 70, 239, 0.25)');
+  const grad = ctx.createRadialGradient(128, 128, 28, 128, 128, 126);
+  grad.addColorStop(0.0, 'rgba(34, 211, 238, 0.92)');
+  grad.addColorStop(0.32, 'rgba(56, 189, 248, 0.55)');
+  grad.addColorStop(0.64, 'rgba(217, 70, 239, 0.24)');
   grad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 256, 256);
+
+  // Segmented holographic HUD reticle ring
+  ctx.strokeStyle = 'rgba(165, 243, 252, 0.75)';
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 12; i++) {
+    const a0 = (i / 12) * Math.PI * 2 + 0.06;
+    const a1 = ((i + 0.65) / 12) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(128, 128, 92, a0, a1);
+    ctx.stroke();
+  }
 
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -196,30 +225,58 @@ function createArenaRuneFloorTexture(): THREE.Texture | null {
 
   const cx = 256;
   const cy = 256;
-  const bg = ctx.createRadialGradient(cx, cy, 24, cx, cy, 256);
-  bg.addColorStop(0.0, '#1e1b4b');
-  bg.addColorStop(0.45, '#0f172a');
-  bg.addColorStop(0.85, '#090d1a');
-  bg.addColorStop(1.0, '#020617');
+  const bg = ctx.createRadialGradient(cx, cy, 18, cx, cy, 256);
+  bg.addColorStop(0.0, '#082f49');
+  bg.addColorStop(0.42, '#071329');
+  bg.addColorStop(0.82, '#030816');
+  bg.addColorStop(1.0, '#01040c');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, 512, 512);
 
-  ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
-  ctx.lineWidth = 3;
-  for (const r of [76, 138, 198, 236]) {
+  // Fine PCB cyber-grid lines
+  ctx.strokeStyle = 'rgba(6, 182, 212, 0.15)';
+  ctx.lineWidth = 1;
+  for (let g = 0; g <= 512; g += 24) {
+    ctx.beginPath();
+    ctx.moveTo(g, 0);
+    ctx.lineTo(g, 512);
+    ctx.moveTo(0, g);
+    ctx.lineTo(512, g);
+    ctx.stroke();
+  }
+
+  // Concentric mainframe timing rings
+  for (const [r, col, w] of [
+    [68, 'rgba(34, 211, 238, 0.68)', 3],
+    [128, 'rgba(232, 121, 249, 0.48)', 2.5],
+    [188, 'rgba(56, 189, 248, 0.55)', 3],
+    [236, 'rgba(34, 211, 238, 0.72)', 3.5],
+  ] as const) {
+    ctx.strokeStyle = col;
+    ctx.lineWidth = w;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.stroke();
   }
 
-  ctx.strokeStyle = 'rgba(168, 85, 247, 0.32)';
-  ctx.lineWidth = 2.5;
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2;
+  // 16 Radial PCB circuit bus traces with glowing solder nodes
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    const r0 = i % 2 === 0 ? 58 : 128;
+    const r1 = 236;
+    ctx.strokeStyle = i % 2 === 0 ? 'rgba(34, 211, 238, 0.55)' : 'rgba(232, 121, 249, 0.45)';
+    ctx.lineWidth = i % 2 === 0 ? 3 : 2;
     ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(a) * 58, cy + Math.sin(a) * 58);
-    ctx.lineTo(cx + Math.cos(a) * 238, cy + Math.sin(a) * 238);
+    ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+    ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
     ctx.stroke();
+
+    const nx = cx + Math.cos(a) * 188;
+    const ny = cy + Math.sin(a) * 188;
+    ctx.fillStyle = i % 2 === 0 ? '#22d3ee' : '#f472b6';
+    ctx.beginPath();
+    ctx.arc(nx, ny, 4.5, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   const tex = new THREE.CanvasTexture(c);
@@ -237,6 +294,9 @@ export class TowerArena3D {
   private readonly monolithCoreMat: THREE.MeshStandardMaterial;
   private readonly haloRing1: THREE.Mesh;
   private readonly haloRing2: THREE.Mesh;
+  private readonly seraphCage: THREE.Mesh;
+  private readonly seraphWings: Array<{ pivot: THREE.Group; side: number; pairIdx: number; baseZRot: number }> = [];
+  private readonly seraphDrones: Array<{ group: THREE.Group; angleOffset: number }> = [];
   private readonly baseRingMat: THREE.MeshBasicMaterial;
   private readonly trimRingMat: THREE.MeshBasicMaterial;
   private readonly pillarCapMat: THREE.MeshStandardMaterial;
@@ -249,6 +309,9 @@ export class TowerArena3D {
   private readonly eclipseOuterHalo: THREE.Mesh;
   private readonly eclipseCoronaMat: THREE.MeshBasicMaterial;
   private readonly eclipseHaloMat: THREE.MeshBasicMaterial;
+  private readonly aiWireframeSphere: THREE.Mesh;
+  private readonly aiGyroRing1: THREE.Mesh;
+  private readonly aiGyroRing2: THREE.Mesh;
   private readonly abyssRing1: THREE.Mesh;
   private readonly abyssRing2: THREE.Mesh;
   private readonly abyssDebris: VoidDebrisRock[] = [];
@@ -274,42 +337,42 @@ export class TowerArena3D {
   constructor() {
     this.group.visible = false;
 
-    // 1. Void Eclipse Sky Dome
+    // 1. Megacorp Cyberspace Grid Sky Dome
     const skyTex = createVoidEclipseSkyTexture();
     const skyDome = new THREE.Mesh(
       new THREE.SphereGeometry(96, 32, 20),
       new THREE.MeshBasicMaterial({
         map: skyTex ?? undefined,
-        color: skyTex ? 0xffffff : 0x09031c,
+        color: skyTex ? 0xffffff : 0x030b1c,
         side: THREE.BackSide,
         fog: false,
       })
     );
     this.group.add(skyDome);
 
-    // 2. Colossal Total Solar Eclipse in the Upper-Rear Sky
+    // 2. Colossal Holographic AI Mainframe Core in the Upper-Rear Sky
     const eclipseGroup = new THREE.Group();
-    eclipseGroup.position.set(0, 4.0, -32);
+    eclipseGroup.position.set(0, 1.35, -32);
 
     const coronaGlowTex = createEclipseCoronaGlowTexture();
     this.eclipseHaloMat = new THREE.MeshBasicMaterial({
       map: coronaGlowTex ?? undefined,
-      color: 0xa855f7,
+      color: 0x06b6d4,
       transparent: true,
-      opacity: coronaGlowTex ? 0.78 : 0.28,
+      opacity: coronaGlowTex ? 0.85 : 0.32,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       side: THREE.DoubleSide,
       fog: false,
     });
     this.eclipseOuterHalo = new THREE.Mesh(
-      coronaGlowTex ? new THREE.PlaneGeometry(16.8, 16.8) : new THREE.RingGeometry(3.2, 6.4, 64),
+      coronaGlowTex ? new THREE.PlaneGeometry(17.5, 17.5) : new THREE.RingGeometry(3.2, 6.4, 64),
       this.eclipseHaloMat
     );
-    this.eclipseOuterHalo.position.z = -0.05;
+    this.eclipseOuterHalo.position.z = -0.1;
 
     this.eclipseCoronaMat = new THREE.MeshBasicMaterial({
-      color: 0xf97316,
+      color: 0x22d3ee,
       transparent: true,
       opacity: 0.92,
       blending: THREE.AdditiveBlending,
@@ -317,65 +380,162 @@ export class TowerArena3D {
       side: THREE.DoubleSide,
       fog: false,
     });
-    this.eclipseCoronaRing = new THREE.Mesh(new THREE.RingGeometry(3.02, 3.65, 64), this.eclipseCoronaMat);
+    this.eclipseCoronaRing = new THREE.Mesh(new THREE.RingGeometry(3.15, 3.72, 48), this.eclipseCoronaMat);
 
-    const blackMoonDisc = new THREE.Mesh(
-      new THREE.CircleGeometry(3.04, 48),
-      new THREE.MeshBasicMaterial({ color: 0x020107, fog: false })
+    // Dark obsidian inner AI kernel sphere
+    const aiCoreSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(2.65, 32, 24),
+      new THREE.MeshBasicMaterial({ color: 0x020617, fog: false })
     );
-    blackMoonDisc.position.z = 0.04;
 
-    const coronalFlareRing = new THREE.Mesh(
-      new THREE.TorusGeometry(4.15, 0.055, 8, 64),
+    // Rotating 3D Geodesic Wireframe AI Hologram Shell
+    this.aiWireframeSphere = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(3.12, 2),
       new THREE.MeshBasicMaterial({
-        color: 0xf43f5e,
+        color: 0x22d3ee,
+        wireframe: true,
         transparent: true,
-        opacity: 0.65,
+        opacity: 0.85,
+        fog: false,
+      })
+    );
+
+    // Counter-rotating cyber-gyroscope data rings around the AI Core
+    this.aiGyroRing1 = new THREE.Mesh(
+      new THREE.TorusGeometry(4.2, 0.065, 8, 64),
+      new THREE.MeshBasicMaterial({
+        color: 0xe879f9,
+        transparent: true,
+        opacity: 0.82,
         blending: THREE.AdditiveBlending,
         fog: false,
       })
     );
-    coronalFlareRing.rotation.x = 0.25;
+    this.aiGyroRing1.rotation.x = 0.42;
 
-    eclipseGroup.add(this.eclipseOuterHalo, this.eclipseCoronaRing, blackMoonDisc, coronalFlareRing);
+    this.aiGyroRing2 = new THREE.Mesh(
+      new THREE.TorusGeometry(4.75, 0.05, 8, 64),
+      new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.72,
+        blending: THREE.AdditiveBlending,
+        fog: false,
+      })
+    );
+    this.aiGyroRing2.rotation.y = 0.55;
+
+    eclipseGroup.add(
+      this.eclipseOuterHalo,
+      aiCoreSphere,
+      this.aiWireframeSphere,
+      this.eclipseCoronaRing,
+      this.aiGyroRing1,
+      this.aiGyroRing2
+    );
     this.group.add(eclipseGroup);
 
-    // 3. Outer Abyss Gyroscope Rings & Levitating Shattered Obsidian Rocks
+    // 3. Megacorp Server Monolith Skyscrapers & Vertical Data Stream Laser Columns
     this.abyssRing1 = new THREE.Mesh(
-      new THREE.TorusGeometry(13.2, 0.12, 8, 64),
-      new THREE.MeshBasicMaterial({ color: 0x7c3aed, transparent: true, opacity: 0.55 })
+      new THREE.TorusGeometry(13.2, 0.11, 8, 64),
+      new THREE.MeshBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.62 })
     );
     this.abyssRing1.position.set(0, 0.2, ARENA_CENTER_Z);
-    this.abyssRing1.rotation.x = Math.PI / 2 - 0.12;
+    this.abyssRing1.rotation.x = Math.PI / 2 - 0.08;
 
     this.abyssRing2 = new THREE.Mesh(
       new THREE.TorusGeometry(15.4, 0.08, 8, 64),
-      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.42 })
+      new THREE.MeshBasicMaterial({ color: 0xe879f9, transparent: true, opacity: 0.48 })
     );
     this.abyssRing2.position.set(0, -0.4, ARENA_CENTER_Z);
-    this.abyssRing2.rotation.x = Math.PI / 2 + 0.16;
+    this.abyssRing2.rotation.x = Math.PI / 2 + 0.1;
     this.group.add(this.abyssRing1, this.abyssRing2);
 
-    const rockMat = new THREE.MeshStandardMaterial({ color: 0x1e1b4b, roughness: 0.72, metalness: 0.28 });
+    const serverTowerMat = new THREE.MeshStandardMaterial({
+      color: 0x050b18,
+      roughness: 0.3,
+      metalness: 0.75,
+    });
+    const cyanNeonMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, fog: false });
+    const magNeonMat = new THREE.MeshBasicMaterial({ color: 0xe879f9, fog: false });
+    const cyanBeamMat = new THREE.MeshBasicMaterial({
+      color: 0x06b6d4,
+      transparent: true,
+      opacity: 0.34,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      fog: false,
+    });
+    const magBeamMat = new THREE.MeshBasicMaterial({
+      color: 0xd946ef,
+      transparent: true,
+      opacity: 0.3,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      fog: false,
+    });
+
+    // Background arc of Megacorp Server Monoliths + Vertical Data Stream Pillars
+    for (let i = 0; i < 16; i++) {
+      const ang = Math.PI * 0.82 + (i / 15) * Math.PI * 1.36;
+      const dist = 21 + (i % 3) * 3.8;
+      const tx = Math.cos(ang) * dist;
+      const tz = ARENA_CENTER_Z + Math.sin(ang) * dist;
+      const th = 14 + (i % 4) * 4.5;
+      const tw = 1.6 + (i % 2) * 0.6;
+
+      const tower = new THREE.Mesh(new THREE.BoxGeometry(tw, th, tw), serverTowerMat);
+      tower.position.set(tx, th * 0.32 - 6, tz);
+      tower.lookAt(0, tower.position.y, ARENA_CENTER_Z);
+
+      const ledStrip = new THREE.Mesh(
+        new THREE.BoxGeometry(0.14, th * 0.92, 0.08),
+        i % 2 === 0 ? cyanNeonMat : magNeonMat
+      );
+      ledStrip.position.z = tw * 0.5 + 0.03;
+      tower.add(ledStrip);
+      this.group.add(tower);
+
+      // Vertical Data Stream Pillar shooting into cyberspace
+      if (i % 2 === 0) {
+        const beamX = Math.cos(ang + 0.05) * (dist - 3.2);
+        const beamZ = ARENA_CENTER_Z + Math.sin(ang + 0.05) * (dist - 3.2);
+        const beam = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.14, 0.14, 38, 8),
+          i % 4 === 0 ? cyanBeamMat : magBeamMat
+        );
+        beam.position.set(beamX, 7.0, beamZ);
+        this.group.add(beam);
+      }
+    }
+
+    // Floating Holographic Data Cubes orbiting the mainframe abyss
     for (let i = 0; i < 8; i++) {
-      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.65 + (i % 3) * 0.35, 0), rockMat);
-      rock.scale.set(1, 1.45 + (i % 2) * 0.5, 0.9);
-      this.group.add(rock);
+      const cubeMat = new THREE.MeshStandardMaterial({
+        color: 0x08142c,
+        emissive: i % 2 === 0 ? 0x06b6d4 : 0xd946ef,
+        emissiveIntensity: 0.75,
+        roughness: 0.2,
+        metalness: 0.8,
+        wireframe: i % 2 === 1,
+      });
+      const cube = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.85, 0.85), cubeMat);
+      this.group.add(cube);
       this.abyssDebris.push({
-        mesh: rock,
+        mesh: cube,
         radius: 13.8 + (i % 3) * 1.9,
         angle: (i / 8) * Math.PI * 2,
-        speed: 0.06 + (i % 2) * 0.03,
-        baseY: -1.4 + (i % 4) * 1.15,
-        rotSpeedX: 0.25 + (i % 3) * 0.1,
-        rotSpeedY: 0.3 + (i % 2) * 0.15,
+        speed: 0.07 + (i % 2) * 0.03,
+        baseY: -0.8 + (i % 4) * 1.15,
+        rotSpeedX: 0.45 + (i % 3) * 0.15,
+        rotSpeedY: 0.55 + (i % 2) * 0.2,
       });
     }
 
-    // 4. Stepped Obsidian Sanctuary Platform + Arcane Rune Floor
+    // 4. Stepped Cyber-Carbon Mainframe Platform + PCB Circuit Floor
     const plinthLower = new THREE.Mesh(
-      new THREE.CylinderGeometry(10.0, 7.6, 2.2, 8),
-      new THREE.MeshStandardMaterial({ color: 0x090d1a, roughness: 0.75, metalness: 0.25 })
+      new THREE.CylinderGeometry(10.2, 7.8, 2.2, 16),
+      new THREE.MeshStandardMaterial({ color: 0x050b18, roughness: 0.4, metalness: 0.7 })
     );
     plinthLower.position.set(0, -1.25, ARENA_CENTER_Z);
     this.group.add(plinthLower);
@@ -385,48 +545,58 @@ export class TowerArena3D {
       new THREE.CylinderGeometry(10.6, 10.8, 0.32, 32),
       new THREE.MeshStandardMaterial({
         map: runeTex ?? undefined,
-        color: runeTex ? 0xffffff : 0x0f172a,
-        roughness: 0.45,
-        metalness: 0.25,
+        color: runeTex ? 0xffffff : 0x071329,
+        roughness: 0.28,
+        metalness: 0.55,
       })
     );
     floorDeck.position.set(0, -0.08, ARENA_CENTER_Z);
     floorDeck.receiveShadow = true;
     this.group.add(floorDeck);
 
-    this.trimRingMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide });
-    const trimRing = new THREE.Mesh(new THREE.RingGeometry(9.7, 10.1, 48), this.trimRingMat);
+    this.trimRingMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, side: THREE.DoubleSide });
+    const trimRing = new THREE.Mesh(new THREE.RingGeometry(9.7, 10.15, 48), this.trimRingMat);
     trimRing.rotation.x = -Math.PI / 2;
     trimRing.position.set(0, 0.09, ARENA_CENTER_Z);
     this.group.add(trimRing);
 
-    this.baseRingMat = new THREE.MeshBasicMaterial({ color: 0xa855f7, side: THREE.DoubleSide });
+    this.baseRingMat = new THREE.MeshBasicMaterial({ color: 0xe879f9, side: THREE.DoubleSide });
     const innerRing = new THREE.Mesh(new THREE.RingGeometry(2.2, 2.55, 36), this.baseRingMat);
     innerRing.rotation.x = -Math.PI / 2;
     innerRing.position.set(0, 0.1, ARENA_CENTER_Z);
     this.group.add(innerRing);
 
-    // 5. Eight Obsidian Colosseum Pillars with Pulsing Eclipse Crystals
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.42, metalness: 0.4 });
+    // 5. Eight Cyber-Server Pylon Towers with Neon LED Strips & Hologram Data Nodes
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x070e20, roughness: 0.28, metalness: 0.78 });
     this.pillarCapMat = new THREE.MeshStandardMaterial({
-      color: 0x38bdf8,
-      emissive: 0x7c3aed,
-      emissiveIntensity: 0.85,
-      roughness: 0.18,
+      color: 0x22d3ee,
+      emissive: 0x06b6d4,
+      emissiveIntensity: 0.95,
+      roughness: 0.15,
+      wireframe: true,
     });
     for (let i = 0; i < 8; i++) {
       const ang = (i * Math.PI) / 4 + Math.PI / 8;
       const isFrontLane = Math.sin(ang) > 0.5;
-      const colHeight = isFrontLane ? 2.4 : 4.2 + (i % 2) * 0.7;
+      const colHeight = isFrontLane ? 2.4 : 4.4 + (i % 2) * 0.8;
       const px = Math.cos(ang) * 9.0;
       const pz = ARENA_CENTER_Z + Math.sin(ang) * 9.0;
 
-      const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.52, colHeight, 6), pillarMat);
+      const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.68, colHeight, 0.68), pillarMat);
       pillar.position.set(px, colHeight * 0.5, pz);
+      pillar.lookAt(0, pillar.position.y, ARENA_CENTER_Z);
       pillar.castShadow = true;
 
-      const cap = new THREE.Mesh(new THREE.OctahedronGeometry(0.42, 0), this.pillarCapMat);
-      cap.position.set(px, colHeight + 0.52, pz);
+      // Glowing vertical LED strip on the inner face of each server pylon
+      const pylonLed = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, colHeight * 0.86, 0.06),
+        i % 2 === 0 ? cyanNeonMat : magNeonMat
+      );
+      pylonLed.position.z = 0.35;
+      pillar.add(pylonLed);
+
+      const cap = new THREE.Mesh(new THREE.OctahedronGeometry(0.46, 0), this.pillarCapMat);
+      cap.position.set(px, colHeight + 0.56, pz);
       this.group.add(pillar, cap);
     }
 
@@ -448,37 +618,145 @@ export class TowerArena3D {
       this.summonPads.push(pad);
     }
 
-    // 7. Central Boss Monolith Core (active on Wave 10 Boss)
+    // 7. Central Boss: 3D Seraphim AI Overlord (active on Wave 10 Boss)
     this.monolithPedestal = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.7, 2.2, 0.72, 8),
-      new THREE.MeshStandardMaterial({ color: 0x1e1b4b, roughness: 0.35, metalness: 0.45 })
+      new THREE.CylinderGeometry(1.75, 2.25, 0.72, 12),
+      new THREE.MeshStandardMaterial({ color: 0x070e20, roughness: 0.28, metalness: 0.78 })
     );
     this.monolithPedestal.position.set(0, 0.42, ARENA_CENTER_Z);
     this.group.add(this.monolithPedestal);
 
     this.monolithCoreMat = new THREE.MeshStandardMaterial({
-      color: 0xf59e0b,
+      color: 0xf43f5e,
       emissive: 0xdc2626,
-      emissiveIntensity: 0.85,
-      roughness: 0.12,
-      metalness: 0.3,
+      emissiveIntensity: 0.95,
+      roughness: 0.14,
+      metalness: 0.45,
     });
-    const mainCrystal = new THREE.Mesh(new THREE.OctahedronGeometry(1.55, 0), this.monolithCoreMat);
-    mainCrystal.scale.set(0.88, 1.48, 0.88);
-    mainCrystal.castShadow = true;
-    this.monolithGroup.add(mainCrystal);
 
+    const bossArmorMat = new THREE.MeshStandardMaterial({
+      color: 0x0b132b,
+      roughness: 0.24,
+      metalness: 0.85,
+    });
+    const bossGoldMat = new THREE.MeshStandardMaterial({
+      color: 0xfacc15,
+      emissive: 0xd97706,
+      emissiveIntensity: 0.55,
+      roughness: 0.2,
+      metalness: 0.82,
+    });
+    const cyanLaserMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, fog: false });
+
+    // 7a. Armored Spherical AI Chassis + Top/Bottom Mecha Spire Crowns
+    const chassisSphere = new THREE.Mesh(new THREE.SphereGeometry(1.12, 28, 22), bossArmorMat);
+    chassisSphere.castShadow = true;
+    this.monolithGroup.add(chassisSphere);
+
+    const topCrown = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.85, 8), bossArmorMat);
+    topCrown.position.y = 1.32;
+    const botCrown = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.95, 8), bossArmorMat);
+    botCrown.rotation.x = Math.PI;
+    botCrown.position.y = -1.35;
+    this.monolithGroup.add(topCrown, botCrown);
+
+    // Geodesic wireframe shield cage around the AI chassis
+    this.seraphCage = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(1.32, 1),
+      new THREE.MeshBasicMaterial({
+        color: 0x22d3ee,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.55,
+      })
+    );
+    this.monolithGroup.add(this.seraphCage);
+
+    // 7b. Mechanical Cyber-Optic Lens (Front Seraphim Eye facing the arena)
+    const opticBezel = new THREE.Mesh(new THREE.TorusGeometry(0.64, 0.11, 12, 32), bossGoldMat);
+    opticBezel.position.z = 0.96;
+    const opticIris = new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.58, 0.12, 28), this.monolithCoreMat);
+    opticIris.rotation.x = Math.PI / 2;
+    opticIris.position.z = 0.95;
+    const opticPupil = new THREE.Mesh(
+      new THREE.SphereGeometry(0.32, 20, 16),
+      new THREE.MeshBasicMaterial({ color: 0x020617 })
+    );
+    opticPupil.position.z = 1.02;
+    const opticLaserDot = new THREE.Mesh(
+      new THREE.SphereGeometry(0.11, 12, 12),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    opticLaserDot.position.z = 1.3;
+    this.monolithGroup.add(opticBezel, opticIris, opticPupil, opticLaserDot);
+
+    // 7c. 6 Articulated Laser-Blade Seraphim Wings (3 pairs on Left & Right)
+    const wingSpecs: ReadonlyArray<{ y: number; span: number; zAngle: number; len: number }> = [
+      { y: 0.72, span: 1.25, zAngle: 0.42, len: 2.35 },
+      { y: 0.04, span: 1.38, zAngle: 0.05, len: 2.65 },
+      { y: -0.64, span: 1.2, zAngle: -0.38, len: 2.15 },
+    ];
+    for (let pairIdx = 0; pairIdx < wingSpecs.length; pairIdx++) {
+      const spec = wingSpecs[pairIdx];
+      for (const side of [-1, 1]) {
+        const pivot = new THREE.Group();
+        pivot.position.set(side * spec.span, spec.y, -0.18);
+        const baseZRot = side * spec.zAngle;
+        pivot.rotation.z = baseZRot;
+        pivot.rotation.y = -side * 0.22;
+
+        // Mechanical thruster mount
+        const mount = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.24, 0.28), bossArmorMat);
+        mount.position.x = side * 0.22;
+        pivot.add(mount);
+
+        const jointNode = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), bossGoldMat);
+        jointNode.position.set(side * 0.42, 0, 0.08);
+        pivot.add(jointNode);
+
+        // Primary swept laser blade feather
+        const mainBlade = new THREE.Mesh(new THREE.ConeGeometry(0.24, spec.len, 4), this.monolithCoreMat);
+        mainBlade.rotation.z = -side * (Math.PI / 2);
+        mainBlade.scale.set(0.45, 1, 1.35);
+        mainBlade.position.set(side * (0.45 + spec.len * 0.5), 0, 0);
+        pivot.add(mainBlade);
+
+        // Secondary neon cyan plasma edge feather
+        const subBlade = new THREE.Mesh(new THREE.ConeGeometry(0.13, spec.len * 0.78, 4), cyanLaserMat);
+        subBlade.rotation.z = -side * (Math.PI / 2);
+        subBlade.position.set(side * (0.5 + spec.len * 0.38), -0.18, 0.06);
+        pivot.add(subBlade);
+
+        this.monolithGroup.add(pivot);
+        this.seraphWings.push({ pivot, side, pairIdx, baseZRot });
+      }
+    }
+
+    // 7d. Interlocking Ophanim Gyroscope Rings + 4 Orbital Attack Drones
     this.haloRing1 = new THREE.Mesh(
-      new THREE.TorusGeometry(2.15, 0.075, 10, 36),
-      new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xea580c, emissiveIntensity: 0.7, metalness: 0.6 })
+      new THREE.TorusGeometry(2.15, 0.07, 10, 40),
+      bossGoldMat
     );
     this.haloRing1.rotation.x = 1.05;
     this.haloRing2 = new THREE.Mesh(
-      new THREE.TorusGeometry(2.48, 0.06, 10, 36),
-      new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xa855f7, emissiveIntensity: 0.6, metalness: 0.6 })
+      new THREE.TorusGeometry(2.52, 0.055, 10, 40),
+      new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x06b6d4, emissiveIntensity: 0.75, metalness: 0.6 })
     );
     this.haloRing2.rotation.y = 1.1;
     this.monolithGroup.add(this.haloRing1, this.haloRing2);
+
+    for (let d = 0; d < 4; d++) {
+      const droneGroup = new THREE.Group();
+      const dBody = new THREE.Mesh(new THREE.OctahedronGeometry(0.32, 0), bossArmorMat);
+      const dRing = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.04, 8, 20), cyanLaserMat);
+      dRing.rotation.x = Math.PI / 2;
+      const dEye = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 12), this.monolithCoreMat);
+      dEye.position.z = 0.24;
+      droneGroup.add(dBody, dRing, dEye);
+      this.monolithGroup.add(droneGroup);
+      this.seraphDrones.push({ group: droneGroup, angleOffset: (d / 4) * Math.PI * 2 });
+    }
+
     this.monolithGroup.position.set(0, 3.15, ARENA_CENTER_Z);
     this.group.add(this.monolithGroup);
 
@@ -863,7 +1141,7 @@ export class TowerArena3D {
       this.lastFloor = opts.floor;
       this.lastWave = opts.wave;
       if (!opts.paused) {
-        if (floorChanged) {
+        if (floorChanged || opts.isBossWave) {
           this.resetFloorCharge();
         } else {
           for (const f of this.fighters.values()) {
@@ -919,11 +1197,14 @@ export class TowerArena3D {
     this.monolithCoreMat.color.set(useBossColors ? '#f59e0b' : opts.isBossWave ? '#f43f5e' : '#38bdf8');
     this.monolithCoreMat.emissive.set(opts.isBossWave ? '#dc2626' : opts.anomalyColorHex);
     this.baseRingMat.color.set(opts.isBossWave ? '#facc15' : opts.anomalyColorHex);
-    this.trimRingMat.color.set(opts.isBossWave ? '#f43f5e' : '#38bdf8');
+    this.trimRingMat.color.set(opts.isBossWave ? '#f43f5e' : '#22d3ee');
     this.pillarCapMat.color.set(opts.isBossWave ? '#facc15' : opts.anomalyColorHex);
-    this.pillarCapMat.emissive.set(opts.isBossWave ? '#ef4444' : '#7c3aed');
-    this.eclipseCoronaMat.color.set(opts.isBossWave ? '#ef4444' : '#f97316');
+    this.pillarCapMat.emissive.set(opts.isBossWave ? '#ef4444' : '#06b6d4');
+    this.eclipseCoronaMat.color.set(opts.isBossWave ? '#ef4444' : '#22d3ee');
     this.eclipseHaloMat.color.set(opts.isBossWave ? '#f43f5e' : opts.anomalyColorHex);
+    (this.aiWireframeSphere.material as THREE.MeshBasicMaterial).color.set(
+      opts.isBossWave ? '#f43f5e' : '#22d3ee'
+    );
 
     if (opts.paused) {
       for (const f of this.fighters.values()) {
@@ -1080,13 +1361,27 @@ export class TowerArena3D {
     }
 
     if (this.bossWave) {
-      const pulse = this.bounceTimer > 0 ? 1 + (this.bounceTimer / 0.24) * 0.14 : 1;
+      const hitFactor = this.bounceTimer > 0 ? this.bounceTimer / 0.24 : 0;
+      const pulse = 1 + hitFactor * 0.14;
       const bossScale = this.bossMode ? 1.18 : 1.0;
       this.monolithGroup.scale.setScalar(bossScale * pulse);
       this.monolithGroup.position.y = 3.15 + Math.sin(elapsed * 2.1) * 0.18;
-      this.monolithGroup.rotation.y = elapsed * (this.bossMode ? 1.35 : 0.85);
+      this.monolithGroup.rotation.y = Math.sin(elapsed * 1.35) * 0.26;
+      this.monolithGroup.rotation.z = Math.cos(elapsed * 1.1) * 0.05;
+      this.seraphCage.rotation.y = elapsed * 0.85;
+      this.seraphCage.rotation.x = -elapsed * 0.55;
       this.haloRing1.rotation.z = elapsed * 1.4;
       this.haloRing2.rotation.x = elapsed * -1.1;
+
+      for (const w of this.seraphWings) {
+        const flap = Math.sin(elapsed * 3.4 - w.pairIdx * 0.65) * 0.16 + hitFactor * 0.28;
+        w.pivot.rotation.z = w.baseZRot + w.side * flap;
+      }
+      for (const d of this.seraphDrones) {
+        const a = d.angleOffset + elapsed * 1.75;
+        d.group.position.set(Math.cos(a) * 3.1, Math.sin(elapsed * 2.8 + d.angleOffset) * 0.45, Math.sin(a) * 1.85);
+        d.group.rotation.y = -a + Math.PI / 2;
+      }
     } else {
       for (const rock of this.waveRocks) {
         if (!rock.alive) continue;
@@ -1113,9 +1408,11 @@ export class TowerArena3D {
       }
     }
 
-    const coronaPulse = 1 + Math.sin(elapsed * 2.4) * 0.035;
-    this.eclipseCoronaRing.scale.setScalar(coronaPulse);
-    this.eclipseOuterHalo.scale.setScalar(1 + Math.sin(elapsed * 1.4 + 0.8) * 0.06);
+    this.eclipseOuterHalo.rotation.z = elapsed * 0.18;
+    this.aiWireframeSphere.rotation.y = elapsed * 0.45;
+    this.aiWireframeSphere.rotation.x = Math.sin(elapsed * 0.3) * 0.25;
+    this.aiGyroRing1.rotation.z = elapsed * 0.65;
+    this.aiGyroRing2.rotation.x = -elapsed * 0.52;
     this.abyssRing1.rotation.z = elapsed * 0.14;
     this.abyssRing2.rotation.z = -elapsed * 0.11;
 

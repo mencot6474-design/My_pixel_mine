@@ -302,7 +302,12 @@ export class GameHud {
         this.pushToast('Tower timer ended!');
         this.setSceneMode('shop');
         this.openModal('tower');
-      } else if (tick.status === 'active') {
+      } else if (tick.status === 'blessing-auto-picked') {
+        audio.playSfx('rare-fanfare', { volume: 0.65 });
+        this.pushToast(`Auto-picked Spire Blessing: ${tick.autoPickedBlessing?.name ?? 'Blessing'}!`);
+        this.syncTowerSceneVisual();
+        this.render();
+      } else if (tick.status === 'active' || tick.status === 'paused') {
         this.towerUi.updateLiveValues(this.root);
       }
     }, 100);

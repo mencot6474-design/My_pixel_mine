@@ -28,15 +28,15 @@ GAME_MAP.md                     Peta struktur file & anchor (dokumen ini)
 === ENTRY & TESTS ===
 src/main.ts                     139 baris — Bootstrap Three.js scene (`MineScene3D`), `GameState`, `GameHud` (+ plot drop ops,
                                             weather & CC0 `AudioManager` sync), CrazyGames SDK init, Tower callbacks & game loop
-tests/world-3d.test.ts        1.165 baris — 27 Vitest unit & integration specs (3D world, Altar dial/dice,
+tests/world-3d.test.ts        1.179 baris — 27 Vitest unit & integration specs (3D world, Altar dial/dice,
                                             Equip Best stat preservation, pure ore damage, research trees
                                             incl. Core-only tap damage, +300K Core Vault Expansion, & W1-W6
-                                            denseOreScale HP x10 / Drop x3, Gem Tower 10-wave 5-ore + Boss +
-                                            strike-only damage + 5-floor milestones, Shop Plaza, Void/Eclipse
-                                            Arena, background mining, hotbar drag reorder & hotbar-to-plot
-                                            swap/equip, 5-Weather 5% Celestial buffs, world/chibi-scaled upgrade
-                                            costs, Frozen+ mutation roll protection, 30 chibis, Exotic/Secret
-                                            tiers, buffed miner drops, & World 6 Starwell)
+                                            denseOreScale HP x10 / Drop x3, Gem Tower 10-wave 5-ore + 3D Seraphim Boss
+                                            + 5s Boss Invulnerability + 5s Blessing Auto-Pick + strike-only damage
+                                            + 5-floor milestones, Shop Plaza, Megacorp Mainframe Arena, background mining,
+                                            hotbar drag reorder & hotbar-to-plot swap/equip, 5-Weather 5% Celestial buffs,
+                                            world/chibi-scaled upgrade costs, Frozen+ mutation roll protection, 30 chibis,
+                                            Exotic/Secret tiers, buffed miner drops, & World 6 Starwell)
 
 === GAME DATA & STATE ===
 src/game/GameData.ts            462 baris — World (`underground`..`starwell` W1-W6), `ORES` 111 (48 ores),
@@ -49,21 +49,21 @@ src/game/ResearchData.ts      1.533 baris — `ResearchTreeId` (`core` | WorldId
                                             `formatNodeEffectLine` 129, `getNodeNextCost` 164, `CORE_NODES` 172
                                             (Strike I–VI sole `tapDamageFlat`, Vault Expansion I–II `+300K`),
                                             `STARWELL_NODES` 1326, `RESEARCH_NODES` 1509
-src/game/TowerData.ts           355 baris — `TOWER_MAX_KEYS` (5), `TOWER_KEY_REGEN_MS` (10m), `TOWER_WAVES_PER_FLOOR` (10),
-                                            `TOWER_ORE_ROCKS_PER_WAVE` (5), `TOWER_CHECKPOINT_STEP` (5), `TOWER_ANOMALIES`,
-                                            `TOWER_BLESSINGS`, `TOWER_MILESTONES` (per 5 floor: 5..50), `getTowerFloorDef`,
-                                            `getTowerWaveDef`, `rollTowerWaveOres`, `getTowerCheckpoints`,
-                                            `getTowerSweepGemReward`, `getGlobalGemGainBonus`
+src/game/TowerData.ts           359 baris — `TOWER_MAX_KEYS` (5), `TOWER_KEY_REGEN_MS` (10m), `TOWER_WAVES_PER_FLOOR` (10),
+                                            `TOWER_ORE_ROCKS_PER_WAVE` (5), `TOWER_BLESSING_AUTO_PICK_SEC` (5), `TOWER_BOSS_INVUL_SEC` (5),
+                                            `TOWER_CHECKPOINT_STEP` (5), `TOWER_ANOMALIES`, `TOWER_BLESSINGS`,
+                                            `TOWER_MILESTONES` (per 5 floor: 5..50), `getTowerFloorDef`, `getTowerWaveDef`,
+                                            `rollTowerWaveOres`, `getTowerCheckpoints`, `getTowerSweepGemReward`, `getGlobalGemGainBonus`
 src/game/WeatherData.ts         187 baris — `WeatherId` (`light_rain` | `snow_rain` | `bloodmoon` | `void` | `celestial`) 1,
                                             `WEATHER_DURATION_MS` (3m) 3, `WEATHERS` 33 (Celestial 5%: 10x Ore / 4x Gem / 5x DMG),
                                             `getWeatherById` 175, `rollWeatherDef` 179
-src/game/GameState.ts         1.793 baris — `PlotUnitState` 126, `SavePayload` 136, `getChibiUpgradeCostMult` 173
-                                            (skala biaya upgrade per harga world & `baseDps`), `GameState` 190: plot loadout/
-                                            leveling, `rollPlotMutation` 543, buffed `onOreBroken` miner drops 705,
+src/game/GameState.ts         1.823 baris — `PlotUnitState` 126, `SavePayload` 136, `getChibiUpgradeCostMult` 175
+                                            (skala biaya upgrade per harga world & `baseDps`), `GameState` 192: plot loadout/
+                                            leveling, `rollPlotMutation` 545, buffed `onOreBroken` miner drops 707,
                                             chests, inventory/ore stack, hotbar 1..9, shop stock, potions, research,
-                                            altar enchant, weather sync/timer/buffs, `getOreHpScale` 1128 /
-                                            `getOreOutputMult` 1146 (`denseOreScale`), global gem bonus, Gem Tower
-                                            10-wave/strike-only state/keys/runs/sweep, localStorage save
+                                            altar enchant, weather sync/timer/buffs, `getOreHpScale` 1130 /
+                                            `getOreOutputMult` 1148 (`denseOreScale`), global gem bonus, Gem Tower
+                                            10-wave/strike-only state/keys/runs/sweep (+ 5s Boss Invul & 5s Blessing Auto-Pick), localStorage save
 src/game/AssetUrl.ts             11 baris — `assetUrl` (resolusi URL aset `public/` terhadap `BASE_URL` `./` agar aman di subpath)
 src/game/NumberFormat.ts         45 baris — `fmtShort` 22, `fmtMoney` 33, `fmtInt` 37, `fmtPct` 41
 src/audio/AudioManager.ts       582 baris — Web Audio SFX pool + synth (`playMutationRoll`, `playEnchantSpinStart`, `playEnchantSpinLand`,
@@ -73,11 +73,11 @@ src/sdk/crazygames.ts           180 baris — CrazyGames SDK v3 wrapper (`isCraz
                                             `cgGameplayStart` 80, `cgHappyTime` 100, `cgRequestRewardedAd` 108)
 
 === UI HUD, MODALS & CSS (Modular Architecture) ===
-src/ui/GameHud.ts             1.798 baris — `GameHud`: Thin UI coordinator; manages 3D overlay layers (incl. Tower ore bars),
+src/ui/GameHud.ts             1.803 baris — `GameHud`: Thin UI coordinator; manages 3D overlay layers (incl. Tower ore bars),
                                             viewport scaling (`updateViewportScale`), currency rail + audio mute toggle, Weather top-left
                                             3D HUD (`renderWeatherHud`), hotbar 1..9 (click + drag reorder + plot drop),
                                             active potion pills, Shop Plaza HUD, Altar HUD + Auto Roll (`triggerSingleEnchantRoll`),
-                                            100ms Tower timer tick & real chibi strike dispatch, delegates modals, Plot Inspector & `TowerUi`
+                                            100ms Tower timer tick (incl. 5s Blessing auto-pick) & real chibi strike dispatch
 src/ui/HudShared.ts             228 baris — Shared types (`ModalKind` 4, `ModalThemeId` 16, `InvTab` 18),
                                             rarity/ring helpers (`rarityCardClasses` 21 incl. `exotic`/`secret`, `rarityVars`,
                                             `applyInspectRing`), `refreshPotionTimersInDom`, dark-glass Tailwind `TW_*` constants,
@@ -85,9 +85,9 @@ src/ui/HudShared.ts             228 baris — Shared types (`ModalKind` 4, `Moda
 src/ui/CollectionModalsUi.ts    778 baris — `CollectionModalsUi` 33: Index modal (6 worlds + Inspector),
                                             Backpack/Inventory (Equip Best / Search / Inspect), Chest modal & live updaters
 src/ui/ShopModalsUi.ts          635 baris — `ShopModalsUi` 40: Pickaxe Shop, Gem Shop, Sell Shop + Inspectors & updaters
-src/ui/TowerUi.ts               466 baris — `TowerUi` 15: Gem Tower Hub Dark-Glass modal (`renderTowerHubModal` 40:
+src/ui/TowerUi.ts               479 baris — `TowerUi` 15: Gem Tower Hub Dark-Glass modal (`renderTowerHubModal` 40:
                                             Keys, 5-Floor Checkpoints & Milestones, Anomalies, Quick Sweep, Run Summary) &
-                                            3D Arena HUD (`renderTowerArenaHud`, wave/ore pips, `updateLiveValues`, Blessings)
+                                            3D Arena HUD (`renderTowerArenaHud`, 5s Boss Invul shield label, 5s Blessing auto-pick timer)
 src/ui/UpgradesWorldsUi.ts      596 baris — `UpgradesWorldsUi` 15: Research/Upgrades tree & World Teleport full-banner
                                             modal (`buildWorldsListHtml` 308 pakai `public/worlds/*.jpg`) & live updaters
 src/ui/PlotInspectUi.ts         398 baris — `PlotInspectUi` 24: Plot Inspector overlay, live updater & modal
@@ -121,9 +121,9 @@ src/game3d/ChibiSprite3D.ts     188 baris — Animated 2D-in-3D billboard sprite
 src/game3d/ShopWorld3D.ts     1.243 baris — 3D Shop Plaza dengan aset Kenney (`fantasy-town/`, `castle/`, `nature/`):
                                             Pickaxe Shop, Sell Stall, Gem Tower Citadel, Enchant Altar medallion,
                                             floating station icons yang ditinggikan di atas atap, & Outer Space Altar clock room
-src/game3d/TowerArena3D.ts    1.292 baris — Cosmic Void/Eclipse 3D Colosseum Arena: sky dome nebula/stars, Total Solar
-                                            Eclipse corona, arcane rune deck, 8 obsidian pillars, 5 random wave ore rock slots
-                                            (Waves 1–9), Boss Monolith (Wave 10), & Chibi Fighters (`dash` -> melee `attack` strike)
+src/game3d/TowerArena3D.ts    1.589 baris — Megacorp Mainframe Core 3D Cyber-Arena: cyberspace wireframe grid dome,
+                                            Holographic AI Core, server monolith towers + vertical data stream beams, PCB circuit deck,
+                                            8 server pylons, 5 random wave ore rock slots (Waves 1–9), 3D Seraphim AI Overlord Boss (Wave 10), & Chibi Fighters
 src/game3d/AltarSpinFx3D.ts     529 baris — `createAltarClockDial` 34, `createAltarClockHand` 153,
                                             `createAltarSubHand` 246, `AltarParticleSystem` 300
 src/game3d/HellAltarEye3D.ts    372 baris — `HellAltarEyeController` 149: Outer Space starfield, cosmic astrolabe floor ring,

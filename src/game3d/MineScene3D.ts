@@ -640,8 +640,8 @@ export class MineScene3D {
       this.targetCamRadius = 12.2;
       this.lookAtPos.set(0, 1.05, -2.4);
     } else if (mode === 'tower') {
-      this.scene.background = new THREE.Color(0x03010a);
-      this.scene.fog = new THREE.Fog(0x090418, 34, 92);
+      this.scene.background = new THREE.Color(0x020614);
+      this.scene.fog = new THREE.Fog(0x040b1e, 38, 96);
       this.targetOrbitYaw = 0;
       this.targetOrbitPitch = -0.34;
       this.targetCamRadius = 16.4;

@@ -686,6 +686,14 @@ describe('Pure 3D Mine World', () => {
     expect(gs.towerRun?.wave).toBe(10);
     expect(gs.towerRun?.isBossWave).toBe(true);
     expect(gs.towerRun?.waveOres).toHaveLength(0);
+    expect(gs.towerRun?.bossInvulLeft).toBe(5);
+
+    // Boss is invulnerable for the first 5 seconds so it cannot be insta-hit
+    const bossMaxHp = gs.towerRun!.maxHp;
+    expect(gs.tapTowerTarget(null, () => 0.99).dmgDealt).toBe(0);
+    expect(gs.towerRun?.hp).toBe(bossMaxHp);
+    gs.stepTowerTick(5.0);
+    expect(gs.towerRun?.bossInvulLeft).toBe(0);
 
     // Defeat Wave 10 Boss -> Floor 1 cleared & 3-card Spire Blessing pause
     guard = 0;
@@ -702,12 +710,18 @@ describe('Pure 3D Mine World', () => {
     expect(gs.towerRun?.wave).toBe(1);
     expect(gs.towerRun?.blessings.some((b) => b.id === chosenId)).toBe(true);
 
-    // Clear Floors 2..5 (10 waves each, picking blessings between floors) -> unlocks Milestone 5 + Dice
+    // Clear Floors 2..5 (10 waves each, verifying 5s boss invul + 5s random blessing auto-pick) -> unlocks Milestone 5 + Dice
     const diceBeforeBoss = gs.enchantDice;
     guard = 0;
     while (gs.towerRun && gs.towerBestFloor < 5 && guard < 6000) {
       if (gs.towerRun.pendingBlessings) {
-        gs.chooseTowerBlessing(gs.towerRun.pendingBlessings[0].id);
+        expect(gs.stepTowerTick(2.5).status).toBe('paused');
+        const autoTick = gs.stepTowerTick(2.6, () => 0.65);
+        expect(autoTick.status).toBe('blessing-auto-picked');
+        expect(autoTick.autoPickedBlessing).toBeDefined();
+        expect(gs.towerRun.pendingBlessings).toBeNull();
+      } else if (gs.towerRun.isBossWave && (gs.towerRun.bossInvulLeft ?? 0) > 0) {
+        gs.stepTowerTick(5.0);
       } else {
         gs.tapTowerTarget(null, () => 0.01); // triggers boss dice drop too
       }

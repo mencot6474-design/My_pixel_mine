@@ -47,10 +47,13 @@ import {
   getTowerWaveDef,
   pickTowerBlessingChoices,
   rollTowerWaveOres,
+  TOWER_BLESSING_AUTO_PICK_SEC,
+  TOWER_BOSS_INVUL_SEC,
   TOWER_KEY_REGEN_MS,
   TOWER_MAX_KEYS,
   TOWER_MILESTONES,
   TOWER_WAVES_PER_FLOOR,
+  TowerBlessingDef,
   TowerRunState,
   TowerRunSummary,
   TowerSaveData,
@@ -1282,6 +1285,7 @@ export class GameState {
     this.towerRun.maxHp = totalHp;
     this.towerRun.timeLeft = maxTime;
     this.towerRun.maxTime = maxTime;
+    this.towerRun.bossInvulLeft = waveDef.isBoss ? TOWER_BOSS_INVUL_SEC : 0;
   }
 
   public startTowerRun(startFloor = 1, now = Date.now(), rng: () => number = Math.random): boolean {
@@ -1386,6 +1390,7 @@ export class GameState {
 
     run.hp = 0;
     run.pendingBlessings = pickTowerBlessingChoices(rng);
+    run.blessingTimerLeft = TOWER_BLESSING_AUTO_PICK_SEC;
     this.emit();
     return {
       waveCleared: true,
@@ -1419,12 +1424,33 @@ export class GameState {
     return summary;
   }
 
-  public stepTowerTick(dtSec: number): {
-    status: 'idle' | 'paused' | 'active' | 'timeout';
+  public stepTowerTick(
+    dtSec: number,
+    rng: () => number = Math.random
+  ): {
+    status: 'idle' | 'paused' | 'active' | 'timeout' | 'blessing-auto-picked';
     summary?: TowerRunSummary | null;
+    autoPickedBlessing?: TowerBlessingDef;
   } {
     if (!this.towerRun) return { status: 'idle' };
-    if (this.towerRun.pendingBlessings) return { status: 'paused' };
+    if (this.towerRun.pendingBlessings) {
+      const prevLeft = this.towerRun.blessingTimerLeft ?? TOWER_BLESSING_AUTO_PICK_SEC;
+      const nextLeft = Math.max(0, prevLeft - dtSec);
+      this.towerRun.blessingTimerLeft = nextLeft;
+      if (nextLeft <= 0 && this.towerRun.pendingBlessings.length > 0) {
+        const choices = this.towerRun.pendingBlessings;
+        const randIdx = Math.min(choices.length - 1, Math.max(0, Math.floor(rng() * choices.length)));
+        const picked = choices[randIdx];
+        this.chooseTowerBlessing(picked.id, rng);
+        return { status: 'blessing-auto-picked', autoPickedBlessing: picked };
+      }
+      return { status: 'paused' };
+    }
+
+    if ((this.towerRun.bossInvulLeft ?? 0) > 0) {
+      this.towerRun.bossInvulLeft = Math.max(0, (this.towerRun.bossInvulLeft ?? 0) - dtSec);
+      return { status: 'active' };
+    }
 
     // Only advance the wave countdown timer; HP drops exclusively from real chibi strikes or player taps.
     this.towerRun.timeLeft = Math.max(0, this.towerRun.timeLeft - dtSec);
@@ -1468,6 +1494,9 @@ export class GameState {
 
     const dmg = Math.max(1, Math.round(rawDmg));
     if (run.isBossWave) {
+      if ((run.bossInvulLeft ?? 0) > 0) {
+        return emptyRes;
+      }
       const dmgDealt = Math.min(run.hp, dmg);
       run.hp = Math.max(0, run.hp - dmgDealt);
       if (run.hp <= 0) {
@@ -1568,6 +1597,7 @@ export class GameState {
     if (!picked) return false;
     this.towerRun.blessings.push(picked);
     this.towerRun.pendingBlessings = null;
+    this.towerRun.blessingTimerLeft = 0;
     this.setupTowerWave(this.towerRun.floor + 1, 1, rng);
     this.emit();
     return true;

@@ -74,6 +74,8 @@ export const TOWER_CHECKPOINT_STEP = 5;
 export const TOWER_WAVES_PER_FLOOR = 10;
 export const TOWER_ORE_ROCKS_PER_WAVE = 5;
 export const TOWER_BOSS_WAVE = 10;
+export const TOWER_BLESSING_AUTO_PICK_SEC = 5;
+export const TOWER_BOSS_INVUL_SEC = 5;
 
 export const TOWER_ANOMALIES: readonly TowerAnomalyDef[] = [
   {
@@ -321,6 +323,8 @@ export interface TowerRunState {
   wavesCleared: number;
   blessings: TowerBlessingDef[];
   pendingBlessings: TowerBlessingDef[] | null;
+  blessingTimerLeft?: number;
+  bossInvulLeft?: number;
 }
 
 export interface TowerRunSummary {
