@@ -28,6 +28,7 @@ export interface ChibiDef {
   accentColor: string;
   baseDps: number;
   poseScale?: number;
+  smoothFilter?: boolean;
 }
 
 function makePoses(id: string): ChibiPoseUrls {
@@ -56,6 +57,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     rarity: 'common',
     accentColor: '#38bdf8',
     baseDps: 8,
+    smoothFilter: true,
   },
   {
     id: 'solar-striker',
@@ -66,16 +68,18 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     rarity: 'uncommon',
     accentColor: '#f59e0b',
     baseDps: 16,
+    smoothFilter: true,
   },
   {
     id: 'frost-vanguard',
-    name: 'Frost Vanguard',
+    name: 'Mistveil Shinobi',
     spriteUrl: '/chibi/frost-vanguard/idle.png',
     poses: makePoses('frost-vanguard'),
     frames: 4,
     rarity: 'rare',
     accentColor: '#60a5fa',
     baseDps: 22,
+    smoothFilter: true,
   },
   {
     id: 'volt-kensei',
@@ -201,23 +205,25 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   // === Worlds 1–5 Exotic & Secret Additions (10) ===
   {
     id: 'tropic-blaze',
-    name: 'Tropic Blaze',
+    name: 'Oni Brawler',
     spriteUrl: '/chibi/tropic-blaze/idle.png',
     poses: makePoses('tropic-blaze'),
     frames: 4,
     rarity: 'exotic',
     accentColor: '#fb923c',
     baseDps: 38,
+    smoothFilter: true,
   },
   {
     id: 'cyber-ki-brawler',
-    name: 'Cyber Ki Brawler',
+    name: 'Inkcloud',
     spriteUrl: '/chibi/cyber-ki-brawler/idle.png',
     poses: makePoses('cyber-ki-brawler'),
     frames: 4,
     rarity: 'secret',
     accentColor: '#22d3ee',
     baseDps: 60,
+    smoothFilter: true,
   },
   {
     id: 'aqua-blitz',

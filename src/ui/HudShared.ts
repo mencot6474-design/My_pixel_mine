@@ -1,5 +1,17 @@
+import { assetUrl } from '../game/AssetUrl';
 import { RARITY_BORDER, ItemRarity } from '../game/GameData';
 import { GameState } from '../game/GameState';
+import { ChibiDef } from '../game3d/ChibiCatalog';
+
+export function chibiPortraitHtml(
+  chibi: ChibiDef,
+  opts?: { usePose?: boolean; draggable?: boolean }
+): string {
+  const src = assetUrl(opts?.usePose ? chibi.poses.pose : chibi.spriteUrl);
+  const cls = chibi.smoothFilter ? ' class="mam-chibi-smooth"' : '';
+  const drag = opts?.draggable === false ? ' draggable="false"' : '';
+  return `<div class="mam-chibi-portrait"><img src="${src}" alt="${chibi.name}"${cls}${drag} /></div>`;
+}
 
 export type ModalKind =
   | 'none'

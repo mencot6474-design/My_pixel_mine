@@ -1,6 +1,5 @@
 import { getChibiById } from '../game3d/ChibiCatalog';
 import { audio } from '../audio/AudioManager';
-import { assetUrl } from '../game/AssetUrl';
 import {
   GEM_SHOP_ITEMS,
   getGemShopItemById,
@@ -17,6 +16,7 @@ import { fmtInt, fmtMoney } from '../game/NumberFormat';
 import { gemPotionIconHtml, hudIconHtml, oreIconSvg, pickaxeIconHtml } from './HudIcons';
 import {
   applyInspectRing,
+  chibiPortraitHtml,
   rarityCardClasses,
   rarityVars,
   refreshPotionTimersInDom,
@@ -300,7 +300,7 @@ export class ShopModalsUi {
         rarity: getMinerRarity(def.id),
         qty: sellable,
         totalValue: getMinerSellValue(def.id) * sellable,
-        artHtml: `<div class="mam-chibi-portrait"><img src="${assetUrl(def.spriteUrl)}" alt="${def.name}" /></div>`,
+        artHtml: chibiPortraitHtml(def),
       });
     }
 

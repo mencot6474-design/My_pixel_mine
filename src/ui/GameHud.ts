@@ -1,5 +1,4 @@
 import { audio } from '../audio/AudioManager';
-import { assetUrl } from '../game/AssetUrl';
 import { getChibiById } from '../game3d/ChibiCatalog';
 import { OreHpScreen, PlotAnchorScreen, SceneMode } from '../game3d/MineScene3D';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
@@ -33,6 +32,7 @@ import {
   weatherIconHtml,
 } from './HudIcons';
 import {
+  chibiPortraitHtml,
   ModalKind,
   rarityCardClasses,
   rarityVars,
@@ -1075,7 +1075,7 @@ export class GameHud {
         if (chibi) {
           rarity = getMinerRarity(chibi.id);
           title = chibi.name;
-          artHtml = `<div class="mam-chibi-portrait"><img src="${assetUrl(chibi.spriteUrl)}" alt="${chibi.name}" draggable="false" /></div>`;
+          artHtml = chibiPortraitHtml(chibi, { draggable: false });
           worth = getMinerSellValue(chibi.id);
           qty = this.state.miners[chibi.id] || 0;
         } else {

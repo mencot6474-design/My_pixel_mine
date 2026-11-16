@@ -241,6 +241,10 @@
     pointer-events: none;
   }
 
+  .mam-chibi-portrait img.mam-chibi-smooth {
+    image-rendering: auto;
+  }
+
   .mam-card-name {
     position: relative;
     z-index: 2;

@@ -1,5 +1,4 @@
 import { audio } from '../audio/AudioManager';
-import { assetUrl } from '../game/AssetUrl';
 import { CHIBI_CATALOG, getChibiById } from '../game3d/ChibiCatalog';
 import {
   GEM_SHOP_ITEMS,
@@ -18,6 +17,7 @@ import { fmtInt, fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
 import { gemPotionIconHtml, hudIconHtml, oreIconSvg } from './HudIcons';
 import {
   applyInspectRing,
+  chibiPortraitHtml,
   InvTab,
   rarityCardClasses,
   rarityVars,
@@ -95,7 +95,7 @@ export class CollectionModalsUi {
         title: chibi.name,
         subtitle: `${worldDef.name} • Chibi Miner`,
         badgesHtml: statusBadge,
-        artHtml: `<div class="mam-chibi-portrait"><img src="${assetUrl(chibi.poses.pose)}" alt="${chibi.name}" /></div>`,
+        artHtml: chibiPortraitHtml(chibi, { usePose: true }),
         dimmed: !unlocked,
         stats: [
           ['Drop Chance', fmtPct(entry.chancePct), 'text-[#7dd3fc]'],
@@ -137,7 +137,7 @@ export class CollectionModalsUi {
         return `
           <div class="${rarityCardClasses(entry.rarity, `${unlocked ? '' : 'locked'} ${isSel ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.45)]' : ''}`.trim())}" style="${rarityVars(entry.rarity)}" data-index-id="${chibi.id}" title="${chibi.name} (${fmtShort(chibi.baseDps)} DPS)">
             <div class="mam-card-art">
-              <div class="mam-chibi-portrait"><img src="${assetUrl(chibi.poses.pose)}" alt="${chibi.name}" /></div>
+              ${chibiPortraitHtml(chibi, { usePose: true })}
             </div>
             <div class="mam-card-name mam-outline-sm">${chibi.name}</div>
             <div class="mam-card-bottom">
@@ -262,7 +262,7 @@ export class CollectionModalsUi {
         title: def.name,
         subtitle: 'Backpack • Chibi Miner',
         badgesHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] font-black border ${isEq ? 'bg-[#14532d]/60 border-[#4ade80]/70 text-[#86efac]' : 'bg-[#1e293b] border-[#475569] text-[#cbd5e1]'}">${isEq ? `Hotbar #${hotbarIdx + 1}` : 'Not Equipped'}</span>`,
-        artHtml: `<div class="mam-chibi-portrait"><img src="${assetUrl(def.spriteUrl)}" alt="${def.name}" /></div>`,
+        artHtml: chibiPortraitHtml(def),
         stats: [
           ['Owned', `x${fmtInt(qty)}`, 'text-white'],
           ['Base DPS', `${fmtShort(def.baseDps)}/s`, 'text-[#facc15]'],
@@ -362,7 +362,7 @@ export class CollectionModalsUi {
           <div class="${rarityCardClasses(rarity, isInsp ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.4)]' : '')}" style="${rarityVars(rarity)}" data-equip-miner="${def.id}" title="Click to Equip / Unequip">
             ${isEquipped ? '<span class="mam-equipped-tag">EQ</span>' : ''}
             <div class="mam-card-art">
-              <div class="mam-chibi-portrait"><img src="${assetUrl(def.spriteUrl)}" alt="${def.name}" /></div>
+              ${chibiPortraitHtml(def)}
             </div>
             <div class="mam-card-name mam-outline-sm">${def.name}</div>
             <div class="mam-card-bottom">
@@ -473,7 +473,7 @@ export class CollectionModalsUi {
       cards.push(`
         <div class="${rarityCardClasses(rarity)}" style="${rarityVars(rarity)}">
           <div class="mam-card-art">
-            <div class="mam-chibi-portrait"><img src="${assetUrl(def.spriteUrl)}" alt="${def.name}" /></div>
+            ${chibiPortraitHtml(def)}
           </div>
           <div class="mam-card-name mam-outline-sm">${def.name}</div>
           <div class="mam-card-bottom">

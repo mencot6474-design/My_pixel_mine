@@ -44,9 +44,10 @@ function getSoftContactShadowTexture(): THREE.CanvasTexture | null {
   return tex;
 }
 
-function loadPoseMeta(url: string): Promise<LoadedPoseMeta> {
+function loadPoseMeta(url: string, smoothFilter = false): Promise<LoadedPoseMeta> {
   const resolved = assetUrl(url);
-  const cached = poseCache.get(resolved);
+  const cacheKey = `${resolved}|${smoothFilter ? 'smooth' : 'pixel'}`;
+  const cached = poseCache.get(cacheKey);
   if (cached) return cached;
 
   const promise = new Promise<LoadedPoseMeta>((resolve, reject) => {
@@ -54,9 +55,15 @@ function loadPoseMeta(url: string): Promise<LoadedPoseMeta> {
       resolved,
       (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
-        tex.magFilter = THREE.NearestFilter;
-        tex.minFilter = THREE.NearestFilter;
-        tex.generateMipmaps = false;
+        if (smoothFilter) {
+          tex.magFilter = THREE.LinearFilter;
+          tex.minFilter = THREE.LinearMipmapLinearFilter;
+          tex.generateMipmaps = true;
+        } else {
+          tex.magFilter = THREE.NearestFilter;
+          tex.minFilter = THREE.NearestFilter;
+          tex.generateMipmaps = false;
+        }
         tex.wrapS = THREE.ClampToEdgeWrapping;
         tex.wrapT = THREE.ClampToEdgeWrapping;
         tex.needsUpdate = true;
@@ -69,7 +76,7 @@ function loadPoseMeta(url: string): Promise<LoadedPoseMeta> {
     );
   });
 
-  poseCache.set(resolved, promise);
+  poseCache.set(cacheKey, promise);
   return promise;
 }
 
@@ -153,24 +160,26 @@ export class ChibiSprite3D {
     this.group.add(this.shadowDisc);
 
     // Preload all 4 poses for instant state swaps and capture idle height reference
-    void loadPoseMeta(this.def.poses.idle).then(
+    const smooth = Boolean(this.def.smoothFilter);
+    void loadPoseMeta(this.def.poses.idle, smooth).then(
       (meta) => {
         if (!this.disposed) this.idlePixelHeight = meta.pixelHeight;
       },
       () => {}
     );
-    void loadPoseMeta(this.def.poses.walk).catch(() => {});
-    void loadPoseMeta(this.def.poses.attack).catch(() => {});
-    void loadPoseMeta(this.def.poses.pose).catch(() => {});
+    void loadPoseMeta(this.def.poses.walk, smooth).catch(() => {});
+    void loadPoseMeta(this.def.poses.attack, smooth).catch(() => {});
+    void loadPoseMeta(this.def.poses.pose, smooth).catch(() => {});
     void this.applyPose('idle');
   }
 
   private async applyPose(state: ChibiAnimState): Promise<void> {
     try {
       const url = stateToPoseUrl(this.def, state);
+      const smooth = Boolean(this.def.smoothFilter);
       const [meta, idleMeta] = await Promise.all([
-        loadPoseMeta(url),
-        this.idlePixelHeight !== null ? Promise.resolve(null) : loadPoseMeta(this.def.poses.idle),
+        loadPoseMeta(url, smooth),
+        this.idlePixelHeight !== null ? Promise.resolve(null) : loadPoseMeta(this.def.poses.idle, smooth),
       ]);
       if (idleMeta && this.idlePixelHeight === null) {
         this.idlePixelHeight = idleMeta.pixelHeight;
