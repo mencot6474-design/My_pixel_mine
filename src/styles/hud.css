@@ -164,6 +164,46 @@
     box-shadow: inset 0 0 14px rgba(236, 72, 153, 0.45);
   }
 
+  .mam-card.rarity-exotic,
+  .mam-strip-card.rarity-exotic,
+  .mam-altar-card.rarity-exotic {
+    border: 2.5px solid transparent;
+    background:
+      radial-gradient(circle at 50% 44%, rgba(20, 184, 166, 0.42), #0f1722 85%) padding-box,
+      linear-gradient(135deg, #2dd4bf, #06b6d4, #34d399, #22d3ee) border-box;
+    animation: mamExoticPulse 2.4s ease-in-out infinite;
+  }
+
+  .mam-card.rarity-secret,
+  .mam-strip-card.rarity-secret,
+  .mam-altar-card.rarity-secret {
+    border: 2.5px solid transparent;
+    background:
+      radial-gradient(circle at 50% 44%, rgba(244, 63, 94, 0.45), #090a12 85%) padding-box,
+      linear-gradient(135deg, #f43f5e, #fbbf24, #9f1239, #f59e0b) border-box;
+    animation: mamSecretPulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes mamExoticPulse {
+    0%,
+    100% {
+      box-shadow: inset 0 0 14px rgba(20, 184, 166, 0.48), 0 0 8px rgba(34, 211, 238, 0.28);
+    }
+    50% {
+      box-shadow: inset 0 0 22px rgba(52, 211, 153, 0.68), 0 0 14px rgba(45, 212, 191, 0.5);
+    }
+  }
+
+  @keyframes mamSecretPulse {
+    0%,
+    100% {
+      box-shadow: inset 0 0 16px rgba(244, 63, 94, 0.55), 0 0 10px rgba(244, 63, 94, 0.35);
+    }
+    50% {
+      box-shadow: inset 0 0 24px rgba(251, 191, 36, 0.62), 0 0 16px rgba(244, 63, 94, 0.65);
+    }
+  }
+
   .mam-card.locked,
   .mam-strip-card.locked {
     filter: grayscale(1) brightness(0.42);

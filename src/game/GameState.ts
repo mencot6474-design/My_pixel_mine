@@ -119,6 +119,7 @@ function createEmptyResearchLevels(): ResearchLevelsMap {
     magma: {},
     ruins: {},
     astral: {},
+    starwell: {},
   };
 }
 
@@ -724,8 +725,8 @@ export class GameState {
       }
     }
 
-    // Rare chance to drop a Miner from Rock / Vein / Geode
-    const minerChance = (variantKey === 'geode' ? 0.04 : variantKey === 'vein' ? 0.015 : 0.004) * (1 + findBonus);
+    // Balanced chance to drop a Miner from Rock / Vein / Geode
+    const minerChance = (variantKey === 'geode' ? 0.12 : variantKey === 'vein' ? 0.045 : 0.014) * (1 + findBonus);
     if (rng() < minerChance && added < capLeft) {
       const miner = rollWorldMiner(this.activeWorldId, rng, charLuck);
       if (miner) {

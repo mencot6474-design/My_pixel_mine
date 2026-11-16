@@ -22,7 +22,10 @@ export const DEFAULT_WORLD_PALETTE: MineWorldPalette = {
   foliageColor: '#16a34a',
 };
 
-export const WORLD_PALETTES: Record<'underground' | 'crystal' | 'magma' | 'ruins' | 'astral', MineWorldPalette> = {
+export const WORLD_PALETTES: Record<
+  'underground' | 'crystal' | 'magma' | 'ruins' | 'astral' | 'starwell',
+  MineWorldPalette
+> = {
   underground: DEFAULT_WORLD_PALETTE,
   crystal: {
     crystalColor: '#22d3ee',
@@ -67,6 +70,17 @@ export const WORLD_PALETTES: Record<'underground' | 'crystal' | 'magma' | 'ruins
     cliffColor: '#1e1b4b',
     pitFloorColor: '#6d28d9',
     foliageColor: '#a855f7',
+  },
+  starwell: {
+    crystalColor: '#38bdf8',
+    rockColor: '#64748b',
+    skyTop: '#0369a1',
+    skyBottom: '#bae6fd',
+    fogColor: '#7dd3fc',
+    terrainColor: '#e2e8f0',
+    cliffColor: '#475569',
+    pitFloorColor: '#cbd5e1',
+    foliageColor: '#0ea5e9',
   },
 };
 

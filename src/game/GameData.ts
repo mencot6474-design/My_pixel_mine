@@ -1,15 +1,8 @@
-import { CHIBI_CATALOG, ChibiDef } from '../game3d/ChibiCatalog';
+import { CHIBI_CATALOG, ChibiDef, ChibiRarity } from '../game3d/ChibiCatalog';
 
-export type WorldId = 'underground' | 'crystal' | 'magma' | 'ruins' | 'astral';
+export type WorldId = 'underground' | 'crystal' | 'magma' | 'ruins' | 'astral' | 'starwell';
 
-export type ItemRarity =
-  | 'common'
-  | 'uncommon'
-  | 'rare'
-  | 'epic'
-  | 'legendary'
-  | 'rainbow'
-  | 'mythic';
+export type ItemRarity = ChibiRarity;
 
 export interface OreDef {
   id: string;
@@ -94,6 +87,8 @@ export const RARITY_BORDER: Record<ItemRarity, string> = {
   legendary: '#f59e0b',
   rainbow: '#f472b6',
   mythic: '#ec4899',
+  exotic: '#14b8a6',
+  secret: '#f43f5e',
 };
 
 export const WORLDS: readonly WorldDef[] = [
@@ -102,6 +97,7 @@ export const WORLDS: readonly WorldDef[] = [
   { id: 'magma', name: 'Magma Hollows', iconColor: '#f97316', unlockCost: 500_000_000, oreHpMult: 30_000 },
   { id: 'ruins', name: 'Ancient Ruins', iconColor: '#a855f7', unlockCost: 100_000_000_000, oreHpMult: 5_000_000 },
   { id: 'astral', name: 'Voidreach', iconColor: '#e879f9', unlockCost: 25_000_000_000_000, oreHpMult: 180_000_000 },
+  { id: 'starwell', name: 'Starwell', iconColor: '#38bdf8', unlockCost: 5_000_000_000_000_000, oreHpMult: 6_000_000_000 },
 ] as const;
 
 export function getWorldById(worldId: WorldId): WorldDef {
@@ -162,33 +158,60 @@ export const ORES: readonly OreDef[] = [
   { id: 'cosmite', name: 'Cosmite', worldId: 'astral', chancePct: 1.1, rarity: 'legendary', color: '#ec4899', secondaryColor: '#1e1b4b', sellValue: 8500000 },
   { id: 'singularite', name: 'Singularite', worldId: 'astral', chancePct: 0.3, rarity: 'rainbow', color: '#38bdf8', secondaryColor: '#09090b', sellValue: 35000000 },
   { id: 'duskcrown', name: 'Duskcrown', worldId: 'astral', chancePct: 0.01, rarity: 'mythic', color: '#ec4899', secondaryColor: '#09090b', sellValue: 240000000 },
+
+  // 6. Starwell (matching World 6 Index)
+  { id: 'cloudgrit', name: 'Cloudgrit', worldId: 'starwell', chancePct: 46.755, rarity: 'common', color: '#7dd3fc', secondaryColor: '#334155', sellValue: 250000 },
+  { id: 'skyshale', name: 'Skyshale', worldId: 'starwell', chancePct: 25.0, rarity: 'uncommon', color: '#38bdf8', secondaryColor: '#0f172a', sellValue: 780000 },
+  { id: 'sunvein', name: 'Sunvein', worldId: 'starwell', chancePct: 16.0, rarity: 'rare', color: '#facc15', secondaryColor: '#1e293b', sellValue: 2100000 },
+  { id: 'gleamstone', name: 'Gleamstone', worldId: 'starwell', chancePct: 7.9, rarity: 'rare', color: '#a5f3fc', secondaryColor: '#334155', sellValue: 5500000 },
+  { id: 'aurorine', name: 'Aurorine', worldId: 'starwell', chancePct: 3.1, rarity: 'epic', color: '#22d3ee', secondaryColor: '#a855f7', sellValue: 15000000 },
+  { id: 'zenithite', name: 'Zenithite', worldId: 'starwell', chancePct: 0.99, rarity: 'legendary', color: '#0ea5e9', secondaryColor: '#09090b', sellValue: 46000000 },
+  { id: 'caelite', name: 'Caelite', worldId: 'starwell', chancePct: 0.25, rarity: 'rainbow', color: '#38bdf8', secondaryColor: '#f472b6', sellValue: 190000000 },
+  { id: 'dawncrown', name: 'Dawncrown', worldId: 'starwell', chancePct: 0.005, rarity: 'mythic', color: '#fbbf24', secondaryColor: '#ec4899', sellValue: 1400000000 },
 ] as const;
 
 export const WORLD_MINERS: readonly WorldMinerEntry[] = [
-  // 1. The Underground (3 miners)
-  { chibiId: 'astral-recruit', worldId: 'underground', chancePct: 3.5, rarity: 'common' },
-  { chibiId: 'solar-striker', worldId: 'underground', chancePct: 1.2, rarity: 'uncommon' },
-  { chibiId: 'frost-vanguard', worldId: 'underground', chancePct: 0.35, rarity: 'rare' },
+  // 1. The Underground (5 miners)
+  { chibiId: 'astral-recruit', worldId: 'underground', chancePct: 4.2, rarity: 'common' },
+  { chibiId: 'solar-striker', worldId: 'underground', chancePct: 2.0, rarity: 'uncommon' },
+  { chibiId: 'frost-vanguard', worldId: 'underground', chancePct: 0.85, rarity: 'rare' },
+  { chibiId: 'tropic-blaze', worldId: 'underground', chancePct: 0.3, rarity: 'exotic' },
+  { chibiId: 'cyber-ki-brawler', worldId: 'underground', chancePct: 0.09, rarity: 'secret' },
 
-  // 2. Crystal Caves (3 miners)
-  { chibiId: 'volt-kensei', worldId: 'crystal', chancePct: 2.5, rarity: 'uncommon' },
-  { chibiId: 'pyre-kitsune', worldId: 'crystal', chancePct: 0.85, rarity: 'rare' },
-  { chibiId: 'zephyr-esper', worldId: 'crystal', chancePct: 0.22, rarity: 'epic' },
+  // 2. Crystal Caves (5 miners)
+  { chibiId: 'volt-kensei', worldId: 'crystal', chancePct: 3.2, rarity: 'uncommon' },
+  { chibiId: 'pyre-kitsune', worldId: 'crystal', chancePct: 1.5, rarity: 'rare' },
+  { chibiId: 'zephyr-esper', worldId: 'crystal', chancePct: 0.6, rarity: 'epic' },
+  { chibiId: 'aqua-blitz', worldId: 'crystal', chancePct: 0.22, rarity: 'exotic' },
+  { chibiId: 'glacier-tide', worldId: 'crystal', chancePct: 0.065, rarity: 'secret' },
 
-  // 3. Magma Hollows (3 miners)
-  { chibiId: 'mantis-monarch', worldId: 'magma', chancePct: 1.8, rarity: 'rare' },
-  { chibiId: 'vortex-mimic', worldId: 'magma', chancePct: 0.55, rarity: 'epic' },
-  { chibiId: 'vesper-ward', worldId: 'magma', chancePct: 0.12, rarity: 'legendary' },
+  // 3. Magma Hollows (5 miners)
+  { chibiId: 'mantis-monarch', worldId: 'magma', chancePct: 2.4, rarity: 'rare' },
+  { chibiId: 'vortex-mimic', worldId: 'magma', chancePct: 1.1, rarity: 'epic' },
+  { chibiId: 'vesper-ward', worldId: 'magma', chancePct: 0.42, rarity: 'legendary' },
+  { chibiId: 'tidebound-corsair', worldId: 'magma', chancePct: 0.15, rarity: 'exotic' },
+  { chibiId: 'chroma-quill', worldId: 'magma', chancePct: 0.045, rarity: 'secret' },
 
-  // 4. Ancient Ruins (3 miners)
-  { chibiId: 'tempest-drake', worldId: 'ruins', chancePct: 1.2, rarity: 'epic' },
-  { chibiId: 'titan-dread', worldId: 'ruins', chancePct: 0.32, rarity: 'legendary' },
-  { chibiId: 'seraph-paladin', worldId: 'ruins', chancePct: 0.06, rarity: 'mythic' },
+  // 4. Ancient Ruins (5 miners)
+  { chibiId: 'tempest-drake', worldId: 'ruins', chancePct: 1.8, rarity: 'epic' },
+  { chibiId: 'titan-dread', worldId: 'ruins', chancePct: 0.85, rarity: 'legendary' },
+  { chibiId: 'seraph-paladin', worldId: 'ruins', chancePct: 0.3, rarity: 'mythic' },
+  { chibiId: 'lotus-frost', worldId: 'ruins', chancePct: 0.11, rarity: 'exotic' },
+  { chibiId: 'rime-duchess', worldId: 'ruins', chancePct: 0.032, rarity: 'secret' },
 
-  // 5. Voidreach (3 miners)
-  { chibiId: 'nebula-archon', worldId: 'astral', chancePct: 0.8, rarity: 'legendary' },
-  { chibiId: 'eclipse-warlord', worldId: 'astral', chancePct: 0.18, rarity: 'rainbow' },
-  { chibiId: 'chrono-sovereign', worldId: 'astral', chancePct: 0.025, rarity: 'mythic' },
+  // 5. Voidreach (5 miners)
+  { chibiId: 'nebula-archon', worldId: 'astral', chancePct: 1.4, rarity: 'legendary' },
+  { chibiId: 'eclipse-warlord', worldId: 'astral', chancePct: 0.65, rarity: 'rainbow' },
+  { chibiId: 'chrono-sovereign', worldId: 'astral', chancePct: 0.22, rarity: 'mythic' },
+  { chibiId: 'zephyr-raven', worldId: 'astral', chancePct: 0.08, rarity: 'exotic' },
+  { chibiId: 'nebula-hex', worldId: 'astral', chancePct: 0.024, rarity: 'secret' },
+
+  // 6. Starwell (5 miners)
+  { chibiId: 'draconic-blademaster', worldId: 'starwell', chancePct: 1.2, rarity: 'legendary' },
+  { chibiId: 'aegis-wyrm', worldId: 'starwell', chancePct: 0.55, rarity: 'rainbow' },
+  { chibiId: 'ashen-titan', worldId: 'starwell', chancePct: 0.18, rarity: 'mythic' },
+  { chibiId: 'vesper-reaver', worldId: 'starwell', chancePct: 0.065, rarity: 'exotic' },
+  { chibiId: 'null-prism', worldId: 'starwell', chancePct: 0.02, rarity: 'secret' },
 ] as const;
 
 export const OTHER_ITEMS: readonly OtherItemDef[] = [] as const;

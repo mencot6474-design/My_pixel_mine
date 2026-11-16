@@ -22,6 +22,8 @@ export function rarityCardClasses(rarity: ItemRarity, extra = ''): string {
   const cls = ['mam-card'];
   if (rarity === 'rainbow') cls.push('rarity-rainbow');
   if (rarity === 'mythic') cls.push('rarity-mythic');
+  if (rarity === 'exotic') cls.push('rarity-exotic');
+  if (rarity === 'secret') cls.push('rarity-secret');
   if (extra) cls.push(extra);
   return cls.join(' ');
 }
@@ -179,9 +181,13 @@ export function renderInspectorPanel(opts: {
   const showcaseBorder =
     opts.rarity === 'rainbow'
       ? 'border-[2.5px] border-transparent [background:radial-gradient(circle_at_50%_45%,rgba(250,204,21,0.35),#141821_82%)_padding-box,linear-gradient(135deg,#ef4444,#facc15,#22c55e,#38bdf8,#a855f7)_border-box]'
-      : 'border-[2.5px]';
+      : opts.rarity === 'exotic'
+        ? 'border-[2.5px] border-transparent [background:radial-gradient(circle_at_50%_45%,rgba(20,184,166,0.42),#0d1820_84%)_padding-box,linear-gradient(135deg,#2dd4bf,#06b6d4,#34d399,#22d3ee)_border-box]'
+        : opts.rarity === 'secret'
+          ? 'border-[2.5px] border-transparent [background:radial-gradient(circle_at_50%_45%,rgba(244,63,94,0.45),#090a12_84%)_padding-box,linear-gradient(135deg,#f43f5e,#fbbf24,#9f1239,#f59e0b)_border-box]'
+          : 'border-[2.5px]';
   const showcaseStyle =
-    opts.rarity === 'rainbow'
+    opts.rarity === 'rainbow' || opts.rarity === 'exotic' || opts.rarity === 'secret'
       ? ''
       : `border-color:${borderColor};background:radial-gradient(circle at 50% 42%,${borderColor}40,rgba(15,19,27,0.96) 78%);`;
   const rarityLabel = opts.rarity.charAt(0).toUpperCase() + opts.rarity.slice(1);

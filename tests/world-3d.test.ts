@@ -5,11 +5,13 @@ import {
   ENCHANTS,
   GEM_SHOP_ITEMS,
   getOresByWorld,
+  getMinerRarity,
   getMinersByWorld,
   getWorldById,
   isHighTierMutation,
   MUTATIONS,
   ORES,
+  RARITY_BORDER,
   WORLD_MINERS,
   WORLDS,
 } from '../src/game/GameData';
@@ -91,8 +93,8 @@ describe('Pure 3D Mine World', () => {
     expect(applyNodeDamagePure(node, 20)).toBeNull();
   });
 
-  it('registers all 15 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
-    expect(CHIBI_CATALOG.length).toBe(15);
+  it('registers all 30 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
+    expect(CHIBI_CATALOG.length).toBe(30);
     expect(getChibiById('solar-striker')?.spriteUrl).toBe('/chibi/solar-striker/idle.png');
     expect(getChibiById('solar-striker')?.poses.attack).toBe('/chibi/solar-striker/attack.png');
     expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.idle, 4)).toBe(0);
@@ -104,8 +106,8 @@ describe('Pure 3D Mine World', () => {
   it('formats Roblox My Anime Mine suffixes and populates Index/Inventory/Chest flows', () => {
     expect(fmtShort(1500)).toBe('1.5K');
     expect(fmtMoney(16.7e45)).toBe('$16.7Qad');
-    expect(ORES.length).toBe(40);
-    expect(WORLD_MINERS.length).toBe(15);
+    expect(ORES.length).toBe(48);
+    expect(WORLD_MINERS.length).toBe(30);
     expect(getOresByWorld('underground').map((o) => o.name)).toContain('Coalite');
     const crystalOres = getOresByWorld('crystal');
     expect(crystalOres.map((o) => o.name)).toEqual([
@@ -166,15 +168,32 @@ describe('Pure 3D Mine World', () => {
     expect(voidOres[0].sellValue).toBeGreaterThan(ruinsOres[0].sellValue);
     expect(voidOres[7].sellValue).toBeGreaterThan(ruinsOres[7].sellValue);
 
-    expect(getMinersByWorld('underground').length).toBe(3);
-    expect(getMinersByWorld('crystal').length).toBe(3);
-    expect(getMinersByWorld('magma').length).toBe(3);
-    expect(getMinersByWorld('ruins').length).toBe(3);
-    expect(getMinersByWorld('astral').length).toBe(3);
+    const starwellOres = getOresByWorld('starwell');
+    expect(starwellOres.map((o) => o.name)).toEqual([
+      'Cloudgrit',
+      'Skyshale',
+      'Sunvein',
+      'Gleamstone',
+      'Aurorine',
+      'Zenithite',
+      'Caelite',
+      'Dawncrown',
+    ]);
+    expect(starwellOres.reduce((acc, o) => acc + o.chancePct, 0)).toBeCloseTo(100, 4);
+    expect(starwellOres[0].sellValue).toBeGreaterThan(voidOres[0].sellValue);
+    expect(starwellOres[7].sellValue).toBeGreaterThan(voidOres[7].sellValue);
+
+    expect(getMinersByWorld('underground').length).toBe(5);
+    expect(getMinersByWorld('crystal').length).toBe(5);
+    expect(getMinersByWorld('magma').length).toBe(5);
+    expect(getMinersByWorld('ruins').length).toBe(5);
+    expect(getMinersByWorld('astral').length).toBe(5);
+    expect(getMinersByWorld('starwell').length).toBe(5);
 
     const gs = new GameState();
-    expect(gs.getTotalIndexCount()).toBe(55);
-    expect(gs.getWorldIndexProgress('astral')).toEqual({ found: 0, total: 11, pct: 0 });
+    expect(gs.getTotalIndexCount()).toBe(78);
+    expect(gs.getWorldIndexProgress('astral')).toEqual({ found: 0, total: 13, pct: 0 });
+    expect(gs.getWorldIndexProgress('starwell')).toEqual({ found: 0, total: 13, pct: 0 });
     expect(gs.hotbar.every((s) => s === null)).toBe(true);
     expect(gs.plotMiners.every((s) => s === null)).toBe(true);
     gs.onOreBroken('geode', () => 0.01);
@@ -469,8 +488,9 @@ describe('Pure 3D Mine World', () => {
   });
 
   it('enforces sequential world unlock gates, Voidreach naming, global Core upgrades, and per-world tree isolation', () => {
-    expect(WORLDS).toHaveLength(5);
+    expect(WORLDS).toHaveLength(6);
     expect(getWorldById('astral').name).toBe('Voidreach');
+    expect(getWorldById('starwell').name).toBe('Starwell');
     expect(PIT_NODE_COUNT).toBe(1);
     expect(BASE_ORE_RESPAWN_SEC).toBeGreaterThanOrEqual(3.5);
 
@@ -479,9 +499,10 @@ describe('Pure 3D Mine World', () => {
     expect(getResearchTreeMaxPoints('magma')).toBe(62);
     expect(getResearchTreeMaxPoints('ruins')).toBe(55);
     expect(getResearchTreeMaxPoints('astral')).toBe(69);
+    expect(getResearchTreeMaxPoints('starwell')).toBe(69);
 
-    // Tap damage must live strictly in Core; Worlds 1-5 replace tap nodes with standardized denseOreScale (HP x10, Drops x3)
-    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral'] as const) {
+    // Tap damage must live strictly in Core; Worlds 1-6 replace tap nodes with standardized denseOreScale (HP x10, Drops x3)
+    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell'] as const) {
       const treeNodes = getResearchNodesForTree(wid);
       expect(treeNodes.some((n) => n.effectType === 'tapDamageFlat')).toBe(false);
       const denseNodes = treeNodes.filter((n) => n.effectType === 'denseOreScale');
@@ -1083,5 +1104,62 @@ describe('Pure 3D Mine World', () => {
     const rolledName = state.rollPlotMutation(0, () => 0.98);
     expect(rolledName).toBe('Frozen');
     expect(isHighTierMutation(state.getPlotUnit(0)!.mutationId)).toBe(true);
+  });
+
+  it('adds 2 Exotic & Secret chibis to Worlds 1–5 and wires all 5 World 6 Starwell chibis', () => {
+    expect(RARITY_BORDER.exotic).toBeTruthy();
+    expect(RARITY_BORDER.secret).toBeTruthy();
+
+    for (const w of WORLDS) {
+      const miners = getMinersByWorld(w.id);
+      expect(miners.length).toBe(5);
+      expect(miners[3].entry.rarity).toBe('exotic');
+      expect(miners[4].entry.rarity).toBe('secret');
+      expect(miners[3].chibi.rarity).toBe('exotic');
+      expect(miners[4].chibi.rarity).toBe('secret');
+      expect(miners[3].entry.chancePct).toBeLessThan(miners[2].entry.chancePct);
+      expect(miners[4].entry.chancePct).toBeLessThan(miners[3].entry.chancePct);
+      expect(miners[3].chibi.baseDps).toBeGreaterThan(miners[2].chibi.baseDps);
+      expect(miners[4].chibi.baseDps).toBeGreaterThan(miners[3].chibi.baseDps);
+      expect(getMinerRarity(miners[3].chibi.id)).toBe('exotic');
+      expect(getMinerRarity(miners[4].chibi.id)).toBe('secret');
+    }
+
+    const w6Ids = ['draconic-blademaster', 'aegis-wyrm', 'ashen-titan', 'vesper-reaver', 'null-prism'];
+    expect(getMinersByWorld('starwell').map((m) => m.chibi.id)).toEqual(w6Ids);
+    for (const id of w6Ids) {
+      const def = getChibiById(id);
+      expect(def).toBeDefined();
+      expect(def?.poses.idle).toBe(`/chibi/${id}/idle.png`);
+      expect(def?.poses.pose).toBe(`/chibi/${id}/pose.png`);
+    }
+  });
+
+  it('buffs chibi drop trigger rate and scales Core Vault Expansion up to +300K capacity', () => {
+    const gs = new GameState();
+    // Buffed common rock drop trigger (1.4%): rng=0.01 must drop a miner
+    gs.onOreBroken('common', () => 0.01);
+    expect(Object.values(gs.chestMiners).reduce((a, b) => a + b, 0)).toBe(1);
+
+    // Core Vault Expansion I (+20K) + Vault Expansion II (+280K) = +300K upgrade (+5K base = 305K)
+    const coreNodes = getResearchNodesForTree('core');
+    const v1 = coreNodes.find((n) => n.id === 'core-chest-1')!;
+    const v2 = coreNodes.find((n) => n.id === 'core-chest-2')!;
+    expect(v1.maxLevel * v1.perLevel + v2.maxLevel * v2.perLevel).toBe(300_000);
+
+    gs.cash = 1e24;
+    for (const nodeId of [
+      'core-chest-1',
+      'core-power-1',
+      'core-value-1',
+      'core-luck-1',
+      'core-chest-2',
+    ]) {
+      const node = coreNodes.find((n) => n.id === nodeId)!;
+      for (let i = 0; i < node.maxLevel; i++) {
+        expect(gs.upgradeResearch(nodeId)).toBe(true);
+      }
+    }
+    expect(gs.getMaxChestCapacity()).toBe(305_000);
   });
 });

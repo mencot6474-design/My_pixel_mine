@@ -1331,6 +1331,155 @@ function buildVoidreachOreModel(oreId: string, _color: string, secondary: string
   return null;
 }
 
+function buildStarwellOreModel(oreId: string, color: string, secondary: string): THREE.Group | null {
+  const g = new THREE.Group();
+  const skyStone = toonMat(secondary || '#334155', 0.65, 0.2);
+
+  if (oreId === 'cloudgrit') {
+    const cloudMat = toonMat(0x7dd3fc, 0.72, 0.08);
+    for (const [x, y, z, r] of [
+      [-0.22, -0.08, 0.06, 0.5],
+      [0.24, -0.06, -0.04, 0.46],
+      [0, 0.22, 0.02, 0.48],
+    ] as Array<[number, number, number, number]>) {
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), cloudMat);
+      rock.position.set(x, y, z);
+      g.add(rock);
+    }
+    g.rotation.set(0.18, -0.25, 0);
+    return g;
+  }
+
+  if (oreId === 'skyshale') {
+    const shaleMat = toonMat(0x38bdf8, 0.35, 0.28, 0x0284c7, 0.22);
+    for (let i = 0; i < 3; i++) {
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(1.15 - i * 0.18, 0.26, 0.88 - i * 0.12), shaleMat);
+      slab.position.set((i - 1) * 0.06, -0.28 + i * 0.28, 0);
+      slab.rotation.y = (i - 1) * 0.14;
+      g.add(slab);
+    }
+    const twin = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.42, 4), shaleMat);
+    twin.position.set(0.22, 0.48, 0);
+    g.add(twin);
+    g.rotation.set(0.22, -0.28, 0);
+    return g;
+  }
+
+  if (oreId === 'sunvein') {
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.72, 0), toonMat(0x1e293b, 0.7, 0.2));
+    rock.scale.set(1.18, 0.9, 1.0);
+    g.add(rock);
+    const goldMat = toonMat(0xfacc15, 0.14, 0.55, 0xf59e0b, 0.85);
+    const bolt1 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.92, 0.32), goldMat);
+    bolt1.position.set(-0.08, 0.06, 0.36);
+    bolt1.rotation.z = -0.35;
+    g.add(bolt1);
+    const bolt2 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.72, 0.28), goldMat);
+    bolt2.position.set(0.16, -0.1, 0.38);
+    bolt2.rotation.z = 0.45;
+    g.add(bolt2);
+    g.rotation.set(0.18, -0.25, 0);
+    return g;
+  }
+
+  if (oreId === 'gleamstone') {
+    const cube = new THREE.Mesh(
+      new THREE.BoxGeometry(0.92, 0.88, 0.88),
+      toonMat(0xa5f3fc, 0.18, 0.32, 0x38bdf8, 0.55)
+    );
+    cube.rotation.set(0.18, 0.35, 0.06);
+    g.add(cube);
+    const starMat = toonMat(0xffffff, 0.05, 0.1, 0xe0f2fe, 0.95);
+    const vBar = new THREE.Mesh(new THREE.OctahedronGeometry(0.26, 0), starMat);
+    vBar.scale.set(0.35, 1.3, 0.35);
+    vBar.position.set(0, 0.06, 0.5);
+    g.add(vBar);
+    const hBar = new THREE.Mesh(new THREE.OctahedronGeometry(0.26, 0), starMat);
+    hBar.scale.set(1.3, 0.35, 0.35);
+    hBar.position.set(0, 0.06, 0.5);
+    g.add(hBar);
+    return g;
+  }
+
+  if (oreId === 'aurorine') {
+    const base = new THREE.Mesh(new THREE.DodecahedronGeometry(0.68, 0), skyStone);
+    base.scale.set(1.25, 0.52, 1.0);
+    base.position.y = -0.36;
+    g.add(base);
+    const hues = [0x22d3ee, 0xa855f7, 0x34d399, 0xe879f9];
+    for (let i = 0; i < 4; i++) {
+      const ang = (i / 3 - 0.5) * 1.15;
+      const mat = toonMat(hues[i], 0.1, 0.25, hues[i], 0.75);
+      const spire = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.85 + (i % 2) * 0.25, 5), mat);
+      spire.position.set(ang * 0.48, 0.16 + (i % 2) * 0.1, (i % 2) * 0.12);
+      spire.rotation.z = -ang * 0.24;
+      g.add(spire);
+    }
+    g.rotation.set(0.18, -0.26, 0);
+    return g;
+  }
+
+  if (oreId === 'zenithite') {
+    const obsidian = new THREE.Mesh(new THREE.DodecahedronGeometry(0.7, 0), toonMat(0x09090b, 0.35, 0.2));
+    obsidian.scale.set(1.26, 0.58, 1.02);
+    obsidian.position.y = -0.34;
+    g.add(obsidian);
+    const elec = toonMat(0x0ea5e9, 0.08, 0.22, 0x38bdf8, 0.94);
+    for (const [x, h, rz] of [[-0.26, 0.82, 0.22], [0.02, 1.12, -0.04], [0.28, 0.78, -0.26]] as Array<[number, number, number]>) {
+      const crystal = new THREE.Mesh(new THREE.ConeGeometry(0.2, h, 5), elec);
+      crystal.position.set(x, h * 0.28 - 0.04, 0.06);
+      crystal.rotation.z = rz;
+      g.add(crystal);
+    }
+    g.rotation.set(0.2, -0.28, 0);
+    return g;
+  }
+
+  if (oreId === 'caelite') {
+    const prism = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.64, 0),
+      toonMat(0x38bdf8, 0.08, 0.3, 0x67e8f9, 0.92)
+    );
+    prism.scale.set(0.86, 1.24, 0.86);
+    g.add(prism);
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.82, 0.07, 10, 28),
+      toonMat(0xf472b6, 0.08, 0.25, 0xfacc15, 0.9)
+    );
+    ring.rotation.set(1.08, 0.32, -0.2);
+    g.add(ring);
+    g.rotation.set(0.18, -0.28, 0);
+    return g;
+  }
+
+  if (oreId === 'dawncrown') {
+    const core = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.46, 0),
+      toonMat(0xfbbf24, 0.08, 0.4, 0xf97316, 0.96)
+    );
+    g.add(core);
+    const crownMat = toonMat(0xfde047, 0.08, 0.45, 0xf59e0b, 0.92);
+    for (let i = 0; i < 5; i++) {
+      const ang = (i / 4 - 0.5) * 1.4;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.65 + (i === 2 ? 0.22 : 0), 5), crownMat);
+      spike.position.set(Math.sin(ang) * 0.4, 0.34, 0.05);
+      spike.rotation.z = -ang * 0.4;
+      g.add(spike);
+    }
+    const dawnRing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.86, 0.07, 10, 28),
+      toonMat(0xec4899, 0.08, 0.25, 0xf472b6, 0.94)
+    );
+    dawnRing.rotation.set(1.12, 0.26, -0.18);
+    g.add(dawnRing);
+    g.rotation.set(0.2, -0.28, 0);
+    return g;
+  }
+
+  void color;
+  return null;
+}
+
 function buildOreModel(color: string, secondary: string, rarity: ItemRarity, oreId = ''): THREE.Group {
   if (oreId) {
     const customCrystal = buildCrystalCavesOreModel(oreId, color, secondary);
@@ -1341,6 +1490,8 @@ function buildOreModel(color: string, secondary: string, rarity: ItemRarity, ore
     if (customRuins) return customRuins;
     const customVoid = buildVoidreachOreModel(oreId, color, secondary);
     if (customVoid) return customVoid;
+    const customStarwell = buildStarwellOreModel(oreId, color, secondary);
+    if (customStarwell) return customStarwell;
   }
 
   const seed = oreId ? hashOreSeed(oreId) : 0;
@@ -1353,8 +1504,24 @@ function buildOreModel(color: string, secondary: string, rarity: ItemRarity, ore
     color,
     roughness: rarity === 'common' ? 0.75 : 0.22,
     metalness: rarity === 'common' ? 0.1 : 0.35,
-    emissive: rarity === 'mythic' || rarity === 'legendary' || rarity === 'rainbow' ? color : '#000000',
-    emissiveIntensity: rarity === 'mythic' ? 0.35 : rarity === 'legendary' ? 0.22 : 0.12,
+    emissive:
+      rarity === 'secret' ||
+      rarity === 'exotic' ||
+      rarity === 'mythic' ||
+      rarity === 'legendary' ||
+      rarity === 'rainbow'
+        ? color
+        : '#000000',
+    emissiveIntensity:
+      rarity === 'secret'
+        ? 0.48
+        : rarity === 'exotic'
+          ? 0.42
+          : rarity === 'mythic'
+            ? 0.35
+            : rarity === 'legendary'
+              ? 0.22
+              : 0.12,
     flatShading: true,
   });
 
