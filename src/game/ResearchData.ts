@@ -1457,7 +1457,7 @@ const STARWELL_NODES: readonly ResearchNodeDef[] = [
     perLevel: 0.4,
     baseCost: 90_000_000_000_000,
     costMult: 2.0,
-    descTemplate: 'Raises Vesper Reaver & Null Prism odds.',
+    descTemplate: 'Raises High Entity & TheBoss odds.',
   },
   {
     id: 'sw-find-1',
