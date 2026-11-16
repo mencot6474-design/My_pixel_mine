@@ -1,11 +1,10 @@
 import * as THREE from 'three';
 import { getEnchantById } from '../game/GameData';
 import { TowerWaveOreState } from '../game/TowerData';
-import { createEnchantAura3D } from './AuraModels3D';
 import { ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
-import { mountGlbProp } from './GlbAssets3D';
 import { OreVariantKey } from './MineWorldPalette';
+import { OreBillboard2D } from './OrePit3D';
 
 export interface TowerFighterConfig {
   slotIndex: number;
@@ -68,15 +67,10 @@ interface TowerWaveRockSlot {
   x: number;
   z: number;
   root: THREE.Group;
-  visualGroup: THREE.Group;
+  oreSprite: OreBillboard2D;
   hitMesh: THREE.Mesh;
-  rockMat: THREE.MeshStandardMaterial;
-  crystalMat: THREE.MeshStandardMaterial;
   ringMat: THREE.MeshBasicMaterial;
   ringMesh: THREE.Mesh;
-  commonMesh: THREE.Group;
-  veinMesh: THREE.Group;
-  geodeMesh: THREE.Group;
   alive: boolean;
   hp: number;
   maxHp: number;
@@ -103,7 +97,6 @@ interface TowerChibiFighter {
   enchantId: string | null;
   colorHex: string;
   auraGroup: THREE.Group | null;
-  auraCrest: THREE.Group | null;
 }
 
 const ARENA_CENTER_Z = -1.6;
@@ -826,103 +819,8 @@ export class TowerArena3D {
     root.position.set(x, 0.08, z);
     root.visible = false;
 
-    const visualGroup = new THREE.Group();
-    root.add(visualGroup);
-
-    const rockMat = new THREE.MeshStandardMaterial({
-      color: 0x475569,
-      roughness: 0.78,
-      metalness: 0.12,
-      flatShading: true,
-    });
-    const crystalMat = new THREE.MeshStandardMaterial({
-      color: 0x38bdf8,
-      emissive: 0x38bdf8,
-      emissiveIntensity: 0.45,
-      roughness: 0.16,
-      metalness: 0.35,
-      flatShading: true,
-    });
-
-    const buildCommon = (): THREE.Group => {
-      const g = new THREE.Group();
-      mountGlbProp('/models/mini-dungeon/rocks.glb', g, {
-        position: [0, 0.02, 0],
-        rotationY: index * 1.2,
-        targetHeight: 0.72,
-        alignBottomY: 0,
-      });
-      const baseBoulder = new THREE.Mesh(new THREE.DodecahedronGeometry(0.56, 0), rockMat);
-      baseBoulder.position.y = 0.42;
-      baseBoulder.scale.set(1.05, 0.78, 1.0);
-      g.add(baseBoulder);
-
-      const gleam = new THREE.Mesh(new THREE.OctahedronGeometry(0.24, 0), crystalMat);
-      gleam.position.set(-0.08, 0.78, 0.06);
-      gleam.scale.set(0.85, 1.35, 0.85);
-      g.add(gleam);
-      return g;
-    };
-
-    const buildVein = (): THREE.Group => {
-      const g = new THREE.Group();
-      mountGlbProp('/models/mini-dungeon/rocks.glb', g, {
-        position: [0, 0.02, 0],
-        rotationY: index * 1.7 + 0.5,
-        targetHeight: 0.86,
-        alignBottomY: 0,
-      });
-      const baseBoulder = new THREE.Mesh(new THREE.DodecahedronGeometry(0.68, 0), rockMat);
-      baseBoulder.position.y = 0.46;
-      baseBoulder.scale.set(1.1, 0.82, 1.05);
-      g.add(baseBoulder);
-
-      const prismSpecs: [number, number, number, number, number, number][] = [
-        [0, 1.04, 0, 0.17, 0.92, 0.08],
-        [0.34, 0.82, 0.18, 0.12, 0.68, 0.48],
-        [-0.3, 0.78, -0.16, 0.11, 0.62, -0.45],
-      ];
-      for (const [px, py, pz, r, h, tilt] of prismSpecs) {
-        const prism = new THREE.Mesh(new THREE.CylinderGeometry(0.03, r, h, 6), crystalMat);
-        prism.position.set(px, py, pz);
-        prism.rotation.set(tilt * 0.7, px * 2, -tilt);
-        g.add(prism);
-      }
-      return g;
-    };
-
-    const buildGeode = (): THREE.Group => {
-      const g = new THREE.Group();
-      mountGlbProp('/models/mini-dungeon/rocks.glb', g, {
-        position: [0, 0.02, 0],
-        rotationY: index * 0.9,
-        targetHeight: 0.98,
-        alignBottomY: 0,
-      });
-      const baseBoulder = new THREE.Mesh(new THREE.DodecahedronGeometry(0.76, 0), rockMat);
-      baseBoulder.position.y = 0.52;
-      baseBoulder.scale.set(1.15, 0.85, 1.1);
-      g.add(baseBoulder);
-
-      const coreHeart = new THREE.Mesh(new THREE.IcosahedronGeometry(0.46, 0), crystalMat);
-      coreHeart.position.y = 0.96;
-      coreHeart.scale.set(1.0, 1.32, 1.0);
-      g.add(coreHeart);
-
-      for (let k = 0; k < 5; k++) {
-        const ang = (k / 5) * Math.PI * 2;
-        const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.13, 0.76, 6), crystalMat);
-        spire.position.set(Math.cos(ang) * 0.46, 0.82, Math.sin(ang) * 0.46);
-        spire.rotation.set(Math.sin(ang) * 0.55, ang, -Math.cos(ang) * 0.55);
-        g.add(spire);
-      }
-      return g;
-    };
-
-    const commonMesh = buildCommon();
-    const veinMesh = buildVein();
-    const geodeMesh = buildGeode();
-    visualGroup.add(commonMesh, veinMesh, geodeMesh);
+    const oreSprite = new OreBillboard2D(1.58);
+    root.add(oreSprite.root);
 
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0x38bdf8,
@@ -950,15 +848,10 @@ export class TowerArena3D {
       x,
       z,
       root,
-      visualGroup,
+      oreSprite,
       hitMesh,
-      rockMat,
-      crystalMat,
       ringMat,
       ringMesh,
-      commonMesh,
-      veinMesh,
-      geodeMesh,
       alive: false,
       hp: 0,
       maxHp: 100,
@@ -1048,7 +941,6 @@ export class TowerArena3D {
           enchantId: null,
           colorHex: '#38bdf8',
           auraGroup: null,
-          auraCrest: null,
         };
         this.fighters.set(cfg.slotIndex, existing);
       } else {
@@ -1072,7 +964,6 @@ export class TowerArena3D {
     if (f.auraGroup) {
       f.sprite.group.remove(f.auraGroup);
       f.auraGroup = null;
-      f.auraCrest = null;
     }
     f.enchantId = enchantId;
     if (!enchantId) {
@@ -1099,10 +990,6 @@ export class TowerArena3D {
     ring.position.y = 0.04;
     g.add(ring);
 
-    const crest = createEnchantAura3D(enc.id, 0.44);
-    crest.position.set(0, 2.38, 0);
-    g.add(crest);
-    f.auraCrest = crest;
     f.auraGroup = g;
     f.sprite.group.add(g);
   }
@@ -1178,18 +1065,13 @@ export class TowerArena3D {
       slot.root.visible = true;
       slot.hitMesh.visible = true;
 
-      slot.commonMesh.visible = state.variantKey === 'common';
-      slot.veinMesh.visible = state.variantKey === 'vein';
-      slot.geodeMesh.visible = state.variantKey === 'geode';
-      slot.crystalMat.color.set(state.color);
-      slot.crystalMat.emissive.set(state.color);
-      slot.rockMat.color.set(state.secondaryColor);
+      const baseSize = state.variantKey === 'geode' ? 2.02 : state.variantKey === 'vein' ? 1.7 : 1.44;
+      slot.oreSprite.setOre(state.oreId, baseSize);
       slot.ringMat.color.set(state.color);
 
       if (newlySpawned) {
         slot.spawnScale = 0.12;
-        slot.squashAmt = 0.15;
-        slot.visualGroup.rotation.y = (i * 1.37 + opts.wave * 0.9) % (Math.PI * 2);
+        slot.squashAmt = 0.24;
       }
     }
 
@@ -1244,7 +1126,7 @@ export class TowerArena3D {
   public triggerOreHitBounce(oreIndex: number, broken = false): void {
     const rock = this.waveRocks[oreIndex];
     if (!rock) return;
-    rock.squashAmt = broken ? 0.34 : 0.22;
+    rock.squashAmt = broken ? 0.46 : 0.36;
     rock.flashTimer = 0.09;
     this.spawnSlashArc(rock.color, (Math.random() - 0.5) * 1.8, broken ? 1.18 : 0.88, rock.x, 1.05, rock.z + 0.45);
   }
@@ -1389,22 +1271,13 @@ export class TowerArena3D {
           rock.spawnScale = Math.min(1, rock.spawnScale + dt * 5.2);
         }
         if (rock.squashAmt > 0.001) {
-          rock.squashAmt = Math.max(0, rock.squashAmt - dt * 2.1);
+          rock.squashAmt = Math.max(0, rock.squashAmt - dt * 2.5);
         }
-        const sy = Math.max(0.08, (1 - rock.squashAmt) * rock.spawnScale);
-        const sxz = (1 + rock.squashAmt * 0.45) * rock.spawnScale;
-        const tremor = rock.squashAmt > 0.005 ? Math.sin(elapsed * 58 + rock.phase) * rock.squashAmt * 0.14 : 0;
-        rock.visualGroup.scale.set(sxz, sy, sxz);
-        rock.visualGroup.position.set(tremor, Math.sin(elapsed * 2.2 + rock.phase) * 0.02, -tremor * 0.65);
-
-        if (rock.flashTimer > 0) {
+        const flashing = rock.flashTimer > 0;
+        if (flashing) {
           rock.flashTimer -= dt;
-          rock.crystalMat.emissive.setHex(0xffffff);
-          rock.crystalMat.emissiveIntensity = 1.8;
-        } else {
-          rock.crystalMat.emissive.set(rock.color);
-          rock.crystalMat.emissiveIntensity = 0.45 + Math.sin(elapsed * 3.5 + rock.phase) * 0.12;
         }
+        rock.oreSprite.updateTransform(elapsed, rock.phase, rock.squashAmt, rock.spawnScale, flashing, camera);
       }
     }
 
@@ -1586,10 +1459,6 @@ export class TowerArena3D {
         }
       }
 
-      if (f.auraCrest) {
-        f.auraCrest.rotation.y = elapsed * 2.1 + f.slotIndex;
-        f.auraCrest.position.y = 2.38 + Math.sin(elapsed * 2.8 + f.slotIndex) * 0.06;
-      }
       if (camera) {
         f.sprite.update(dt, elapsed, camera);
       }

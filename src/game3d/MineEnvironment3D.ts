@@ -195,7 +195,7 @@ export class MineEnvironment3D {
     frontMeadow.receiveShadow = true;
 
     const backMeadow = new THREE.Mesh(new THREE.BoxGeometry(18.8, 0.99, 3.6), this.terrainMat);
-    backMeadow.position.set(0, -0.285, -7.2);
+    backMeadow.position.set(0, -0.285, -7.8);
     backMeadow.receiveShadow = true;
 
     // Stone retaining kerbs bordering raised meadows along the courtyard edges
@@ -266,7 +266,7 @@ export class MineEnvironment3D {
     steelMat: THREE.Material
   ): void {
     const g = new THREE.Group();
-    g.position.set(0, 0.21, -5.35);
+    g.position.set(0, 0.21, -6.0);
 
     // Recessed Stone-Framed Backdrop Parapet between pillars with matching slate coping
     const wallBase = new THREE.Mesh(new THREE.BoxGeometry(12.6, 0.85, 0.32), darkMetalMat);
@@ -278,65 +278,67 @@ export class MineEnvironment3D {
     wallTopTrim.receiveShadow = true;
     g.add(wallBase, wallTopTrim);
 
-    // Twin Carved Quarry Pillars using Kenney mini-dungeon column.glb + Clean Stepped Masonry Capitals
+    // Twin Tall Carved Quarry Pillars using Kenney mini-dungeon column.glb + Stepped Plinth, Mid-Band & Finial Caps
     for (const sx of [-1, 1]) {
       const px = sx * 6.6;
-      const plinthLower = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.4, 1.4), this.cliffMat);
-      plinthLower.position.set(px, 0.2, 0);
+      const plinthLower = new THREE.Mesh(new THREE.BoxGeometry(1.64, 0.44, 1.48), this.cliffMat);
+      plinthLower.position.set(px, 0.22, 0);
       plinthLower.castShadow = true;
       plinthLower.receiveShadow = true;
 
-      const plinthCap = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.14, 1.24), darkMetalMat);
-      plinthCap.position.set(px, 0.46, 0);
+      const plinthCap = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.16, 1.28), darkMetalMat);
+      plinthCap.position.set(px, 0.52, 0);
 
       mountGlbProp('/models/mini-dungeon/column.glb', g, {
         position: [px, 0, 0],
-        targetHeight: 3.12,
-        alignBottomY: 0.52,
+        targetHeight: 3.95,
+        alignBottomY: 0.58,
       });
 
-      const collar = new THREE.Mesh(new THREE.BoxGeometry(1.48, 0.22, 1.16), steelMat);
-      collar.position.set(px, 3.6, 0);
+      const midBand = new THREE.Mesh(new THREE.BoxGeometry(1.16, 0.14, 1.06), steelMat);
+      midBand.position.set(px, 2.55, 0);
 
-      const capstone = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.16, 0.96), this.cliffMat);
-      capstone.position.set(px, 4.1, 0);
+      const collar = new THREE.Mesh(new THREE.BoxGeometry(1.54, 0.24, 1.22), steelMat);
+      collar.position.set(px, 4.52, 0);
+
+      const capstone = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.18, 1.02), this.cliffMat);
+      capstone.position.set(px, 5.12, 0);
       capstone.castShadow = true;
 
-      g.add(plinthLower, plinthCap, collar, capstone);
+      const finial = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.52, 0.38, 4), darkMetalMat);
+      finial.rotation.y = Math.PI / 4;
+      finial.position.set(px, 5.4, 0);
+      finial.castShadow = true;
+
+      g.add(plinthLower, plinthCap, midBand, collar, capstone, finial);
     }
 
     // Clean Sculpted Quarry Stone Lintel & Cornice (Zero Flat 2D Signboard / Neon Bars / SVG Gyro)
-    const lowerBeam = new THREE.Mesh(new THREE.BoxGeometry(13.8, 0.26, 0.68), darkMetalMat);
-    lowerBeam.position.set(0, 3.74, 0);
+    const lowerBeam = new THREE.Mesh(new THREE.BoxGeometry(13.8, 0.28, 0.68), darkMetalMat);
+    lowerBeam.position.set(0, 4.72, 0);
     lowerBeam.castShadow = true;
 
-    const upperCanopy = new THREE.Mesh(new THREE.BoxGeometry(14.3, 0.2, 0.9), steelMat);
-    upperCanopy.position.set(0, 3.96, 0);
+    const upperCanopy = new THREE.Mesh(new THREE.BoxGeometry(14.3, 0.22, 0.92), steelMat);
+    upperCanopy.position.set(0, 4.96, 0);
     upperCanopy.castShadow = true;
 
     // Central Carved Stone Pediment + Pure 3D Sanctuary Jewel Crest
-    const centerKeystone = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.36, 0.78), this.cliffMat);
-    centerKeystone.position.set(0, 3.92, 0.04);
+    const centerKeystone = new THREE.Mesh(new THREE.BoxGeometry(1.48, 0.38, 0.8), this.cliffMat);
+    centerKeystone.position.set(0, 4.92, 0.04);
     centerKeystone.castShadow = true;
 
-    const crestPlinth = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.18, 0.58), darkMetalMat);
-    crestPlinth.position.set(0, 4.16, 0.04);
+    const crestPlinth = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.18, 0.6), darkMetalMat);
+    crestPlinth.position.set(0, 5.18, 0.04);
     g.add(lowerBeam, upperCanopy, centerKeystone, crestPlinth);
 
     mountGlbProp('/models/platformer/jewel.glb', g, {
       position: [0, 0, 0.04],
-      targetHeight: 0.62,
-      alignBottomY: 4.24,
+      targetHeight: 0.68,
+      alignBottomY: 5.26,
     });
 
-    // Twin Real 3D Cloth Banners & Standing Quarry Lanterns Framing the Sanctuary
+    // Standing Quarry Lanterns Framing the Sanctuary (banners removed for clean view)
     for (const sx of [-1, 1]) {
-      mountGlbProp('/models/mini-dungeon/banner.glb', g, {
-        position: [sx * 4.35, 0, 0.36],
-        targetHeight: 1.24,
-        alignBottomY: 2.38,
-      });
-
       mountGlbProp('/models/fantasy-town/lantern.glb', g, {
         position: [sx * 5.45, 0, 0.52],
         targetHeight: 1.65,

@@ -15,10 +15,12 @@ export class PlotPedestal3D {
 
   private enchantId: string | null = null;
   private auraGroup: THREE.Group | null = null;
+  private auraHaloPivot: THREE.Group | null = null;
   private auraHalo: THREE.Mesh | null = null;
   private auraGroundMat: THREE.MeshBasicMaterial | null = null;
   private auraMoteGeo: THREE.BufferGeometry | null = null;
   private auraMotes: THREE.Points | null = null;
+  private readonly haloWorldPos = new THREE.Vector3();
 
   constructor(index: number, x: number, z: number) {
     this.index = index;
@@ -98,6 +100,7 @@ export class PlotPedestal3D {
     if (this.auraGroup) {
       this.group.remove(this.auraGroup);
       this.auraGroup = null;
+      this.auraHaloPivot = null;
       this.auraHalo = null;
       this.auraGroundMat = null;
       this.auraMoteGeo?.dispose();
@@ -141,8 +144,9 @@ export class PlotPedestal3D {
     auraGroup.add(groundRing);
     this.auraGroundMat = groundMat;
 
+    const haloPivot = new THREE.Group();
     const halo = new THREE.Mesh(
-      new THREE.TorusGeometry(0.76, 0.032, 8, 32),
+      new THREE.TorusGeometry(0.98, 0.032, 8, 32),
       new THREE.MeshBasicMaterial({
         color: enc.color,
         transparent: true,
@@ -151,9 +155,11 @@ export class PlotPedestal3D {
         depthWrite: false,
       })
     );
-    halo.rotation.x = Math.PI * 0.42;
-    halo.position.y = 0.78;
-    auraGroup.add(halo);
+    halo.rotation.x = Math.PI * 0.455;
+    halo.position.y = 0.7;
+    haloPivot.add(halo);
+    auraGroup.add(haloPivot);
+    this.auraHaloPivot = haloPivot;
     this.auraHalo = halo;
 
     // Lightweight rising enchant aura sparks around the Chibi
@@ -217,8 +223,25 @@ export class PlotPedestal3D {
     if (this.auraGroup) {
       const phase = elapsed + this.index * 0.65;
       if (this.auraHalo) {
+        const haloY = 0.7 + Math.sin(phase * 2.0) * 0.04;
         this.auraHalo.rotation.z = phase * 1.9;
-        this.auraHalo.position.y = 0.78 + Math.sin(phase * 2.0) * 0.06;
+        this.auraHalo.position.y = haloY;
+        if (this.auraHaloPivot && camera) {
+          if (this.chibiSprite) {
+            this.chibiSprite.group.getWorldPosition(this.haloWorldPos);
+          } else {
+            this.group.getWorldPosition(this.haloWorldPos);
+            this.haloWorldPos.y += 0.28;
+          }
+          const dx = camera.position.x - this.haloWorldPos.x;
+          const dy = camera.position.y - this.haloWorldPos.y;
+          const dz = camera.position.z - this.haloWorldPos.z;
+          const horizDist = Math.max(0.001, Math.hypot(dx, dz));
+          const camPitch = Math.atan2(dy, horizDist);
+          const spriteTilt = Math.max(0, Math.min(0.66, camPitch * 0.72));
+          this.auraHaloPivot.rotation.y = Math.atan2(dx, dz);
+          this.auraHalo.position.z = -(haloY - 0.42) * Math.tan(spriteTilt);
+        }
       }
       if (this.auraGroundMat) {
         this.auraGroundMat.opacity = 0.42 + Math.sin(phase * 3.2) * 0.16;

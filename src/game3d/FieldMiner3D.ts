@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { getEnchantById } from '../game/GameData';
-import { createEnchantAura3D } from './AuraModels3D';
 import { ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
 import { OreVariantKey, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
@@ -18,7 +17,6 @@ export class FieldMiner3D {
   private attackInterval = 0.85;
   private enchantId: string | null = null;
   private auraGroup: THREE.Group | null = null;
-  private auraCrest: THREE.Group | null = null;
 
   constructor(def: ChibiDef, slotIndex: number) {
     this.def = def;
@@ -36,7 +34,6 @@ export class FieldMiner3D {
     if (this.auraGroup) {
       this.sprite.group.remove(this.auraGroup);
       this.auraGroup = null;
-      this.auraCrest = null;
     }
     this.enchantId = enchantId;
     if (!enchantId) return;
@@ -59,11 +56,6 @@ export class FieldMiner3D {
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.04;
     g.add(ring);
-
-    const crest = createEnchantAura3D(enc.id, 0.44);
-    crest.position.set(0, 2.38, 0);
-    g.add(crest);
-    this.auraCrest = crest;
 
     this.auraGroup = g;
     this.sprite.group.add(g);
@@ -109,10 +101,6 @@ export class FieldMiner3D {
       this.targetNodeId = -1;
       if (renderVisuals) {
         this.sprite.setAnimState('idle');
-        if (this.auraCrest) {
-          this.auraCrest.rotation.y = elapsed * 2.0 + this.slotIndex;
-          this.auraCrest.position.y = 2.38 + Math.sin(elapsed * 2.8 + this.slotIndex) * 0.06;
-        }
         this.sprite.update(dtSec, elapsed, camera);
       }
       return;
@@ -180,10 +168,6 @@ export class FieldMiner3D {
     }
 
     if (renderVisuals) {
-      if (this.auraCrest) {
-        this.auraCrest.rotation.y = elapsed * 2.0 + this.slotIndex;
-        this.auraCrest.position.y = 2.38 + Math.sin(elapsed * 2.8 + this.slotIndex) * 0.06;
-      }
       this.sprite.update(dtSec, elapsed, camera);
     }
   }

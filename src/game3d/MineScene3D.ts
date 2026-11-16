@@ -158,14 +158,14 @@ export class MineScene3D {
 
     // Elevated Carved Stone Terrace & Kenney Stairs in front of Rear Sanctuary Gate
     const rackDeck = new THREE.Mesh(
-      new THREE.BoxGeometry(12.8, 0.26, 2.15),
+      new THREE.BoxGeometry(12.8, 0.26, 2.75),
       new THREE.MeshStandardMaterial({
         color: 0x475569,
         roughness: 0.72,
         metalness: 0.1,
       })
     );
-    rackDeck.position.set(0, 0.13, -4.25);
+    rackDeck.position.set(0, 0.13, -4.55);
     rackDeck.receiveShadow = true;
     rackDeck.castShadow = true;
     this.env.group.add(rackDeck);
@@ -428,7 +428,7 @@ export class MineScene3D {
 
     this.env.update(dtSec, this.elapsed);
     this.pedestals.forEach((p) => p.update(dtSec, this.elapsed, this.camera));
-    this.pit.update(dtSec, this.elapsed);
+    this.pit.update(dtSec, this.elapsed, this.camera);
     this.shopWorld.update(dtSec, this.elapsed, this.mode);
     this.towerArena.update(dtSec, this.elapsed, this.camera, (strike) => {
       const res = this.callbacks.onTowerFighterStrike?.(

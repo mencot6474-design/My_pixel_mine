@@ -1,10 +1,13 @@
 import * as THREE from 'three';
+import { assetUrl } from '../game/AssetUrl';
+import { getOresByWorld, type OreDef, type WorldId } from '../game/GameData';
 import {
   MAX_PIT_NODE_COUNT,
   type MineWorldPalette,
   type OreVariantDef,
   type OreVariantKey,
   rollOreVariant,
+  WORLD_PALETTES,
 } from './MineWorldPalette';
 import {
   getHazardStripeTexture,
@@ -76,17 +79,211 @@ interface SlashFx {
   dur: number;
 }
 
+const oreTexCache = new Map<string, Promise<THREE.Texture>>();
+const oreTexLoader = new THREE.TextureLoader();
+let oreShadowTex: THREE.CanvasTexture | null | undefined;
+
+function getOreShadowTexture(): THREE.CanvasTexture | null {
+  if (oreShadowTex !== undefined) return oreShadowTex;
+  if (typeof document === 'undefined') {
+    oreShadowTex = null;
+    return null;
+  }
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    oreShadowTex = null;
+    return null;
+  }
+  const r = size / 2;
+  const grad = ctx.createRadialGradient(r, r, 0, r, r, r);
+  grad.addColorStop(0, 'rgba(2, 6, 23, 0.72)');
+  grad.addColorStop(0.45, 'rgba(2, 6, 23, 0.42)');
+  grad.addColorStop(0.78, 'rgba(2, 6, 23, 0.14)');
+  grad.addColorStop(1, 'rgba(2, 6, 23, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  oreShadowTex = tex;
+  return tex;
+}
+
+function loadOreTexture(oreId: string): Promise<THREE.Texture> {
+  const url = assetUrl(`/ores/${oreId}.png`);
+  const cached = oreTexCache.get(url);
+  if (cached) return cached;
+
+  const promise = new Promise<THREE.Texture>((resolve, reject) => {
+    if (typeof Image === 'undefined') {
+      reject(new Error('No DOM Image available'));
+      return;
+    }
+    oreTexLoader.load(
+      url,
+      (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.magFilter = THREE.LinearFilter;
+        tex.minFilter = THREE.LinearMipmapLinearFilter;
+        tex.generateMipmaps = true;
+        tex.wrapS = THREE.ClampToEdgeWrapping;
+        tex.wrapT = THREE.ClampToEdgeWrapping;
+        tex.needsUpdate = true;
+        resolve(tex);
+      },
+      undefined,
+      (err) => reject(err)
+    );
+  });
+  oreTexCache.set(url, promise);
+  return promise;
+}
+
+function resolveWorldIdFromPalette(palette: MineWorldPalette): WorldId {
+  for (const [id, p] of Object.entries(WORLD_PALETTES) as Array<[WorldId, MineWorldPalette]>) {
+    if (p === palette) return id;
+  }
+  return 'underground';
+}
+
+function pickWorldOreForVariant(worldId: WorldId, variantKey: OreVariantKey): OreDef {
+  const ores = getOresByWorld(worldId);
+  const pool =
+    variantKey === 'geode'
+      ? ores.slice(5, 8)
+      : variantKey === 'vein'
+        ? ores.slice(2, 5)
+        : ores.slice(0, 2);
+  const list = pool.length > 0 ? pool : ores;
+  return list[Math.floor(Math.random() * list.length)] ?? ores[0];
+}
+
+/**
+ * Reusable 2D illustrated ore billboard sprite with directional + contact shadows
+ * and squash-on-hit ("gepeng") animation shared by OrePit3D and TowerArena3D.
+ */
+export class OreBillboard2D {
+  public readonly root = new THREE.Group();
+  private readonly spritePivot = new THREE.Group();
+  private readonly visualGroup = new THREE.Group();
+  private readonly spriteMesh: THREE.Mesh;
+  private readonly spriteMat: THREE.MeshBasicMaterial;
+  private readonly depthMat: THREE.MeshDepthMaterial;
+  private readonly shadowDisc: THREE.Mesh;
+  private readonly tmpWorldPos = new THREE.Vector3();
+
+  private baseSize = 1.45;
+  private oreId = '';
+
+  constructor(initialSize = 1.45) {
+    this.baseSize = initialSize;
+    this.spritePivot.rotation.order = 'YXZ';
+    this.visualGroup.scale.set(initialSize, initialSize, 1);
+    this.spritePivot.add(this.visualGroup);
+    this.root.add(this.spritePivot);
+
+    this.spriteMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      alphaTest: 0.15,
+      side: THREE.DoubleSide,
+      depthWrite: true,
+      opacity: 0,
+    });
+    this.depthMat = new THREE.MeshDepthMaterial({
+      depthPacking: THREE.RGBADepthPacking,
+      alphaTest: 0.15,
+      side: THREE.DoubleSide,
+    });
+
+    this.spriteMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.spriteMat);
+    this.spriteMesh.position.y = 0.45;
+    this.spriteMesh.customDepthMaterial = this.depthMat;
+    this.spriteMesh.castShadow = false;
+    this.visualGroup.add(this.spriteMesh);
+
+    const shadowTex = getOreShadowTexture();
+    const shadowMat = new THREE.MeshBasicMaterial({
+      map: shadowTex,
+      color: shadowTex ? 0xffffff : 0x020617,
+      transparent: true,
+      opacity: shadowTex ? 0.8 : 0.28,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    });
+    this.shadowDisc = new THREE.Mesh(
+      shadowTex ? new THREE.PlaneGeometry(1.35, 0.84) : new THREE.CircleGeometry(0.55, 20),
+      shadowMat
+    );
+    this.shadowDisc.rotation.x = -Math.PI / 2;
+    this.shadowDisc.position.y = 0.015;
+    this.root.add(this.shadowDisc);
+  }
+
+  public setOre(oreId: string, baseSize: number): void {
+    this.baseSize = baseSize;
+    this.shadowDisc.scale.setScalar(baseSize / 1.45);
+    if (oreId === this.oreId) return;
+    this.oreId = oreId;
+
+    void loadOreTexture(oreId)
+      .then((tex) => {
+        if (this.oreId !== oreId) return;
+        this.spriteMat.map = tex;
+        this.spriteMat.opacity = 1;
+        this.spriteMat.needsUpdate = true;
+        this.depthMat.map = tex;
+        this.depthMat.needsUpdate = true;
+        this.spriteMesh.castShadow = true;
+      })
+      .catch(() => {
+        // Safe no-op in headless tests
+      });
+  }
+
+  public updateTransform(
+    elapsed: number,
+    phase: number,
+    squashAmt: number,
+    scaleMult: number,
+    flashActive: boolean,
+    camera?: THREE.Camera
+  ): void {
+    if (camera) {
+      this.root.getWorldPosition(this.tmpWorldPos);
+      const dx = camera.position.x - this.tmpWorldPos.x;
+      const dy = camera.position.y - this.tmpWorldPos.y;
+      const dz = camera.position.z - this.tmpWorldPos.z;
+      const horizDist = Math.max(0.001, Math.hypot(dx, dz));
+      const camPitch = Math.atan2(dy, horizDist);
+      this.spritePivot.rotation.y = Math.atan2(dx, dz);
+      this.spritePivot.rotation.x = -Math.max(0, Math.min(0.62, camPitch * 0.65));
+    }
+
+    const sy = Math.max(0.32, 1 - squashAmt) * this.baseSize * scaleMult;
+    const sx = (1 + squashAmt * 0.85) * this.baseSize * scaleMult;
+    const tremor = squashAmt > 0.005 ? Math.sin(elapsed * 64 + phase) * squashAmt * 0.14 : 0;
+    this.visualGroup.scale.set(sx, sy, 1);
+    this.visualGroup.position.set(tremor, Math.sin(elapsed * 2.2 + phase) * 0.02, 0);
+    this.shadowDisc.scale.setScalar((this.baseSize / 1.45) * (1 + squashAmt * 0.35));
+    this.spriteMat.color.setHex(flashActive ? 0xffe4b5 : 0xffffff);
+  }
+}
+
 interface InternalOreNode {
   id: number;
   root: THREE.Group;
-  visualGroup: THREE.Group;
+  oreSprite: OreBillboard2D;
   hitMesh: THREE.Mesh;
-  rockMat: THREE.MeshStandardMaterial;
-  crystalMat: THREE.MeshStandardMaterial;
   geodeRing: THREE.Mesh;
-  commonMesh: THREE.Group;
-  veinMesh: THREE.Group;
-  geodeMesh: THREE.Group;
+  oreDef: OreDef;
   variant: OreVariantDef;
   hp: number;
   maxHp: number;
@@ -115,6 +312,7 @@ export class OrePit3D {
   private readonly nodes: InternalOreNode[] = [];
 
   private activePalette!: MineWorldPalette;
+  private activeWorldId: WorldId = 'underground';
   private hoveredNodeId = -1;
   private respawnSpeedMult = 1;
   private activeNodeCount = PIT_NODE_COUNT;
@@ -264,97 +462,8 @@ export class OrePit3D {
 
   private createNodeSlot(id: number): InternalOreNode {
     const root = new THREE.Group();
-    const visualGroup = new THREE.Group();
-    root.add(visualGroup);
-
-    const rockMat = new THREE.MeshStandardMaterial({
-      color: this.activePalette.rockColor,
-      roughness: 0.78,
-      metalness: 0.08,
-      flatShading: true,
-    });
-    const crystalMat = new THREE.MeshStandardMaterial({
-      color: this.activePalette.crystalColor,
-      emissive: this.activePalette.crystalColor,
-      emissiveIntensity: 0.4,
-      roughness: 0.16,
-      metalness: 0.35,
-      flatShading: true,
-    });
-
-    // 3 Distinct Ore Silhouettes backed by Kenney CC0 Low-Poly Boulders + Dynamic Crystal Spires
-    const buildCommonOre = (): THREE.Group => {
-      const g = new THREE.Group();
-      mountGlbProp('/models/mini-dungeon/rocks.glb', g, {
-        position: [0, 0.02, 0],
-        rotationY: id * 1.1,
-        targetHeight: 0.52,
-        alignBottomY: 0,
-      });
-
-      const gleam = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), crystalMat);
-      gleam.position.set(-0.08, 0.56, 0.06);
-      gleam.scale.set(0.85, 1.35, 0.85);
-      gleam.rotation.set(0.25, 0.7, 0.35);
-      g.add(gleam);
-      return g;
-    };
-
-    const buildCrystalVein = (): THREE.Group => {
-      const g = new THREE.Group();
-      mountGlbProp('/models/mini-dungeon/rocks.glb', g, {
-        position: [0, 0.02, 0],
-        rotationY: id * 1.7 + 0.5,
-        targetHeight: 0.72,
-        alignBottomY: 0,
-      });
-
-      const prismSpecs: [number, number, number, number, number, number][] = [
-        [0, 0.94, 0, 0.15, 0.86, 0.08],
-        [0.32, 0.72, 0.18, 0.11, 0.62, 0.48],
-        [-0.28, 0.7, -0.16, 0.1, 0.58, -0.45],
-        [0.14, 0.66, -0.28, 0.1, 0.52, 0.34],
-      ];
-      for (const [px, py, pz, r, h, tilt] of prismSpecs) {
-        const prism = new THREE.Mesh(new THREE.CylinderGeometry(0.03, r, h, 6), crystalMat);
-        prism.position.set(px, py, pz);
-        prism.rotation.set(tilt * 0.7, px * 2, -tilt);
-        prism.castShadow = true;
-        g.add(prism);
-      }
-      return g;
-    };
-
-    const buildRareGeode = (): THREE.Group => {
-      const g = new THREE.Group();
-      mountGlbProp('/models/mini-dungeon/rocks.glb', g, {
-        position: [0, 0.02, 0],
-        rotationY: id * 0.9,
-        targetHeight: 0.78,
-        alignBottomY: 0,
-      });
-
-      const coreHeart = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 0), crystalMat);
-      coreHeart.position.y = 0.76;
-      coreHeart.scale.set(1.0, 1.28, 1.0);
-      coreHeart.castShadow = true;
-      g.add(coreHeart);
-
-      for (let k = 0; k < 5; k++) {
-        const ang = (k / 5) * Math.PI * 2;
-        const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.12, 0.68, 6), crystalMat);
-        spire.position.set(Math.cos(ang) * 0.42, 0.68, Math.sin(ang) * 0.42);
-        spire.rotation.set(Math.sin(ang) * 0.55, ang, -Math.cos(ang) * 0.55);
-        spire.castShadow = true;
-        g.add(spire);
-      }
-      return g;
-    };
-
-    const commonMesh = buildCommonOre();
-    const veinMesh = buildCrystalVein();
-    const geodeMesh = buildRareGeode();
-    visualGroup.add(commonMesh, veinMesh, geodeMesh);
+    const oreSprite = new OreBillboard2D(1.45);
+    root.add(oreSprite.root);
 
     const geodeRing = new THREE.Mesh(
       new THREE.RingGeometry(0.8, 0.98, 24),
@@ -382,17 +491,14 @@ export class OrePit3D {
     root.add(hitMesh);
 
     const variant = rollOreVariant();
+    const oreDef = pickWorldOreForVariant(this.activeWorldId, variant.key);
     return {
       id,
       root,
-      visualGroup,
+      oreSprite,
       hitMesh,
-      rockMat,
-      crystalMat,
       geodeRing,
-      commonMesh,
-      veinMesh,
-      geodeMesh,
+      oreDef,
       variant,
       hp: 100,
       maxHp: 100,
@@ -409,6 +515,7 @@ export class OrePit3D {
 
   public setPalette(palette: MineWorldPalette, forceRespawnAll = false): void {
     this.activePalette = palette;
+    this.activeWorldId = resolveWorldIdFromPalette(palette);
 
     const cColor = new THREE.Color(palette.crystalColor);
     this.floorMat.map = getQuarryFloorTexture(palette.pitFloorColor, palette.crystalColor);
@@ -496,16 +603,19 @@ export class OrePit3D {
     }
     const spot = this.pickNonOverlappingSpot(node.id);
     const variant = rollOreVariant();
+    const oreDef = pickWorldOreForVariant(this.activeWorldId, variant.key);
     const maxHp = Math.max(10, Math.round(BASE_ORE_HP * this.hpScale * variant.hpMult));
+    const baseSize = variant.key === 'geode' ? 1.9 : variant.key === 'vein' ? 1.58 : 1.32;
 
     node.variant = variant;
+    node.oreDef = oreDef;
     node.x = spot.x;
     node.z = spot.z;
     node.hp = maxHp;
     node.maxHp = maxHp;
     node.alive = true;
     node.respawnTimer = 0;
-    node.squashAmt = instant ? 0 : 0.18;
+    node.squashAmt = instant ? 0 : 0.24;
     node.flashTimer = 0;
     node.spawnScale = instant ? 1 : 0.08;
 
@@ -513,22 +623,14 @@ export class OrePit3D {
     node.root.visible = true;
     node.hitMesh.visible = true;
 
-    node.rockMat.color.set(this.activePalette.rockColor);
-    const crystalColor =
+    const ringColor =
       variant.key === 'geode'
-        ? new THREE.Color(this.activePalette.crystalColor).lerp(new THREE.Color('#ffffff'), 0.18)
+        ? new THREE.Color(oreDef.color).lerp(new THREE.Color('#ffffff'), 0.15)
         : new THREE.Color(this.activePalette.crystalColor);
-    node.crystalMat.color.copy(crystalColor);
-    node.crystalMat.emissive.copy(crystalColor);
-    node.crystalMat.emissiveIntensity = variant.key === 'geode' ? 0.65 : variant.key === 'vein' ? 0.45 : 0.32;
-
-    node.commonMesh.visible = variant.key === 'common';
-    node.veinMesh.visible = variant.key === 'vein';
-    node.geodeMesh.visible = variant.key === 'geode';
     node.geodeRing.visible = variant.key === 'geode';
-    (node.geodeRing.material as THREE.MeshBasicMaterial).color.copy(crystalColor);
+    (node.geodeRing.material as THREE.MeshBasicMaterial).color.copy(ringColor);
 
-    node.visualGroup.rotation.y = Math.random() * Math.PI * 2;
+    node.oreSprite.setOre(oreDef.id, baseSize);
   }
 
   public setHoveredNode(nodeId: number): void {
@@ -547,8 +649,8 @@ export class OrePit3D {
     const pure = applyNodeDamagePure(node, dmg);
     if (!pure) return null;
 
-    node.squashAmt = heavy ? 0.28 : 0.16;
-    node.flashTimer = 0.08;
+    node.squashAmt = heavy ? 0.46 : 0.34;
+    node.flashTimer = 0.09;
     if (this.group.visible) {
       this.spawnShardsAt(node.x, node.z, pure.broken ? 14 : shardCount);
       this.spawnSlashAt(node.x, node.z, heavy);
@@ -643,7 +745,7 @@ export class OrePit3D {
     this.respawnSpeedMult = Math.max(0.5, mult);
   }
 
-  public update(dtSec: number, elapsed: number): void {
+  public update(dtSec: number, elapsed: number, camera?: THREE.Camera): void {
     for (const node of this.nodes) {
       if (node.id >= this.activeNodeCount) continue;
       if (!node.alive) {
@@ -661,32 +763,19 @@ export class OrePit3D {
       }
 
       if (node.squashAmt > 0.001) {
-        node.squashAmt = Math.max(0, node.squashAmt - dtSec * 1.9);
+        node.squashAmt = Math.max(0, node.squashAmt - dtSec * 2.5);
       }
 
       const hoverMult = (node.id === this.hoveredNodeId ? 1.1 : 1.0) * node.spawnScale;
-      const sy = Math.max(0.05, (1 - node.squashAmt) * hoverMult);
-      const sxz = (1 + node.squashAmt * 0.48) * hoverMult;
-      const tremor = node.squashAmt > 0.005 ? Math.sin(elapsed * 58 + node.phase) * node.squashAmt * 0.14 : 0;
-      node.visualGroup.scale.set(sxz, sy, sxz);
-      node.visualGroup.position.set(tremor, Math.sin(elapsed * 2.2 + node.phase) * 0.02, -tremor * 0.65);
+      const flashing = node.flashTimer > 0;
+      if (flashing) {
+        node.flashTimer -= dtSec;
+      }
+
+      node.oreSprite.updateTransform(elapsed, node.phase, node.squashAmt, hoverMult, flashing, camera);
 
       if (node.geodeRing.visible) {
         node.geodeRing.rotation.z = elapsed * 0.8 + node.phase;
-      }
-
-      if (node.flashTimer > 0) {
-        node.flashTimer -= dtSec;
-        node.crystalMat.emissive.setHex(0xffffff);
-        node.crystalMat.emissiveIntensity = 1.8;
-      } else {
-        const baseColor =
-          node.variant.key === 'geode'
-            ? new THREE.Color(this.activePalette.crystalColor).lerp(new THREE.Color('#ffffff'), 0.18)
-            : new THREE.Color(this.activePalette.crystalColor);
-        node.crystalMat.emissive.copy(baseColor);
-        const pulse = node.variant.key === 'geode' ? 0.65 + Math.sin(elapsed * 4 + node.phase) * 0.2 : 0.36;
-        node.crystalMat.emissiveIntensity = node.id === this.hoveredNodeId ? pulse + 0.28 : pulse;
       }
     }
 
