@@ -250,14 +250,14 @@ export class PlotInspectUi {
     this.pushToast(`Rolled ${res}!`);
     const updated = this.state.getPlotUnit(slot);
     if (updated && isHighTierMutation(updated.mutationId)) {
-      audio.playSfx('rare-fanfare', { volume: 0.7 });
+      audio.playMutationRoll(true);
       this.pendingMutationConfirm = {
         slot,
         mutId: updated.mutationId,
         mode: 'obtained',
       };
     } else {
-      audio.playSfx('magic-roll', { volume: 0.55 });
+      audio.playMutationRoll(false);
       this.pendingMutationConfirm = null;
     }
     this.onRequestRender();
@@ -382,7 +382,7 @@ export class PlotInspectUi {
           audio.playSfx('ui-error');
           this.pushToast('Locked! Obtain from Enchant Roll (coming soon)');
         } else {
-          audio.playSfx('magic-roll', { volume: 0.45 });
+          audio.playEnchantEquip();
           this.onRequestRender();
         }
       });

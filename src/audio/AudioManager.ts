@@ -88,6 +88,8 @@ export class AudioManager {
   private readonly buffers = new Map<SfxKey, AudioBuffer>();
   private readonly loading = new Map<SfxKey, Promise<AudioBuffer | null>>();
   private readonly lastPlayedAt = new Map<string, number>();
+  private noiseBuffer: AudioBuffer | null = null;
+  private activeSpinGain: GainNode | null = null;
 
   private bgmAudio: HTMLAudioElement | null = null;
   private desiredBgm: BgmKind = 'mine';
@@ -239,6 +241,236 @@ export class AudioManager {
       cooldownMs: 85,
       bucket: 'ore-break',
     });
+  }
+
+  private prepareSynthCtx(cooldownMs: number, bucket: string): { ctx: AudioContext; gain: GainNode } | null {
+    if (typeof window === 'undefined' || this.isEffectivelyMuted()) return null;
+    if (!this.unlocked) this.unlock();
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return null;
+
+    const nowMs = performance.now();
+    const prev = this.lastPlayedAt.get(bucket) ?? 0;
+    if (nowMs - prev < cooldownMs) return null;
+    this.lastPlayedAt.set(bucket, nowMs);
+    return { ctx, gain: this.sfxGain };
+  }
+
+  private getNoiseBuffer(ctx: AudioContext): AudioBuffer {
+    if (this.noiseBuffer && this.noiseBuffer.sampleRate === ctx.sampleRate) {
+      return this.noiseBuffer;
+    }
+    const len = Math.max(1, Math.floor(ctx.sampleRate * 0.06));
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    this.noiseBuffer = buf;
+    return buf;
+  }
+
+  private scheduleTone(
+    ctx: AudioContext,
+    dest: AudioNode,
+    startTime: number,
+    opts: {
+      type: OscillatorType;
+      freqStart: number;
+      freqEnd?: number;
+      dur: number;
+      peakGain: number;
+      attack?: number;
+    }
+  ): void {
+    const osc = ctx.createOscillator();
+    const env = ctx.createGain();
+    const attack = opts.attack ?? 0.006;
+    const endTime = startTime + Math.max(0.02, opts.dur);
+
+    osc.type = opts.type;
+    osc.frequency.setValueAtTime(opts.freqStart, startTime);
+    if (opts.freqEnd !== undefined && opts.freqEnd !== opts.freqStart) {
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20, opts.freqEnd), endTime);
+    }
+
+    env.gain.setValueAtTime(0.0001, startTime);
+    env.gain.linearRampToValueAtTime(opts.peakGain, startTime + attack);
+    env.gain.exponentialRampToValueAtTime(0.0001, endTime);
+
+    osc.connect(env);
+    env.connect(dest);
+    osc.start(startTime);
+    osc.stop(endTime + 0.01);
+  }
+
+  private scheduleNoiseClick(
+    ctx: AudioContext,
+    dest: AudioNode,
+    startTime: number,
+    opts: { centerFreq: number; q?: number; dur: number; peakGain: number }
+  ): void {
+    const src = ctx.createBufferSource();
+    src.buffer = this.getNoiseBuffer(ctx);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(opts.centerFreq, startTime);
+    filter.Q.setValueAtTime(opts.q ?? 2.4, startTime);
+
+    const env = ctx.createGain();
+    const endTime = startTime + Math.max(0.015, opts.dur);
+    env.gain.setValueAtTime(0.0001, startTime);
+    env.gain.linearRampToValueAtTime(opts.peakGain, startTime + 0.002);
+    env.gain.exponentialRampToValueAtTime(0.0001, endTime);
+
+    src.connect(filter);
+    filter.connect(env);
+    env.connect(dest);
+    src.start(startTime);
+    src.stop(endTime + 0.01);
+  }
+
+  /**
+   * Snappy crystalline dice roll SFX for Plot Mutation rolls.
+   */
+  public playMutationRoll(isHighTier = false): void {
+    const audioCtx = this.prepareSynthCtx(45, 'mutation-roll');
+    if (!audioCtx) return;
+    const { ctx, gain } = audioCtx;
+    const t0 = ctx.currentTime + 0.005;
+    const jitter = 0.96 + Math.random() * 0.08;
+
+    // Tactile crystal-dice snap
+    this.scheduleNoiseClick(ctx, gain, t0, { centerFreq: 2500 * jitter, q: 2.2, dur: 0.03, peakGain: 0.28 });
+    this.scheduleNoiseClick(ctx, gain, t0 + 0.045, { centerFreq: 3100 * jitter, q: 2.6, dur: 0.025, peakGain: 0.22 });
+
+    // Fast ascending shimmer triad
+    const notes = isHighTier
+      ? [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98]
+      : [523.25, 659.25, 783.99];
+    notes.forEach((freq, i) => {
+      const start = t0 + i * (isHighTier ? 0.055 : 0.042);
+      const dur = isHighTier ? (i >= 3 ? 0.34 : 0.16) : i === notes.length - 1 ? 0.19 : 0.11;
+      this.scheduleTone(ctx, gain, start, {
+        type: i % 2 === 0 ? 'triangle' : 'sine',
+        freqStart: freq * jitter,
+        dur,
+        peakGain: isHighTier ? 0.22 : 0.19,
+      });
+    });
+
+    if (isHighTier) {
+      // Warm harmonic pad + high bell sparkle for Frozen+
+      this.scheduleTone(ctx, gain, t0 + 0.12, {
+        type: 'sine',
+        freqStart: 261.63,
+        dur: 0.48,
+        peakGain: 0.18,
+        attack: 0.015,
+      });
+      this.scheduleTone(ctx, gain, t0 + 0.28, {
+        type: 'sine',
+        freqStart: 2093.0,
+        dur: 0.42,
+        peakGain: 0.14,
+      });
+    }
+  }
+
+  /**
+   * Decelerating enchanted clock-wheel ticks synced to the 3D Altar spin.
+   */
+  public playEnchantSpinStart(durationSec = 1.9): void {
+    this.cancelEnchantSpinSfx();
+    const audioCtx = this.prepareSynthCtx(120, 'enchant-spin');
+    if (!audioCtx) return;
+    const { ctx, gain } = audioCtx;
+    const spinBus = ctx.createGain();
+    spinBus.gain.value = 1;
+    spinBus.connect(gain);
+    this.activeSpinGain = spinBus;
+
+    const t0 = ctx.currentTime + 0.005;
+    // Launch arcane whoosh chime
+    this.scheduleTone(ctx, spinBus, t0, {
+      type: 'triangle',
+      freqStart: 280,
+      freqEnd: 680,
+      dur: 0.2,
+      peakGain: 0.18,
+      attack: 0.015,
+    });
+
+    // 18 decelerating clock peg clicks ending just before the wheel settles
+    const tickCount = 18;
+    const span = Math.max(0.6, durationSec - 0.14);
+    for (let i = 0; i < tickCount; i++) {
+      const u = i / (tickCount - 1);
+      const tickTime = t0 + 0.04 + span * Math.pow(u, 1.85);
+      const pitch = 740 + u * 340;
+      const vol = 0.22 - u * 0.05;
+      this.scheduleNoiseClick(ctx, spinBus, tickTime, {
+        centerFreq: 1700 + u * 900,
+        q: 2.8,
+        dur: 0.024,
+        peakGain: vol,
+      });
+      this.scheduleTone(ctx, spinBus, tickTime, {
+        type: 'sine',
+        freqStart: pitch,
+        freqEnd: pitch * 1.18,
+        dur: 0.036,
+        peakGain: vol * 0.85,
+        attack: 0.002,
+      });
+    }
+  }
+
+  public cancelEnchantSpinSfx(): void {
+    if (!this.activeSpinGain || !this.ctx) return;
+    try {
+      this.activeSpinGain.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.015);
+    } catch {
+      // ignore audio node errors
+    }
+    this.activeSpinGain = null;
+  }
+
+  /**
+   * Bright lock-in chime when the Enchant Altar wheel lands on a result.
+   */
+  public playEnchantSpinLand(isRare = false): void {
+    this.activeSpinGain = null;
+    const audioCtx = this.prepareSynthCtx(60, 'enchant-land');
+    if (!audioCtx) return;
+    const { ctx, gain } = audioCtx;
+    const t0 = ctx.currentTime + 0.005;
+
+    // Crisp mechanical latch
+    this.scheduleNoiseClick(ctx, gain, t0, { centerFreq: 1400, q: 1.8, dur: 0.04, peakGain: 0.24 });
+
+    const chord = isRare ? [329.63, 415.3, 493.88, 659.25, 830.61, 987.77, 1318.51] : [329.63, 415.3, 493.88, 659.25];
+    chord.forEach((freq, i) => {
+      this.scheduleTone(ctx, gain, t0 + i * 0.036, {
+        type: i === 0 ? 'triangle' : 'sine',
+        freqStart: freq,
+        dur: isRare ? 0.42 : 0.28,
+        peakGain: isRare ? 0.21 : 0.18,
+        attack: 0.006,
+      });
+    });
+  }
+
+  /**
+   * Crisp crystal latch when equipping/unequipping an Enchant on a plot.
+   */
+  public playEnchantEquip(): void {
+    const audioCtx = this.prepareSynthCtx(40, 'enchant-equip');
+    if (!audioCtx) return;
+    const { ctx, gain } = audioCtx;
+    const t0 = ctx.currentTime + 0.005;
+    this.scheduleTone(ctx, gain, t0, { type: 'triangle', freqStart: 587.33, dur: 0.09, peakGain: 0.18 });
+    this.scheduleTone(ctx, gain, t0 + 0.045, { type: 'sine', freqStart: 880.0, dur: 0.16, peakGain: 0.2 });
   }
 
   private bindLifecycle(): void {

@@ -507,6 +507,7 @@ export class GameHud {
         this.enchantSpinSafetyTimer = null;
       }
       this.enchantSpinning = false;
+      audio.cancelEnchantSpinSfx();
     }
     this.sceneMode = mode;
     this.activeModal = 'none';
@@ -1208,7 +1209,7 @@ export class GameHud {
             this.pushToast('Out of Enchanted Dice!');
             return;
           }
-          audio.playSfx('spin-start');
+          audio.playEnchantSpinStart(1.9);
           if (this.enchantSpinSafetyTimer !== null) {
             window.clearTimeout(this.enchantSpinSafetyTimer);
           }
@@ -1217,7 +1218,14 @@ export class GameHud {
             if (finalized) return;
             finalized = true;
             this.finishEnchantSpin();
-            audio.playSfx('magic-roll', { volume: 0.65 });
+            const isRare =
+              rolled.rarity === 'epic' ||
+              rolled.rarity === 'legendary' ||
+              rolled.rarity === 'rainbow' ||
+              rolled.rarity === 'mythic' ||
+              rolled.rarity === 'exotic' ||
+              rolled.rarity === 'secret';
+            audio.playEnchantSpinLand(isRare);
             this.pushToast(`Rolled ${rolled.name} (${rolled.dmgMult}x DMG)!`);
           };
           if (this.onTriggerEnchantSpin) {
