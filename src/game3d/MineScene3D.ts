@@ -702,6 +702,7 @@ export class MineScene3D {
       this.env.setPalette(palette);
       this.pit.setPalette(palette, true);
       this.applyWeatherAtmosphere();
+      this.callbacks.onOreBars?.([]);
     }
   }
 

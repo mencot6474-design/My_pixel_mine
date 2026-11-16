@@ -314,7 +314,14 @@ export class GameHud {
   }
 
   public updateOreBars(bars: OreHpScreen[]): void {
-    if (!this.oreBarLayerEl || this.sceneMode !== 'mine') return;
+    if (!this.oreBarLayerEl) return;
+    if (this.sceneMode !== 'mine') {
+      if (this.oreBarLayerEl.dataset.keys?.startsWith('mine:')) {
+        this.oreBarLayerEl.innerHTML = '';
+        this.oreBarLayerEl.dataset.keys = '';
+      }
+      return;
+    }
     if (this.inspectedSlot !== null || this.activeModal !== 'none' || bars.length === 0) {
       if (this.oreBarLayerEl.innerHTML !== '') {
         this.oreBarLayerEl.innerHTML = '';
@@ -532,6 +539,13 @@ export class GameHud {
     this.activeModal = 'none';
     this.collectionUi.closeReviewDialog();
     this.inspectedSlot = null;
+    if (this.oreBarLayerEl) {
+      this.oreBarLayerEl.innerHTML = '';
+      this.oreBarLayerEl.dataset.keys = '';
+    }
+    if (this.dmgLayerEl) {
+      this.dmgLayerEl.innerHTML = '';
+    }
     this.onSetSceneMode?.(mode);
     if (mode === 'tower') {
       this.syncTowerSceneVisual();
