@@ -429,7 +429,7 @@ export class MineScene3D {
     this.env.update(dtSec, this.elapsed);
     this.pedestals.forEach((p) => p.update(dtSec, this.elapsed, this.camera));
     this.pit.update(dtSec, this.elapsed, this.camera);
-    this.shopWorld.update(dtSec, this.elapsed, this.mode);
+    this.shopWorld.update(dtSec, this.elapsed, this.mode, this.camera);
     this.towerArena.update(dtSec, this.elapsed, this.camera, (strike) => {
       const res = this.callbacks.onTowerFighterStrike?.(
         strike.slotIndex,

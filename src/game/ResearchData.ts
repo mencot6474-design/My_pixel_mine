@@ -1271,7 +1271,7 @@ const VOIDREACH_NODES: readonly ResearchNodeDef[] = [
     perLevel: 0.4,
     baseCost: 450_000_000_000,
     costMult: 2.0,
-    descTemplate: 'Raises Eclipse Warlord & Chrono Sovereign odds.',
+    descTemplate: 'Raises BangJoo & LouisBerg odds.',
   },
   {
     id: 'vr-find-1',

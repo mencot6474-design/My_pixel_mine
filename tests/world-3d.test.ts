@@ -29,7 +29,7 @@ import {
 import { GameState } from '../src/game/GameState';
 import { rollWeatherDef, WEATHER_DURATION_MS, WEATHERS } from '../src/game/WeatherData';
 import { fmtMoney, fmtShort } from '../src/game/NumberFormat';
-import { createEnchantAura3D, createEnchantDice3D } from '../src/game3d/AuraModels3D';
+import { createEnchantAura3D, createEnchantDice3D, EnchantBillboard2D } from '../src/game3d/AuraModels3D';
 import {
   AltarParticleSystem,
   createAltarClockDial,
@@ -1336,5 +1336,29 @@ describe('Pure 3D Mine World', () => {
       expect(existsSync(resolve(process.cwd(), 'public', 'ores', `${ore.id}.png`))).toBe(true);
       expect(oreIconSvg(ore.color, ore.secondaryColor, ore.rarity, `ix_${ore.id}`)).toContain(`ores/${ore.id}.png`);
     }
+  });
+
+  it('builds 2.5D EnchantBillboard2D sprites with camera billboarding and updates Altar pedestals safely', () => {
+    const bb = new EnchantBillboard2D('blazing', '#f97316', 1.38, 0.5);
+    expect(bb.root.children.length).toBeGreaterThanOrEqual(3);
+
+    const cam = new THREE.PerspectiveCamera(48, 16 / 9, 0.1, 200);
+    cam.position.set(2, 6, 10);
+    cam.updateMatrixWorld(true);
+    bb.root.position.set(-1, 0.5, -2);
+    bb.root.updateMatrixWorld(true);
+    bb.updateTransform(0.05, 1.0, false, false, cam);
+    expect(bb.spritePivot.rotation.y).not.toBe(0);
+    expect(bb.spritePivot.rotation.x).toBeLessThan(0);
+
+    const shop = new ShopWorld3D();
+    shop.update(0.05, 1.0, 'altar', cam);
+    const anchors = shop.getAltarAnchors(cam, 1280, 720, new THREE.Vector3());
+    expect(anchors).toHaveLength(ENCHANTS.length);
+
+    shop.update(0.05, 1.0, 'shop', cam);
+    const shopAnchors = shop.getShopAnchors(cam, 1280, 720, new THREE.Vector3());
+    expect(shopAnchors).toHaveLength(5);
+    expect(existsSync(resolve(process.cwd(), 'public', 'pickaxes', 'sunwheel.png'))).toBe(true);
   });
 });

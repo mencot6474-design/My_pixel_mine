@@ -8,7 +8,7 @@ import {
   createAltarClockHand,
   createAltarSubHand,
 } from './AltarSpinFx3D';
-import { createEnchantAura3D } from './AuraModels3D';
+import { ArtBillboard2D, EnchantBillboard2D } from './AuraModels3D';
 import { mountGlbProp } from './GlbAssets3D';
 import { HellAltarEyeController } from './HellAltarEye3D';
 
@@ -39,6 +39,7 @@ interface AltarPedestalEntry {
   group: THREE.Group;
   ringMat: THREE.MeshBasicMaterial;
   prop: THREE.Object3D;
+  billboard: EnchantBillboard2D;
   baseY: number;
   needleAngle: number;
   worldX: number;
@@ -51,11 +52,7 @@ export class ShopWorld3D {
   public readonly altarGroup = new THREE.Group();
   public readonly shopClickables: THREE.Object3D[] = [];
 
-  private readonly pickaxeFloat = new THREE.Group();
-  private readonly coinFloat = new THREE.Group();
-  private readonly gemFloat = new THREE.Group();
-  private readonly altarPortalFloat = new THREE.Group();
-  private readonly towerPortalFloat = new THREE.Group();
+  private readonly shopEmblems: ArtBillboard2D[] = [];
   private readonly plazaCrystals: THREE.Mesh[] = [];
   private readonly altarPedestals: AltarPedestalEntry[] = [];
   private readonly floatingShards: THREE.Mesh[] = [];
@@ -389,29 +386,8 @@ export class ShopWorld3D {
       });
     }
 
-    const altarCrystal = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.68, 0),
-      new THREE.MeshStandardMaterial({
-        color: 0xe879f9,
-        emissive: 0xa855f7,
-        emissiveIntensity: 0.8,
-        roughness: 0.12,
-        metalness: 0.25,
-      })
-    );
-    const altarOrbit = new THREE.Mesh(
-      new THREE.TorusGeometry(1.02, 0.065, 10, 32),
-      new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xf59e0b, emissiveIntensity: 0.45, metalness: 0.75 })
-    );
-    altarOrbit.rotation.x = 1.1;
-    const altarOrbit2 = new THREE.Mesh(
-      new THREE.TorusGeometry(1.02, 0.055, 10, 32),
-      new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.4, metalness: 0.65 })
-    );
-    altarOrbit2.rotation.y = 1.1;
-    this.altarPortalFloat.add(altarCrystal, altarOrbit, altarOrbit2);
-    this.altarPortalFloat.position.set(0, 2.7, -0.5);
-    this.shopGroup.add(this.altarPortalFloat);
+    const altarEmblem = this.addShopEmblem('/hud/enchant.png', '#e879f9', 0, 2.7, -0.5, 1.55, 2.5);
+    void altarEmblem;
 
     const altarHit = this.createHitbox(0, 1.55, -0.5, 5.8, 3.0, 5.8, 'shop-altar');
     this.shopGroup.add(altarHit);
@@ -539,26 +515,7 @@ export class ShopWorld3D {
       targetHeight: 0.9,
     });
 
-    const pickHandle = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.11, 0.13, 1.55, 10),
-      new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.6 })
-    );
-    const pickHead = new THREE.Mesh(
-      new THREE.BoxGeometry(1.45, 0.28, 0.28),
-      new THREE.MeshStandardMaterial({
-        color: 0x38bdf8,
-        roughness: 0.2,
-        metalness: 0.72,
-        emissive: 0x0284c7,
-        emissiveIntensity: 0.4,
-      })
-    );
-    pickHead.position.y = 0.62;
-    this.pickaxeFloat.add(pickHandle, pickHead);
-    this.pickaxeFloat.scale.setScalar(0.72);
-    this.pickaxeFloat.position.set(cx, 4.9, cz);
-    this.pickaxeFloat.rotation.z = -0.35;
-    this.shopGroup.add(this.pickaxeFloat);
+    this.addShopEmblem('/pickaxes/sunwheel.png', '#38bdf8', cx, 4.7, cz, 1.55, 0);
 
     const pickHit = this.createHitbox(cx, 2.2, cz, 5.4, 4.6, 4.6, 'shop-pickaxe');
     this.shopGroup.add(pickHit);
@@ -612,21 +569,7 @@ export class ShopWorld3D {
       targetHeight: 0.65,
     });
 
-    const coinMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.75, 0.75, 0.24, 24),
-      new THREE.MeshStandardMaterial({
-        color: 0xfacc15,
-        roughness: 0.18,
-        metalness: 0.85,
-        emissive: 0xca8a04,
-        emissiveIntensity: 0.35,
-      })
-    );
-    coinMesh.rotation.x = Math.PI / 2;
-    this.coinFloat.add(coinMesh);
-    this.coinFloat.scale.setScalar(0.72);
-    this.coinFloat.position.set(sx, 4.25, sz);
-    this.shopGroup.add(this.coinFloat);
+    this.addShopEmblem('/hud/trade.png', '#4ade80', sx, 4.05, sz, 1.48, 1.0);
 
     const sellHit = this.createHitbox(sx, 2.1, sz, 5.6, 4.4, 4.4, 'shop-sell');
     this.shopGroup.add(sellHit);
@@ -760,26 +703,7 @@ export class ShopWorld3D {
       targetHeight: 0.72,
     });
 
-    const gemCrystal = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.84, 0),
-      new THREE.MeshStandardMaterial({
-        color: 0xf472b6,
-        emissive: 0xdb2777,
-        emissiveIntensity: 0.55,
-        roughness: 0.12,
-        metalness: 0.25,
-      })
-    );
-    gemCrystal.scale.set(0.95, 1.3, 0.95);
-    const gemRing = new THREE.Mesh(
-      new THREE.TorusGeometry(1.1, 0.07, 10, 28),
-      new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0x9333ea, emissiveIntensity: 0.45, metalness: 0.6 })
-    );
-    gemRing.rotation.x = Math.PI / 2.4;
-    this.gemFloat.add(gemCrystal, gemRing);
-    this.gemFloat.scale.setScalar(0.72);
-    this.gemFloat.position.set(gx, 7.05, gz);
-    this.shopGroup.add(this.gemFloat);
+    this.addShopEmblem('/hud/gem.png', '#f472b6', gx, 6.85, gz, 1.55, 1.8);
 
     const gemHit = this.createHitbox(gx, 2.3, gz, 5.4, 5.0, 4.6, 'shop-gems');
     this.shopGroup.add(gemHit);
@@ -888,30 +812,7 @@ export class ShopWorld3D {
     towerRing.position.set(0, 1.43, -11.4);
     this.shopGroup.add(towerRing);
 
-    const apexCrystal = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.85, 0),
-      new THREE.MeshStandardMaterial({
-        color: 0x38bdf8,
-        emissive: 0x7c3aed,
-        emissiveIntensity: 0.85,
-        roughness: 0.12,
-        metalness: 0.3,
-      })
-    );
-    apexCrystal.scale.set(0.9, 1.35, 0.9);
-    const towerOrbit1 = new THREE.Mesh(
-      new THREE.TorusGeometry(1.3, 0.08, 10, 32),
-      new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.55, metalness: 0.7 })
-    );
-    towerOrbit1.rotation.x = 1.1;
-    const towerOrbit2 = new THREE.Mesh(
-      new THREE.TorusGeometry(1.4, 0.06, 10, 32),
-      new THREE.MeshStandardMaterial({ color: 0xe879f9, emissive: 0xa855f7, emissiveIntensity: 0.5, metalness: 0.65 })
-    );
-    towerOrbit2.rotation.y = 1.1;
-    this.towerPortalFloat.add(apexCrystal, towerOrbit1, towerOrbit2);
-    this.towerPortalFloat.position.set(0, 8.75, -11.4);
-    this.shopGroup.add(this.towerPortalFloat);
+    this.addShopEmblem('/hud/tower.png', '#38bdf8', 0, 8.55, -11.4, 1.78, 0.8);
 
     const towerHit = this.createHitbox(0, 4.5, -11.4, 8.2, 7.8, 7.2, 'shop-tower');
     this.shopGroup.add(towerHit);
@@ -946,6 +847,30 @@ export class ShopWorld3D {
     ob.add(plinth, shaft, crown, crystal);
     this.plazaCrystals.push(crystal);
     return ob;
+  }
+
+  private addShopEmblem(
+    publicPath: string,
+    color: string,
+    x: number,
+    y: number,
+    z: number,
+    baseSize: number,
+    phase: number
+  ): ArtBillboard2D {
+    const emblem = new ArtBillboard2D(publicPath, color, {
+      baseSize,
+      phase,
+      centerY: 0,
+      showPedestalBase: false,
+      bobAmp: 0.14,
+      swayAmp: 0.048,
+      haloScale: 1.48,
+    });
+    emblem.root.position.set(x, y, z);
+    this.shopGroup.add(emblem.root);
+    this.shopEmblems.push(emblem);
+    return emblem;
   }
 
   private createHitbox(
@@ -1019,21 +944,22 @@ export class ShopWorld3D {
       ring.position.y = 0.08;
       pg.add(ring);
 
-      const prop = createEnchantAura3D(enc.id, 0.78);
-      prop.position.y = 0.78;
-      pg.add(prop);
+      const billboard = new EnchantBillboard2D(enc.id, enc.color, 1.38, i * 0.7);
+      billboard.root.position.y = 0.08;
+      pg.add(billboard.root);
 
       this.altarGroup.add(pg);
       this.altarPedestals.push({
         id: enc.id,
         group: pg,
         ringMat,
-        prop,
+        prop: billboard.root,
+        billboard,
         baseY: py,
         needleAngle,
         worldX: px,
         worldZ: pz,
-        anchorLocal: new THREE.Vector3(px, py + 1.62, pz),
+        anchorLocal: new THREE.Vector3(px, py + 1.72, pz),
       });
     }
 
@@ -1083,21 +1009,19 @@ export class ShopWorld3D {
     return true;
   }
 
-  public update(dt: number, elapsed: number, mode: 'mine' | 'shop' | 'altar' | 'tower'): void {
+  public update(
+    dt: number,
+    elapsed: number,
+    mode: 'mine' | 'shop' | 'altar' | 'tower',
+    camera?: THREE.Camera
+  ): void {
     this.shopGroup.visible = mode === 'shop';
     this.altarGroup.visible = mode === 'altar';
 
     if (mode === 'shop') {
-      this.pickaxeFloat.rotation.y = elapsed * 1.4;
-      this.pickaxeFloat.position.y = 4.9 + Math.sin(elapsed * 2.2) * 0.14;
-      this.coinFloat.rotation.y = elapsed * 1.8;
-      this.coinFloat.position.y = 4.25 + Math.sin(elapsed * 2.2 + 1) * 0.14;
-      this.gemFloat.rotation.y = elapsed * 1.5;
-      this.gemFloat.position.y = 7.05 + Math.sin(elapsed * 2.0 + 1.8) * 0.14;
-      this.altarPortalFloat.rotation.y = elapsed * 1.35;
-      this.altarPortalFloat.position.y = 2.7 + Math.sin(elapsed * 2.1 + 2.5) * 0.12;
-      this.towerPortalFloat.rotation.y = -elapsed * 1.1;
-      this.towerPortalFloat.position.y = 8.75 + Math.sin(elapsed * 1.9 + 0.8) * 0.18;
+      for (let i = 0; i < this.shopEmblems.length; i++) {
+        this.shopEmblems[i].updateTransform(dt, elapsed, false, false, camera);
+      }
       for (let i = 0; i < this.plazaCrystals.length; i++) {
         this.plazaCrystals[i].rotation.y = elapsed * 0.9 + i;
       }
@@ -1185,9 +1109,8 @@ export class ShopWorld3D {
       for (let i = 0; i < this.altarPedestals.length; i++) {
         const p = this.altarPedestals[i];
         const isHi = i === this.activeHighlightIndex;
-        p.group.position.y = p.baseY + Math.sin(elapsed * 1.8 + i * 0.7) * 0.12 + (isHi ? 0.38 : 0);
-        p.prop.rotation.y = elapsed * (isHi ? 4.0 : 1.3) + i;
-        p.prop.scale.setScalar(isHi ? 1.12 : 0.78);
+        p.group.position.y = p.baseY + Math.sin(elapsed * 1.8 + i * 0.7) * 0.12 + (isHi ? 0.34 : 0);
+        p.billboard.updateTransform(dt, elapsed, isHi, isSpinning, camera);
       }
 
       for (let i = 0; i < this.floatingShards.length; i++) {
@@ -1226,7 +1149,10 @@ export class ShopWorld3D {
   ): AltarPedestalAnchor[] {
     return this.altarPedestals.map((p, idx) => {
       const enc = ENCHANTS[idx];
-      projVec.copy(p.anchorLocal).project(camera);
+      const highlighted = idx === this.activeHighlightIndex;
+      projVec
+        .set(p.worldX, p.group.position.y + (highlighted ? 2.15 : 1.66), p.worldZ)
+        .project(camera);
       const visible = projVec.z >= -1 && projVec.z <= 1;
       return {
         id: enc.id,
@@ -1236,7 +1162,7 @@ export class ShopWorld3D {
         x: (projVec.x * 0.5 + 0.5) * width,
         y: (-projVec.y * 0.5 + 0.5) * height,
         visible,
-        highlighted: idx === this.activeHighlightIndex,
+        highlighted,
       };
     });
   }

@@ -79,14 +79,14 @@ interface SlashFx {
   dur: number;
 }
 
-const oreTexCache = new Map<string, Promise<THREE.Texture>>();
-const oreTexLoader = new THREE.TextureLoader();
-let oreShadowTex: THREE.CanvasTexture | null | undefined;
+const spriteTexCache = new Map<string, Promise<THREE.Texture>>();
+const spriteTexLoader = new THREE.TextureLoader();
+let softContactShadowTex: THREE.CanvasTexture | null | undefined;
 
-function getOreShadowTexture(): THREE.CanvasTexture | null {
-  if (oreShadowTex !== undefined) return oreShadowTex;
+export function getSoftContactShadowTexture(): THREE.CanvasTexture | null {
+  if (softContactShadowTex !== undefined) return softContactShadowTex;
   if (typeof document === 'undefined') {
-    oreShadowTex = null;
+    softContactShadowTex = null;
     return null;
   }
   const size = 64;
@@ -95,7 +95,7 @@ function getOreShadowTexture(): THREE.CanvasTexture | null {
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    oreShadowTex = null;
+    softContactShadowTex = null;
     return null;
   }
   const r = size / 2;
@@ -110,13 +110,13 @@ function getOreShadowTexture(): THREE.CanvasTexture | null {
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.needsUpdate = true;
-  oreShadowTex = tex;
+  softContactShadowTex = tex;
   return tex;
 }
 
-function loadOreTexture(oreId: string): Promise<THREE.Texture> {
-  const url = assetUrl(`/ores/${oreId}.png`);
-  const cached = oreTexCache.get(url);
+export function loadPublicSpriteTexture(publicPath: string): Promise<THREE.Texture> {
+  const url = assetUrl(publicPath);
+  const cached = spriteTexCache.get(url);
   if (cached) return cached;
 
   const promise = new Promise<THREE.Texture>((resolve, reject) => {
@@ -124,7 +124,7 @@ function loadOreTexture(oreId: string): Promise<THREE.Texture> {
       reject(new Error('No DOM Image available'));
       return;
     }
-    oreTexLoader.load(
+    spriteTexLoader.load(
       url,
       (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
@@ -140,7 +140,7 @@ function loadOreTexture(oreId: string): Promise<THREE.Texture> {
       (err) => reject(err)
     );
   });
-  oreTexCache.set(url, promise);
+  spriteTexCache.set(url, promise);
   return promise;
 }
 
@@ -207,7 +207,7 @@ export class OreBillboard2D {
     this.spriteMesh.castShadow = false;
     this.visualGroup.add(this.spriteMesh);
 
-    const shadowTex = getOreShadowTexture();
+    const shadowTex = getSoftContactShadowTexture();
     const shadowMat = new THREE.MeshBasicMaterial({
       map: shadowTex,
       color: shadowTex ? 0xffffff : 0x020617,
@@ -233,7 +233,7 @@ export class OreBillboard2D {
     if (oreId === this.oreId) return;
     this.oreId = oreId;
 
-    void loadOreTexture(oreId)
+    void loadPublicSpriteTexture(`/ores/${oreId}.png`)
       .then((tex) => {
         if (this.oreId !== oreId) return;
         this.spriteMat.map = tex;

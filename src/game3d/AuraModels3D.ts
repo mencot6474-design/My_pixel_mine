@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getSoftContactShadowTexture, loadPublicSpriteTexture } from './OrePit3D';
 
 function auraMat(
   color: THREE.ColorRepresentation,
@@ -359,4 +360,221 @@ export function createEnchantDice3D(): THREE.Group {
 
   g.rotation.set(0.45, -0.58, 0.12);
   return g;
+}
+
+let enchantHaloTex: THREE.CanvasTexture | null | undefined;
+
+function getEnchantHaloTexture(): THREE.CanvasTexture | null {
+  if (enchantHaloTex !== undefined) return enchantHaloTex;
+  if (typeof document === 'undefined') {
+    enchantHaloTex = null;
+    return null;
+  }
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    enchantHaloTex = null;
+    return null;
+  }
+  const r = size / 2;
+  const grad = ctx.createRadialGradient(r, r, 0, r, r, r);
+  grad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+  grad.addColorStop(0.32, 'rgba(255, 255, 255, 0.55)');
+  grad.addColorStop(0.68, 'rgba(255, 255, 255, 0.16)');
+  grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  enchantHaloTex = tex;
+  return tex;
+}
+
+export interface ArtBillboardOptions {
+  baseSize?: number;
+  phase?: number;
+  centerY?: number;
+  showPedestalBase?: boolean;
+  bobAmp?: number;
+  swayAmp?: number;
+  haloScale?: number;
+}
+
+/**
+ * Reusable 2.5D illustrated billboard sprite with backlit color-matched aura halo,
+ * optional pedestal contact shadow + ring, bob/sway animation, and camera-pitch tilt.
+ */
+export class ArtBillboard2D {
+  public readonly root = new THREE.Group();
+  public readonly spritePivot = new THREE.Group();
+  private readonly visualGroup = new THREE.Group();
+  private readonly spriteMesh: THREE.Mesh;
+  private readonly spriteMat: THREE.MeshBasicMaterial;
+  private readonly haloMesh: THREE.Mesh;
+  private readonly haloMat: THREE.MeshBasicMaterial;
+  private readonly shadowDisc: THREE.Mesh | null;
+  private readonly baseRingMat: THREE.MeshBasicMaterial | null;
+  private readonly tmpWorldPos = new THREE.Vector3();
+
+  private readonly baseSize: number;
+  private readonly phase: number;
+  private readonly bobAmp: number;
+  private readonly swayAmp: number;
+  private curScale = 1;
+
+  constructor(publicPath: string, color: string, opts: ArtBillboardOptions = {}) {
+    const baseSize = opts.baseSize ?? 1.38;
+    const phase = opts.phase ?? 0;
+    const centerY = opts.centerY ?? 0.54;
+    const showPedestalBase = opts.showPedestalBase ?? true;
+    const haloScale = opts.haloScale ?? 1.38;
+
+    this.baseSize = baseSize;
+    this.phase = phase;
+    this.bobAmp = opts.bobAmp ?? 0.06;
+    this.swayAmp = opts.swayAmp ?? 0.036;
+
+    this.spritePivot.rotation.order = 'YXZ';
+    this.visualGroup.scale.set(baseSize, baseSize, 1);
+    this.spritePivot.add(this.visualGroup);
+    this.root.add(this.spritePivot);
+
+    const haloTex = getEnchantHaloTexture();
+    this.haloMat = new THREE.MeshBasicMaterial({
+      map: haloTex,
+      color,
+      transparent: true,
+      opacity: haloTex ? 0.45 : 0.16,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    this.haloMesh = new THREE.Mesh(
+      haloTex ? new THREE.PlaneGeometry(haloScale, haloScale) : new THREE.CircleGeometry(0.58, 24),
+      this.haloMat
+    );
+    this.haloMesh.position.set(0, centerY, -0.06);
+    this.visualGroup.add(this.haloMesh);
+
+    this.spriteMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      alphaTest: 0.12,
+      side: THREE.DoubleSide,
+      depthWrite: true,
+      opacity: 0,
+    });
+    this.spriteMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.spriteMat);
+    this.spriteMesh.position.set(0, centerY, 0.02);
+    this.visualGroup.add(this.spriteMesh);
+
+    if (showPedestalBase) {
+      const shadowTex = getSoftContactShadowTexture();
+      const shadowMat = new THREE.MeshBasicMaterial({
+        map: shadowTex,
+        color: shadowTex ? 0xffffff : 0x020617,
+        transparent: true,
+        opacity: shadowTex ? 0.72 : 0.25,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
+      });
+      this.shadowDisc = new THREE.Mesh(
+        shadowTex ? new THREE.PlaneGeometry(1.22, 0.76) : new THREE.CircleGeometry(0.48, 20),
+        shadowMat
+      );
+      this.shadowDisc.rotation.x = -Math.PI / 2;
+      this.shadowDisc.position.y = 0.012;
+      this.root.add(this.shadowDisc);
+
+      this.baseRingMat = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.34,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      const baseRing = new THREE.Mesh(new THREE.RingGeometry(0.56, 0.86, 28), this.baseRingMat);
+      baseRing.rotation.x = -Math.PI / 2;
+      baseRing.position.y = 0.018;
+      this.root.add(baseRing);
+    } else {
+      this.shadowDisc = null;
+      this.baseRingMat = null;
+    }
+
+    void loadPublicSpriteTexture(publicPath)
+      .then((tex) => {
+        this.spriteMat.map = tex;
+        this.spriteMat.opacity = 1;
+        this.spriteMat.needsUpdate = true;
+      })
+      .catch(() => {
+        // Safe no-op in headless tests
+      });
+  }
+
+  public updateTransform(
+    dt: number,
+    elapsed: number,
+    highlighted: boolean,
+    isSpinning: boolean,
+    camera?: THREE.Camera
+  ): void {
+    if (camera) {
+      this.root.getWorldPosition(this.tmpWorldPos);
+      const dx = camera.position.x - this.tmpWorldPos.x;
+      const dy = camera.position.y - this.tmpWorldPos.y;
+      const dz = camera.position.z - this.tmpWorldPos.z;
+      const horizDist = Math.max(0.001, Math.hypot(dx, dz));
+      const camPitch = Math.atan2(dy, horizDist);
+      this.spritePivot.rotation.y = Math.atan2(dx, dz);
+      this.spritePivot.rotation.x = -Math.max(0, Math.min(0.5, camPitch * 0.52));
+    }
+
+    const targetScale = highlighted ? 1.32 : isSpinning ? 0.94 : 1.0;
+    const damp = 1 - Math.exp(-Math.max(0.001, dt) * 14);
+    this.curScale += (targetScale - this.curScale) * damp;
+
+    const bob =
+      Math.sin(elapsed * 2.1 + this.phase) * this.bobAmp +
+      (highlighted ? 0.14 + Math.abs(Math.sin(elapsed * 7.5)) * 0.06 : 0);
+    const sway = Math.sin(elapsed * 1.55 + this.phase) * (highlighted ? this.swayAmp * 2.08 : this.swayAmp);
+
+    const s = this.baseSize * this.curScale;
+    this.visualGroup.scale.set(s, s, 1);
+    this.visualGroup.position.set(0, bob, 0);
+    this.visualGroup.rotation.z = sway;
+
+    const haloPulse = 1 + Math.sin(elapsed * (highlighted ? 6.5 : 2.4) + this.phase) * (highlighted ? 0.14 : 0.07);
+    this.haloMesh.scale.setScalar(haloPulse);
+    this.haloMat.opacity = highlighted ? 0.85 : isSpinning ? 0.28 : 0.45 + Math.sin(elapsed * 2.0 + this.phase) * 0.08;
+    if (this.baseRingMat) {
+      this.baseRingMat.opacity = highlighted ? 0.82 : 0.34;
+    }
+    if (this.shadowDisc) {
+      this.shadowDisc.scale.setScalar(Math.max(0.7, (1 - bob * 0.65) * (0.92 + (this.curScale - 1) * 0.4)));
+    }
+  }
+}
+
+/**
+ * 2.5D illustrated Enchant billboard sprite for the Enchant Altar pedestals.
+ */
+export class EnchantBillboard2D extends ArtBillboard2D {
+  constructor(enchantId: string, color: string, baseSize = 1.38, phase = 0) {
+    super(`/enchants/${enchantId}.png`, color, {
+      baseSize,
+      phase,
+      centerY: 0.54,
+      showPedestalBase: true,
+    });
+  }
 }
