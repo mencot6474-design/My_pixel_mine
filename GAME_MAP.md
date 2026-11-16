@@ -73,12 +73,12 @@ src/sdk/crazygames.ts           180 baris — CrazyGames SDK v3 wrapper (`isCraz
                                             `cgGameplayStart` 80, `cgHappyTime` 100, `cgRequestRewardedAd` 108)
 
 === UI HUD, MODALS & CSS (Modular Architecture) ===
-src/ui/GameHud.ts             1.712 baris — `GameHud`: Thin UI coordinator; manages 3D overlay layers (incl. Tower ore bars),
+src/ui/GameHud.ts             1.798 baris — `GameHud`: Thin UI coordinator; manages 3D overlay layers (incl. Tower ore bars),
                                             viewport scaling (`updateViewportScale`), currency rail + audio mute toggle, Weather top-left
                                             3D HUD (`renderWeatherHud`), hotbar 1..9 (click + drag reorder + plot drop),
-                                            active potion pills, Shop Plaza HUD, Altar HUD, 100ms Tower timer tick &
-                                            real chibi strike dispatch, delegates modals, Plot Inspector & `TowerUi`
-src/ui/HudShared.ts             226 baris — Shared types (`ModalKind` 4, `ModalThemeId` 16, `InvTab` 18),
+                                            active potion pills, Shop Plaza HUD, Altar HUD + Auto Roll (`triggerSingleEnchantRoll`),
+                                            100ms Tower timer tick & real chibi strike dispatch, delegates modals, Plot Inspector & `TowerUi`
+src/ui/HudShared.ts             228 baris — Shared types (`ModalKind` 4, `ModalThemeId` 16, `InvTab` 18),
                                             rarity/ring helpers (`rarityCardClasses` 21 incl. `exotic`/`secret`, `rarityVars`,
                                             `applyInspectRing`), `refreshPotionTimersInDom`, dark-glass Tailwind `TW_*` constants,
                                             shared shell builders (`renderModalShell` 134, `renderInspectorPanel` 170)
@@ -124,8 +124,10 @@ src/game3d/ShopWorld3D.ts     1.252 baris — 3D Shop Plaza dengan aset Kenney (
 src/game3d/TowerArena3D.ts    1.292 baris — Cosmic Void/Eclipse 3D Colosseum Arena: sky dome nebula/stars, Total Solar
                                             Eclipse corona, arcane rune deck, 8 obsidian pillars, 5 random wave ore rock slots
                                             (Waves 1–9), Boss Monolith (Wave 10), & Chibi Fighters (`dash` -> melee `attack` strike)
-src/game3d/AltarSpinFx3D.ts     537 baris — `createAltarClockDial` 34, `createAltarClockHand` 161,
-                                            `createAltarSubHand` 262, `AltarParticleSystem` 316
+src/game3d/AltarSpinFx3D.ts     529 baris — `createAltarClockDial` 34, `createAltarClockHand` 153,
+                                            `createAltarSubHand` 246, `AltarParticleSystem` 300
+src/game3d/HellAltarEye3D.ts    372 baris — `HellAltarEyeController` 149: Outer Space starfield, cosmic astrolabe floor ring,
+                                            & distant Pitch-Black Black Hole (`#000000` event horizon, photon ring, lensing arches, accretion disk)
 src/game3d/AuraModels3D.ts      362 baris — `createEnchantAura3D` 275 & `createEnchantDice3D` 317
 src/game3d/HudIcon3DRenderer.ts 1.985 baris — Offscreen WebGL renderer generating cached data-URL 3D icons (`buildStarwellOreModel` 1334)
                                             & 5 3D weather icons (`init3dHudIcons`)

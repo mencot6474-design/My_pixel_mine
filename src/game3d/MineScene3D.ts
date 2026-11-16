@@ -633,12 +633,12 @@ export class MineScene3D {
     }
 
     if (mode === 'altar') {
-      this.scene.background = new THREE.Color(0x020206);
-      this.scene.fog = new THREE.Fog(0x020206, 26, 70);
+      this.scene.background = new THREE.Color(0x020208);
+      this.scene.fog = new THREE.Fog(0x040312, 34, 86);
       this.targetOrbitYaw = 0;
-      this.targetOrbitPitch = -0.05;
-      this.targetCamRadius = 11.8;
-      this.lookAtPos.set(0, 0.2, -2.2);
+      this.targetOrbitPitch = -0.18;
+      this.targetCamRadius = 12.2;
+      this.lookAtPos.set(0, 1.05, -2.4);
     } else if (mode === 'tower') {
       this.scene.background = new THREE.Color(0x03010a);
       this.scene.fog = new THREE.Fog(0x090418, 34, 92);

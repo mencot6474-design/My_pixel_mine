@@ -134,18 +134,13 @@ export function createAltarClockDial(
   pivotBase.position.y = 0.2;
   group.add(pivotBase);
 
-  // Floating levitating finial orb above clock hands
+  // Center pivot cap (hidden finial orb kept for interface compatibility)
   const centerOrb = new THREE.Mesh(
-    new THREE.OctahedronGeometry(0.22, 0),
-    new THREE.MeshStandardMaterial({
-      color: 0xf0abfc,
-      emissive: 0xa855f7,
-      emissiveIntensity: 1.0,
-      roughness: 0.12,
-      metalness: 0.25,
-    })
+    new THREE.CylinderGeometry(0.18, 0.22, 0.05, 16),
+    goldMat
   );
-  centerOrb.position.y = 0.72;
+  centerOrb.position.y = 0.4;
+  centerOrb.visible = false;
   group.add(centerOrb);
 
   return { group, gearRing, centerOrb };
@@ -180,12 +175,9 @@ export function createAltarClockHand(): AltarClockHandParts {
   const hubBoss = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, 0.14, 8), goldMat);
   group.add(hubBoss);
 
-  const hubGem = new THREE.Mesh(
-    new THREE.OctahedronGeometry(0.16, 0),
-    new THREE.MeshBasicMaterial({ color: 0xe879f9 })
-  );
-  hubGem.position.y = 0.09;
-  group.add(hubGem);
+  const hubCap = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.05, 16), goldMat);
+  hubCap.position.y = 0.08;
+  group.add(hubCap);
 
   // Counterweight tail (-X side)
   const tailShaft = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.07, 0.14), darkMetalMat);

@@ -38,6 +38,7 @@ import {
   rarityVars,
   refreshPotionTimersInDom,
   TW_ACTIVE_POT_PILL,
+  TW_ALTAR_AUTO_BTN,
   TW_ALTAR_ROLL_BTN,
   TW_BADGE_BASE,
   TW_CURRENCY_BAR,
@@ -77,6 +78,8 @@ export class GameHud {
   private nextToastId = 1;
   private enchantSpinning = false;
   private enchantSpinSafetyTimer: number | null = null;
+  private enchantAutoRolling = false;
+  private enchantAutoTimer: number | null = null;
   private lastRegrowthActive = false;
   private weatherPopoverOpen = false;
   private hotbarDrag: {
@@ -506,7 +509,12 @@ export class GameHud {
         window.clearTimeout(this.enchantSpinSafetyTimer);
         this.enchantSpinSafetyTimer = null;
       }
+      if (this.enchantAutoTimer !== null) {
+        window.clearTimeout(this.enchantAutoTimer);
+        this.enchantAutoTimer = null;
+      }
       this.enchantSpinning = false;
+      this.enchantAutoRolling = false;
       audio.cancelEnchantSpinSfx();
     }
     this.sceneMode = mode;
@@ -614,6 +622,90 @@ export class GameHud {
     if (this.sceneMode === 'altar') {
       this.updateAltarLiveValues();
     }
+  }
+
+  private stopEnchantAutoRoll(reasonToast?: string): void {
+    if (this.enchantAutoTimer !== null) {
+      window.clearTimeout(this.enchantAutoTimer);
+      this.enchantAutoTimer = null;
+    }
+    this.enchantAutoRolling = false;
+    if (this.sceneMode === 'altar') {
+      this.updateAltarLiveValues();
+    }
+    if (reasonToast) {
+      this.pushToast(reasonToast);
+    }
+  }
+
+  private triggerSingleEnchantRoll(): boolean {
+    if (this.enchantSpinning) return false;
+    if (this.state.enchantDice <= 0) {
+      audio.playSfx('ui-error');
+      if (this.enchantAutoRolling) {
+        this.stopEnchantAutoRoll('Auto Roll stopped: Out of Enchanted Dice!');
+      } else {
+        this.pushToast('Out of Enchanted Dice!');
+      }
+      return false;
+    }
+
+    this.enchantSpinning = true;
+    const rolled = this.state.rollEnchant();
+    if (!rolled) {
+      this.enchantSpinning = false;
+      audio.playSfx('ui-error');
+      if (this.enchantAutoRolling) {
+        this.stopEnchantAutoRoll('Auto Roll stopped: Out of Enchanted Dice!');
+      } else {
+        this.pushToast('Out of Enchanted Dice!');
+      }
+      return false;
+    }
+
+    audio.playEnchantSpinStart(1.9);
+    if (this.enchantSpinSafetyTimer !== null) {
+      window.clearTimeout(this.enchantSpinSafetyTimer);
+    }
+    let finalized = false;
+    const settle = () => {
+      if (finalized) return;
+      finalized = true;
+      this.finishEnchantSpin();
+      const isRare =
+        rolled.rarity === 'epic' ||
+        rolled.rarity === 'legendary' ||
+        rolled.rarity === 'rainbow' ||
+        rolled.rarity === 'mythic' ||
+        rolled.rarity === 'exotic' ||
+        rolled.rarity === 'secret';
+      audio.playEnchantSpinLand(isRare);
+      this.pushToast(`Rolled ${rolled.name} (${rolled.dmgMult}x DMG)!`);
+
+      if (this.enchantAutoRolling && this.sceneMode === 'altar') {
+        if (this.state.enchantDice <= 0) {
+          this.stopEnchantAutoRoll('Auto Roll finished: Out of Enchanted Dice!');
+          return;
+        }
+        if (this.enchantAutoTimer !== null) {
+          window.clearTimeout(this.enchantAutoTimer);
+        }
+        this.enchantAutoTimer = window.setTimeout(() => {
+          this.enchantAutoTimer = null;
+          if (this.enchantAutoRolling && this.sceneMode === 'altar' && !this.enchantSpinning) {
+            this.triggerSingleEnchantRoll();
+          }
+        }, 260);
+      }
+    };
+
+    if (this.onTriggerEnchantSpin) {
+      this.enchantSpinSafetyTimer = window.setTimeout(settle, 2500);
+      this.onTriggerEnchantSpin(rolled.id, settle);
+    } else {
+      settle();
+    }
+    return true;
   }
 
   public openShopStation(station: ShopStationId): void {
@@ -1109,13 +1201,16 @@ export class GameHud {
       ${this.renderCurrencyRail({})}
 
       <div class="absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(1240px,calc(100%-24px))] flex flex-col items-center gap-2 pointer-events-auto">
-        <div class="flex items-center gap-2.5 flex-wrap justify-center">
-          <div class="min-w-[88px] min-h-[82px] rounded-lg border-2 border-[#7c3aed] bg-[radial-gradient(circle_at_50%_55%,rgba(168,85,247,0.25),rgba(15,23,42,0.94)_80%)] flex flex-col items-center justify-between gap-0.5 px-2 py-[5px] text-center">
+        <div class="flex items-stretch gap-2.5 flex-wrap justify-center">
+          <div class="min-w-[88px] rounded-lg border-2 border-[#7c3aed] bg-[radial-gradient(circle_at_50%_55%,rgba(168,85,247,0.25),rgba(15,23,42,0.94)_80%)] flex flex-col items-center justify-between gap-0.5 px-2 py-[5px] text-center">
             <div class="text-[12px] font-extrabold text-[#e2e8f0] leading-[1.1] mam-outline-sm">Enchanted<br/>Dice</div>
             <div class="flex items-center justify-center h-[34px] [&>.mam-3d-icon]:w-[34px] [&>.mam-3d-icon]:h-[34px]">${enchantDiceIconHtml(34)}</div>
             <div class="text-[14px] font-black mam-outline-sm" data-altar-dice-count="true" style="color:${outOfRolls ? '#f87171' : '#4ade80'}">${fmtInt(this.state.enchantDice)}/1</div>
           </div>
-          <button class="mam-sheen-hover relative overflow-hidden px-[18px] py-2.5 rounded-lg border-[2.5px] border-[#14532d] bg-[linear-gradient(180deg,#4ade80_0%,#16a34a_100%)] shadow-[inset_0_2px_0_rgba(255,255,255,0.35),0_4px_0_#14532d] text-white text-[15px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-[140ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:scale-[1.03] hover:brightness-[1.09] active:translate-y-[3px] active:scale-[0.96] active:shadow-[inset_0_2px_0_rgba(255,255,255,0.2),0_1px_0_#14532d] mam-outline-sm" data-action="buy-dice">Buy Dice (${ENCHANT_DICE_GEM_COST} Gems)</button>
+          <div class="flex flex-col gap-2 items-stretch justify-center">
+            <button class="mam-sheen-hover relative overflow-hidden w-full px-[18px] py-2 rounded-lg border-[2.5px] border-[#14532d] bg-[linear-gradient(180deg,#4ade80_0%,#16a34a_100%)] shadow-[inset_0_2px_0_rgba(255,255,255,0.35),0_4px_0_#14532d] text-white text-[15px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-[140ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:scale-[1.03] hover:brightness-[1.09] active:translate-y-[3px] active:scale-[0.96] active:shadow-[inset_0_2px_0_rgba(255,255,255,0.2),0_1px_0_#14532d] mam-outline-sm" data-action="buy-dice">Buy Dice (${ENCHANT_DICE_GEM_COST} Gems)</button>
+            <button class="${TW_ALTAR_AUTO_BTN} mam-outline-sm ${this.enchantAutoRolling ? 'is-active' : ''}" data-action="toggle-auto-enchant">${this.enchantAutoRolling ? 'Stop' : 'Auto Roll'}</button>
+          </div>
         </div>
 
         <button
@@ -1195,44 +1290,21 @@ export class GameHud {
             this.pushToast(`Need ${ENCHANT_DICE_GEM_COST} Gems!`);
           }
         } else if (action === 'roll-enchant') {
-          if (this.enchantSpinning) return;
-          if (this.state.enchantDice <= 0) {
+          this.triggerSingleEnchantRoll();
+        } else if (action === 'toggle-auto-enchant') {
+          if (this.enchantAutoRolling) {
+            audio.playSfx('ui-click');
+            this.stopEnchantAutoRoll('Auto Roll stopped');
+          } else if (this.state.enchantDice <= 0 && !this.enchantSpinning) {
             audio.playSfx('ui-error');
             this.pushToast('Out of Enchanted Dice!');
-            return;
-          }
-          this.enchantSpinning = true;
-          const rolled = this.state.rollEnchant();
-          if (!rolled) {
-            this.enchantSpinning = false;
-            audio.playSfx('ui-error');
-            this.pushToast('Out of Enchanted Dice!');
-            return;
-          }
-          audio.playEnchantSpinStart(1.9);
-          if (this.enchantSpinSafetyTimer !== null) {
-            window.clearTimeout(this.enchantSpinSafetyTimer);
-          }
-          let finalized = false;
-          const settle = () => {
-            if (finalized) return;
-            finalized = true;
-            this.finishEnchantSpin();
-            const isRare =
-              rolled.rarity === 'epic' ||
-              rolled.rarity === 'legendary' ||
-              rolled.rarity === 'rainbow' ||
-              rolled.rarity === 'mythic' ||
-              rolled.rarity === 'exotic' ||
-              rolled.rarity === 'secret';
-            audio.playEnchantSpinLand(isRare);
-            this.pushToast(`Rolled ${rolled.name} (${rolled.dmgMult}x DMG)!`);
-          };
-          if (this.onTriggerEnchantSpin) {
-            this.enchantSpinSafetyTimer = window.setTimeout(settle, 2500);
-            this.onTriggerEnchantSpin(rolled.id, settle);
           } else {
-            settle();
+            this.enchantAutoRolling = true;
+            audio.playSfx('ui-tab');
+            this.updateAltarLiveValues();
+            if (!this.enchantSpinning) {
+              this.triggerSingleEnchantRoll();
+            }
           }
         } else if (action === 'open-worlds') {
           this.toggleModal('worlds');
@@ -1709,6 +1781,12 @@ export class GameHud {
         : outOfRolls
           ? 'Out of Rolls'
           : 'Roll';
+    }
+
+    const autoBtn = this.root.querySelector<HTMLButtonElement>('[data-action="toggle-auto-enchant"]');
+    if (autoBtn) {
+      autoBtn.classList.toggle('is-active', this.enchantAutoRolling);
+      autoBtn.textContent = this.enchantAutoRolling ? 'Stop' : 'Auto Roll';
     }
 
     for (const e of ENCHANTS) {

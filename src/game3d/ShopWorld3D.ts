@@ -10,6 +10,7 @@ import {
 } from './AltarSpinFx3D';
 import { createEnchantAura3D } from './AuraModels3D';
 import { mountGlbProp } from './GlbAssets3D';
+import { HellAltarEyeController } from './HellAltarEye3D';
 
 export type ShopStationId = 'pickaxe' | 'sell' | 'gems' | 'altar' | 'tower';
 
@@ -59,6 +60,7 @@ export class ShopWorld3D {
   private readonly altarPedestals: AltarPedestalEntry[] = [];
   private readonly floatingShards: THREE.Mesh[] = [];
   private readonly altarParticles = new AltarParticleSystem();
+  private readonly hellEye = new HellAltarEyeController();
   private clockDial!: AltarClockDialParts;
   private clockHand!: AltarClockHandParts;
   private clockSubHand!: THREE.Group;
@@ -965,30 +967,10 @@ export class ShopWorld3D {
   }
 
   private buildEnchantAltar(): void {
-    // Deep space stars
-    const starPos: number[] = [];
-    for (let i = 0; i < 360; i++) {
-      starPos.push((Math.random() - 0.5) * 65, (Math.random() - 0.3) * 38, (Math.random() - 0.5) * 65 - 6);
-    }
-    const starGeo = new THREE.BufferGeometry();
-    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-    const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xe2e8f0, size: 0.16 }));
-    this.altarGroup.add(stars);
-
-    // Floating dark purple crystals in void
-    const shardMat = new THREE.MeshStandardMaterial({ color: 0x3b0764, roughness: 0.4, metalness: 0.2 });
-    for (let i = 0; i < 14; i++) {
-      const shard = new THREE.Mesh(new THREE.OctahedronGeometry(0.45 + (i % 3) * 0.2, 0), shardMat);
-      const ang = (i / 14) * Math.PI * 2;
-      shard.position.set(Math.cos(ang) * 14, -1 + (i % 4) * 1.5, Math.sin(ang) * 10 - 3);
-      this.altarGroup.add(shard);
-      this.floatingShards.push(shard);
-    }
-
-    // Center dark pedestal
+    // Center dark cosmic pedestal
     const centerRock = new THREE.Mesh(
       new THREE.CylinderGeometry(1.55, 0.85, 1.5, 10),
-      new THREE.MeshStandardMaterial({ color: 0x3b0764, roughness: 0.45 })
+      new THREE.MeshStandardMaterial({ color: 0x1e1b4b, roughness: 0.45 })
     );
     centerRock.position.set(0, -0.5, -2.4);
     this.altarGroup.add(centerRock);
@@ -1001,7 +983,7 @@ export class ShopWorld3D {
     centerRing.position.set(0, 0.27, -2.4);
     this.altarGroup.add(centerRing);
 
-    // 10 floating Enchant pedestals in an ellipse ring matching the screenshot
+    // 10 floating Enchant pedestals in an ellipse ring
     const count = ENCHANTS.length;
     const pedestalTargets: Array<{ x: number; z: number; color: string }> = [];
     for (let i = 0; i < count; i++) {
@@ -1020,14 +1002,14 @@ export class ShopWorld3D {
 
       const rock = new THREE.Mesh(
         new THREE.CylinderGeometry(1.05, 0.52, 1.35, 7),
-        new THREE.MeshStandardMaterial({ color: 0x312e81, roughness: 0.55 })
+        new THREE.MeshStandardMaterial({ color: 0x1e1b4b, roughness: 0.55 })
       );
       rock.position.y = -0.68;
       pg.add(rock);
 
       const topDisc = new THREE.Mesh(
         new THREE.CylinderGeometry(1.08, 1.08, 0.12, 24),
-        new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.35 })
+        new THREE.MeshStandardMaterial({ color: 0x090b1a, roughness: 0.35 })
       );
       pg.add(topDisc);
 
@@ -1062,7 +1044,13 @@ export class ShopWorld3D {
     this.subHandAngle = this.needleAngle;
     this.clockHand.group.rotation.y = this.needleAngle;
     this.clockSubHand.rotation.y = this.subHandAngle;
-    this.altarGroup.add(this.clockDial.group, this.clockHand.group, this.clockSubHand, this.altarParticles.group);
+    this.altarGroup.add(
+      this.hellEye.root,
+      this.clockDial.group,
+      this.clockHand.group,
+      this.clockSubHand,
+      this.altarParticles.group
+    );
   }
 
   public isSpinning(): boolean {
@@ -1164,6 +1152,7 @@ export class ShopWorld3D {
           if (winP) {
             this.needleAngle = winP.needleAngle;
             this.subHandAngle = winP.needleAngle;
+            this.hellEye.glanceAtWorldX(winP.worldX);
             this.altarParticles.spawnBurst(winP.worldX, winP.baseY + 0.45, winP.worldZ, winEnc.color, 85, 1.35);
             this.altarParticles.spawnBurst(0, 0.72, -2.4, winEnc.color, 45, 1.1);
             this.altarParticles.triggerWinShockwave(winP.worldX, winP.baseY, winP.worldZ, winEnc.color);
@@ -1204,6 +1193,8 @@ export class ShopWorld3D {
       for (let i = 0; i < this.floatingShards.length; i++) {
         this.floatingShards[i].rotation.y = elapsed * 0.4 + i;
       }
+
+      this.hellEye.update(dt, elapsed, isSpinning, this.needleAngle);
     }
   }
 
