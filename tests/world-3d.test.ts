@@ -49,7 +49,7 @@ import { applyNodeDamagePure, BASE_ORE_RESPAWN_SEC, OrePit3D, PIT_NODE_COUNT } f
 import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
 import { ShopWorld3D } from '../src/game3d/ShopWorld3D';
 import { TowerArena3D } from '../src/game3d/TowerArena3D';
-import { pickaxeIconHtml } from '../src/ui/HudIcons';
+import { enchantAuraIconHtml, enchantDiceIconHtml, gemPotionIconHtml, hudIconHtml, oreIconSvg, pickaxeIconHtml, towerIconHtml, weatherIconHtml } from '../src/ui/HudIcons';
 import {
   getGlobalGemGainBonus,
   getTowerCheckpoints,
@@ -254,6 +254,10 @@ describe('Pure 3D Mine World', () => {
 
   it('buys Gem Shop potions into Backpack, activates via useGemPotion, and applies gameplay multipliers', () => {
     expect(GEM_SHOP_ITEMS.length).toBe(8);
+    for (const pot of GEM_SHOP_ITEMS) {
+      expect(existsSync(resolve(process.cwd(), 'public', 'potions', `${pot.id}.png`))).toBe(true);
+      expect(gemPotionIconHtml(pot.id, 64, pot.name, pot.color)).toContain(`potions/${pot.id}.png`);
+    }
     const gs = new GameState();
     let emits = 0;
     gs.subscribe(() => {
@@ -1006,6 +1010,10 @@ describe('Pure 3D Mine World', () => {
   it('rolls 5 weathers every 3 minutes with 5% Celestial granting 10x Ore, 4x Gems, and 5x Damage', async () => {
     expect(WEATHER_DURATION_MS).toBe(180_000);
     expect(WEATHERS.map((w) => w.id)).toEqual(['light_rain', 'snow_rain', 'bloodmoon', 'void', 'celestial']);
+    for (const w of WEATHERS) {
+      expect(existsSync(resolve(process.cwd(), 'public', 'weathers', `${w.id}.png`))).toBe(true);
+      expect(weatherIconHtml(w.id, 38, w.name)).toContain(`weathers/${w.id}.png`);
+    }
     const totalChance = WEATHERS.reduce((sum, w) => sum + w.chancePct, 0);
     expect(totalChance).toBe(100);
 
@@ -1284,5 +1292,49 @@ describe('Pure 3D Mine World', () => {
     expect(gs.buyPickaxe('starwellcrown')).toBe('bought');
     expect(gs.ownedPickaxes.starwellcrown).toBe(1);
     expect(gs.buyPickaxe('starwellcrown')).toBe('sold_out');
+  });
+
+  it('serves 2D fantasy PNG art for all 16 HUD & Modal icons', () => {
+    const hudKeys = [
+      'shops',
+      'shopBasket',
+      'hourglass',
+      'indexBook',
+      'gem',
+      'backpack',
+      'chest',
+      'sparkle',
+      'daily',
+      'quest',
+      'trade',
+      'stats',
+      'mutation',
+      'enchant',
+      'lock',
+    ] as const;
+
+    for (const k of hudKeys) {
+      expect(existsSync(resolve(process.cwd(), 'public', 'hud', `${k}.png`))).toBe(true);
+      expect(hudIconHtml(k, 28, k)).toContain(`hud/${k}.png`);
+    }
+    expect(existsSync(resolve(process.cwd(), 'public', 'hud', 'tower.png'))).toBe(true);
+    expect(towerIconHtml(24)).toContain('hud/tower.png');
+  });
+
+  it('serves 2D fantasy PNG art for all 10 Enchant Auras and Enchanted Dice', () => {
+    for (const enc of ENCHANTS) {
+      expect(existsSync(resolve(process.cwd(), 'public', 'enchants', `${enc.id}.png`))).toBe(true);
+      expect(enchantAuraIconHtml(enc.id, enc.color, 46, enc.name)).toContain(`enchants/${enc.id}.png`);
+    }
+    expect(existsSync(resolve(process.cwd(), 'public', 'enchants', 'enchant_dice.png'))).toBe(true);
+    expect(enchantDiceIconHtml(34)).toContain('enchants/enchant_dice.png');
+  });
+
+  it('serves 2D fantasy PNG art for all 48 World 1–6 ores', () => {
+    expect(ORES.length).toBe(48);
+    for (const ore of ORES) {
+      expect(existsSync(resolve(process.cwd(), 'public', 'ores', `${ore.id}.png`))).toBe(true);
+      expect(oreIconSvg(ore.color, ore.secondaryColor, ore.rarity, `ix_${ore.id}`)).toContain(`ores/${ore.id}.png`);
+    }
   });
 });

@@ -28,7 +28,7 @@ GAME_MAP.md                     Peta struktur file & anchor (dokumen ini)
 === ENTRY & TESTS ===
 src/main.ts                     139 baris — Bootstrap Three.js scene (`MineScene3D`), `GameState`, `GameHud` (+ plot drop ops,
                                             weather & CC0 `AudioManager` sync), CrazyGames SDK init, Tower callbacks & game loop
-tests/world-3d.test.ts        1.288 baris — 30 Vitest unit & integration specs (3D world, Altar dial/dice,
+tests/world-3d.test.ts        1.340 baris — 33 Vitest unit & integration specs (3D world, Altar dial/dice,
                                             Equip Best stat preservation, pure ore damage, research trees
                                             incl. Core-only tap damage, +300K Core Vault Expansion, & W1-W6
                                             denseOreScale HP x10 / Drop x3, Gem Tower 10-wave 5-ore + 3D Seraphim Boss
@@ -93,7 +93,7 @@ src/ui/UpgradesWorldsUi.ts      596 baris — `UpgradesWorldsUi` 17: Research/Up
 src/ui/PlotInspectUi.ts         398 baris — `PlotInspectUi` 25: Plot Inspector overlay, live updater & modal
                                             konfirmasi peringatan roll mutasi Frozen+ (`renderMutationConfirmOverlay`
                                             209: `Stop (Keep)` / `Continue`, proteksi obtain & overwrite)
-src/ui/HudIcons.ts              349 baris — SVG, 2D fantasy pickaxe art (`public/pickaxes/*.png`), & 3D-thumbnail icon helpers (`HUD_ICONS`, `hudIconHtml`,
+src/ui/HudIcons.ts              366 baris — SVG, 2D fantasy art (`public/{enchants,hud,ores,pickaxes,potions,weathers}/*.png`), & 3D-thumbnail icon helpers (`HUD_ICONS`, `hudIconHtml`,
                                             `weatherIconHtml`, `towerIconHtml`, `pickaxeIconHtml`, `gemPotionIconHtml`,
                                             `enchantAuraIconHtml`, `enchantDiceIconHtml`, `researchIconHtml`)
 src/styles/global.css            40 baris — Tailwind v4 entry (`@import "tailwindcss";`) + base font/reset
@@ -137,9 +137,14 @@ src/game3d/GlbAssets3D.ts       135 baris — Async GLTF/GLB loader & cache (`mo
 === ASSETS (`public/`) ===
 public/audio/                   CC0 BGM (`bgm/{mine,shop,tower,boss}.mp3`) & 24 SFX (`sfx/*.ogg|wav|mp3`) + `LICENSE.txt`
 public/chibi/                   30 chibi (`<id>/{attack,idle,pose,walk}.png` + 15 legacy `*-spritesheet-alpha.png`)
+public/enchants/                11 transparent PNG fantasy aura & dice icons (`blazing`..`spellbound`, `enchant_dice`)
+public/hud/                     16 transparent PNG fantasy HUD & modal art icons (`shops`..`lock`)
 public/models/                  Kenney & fantasy `.glb` packs (`castle/`, `factory/`, `fantasy-town/`, `mini-dungeon/`,
                                 `modular-cave/`, `nature/`, `platformer/`, `retro-fantasy/`, `survival/`, `train/`)
+public/ores/                    48 transparent PNG fantasy ore icons (W1–W6 `underground`..`starwell`)
 public/pickaxes/                12 transparent PNG fantasy pickaxe art icons (`starter`..`starwellcrown`)
+public/potions/                 8 transparent PNG fantasy potion art icons (`ore-elixir-1`..`mutation-luck-1`)
+public/weathers/                5 transparent PNG fantasy weather emblem icons (`light_rain`..`celestial`)
 public/worlds/                  6 full-bleed teleport banner JPGs (`underground`, `crystal`, `magma`, `ruins`, `astral`, `starwell`)
 ```
 

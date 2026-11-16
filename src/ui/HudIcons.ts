@@ -1,18 +1,36 @@
 import { assetUrl } from '../game/AssetUrl';
-import { ItemRarity, PICKAXES } from '../game/GameData';
+import { ENCHANTS, GEM_SHOP_ITEMS, ItemRarity, ORES, PICKAXES } from '../game/GameData';
 import type { ResearchIconKind } from '../game/ResearchData';
-import type { WeatherId } from '../game/WeatherData';
+import { WEATHERS, type WeatherId } from '../game/WeatherData';
 import {
-  get3dAuraIconUrl,
-  get3dEnchantDiceIconUrl,
-  get3dGemPotionIconUrl,
   get3dHudIconUrl,
   get3dOreIconUrl,
-  get3dWeatherIconUrl,
   Hud3dIconKey,
 } from '../game3d/HudIcon3DRenderer';
 
 const PICKAXE_ART_IDS = new Set(PICKAXES.map((p) => p.id));
+const POTION_ART_IDS = new Set(GEM_SHOP_ITEMS.map((item) => item.id));
+const ENCHANT_ART_IDS = new Set(ENCHANTS.map((e) => e.id));
+const WEATHER_ART_IDS = new Set<WeatherId>(WEATHERS.map((w) => w.id));
+const HUD_ART_KEYS = new Set([
+  'shops',
+  'shopBasket',
+  'hourglass',
+  'indexBook',
+  'gem',
+  'backpack',
+  'chest',
+  'sparkle',
+  'daily',
+  'quest',
+  'trade',
+  'tower',
+  'stats',
+  'mutation',
+  'enchant',
+  'lock',
+]);
+const ORE_ART_IDS = new Set(ORES.map((o) => o.id));
 
 export function oreIconSvg(
   color: string,
@@ -22,6 +40,10 @@ export function oreIconSvg(
   oreId = ''
 ): string {
   const inferredId = oreId || (idSeed.includes('_') ? idSeed.slice(idSeed.lastIndexOf('_') + 1) : idSeed);
+  if (ORE_ART_IDS.has(inferredId)) {
+    const artUrl = assetUrl(`/ores/${inferredId}.png`);
+    return `<img class="mam-3d-icon drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]" src="${artUrl}" width="64" height="64" alt="${inferredId}" />`;
+  }
   const url3d = get3dOreIconUrl(color, secondary, rarity, inferredId);
   if (url3d) {
     return `<img class="mam-3d-icon" src="${url3d}" width="64" height="64" alt="ore" />`;
@@ -177,12 +199,17 @@ export const HUD_ICONS = {
 } as const;
 
 export function towerIconHtml(sizePx = 22): string {
-  return `<svg viewBox="0 0 24 24" width="${sizePx}" height="${sizePx}" aria-hidden="true"><polygon points="12,2 16,7 14,7 17,19 7,19 10,7 8,7" fill="#38bdf8" stroke="#c084fc" stroke-width="1.6" stroke-linejoin="round"/><rect x="5" y="19" width="14" height="3" rx="1" fill="#312e81" stroke="#38bdf8" stroke-width="1.2"/></svg>`;
+  const artUrl = assetUrl('/hud/tower.png');
+  return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="Gem Tower" />`;
 }
 
 export function hudIconHtml(key: keyof typeof HUD_ICONS & Hud3dIconKey, sizePx: number, alt = ''): string {
   if (key === 'pickaxe') {
     return pickaxeIconHtml('sunwheel', sizePx, alt || 'Pickaxe');
+  }
+  if (HUD_ART_KEYS.has(key)) {
+    const artUrl = assetUrl(`/hud/${key}.png`);
+    return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
   }
   const url3d = get3dHudIconUrl(key);
   if (url3d) {
@@ -198,17 +225,17 @@ export function pickaxeIconHtml(pickaxeId: string, sizePx: number, alt = 'Pickax
 }
 
 export function gemPotionIconHtml(potionId: string, sizePx: number, alt = 'Potion', color = '#38bdf8'): string {
-  const url3d = get3dGemPotionIconUrl(potionId);
-  if (url3d) {
-    return `<img class="mam-3d-icon" src="${url3d}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
+  if (POTION_ART_IDS.has(potionId)) {
+    const artUrl = assetUrl(`/potions/${potionId}.png`);
+    return `<img class="mam-3d-icon drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
   }
   return otherItemSvg('potion', color);
 }
 
 export function enchantAuraIconHtml(enchantId: string, color: string, sizePx: number, alt = 'Aura'): string {
-  const url3d = get3dAuraIconUrl(enchantId);
-  if (url3d) {
-    return `<img class="mam-3d-icon" src="${url3d}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
+  if (ENCHANT_ART_IDS.has(enchantId)) {
+    const artUrl = assetUrl(`/enchants/${enchantId}.png`);
+    return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
   }
   return `<svg viewBox="0 0 40 40" width="${sizePx}" height="${sizePx}" aria-hidden="true">
     <circle cx="20" cy="20" r="16" fill="${color}" opacity="0.22" stroke="${color}" stroke-width="2.5"/>
@@ -217,24 +244,14 @@ export function enchantAuraIconHtml(enchantId: string, color: string, sizePx: nu
 }
 
 export function enchantDiceIconHtml(sizePx = 34): string {
-  const url3d = get3dEnchantDiceIconUrl();
-  if (url3d) {
-    return `<img class="mam-3d-icon" src="${url3d}" width="${sizePx}" height="${sizePx}" alt="Enchanted Dice" />`;
-  }
-  return `<svg viewBox="0 0 36 36" width="${sizePx}" height="${sizePx}" aria-hidden="true">
-    <rect x="6" y="6" width="24" height="24" rx="5" fill="#1e1b4b" stroke="#e879f9" stroke-width="2.4"/>
-    <circle cx="13" cy="13" r="2.2" fill="#e879f9"/>
-    <circle cx="23" cy="13" r="2.2" fill="#e879f9"/>
-    <circle cx="18" cy="18" r="2.2" fill="#fde047"/>
-    <circle cx="13" cy="23" r="2.2" fill="#e879f9"/>
-    <circle cx="23" cy="23" r="2.2" fill="#e879f9"/>
-  </svg>`;
+  const artUrl = assetUrl('/enchants/enchant_dice.png');
+  return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="Enchanted Dice" />`;
 }
 
 export function weatherIconHtml(weatherId: WeatherId, sizePx = 38, alt = 'Weather'): string {
-  const url3d = get3dWeatherIconUrl(weatherId);
-  if (url3d) {
-    return `<img class="mam-3d-icon" src="${url3d}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
+  if (WEATHER_ART_IDS.has(weatherId)) {
+    const artUrl = assetUrl(`/weathers/${weatherId}.png`);
+    return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
   }
   switch (weatherId) {
     case 'light_rain':
