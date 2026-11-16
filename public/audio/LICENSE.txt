@@ -1,0 +1,24 @@
+All audio files in public/audio/ are CC0 1.0 Universal (Public Domain):
+
+BGM (`public/audio/bgm/`):
+- bgm-mine.mp3: "Crystal Cave (song18)" by cynicmusic (The Cynic Project) — OpenGameArt.org (CC0)
+  https://opengameart.org/content/crystal-cave-song18
+- bgm-shop.mp3: "Town Theme RPG" by cynicmusic (The Cynic Project) — OpenGameArt.org (CC0)
+  https://opengameart.org/content/town-theme-rpg
+- bgm-tower.mp3: "JRPG Epic Rock Battle Theme #1" (jrpg_battle_loop) by HydroGene — OpenGameArt.org (CC0)
+  https://opengameart.org/content/jrpg-epic-rock-battle-theme-1
+- bgm-boss.mp3: "Boss Battle Loop" by Pro Sensory / Alex McCulloch — OpenGameArt.org (CC0)
+  https://opengameart.org/content/boss-battle-loop
+
+SFX (`public/audio/sfx/`):
+- ore-hit-*.ogg, ore-break-*.ogg: "75 CC0 breaking / falling / hit sfx" by rubberduck — OpenGameArt.org (CC0)
+  https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx
+- ui-click.wav, ui-open.wav, ui-close.wav, ui-tab.wav: "51 UI sound effects (buttons, switches and clicks)" by Kenney — OpenGameArt.org (CC0)
+  https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks
+- ui-error.mp3, upgrade.mp3, unlock.mp3, teleport.mp3, spin-start.mp3, rare-fanfare.mp3, wave-clear.mp3:
+  "63 Digital sound effects" by Kenney — OpenGameArt.org (CC0)
+  https://opengameart.org/content/63-digital-sound-effects-lasers-phasers-space-etc
+- coin.ogg, coin-alt.ogg, place-chibi.ogg, equip-pick.ogg: "50 RPG Sound Effects" by Kenney — OpenGameArt.org (CC0)
+  https://opengameart.org/content/50-rpg-sound-effects
+- potion.wav, magic-roll.wav, chibi-swing.wav: "RPG Sound Pack" by artisticdude — OpenGameArt.org (CC0)
+  https://opengameart.org/content/rpg-sound-pack

@@ -1,0 +1,1087 @@
+import * as THREE from 'three';
+import { describe, expect, it } from 'vitest';
+import {
+  ENCHANT_DICE_GEM_COST,
+  ENCHANTS,
+  GEM_SHOP_ITEMS,
+  getOresByWorld,
+  getMinersByWorld,
+  getWorldById,
+  isHighTierMutation,
+  MUTATIONS,
+  ORES,
+  WORLD_MINERS,
+  WORLDS,
+} from '../src/game/GameData';
+import {
+  formatNodeEffectLine,
+  getResearchNodesForTree,
+  getResearchTreeMaxPoints,
+  RESEARCH_NODES,
+} from '../src/game/ResearchData';
+import { GameState } from '../src/game/GameState';
+import { rollWeatherDef, WEATHER_DURATION_MS, WEATHERS } from '../src/game/WeatherData';
+import { fmtMoney, fmtShort } from '../src/game/NumberFormat';
+import { createEnchantAura3D, createEnchantDice3D } from '../src/game3d/AuraModels3D';
+import {
+  AltarParticleSystem,
+  createAltarClockDial,
+  createAltarClockHand,
+  createAltarSubHand,
+} from '../src/game3d/AltarSpinFx3D';
+import {
+  CHIBI_CATALOG,
+  CHIBI_FRAME_INDEX,
+  getChibiById,
+  getChibiFrameUvOffset,
+} from '../src/game3d/ChibiCatalog';
+import { FieldMiner3D } from '../src/game3d/FieldMiner3D';
+import { DEFAULT_WORLD_PALETTE, rollOreVariant, STAGE_PEDESTAL_COUNT } from '../src/game3d/MineWorldPalette';
+import { applyNodeDamagePure, BASE_ORE_RESPAWN_SEC, OrePit3D, PIT_NODE_COUNT } from '../src/game3d/OrePit3D';
+import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
+import { ShopWorld3D } from '../src/game3d/ShopWorld3D';
+import { TowerArena3D } from '../src/game3d/TowerArena3D';
+import {
+  getGlobalGemGainBonus,
+  getTowerCheckpoints,
+  getTowerFloorDef,
+  getTowerKeyCashCost,
+  getTowerSweepGemReward,
+  getTowerWaveDef,
+  rollTowerWaveOres,
+  TOWER_MAX_KEYS,
+  TOWER_MILESTONES,
+  TOWER_ORE_ROCKS_PER_WAVE,
+  TOWER_WAVES_PER_FLOOR,
+} from '../src/game/TowerData';
+
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+describe('Pure 3D Mine World', () => {
+  it('defines a valid daylight palette for the 3D quarry island', () => {
+    expect(DEFAULT_WORLD_PALETTE.skyTop).toMatch(HEX_RE);
+    expect(DEFAULT_WORLD_PALETTE.skyBottom).toMatch(HEX_RE);
+    expect(DEFAULT_WORLD_PALETTE.fogColor).toMatch(HEX_RE);
+    expect(DEFAULT_WORLD_PALETTE.terrainColor).toMatch(HEX_RE);
+    expect(DEFAULT_WORLD_PALETTE.cliffColor).toMatch(HEX_RE);
+    expect(DEFAULT_WORLD_PALETTE.pitFloorColor).toMatch(HEX_RE);
+    expect(DEFAULT_WORLD_PALETTE.foliageColor).toMatch(HEX_RE);
+    expect(DEFAULT_WORLD_PALETTE.pitFloorColor.toLowerCase()).not.toBe(
+      DEFAULT_WORLD_PALETTE.rockColor.toLowerCase()
+    );
+  });
+
+  it('rolls 3D ore variants across cumulative weight boundaries', () => {
+    expect(rollOreVariant(() => 0).key).toBe('common');
+    expect(rollOreVariant(() => 0.549).key).toBe('common');
+    expect(rollOreVariant(() => 0.55).key).toBe('vein');
+    expect(rollOreVariant(() => 0.869).key).toBe('vein');
+    expect(rollOreVariant(() => 0.87).key).toBe('geode');
+    expect(rollOreVariant(() => 0.9999).key).toBe('geode');
+  });
+
+  it('breaks an ore node cleanly once when HP reaches zero', () => {
+    const node = { hp: 50, alive: true };
+    const hit = applyNodeDamagePure(node, 80);
+    expect(hit?.broken).toBe(true);
+    expect(hit?.dmgDealt).toBe(50);
+    expect(node.alive).toBe(false);
+    expect(node.hp).toBe(0);
+
+    expect(applyNodeDamagePure(node, 20)).toBeNull();
+  });
+
+  it('registers all 15 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
+    expect(CHIBI_CATALOG.length).toBe(15);
+    expect(getChibiById('solar-striker')?.spriteUrl).toBe('/chibi/solar-striker/idle.png');
+    expect(getChibiById('solar-striker')?.poses.attack).toBe('/chibi/solar-striker/attack.png');
+    expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.idle, 4)).toBe(0);
+    expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.dash, 4)).toBe(0.25);
+    expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.attack, 4)).toBe(0.5);
+    expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.aura, 4)).toBe(0.75);
+  });
+
+  it('formats Roblox My Anime Mine suffixes and populates Index/Inventory/Chest flows', () => {
+    expect(fmtShort(1500)).toBe('1.5K');
+    expect(fmtMoney(16.7e45)).toBe('$16.7Qad');
+    expect(ORES.length).toBe(40);
+    expect(WORLD_MINERS.length).toBe(15);
+    expect(getOresByWorld('underground').map((o) => o.name)).toContain('Coalite');
+    const crystalOres = getOresByWorld('crystal');
+    expect(crystalOres.map((o) => o.name)).toEqual([
+      'Glowquartz',
+      'Frostquartz',
+      'Prismite',
+      'Hushstone',
+      'Azurine',
+      'Glimmerite',
+      'Spectrine',
+      'Celestium',
+    ]);
+    expect(crystalOres.reduce((acc, o) => acc + o.chancePct, 0)).toBeCloseTo(100, 4);
+    expect(crystalOres[0].sellValue).toBeGreaterThan(getOresByWorld('underground')[0].sellValue * 10);
+
+    const magmaOres = getOresByWorld('magma');
+    expect(magmaOres.map((o) => o.name)).toEqual([
+      'Emberstone',
+      'Ashglass',
+      'Magmite',
+      'Cindershard',
+      'Scorchgold',
+      'Pyroclast',
+      'Moltenite',
+      'Pyrecore',
+    ]);
+    expect(magmaOres.reduce((acc, o) => acc + o.chancePct, 0)).toBeCloseTo(100, 4);
+    expect(magmaOres[0].sellValue).toBeGreaterThan(crystalOres[0].sellValue);
+    expect(magmaOres[7].sellValue).toBeGreaterThan(crystalOres[7].sellValue);
+
+    const ruinsOres = getOresByWorld('ruins');
+    expect(ruinsOres.map((o) => o.name)).toEqual([
+      'Runestone',
+      'Dustglyph',
+      'Relicore',
+      'Sanctite',
+      'Gildium',
+      'Oathstone',
+      'Idolshard',
+      'Immortite',
+    ]);
+    expect(ruinsOres.reduce((acc, o) => acc + o.chancePct, 0)).toBeCloseTo(100, 4);
+    expect(ruinsOres[0].sellValue).toBeGreaterThan(magmaOres[0].sellValue);
+    expect(ruinsOres[7].sellValue).toBeGreaterThan(magmaOres[7].sellValue);
+
+    const voidOres = getOresByWorld('astral');
+    expect(voidOres.map((o) => o.name)).toEqual([
+      'Voidshard',
+      'Gloomite',
+      'Nullite',
+      'Riftglass',
+      'Starcore',
+      'Cosmite',
+      'Singularite',
+      'Duskcrown',
+    ]);
+    expect(voidOres.reduce((acc, o) => acc + o.chancePct, 0)).toBeCloseTo(100, 4);
+    expect(voidOres[0].sellValue).toBeGreaterThan(ruinsOres[0].sellValue);
+    expect(voidOres[7].sellValue).toBeGreaterThan(ruinsOres[7].sellValue);
+
+    expect(getMinersByWorld('underground').length).toBe(3);
+    expect(getMinersByWorld('crystal').length).toBe(3);
+    expect(getMinersByWorld('magma').length).toBe(3);
+    expect(getMinersByWorld('ruins').length).toBe(3);
+    expect(getMinersByWorld('astral').length).toBe(3);
+
+    const gs = new GameState();
+    expect(gs.getTotalIndexCount()).toBe(55);
+    expect(gs.getWorldIndexProgress('astral')).toEqual({ found: 0, total: 11, pct: 0 });
+    expect(gs.hotbar.every((s) => s === null)).toBe(true);
+    expect(gs.plotMiners.every((s) => s === null)).toBe(true);
+    gs.onOreBroken('geode', () => 0.01);
+    expect(gs.getChestItemCount()).toBeGreaterThan(0);
+    const taken = gs.takeAllFromChest();
+    expect(taken).toBeGreaterThan(0);
+    expect(gs.getChestItemCount()).toBe(0);
+    gs.equipBestMiners();
+    expect(gs.plotMiners[0]).not.toBeNull();
+    expect(gs.getPlotUnitStats(0)?.dmg).toBeGreaterThan(0);
+    gs.cash = 10000;
+    expect(gs.upgradePlotDamage(0)).toBe(true);
+    expect(gs.getPlotUnit(0)?.damageLevel).toBe(2);
+    // takeAllFromChest auto-populated collected miner & ore into hotbar; toggling un-equips and re-equips cleanly
+    expect(gs.hotbar.some((s) => s !== null)).toBe(true);
+    const firstPlotMiner = gs.plotMiners[0]!;
+    if (gs.hotbar.includes(firstPlotMiner)) {
+      gs.toggleEquipMiner(firstPlotMiner);
+      expect(gs.hotbar).not.toContain(firstPlotMiner);
+    }
+    gs.toggleEquipMiner(firstPlotMiner);
+    expect(gs.hotbar).toContain(firstPlotMiner);
+  });
+
+  it('buys pickaxes and batch-sells ores/miners/pickaxes with live subscriber updates', () => {
+    const gs = new GameState();
+    let emitCount = 0;
+    gs.subscribe(() => {
+      emitCount++;
+    });
+
+    gs.cash = 1000;
+    const beforeStock = gs.pickaxeStock.sunwheel;
+    expect(gs.buyPickaxe('sunwheel')).toBe('bought');
+    expect(emitCount).toBe(1);
+    expect(gs.pickaxeStock.sunwheel).toBe(beforeStock - 1);
+    expect(gs.ownedPickaxes.sunwheel).toBe(1);
+    expect(gs.cash).toBe(550);
+
+    gs.ores.coalite = 2;
+    gs.miners['solar-striker'] = 2;
+    const cashBeforeSell = gs.cash;
+    const earned = gs.sellBatch(['ore:coalite', 'miner:solar-striker', 'pickaxe:sunwheel']);
+    expect(earned).toBeGreaterThan(0);
+    expect(gs.cash).toBe(cashBeforeSell + earned);
+    expect(gs.ores.coalite).toBeUndefined();
+    expect(gs.miners['solar-striker']).toBeUndefined();
+    expect(gs.ownedPickaxes.sunwheel).toBeUndefined();
+    expect(emitCount).toBe(2);
+  });
+
+  it('buys Gem Shop potions into Backpack, activates via useGemPotion, and applies gameplay multipliers', () => {
+    expect(GEM_SHOP_ITEMS.length).toBe(8);
+    const gs = new GameState();
+    let emits = 0;
+    gs.subscribe(() => {
+      emits++;
+    });
+
+    gs.gems = 1500;
+    expect(gs.buyGemShopItem('ore-elixir-1')).toBe('bought');
+    expect(gs.buyGemShopItem('regrowth-potion')).toBe('bought');
+    expect(gs.buyGemShopItem('ore-luck-potion')).toBe('bought');
+    expect(gs.buyGemShopItem('mutation-luck-1')).toBe('bought');
+    expect(emits).toBe(4);
+    expect(gs.gems).toBe(1500 - 100 - 300 - 500 - 600);
+
+    // Purchased potions go to Backpack (others), not immediately active
+    expect(gs.others['ore-elixir-1']).toBe(1);
+    expect(gs.others['regrowth-potion']).toBe(1);
+    expect(gs.others['ore-luck-potion']).toBe(1);
+    expect(gs.others['mutation-luck-1']).toBe(1);
+    expect(gs.getBoostRemainingSec('ore-elixir-1')).toBe(0);
+    expect(gs.getOreOutputMult()).toBe(1);
+    expect(gs.getRespawnSpeedMult()).toBe(1);
+
+    // Using potion from Backpack consumes 1 and starts the timer + multiplier
+    expect(gs.useGemPotion('ore-elixir-1')).toBe(true);
+    expect(gs.useGemPotion('regrowth-potion')).toBe(true);
+    expect(gs.useGemPotion('ore-luck-potion')).toBe(true);
+    expect(gs.useGemPotion('mutation-luck-1')).toBe(true);
+    expect(gs.others['ore-elixir-1']).toBeUndefined();
+    expect(gs.useGemPotion('ore-elixir-1')).toBe(false);
+
+    expect(gs.getOreOutputMult()).toBeCloseTo(1.1);
+    expect(gs.getRespawnSpeedMult()).toBe(2.0);
+    expect(gs.getOreLuckMult()).toBe(2.0);
+    expect(gs.getMutationLuckMult()).toBe(2.0);
+    expect(gs.getBoostRemainingSec('ore-elixir-1')).toBeGreaterThan(590);
+    expect(gs.buyGemShopItem('ore-elixir-3')).toBe('no_gems');
+  });
+
+  it('builds unique non-empty 3D Aura models for all 10 enchants and the Enchanted Dice', () => {
+    expect(ENCHANTS).toHaveLength(10);
+    for (const enc of ENCHANTS) {
+      const aura = createEnchantAura3D(enc.id);
+      expect(aura).toBeInstanceOf(THREE.Group);
+      expect(aura.children.length).toBeGreaterThan(0);
+    }
+    const dice = createEnchantDice3D();
+    expect(dice).toBeInstanceOf(THREE.Group);
+    expect(dice.children.length).toBeGreaterThan(0);
+  });
+
+  it('builds Altar clock dial, clock hands, and updates spin particle buffers safely', () => {
+    const dial = createAltarClockDial(
+      ENCHANTS.map((e, i) => ({
+        x: Math.cos((i / ENCHANTS.length) * Math.PI * 2) * 5.4,
+        z: Math.sin((i / ENCHANTS.length) * Math.PI * 2) * 3.9 - 2.4,
+        color: e.color,
+      }))
+    );
+    expect(dial.group.children.length).toBeGreaterThan(10);
+
+    const mainHand = createAltarClockHand();
+    expect(mainHand.group.children.length).toBeGreaterThan(5);
+    const subHand = createAltarSubHand();
+    expect(subHand.children.length).toBeGreaterThan(1);
+
+    const fx = new AltarParticleSystem();
+    expect(fx.group.children.length).toBeGreaterThanOrEqual(2);
+    fx.spawnNeedleTrail(2.8, 0.6, -2.4, '#38bdf8', 5);
+    fx.spawnBurst(0, 0.7, -2.4, '#a855f7', 30, 1.2);
+    fx.triggerWinShockwave(2, 0, -2, '#facc15');
+    expect(() => fx.update(0.016, 1.5, 0.8, '#f97316')).not.toThrow();
+  });
+
+  it('uses 5 plot slots in state and equips/syncs enchants cleanly', () => {
+    expect(STAGE_PEDESTAL_COUNT).toBe(5);
+    const gs = new GameState();
+    expect(gs.plotMiners).toHaveLength(5);
+    expect(gs.plotUnits).toHaveLength(5);
+
+    gs.miners['astral-recruit'] = 7;
+    gs.equipBestMiners();
+    expect(gs.plotMiners.filter(Boolean)).toHaveLength(5);
+    expect(gs.placeSelectedOnPlot(5)).toBe('need-select');
+
+    expect(gs.togglePlotEnchant(0, 'blazing')).toBe(true);
+    expect(gs.getPlotUnit(0)?.enchantId).toBe('blazing');
+    expect(gs.getPlotUnitStats(0)?.dmg).toBeGreaterThan(CHIBI_CATALOG[0].baseDps);
+
+    const ped = new PlotPedestal3D(0, 0, -4.25);
+    expect(ped.getEnchantId()).toBeNull();
+    expect(ped.group.children.length).toBeGreaterThan(0);
+    expect(() => ped.update(0.016, 1.0)).not.toThrow();
+
+    const auraMesh = createEnchantAura3D('blazing', 0.62);
+    expect(auraMesh.children.length).toBeGreaterThan(0);
+  });
+
+  it('preserves character stats, mutations, enchants, and pickaxes across equipBestMiners and pickup/re-place', () => {
+    const gs = new GameState();
+    const c0 = CHIBI_CATALOG[0].id;
+    const strong1 = CHIBI_CATALOG[10].id;
+    const strong2 = CHIBI_CATALOG[11].id;
+    const strong3 = CHIBI_CATALOG[12].id;
+    const strong4 = CHIBI_CATALOG[13].id;
+    const strong5 = CHIBI_CATALOG[14].id;
+
+    // Place and heavily upgrade c0 in slot 2
+    gs.miners[c0] = 1;
+    gs.plotMiners[2] = c0;
+    gs.plotUnits[2] = {
+      chibiId: c0,
+      damageLevel: 5,
+      speedLevel: 4,
+      miningSpeedLevel: 3,
+      pickaxeId: 'iron-pick',
+      mutationId: 'golden',
+      enchantId: 'blazing',
+    };
+
+    // Add a stronger miner strong1 and run Equip Best -> strong1 takes slot 0, c0 shifts to slot 1 without losing stats
+    gs.miners[strong1] = 1;
+    gs.equipBestMiners();
+
+    const c0SlotAfterFirst = gs.plotMiners.indexOf(c0);
+    expect(c0SlotAfterFirst).toBe(1);
+    const c0UnitAfterFirst = gs.getPlotUnit(c0SlotAfterFirst);
+    expect(c0UnitAfterFirst).toMatchObject({
+      chibiId: c0,
+      damageLevel: 5,
+      speedLevel: 4,
+      miningSpeedLevel: 3,
+      pickaxeId: 'iron-pick',
+      mutationId: 'golden',
+      enchantId: 'blazing',
+    });
+
+    // Add 4 more top-tier miners (strong2..strong5) so 5 stronger miners displace c0 to stash
+    gs.miners[strong2] = 1;
+    gs.miners[strong3] = 1;
+    gs.miners[strong4] = 1;
+    gs.miners[strong5] = 1;
+    gs.equipBestMiners();
+
+    // Strongest 5 should now occupy the plot, c0 displaced with pickaxe safely returned to inventory
+    expect(gs.plotMiners.includes(c0)).toBe(false);
+    expect(gs.ownedPickaxes['iron-pick']).toBe(1);
+    expect(gs.stashedUnits[c0]?.length).toBe(1);
+    expect(gs.stashedUnits[c0]?.[0]).toMatchObject({
+      chibiId: c0,
+      damageLevel: 5,
+      speedLevel: 4,
+      miningSpeedLevel: 3,
+      pickaxeId: '',
+      mutationId: 'golden',
+      enchantId: 'blazing',
+    });
+
+    // Manually remove slot 4 and re-place c0 -> restored with all upgrades intact
+    gs.removeMinerFromPlot(4);
+    if (!gs.hotbar.includes(c0)) gs.toggleEquipMiner(c0);
+    gs.selectHotbarSlot(gs.hotbar.indexOf(c0));
+    expect(gs.placeSelectedOnPlot(4)).toBe('placed');
+    expect(gs.getPlotUnit(4)).toMatchObject({
+      chibiId: c0,
+      damageLevel: 5,
+      speedLevel: 4,
+      miningSpeedLevel: 3,
+      mutationId: 'golden',
+      enchantId: 'blazing',
+    });
+    expect(gs.stashedUnits[c0] ?? []).toHaveLength(0);
+
+    // Pick up c0 via removeMinerFromPlot and place on slot 4 again -> stats remain preserved
+    gs.removeMinerFromPlot(4);
+    expect(gs.stashedUnits[c0]?.length).toBe(1);
+    expect(gs.placeSelectedOnPlot(4)).toBe('placed');
+    expect(gs.getPlotUnit(4)).toMatchObject({
+      chibiId: c0,
+      damageLevel: 5,
+      speedLevel: 4,
+      miningSpeedLevel: 3,
+      mutationId: 'golden',
+      enchantId: 'blazing',
+    });
+  });
+
+  it('prices Enchanted Dice at 250 gems and locks Altar wheel spin until animation completes', async () => {
+    expect(ENCHANT_DICE_GEM_COST).toBe(250);
+    const gs = new GameState();
+    gs.gems = 249;
+    expect(gs.buyEnchantDice(1)).toBe(false);
+    expect(gs.gems).toBe(249);
+
+    gs.gems = 250;
+    const diceBefore = gs.enchantDice;
+    expect(gs.buyEnchantDice(1)).toBe(true);
+    expect(gs.gems).toBe(0);
+    expect(gs.enchantDice).toBe(diceBefore + 1);
+
+    const { ShopWorld3D } = await import('../src/game3d/ShopWorld3D');
+    const shop = new ShopWorld3D();
+    let completed = 0;
+    expect(shop.isSpinning()).toBe(false);
+    expect(
+      shop.triggerSpin('blazing', () => {
+        completed++;
+      })
+    ).toBe(true);
+    expect(shop.isSpinning()).toBe(true);
+
+    // Spamming triggerSpin mid-animation must be rejected
+    expect(shop.triggerSpin('glacial')).toBe(false);
+    expect(completed).toBe(0);
+
+    // Advance until spin duration (1.9s) finishes
+    for (let i = 0; i < 40; i++) {
+      shop.update(0.05, (i + 1) * 0.05, 'altar');
+    }
+    expect(shop.isSpinning()).toBe(false);
+    expect(completed).toBe(1);
+  });
+
+  it('starts with no legacy placeholder items in backpack others', async () => {
+    const { OTHER_ITEMS } = await import('../src/game/GameData');
+    expect(OTHER_ITEMS).toHaveLength(0);
+
+    const gs = new GameState();
+    for (const legacyId of [
+      'summon-scroll',
+      'gems-pouch',
+      'quaking-potion',
+      'glacial-potion',
+      'blazing-potion',
+      'diamondbound-charm',
+    ]) {
+      expect(gs.others[legacyId]).toBeUndefined();
+    }
+  });
+
+  it('enforces sequential world unlock gates, Voidreach naming, global Core upgrades, and per-world tree isolation', () => {
+    expect(WORLDS).toHaveLength(5);
+    expect(getWorldById('astral').name).toBe('Voidreach');
+    expect(PIT_NODE_COUNT).toBe(1);
+    expect(BASE_ORE_RESPAWN_SEC).toBeGreaterThanOrEqual(3.5);
+
+    expect(getResearchTreeMaxPoints('underground')).toBe(38);
+    expect(getResearchTreeMaxPoints('crystal')).toBe(44);
+    expect(getResearchTreeMaxPoints('magma')).toBe(62);
+    expect(getResearchTreeMaxPoints('ruins')).toBe(55);
+    expect(getResearchTreeMaxPoints('astral')).toBe(69);
+
+    // Tap damage must live strictly in Core; Worlds 1-5 replace tap nodes with standardized denseOreScale (HP x10, Drops x3)
+    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral'] as const) {
+      const treeNodes = getResearchNodesForTree(wid);
+      expect(treeNodes.some((n) => n.effectType === 'tapDamageFlat')).toBe(false);
+      const denseNodes = treeNodes.filter((n) => n.effectType === 'denseOreScale');
+      expect(denseNodes).toHaveLength(1);
+      expect(denseNodes[0].maxLevel).toBe(1);
+      expect(denseNodes[0].perLevel).toBe(1);
+      expect(formatNodeEffectLine(denseNodes[0], 1)).toContain('Ore HP ×10');
+      expect(formatNodeEffectLine(denseNodes[0], 1)).toContain('Ore Drops ×3');
+    }
+    expect(RESEARCH_NODES.some((n) => n.treeId === 'core' && n.effectType === 'tapDamageFlat')).toBe(true);
+    expect(getResearchNodesForTree('core').filter((n) => n.effectType === 'tapDamageFlat')).toHaveLength(6);
+
+    const gs = new GameState();
+    expect(gs.activeWorldId).toBe('underground');
+    expect(gs.setActiveWorld('crystal')).toBe(false);
+    expect(gs.canUnlockWorld('crystal')).toBe('locked-prereq');
+
+    // Global Core Strike I applies in World 1 and stays active in World 2
+    const baseTap = gs.getTapDamage();
+    gs.cash = 1_000_000_000;
+    expect(gs.upgradeResearch('core-strike-1')).toBe(true);
+    expect(gs.getTapDamage()).toBeGreaterThan(baseTap);
+    const tapWithCore = gs.getTapDamage();
+
+    // Start at 1 ore node; upgrade World 1 node (Deposits I: +1 ore node per lvl)
+    expect(gs.getActiveOreNodeCount()).toBe(1);
+    expect(gs.upgradeResearch('ug-deposits-1')).toBe(true);
+    expect(gs.getActiveOreNodeCount()).toBe(2);
+
+    // Partial World 1 tree still blocks Crystal Caves unlock
+    expect(gs.isTreeComplete('underground')).toBe(false);
+    expect(gs.canUnlockWorld('crystal')).toBe('locked-prereq');
+
+    // Upgrade World 1 prerequisite path to Dense Seam and verify HP x10 + Ore Drops x3
+    expect(gs.upgradeResearch('ug-respawn-1')).toBe(true);
+    expect(gs.upgradeResearch('ug-value-1')).toBe(true);
+    const hpScaleBeforeDense = gs.getOreHpScale();
+    const dropMultBeforeDense = gs.getTotalOreDropMult();
+    expect(gs.upgradeResearch('ug-rich-seam')).toBe(true);
+    expect(gs.getOreHpScale()).toBeCloseTo(hpScaleBeforeDense * 10, 6);
+    expect(gs.getTotalOreDropMult()).toBeCloseTo(dropMultBeforeDense * 3, 6);
+
+    // Max every node in The Underground (38/38)
+    for (const node of getResearchNodesForTree('underground')) {
+      while (gs.getResearchLevel(node.id) < node.maxLevel) {
+        expect(gs.upgradeResearch(node.id)).toBe(true);
+      }
+    }
+    expect(gs.getTreeSpentPoints('underground')).toBe(38);
+    expect(gs.isTreeComplete('underground')).toBe(true);
+    expect(gs.canUnlockWorld('crystal')).toBe('ok');
+
+    // Unlock Crystal Caves and verify World 1 research is isolated (resets pit to 1 node and clears W1 denseOreScale!)
+    expect(gs.unlockWorld('crystal')).toBe(true);
+    expect(gs.activeWorldId).toBe('crystal');
+    expect(gs.getActiveOreNodeCount()).toBe(1); // World 1 Deposits (+8) did NOT carry over to Crystal Caves!
+    expect(gs.getOreHpScale()).toBe(getWorldById('crystal').oreHpMult);
+    expect(getWorldById('crystal').oreHpMult).toBeGreaterThanOrEqual(150);
+    expect((getChibiById('volt-kensei')?.baseDps ?? 0)).toBeGreaterThanOrEqual(
+      (getChibiById('frost-vanguard')?.baseDps ?? 0) * 3
+    );
+    expect(gs.getTapDamage()).toBe(tapWithCore); // Global Core Strike I STILL active in World 2!
+
+    // Magma Hollows stays gated behind Crystal Caves (44/44)
+    expect(gs.canUnlockWorld('magma')).toBe('locked-prereq');
+    // Travel back to World 1 restores World 1's Deposits (+8 => 9 nodes)
+    expect(gs.setActiveWorld('underground')).toBe(true);
+    expect(gs.getActiveOreNodeCount()).toBe(9);
+  });
+
+  it('auto-populates hotbar 1-9 with Chibis and Ores on chest takeAll and clears sold ores', () => {
+    const gs = new GameState();
+    gs.chestMiners = { 'solar-striker': 1 };
+    gs.chestOres = { coalite: 3, ochrite: 2 };
+
+    const taken = gs.takeAllFromChest();
+    expect(taken).toBe(6);
+    expect(gs.hotbar.slice(0, 3)).toEqual(['solar-striker', 'coalite', 'ochrite']);
+
+    // Selecting an ore slot must not place it on a plot pedestal
+    gs.selectHotbarSlot(1);
+    expect(gs.placeSelectedOnPlot(0)).toBe('need-select');
+    expect(gs.plotMiners[0]).toBeNull();
+
+    // Selling out an ore clears it from the hotbar
+    expect(gs.sellOre('coalite', true)).toBeGreaterThan(0);
+    expect(gs.hotbar).not.toContain('coalite');
+    expect(gs.hotbar).toContain('ochrite');
+
+    expect(gs.sellAllOres()).toBeGreaterThan(0);
+    expect(gs.hotbar).not.toContain('ochrite');
+  });
+
+  it('scales Gem Tower floors, 10 waves per floor, 5-floor checkpoints/milestones, anomalies, and global gem bonus', () => {
+    const f1 = getTowerFloorDef(1);
+    const f4 = getTowerFloorDef(4);
+    const f5 = getTowerFloorDef(5);
+
+    expect(f1.isBoss).toBe(false);
+    expect(f4.anomaly.id).not.toBe('none');
+    expect(f5.isBoss).toBe(true);
+    expect(f5.hp).toBeGreaterThan(f4.hp);
+    expect(f5.diceDropChance).toBeGreaterThan(0);
+
+    // Waves 1..9 have 5 random ore rocks; Wave 10 is the Floor Boss
+    const w1 = getTowerWaveDef(1, 1);
+    const w10 = getTowerWaveDef(1, TOWER_WAVES_PER_FLOOR);
+    expect(w1.isBoss).toBe(false);
+    expect(w10.isBoss).toBe(true);
+    const w1Ores = rollTowerWaveOres(1, 1, f1.anomaly);
+    expect(w1Ores).toHaveLength(TOWER_ORE_ROCKS_PER_WAVE);
+    expect(w1Ores.every((o) => o.alive && o.hp > 0)).toBe(true);
+    expect(rollTowerWaveOres(1, TOWER_WAVES_PER_FLOOR, f1.anomaly)).toHaveLength(0);
+
+    // Checkpoints and Milestones every 5 floors
+    expect(getTowerCheckpoints(0)).toEqual([1]);
+    expect(getTowerCheckpoints(5)).toEqual([1, 5]);
+    expect(getTowerCheckpoints(12)).toEqual([1, 5, 10]);
+    expect(TOWER_MILESTONES.map((m) => m.floor)).toEqual([5, 10, 15, 20, 25, 30, 35, 40, 45, 50]);
+
+    expect(getGlobalGemGainBonus(0)).toBe(0);
+    expect(getGlobalGemGainBonus(5)).toBeCloseTo(0.1);
+    expect(getGlobalGemGainBonus(10)).toBeCloseTo(0.2);
+
+    expect(getTowerSweepGemReward(0)).toBe(0);
+    expect(getTowerSweepGemReward(10)).toBeGreaterThan(getTowerSweepGemReward(5));
+  });
+
+  it('runs full Gem Tower 10-wave loop: no passive HP drain, 5 rocks per wave, wave 10 boss, blessing, milestone 5, sweep & key buy', () => {
+    const gs = new GameState();
+    const startNow = 1_700_000_000_000;
+    expect(gs.towerKeys).toBe(TOWER_MAX_KEYS);
+
+    // Put a real miner onto Plot 1 so chibi strike damage is non-zero
+    gs.miners['solar-striker'] = 1;
+    gs.hotbar[0] = 'solar-striker';
+    gs.selectHotbarSlot(0);
+    expect(gs.placeSelectedOnPlot(0)).toBe('placed');
+
+    // Start run from Floor 1 Wave 1 with 5 random ore rocks
+    expect(gs.startTowerRun(1, startNow)).toBe(true);
+    expect(gs.towerKeys).toBe(TOWER_MAX_KEYS - 1);
+    expect(gs.towerRun?.floor).toBe(1);
+    expect(gs.towerRun?.wave).toBe(1);
+    expect(gs.towerRun?.isBossWave).toBe(false);
+    expect(gs.towerRun?.waveOres).toHaveLength(5);
+
+    // Stepping the timer MUST NOT drain HP before a chibi actually strikes
+    const initialHp = gs.towerRun!.hp;
+    const initialRockHps = gs.towerRun!.waveOres.map((o) => o.hp);
+    const tickRes = gs.stepTowerTick(1.0);
+    expect(tickRes.status).toBe('active');
+    expect(gs.towerRun?.hp).toBe(initialHp);
+    expect(gs.towerRun?.waveOres.map((o) => o.hp)).toEqual(initialRockHps);
+
+    // Breaking 4 of 5 rocks keeps player on Wave 1 until the 5th rock breaks
+    for (let idx = 0; idx < 4; idx++) {
+      while (gs.towerRun!.waveOres[idx].alive) {
+        gs.applyTowerChibiStrike(0, idx, 0.85, () => 0.99);
+      }
+    }
+    expect(gs.towerRun?.wave).toBe(1);
+    expect(gs.towerRun?.waveOres.filter((o) => o.alive)).toHaveLength(1);
+
+    // Break the 5th rock -> advances to Wave 2 with 5 fresh ore rocks
+    while (gs.towerRun?.wave === 1) {
+      gs.applyTowerChibiStrike(0, 4, 0.85, () => 0.99);
+    }
+    expect(gs.towerRun?.floor).toBe(1);
+    expect(gs.towerRun?.wave).toBe(2);
+    expect(gs.towerRun?.waveOres).toHaveLength(5);
+    expect(gs.gems).toBeGreaterThan(0);
+
+    // Clear Waves 2..9 to reach Wave 10 Boss
+    let guard = 0;
+    while (gs.towerRun && !gs.towerRun.isBossWave && guard < 1500) {
+      gs.tapTowerTarget(null, () => 0.99);
+      guard++;
+    }
+    expect(gs.towerRun?.floor).toBe(1);
+    expect(gs.towerRun?.wave).toBe(10);
+    expect(gs.towerRun?.isBossWave).toBe(true);
+    expect(gs.towerRun?.waveOres).toHaveLength(0);
+
+    // Defeat Wave 10 Boss -> Floor 1 cleared & 3-card Spire Blessing pause
+    guard = 0;
+    while (gs.towerRun && !gs.towerRun.pendingBlessings && guard < 500) {
+      gs.tapTowerTarget(null, () => 0.99);
+      guard++;
+    }
+    expect(gs.towerBestFloor).toBeGreaterThanOrEqual(1);
+    expect(gs.towerRun?.pendingBlessings).toHaveLength(3);
+    const chosenId = gs.towerRun!.pendingBlessings![0].id;
+    expect(gs.chooseTowerBlessing(chosenId)).toBe(true);
+    expect(gs.towerRun?.pendingBlessings).toBeNull();
+    expect(gs.towerRun?.floor).toBe(2);
+    expect(gs.towerRun?.wave).toBe(1);
+    expect(gs.towerRun?.blessings.some((b) => b.id === chosenId)).toBe(true);
+
+    // Clear Floors 2..5 (10 waves each, picking blessings between floors) -> unlocks Milestone 5 + Dice
+    const diceBeforeBoss = gs.enchantDice;
+    guard = 0;
+    while (gs.towerRun && gs.towerBestFloor < 5 && guard < 6000) {
+      if (gs.towerRun.pendingBlessings) {
+        gs.chooseTowerBlessing(gs.towerRun.pendingBlessings[0].id);
+      } else {
+        gs.tapTowerTarget(null, () => 0.01); // triggers boss dice drop too
+      }
+      guard++;
+    }
+    expect(gs.towerBestFloor).toBeGreaterThanOrEqual(5);
+    expect(gs.towerClaimedMilestones).toContain(5);
+    expect(gs.enchantDice).toBeGreaterThan(diceBeforeBoss);
+
+    // Exit run -> produces accurate summary
+    const summary = gs.abandonTowerRun();
+    expect(summary).not.toBeNull();
+    expect(summary!.newRecord).toBe(true);
+    expect(summary!.floorsCleared).toBeGreaterThanOrEqual(5);
+    expect(summary!.wavesCleared).toBeGreaterThanOrEqual(50);
+    expect(gs.towerRun).toBeNull();
+
+    // Quick Sweep consumes 1 key & awards scaled Gems
+    const gemsBeforeSweep = gs.gems;
+    const sweep = gs.quickSweepTower();
+    expect(sweep.ok).toBe(true);
+    expect(sweep.gemsAwarded).toBeGreaterThan(0);
+    expect(gs.gems).toBe(gemsBeforeSweep + sweep.gemsAwarded);
+
+    // Buy +1 Key with Cash
+    const keyCost = getTowerKeyCashCost(gs.towerBestFloor);
+    gs.cash = keyCost;
+    const keysBeforeBuy = gs.towerKeys;
+    expect(gs.buyTowerKeyWithCash()).toBe('bought');
+    expect(gs.towerKeys).toBe(keysBeforeBuy + 1);
+    expect(gs.cash).toBe(0);
+  });
+
+  it('places Sell Shop off the main path, Enchant Altar in the central plaza medallion, and Gem Tower on the rear terrace', () => {
+    const shop = new ShopWorld3D();
+    shop.shopGroup.updateMatrixWorld(true);
+    const byStation = new Map<string, THREE.Vector3>();
+    for (const obj of shop.shopClickables) {
+      const vals = [obj.name, ...Object.values(obj.userData ?? {}).map(String)];
+      const tag = vals.find((v) =>
+        ['sell', 'shop-sell', 'altar', 'shop-altar', 'tower', 'shop-tower'].includes(v)
+      );
+      if (!tag) continue;
+      const key = tag.replace(/^shop-/, '');
+      const box = new THREE.Box3().setFromObject(obj);
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      byStation.set(key, center);
+    }
+
+    expect(byStation.has('sell')).toBe(true);
+    expect(byStation.has('altar')).toBe(true);
+    expect(byStation.has('tower')).toBe(true);
+
+    const sellPos = byStation.get('sell')!;
+    const altarPos = byStation.get('altar')!;
+    const towerPos = byStation.get('tower')!;
+
+    // Sell shop shifted far left off the foreground road
+    expect(sellPos.x).toBeLessThan(-6);
+    // Enchant Altar stands in the central circular medallion (x≈0, z≈-0.5)
+    expect(Math.abs(altarPos.x)).toBeLessThan(1.0);
+    expect(altarPos.z).toBeCloseTo(-0.5, 0);
+    // Gem Tower rises on the rear terrace (x≈0, z≈-11.4) well behind the central altar
+    expect(Math.abs(towerPos.x)).toBeLessThan(1.0);
+    expect(towerPos.z).toBeLessThan(-9);
+
+    // Floating shop station anchors project cleanly with vertical badge separation
+    const cam = new THREE.PerspectiveCamera(48, 1280 / 720, 0.1, 200);
+    cam.position.set(0, 12.2, 22.8);
+    cam.lookAt(0, 1.0, -2.6);
+    cam.updateMatrixWorld(true);
+    const anchors = shop.getShopAnchors(cam, 1280, 720, new THREE.Vector3());
+    const anchorIds = anchors.map((a) => a.id);
+    expect(anchorIds).toContain('sell');
+    expect(anchorIds).toContain('altar');
+    expect(anchorIds).toContain('tower');
+    const altarA = anchors.find((a) => a.id === 'altar')!;
+    const towerA = anchors.find((a) => a.id === 'tower')!;
+    expect(towerA.visible).toBe(true);
+    expect(altarA.visible).toBe(true);
+    expect(Math.abs(towerA.y - altarA.y)).toBeGreaterThan(20);
+  });
+
+  it('builds Void/Eclipse TowerArena3D with 5 wave ores, Boss Monolith, and only strikes after chibis reach targets', () => {
+    const arena = new TowerArena3D();
+    arena.group.visible = true;
+    expect(arena.clickables.length).toBeGreaterThanOrEqual(6);
+    expect(arena.clickables[0].userData?.kind).toBe('tower-core');
+
+    arena.syncFighters([
+      { slotIndex: 0, def: CHIBI_CATALOG[0], enchantId: 'blazing', dmg: 35, speed: 12, miningMult: 1.2 },
+      { slotIndex: 2, def: CHIBI_CATALOG[1], enchantId: null, dmg: 20, speed: 10, miningMult: 1.0 },
+    ]);
+    expect(arena.getConfiguredFighterCount()).toBe(2);
+
+    const wave1Ores = rollTowerWaveOres(1, 1);
+    arena.syncWaveState({
+      floor: 1,
+      wave: 1,
+      isBossWave: false,
+      isCheckpointFloor: false,
+      waveOres: wave1Ores,
+      anomalyColorHex: '#38bdf8',
+      equippedMinerCount: 2,
+      paused: false,
+    });
+    expect(arena.getActiveClickables()).toHaveLength(5);
+
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(0, 9.2, 14.8);
+    cam.lookAt(0, 2.2, -1.6);
+
+    // First brief dash tick: chibis are still running from spawn pads, so zero strikes fire yet
+    let oreStrikes: Array<number | null> = [];
+    arena.update(0.05, 0.05, cam, (ev) => {
+      oreStrikes.push(ev.targetOreIndex);
+    });
+    expect(oreStrikes).toHaveLength(0);
+
+    // Advance until chibis reach their assigned ore rocks and attack
+    for (let i = 1; i < 45; i++) {
+      arena.update(0.05, (i + 1) * 0.05, cam, (ev) => {
+        oreStrikes.push(ev.targetOreIndex);
+      });
+    }
+    expect(oreStrikes.length).toBeGreaterThan(0);
+    expect(oreStrikes.every((idx) => idx !== null && idx >= 0 && idx < 5)).toBe(true);
+
+    // Switch to Wave 10 Boss Monolith
+    arena.setFloorVisual(true, '#facc15', 2, 5, false);
+    arena.triggerHitBounce(0.24, true);
+    expect(arena.getActiveClickables()).toHaveLength(1);
+    expect(arena.getActiveClickables()[0].userData?.kind).toBe('tower-core');
+
+    let strikeCount = 0;
+    for (let i = 0; i < 45; i++) {
+      arena.update(0.05, (i + 1) * 0.05, cam, () => {
+        strikeCount++;
+      });
+    }
+    expect(strikeCount).toBeGreaterThan(0);
+
+    // Paused (e.g. Blessing pick) stops new swings cleanly
+    const beforePauseStrikes = strikeCount;
+    arena.setFloorVisual(true, '#facc15', 2, 5, true);
+    arena.update(0.5, 3.0, cam, () => {
+      strikeCount++;
+    });
+    expect(strikeCount).toBe(beforePauseStrikes);
+  });
+
+  it('keeps FieldMiner3D mining and breaking ores in background mode when player is in Shop/Altar/Tower', () => {
+    const pitNode = {
+      id: 0,
+      hp: 80,
+      maxHp: 80,
+      alive: true,
+      worldX: 0,
+      worldY: 0.1,
+      worldZ: -1.0,
+      variantKey: 'vein' as const,
+    };
+    let respawnTimer = 0;
+    const fakePit = {
+      getAliveNodesInfo: () => (pitNode.alive ? [pitNode] : []),
+      hitNode: (_id: number, dmg: number) => {
+        if (!pitNode.alive) return null;
+        const pure = applyNodeDamagePure(pitNode, dmg);
+        if (!pure) return null;
+        if (pure.broken) respawnTimer = 1.0;
+        return { ...pure, variantKey: pitNode.variantKey };
+      },
+    } as unknown as OrePit3D;
+
+    const fm = new FieldMiner3D(CHIBI_CATALOG[0], 0);
+    fm.setCombatStats(50, 14, 1.5);
+
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    let broken = 0;
+    let visualHits = 0;
+    for (let i = 0; i < 60; i++) {
+      if (!pitNode.alive) {
+        respawnTimer -= 0.1;
+        if (respawnTimer <= 0) {
+          pitNode.hp = 80;
+          pitNode.alive = true;
+        }
+      }
+      fm.update(
+        0.1,
+        (i + 1) * 0.1,
+        cam,
+        fakePit,
+        () => {
+          broken++;
+        },
+        () => {
+          visualHits++;
+        },
+        false
+      );
+    }
+
+    expect(broken).toBeGreaterThanOrEqual(2);
+    expect(visualHits).toBe(0);
+  });
+
+  it('swapHotbarSlots moves/swaps items across hotbar 1..9 and tracks selectedHotbarSlot', () => {
+    const state = new GameState();
+    state.hotbar = Array(9).fill(null);
+    state.hotbar[0] = 'chibi_1';
+    state.hotbar[2] = 'stone';
+    state.selectedHotbarSlot = 0;
+
+    // Move filled slot 0 -> empty slot 4
+    expect(state.swapHotbarSlots(0, 4)).toBe(true);
+    expect(state.hotbar[0]).toBeNull();
+    expect(state.hotbar[4]).toBe('chibi_1');
+    expect(state.selectedHotbarSlot).toBe(4);
+
+    // Swap filled slot 4 <-> filled slot 2 (selection follows slot 2 -> 4 or 4 -> 2)
+    expect(state.swapHotbarSlots(4, 2)).toBe(true);
+    expect(state.hotbar[2]).toBe('chibi_1');
+    expect(state.hotbar[4]).toBe('stone');
+    expect(state.selectedHotbarSlot).toBe(2);
+
+    // Selecting target slot follows too when source isn't selected
+    expect(state.swapHotbarSlots(4, 2)).toBe(true);
+    expect(state.hotbar[4]).toBe('chibi_1');
+    expect(state.hotbar[2]).toBe('stone');
+    expect(state.selectedHotbarSlot).toBe(4);
+
+    // Rejects dragging an empty slot, self-drop, or out-of-bounds indices
+    expect(state.swapHotbarSlots(0, 1)).toBe(false);
+    expect(state.swapHotbarSlots(4, 4)).toBe(false);
+    expect(state.swapHotbarSlots(-1, 2)).toBe(false);
+    expect(state.swapHotbarSlots(4, 9)).toBe(false);
+  });
+
+  it('placeHotbarItemOnPlot equips/swaps miners onto plots while preserving replaced unit upgrades', () => {
+    const state = new GameState();
+    const firstChibi = CHIBI_CATALOG[0].id;
+    const secondChibi = CHIBI_CATALOG[1].id;
+    state.miners[firstChibi] = 1;
+    state.miners[secondChibi] = 1;
+    state.ores['stone'] = 3;
+    state.hotbar = Array(9).fill(null);
+    state.hotbar[0] = firstChibi;
+    state.hotbar[1] = secondChibi;
+    state.hotbar[2] = 'stone';
+    state.plotMiners = Array(5).fill(null);
+    state.plotUnits = Array(5).fill(null);
+
+    // Equip onto empty plot #0
+    expect(state.placeHotbarItemOnPlot(0, 0)).toBe('placed');
+    expect(state.plotMiners[0]).toBe(firstChibi);
+    expect(state.plotUnits[0]).not.toBeNull();
+    state.plotUnits[0]!.damageLevel = 7;
+
+    // Dropping the exact same single miner onto the same plot does not reset upgrades
+    expect(state.placeHotbarItemOnPlot(0, 0)).toBe('same');
+    expect(state.plotUnits[0]?.damageLevel).toBe(7);
+
+    // Drag-replacing plot #0 with a different miner immediately swaps & stashes the upgraded first unit
+    expect(state.placeHotbarItemOnPlot(1, 0)).toBe('replaced');
+    expect(state.plotMiners[0]).toBe(secondChibi);
+    expect(state.stashedUnits[firstChibi]?.[0]?.damageLevel).toBe(7);
+
+    // Dragging an ore onto a plot returns 'not-miner' and leaves the plot intact
+    expect(state.placeHotbarItemOnPlot(2, 0)).toBe('not-miner');
+    expect(state.plotMiners[0]).toBe(secondChibi);
+  });
+
+  it('rolls 5 weathers every 3 minutes with 5% Celestial granting 10x Ore, 4x Gems, and 5x Damage', async () => {
+    expect(WEATHER_DURATION_MS).toBe(180_000);
+    expect(WEATHERS.map((w) => w.id)).toEqual(['light_rain', 'snow_rain', 'bloodmoon', 'void', 'celestial']);
+    const totalChance = WEATHERS.reduce((sum, w) => sum + w.chancePct, 0);
+    expect(totalChance).toBe(100);
+
+    expect(rollWeatherDef(() => 0.0).id).toBe('light_rain');
+    expect(rollWeatherDef(() => 0.35).id).toBe('snow_rain');
+    expect(rollWeatherDef(() => 0.65).id).toBe('bloodmoon');
+    expect(rollWeatherDef(() => 0.85).id).toBe('void');
+    const cel = rollWeatherDef(() => 0.96);
+    expect(cel.id).toBe('celestial');
+    expect(cel.chancePct).toBe(5);
+    expect(cel.oreDropMult).toBe(10);
+    expect(cel.gemDropMult).toBe(4);
+    expect(cel.damageMult).toBe(5);
+
+    const state = new GameState();
+    const t0 = 1_700_000_000_000;
+    state.forceWeather('light_rain', t0);
+    expect(state.getActiveWeather().id).toBe('light_rain');
+
+    // Before 3 minutes elapse, syncWeather keeps active weather
+    expect(state.syncWeather(t0 + 179_000, () => 0.97)).toBeNull();
+    expect(state.weatherId).toBe('light_rain');
+
+    // At 3 minutes, syncWeather rolls a new weather (rng=0.97 -> Celestial 5% bucket)
+    const rolled = state.syncWeather(t0 + 180_000, () => 0.97);
+    expect(rolled?.id).toBe('celestial');
+    expect(state.weatherId).toBe('celestial');
+    expect(state.weatherExpiresAt).toBe(t0 + 360_000);
+
+    // Put a miner on Plot 0 so we verify both tap DMG and miner DMG scale 5x under Celestial vs 1x
+    const firstChibi = CHIBI_CATALOG[0].id;
+    state.miners[firstChibi] = 1;
+    state.hotbar[0] = firstChibi;
+    state.placeHotbarItemOnPlot(0, 0);
+
+    const celestialTap = state.getTapDamage();
+    const celestialMinerDmg = state.getPlotUnitStats(0)!.dmg;
+    const celestialOreMult = state.getTotalOreDropMult();
+
+    // Check actual ore & gem drops from breaking a Geode (3 base ores, 3 base gems)
+    state.chestOres = {};
+    const gemsBefore = state.gems;
+    state.onOreBroken('geode', () => 0.05);
+    const oresDropped = Object.values(state.chestOres).reduce((a, b) => a + b, 0);
+    expect(oresDropped).toBe(30); // 3 base geode rolls * 10x Celestial ore drop
+    expect(state.gems - gemsBefore).toBe(12); // 3 base geode gems * 4x Celestial gem drop
+
+    // Compare against Bloodmoon (3x Ore, 2x Gem, 2.5x DMG)
+    state.forceWeather('bloodmoon', t0);
+    expect(celestialOreMult / state.getTotalOreDropMult()).toBeCloseTo(10 / 3, 4);
+    expect(celestialTap).toBeGreaterThan(state.getTapDamage());
+    expect(celestialMinerDmg).toBeGreaterThan(state.getPlotUnitStats(0)!.dmg);
+
+    // 3D WeatherFx switches all 5 modes cleanly
+    const { WeatherFx3D } = await import('../src/game3d/WeatherFx3D');
+    const fx = new WeatherFx3D();
+    for (const w of WEATHERS) {
+      fx.setWeather(w.id);
+      fx.update(0.016, 1.0, true);
+    }
+    fx.update(0.016, 1.0, false);
+    expect(fx.group.visible).toBe(false);
+  });
+
+  it('scales chibi plot upgrade costs by character strength and world unlock price', () => {
+    const state = new GameState();
+    const inspectCosts = (chibiId: string) => {
+      state.miners[chibiId] = 1;
+      state.hotbar[0] = chibiId;
+      state.plotUnits[0] = null;
+      state.plotMiners[0] = null;
+      state.placeHotbarItemOnPlot(0, 0);
+      return state.getPlotUnitStats(0)!;
+    };
+
+    const starter = inspectCosts('astral-recruit');
+    expect(starter.dmgCost).toBe(50);
+    expect(starter.speedCost).toBe(75);
+    expect(starter.miningCost).toBe(90);
+
+    const solar = inspectCosts('solar-striker');
+    const frost = inspectCosts('frost-vanguard');
+    expect(solar.dmgCost).toBe(100);
+    expect(frost.dmgCost).toBeGreaterThan(solar.dmgCost);
+    expect(solar.speedCost).toBeGreaterThan(starter.speedCost);
+    expect(frost.miningCost).toBeGreaterThan(solar.miningCost);
+
+    const volt = inspectCosts('volt-kensei');
+    const zephyr = inspectCosts('zephyr-esper');
+    const vesper = inspectCosts('vesper-ward');
+    const seraph = inspectCosts('seraph-paladin');
+    const nebula = inspectCosts('nebula-archon');
+    const chrono = inspectCosts('chrono-sovereign');
+
+    expect(volt.dmgCost).toBe(50_000);
+    expect(nebula.dmgCost).toBe(500_000_000_000);
+    expect(zephyr.dmgCost).toBeGreaterThan(volt.dmgCost);
+    expect(vesper.dmgCost).toBeGreaterThan(zephyr.dmgCost);
+    expect(seraph.dmgCost).toBeGreaterThan(vesper.dmgCost);
+    expect(chrono.dmgCost).toBeGreaterThan(seraph.dmgCost);
+  });
+
+  it('flags Frozen and higher mutations as protected high-tier rolls', () => {
+    const expectedProtected = new Set(['frozen', 'inferno', 'nightmare', 'unreal']);
+    for (const mut of MUTATIONS) {
+      expect(isHighTierMutation(mut.id)).toBe(expectedProtected.has(mut.id));
+    }
+
+    const state = new GameState();
+    const firstChibi = CHIBI_CATALOG[0].id;
+    state.miners[firstChibi] = 1;
+    state.hotbar[0] = firstChibi;
+    state.placeHotbarItemOnPlot(0, 0);
+    state.gems = 10_000;
+
+    // Roll near top of cumulative probability (Frozen = last ~2.5% band -> 0.98 hits Frozen)
+    const rolledName = state.rollPlotMutation(0, () => 0.98);
+    expect(rolledName).toBe('Frozen');
+    expect(isHighTierMutation(state.getPlotUnit(0)!.mutationId)).toBe(true);
+  });
+});

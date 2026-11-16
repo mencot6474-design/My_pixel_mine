@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@layer base {
+  html,
+  body,
+  #threeRoot {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    user-select: none;
+    background: #0f172a;
+    font-family: 'Fredoka', sans-serif;
+    cursor: var(--mam-cursor, auto);
+  }
+
+  button,
+  [role='button'],
+  #hudRoot,
+  #threeRoot canvas,
+  .mam-card,
+  .mam-strip-card {
+    cursor: var(--mam-cursor, auto) !important;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-family: 'Fredoka', sans-serif;
+  }
+
+  #threeRoot canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    outline: none;
+  }
+}
