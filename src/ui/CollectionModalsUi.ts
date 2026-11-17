@@ -47,6 +47,7 @@ export class CollectionModalsUi {
   private indexInspectId: string | null = null;
   private invInspectTarget: { kind: 'miner' | 'ore' | 'gem-item'; id: string } | null = null;
   private lastChestCardsHtml = '';
+  private lastChestCardsKey = '';
   private lastInvCardsHtml = '';
   private lastIndexInspectorHtml = '';
   private lastInvInspectorHtml = '';
@@ -403,15 +404,15 @@ export class CollectionModalsUi {
         ],
         actionHtml: `
           <div class="flex flex-col gap-1.5">
-            <button class="w-full h-9 rounded-[7px] border-2 ${isEq ? 'border-[#7c2d12] bg-[linear-gradient(180deg,#fb923c,#ea580c)] shadow-[0_3px_0_#7c2d12]' : 'border-[#14532d] bg-[linear-gradient(180deg,#4ade80,#16a34a)] shadow-[0_3px_0_#14532d]'} text-white text-[13px] font-black cursor-pointer hover:brightness-110 active:translate-y-0.5 mam-outline-sm" data-insp-inv-action="toggle-miner" data-insp-id="${def.id}">
+            <button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-[7px] border-2 ${isEq ? 'border-[#7c2d12] bg-[linear-gradient(180deg,#fb923c,#ea580c)] shadow-[0_3px_0_#7c2d12]' : 'border-[#14532d] bg-[linear-gradient(180deg,#4ade80,#16a34a)] shadow-[0_3px_0_#14532d]'} text-white text-[13px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] mam-outline-sm" data-insp-inv-action="toggle-miner" data-insp-id="${def.id}">
               ${isEq ? 'Unequip from Hotbar' : 'Equip to Hotbar'}
             </button>
-            <button class="w-full h-9 rounded-[7px] border-2 ${
+            <button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-[7px] border-2 transition-[transform,filter,box-shadow] duration-150 ease-out ${
               !nextTier
-                ? 'border-amber-600/60 bg-amber-950/60 text-amber-300 cursor-default'
+                ? 'disabled border-amber-600/60 bg-amber-950/60 text-amber-300 cursor-default'
                 : canStarUp
-                  ? 'border-[#854d0e] bg-[linear-gradient(180deg,#facc15,#eab308)] shadow-[0_3px_0_#854d0e] text-[#1e293b] cursor-pointer hover:brightness-110 active:translate-y-0.5'
-                  : 'border-slate-700 bg-slate-800/80 text-slate-400 cursor-not-allowed opacity-75'
+                  ? 'border-[#854d0e] bg-[linear-gradient(180deg,#facc15,#eab308)] shadow-[0_3px_0_#854d0e] text-[#1e293b] cursor-pointer hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96]'
+                  : 'disabled border-slate-700 bg-slate-800/80 text-slate-400 cursor-not-allowed opacity-75'
             } text-[12.5px] font-black" data-insp-inv-action="star-up-miner" data-insp-id="${def.id}" ${!nextTier || !canStarUp ? 'disabled' : ''}>
               ${
                 nextTier
@@ -448,10 +449,10 @@ export class CollectionModalsUi {
         ],
         actionHtml: `
           <div class="grid grid-cols-2 gap-1.5">
-            <button class="h-9 rounded-[7px] border-2 ${isEq ? 'border-[#7c2d12] bg-[linear-gradient(180deg,#fb923c,#ea580c)]' : 'border-[#0369a1] bg-[linear-gradient(180deg,#38bdf8,#0284c7)]'} text-white text-[12.5px] font-black cursor-pointer hover:brightness-110 mam-outline-sm" data-insp-inv-action="toggle-ore" data-insp-id="${def.id}">
+            <button class="mam-sheen-hover relative overflow-hidden h-9 rounded-[7px] border-2 ${isEq ? 'border-[#7c2d12] bg-[linear-gradient(180deg,#fb923c,#ea580c)]' : 'border-[#0369a1] bg-[linear-gradient(180deg,#38bdf8,#0284c7)]'} text-white text-[12.5px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] mam-outline-sm" data-insp-inv-action="toggle-ore" data-insp-id="${def.id}">
               ${isEq ? 'Unequip' : 'Equip'}
             </button>
-            <button class="h-9 rounded-[7px] border-2 border-[#14532d] bg-[linear-gradient(180deg,#4ade80,#16a34a)] text-white text-[12.5px] font-black cursor-pointer hover:brightness-110 mam-outline-sm" data-insp-inv-action="sell-ore-all" data-insp-id="${def.id}">
+            <button class="mam-sheen-hover relative overflow-hidden h-9 rounded-[7px] border-2 border-[#14532d] bg-[linear-gradient(180deg,#4ade80,#16a34a)] text-white text-[12.5px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] mam-outline-sm" data-insp-inv-action="sell-ore-all" data-insp-id="${def.id}">
               Sell All
             </button>
           </div>
@@ -482,7 +483,7 @@ export class CollectionModalsUi {
         ['Timer', isActive ? `${mm}:${ss}` : 'Inactive', isActive ? 'text-[#4ade80]' : 'text-[#94a3b8]'],
       ],
       actionHtml: `
-        <button class="w-full h-10 rounded-[7px] border-2 border-[#0369a1] bg-[linear-gradient(180deg,#38bdf8,#0284c7)] shadow-[0_3px_0_#075985] text-white text-[14px] font-black cursor-pointer hover:brightness-110 active:translate-y-0.5 mam-outline-sm" data-insp-inv-action="use-potion" data-insp-id="${pot.id}">
+        <button class="mam-sheen-hover relative overflow-hidden w-full h-10 rounded-[7px] border-2 border-[#0369a1] bg-[linear-gradient(180deg,#38bdf8,#0284c7)] shadow-[0_3px_0_#075985] text-white text-[14px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] mam-outline-sm" data-insp-inv-action="use-potion" data-insp-id="${pot.id}">
           Use Potion (x${fmtInt(qty)})
         </button>
       `,
@@ -593,10 +594,10 @@ export class CollectionModalsUi {
       boxClass: `w-[980px] h-[min(640px,88vh)] ${TW_SHOP_MODAL_RESP}`,
       headerExtraHtml: `
         <div class="flex items-center gap-1.5">
-          <button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-amber-300/45 bg-[linear-gradient(135deg,rgba(245,158,11,0.88),rgba(217,119,6,0.92))] shadow-[0_6px_16px_rgba(245,158,11,0.25),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[13px] font-extrabold cursor-pointer transition-[transform,filter] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="auto-star-up" title="Merge all spare Chibi duplicates into Stars">
+          <button class="mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-amber-300/45 bg-[linear-gradient(135deg,rgba(245,158,11,0.88),rgba(217,119,6,0.92))] shadow-[0_6px_16px_rgba(245,158,11,0.25),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[13px] font-extrabold cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="auto-star-up" title="Merge all spare Chibi duplicates into Stars">
             <span>★ Auto Star-Up</span>
           </button>
-          <button class="mam-equip-best-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-emerald-300/45 bg-[linear-gradient(135deg,rgba(34,197,94,0.88),rgba(5,150,105,0.92))] shadow-[0_6px_16px_rgba(16,185,129,0.28),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[14px] font-extrabold cursor-pointer transition-[transform,filter,box-shadow] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="equip-best">
+          <button class="mam-equip-best-btn mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-emerald-300/45 bg-[linear-gradient(135deg,rgba(34,197,94,0.88),rgba(5,150,105,0.92))] shadow-[0_6px_16px_rgba(16,185,129,0.28),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[14px] font-extrabold cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="equip-best">
             ${hudIconHtml('sparkle', 18, 'Equip Best')}
             <span>Equip Best</span>
           </button>
@@ -623,6 +624,19 @@ export class CollectionModalsUi {
     });
   }
 
+  private buildChestCardsKey(): string {
+    const keys: string[] = [];
+    for (const [id, qty] of Object.entries(this.state.chestMiners)) {
+      if (qty > 0 && getChibiById(id)) keys.push(`m:${id}`);
+    }
+    for (const [id, qty] of Object.entries(this.state.chestOres)) {
+      if (qty > 0 && getOreById(id)) {
+        keys.push(`o:${id}:${this.state.isOreLocked(id) ? 1 : 0}`);
+      }
+    }
+    return keys.join('|');
+  }
+
   private buildChestCardsHtml(): string {
     const cards: string[] = [];
     for (const [id, qty] of Object.entries(this.state.chestMiners)) {
@@ -638,7 +652,7 @@ export class CollectionModalsUi {
           <div class="mam-card-name mam-outline-sm">${def.name}</div>
           <div class="mam-card-bottom">
             <span class="mam-card-dps mam-outline-sm">${fmtShort(def.baseDps)}</span>
-            <span class="mam-card-qty mam-outline-sm">x${fmtInt(qty)}</span>
+            <span class="mam-card-qty mam-outline-sm" data-chest-qty="miner:${def.id}">x${fmtInt(qty)}</span>
           </div>
         </div>
       `);
@@ -656,7 +670,7 @@ export class CollectionModalsUi {
           <div class="mam-card-name mam-outline-sm">${def.name}</div>
           <div class="mam-card-bottom">
             <span class="mam-card-val mam-outline-sm">${fmtMoney(def.sellValue)}</span>
-            <span class="mam-card-qty mam-outline-sm">x${fmtInt(qty)}</span>
+            <span class="mam-card-qty mam-outline-sm" data-chest-qty="ore:${def.id}">x${fmtInt(qty)}</span>
           </div>
         </div>
       `);
@@ -708,6 +722,7 @@ export class CollectionModalsUi {
     const pct = Math.min(100, Math.round((count / Math.max(1, cap)) * 100));
     const cardsHtml = this.buildChestCardsHtml();
     this.lastChestCardsHtml = cardsHtml;
+    this.lastChestCardsKey = this.buildChestCardsKey();
 
     return renderModalShell({
       title: 'Chest',
@@ -948,9 +963,23 @@ export class CollectionModalsUi {
 
     const grid = root.querySelector<HTMLElement>('[data-chest-grid="true"]');
     if (!grid) return;
+    const nextKey = this.buildChestCardsKey();
+    if (this.lastChestCardsKey === nextKey) {
+      grid.querySelectorAll<HTMLElement>('[data-chest-qty]').forEach((el) => {
+        const ref = el.dataset.chestQty;
+        if (!ref) return;
+        const [kind, id] = ref.split(':');
+        const qty = kind === 'miner' ? this.state.chestMiners[id] || 0 : this.state.chestOres[id] || 0;
+        const text = `x${fmtInt(qty)}`;
+        if (el.textContent !== text) el.textContent = text;
+      });
+      return;
+    }
+
     const nextHtml = this.buildChestCardsHtml();
     if (this.lastChestCardsHtml !== nextHtml) {
       const prevScroll = grid.scrollTop;
+      this.lastChestCardsKey = nextKey;
       this.lastChestCardsHtml = nextHtml;
       grid.innerHTML = nextHtml;
       grid.scrollTop = prevScroll;

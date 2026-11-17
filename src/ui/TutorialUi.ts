@@ -180,7 +180,8 @@ export class TutorialUi {
   constructor(
     private readonly onSetPitZoom: (zoomed: boolean) => void,
     private readonly onSetChestZoom: (zoomed: boolean) => void,
-    private readonly onSetSellShopZoom: (zoomed: boolean) => void
+    private readonly onSetSellShopZoom: (zoomed: boolean) => void,
+    private readonly onComplete?: () => void
   ) {
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
       this.step = 'done';
@@ -442,6 +443,7 @@ export class TutorialUi {
       // ignore storage errors
     }
     this.render();
+    this.onComplete?.();
   }
 
   public render(): void {

@@ -50,6 +50,11 @@ import {
   ResearchTreeId,
 } from './ResearchData';
 import {
+  getRelicById,
+  MAX_EQUIPPED_RELICS,
+  RelicEffectStat,
+} from './RelicData';
+import {
   getGlobalGemGainBonus,
   getTowerCheckpoints,
   getTowerFloorDef,
@@ -174,6 +179,8 @@ export interface SavePayload {
   researchLevels?: Partial<ResearchLevelsMap>;
   chibiStars?: Record<string, number>;
   stashedUnits?: Record<string, PlotUnitState[]>;
+  craftedRelics?: string[];
+  equippedRelics?: string[];
   tower?: TowerSaveData;
   weather?: {
     id: WeatherId;
@@ -251,6 +258,8 @@ export class GameState {
   ];
   public stashedUnits: Record<string, PlotUnitState[]> = {};
   public chibiStars: Record<string, number> = {};
+  public craftedRelics = new Set<string>();
+  public equippedRelics: string[] = [];
   public ownedPickaxes: Record<string, number> = {};
   public ownedEnchants: Record<string, number> = {
     blazing: 2,
@@ -367,7 +376,7 @@ export class GameState {
     const encMult = enc ? enc.dmgMult : 1;
 
     const lvlScale = (lvl: number) => Math.pow(1.28, lvl - 1);
-    const dmgResearchMult = 1 + this.getActiveResearchBonus('minerDmgPct');
+    const dmgResearchMult = 1 + this.getActiveResearchBonus('minerDmgPct') + this.getRelicBonus('minerDmgPct');
     const weatherDmgMult = this.getWeatherDamageMult();
     const starTier = getChibiStarTier(this.getChibiStar(chibi.id));
     const resonanceDmgMult = 1 + this.getWorldResonanceDmgBonusPct(getMinerWorldId(chibi.id));
@@ -393,7 +402,9 @@ export class GameState {
         weatherDmgMult
     );
     const speed = 10 + (unit.speedLevel - 1) * 2;
-    const miningMult = Number((1 + (unit.miningSpeedLevel - 1) * 0.1 + starTier.miningSpeedBonus).toFixed(2));
+    const miningMult = Number(
+      (1 + (unit.miningSpeedLevel - 1) * 0.1 + starTier.miningSpeedBonus + this.getRelicBonus('miningSpeedPct')).toFixed(2)
+    );
     const worth = Math.round(baseDmg * 12);
 
     const upgradeCostMult = getChibiUpgradeCostMult(chibi.id);
@@ -978,7 +989,9 @@ export class GameState {
     if (variantKey === 'geode' || rng() < 0.18 + findBonus * 0.5) {
       const baseGem = variantKey === 'geode' ? 3 : 1;
       const { gemBonusPct } = this.getActiveStarDropAndGemBonus();
-      const mult = (1 + getGlobalGemGainBonus(this.towerBestFloor) + gemBonusPct) * this.getWeatherGemDropMult();
+      const mult =
+        (1 + getGlobalGemGainBonus(this.towerBestFloor) + gemBonusPct + this.getRelicBonus('gemGainPct')) *
+        this.getWeatherGemDropMult();
       this.gems += Math.max(baseGem, Math.round(baseGem * mult));
     }
 
@@ -998,8 +1011,9 @@ export class GameState {
   } {
     const weatherDef = getWeatherById(weatherId);
     const weatherOre = getWeatherOreByWeatherId(weatherId);
+    const meteorBonusMult = 1 + this.getRelicBonus('meteorDropPct');
     const qtyBonus = weatherId === 'celestial' ? 3 : weatherId === 'void' || weatherId === 'bloodmoon' ? 2 : 1;
-    const weatherOreQty = qtyBonus + (rng() < 0.35 ? 1 : 0);
+    const weatherOreQty = Math.max(1, Math.round((qtyBonus + (rng() < 0.35 ? 1 : 0)) * meteorBonusMult));
 
     const capLeft = Math.max(0, this.getMaxChestCapacity() - this.getChestItemCount());
     let added = 0;
@@ -1058,7 +1072,9 @@ export class GameState {
     const baseGems = 20 + worldIdx * 12;
     const { gemBonusPct } = this.getActiveStarDropAndGemBonus();
     const gemMult =
-      (1 + getGlobalGemGainBonus(this.towerBestFloor) + gemBonusPct) * weatherDef.gemDropMult;
+      (1 + getGlobalGemGainBonus(this.towerBestFloor) + gemBonusPct + this.getRelicBonus('gemGainPct')) *
+      this.scaleWeatherMult(weatherDef.gemDropMult) *
+      meteorBonusMult;
     const gemsAwarded = Math.max(10, Math.round(baseGems * gemMult));
     this.gems += gemsAwarded;
 
@@ -1539,16 +1555,21 @@ export class GameState {
     return Math.max(0, Math.ceil((this.weatherExpiresAt - now) / 1000));
   }
 
+  private scaleWeatherMult(base: number): number {
+    const weatherRelic = this.getRelicBonus('weatherBuffPct');
+    return base > 1 && weatherRelic > 0 ? 1 + (base - 1) * (1 + weatherRelic) : base;
+  }
+
   public getWeatherDamageMult(): number {
-    return this.getActiveWeather().damageMult;
+    return this.scaleWeatherMult(this.getActiveWeather().damageMult);
   }
 
   public getWeatherOreDropMult(): number {
-    return this.getActiveWeather().oreDropMult;
+    return this.scaleWeatherMult(this.getActiveWeather().oreDropMult);
   }
 
   public getWeatherGemDropMult(): number {
-    return this.getActiveWeather().gemDropMult;
+    return this.scaleWeatherMult(this.getActiveWeather().gemDropMult);
   }
 
   public syncWeather(
@@ -1581,11 +1602,18 @@ export class GameState {
   }
 
   public getTapDamage(): number {
-    return Math.max(1, Math.round((20 + this.getActiveResearchBonus('tapDamageFlat')) * this.getWeatherDamageMult()));
+    const tapMult = 1 + this.getRelicBonus('tapDmgPct');
+    return Math.max(
+      1,
+      Math.round((20 + this.getActiveResearchBonus('tapDamageFlat')) * tapMult * this.getWeatherDamageMult())
+    );
   }
 
   public getMaxChestCapacity(): number {
-    return this.chestCapacity + Math.round(this.getActiveResearchBonus('chestCapacityFlat'));
+    return (
+      this.chestCapacity +
+      Math.round(this.getActiveResearchBonus('chestCapacityFlat') + this.getRelicBonus('chestCapacityFlat'))
+    );
   }
 
   public getActiveOreNodeCount(): number {
@@ -1601,7 +1629,7 @@ export class GameState {
   }
 
   public getOreValueMult(): number {
-    return 1 + this.getActiveResearchBonus('oreValuePct');
+    return 1 + this.getActiveResearchBonus('oreValuePct') + this.getRelicBonus('oreValuePct');
   }
 
   public getEffectiveOreSellValue(oreId: string): number {
@@ -1612,7 +1640,7 @@ export class GameState {
 
   public getOreOutputMult(): number {
     const { oreDropBonusPct } = this.getActiveStarDropAndGemBonus();
-    let mult = 1 + this.getActiveResearchBonus('oreOutputPct') + oreDropBonusPct;
+    let mult = 1 + this.getActiveResearchBonus('oreOutputPct') + oreDropBonusPct + this.getRelicBonus('oreDropPct');
     if (this.isBoostActive('ore-elixir-1')) mult += 0.1;
     if (this.isBoostActive('ore-elixir-2')) mult += 0.25;
     if (this.isBoostActive('ore-elixir-3')) mult += 0.5;
@@ -1641,11 +1669,90 @@ export class GameState {
 
   public getOreLuckMult(): number {
     const base = this.isBoostActive('ore-luck-potion') ? 2.0 : 1.0;
-    return base + this.getActiveResearchBonus('oreLuckPct');
+    return base + this.getActiveResearchBonus('oreLuckPct') + this.getRelicBonus('oreLuckPct');
   }
 
   public getMutationLuckMult(): number {
-    return this.isBoostActive('mutation-luck-1') ? 2.0 : 1.0;
+    const base = this.isBoostActive('mutation-luck-1') ? 2.0 : 1.0;
+    return base + this.getRelicBonus('mutationLuckPct');
+  }
+
+  // === RELIC FORGE ===
+  public hasCraftedRelic(relicId: string): boolean {
+    return this.craftedRelics.has(relicId);
+  }
+
+  public isRelicEquipped(relicId: string): boolean {
+    return this.equippedRelics.includes(relicId);
+  }
+
+  public getTotalOwnedOreCount(oreId: string): number {
+    return (this.ores[oreId] || 0) + (this.chestOres[oreId] || 0);
+  }
+
+  public canCraftRelic(relicId: string): boolean {
+    const def = getRelicById(relicId);
+    if (!def || this.craftedRelics.has(relicId)) return false;
+    if (this.gems < def.gemCost) return false;
+    for (const ing of def.ingredients) {
+      if (this.getTotalOwnedOreCount(ing.oreId) < ing.amount) return false;
+    }
+    return true;
+  }
+
+  public craftRelic(relicId: string): boolean {
+    const def = getRelicById(relicId);
+    if (!def || !this.canCraftRelic(relicId)) return false;
+    this.gems -= def.gemCost;
+    for (const ing of def.ingredients) {
+      let rem = ing.amount;
+      const inBag = this.ores[ing.oreId] || 0;
+      if (inBag > 0) {
+        const takeBag = Math.min(inBag, rem);
+        this.ores[ing.oreId] = inBag - takeBag;
+        if (this.ores[ing.oreId] <= 0) {
+          delete this.ores[ing.oreId];
+          this.removeFromHotbar(ing.oreId);
+        }
+        rem -= takeBag;
+      }
+      if (rem > 0) {
+        const inChest = this.chestOres[ing.oreId] || 0;
+        const takeChest = Math.min(inChest, rem);
+        this.chestOres[ing.oreId] = inChest - takeChest;
+        if (this.chestOres[ing.oreId] <= 0) delete this.chestOres[ing.oreId];
+      }
+    }
+    this.craftedRelics.add(relicId);
+    if (this.equippedRelics.length < MAX_EQUIPPED_RELICS && !this.equippedRelics.includes(relicId)) {
+      this.equippedRelics.push(relicId);
+    }
+    this.emit();
+    return true;
+  }
+
+  public toggleEquipRelic(relicId: string): 'equipped' | 'unequipped' | 'full' | 'not-crafted' {
+    if (!this.craftedRelics.has(relicId)) return 'not-crafted';
+    const idx = this.equippedRelics.indexOf(relicId);
+    if (idx >= 0) {
+      this.equippedRelics.splice(idx, 1);
+      this.emit();
+      return 'unequipped';
+    }
+    if (this.equippedRelics.length >= MAX_EQUIPPED_RELICS) return 'full';
+    this.equippedRelics.push(relicId);
+    this.emit();
+    return 'equipped';
+  }
+
+  public getRelicBonus(stat: RelicEffectStat): number {
+    let total = 0;
+    for (const id of this.equippedRelics) {
+      const def = getRelicById(id);
+      if (!def) continue;
+      total += def.effects[stat] ?? 0;
+    }
+    return total;
   }
 
   public buyEnchantDice(amount = 1): boolean {
@@ -1703,7 +1810,8 @@ export class GameState {
       }
     }
     const blessingPct = (this.towerRun?.blessings ?? []).reduce((s, b) => s + (b.dpsBonusPct ?? 0), 0);
-    return Math.max(1, Math.round(unitDps * def.anomaly.dpsMult * (1 + blessingPct)));
+    const towerRelicMult = 1 + this.getRelicBonus('towerDmgPct');
+    return Math.max(1, Math.round(unitDps * def.anomaly.dpsMult * (1 + blessingPct) * towerRelicMult));
   }
 
   public getTowerSlotStrikeDamage(slotIndex: number, attackIntervalSec = 0.85): number {
@@ -1724,7 +1832,8 @@ export class GameState {
     const floor = this.towerRun?.floor ?? 1;
     const def = getTowerFloorDef(floor);
     const blessingPct = (this.towerRun?.blessings ?? []).reduce((s, b) => s + (b.tapBonusPct ?? 0), 0);
-    return Math.max(1, Math.round(this.getTapDamage() * def.anomaly.tapMult * (1 + blessingPct)));
+    const towerRelicMult = 1 + this.getRelicBonus('towerDmgPct');
+    return Math.max(1, Math.round(this.getTapDamage() * def.anomaly.tapMult * (1 + blessingPct) * towerRelicMult));
   }
 
   private getTowerExtraTimerSec(): number {
@@ -1802,7 +1911,7 @@ export class GameState {
     const floorDef = getTowerFloorDef(currentFloor);
     const waveDef = getTowerWaveDef(currentFloor, currentWave);
     const runGemPct = run.blessings.reduce((s, b) => s + (b.gemBonusPct ?? 0), 0);
-    const globalGemPct = getGlobalGemGainBonus(Math.max(this.towerBestFloor, currentFloor));
+    const globalGemPct = getGlobalGemGainBonus(Math.max(this.towerBestFloor, currentFloor)) + this.getRelicBonus('gemGainPct');
     const gemMult = (1 + runGemPct + globalGemPct) * this.getWeatherGemDropMult();
 
     run.wavesCleared += 1;
@@ -2082,7 +2191,10 @@ export class GameState {
     }
     this.towerKeys -= 1;
     const baseGems = getTowerSweepGemReward(this.towerBestFloor);
-    const gemsAwarded = Math.max(1, Math.round(baseGems * (1 + getGlobalGemGainBonus(this.towerBestFloor))));
+    const gemsAwarded = Math.max(
+      1,
+      Math.round(baseGems * (1 + getGlobalGemGainBonus(this.towerBestFloor) + this.getRelicBonus('gemGainPct')))
+    );
     this.gems += gemsAwarded;
     this.emit();
     return { ok: true, gemsAwarded };
@@ -2143,6 +2255,8 @@ export class GameState {
         unlockedWorlds: this.unlockedWorlds,
         researchLevels: this.researchLevels,
         chibiStars: this.chibiStars,
+        craftedRelics: Array.from(this.craftedRelics),
+        equippedRelics: this.equippedRelics,
         tower: {
           bestFloor: this.towerBestFloor,
           keys: this.towerKeys,
@@ -2289,6 +2403,18 @@ export class GameState {
         this.lockedOreIds = new Set(data.lockedOreIds.map((id) => migrateOreId(id)).filter((id) => Boolean(getOreById(id))));
       }
       if (typeof data.autoMeteor === 'boolean') this.autoMeteor = data.autoMeteor;
+      if (Array.isArray(data.craftedRelics)) {
+        this.craftedRelics = new Set(data.craftedRelics.filter((id) => Boolean(getRelicById(id))));
+      }
+      if (Array.isArray(data.equippedRelics)) {
+        const validEquipped: string[] = [];
+        for (const id of data.equippedRelics) {
+          if (this.craftedRelics.has(id) && !validEquipped.includes(id) && validEquipped.length < MAX_EQUIPPED_RELICS) {
+            validEquipped.push(id);
+          }
+        }
+        this.equippedRelics = validEquipped;
+      }
       if (Array.isArray(data.discovered)) {
         const cleaned = new Set<string>();
         for (const rawId of data.discovered) {

@@ -374,6 +374,15 @@
     --mam-m-well-border: rgba(251, 146, 60, 0.24);
   }
 
+  .mam-modal[data-modal-theme='forge'] {
+    --mam-m-accent: #f59e0b;
+    --mam-m-accent-hi: #fde68a;
+    --mam-m-accent-deep: #b45309;
+    --mam-m-ambient: rgba(245, 158, 11, 0.22);
+    --mam-m-glow: rgba(251, 191, 36, 0.4);
+    --mam-m-well-border: rgba(251, 191, 36, 0.28);
+  }
+
   .mam-modal[data-modal-theme='gem-shop'] {
     --mam-m-accent: #06b6d4;
     --mam-m-accent-hi: #67e8f9;
@@ -690,7 +699,7 @@
   }
 
   /* Glossy sheen pseudo-elements */
-  .mam-sheen-hover:not(.disabled):not(.sold-out)::after {
+  .mam-sheen-hover:not(.disabled):not(.sold-out):not(:disabled)::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -700,7 +709,7 @@
     pointer-events: none;
   }
 
-  .mam-sheen-hover:not(.disabled):not(.sold-out):hover::after {
+  .mam-sheen-hover:not(.disabled):not(.sold-out):not(:disabled):hover::after {
     animation: mamBtnSheen 0.58s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 

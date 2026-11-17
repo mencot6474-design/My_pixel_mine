@@ -10,6 +10,7 @@ import {
   getOresByWorld,
   getMinerRarity,
   getMinersByWorld,
+  getOreById,
   getPickaxeSellValue,
   getWorldById,
   isHighTierMutation,
@@ -27,6 +28,7 @@ import {
   RESEARCH_NODES,
 } from '../src/game/ResearchData';
 import { GameState, getChibiUpgradeCostMult } from '../src/game/GameState';
+import { MAX_EQUIPPED_RELICS, RELICS } from '../src/game/RelicData';
 import { rollWeatherDef, WEATHER_DURATION_MS, WEATHERS } from '../src/game/WeatherData';
 import { fmtMoney, fmtShort } from '../src/game/NumberFormat';
 import { createEnchantAura3D, createEnchantDice3D, EnchantBillboard2D } from '../src/game3d/AuraModels3D';
@@ -1381,7 +1383,7 @@ describe('Pure 3D Mine World', () => {
 
     shop.update(0.05, 1.0, 'shop', cam);
     const shopAnchors = shop.getShopAnchors(cam, 1280, 720, new THREE.Vector3());
-    expect(shopAnchors).toHaveLength(5);
+    expect(shopAnchors).toHaveLength(6);
     expect(existsSync(resolve(process.cwd(), 'public', 'pickaxes', 'sunwheel.webp'))).toBe(true);
   });
 
@@ -1624,5 +1626,46 @@ describe('Pure 3D Mine World', () => {
     expect(gs.hotbar[1]).toBe(gs.plotMiners[1]);
     expect(gs.hotbar[2]).toBe('copperine');
     expect(gs.hotbar[3]).toBeNull();
+  });
+
+  it('supports Relic Forge recipes, bag+chest consumption, 3-slot equip cap, and stat bonuses', () => {
+    expect(RELICS.length).toBe(12);
+    for (const relic of RELICS) {
+      expect(existsSync(resolve(process.cwd(), 'public', relic.iconPath.replace(/^\//, '')))).toBe(true);
+      for (const ing of relic.ingredients) {
+        expect(getOreById(ing.oreId)).toBeDefined();
+        expect(ing.amount).toBeGreaterThan(0);
+      }
+    }
+
+    const gs = new GameState();
+    const baseTap = gs.getTapDamage();
+    const baseCap = gs.getMaxChestCapacity();
+    const baseValue = gs.getOreValueMult();
+
+    // Provide materials split across bag (ores) and chest (chestOres)
+    gs.gems = 200000;
+    gs.ores = { coalite: 100, copperine: 20, glowquartz: 100, prismite: 30 };
+    gs.chestOres = { coalite: 140, copperine: 25, ironshard: 8, runestone: 80, relicore: 20, scorchgold: 10, emberstone: 90, magmite: 25, frostquartz: 15 };
+
+    expect(gs.canCraftRelic('miner_lantern')).toBe(true);
+    expect(gs.craftRelic('miner_lantern')).toBe(true);
+    expect(gs.hasCraftedRelic('miner_lantern')).toBe(true);
+    expect(gs.isRelicEquipped('miner_lantern')).toBe(true);
+    expect(gs.getTapDamage()).toBeGreaterThan(baseTap);
+
+    // Craft 2nd & 3rd relics (auto-equipped into slots 2 & 3)
+    expect(gs.craftRelic('prism_heart')).toBe(true);
+    expect(gs.craftRelic('chrono_compass')).toBe(true);
+    expect(gs.equippedRelics.length).toBe(MAX_EQUIPPED_RELICS);
+    expect(gs.getMaxChestCapacity()).toBe(baseCap + 3000);
+    expect(gs.getOreValueMult()).toBeGreaterThan(baseValue);
+
+    // 4th relic crafts but cannot equip until a slot is freed
+    expect(gs.craftRelic('ember_gauntlet')).toBe(true);
+    expect(gs.isRelicEquipped('ember_gauntlet')).toBe(false);
+    expect(gs.toggleEquipRelic('ember_gauntlet')).toBe('full');
+    expect(gs.toggleEquipRelic('prism_heart')).toBe('unequipped');
+    expect(gs.toggleEquipRelic('ember_gauntlet')).toBe('equipped');
   });
 });

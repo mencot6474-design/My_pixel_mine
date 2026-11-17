@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { WeatherId } from '../game/WeatherData';
 import type { MineWorldPalette } from './MineWorldPalette';
 import { mountGlbProp } from './GlbAssets3D';
+import { loadPublicSpriteTexture } from './OrePit3D';
 import {
   getCobblePathTexture,
   getHazardStripeTexture,
@@ -268,80 +269,78 @@ export class MineEnvironment3D {
     const g = new THREE.Group();
     g.position.set(0, 0.21, -6.0);
 
-    // Recessed Stone-Framed Backdrop Parapet between pillars with matching slate coping
-    const wallBase = new THREE.Mesh(new THREE.BoxGeometry(12.6, 0.85, 0.32), darkMetalMat);
-    wallBase.position.set(0, 0.42, 0.12);
-    wallBase.castShadow = true;
-    wallBase.receiveShadow = true;
-    const wallTopTrim = new THREE.Mesh(new THREE.BoxGeometry(12.7, 0.12, 0.38), steelMat);
-    wallTopTrim.position.set(0, 0.87, 0.12);
-    wallTopTrim.receiveShadow = true;
-    g.add(wallBase, wallTopTrim);
+    // Grounded Stone-Framed Game Banner Wall (3:1 aspect ratio, elevated above the 5-Chibi stage nametags)
+    const bannerW = 8.4;
+    const bannerH = 2.8;
+    const bannerCenterY = 3.95;
 
-    // Twin Tall Carved Quarry Pillars using Kenney mini-dungeon column.glb + Stepped Plinth, Mid-Band & Finial Caps
+    const plinthBase = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.44, 0.92), this.cliffMat);
+    plinthBase.position.set(0, 0.22, 0);
+    plinthBase.castShadow = true;
+    plinthBase.receiveShadow = true;
+
+    const lowerStoneWall = new THREE.Mesh(new THREE.BoxGeometry(9.2, 2.08, 0.54), this.cliffMat);
+    lowerStoneWall.position.set(0, 1.48, -0.02);
+    lowerStoneWall.castShadow = true;
+    lowerStoneWall.receiveShadow = true;
+
+    const plinthTop = new THREE.Mesh(new THREE.BoxGeometry(9.35, 0.14, 0.72), steelMat);
+    plinthTop.position.set(0, 2.52, 0);
+    plinthTop.receiveShadow = true;
+
+    const wallBacking = new THREE.Mesh(new THREE.BoxGeometry(bannerW + 0.36, bannerH + 0.28, 0.42), darkMetalMat);
+    wallBacking.position.set(0, bannerCenterY, -0.02);
+    wallBacking.castShadow = true;
+    wallBacking.receiveShadow = true;
+
+    const topCornice = new THREE.Mesh(new THREE.BoxGeometry(9.4, 0.22, 0.64), this.cliffMat);
+    topCornice.position.set(0, bannerCenterY + bannerH * 0.5 + 0.24, 0);
+    topCornice.castShadow = true;
+
+    const topTrim = new THREE.Mesh(new THREE.BoxGeometry(9.15, 0.1, 0.52), steelMat);
+    topTrim.position.set(0, bannerCenterY + bannerH * 0.5 + 0.12, 0);
+
+    g.add(plinthBase, lowerStoneWall, plinthTop, wallBacking, topCornice, topTrim);
+
+    // Side Stone Pilasters Framing the Banner Wall
     for (const sx of [-1, 1]) {
-      const px = sx * 6.6;
-      const plinthLower = new THREE.Mesh(new THREE.BoxGeometry(1.64, 0.44, 1.48), this.cliffMat);
-      plinthLower.position.set(px, 0.22, 0);
-      plinthLower.castShadow = true;
-      plinthLower.receiveShadow = true;
+      const px = sx * (bannerW * 0.5 + 0.32);
+      const pilaster = new THREE.Mesh(new THREE.BoxGeometry(0.48, bannerH + 2.65, 0.62), this.cliffMat);
+      pilaster.position.set(px, 2.74, 0.02);
+      pilaster.castShadow = true;
+      pilaster.receiveShadow = true;
 
-      const plinthCap = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.16, 1.28), darkMetalMat);
-      plinthCap.position.set(px, 0.52, 0);
-
-      mountGlbProp('/models/mini-dungeon/column.glb', g, {
-        position: [px, 0, 0],
-        targetHeight: 3.95,
-        alignBottomY: 0.58,
-      });
-
-      const midBand = new THREE.Mesh(new THREE.BoxGeometry(1.16, 0.14, 1.06), steelMat);
-      midBand.position.set(px, 2.55, 0);
-
-      const collar = new THREE.Mesh(new THREE.BoxGeometry(1.54, 0.24, 1.22), steelMat);
-      collar.position.set(px, 4.52, 0);
-
-      const capstone = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.18, 1.02), this.cliffMat);
-      capstone.position.set(px, 5.12, 0);
-      capstone.castShadow = true;
-
-      const finial = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.52, 0.38, 4), darkMetalMat);
-      finial.rotation.y = Math.PI / 4;
-      finial.position.set(px, 5.4, 0);
-      finial.castShadow = true;
-
-      g.add(plinthLower, plinthCap, midBand, collar, capstone, finial);
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.18, 0.72), steelMat);
+      cap.position.set(px, bannerCenterY + bannerH * 0.5 + 0.36, 0.02);
+      cap.castShadow = true;
+      g.add(pilaster, cap);
     }
 
-    // Clean Sculpted Quarry Stone Lintel & Cornice (Zero Flat 2D Signboard / Neon Bars / SVG Gyro)
-    const lowerBeam = new THREE.Mesh(new THREE.BoxGeometry(13.8, 0.28, 0.68), darkMetalMat);
-    lowerBeam.position.set(0, 4.72, 0);
-    lowerBeam.castShadow = true;
-
-    const upperCanopy = new THREE.Mesh(new THREE.BoxGeometry(14.3, 0.22, 0.92), steelMat);
-    upperCanopy.position.set(0, 4.96, 0);
-    upperCanopy.castShadow = true;
-
-    // Central Carved Stone Pediment + Pure 3D Sanctuary Jewel Crest
-    const centerKeystone = new THREE.Mesh(new THREE.BoxGeometry(1.48, 0.38, 0.8), this.cliffMat);
-    centerKeystone.position.set(0, 4.92, 0.04);
-    centerKeystone.castShadow = true;
-
-    const crestPlinth = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.18, 0.6), darkMetalMat);
-    crestPlinth.position.set(0, 5.18, 0.04);
-    g.add(lowerBeam, upperCanopy, centerKeystone, crestPlinth);
-
-    mountGlbProp('/models/platformer/jewel.glb', g, {
-      position: [0, 0, 0.04],
-      targetHeight: 0.68,
-      alignBottomY: 5.26,
+    // 3:1 Game Banner Plane ("My Chibi Minerr")
+    const bannerMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0,
     });
+    const bannerPlane = new THREE.Mesh(new THREE.PlaneGeometry(bannerW, bannerH), bannerMat);
+    bannerPlane.position.set(0, bannerCenterY, 0.21);
+    g.add(bannerPlane);
 
-    // Standing Quarry Lanterns Framing the Sanctuary (banners removed for clean view)
+    void loadPublicSpriteTexture('/hud/game_banner.webp')
+      .then((tex) => {
+        bannerMat.map = tex;
+        bannerMat.opacity = 1;
+        bannerMat.needsUpdate = true;
+      })
+      .catch(() => {
+        // Safe no-op in headless tests
+      });
+
+    // Standing Quarry Lanterns Framing the Banner Wall
     for (const sx of [-1, 1]) {
       mountGlbProp('/models/fantasy-town/lantern.glb', g, {
-        position: [sx * 5.45, 0, 0.52],
-        targetHeight: 1.65,
+        position: [sx * 5.65, 0, 0.45],
+        targetHeight: 1.75,
         alignBottomY: 0,
       });
     }

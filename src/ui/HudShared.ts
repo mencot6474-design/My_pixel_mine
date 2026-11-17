@@ -23,7 +23,8 @@ export type ModalKind =
   | 'gem-shop'
   | 'upgrades'
   | 'worlds'
-  | 'tower';
+  | 'tower'
+  | 'forge';
 
 export type ModalThemeId = Exclude<ModalKind, 'none'>;
 
@@ -125,7 +126,7 @@ export const TW_TAB_BTN =
   'mam-tab-btn inline-flex items-center gap-[7px] px-3.5 py-[7px] @max-[720px]:px-2.5 @max-[720px]:py-1 @max-[720px]:text-[13px] rounded-xl text-[14px] font-extrabold cursor-pointer';
 export const TW_MODAL_GRID_BASE = 'mam-grid flex-1 min-h-0 content-start overflow-y-auto pr-0 grid';
 export const TW_SHOP_DOCK_BTN_BASE =
-  'relative overflow-hidden inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_6px_16px_rgba(0,0,0,0.45)] text-white text-[13px] font-extrabold whitespace-nowrap cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-[1.03] hover:brightness-110 active:translate-y-0.5 active:scale-95';
+  'relative overflow-hidden shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 @max-[760px]:px-2.5 @max-[760px]:py-1.5 @max-[760px]:gap-1 @max-[760px]:text-[11.5px] [&>img]:shrink-0 [&>svg]:shrink-0 @max-[760px]:[&>img]:w-[22px] @max-[760px]:[&>img]:h-[22px] @max-[760px]:[&>svg]:w-[20px] @max-[760px]:[&>svg]:h-[20px] rounded-xl backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_6px_16px_rgba(0,0,0,0.45)] text-white text-[13px] font-extrabold whitespace-nowrap cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-[1.03] hover:brightness-110 active:translate-y-0.5 active:scale-95';
 export const TW_SHOP_BUY_BTN =
   'mam-sheen-hover relative overflow-hidden mt-auto w-full h-[34px] shrink-0 rounded-xl border border-[#4ade80]/60 bg-[linear-gradient(135deg,#22c55e_0%,#059669_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_4px_12px_-2px_rgba(34,197,94,0.4)] text-white text-[13px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out [&:not(.disabled):not(.sold-out)]:hover:-translate-y-0.5 [&:not(.disabled):not(.sold-out)]:hover:brightness-110 [&:not(.disabled):not(.sold-out)]:active:translate-y-0.5 [&:not(.disabled):not(.sold-out)]:active:scale-95 [&.disabled]:bg-white/[0.06] [&.disabled]:bg-none [&.disabled]:border-white/15 [&.disabled]:shadow-none [&.disabled]:text-[#94a3b8] [&.disabled]:active:scale-[0.97] [&.sold-out]:bg-[linear-gradient(135deg,#ef4444_0%,#b91c1c_100%)] [&.sold-out]:border-rose-400/50 [&.sold-out]:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_4px_12px_-2px_rgba(239,68,68,0.4)] [&.sold-out]:active:scale-[0.97]';
 export const TW_SHOP_SIGN_BASE =

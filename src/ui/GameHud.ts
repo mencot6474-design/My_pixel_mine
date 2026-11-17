@@ -28,6 +28,7 @@ import { fmtInt, fmtMoney, fmtShort } from '../game/NumberFormat';
 import { getTowerFloorDef, TowerWaveOreState } from '../game/TowerData';
 import { WEATHERS, WeatherId } from '../game/WeatherData';
 import { CollectionModalsUi } from './CollectionModalsUi';
+import { ForgeModalUi, ForgeTab } from './ForgeModalUi';
 import {
   enchantAuraIconHtml,
   enchantDiceIconHtml,
@@ -115,6 +116,7 @@ export class GameHud {
   private suppressHotbarClickUntil = 0;
 
   private readonly shopUi: ShopModalsUi;
+  private readonly forgeUi: ForgeModalUi;
   private readonly collectionUi: CollectionModalsUi;
   private readonly upgradesUi: UpgradesWorldsUi;
   private readonly plotInspectUi: PlotInspectUi;
@@ -147,9 +149,11 @@ export class GameHud {
     private readonly onSetTutorialPitZoom?: (zoomed: boolean) => void,
     private readonly onSetTutorialChestZoom?: (zoomed: boolean) => void,
     private readonly onSetTutorialSellShopZoom?: (zoomed: boolean) => void,
-    private readonly onToggleAutoMeteor?: (enabled: boolean) => void
+    private readonly onToggleAutoMeteor?: (enabled: boolean) => void,
+    private readonly onTutorialComplete?: () => void
   ) {
     this.shopUi = new ShopModalsUi(this.state, (msg) => this.pushToast(msg));
+    this.forgeUi = new ForgeModalUi(this.state);
     this.collectionUi = new CollectionModalsUi(
       this.state,
       (msg) => this.pushToast(msg),
@@ -180,7 +184,8 @@ export class GameHud {
     this.tutorialUi = new TutorialUi(
       (zoomed) => this.onSetTutorialPitZoom?.(zoomed),
       (zoomed) => this.onSetTutorialChestZoom?.(zoomed),
-      (zoomed) => this.onSetTutorialSellShopZoom?.(zoomed)
+      (zoomed) => this.onSetTutorialSellShopZoom?.(zoomed),
+      () => this.onTutorialComplete?.()
     );
     this.tutorialUi.mount();
     this.root.addEventListener(
@@ -575,6 +580,10 @@ export class GameHud {
     }
   }
 
+  public isTutorialActive(): boolean {
+    return this.tutorialUi.isActive();
+  }
+
   public openModal(kind: ModalKind): void {
     const prev = this.activeModal;
     this.activeModal = kind;
@@ -830,6 +839,10 @@ export class GameHud {
       this.render();
     } else if (station === 'gems') {
       this.activeModal = 'gem-shop';
+      this.render();
+    } else if (station === 'forge') {
+      this.forgeUi.resetInspect();
+      this.activeModal = 'forge';
       this.render();
     } else {
       this.activeModal = 'sell-shop';
@@ -1300,6 +1313,7 @@ export class GameHud {
     if (this.activeModal === 'upgrades') return this.upgradesUi.renderUpgradesModal();
     if (this.activeModal === 'worlds') return this.upgradesUi.renderWorldsModal();
     if (this.activeModal === 'tower') return this.towerUi.renderTowerHubModal();
+    if (this.activeModal === 'forge') return this.forgeUi.renderForgeModal();
     return '';
   }
 
@@ -1329,7 +1343,7 @@ export class GameHud {
         </button>
       </div>
 
-      <div class="mam-no-scrollbar absolute left-1/2 bottom-[14px] -translate-x-1/2 flex items-center gap-2 px-3 py-2 rounded-2xl bg-[rgba(12,16,28,0.84)] border border-white/15 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_36px_rgba(0,0,0,0.6)] max-w-[calc(100%-24px)] overflow-x-auto">
+      <div class="mam-no-scrollbar absolute left-1/2 bottom-[14px] -translate-x-1/2 flex flex-wrap justify-center items-center gap-2 @max-[760px]:gap-1.5 px-3 py-2 @max-[760px]:px-2 @max-[760px]:py-1.5 rounded-2xl bg-[rgba(12,16,28,0.84)] border border-white/15 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_36px_rgba(0,0,0,0.6)] w-max max-w-[calc(100%-24px)]">
         <button class="${dockBtnPickaxe}" data-action="open-pickaxe-shop">
           ${hudIconHtml('pickaxe', 28, 'Pickaxe')}
           <span class="mam-outline-sm">Pickaxes</span>
@@ -1337,6 +1351,10 @@ export class GameHud {
         <button class="${dockBtnSell}" data-action="open-sell-shop">
           ${hudIconHtml('trade', 28, 'Sell')}
           <span class="mam-outline-sm">Sell</span>
+        </button>
+        <button class="${dockBtnPickaxe}" data-action="open-relic-forge">
+          <img src="${assetUrl('/relics/ember_gauntlet.webp')}" alt="Relic Forge" class="w-[28px] h-[28px] object-contain" />
+          <span class="mam-outline-sm">Forge</span>
         </button>
         <button class="${dockBtnGem}" data-action="open-gem-shop">
           ${hudIconHtml('gem', 28, 'Gem Shop')}
@@ -1487,6 +1505,54 @@ export class GameHud {
           this.openShopStation('altar');
         } else if (action === 'open-gem-tower') {
           this.openShopStation('tower');
+        } else if (action === 'open-relic-forge') {
+          audio.playSfx('ui-open');
+          this.openShopStation('forge');
+        } else if (action === 'forge-tab') {
+          audio.playSfx('ui-tab');
+          this.forgeUi.forgeTab = ((el as HTMLElement).dataset.tab as ForgeTab) ?? 'all';
+          this.render();
+        } else if (action === 'inspect-forge') {
+          audio.playSfx('ui-click');
+          this.forgeUi.inspectedRelicId = (el as HTMLElement).dataset.id ?? null;
+          this.forgeUi.inspectedOreSourceId = null;
+          this.render();
+        } else if (action === 'forge-ore-info') {
+          audio.playSfx('ui-click');
+          const oreId = (el as HTMLElement).dataset.oreId ?? null;
+          this.forgeUi.inspectedOreSourceId =
+            this.forgeUi.inspectedOreSourceId === oreId ? null : oreId;
+          this.render();
+        } else if (action === 'forge-ore-info-close') {
+          audio.playSfx('ui-close');
+          this.forgeUi.inspectedOreSourceId = null;
+          this.render();
+        } else if (action === 'forge-craft') {
+          const id = (el as HTMLElement).dataset.id;
+          if (id && this.state.craftRelic(id)) {
+            audio.playSfx('coin-alt');
+            this.pushToast('Relic forged!');
+            this.render();
+          } else {
+            audio.playSfx('ui-error');
+            this.pushToast('Missing materials or Gems!');
+          }
+        } else if (action === 'forge-equip-toggle' || action === 'forge-unequip') {
+          const id = (el as HTMLElement).dataset.id;
+          if (id) {
+            const res = this.state.toggleEquipRelic(id);
+            if (res === 'equipped') {
+              audio.playSfx('ui-open');
+              this.pushToast('Relic equipped!');
+            } else if (res === 'unequipped') {
+              audio.playSfx('ui-close');
+              this.pushToast('Relic unequipped');
+            } else if (res === 'full') {
+              audio.playSfx('ui-error');
+              this.pushToast('All 3 Relic slots full!');
+            }
+            this.render();
+          }
         } else if (action === 'sell-select-all') {
           audio.playSfx('ui-tab');
           this.shopUi.toggleSellSelectAll(this.root);

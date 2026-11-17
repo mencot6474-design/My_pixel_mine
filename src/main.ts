@@ -3,7 +3,7 @@ import './styles/hud.css';
 import { audio } from './audio/AudioManager';
 import { assetUrl } from './game/AssetUrl';
 import { GameState } from './game/GameState';
-import { getWeatherById } from './game/WeatherData';
+import { getWeatherById, type WeatherId } from './game/WeatherData';
 import { getChibiById } from './game3d/ChibiCatalog';
 import { init3dHudIcons } from './game3d/HudIcon3DRenderer';
 import { MineScene3D } from './game3d/MineScene3D';
@@ -149,6 +149,13 @@ async function bootstrap(): Promise<void> {
     );
   };
 
+  const spawnMeteorIfAllowed = (weatherId: WeatherId, toastText?: string): void => {
+    if (!gameState.autoMeteor || hud?.isTutorialActive()) return;
+    const minBossHp = Math.round(gameState.getTotalPlotDps() * 90 + gameState.getTapDamage() * 300);
+    scene.spawnWeatherMeteor(weatherId, gameState.getOreHpScale(), minBossHp);
+    if (toastText) hud?.pushToast(toastText);
+  };
+
   hud = new GameHud(
     hudRoot,
     gameState,
@@ -183,12 +190,8 @@ async function bootstrap(): Promise<void> {
     },
     (weatherId) => {
       scene.setWeather(weatherId);
-      if (gameState.autoMeteor) {
-        const minBossHp = Math.round(gameState.getTotalPlotDps() * 90 + gameState.getTapDamage() * 300);
-        scene.spawnWeatherMeteor(weatherId, gameState.getOreHpScale(), minBossHp);
-        const wDef = getWeatherById(weatherId);
-        hud?.pushToast(`☄️ ${wDef.name} Meteor crashed into the pit!`);
-      }
+      const wDef = getWeatherById(weatherId);
+      spawnMeteorIfAllowed(weatherId, `☄️ ${wDef.name} Meteor crashed into the pit!`);
       if (weatherId === 'celestial') {
         audio.playSfx('rare-fanfare', { volume: 0.65 });
       }
@@ -205,23 +208,23 @@ async function bootstrap(): Promise<void> {
     (enabled) => {
       if (enabled) {
         if (!scene.hasAliveMeteor()) {
-          const minBossHp = Math.round(gameState.getTotalPlotDps() * 90 + gameState.getTapDamage() * 300);
-          scene.spawnWeatherMeteor(gameState.weatherId, gameState.getOreHpScale(), minBossHp);
+          spawnMeteorIfAllowed(gameState.weatherId);
         }
         hud?.pushToast('Auto Meteor: ON');
       } else {
         scene.clearWeatherMeteor();
         hud?.pushToast('Auto Meteor: OFF');
       }
+    },
+    () => {
+      if (!scene.hasAliveMeteor()) {
+        spawnMeteorIfAllowed(gameState.weatherId);
+      }
     }
   );
 
-  if (gameState.autoMeteor) {
-    scene.spawnWeatherMeteor(
-      gameState.weatherId,
-      gameState.getOreHpScale(),
-      Math.round(gameState.getTotalPlotDps() * 90 + gameState.getTapDamage() * 300)
-    );
+  if (!hud.isTutorialActive() && gameState.autoMeteor) {
+    spawnMeteorIfAllowed(gameState.weatherId);
   }
   audio.setSceneMode('mine');
   cgLoadingStop();

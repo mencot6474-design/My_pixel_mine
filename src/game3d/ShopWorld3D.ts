@@ -14,7 +14,7 @@ import { ChibiSprite3D } from './ChibiSprite3D';
 import { mountGlbProp } from './GlbAssets3D';
 import { HellAltarEyeController } from './HellAltarEye3D';
 
-export type ShopStationId = 'pickaxe' | 'sell' | 'gems' | 'altar' | 'tower';
+export type ShopStationId = 'pickaxe' | 'sell' | 'gems' | 'altar' | 'tower' | 'forge';
 
 export interface ShopChibiBubbleAnchor {
   id: string;
@@ -46,12 +46,13 @@ interface PlazaWalker {
 }
 
 const PLAZA_WAYPOINTS: readonly PlazaWaypoint[] = [
-  { x: -7.8, z: -2.4, shopId: 'pickaxe' },
-  { x: -5.1, z: 4.5, shopId: 'sell' },
-  { x: 7.6, z: -2.4, shopId: 'gems' },
+  { x: -9.2, z: -6.4, shopId: 'pickaxe' },
+  { x: -7.0, z: 1.4, shopId: 'sell' },
+  { x: 9.2, z: -6.4, shopId: 'gems' },
   { x: -2.3, z: -2.1, shopId: 'altar' },
   { x: 2.3, z: 2.1, shopId: 'altar' },
   { x: 0.0, z: -6.4, shopId: 'tower' },
+  { x: 7.0, z: 1.4, shopId: 'forge' },
   { x: 0.5, z: 6.2, shopId: 'walk' },
   { x: 5.2, z: 3.9, shopId: 'walk' },
 ];
@@ -86,6 +87,12 @@ const PLAZA_BUBBLE_LINES: Record<ShopStationId | 'walk', readonly string[]> = {
     'Ready for the Boss!',
     'Who lives up there?!',
     'Let us climb the Tower!',
+  ],
+  forge: [
+    'Clang! Clang! Forging!',
+    'Hot anvil, shiny relics!',
+    'Time to craft a Relic!',
+    'Smells like molten gold!',
   ],
   walk: [
     'Nice weather today!',
@@ -163,11 +170,12 @@ export class ShopWorld3D {
     subtitle: string;
     pos: THREE.Vector3;
   }> = [
-    { id: 'pickaxe', title: 'Pickaxes!', subtitle: 'Buy Pickaxes', pos: new THREE.Vector3(-11.2, 5.95, -3.6) },
-    { id: 'sell', title: 'Sell Items!', subtitle: 'Sell Ores & Chibi', pos: new THREE.Vector3(-6.95, 5.15, 2.8) },
-    { id: 'gems', title: 'Gem Shop!', subtitle: 'Elixirs & Potions', pos: new THREE.Vector3(11.0, 8.15, -3.6) },
+    { id: 'pickaxe', title: 'Pickaxes!', subtitle: 'Buy Pickaxes', pos: new THREE.Vector3(-11.4, 5.95, -9.6) },
+    { id: 'sell', title: 'Sell Items!', subtitle: 'Sell Ores & Chibi', pos: new THREE.Vector3(-10.2, 4.35, 0.8) },
+    { id: 'gems', title: 'Gem Shop!', subtitle: 'Elixirs & Potions', pos: new THREE.Vector3(11.4, 8.15, -9.6) },
     { id: 'altar', title: 'Enchant Altar', subtitle: 'Spin Enchants', pos: new THREE.Vector3(0, 4.15, -0.5) },
     { id: 'tower', title: 'Gem Tower', subtitle: 'Grind Gems & Dice', pos: new THREE.Vector3(0, 9.75, -11.4) },
+    { id: 'forge', title: 'Relic Forge', subtitle: 'Craft & Equip Relics', pos: new THREE.Vector3(10.2, 4.35, 0.8) },
   ];
 
   constructor() {
@@ -182,6 +190,7 @@ export class ShopWorld3D {
     this.buildCentralAltarShrine();
     this.buildPickaxeBlacksmith();
     this.buildSellMarketPavilion();
+    this.buildRelicForgePavilion();
     this.buildGemEmporium();
     this.buildGemTowerCitadel();
   }
@@ -306,17 +315,17 @@ export class ShopWorld3D {
     const planterCurbMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.65 });
     const turfMat = new THREE.MeshStandardMaterial({ color: 0x3b8c47, roughness: 0.88 });
     for (const [px, pz, treeModel] of [
-      [-10.4, -14.2, '/models/fantasy-town/tree-high-round.glb'],
-      [10.4, -14.2, '/models/fantasy-town/tree-high.glb'],
+      [-16.4, -14.2, '/models/fantasy-town/tree-high-round.glb'],
+      [16.4, -14.2, '/models/fantasy-town/tree-high.glb'],
       [-17.4, 10.6, '/models/fantasy-town/tree-high-round.glb'],
       [17.4, 10.6, '/models/fantasy-town/tree-crooked.glb'],
     ] as Array<[number, number, string]>) {
-      const curb = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.34, 5.2), planterCurbMat);
+      const curb = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.34, 4.2), planterCurbMat);
       curb.position.set(px, 0.2, pz);
       curb.receiveShadow = true;
       this.shopGroup.add(curb);
 
-      const turf = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.16, 4.5), turfMat);
+      const turf = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.16, 3.6), turfMat);
       turf.position.set(px, 0.34, pz);
       turf.receiveShadow = true;
       this.shopGroup.add(turf);
@@ -419,27 +428,27 @@ export class ShopWorld3D {
       this.plazaCrystals.push(shard);
     }
 
-    // Front-Right Decorative Cargo & Ore Train Depot (balances Sell Pavilion on Front-Left)
+    // Front-Right Decorative Cargo & Ore Train Depot (placed south of the z=5.2 promenade road)
     mountGlbProp('/models/nature/platform_stone.glb', this.shopGroup, {
-      position: [9.2, 0.14, 5.4],
-      targetWidth: 6.8,
+      position: [10.4, 0.14, 9.0],
+      targetWidth: 6.4,
     });
     mountGlbProp('/models/train/track-detailed.glb', this.shopGroup, {
-      position: [9.4, 0.28, 5.4],
+      position: [10.6, 0.28, 9.0],
       rotationY: Math.PI / 2,
-      targetWidth: 4.2,
+      targetWidth: 4.0,
     });
     mountGlbProp('/models/train/train-carriage-coal.glb', this.shopGroup, {
-      position: [9.4, 0.38, 5.4],
+      position: [10.6, 0.38, 9.0],
       rotationY: Math.PI / 2,
       targetHeight: 2.0,
     });
     mountGlbProp('/models/survival/barrel.glb', this.shopGroup, {
-      position: [5.8, 0.18, 5.9],
+      position: [7.2, 0.18, 9.4],
       targetHeight: 0.95,
     });
     mountGlbProp('/models/platformer/crate-item.glb', this.shopGroup, {
-      position: [6.75, 0.18, 6.1],
+      position: [8.1, 0.18, 9.6],
       targetHeight: 0.95,
     });
   }
@@ -480,9 +489,9 @@ export class ShopWorld3D {
   }
 
   private buildPickaxeBlacksmith(): void {
-    // === 1. PICKAXE BLACKSMITH WORKSHOP (Left Wing: x=-11.2, z=-3.6) ===
-    const cx = -11.2;
-    const cz = -3.6;
+    // === 1. PICKAXE BLACKSMITH WORKSHOP (Upper-Left Grass Wing beside Tower: x=-11.4, z=-9.6) ===
+    const cx = -11.4;
+    const cz = -9.6;
     const u = 1.95; // 2x1 modular Kenney building = 3.9 wide x 1.95 deep
     const baseY = 0.24;
 
@@ -608,11 +617,11 @@ export class ShopWorld3D {
   }
 
   private buildSellMarketPavilion(): void {
-    // === 2. SELL MARKET PAVILION (Front-Left Courtyard: x=-6.95, z=2.8) ===
-    const sx = -6.95;
-    const sz = 2.8;
+    // === 2. SELL MARKET PAVILION (Mid-Left Courtyard: x=-10.2, z=0.8, symmetric to Relic Forge) ===
+    const sx = -10.2;
+    const sz = 0.8;
     const pad = new THREE.Mesh(
-      new THREE.BoxGeometry(5.6, 0.2, 4.2),
+      new THREE.BoxGeometry(5.2, 0.2, 3.8),
       new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 })
     );
     pad.position.set(sx, 0.14, sz);
@@ -621,50 +630,106 @@ export class ShopWorld3D {
 
     // Twin Kenney Market Stalls facing +Z
     mountGlbProp('/models/fantasy-town/stall-green.glb', this.shopGroup, {
-      position: [sx - 1.25, 0.24, sz - 0.15],
+      position: [sx - 1.15, 0.24, sz - 0.15],
       rotationY: Math.PI / 2,
-      targetHeight: 2.75,
+      targetHeight: 2.65,
     });
     mountGlbProp('/models/fantasy-town/stall-red.glb', this.shopGroup, {
-      position: [sx + 1.25, 0.24, sz - 0.15],
+      position: [sx + 1.15, 0.24, sz - 0.15],
       rotationY: Math.PI / 2,
-      targetHeight: 2.75,
+      targetHeight: 2.65,
     });
     mountGlbProp('/models/fantasy-town/cart-high.glb', this.shopGroup, {
-      position: [sx - 3.35, 0.16, sz + 0.55],
+      position: [sx - 3.05, 0.16, sz + 0.55],
       rotationY: 0.55,
-      targetHeight: 1.4,
+      targetHeight: 1.35,
     });
     mountGlbProp('/models/fantasy-town/stall-bench.glb', this.shopGroup, {
-      position: [sx + 0.2, 0.24, sz + 1.35],
+      position: [sx + 0.15, 0.24, sz + 1.2],
       rotationY: Math.PI / 2,
       targetHeight: 0.52,
     });
     mountGlbProp('/models/platformer/crate-item.glb', this.shopGroup, {
-      position: [sx - 1.35, 0.24, sz + 1.15],
-      targetHeight: 0.85,
+      position: [sx - 1.25, 0.24, sz + 1.05],
+      targetHeight: 0.82,
     });
     mountGlbProp('/models/mini-dungeon/chest.glb', this.shopGroup, {
-      position: [sx + 1.45, 0.24, sz + 1.15],
+      position: [sx + 1.35, 0.24, sz + 1.05],
       rotationY: -0.35,
-      targetHeight: 0.75,
+      targetHeight: 0.72,
     });
     mountGlbProp('/models/platformer/coin-gold.glb', this.shopGroup, {
-      position: [sx - 1.35, 1.09, sz + 1.15],
-      targetHeight: 0.65,
+      position: [sx - 1.25, 1.06, sz + 1.05],
+      targetHeight: 0.62,
     });
 
-    this.addShopEmblem('/hud/trade.webp', '#4ade80', sx, 4.05, sz, 1.48, 1.0);
+    this.addShopEmblem('/hud/trade.webp', '#4ade80', sx, 3.35, sz, 1.42, 1.0);
 
-    const sellHit = this.createHitbox(sx, 2.1, sz, 5.6, 4.4, 4.4, 'shop-sell');
+    const sellHit = this.createHitbox(sx, 2.0, sz, 5.2, 4.2, 3.8, 'shop-sell');
     this.shopGroup.add(sellHit);
     this.shopClickables.push(sellHit);
   }
 
+  private buildRelicForgePavilion(): void {
+    // === 2b. RELIC FORGE PAVILION (Mid-Right Courtyard: x=10.2, z=0.8, symmetric to Sell) ===
+    const fx = 10.2;
+    const fz = 0.8;
+    const pad = new THREE.Mesh(
+      new THREE.BoxGeometry(4.8, 0.2, 3.6),
+      new THREE.MeshStandardMaterial({ color: 0x292524, roughness: 0.72 })
+    );
+    pad.position.set(fx, 0.14, fz);
+    pad.receiveShadow = true;
+    this.shopGroup.add(pad);
+
+    // Forge canopy stall + stone chimney furnace facing +Z (matching Sell courtyard)
+    mountGlbProp('/models/fantasy-town/stall-red.glb', this.shopGroup, {
+      position: [fx - 0.35, 0.24, fz - 0.35],
+      rotationY: Math.PI / 2,
+      targetHeight: 2.6,
+    });
+    mountGlbProp('/models/fantasy-town/chimney.glb', this.shopGroup, {
+      position: [fx + 1.35, 0.24, fz - 0.75],
+      rotationY: -0.25,
+      targetHeight: 2.95,
+    });
+    mountGlbProp('/models/survival/workbench-anvil.glb', this.shopGroup, {
+      position: [fx - 0.95, 0.24, fz + 0.85],
+      rotationY: 0.4,
+      targetHeight: 1.05,
+    });
+    mountGlbProp('/models/nature/campfire_stones.glb', this.shopGroup, {
+      position: [fx + 1.15, 0.24, fz + 0.75],
+      targetWidth: 1.05,
+    });
+    mountGlbProp('/models/survival/barrel.glb', this.shopGroup, {
+      position: [fx - 1.8, 0.24, fz - 0.85],
+      targetHeight: 0.88,
+    });
+
+    // Warm molten ember glow at the hearth
+    const hearthGlow = new THREE.Mesh(
+      new THREE.SphereGeometry(0.26, 10, 8),
+      new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.85 })
+    );
+    hearthGlow.position.set(fx + 1.15, 0.48, fz + 0.75);
+    this.shopGroup.add(hearthGlow);
+
+    const forgeLight = new THREE.PointLight(0xf97316, 2.4, 8.0, 1.8);
+    forgeLight.position.set(fx + 0.6, 1.5, fz + 0.6);
+    this.shopGroup.add(forgeLight);
+
+    this.addShopEmblem('/relics/ember_gauntlet.webp', '#f97316', fx, 3.25, fz, 1.38, 1.0);
+
+    const forgeHit = this.createHitbox(fx, 2.0, fz, 4.8, 4.2, 3.6, 'shop-forge');
+    this.shopGroup.add(forgeHit);
+    this.shopClickables.push(forgeHit);
+  }
+
   private buildGemEmporium(): void {
-    // === 3. GEM & POTION EMPORIUM (Right Wing: x=11.0, z=-3.6 — 2-Story Arcane Shop) ===
-    const gx = 11.0;
-    const gz = -3.6;
+    // === 3. GEM & POTION EMPORIUM (Upper-Right Grass Wing beside Tower: x=11.4, z=-9.6) ===
+    const gx = 11.4;
+    const gz = -9.6;
     const u = 1.9;
     const baseY = 0.24;
 

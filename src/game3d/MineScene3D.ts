@@ -417,6 +417,8 @@ export class MineScene3D {
         this.callbacks.onShopStationClick?.('altar');
       } else if (hit.userData.kind === 'shop-tower') {
         this.callbacks.onShopStationClick?.('tower');
+      } else if (hit.userData.kind === 'shop-forge') {
+        this.callbacks.onShopStationClick?.('forge');
       } else if (hit.userData.kind === 'tower-ore') {
         const oreIndex = Number(hit.userData.oreIndex ?? -1);
         if (oreIndex >= 0) {
