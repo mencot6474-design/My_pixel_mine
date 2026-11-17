@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { getEnchantById } from '../game/GameData';
+import { type WeatherId } from '../game/WeatherData';
 import { ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
 import { OreVariantKey, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
@@ -72,7 +73,7 @@ export class FieldMiner3D {
     elapsed: number,
     camera: THREE.Camera,
     pit: OrePit3D,
-    onOreBroken?: (variantKey: OreVariantKey) => void,
+    onOreBroken?: (variantKey: OreVariantKey, meteorWeatherId?: WeatherId) => void,
     onOreHit?: (dmg: number, wx: number, wy: number, wz: number) => void,
     renderVisuals = true
   ): void {
@@ -161,7 +162,7 @@ export class FieldMiner3D {
           }
           if (res.broken) {
             this.targetNodeId = -1;
-            onOreBroken?.(res.variantKey);
+            onOreBroken?.(res.variantKey, res.meteorWeatherId);
           }
         }
       }

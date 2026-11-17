@@ -14,12 +14,14 @@ import {
   getOresByWorld,
   getWorldById,
   RARITY_BORDER,
+  WEATHER_ORES,
   WorldId,
   WORLDS,
 } from '../game/GameData';
 import { GameState } from '../game/GameState';
+import { getWeatherById } from '../game/WeatherData';
 import { fmtInt, fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
-import { gemPotionIconHtml, hudIconHtml, oreIconSvg } from './HudIcons';
+import { gemPotionIconHtml, hudIconHtml, meteorIconHtml, oreIconSvg } from './HudIcons';
 import {
   applyInspectRing,
   chibiPortraitHtml,
@@ -37,7 +39,7 @@ import {
 } from './HudShared';
 
 export class CollectionModalsUi {
-  private indexWorldId: WorldId = 'underground';
+  private indexWorldId: WorldId | 'weather' = 'underground';
   private invTab: InvTab = 'all';
   private invSearch = '';
   private indexInspectId: string | null = null;
@@ -54,6 +56,12 @@ export class CollectionModalsUi {
   ) {}
 
   private getResolvedIndexInspectId(): string | null {
+    if (this.indexWorldId === 'weather') {
+      const allIds = WEATHER_ORES.map((o) => o.id);
+      if (this.indexInspectId && allIds.includes(this.indexInspectId)) return this.indexInspectId;
+      this.indexInspectId = allIds[0] ?? null;
+      return this.indexInspectId;
+    }
     const ores = getOresByWorld(this.indexWorldId);
     const miners = getMinersByWorld(this.indexWorldId);
     const allIds = [...ores.map((o) => o.id), ...miners.map((m) => m.chibi.id)];
@@ -67,8 +75,34 @@ export class CollectionModalsUi {
     if (!targetId) return renderEmptyInspectorPanel('Select any Ore or Miner to inspect details.');
 
     const unlocked = this.state.discovered.has(targetId);
-    const worldDef = getWorldById(this.indexWorldId);
     const statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-black border ${unlocked ? 'bg-[#14532d]/60 border-[#4ade80]/70 text-[#86efac]' : 'bg-[#1e293b] border-[#475569] text-[#94a3b8]'}">${unlocked ? 'Discovered' : 'Locked'}</span>`;
+
+    if (this.indexWorldId === 'weather') {
+      const wOre = WEATHER_ORES.find((o) => o.id === targetId);
+      if (wOre) {
+        const wDef = getWeatherById(wOre.weatherId);
+        const bagQty = this.state.ores[wOre.id] || 0;
+        const chestQty = this.state.chestOres[wOre.id] || 0;
+        const effVal = this.state.getEffectiveOreSellValue(wOre.id);
+        return renderInspectorPanel({
+          rarity: wOre.rarity,
+          title: wOre.name,
+          subtitle: `${wDef.name} • Meteor Ore`,
+          badgesHtml: statusBadge,
+          artHtml: `<img class="w-16 h-16 object-contain" src="${assetUrl(`/ores/${wOre.id}.webp`)}" alt="${wOre.name}" />`,
+          dimmed: !unlocked,
+          stats: [
+            ['Source', wOre.meteorName, 'text-[#7dd3fc]'],
+            ['Base Value', fmtMoney(wOre.sellValue), 'text-[#e2e8f0]'],
+            ['Your Value', fmtMoney(effVal), 'text-[#4ade80]'],
+            ['Owned', `Bag ${fmtInt(bagQty)} • Chest ${fmtInt(chestQty)}`, 'text-[#facc15]'],
+          ],
+        });
+      }
+      return renderEmptyInspectorPanel('Select any Weather Meteor Ore to inspect details.');
+    }
+
+    const worldDef = getWorldById(this.indexWorldId);
 
     const ore = getOresByWorld(this.indexWorldId).find((o) => o.id === targetId);
     if (ore) {
@@ -123,9 +157,26 @@ export class CollectionModalsUi {
   }
 
   private buildIndexCardsHtml(): string {
+    const selectedId = this.getResolvedIndexInspectId();
+    if (this.indexWorldId === 'weather') {
+      return WEATHER_ORES.map((wOre) => {
+        const unlocked = this.state.discovered.has(wOre.id);
+        const isSel = selectedId === wOre.id;
+        const wDef = getWeatherById(wOre.weatherId);
+        return `
+          <div class="${rarityCardClasses(wOre.rarity, `${unlocked ? '' : 'locked'} ${isSel ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.45)]' : ''}`.trim())}" style="${rarityVars(wOre.rarity)}" data-index-id="${wOre.id}" title="${wOre.name} (${fmtMoney(wOre.sellValue)})">
+            <div class="mam-card-art"><img class="w-12 h-12 object-contain" src="${assetUrl(`/ores/${wOre.id}.webp`)}" alt="${wOre.name}" /></div>
+            <div class="mam-card-name mam-outline-sm">${wOre.name}</div>
+            <div class="mam-card-bottom">
+              <span class="mam-card-pct mam-outline-sm">${wDef.shortName}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
     const ores = getOresByWorld(this.indexWorldId);
     const miners = getMinersByWorld(this.indexWorldId);
-    const selectedId = this.getResolvedIndexInspectId();
 
     const oreCards = ores
       .map((ore) => {
@@ -175,7 +226,7 @@ export class CollectionModalsUi {
       title: 'Index',
       theme: 'index',
       iconHtml: hudIconHtml('indexBook', 26, 'Index'),
-      boxClass: `w-[980px] ${TW_SHOP_MODAL_RESP}`,
+      boxClass: `w-[980px] h-[min(640px,88vh)] ${TW_SHOP_MODAL_RESP}`,
       headerExtraHtml: `
         <div class="relative flex-1 max-w-[440px] h-7 rounded-full bg-[rgba(12,15,28,0.85)] border border-white/15 shadow-[inset_0_2px_8px_rgba(0,0,0,0.65)] overflow-hidden flex items-center justify-center backdrop-blur-md">
           <div class="absolute left-0 top-0 bottom-0 bg-[linear-gradient(90deg,#a855f7,#ec4899,#38bdf8)] rounded-full transition-[width] duration-250 ease-out shadow-[0_0_12px_rgba(192,132,252,0.55)]" data-index-fill="true" style="width:${pct}%"></div>
@@ -197,10 +248,14 @@ export class CollectionModalsUi {
             </button>
           `;
           }).join('')}
+          <button class="${TW_TAB_BTN} mam-outline-sm ${this.indexWorldId === 'weather' ? 'active' : ''}" data-index-world="weather">
+            <span class="inline-flex items-center gap-1">${meteorIconHtml('celestial', 16, 'Weather')} Weather</span>
+            <span class="text-[11px] font-bold opacity-85">(${WEATHER_ORES.filter((o) => this.state.discovered.has(o.id)).length}/${WEATHER_ORES.length})</span>
+          </button>
         </div>
 
         <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto">
-          <div class="${TW_MODAL_GRID_BASE} grid-cols-5 @max-[720px]:grid-cols-3 gap-2 flex-1 min-h-[220px] @max-[920px]:flex-none @max-[920px]:max-h-[340px]" data-index-grid="true">
+          <div class="${TW_MODAL_GRID_BASE} grid-cols-5 @max-[720px]:grid-cols-3 gap-2 flex-1 min-h-[360px] @max-[920px]:min-h-[220px] @max-[920px]:flex-none @max-[920px]:max-h-[340px]" data-index-grid="true">
             ${this.buildIndexCardsHtml()}
           </div>
           <div class="mam-inspector-well w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-index-inspector="true">
@@ -486,7 +541,7 @@ export class CollectionModalsUi {
       title: 'Inventory',
       theme: 'inventory',
       iconHtml: hudIconHtml('backpack', 26, 'Inventory'),
-      boxClass: `w-[980px] ${TW_SHOP_MODAL_RESP}`,
+      boxClass: `w-[980px] h-[min(640px,88vh)] ${TW_SHOP_MODAL_RESP}`,
       headerExtraHtml: `
         <div class="flex items-center gap-1.5">
           <button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-amber-300/45 bg-[linear-gradient(135deg,rgba(245,158,11,0.88),rgba(217,119,6,0.92))] shadow-[0_6px_16px_rgba(245,158,11,0.25),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[13px] font-extrabold cursor-pointer transition-[transform,filter] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="auto-star-up" title="Merge all spare Chibi duplicates into Stars">
@@ -594,7 +649,7 @@ export class CollectionModalsUi {
   public bindEvents(root: HTMLElement): void {
     root.querySelectorAll('[data-index-world]').forEach((el) => {
       el.addEventListener('click', () => {
-        const wid = (el as HTMLElement).dataset.indexWorld as WorldId;
+        const wid = (el as HTMLElement).dataset.indexWorld as WorldId | 'weather';
         this.indexWorldId = wid;
         this.onRequestRender();
       });
@@ -787,7 +842,7 @@ export class CollectionModalsUi {
     const borderColor = RARITY_BORDER[rarity];
     const rarityLabel = rarity.charAt(0).toUpperCase() + rarity.slice(1);
     const unlocked = this.state.discovered.has(chibi.id);
-    const worldDef = getWorldById(this.indexWorldId);
+    const worldDef = getWorldById(getMinerWorldId(chibi.id) ?? (this.indexWorldId === 'weather' ? 'underground' : this.indexWorldId));
     const smoothCls = chibi.smoothFilter ? ' class="mam-chibi-smooth"' : '';
     const poses: Array<[string, string]> = [
       ['Idle', chibi.poses.idle],

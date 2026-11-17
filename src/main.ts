@@ -3,6 +3,8 @@ import './styles/hud.css';
 import { audio } from './audio/AudioManager';
 import { assetUrl } from './game/AssetUrl';
 import { GameState } from './game/GameState';
+import { getWeatherById } from './game/WeatherData';
+import { getChibiById } from './game3d/ChibiCatalog';
 import { init3dHudIcons } from './game3d/HudIcon3DRenderer';
 import { MineScene3D } from './game3d/MineScene3D';
 import { STAGE_PEDESTAL_COUNT, WORLD_PALETTES } from './game3d/MineWorldPalette';
@@ -62,7 +64,22 @@ async function bootstrap(): Promise<void> {
   let hud: GameHud | null = null;
 
   const scene = new MineScene3D(threeRoot, {
-    onOreBroken: (variantKey) => {
+    onOreBroken: (variantKey, meteorWeatherId) => {
+      if (meteorWeatherId) {
+        const reward = gameState.onMeteorBroken(meteorWeatherId);
+        audio.playOreBreak('geode');
+        audio.playSfx('rare-fanfare', { volume: 0.55 });
+        const chibiName = reward.chibiId ? (getChibiById(reward.chibiId)?.name ?? reward.chibiId) : null;
+        const extras = [
+          `+${reward.weatherOreQty} ${reward.weatherOre.name}`,
+          `+${reward.gemsAwarded} Gems`,
+          reward.diceAwarded > 0 ? `+${reward.diceAwarded} Enchant Dice` : null,
+          chibiName ? `+1 ${chibiName}` : null,
+        ].filter(Boolean);
+        hud?.pushToast(`☄️ ${reward.weatherOre.meteorName} shattered! ${extras.join(' • ')}`);
+        hud?.notifyTutorialOreBroken();
+        return;
+      }
       gameState.onOreBroken(variantKey);
       audio.playOreBreak(variantKey);
       hud?.notifyTutorialOreBroken();
@@ -166,6 +183,10 @@ async function bootstrap(): Promise<void> {
     },
     (weatherId) => {
       scene.setWeather(weatherId);
+      const minBossHp = Math.round(gameState.getTotalPlotDps() * 90 + gameState.getTapDamage() * 300);
+      scene.spawnWeatherMeteor(weatherId, gameState.getOreHpScale(), minBossHp);
+      const wDef = getWeatherById(weatherId);
+      hud?.pushToast(`☄️ ${wDef.name} Meteor crashed into the pit!`);
       if (weatherId === 'celestial') {
         audio.playSfx('rare-fanfare', { volume: 0.65 });
       }
@@ -181,6 +202,11 @@ async function bootstrap(): Promise<void> {
     }
   );
 
+  scene.spawnWeatherMeteor(
+    gameState.weatherId,
+    gameState.getOreHpScale(),
+    Math.round(gameState.getTotalPlotDps() * 90 + gameState.getTapDamage() * 300)
+  );
   audio.setSceneMode('mine');
   cgLoadingStop();
   cgGameplayStart();

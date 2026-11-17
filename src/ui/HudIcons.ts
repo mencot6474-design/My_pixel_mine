@@ -364,3 +364,8 @@ export function researchIconHtml(kind: ResearchIconKind, sizePx: number, accent 
       </svg>`;
   }
 }
+
+export function meteorIconHtml(weatherId: WeatherId = 'celestial', sizePx = 20, alt = 'Meteor'): string {
+  const src = assetUrl(`/meteors/${weatherId}.webp`);
+  return `<img src="${src}" width="${sizePx}" height="${sizePx}" alt="${alt}" style="width:${sizePx}px;height:${sizePx}px;object-fit:contain;display:inline-block;vertical-align:middle;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.65));flex-shrink:0;" draggable="false" />`;
+}

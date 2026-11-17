@@ -19,6 +19,7 @@ import {
   RARITY_BORDER,
 } from '../game/GameData';
 import { GameState } from '../game/GameState';
+import { getWeatherById } from '../game/WeatherData';
 import { fmtInt, fmtMoney, fmtShort } from '../game/NumberFormat';
 import { getTowerFloorDef, TowerWaveOreState } from '../game/TowerData';
 import { WEATHERS, WeatherId } from '../game/WeatherData';
@@ -28,6 +29,7 @@ import {
   enchantDiceIconHtml,
   gemPotionIconHtml,
   hudIconHtml,
+  meteorIconHtml,
   oreIconSvg,
   towerIconHtml,
   weatherIconHtml,
@@ -374,18 +376,30 @@ export class GameHud {
       return;
     }
 
-    const key = `mine:${bars.map((b) => b.id).join(',')}`;
+    const key = `mine:${bars.map((b) => `${b.id}:${b.meteorWeatherId ?? ''}`).join(',')}`;
     if (this.oreBarLayerEl.dataset.keys !== key) {
       this.oreBarLayerEl.dataset.keys = key;
       this.oreBarLayerEl.innerHTML = bars
-        .map(
-          (b) => `
+        .map((b) => {
+          if (b.isMeteor) {
+            const wDef = getWeatherById(b.meteorWeatherId ?? 'light_rain');
+            return `
+              <div class="absolute -translate-x-1/2 -translate-y-full flex flex-col items-center gap-0.5 pointer-events-none" data-ore-bar="${b.id}">
+                <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[rgba(10,14,26,0.92)] border text-[10px] font-black uppercase tracking-wider text-white mam-outline-sm" style="border-color:${wDef.accentColor};color:${wDef.accentColor}">${meteorIconHtml(wDef.id, 16, wDef.name)} ${wDef.name} Meteor</div>
+                <div class="relative w-44 h-5 rounded-md border-2 bg-[rgba(12,16,28,0.94)] overflow-hidden flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.65)]" style="border-color:${wDef.accentColor}">
+                  <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${wDef.glowColor},${wDef.accentColor})" data-ore-fill="true"></div>
+                  <div class="relative z-[2] text-[11px] font-black text-white leading-none mam-outline-sm" data-ore-text="true"></div>
+                </div>
+              </div>
+            `;
+          }
+          return `
           <div class="absolute -translate-x-1/2 -translate-y-full w-24 h-4 rounded border-2 border-[#0f172a] bg-[rgba(15,23,42,0.9)] overflow-hidden flex items-center justify-center" data-ore-bar="${b.id}">
             <div class="absolute left-0 top-0 bottom-0 bg-[linear-gradient(180deg,#38bdf8,#0284c7)] transition-[width] duration-[80ms] ease-linear" data-ore-fill="true"></div>
             <div class="relative z-[2] text-[11px] font-extrabold text-white leading-none mam-outline-sm" data-ore-text="true"></div>
           </div>
-        `
-        )
+        `;
+        })
         .join('');
     }
 

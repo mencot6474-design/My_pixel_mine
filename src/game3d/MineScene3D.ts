@@ -31,10 +31,12 @@ export interface OreHpScreen {
   hp: number;
   maxHp: number;
   variantKey: OreVariantKey;
+  isMeteor?: boolean;
+  meteorWeatherId?: WeatherId;
 }
 
 export interface MineSceneCallbacks {
-  onOreBroken?: (variantKey: OreVariantKey) => void;
+  onOreBroken?: (variantKey: OreVariantKey, meteorWeatherId?: WeatherId) => void;
   onOreDamage?: (dmg: number, screenX: number, screenY: number, isClick: boolean) => void;
   onChestClick?: () => void;
   onPedestalClick?: (slotIndex: number) => void;
@@ -380,7 +382,7 @@ export class MineScene3D {
             if (res) {
               this.emitDamageScreen(res.dmgDealt, best.worldX, best.worldY + 0.9, best.worldZ, true);
               if (res.broken) {
-                this.callbacks.onOreBroken?.(res.variantKey);
+                this.callbacks.onOreBroken?.(res.variantKey, res.meteorWeatherId);
               }
             }
           }
@@ -395,7 +397,7 @@ export class MineScene3D {
           hit.getWorldPosition(wp);
           this.emitDamageScreen(res.dmgDealt, wp.x, wp.y + 0.9, wp.z, true);
           if (res.broken) {
-            this.callbacks.onOreBroken?.(res.variantKey);
+            this.callbacks.onOreBroken?.(res.variantKey, res.meteorWeatherId);
           }
         }
       } else if (hit.userData.kind === 'pedestal') {
@@ -669,8 +671,9 @@ export class MineScene3D {
     const h = this.mountEl.clientHeight || 1;
     const bars: OreHpScreen[] = [];
     for (const node of this.pit.getAliveNodesInfo()) {
-      if (node.hp >= node.maxHp) continue;
-      this.projVec.set(node.worldX, node.worldY + 1.42, node.worldZ).project(this.camera);
+      if (!node.isMeteor && node.hp >= node.maxHp) continue;
+      const yOffset = node.isMeteor ? 2.65 : 1.42;
+      this.projVec.set(node.worldX, node.worldY + yOffset, node.worldZ).project(this.camera);
       if (this.projVec.z <= -1 || this.projVec.z >= 1) continue;
       bars.push({
         id: node.id,
@@ -679,6 +682,8 @@ export class MineScene3D {
         hp: node.hp,
         maxHp: node.maxHp,
         variantKey: node.variantKey,
+        isMeteor: node.isMeteor,
+        meteorWeatherId: node.meteorWeatherId,
       });
     }
     this.callbacks.onOreBars(bars);
@@ -815,6 +820,18 @@ export class MineScene3D {
     this.activeWeatherId = weatherId;
     this.weatherFx.setWeather(weatherId);
     this.applyWeatherAtmosphere();
+  }
+
+  public spawnWeatherMeteor(weatherId: WeatherId, hpScale: number, minBossHp = 0): void {
+    this.pit.spawnWeatherMeteor(weatherId, hpScale, minBossHp);
+  }
+
+  public clearWeatherMeteor(): void {
+    this.pit.clearWeatherMeteor();
+  }
+
+  public hasAliveMeteor(): boolean {
+    return this.pit.hasAliveMeteor();
   }
 
   public setWorldState(

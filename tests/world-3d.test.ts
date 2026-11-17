@@ -1497,4 +1497,55 @@ describe('Pure 3D Mine World', () => {
     expect(state.togglePlotEnchant(1, 'blazing')).toBe(true);
     expect(state.getPlotUnit(1)?.enchantId).toBe('blazing');
   });
+
+  it('spawns 1000x HP Weather Meteor in OrePit3D and awards Weather Limited Ores on break', () => {
+    const noop = () => {};
+    const fakeCtx = new Proxy(
+      { createLinearGradient: () => ({ addColorStop: noop }), createRadialGradient: () => ({ addColorStop: noop }) },
+      { get: (t, p) => (p in t ? (t as any)[p] : noop) }
+    );
+    const prevDoc = (globalThis as any).document;
+    (globalThis as any).document = {
+      createElement: () => ({ width: 256, height: 256, getContext: () => fakeCtx }),
+    };
+    try {
+      const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+      expect(pit.hasAliveMeteor()).toBe(false);
+
+      pit.spawnWeatherMeteor('celestial', 2);
+      expect(pit.hasAliveMeteor()).toBe(true);
+
+      const meteorInfo = pit.getAliveNodesInfo().find((n) => n.isMeteor);
+      expect(meteorInfo).toBeDefined();
+      expect(meteorInfo?.maxHp).toBe(180 * 2 * 1000);
+      expect(meteorInfo?.meteorWeatherId).toBe('celestial');
+
+      const firstHit = pit.hitNode(meteorInfo!.id, meteorInfo!.maxHp, true);
+      expect(firstHit?.broken).toBe(false);
+      expect(firstHit?.dmgDealt).toBe(Math.ceil(meteorInfo!.maxHp * 0.015));
+      expect(pit.hasAliveMeteor()).toBe(true);
+
+      let hitRes = firstHit;
+      let guard = 0;
+      while (pit.hasAliveMeteor() && guard < 100) {
+        hitRes = pit.hitNode(meteorInfo!.id, meteorInfo!.maxHp, true);
+        guard++;
+      }
+      expect(hitRes?.broken).toBe(true);
+      expect(hitRes?.meteorWeatherId).toBe('celestial');
+      expect(pit.hasAliveMeteor()).toBe(false);
+    } finally {
+      (globalThis as any).document = prevDoc;
+    }
+
+    const gs = new GameState();
+    const gemsBefore = gs.gems;
+    const reward = gs.onMeteorBroken('celestial', () => 0.1);
+    expect(reward.weatherOre.id).toBe('astral-nova-fragment');
+    expect(reward.weatherOreQty).toBeGreaterThanOrEqual(3);
+    expect(gs.discovered.has('astral-nova-fragment')).toBe(true);
+    expect(gs.chestOres['astral-nova-fragment']).toBe(reward.weatherOreQty);
+    expect(gs.gems).toBeGreaterThan(gemsBefore);
+    expect(gs.enchantDice).toBeGreaterThanOrEqual(2);
+  });
 });

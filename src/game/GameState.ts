@@ -19,6 +19,7 @@ import {
   getOresByWorld,
   getPickaxeById,
   getPickaxeSellValue,
+  getWeatherOreByWeatherId,
   getWorldById,
   getWorldIndex,
   ORES,
@@ -28,6 +29,8 @@ import {
   rollMutation,
   rollWorldMiner,
   rollWorldOre,
+  WEATHER_METEOR_CHIBIS,
+  WeatherOreDef,
   WORLD_MINERS,
   WorldId,
   WorldResonanceStatus,
@@ -899,6 +902,105 @@ export class GameState {
     }
 
     this.emit();
+  }
+
+  public onMeteorBroken(
+    weatherId: WeatherId,
+    rng: () => number = Math.random
+  ): {
+    weatherDef: WeatherDef;
+    weatherOre: WeatherOreDef;
+    weatherOreQty: number;
+    chibiId: string | null;
+    gemsAwarded: number;
+    diceAwarded: number;
+  } {
+    const weatherDef = getWeatherById(weatherId);
+    const weatherOre = getWeatherOreByWeatherId(weatherId);
+    const qtyBonus = weatherId === 'celestial' ? 3 : weatherId === 'void' || weatherId === 'bloodmoon' ? 2 : 1;
+    const weatherOreQty = qtyBonus + (rng() < 0.35 ? 1 : 0);
+
+    const capLeft = Math.max(0, this.getMaxChestCapacity() - this.getChestItemCount());
+    let added = 0;
+
+    this.discovered.add(weatherOre.id);
+    if (added + weatherOreQty <= capLeft) {
+      this.chestOres[weatherOre.id] = (this.chestOres[weatherOre.id] || 0) + weatherOreQty;
+      added += weatherOreQty;
+    } else {
+      this.ores[weatherOre.id] = (this.ores[weatherOre.id] || 0) + weatherOreQty;
+      this.addItemToHotbarIfSpace(weatherOre.id);
+    }
+
+    // Bonus world ore burst
+    const oreLuck = this.getOreLuckMult() * 1.6;
+    for (let i = 0; i < 4; i++) {
+      const ore = rollWorldOre(this.activeWorldId, rng, oreLuck);
+      this.discovered.add(ore.id);
+      if (added < capLeft) {
+        this.chestOres[ore.id] = (this.chestOres[ore.id] || 0) + 1;
+        added++;
+      }
+    }
+
+    // Limited Chibi pool (if populated) or rare active-world Chibi drop
+    let droppedChibiId: string | null = null;
+    const limitedPool = WEATHER_METEOR_CHIBIS[weatherId] ?? [];
+    if (limitedPool.length > 0) {
+      const totalPct = limitedPool.reduce((acc, e) => acc + Math.max(0, e.chancePct), 0);
+      let roll = rng() * Math.max(100, totalPct);
+      for (const entry of limitedPool) {
+        roll -= Math.max(0, entry.chancePct);
+        if (roll <= 0) {
+          droppedChibiId = entry.chibiId;
+          break;
+        }
+      }
+    }
+    if (!droppedChibiId && rng() < 0.65) {
+      const miner = rollWorldMiner(this.activeWorldId, rng, this.getCharacterLuckMult() * 2.5);
+      if (miner) droppedChibiId = miner.id;
+    }
+    if (droppedChibiId) {
+      this.discovered.add(droppedChibiId);
+      if (added < capLeft) {
+        this.chestMiners[droppedChibiId] = (this.chestMiners[droppedChibiId] || 0) + 1;
+      } else {
+        this.miners[droppedChibiId] = (this.miners[droppedChibiId] || 0) + 1;
+        this.addItemToHotbarIfSpace(droppedChibiId);
+      }
+    }
+
+    const worldIdx = Math.max(0, getWorldIndex(this.activeWorldId));
+    const baseGems = 20 + worldIdx * 12;
+    const { gemBonusPct } = this.getActiveStarDropAndGemBonus();
+    const gemMult =
+      (1 + getGlobalGemGainBonus(this.towerBestFloor) + gemBonusPct) * weatherDef.gemDropMult;
+    const gemsAwarded = Math.max(10, Math.round(baseGems * gemMult));
+    this.gems += gemsAwarded;
+
+    const diceChanceByWeather: Record<WeatherId, number> = {
+      light_rain: 0.15,
+      snow_rain: 0.22,
+      bloodmoon: 0.35,
+      void: 0.5,
+      celestial: 0.75,
+    };
+    let diceAwarded = 0;
+    if (rng() < (diceChanceByWeather[weatherId] ?? 0.2)) {
+      diceAwarded = 1;
+      this.enchantDice += 1;
+    }
+
+    this.emit();
+    return {
+      weatherDef,
+      weatherOre,
+      weatherOreQty,
+      chibiId: droppedChibiId,
+      gemsAwarded,
+      diceAwarded,
+    };
   }
 
   private addItemToHotbarIfSpace(itemId: string): void {

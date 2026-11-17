@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { assetUrl } from '../game/AssetUrl';
 import { getOresByWorld, type OreDef, type WorldId } from '../game/GameData';
+import { getWeatherById, type WeatherId } from '../game/WeatherData';
 import {
   MAX_PIT_NODE_COUNT,
   type MineWorldPalette,
@@ -62,6 +63,7 @@ export interface OreHitResult {
   broken: boolean;
   variantKey: OreVariantKey;
   dmgDealt: number;
+  meteorWeatherId?: WeatherId;
 }
 
 interface ShardParticle {
@@ -229,14 +231,22 @@ export class OreBillboard2D {
   }
 
   public setOre(oreId: string, baseSize: number): void {
+    this.setSprite(`ore:${oreId}`, `/ores/${oreId}.webp`, baseSize);
+  }
+
+  public setMeteor(weatherId: WeatherId, baseSize: number): void {
+    this.setSprite(`meteor:${weatherId}`, `/meteors/${weatherId}.webp`, baseSize);
+  }
+
+  private setSprite(spriteKey: string, urlPath: string, baseSize: number): void {
     this.baseSize = baseSize;
     this.shadowDisc.scale.setScalar(baseSize / 1.45);
-    if (oreId === this.oreId) return;
-    this.oreId = oreId;
+    if (spriteKey === this.oreId) return;
+    this.oreId = spriteKey;
 
-    void loadPublicSpriteTexture(`/ores/${oreId}.webp`)
+    void loadPublicSpriteTexture(urlPath)
       .then((tex) => {
-        if (this.oreId !== oreId) return;
+        if (this.oreId !== spriteKey) return;
         this.spriteMat.map = tex;
         this.spriteMat.opacity = 1;
         this.spriteMat.needsUpdate = true;
@@ -296,6 +306,9 @@ interface InternalOreNode {
   x: number;
   z: number;
   phase: number;
+  isMeteor?: boolean;
+  meteorWeatherId?: WeatherId | null;
+  dropY?: number;
 }
 
 export class OrePit3D {
@@ -318,6 +331,7 @@ export class OrePit3D {
   private respawnSpeedMult = 1;
   private activeNodeCount = PIT_NODE_COUNT;
   private hpScale = 1;
+  private meteorNode: InternalOreNode;
 
   constructor(palette: MineWorldPalette) {
     this.activePalette = palette;
@@ -435,6 +449,17 @@ export class OrePit3D {
       this.group.add(node.root);
       this.clickableMeshes.push(node.hitMesh);
     }
+
+    this.meteorNode = this.createNodeSlot(999);
+    this.meteorNode.isMeteor = true;
+    this.meteorNode.meteorWeatherId = null;
+    this.meteorNode.alive = false;
+    this.meteorNode.root.visible = false;
+    this.meteorNode.hitMesh.visible = false;
+    this.meteorNode.hitMesh.scale.set(1.85, 1.65, 1.85);
+    this.meteorNode.geodeRing.scale.setScalar(1.95);
+    this.group.add(this.meteorNode.root);
+    this.clickableMeshes.push(this.meteorNode.hitMesh);
 
     this.setPalette(palette, true);
   }
@@ -571,6 +596,50 @@ export class OrePit3D {
       node.maxHp = Math.max(10, Math.round(BASE_ORE_HP * this.hpScale * node.variant.hpMult));
       node.hp = Math.max(1, Math.min(node.maxHp, Math.round(node.hp * ratio)));
     }
+    if (this.meteorNode.alive) {
+      this.meteorNode.maxHp = Math.max(1000, Math.round(this.meteorNode.maxHp * ratio));
+      this.meteorNode.hp = Math.max(1, Math.min(this.meteorNode.maxHp, Math.round(this.meteorNode.hp * ratio)));
+    }
+  }
+
+  public spawnWeatherMeteor(weatherId: WeatherId, hpScale = this.hpScale, minBossHp = 0): void {
+    this.hpScale = Math.max(0.25, hpScale);
+    const weather = getWeatherById(weatherId);
+    const baseMeteorHp = Math.max(1000, Math.round(BASE_ORE_HP * this.hpScale * 1000));
+    const meteorHp = Math.max(baseMeteorHp, Math.round(minBossHp));
+    const n = this.meteorNode;
+    n.meteorWeatherId = weatherId;
+    n.variant = ORE_VARIANTS.find((v) => v.key === 'geode') ?? ORE_VARIANTS[0];
+    n.x = 0;
+    n.z = -0.25;
+    n.hp = meteorHp;
+    n.maxHp = meteorHp;
+    n.alive = true;
+    n.respawnTimer = 0;
+    n.squashAmt = 0.25;
+    n.flashTimer = 0.14;
+    n.spawnScale = 1;
+    n.dropY = 12;
+
+    n.root.position.set(n.x, n.dropY, n.z);
+    n.root.visible = true;
+    n.hitMesh.visible = true;
+    n.geodeRing.visible = true;
+    (n.geodeRing.material as THREE.MeshBasicMaterial).color.set(weather.accentColor);
+    n.oreSprite.setMeteor(weatherId, 3.15);
+  }
+
+  public clearWeatherMeteor(): void {
+    const n = this.meteorNode;
+    n.alive = false;
+    n.meteorWeatherId = null;
+    n.respawnTimer = 0;
+    n.root.visible = false;
+    n.hitMesh.visible = false;
+  }
+
+  public hasAliveMeteor(): boolean {
+    return this.meteorNode.alive;
   }
 
   private pickNonOverlappingSpot(excludeId: number): { x: number; z: number } {
@@ -674,29 +743,40 @@ export class OrePit3D {
     heavy: boolean,
     shardCount = heavy ? 9 : 4
   ): OreHitResult | null {
-    const node = this.nodes.find((n) => n.id === nodeId);
+    const node =
+      nodeId === this.meteorNode.id ? this.meteorNode : this.nodes.find((n) => n.id === nodeId);
     if (!node || !node.alive) return null;
 
-    const pure = applyNodeDamagePure(node, dmg);
+    const effectiveDmg = node.isMeteor
+      ? Math.min(dmg, Math.max(1, Math.ceil(node.maxHp * 0.015)))
+      : dmg;
+    const pure = applyNodeDamagePure(node, effectiveDmg);
     if (!pure) return null;
 
     node.squashAmt = heavy ? 0.46 : 0.34;
     node.flashTimer = 0.09;
     if (this.group.visible) {
-      this.spawnShardsAt(node.x, node.z, pure.broken ? 14 : shardCount);
+      this.spawnShardsAt(node.x, node.z, pure.broken ? (node.isMeteor ? 28 : 14) : shardCount);
       this.spawnSlashAt(node.x, node.z, heavy);
     }
 
+    const meteorWeatherId = node.isMeteor && pure.broken ? (node.meteorWeatherId ?? undefined) : undefined;
     if (pure.broken) {
       node.root.visible = false;
       node.hitMesh.visible = false;
-      node.respawnTimer = BASE_ORE_RESPAWN_SEC;
+      if (node.isMeteor) {
+        node.respawnTimer = 0;
+        node.meteorWeatherId = null;
+      } else {
+        node.respawnTimer = BASE_ORE_RESPAWN_SEC;
+      }
     }
 
     return {
       broken: pure.broken,
       variantKey: node.variant.key,
       dmgDealt: pure.dmgDealt,
+      meteorWeatherId,
     };
   }
 
@@ -758,8 +838,20 @@ export class OrePit3D {
     hp: number;
     maxHp: number;
     variantKey: OreVariantKey;
+    isMeteor?: boolean;
+    meteorWeatherId?: WeatherId;
   }> {
-    return this.nodes
+    const list: Array<{
+      id: number;
+      worldX: number;
+      worldY: number;
+      worldZ: number;
+      hp: number;
+      maxHp: number;
+      variantKey: OreVariantKey;
+      isMeteor?: boolean;
+      meteorWeatherId?: WeatherId;
+    }> = this.nodes
       .filter((n) => n.alive)
       .map((n) => ({
         id: n.id,
@@ -770,6 +862,20 @@ export class OrePit3D {
         maxHp: n.maxHp,
         variantKey: n.variant.key,
       }));
+    if (this.meteorNode.alive) {
+      list.push({
+        id: this.meteorNode.id,
+        worldX: this.meteorNode.x,
+        worldY: PIT_FLOOR_Y,
+        worldZ: PIT_CENTER_Z + this.meteorNode.z,
+        hp: this.meteorNode.hp,
+        maxHp: this.meteorNode.maxHp,
+        variantKey: this.meteorNode.variant.key,
+        isMeteor: true,
+        meteorWeatherId: this.meteorNode.meteorWeatherId ?? undefined,
+      });
+    }
+    return list;
   }
 
   public setRespawnSpeedMult(mult: number): void {
@@ -777,8 +883,9 @@ export class OrePit3D {
   }
 
   public update(dtSec: number, elapsed: number, camera?: THREE.Camera): void {
-    for (const node of this.nodes) {
-      if (node.id >= this.activeNodeCount) continue;
+    const allNodes = this.meteorNode.alive ? [...this.nodes, this.meteorNode] : this.nodes;
+    for (const node of allNodes) {
+      if (!node.isMeteor && node.id >= this.activeNodeCount) continue;
       if (!node.alive) {
         if (node.respawnTimer > 0) {
           node.respawnTimer -= dtSec * this.respawnSpeedMult;
@@ -787,6 +894,15 @@ export class OrePit3D {
           }
         }
         continue;
+      }
+
+      if (node.isMeteor && (node.dropY ?? 0) > 0) {
+        node.dropY = Math.max(0, (node.dropY ?? 0) - dtSec * 28);
+        node.root.position.y = node.dropY;
+        if (node.dropY === 0 && this.group.visible) {
+          node.squashAmt = 0.48;
+          this.spawnShardsAt(node.x, node.z, 22);
+        }
       }
 
       if (node.spawnScale < 1) {

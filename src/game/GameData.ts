@@ -1,4 +1,5 @@
 import { CHIBI_CATALOG, ChibiDef, ChibiRarity } from '../game3d/ChibiCatalog';
+import { WeatherId } from './WeatherData';
 
 export type WorldId = 'underground' | 'crystal' | 'magma' | 'ruins' | 'astral' | 'starwell';
 
@@ -169,6 +170,85 @@ export const ORES: readonly OreDef[] = [
   { id: 'caelite', name: 'Caelite', worldId: 'starwell', chancePct: 0.25, rarity: 'rainbow', color: '#38bdf8', secondaryColor: '#f472b6', sellValue: 140000000000 },
   { id: 'dawncrown', name: 'Dawncrown', worldId: 'starwell', chancePct: 0.005, rarity: 'mythic', color: '#fbbf24', secondaryColor: '#ec4899', sellValue: 950000000000 },
 ] as const;
+
+export interface WeatherOreDef extends OreDef {
+  weatherId: WeatherId;
+  meteorName: string;
+}
+
+export const WEATHER_ORES: readonly WeatherOreDef[] = [
+  {
+    id: 'stormwater-opal',
+    name: 'Stormwater Opal',
+    worldId: 'underground',
+    weatherId: 'light_rain',
+    meteorName: 'Stormwater Meteor',
+    chancePct: 100,
+    rarity: 'epic',
+    color: '#38bdf8',
+    secondaryColor: '#0284c7',
+    sellValue: 25000,
+  },
+  {
+    id: 'permafrost-core',
+    name: 'Permafrost Core',
+    worldId: 'crystal',
+    weatherId: 'snow_rain',
+    meteorName: 'Permafrost Meteor',
+    chancePct: 100,
+    rarity: 'legendary',
+    color: '#bae6fd',
+    secondaryColor: '#0ea5e9',
+    sellValue: 90000,
+  },
+  {
+    id: 'crimson-eclipse-shard',
+    name: 'Crimson Eclipse Shard',
+    worldId: 'magma',
+    weatherId: 'bloodmoon',
+    meteorName: 'Crimson Eclipse Meteor',
+    chancePct: 100,
+    rarity: 'rainbow',
+    color: '#f43f5e',
+    secondaryColor: '#7f1d1d',
+    sellValue: 450000,
+  },
+  {
+    id: 'abyssal-singularity-ore',
+    name: 'Abyssal Singularity Ore',
+    worldId: 'astral',
+    weatherId: 'void',
+    meteorName: 'Abyssal Void Meteor',
+    chancePct: 100,
+    rarity: 'mythic',
+    color: '#c084fc',
+    secondaryColor: '#1e1b4b',
+    sellValue: 2500000,
+  },
+  {
+    id: 'astral-nova-fragment',
+    name: 'Astral Nova Fragment',
+    worldId: 'starwell',
+    weatherId: 'celestial',
+    meteorName: 'Astral Nova Meteor',
+    chancePct: 100,
+    rarity: 'secret',
+    color: '#fde047',
+    secondaryColor: '#38bdf8',
+    sellValue: 15000000,
+  },
+] as const;
+
+export const WEATHER_METEOR_CHIBIS: Record<
+  WeatherId,
+  readonly { chibiId: string; chancePct: number; rarity: ItemRarity }[]
+> = {
+  light_rain: [],
+  snow_rain: [],
+  bloodmoon: [],
+  void: [],
+  celestial: [],
+};
 
 export const WORLD_MINERS: readonly WorldMinerEntry[] = [
   // 1. The Underground (5 miners)
@@ -439,7 +519,11 @@ export function rollMutation(rng: () => number = Math.random, luckMult = 1): Mut
 }
 
 export function getOreById(id: string): OreDef | undefined {
-  return ORES.find((o) => o.id === id);
+  return ORES.find((o) => o.id === id) ?? WEATHER_ORES.find((o) => o.id === id);
+}
+
+export function getWeatherOreByWeatherId(weatherId: WeatherId): WeatherOreDef {
+  return WEATHER_ORES.find((o) => o.weatherId === weatherId) ?? WEATHER_ORES[0];
 }
 
 export function getOresByWorld(worldId: WorldId): OreDef[] {
