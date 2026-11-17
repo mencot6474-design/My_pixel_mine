@@ -54,10 +54,10 @@ import {
   getGlobalGemGainBonus,
   getTowerCheckpoints,
   getTowerFloorDef,
-  getTowerKeyCashCost,
   getTowerSweepGemReward,
   getTowerWaveDef,
   rollTowerWaveOres,
+  TOWER_KEY_GEM_COST,
   TOWER_MAX_KEYS,
   TOWER_MILESTONES,
   TOWER_ORE_ROCKS_PER_WAVE,
@@ -753,18 +753,22 @@ describe('Pure 3D Mine World', () => {
 
     // Quick Sweep consumes 1 key & awards scaled Gems
     const gemsBeforeSweep = gs.gems;
+    const expectedSweepBase = getTowerSweepGemReward(gs.towerBestFloor);
+    expect(expectedSweepBase).toBeGreaterThanOrEqual(9);
     const sweep = gs.quickSweepTower();
     expect(sweep.ok).toBe(true);
     expect(sweep.gemsAwarded).toBeGreaterThan(0);
     expect(gs.gems).toBe(gemsBeforeSweep + sweep.gemsAwarded);
 
-    // Buy +1 Key with Cash
-    const keyCost = getTowerKeyCashCost(gs.towerBestFloor);
-    gs.cash = keyCost;
+    // Buy +1 Key with 1000 Gems
+    expect(TOWER_KEY_GEM_COST).toBe(1000);
+    gs.gems = TOWER_KEY_GEM_COST - 1;
+    expect(gs.buyTowerKeyWithGems()).toBe('no_gems');
+    gs.gems = TOWER_KEY_GEM_COST;
     const keysBeforeBuy = gs.towerKeys;
-    expect(gs.buyTowerKeyWithCash()).toBe('bought');
+    expect(gs.buyTowerKeyWithGems()).toBe('bought');
     expect(gs.towerKeys).toBe(keysBeforeBuy + 1);
-    expect(gs.cash).toBe(0);
+    expect(gs.gems).toBe(0);
   });
 
   it('places Sell Shop off the main path, Enchant Altar in the central plaza medallion, and Gem Tower on the rear terrace', () => {

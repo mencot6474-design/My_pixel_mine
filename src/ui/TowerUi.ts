@@ -1,14 +1,14 @@
 import { audio } from '../audio/AudioManager';
 import { GameState } from '../game/GameState';
 import { CG_ADS_ENABLED, cgRequestRewardedAd } from '../sdk/crazygames';
-import { fmtInt, fmtMoney, fmtShort } from '../game/NumberFormat';
+import { fmtInt, fmtShort } from '../game/NumberFormat';
 import {
   getGlobalGemGainBonus,
   getTowerCheckpoints,
   getTowerFloorDef,
-  getTowerKeyCashCost,
   getTowerSweepGemReward,
   getTowerWaveDef,
+  TOWER_KEY_GEM_COST,
   TOWER_MAX_KEYS,
   TOWER_MILESTONES,
   TOWER_ORE_ROCKS_PER_WAVE,
@@ -51,7 +51,6 @@ export class TowerUi {
     const regenSec = this.state.getTowerNextKeyRegenSec();
     const regenStr =
       regenSec > 0 ? `+1 in ${Math.floor(regenSec / 60)}:${String(regenSec % 60).padStart(2, '0')}` : 'Full';
-    const keyCost = getTowerKeyCashCost(this.state.towerBestFloor);
     const sweepGems = getTowerSweepGemReward(this.state.towerBestFloor);
     const globalBonusPct = Math.round(getGlobalGemGainBonus(this.state.towerBestFloor) * 100);
     const globalMult = 1 + getGlobalGemGainBonus(this.state.towerBestFloor);
@@ -68,7 +67,7 @@ export class TowerUi {
         </div>
         ${
           this.state.towerKeys < TOWER_MAX_KEYS
-            ? `<button class="px-2.5 py-1 rounded-xl border border-amber-300/45 bg-[linear-gradient(135deg,rgba(245,158,11,0.85),rgba(180,83,9,0.92))] text-white text-[12px] font-black cursor-pointer hover:brightness-110 active:scale-95" data-action="tower-buy-key">+1 Key (${fmtMoney(keyCost)})</button>${
+            ? `<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border border-amber-300/45 bg-[linear-gradient(135deg,rgba(245,158,11,0.85),rgba(180,83,9,0.92))] text-white text-[12px] font-black cursor-pointer hover:brightness-110 active:scale-95" data-action="tower-buy-key">+1 Key (${hudIconHtml('gem', 13, 'Gems')} ${fmtInt(TOWER_KEY_GEM_COST)})</button>${
                 CG_ADS_ENABLED
                   ? `<button class="px-2.5 py-1 rounded-xl border border-emerald-300/45 bg-[linear-gradient(135deg,rgba(16,185,129,0.88),rgba(4,120,87,0.94))] text-white text-[12px] font-black cursor-pointer hover:brightness-110 active:scale-95" data-action="tower-ad-key">🎬 +1 Key (Ad)</button>`
                   : ''
@@ -478,7 +477,7 @@ export class TowerUi {
     });
 
     root.querySelector('[data-action="tower-buy-key"]')?.addEventListener('click', () => {
-      const res = this.state.buyTowerKeyWithCash();
+      const res = this.state.buyTowerKeyWithGems();
       if (res === 'bought') {
         audio.playSfx('coin-alt');
         this.pushToast('+1 Tower Key purchased!');
@@ -487,7 +486,7 @@ export class TowerUi {
         this.pushToast('Tower Keys are already full!');
       } else {
         audio.playSfx('ui-error');
-        this.pushToast('Not enough Cash!');
+        this.pushToast('Not enough Gems!');
       }
       this.onRequestRender();
     });

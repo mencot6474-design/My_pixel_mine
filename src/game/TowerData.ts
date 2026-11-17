@@ -70,6 +70,7 @@ export interface TowerMilestoneDef {
 
 export const TOWER_MAX_KEYS = 5;
 export const TOWER_KEY_REGEN_MS = 10 * 60 * 1000; // 10 minutes per key
+export const TOWER_KEY_GEM_COST = 1000;
 export const TOWER_CHECKPOINT_STEP = 5;
 export const TOWER_WAVES_PER_FLOOR = 10;
 export const TOWER_ORE_ROCKS_PER_WAVE = 5;
@@ -297,7 +298,7 @@ export function getTowerSweepGemReward(bestFloor: number): number {
   for (let f = start; f <= bestFloor; f++) {
     total += getTowerFloorDef(f).gemReward;
   }
-  return Math.max(18, Math.round(total * 0.8));
+  return Math.max(9, Math.round(total * 0.4));
 }
 
 export interface TowerSaveData {

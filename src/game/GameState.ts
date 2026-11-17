@@ -48,13 +48,13 @@ import {
   getGlobalGemGainBonus,
   getTowerCheckpoints,
   getTowerFloorDef,
-  getTowerKeyCashCost,
   getTowerSweepGemReward,
   getTowerWaveDef,
   pickTowerBlessingChoices,
   rollTowerWaveOres,
   TOWER_BLESSING_AUTO_PICK_SEC,
   TOWER_BOSS_INVUL_SEC,
+  TOWER_KEY_GEM_COST,
   TOWER_KEY_REGEN_MS,
   TOWER_MAX_KEYS,
   TOWER_MILESTONES,
@@ -1804,12 +1804,11 @@ export class GameState {
     return { ok: true, gemsAwarded };
   }
 
-  public buyTowerKeyWithCash(): 'bought' | 'full' | 'no_cash' {
+  public buyTowerKeyWithGems(): 'bought' | 'full' | 'no_gems' {
     this.syncTowerKeys();
     if (this.towerKeys >= TOWER_MAX_KEYS) return 'full';
-    const cost = getTowerKeyCashCost(this.towerBestFloor);
-    if (this.cash < cost) return 'no_cash';
-    this.cash -= cost;
+    if (this.gems < TOWER_KEY_GEM_COST) return 'no_gems';
+    this.gems -= TOWER_KEY_GEM_COST;
     this.towerKeys += 1;
     this.emit();
     return 'bought';
