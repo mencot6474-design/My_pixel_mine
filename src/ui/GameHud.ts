@@ -1,4 +1,5 @@
 import { audio } from '../audio/AudioManager';
+import { assetUrl } from '../game/AssetUrl';
 import { cgHappyTime, cgTryMidgameAd } from '../sdk/crazygames';
 import { getChibiById } from '../game3d/ChibiCatalog';
 import { OreHpScreen, PlotAnchorScreen, SceneMode } from '../game3d/MineScene3D';
@@ -14,9 +15,12 @@ import {
   getMinerSellValue,
   getMutationById,
   getOreById,
+  getWeatherOreByWeatherId,
   getWorldById,
   ItemRarity,
   RARITY_BORDER,
+  WEATHER_METEOR_CHIBIS,
+  WEATHER_METEOR_DICE_CHANCE,
 } from '../game/GameData';
 import { GameState } from '../game/GameState';
 import { getWeatherById } from '../game/WeatherData';
@@ -84,6 +88,7 @@ export class GameHud {
   private enchantAutoTimer: number | null = null;
   private lastRegrowthActive = false;
   private weatherPopoverOpen = false;
+  private weatherInspectId: WeatherId | null = null;
   private hotbarDrag: {
     fromSlot: number;
     itemId: string;
@@ -139,7 +144,8 @@ export class GameHud {
     private readonly onWeatherChange?: (weatherId: WeatherId) => void,
     private readonly onSetTutorialPitZoom?: (zoomed: boolean) => void,
     private readonly onSetTutorialChestZoom?: (zoomed: boolean) => void,
-    private readonly onSetTutorialSellShopZoom?: (zoomed: boolean) => void
+    private readonly onSetTutorialSellShopZoom?: (zoomed: boolean) => void,
+    private readonly onToggleAutoMeteor?: (enabled: boolean) => void
   ) {
     this.shopUi = new ShopModalsUi(this.state, (msg) => this.pushToast(msg));
     this.collectionUi = new CollectionModalsUi(
@@ -1517,6 +1523,11 @@ export class GameHud {
           audio.playSfx('ui-tab');
           this.weatherPopoverOpen = !this.weatherPopoverOpen;
           this.syncWeatherWidget(true);
+        } else if (action === 'toggle-auto-meteor') {
+          const enabled = this.state.toggleAutoMeteor();
+          audio.playSfx('ui-tab');
+          this.onToggleAutoMeteor?.(enabled);
+          this.syncWeatherWidget(true);
         } else if (action === 'open-shop') {
           audio.playSfx('ui-open');
           this.setSceneMode('shop');
@@ -1526,6 +1537,8 @@ export class GameHud {
         }
       });
     });
+
+    this.bindWeatherInspectClicks(this.root);
 
     this.bindHotbarEvents(this.root);
     this.upgradesUi.bindUpgradesEvents(this.root);
@@ -1836,28 +1849,98 @@ export class GameHud {
   private buildWeatherWidgetInnerHtml(now = Date.now()): string {
     const w = this.state.getActiveWeather();
     const timerTxt = this.formatWeatherTimer(this.state.getWeatherRemainingSec(now));
+    const inspectedId = this.weatherInspectId ?? w.id;
+    const inspected = WEATHERS.find((x) => x.id === inspectedId) ?? w;
+    const inspOre = getWeatherOreByWeatherId(inspected.id);
+    const inspChibiEntries = WEATHER_METEOR_CHIBIS[inspected.id] ?? [];
+    const inspChibi = inspChibiEntries[0] ? getChibiById(inspChibiEntries[0].chibiId) : null;
+    const inspDicePct = Math.round((WEATHER_METEOR_DICE_CHANCE[inspected.id] ?? 0.2) * 100);
+    const inspOreQtyRange =
+      inspected.id === 'celestial' ? '3-4x' : inspected.id === 'void' || inspected.id === 'bloodmoon' ? '2-3x' : '1-2x';
+
     const popoverHtml = this.weatherPopoverOpen
       ? `
-      <div class="w-[290px] rounded-2xl border border-white/15 bg-[rgba(10,14,24,0.94)] backdrop-blur-xl shadow-[0_18px_38px_rgba(0,0,0,0.68),inset_0_1px_0_rgba(255,255,255,0.16)] p-2.5 flex flex-col gap-1.5">
+      <div class="w-[315px] max-h-[76vh] overflow-y-auto mam-no-scrollbar rounded-2xl border border-white/15 bg-[rgba(10,14,24,0.95)] backdrop-blur-xl shadow-[0_18px_38px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.16)] p-2.5 flex flex-col gap-1.5">
         <div class="flex items-center justify-between px-1 pb-1 border-b border-white/10">
           <span class="text-[11px] font-black uppercase tracking-wider text-slate-300">Weather Forecast</span>
           <span class="text-[10px] font-extrabold text-sky-300">Rolls every 3:00</span>
         </div>
         ${WEATHERS.map((item) => {
           const isActive = item.id === w.id;
+          const isInsp = item.id === inspected.id;
           return `
-            <div class="flex items-center gap-2 px-2 py-1.5 rounded-xl border ${isActive ? 'bg-white/10' : 'bg-white/[0.03] border-white/8'}" style="${isActive ? `border-color:${item.accentColor};box-shadow:0 0 12px ${item.glowColor}33` : ''}">
+            <button
+              type="button"
+              class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-xl border cursor-pointer transition-[background,border-color] duration-150 ${
+                isInsp ? 'bg-white/12' : isActive ? 'bg-white/[0.06]' : 'bg-white/[0.03] border-white/8 hover:bg-white/[0.07]'
+              }"
+              style="${isInsp || isActive ? `border-color:${item.accentColor};${isInsp ? `box-shadow:0 0 12px ${item.glowColor}44` : ''}` : ''}"
+              data-weather-inspect="${item.id}"
+            >
               <div class="w-8 h-8 shrink-0 flex items-center justify-center [&>.mam-3d-icon]:w-8 [&>.mam-3d-icon]:h-8">${weatherIconHtml(item.id, 32, item.name)}</div>
               <div class="flex-1 min-w-0 flex flex-col">
                 <div class="flex items-center justify-between gap-1">
-                  <span class="text-[12px] font-black leading-tight truncate mam-outline-sm" style="color:${item.accentColor}">${item.name}</span>
+                  <span class="text-[12px] font-black leading-tight truncate mam-outline-sm" style="color:${item.accentColor}">${item.name}${isActive ? ' • Now' : ''}</span>
                   <span class="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-black/40 text-slate-200 border border-white/10">${item.chancePct}%</span>
                 </div>
                 <div class="text-[10px] font-bold text-slate-300 leading-tight mt-0.5">${item.oreDropMult}x Ore • ${item.gemDropMult}x Gems • ${item.damageMult}x DMG</div>
               </div>
-            </div>
+            </button>
           `;
         }).join('')}
+
+        <div class="mt-0.5 pt-2 border-t border-white/12 flex flex-col gap-1.5">
+          <div class="flex items-center justify-between gap-2 px-1">
+            <div class="inline-flex items-center gap-1.5 min-w-0">
+              ${meteorIconHtml(inspected.id, 20, inspOre.meteorName)}
+              <span class="text-[11px] font-black truncate mam-outline-sm" style="color:${inspected.accentColor}">${inspOre.meteorName} Drops</span>
+            </div>
+            <span class="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wide">1000x Pit HP</span>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl bg-white/[0.04] border border-white/10">
+            <div class="inline-flex items-center gap-2 min-w-0">
+              <img class="w-6 h-6 object-contain shrink-0" src="${assetUrl(`/ores/${inspOre.id}.webp`)}" alt="${inspOre.name}" />
+              <div class="flex flex-col min-w-0">
+                <span class="text-[11px] font-black text-white truncate">${inspOre.name}</span>
+                <span class="text-[9.5px] font-bold text-slate-400">${inspOreQtyRange} per meteor</span>
+              </div>
+            </div>
+            <span class="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/35 shrink-0">100%</span>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl bg-white/[0.04] border border-white/10">
+            <div class="inline-flex items-center gap-2 min-w-0">
+              ${
+                inspChibi
+                  ? `<img class="w-6 h-6 object-contain shrink-0 rounded-md bg-black/30" src="${assetUrl(inspChibi.poses.pose)}" alt="${inspChibi.name}" />`
+                  : `${hudIconHtml('lock', 20, 'Locked')}`
+              }
+              <div class="flex flex-col min-w-0">
+                <span class="text-[11px] font-black text-white truncate">${inspChibi ? inspChibi.name : 'Celestial Limited'}</span>
+                <span class="text-[9.5px] font-bold text-slate-400">${
+                  inspChibi && inspChibiEntries[0]
+                    ? `${inspChibiEntries[0].rarity.toUpperCase()} Chibi`
+                    : 'Coming Soon'
+                }</span>
+              </div>
+            </div>
+            <span class="text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+              inspChibi ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-400/35' : 'bg-slate-700/50 text-slate-300 border-white/15'
+            } border shrink-0">${inspChibi && inspChibiEntries[0] ? `${inspChibiEntries[0].chancePct}%` : 'Soon'}</span>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl bg-white/[0.04] border border-white/10">
+            <div class="inline-flex items-center gap-2 min-w-0">
+              <div class="w-6 h-6 flex items-center justify-center shrink-0 [&>img]:w-5 [&>img]:h-5">${enchantDiceIconHtml(20)}</div>
+              <div class="flex flex-col min-w-0">
+                <span class="text-[11px] font-black text-white truncate">Enchant Dice + Gems</span>
+                <span class="text-[9.5px] font-bold text-slate-400">Bonus meteor reward</span>
+              </div>
+            </div>
+            <span class="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-sky-500/20 text-sky-300 border border-sky-400/35 shrink-0">${inspDicePct}%</span>
+          </div>
+        </div>
       </div>
     `
       : '';
@@ -1889,6 +1972,30 @@ export class GameHud {
           </div>
         </div>
       </button>
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border backdrop-blur-xl cursor-pointer transition-[transform,filter,border-color,background] duration-150 hover:brightness-110 active:scale-[0.97] ${
+          this.state.autoMeteor
+            ? 'border-cyan-300/60 bg-[rgba(12,24,42,0.88)] shadow-[0_4px_14px_rgba(34,211,238,0.22)]'
+            : 'border-white/15 bg-[rgba(12,16,28,0.82)]'
+        }"
+        data-action="toggle-auto-meteor"
+        aria-pressed="${this.state.autoMeteor}"
+        title="Toggle automatic Meteor spawn on weather change"
+      >
+        ${meteorIconHtml(w.id, 16, 'Auto Meteor')}
+        <span class="text-[11px] font-black text-slate-200 mam-outline-sm">Auto Meteor</span>
+        <span class="relative inline-flex items-center w-9 h-[18px] rounded-full transition-colors duration-150 ${
+          this.state.autoMeteor ? 'bg-emerald-500/85' : 'bg-slate-600/85'
+        }">
+          <span class="inline-block w-3.5 h-3.5 rounded-full bg-white shadow transition-transform duration-150 ${
+            this.state.autoMeteor ? 'translate-x-[19px]' : 'translate-x-[3px]'
+          }"></span>
+        </span>
+        <span class="text-[10px] font-black uppercase ${this.state.autoMeteor ? 'text-emerald-300' : 'text-slate-400'}">${
+          this.state.autoMeteor ? 'ON' : 'OFF'
+        }</span>
+      </button>
       ${popoverHtml}
     `;
   }
@@ -1896,7 +2003,7 @@ export class GameHud {
   private renderWeatherWidget(now = Date.now()): string {
     const w = this.state.getActiveWeather();
     return `
-      <div class="absolute top-[14px] left-4 @max-[720px]:top-2.5 @max-[720px]:left-2.5 z-[5] flex flex-col items-start gap-1.5 pointer-events-auto" data-hud-weather="true" data-weather-key="${w.id}:${this.weatherPopoverOpen ? 1 : 0}">
+      <div class="absolute top-[14px] left-4 @max-[720px]:top-2.5 @max-[720px]:left-2.5 z-[5] flex flex-col items-start gap-1.5 pointer-events-auto" data-hud-weather="true" data-weather-key="${w.id}:${this.weatherPopoverOpen ? 1 : 0}:${this.state.autoMeteor ? 1 : 0}">
         ${this.buildWeatherWidgetInnerHtml(now)}
       </div>
     `;
@@ -1906,12 +2013,19 @@ export class GameHud {
     const host = this.root.querySelector<HTMLElement>('[data-hud-weather="true"]');
     if (!host) return;
     const w = this.state.getActiveWeather();
-    const nextKey = `${w.id}:${this.weatherPopoverOpen ? 1 : 0}`;
+    const nextKey = `${w.id}:${this.weatherPopoverOpen ? 1 : 0}:${this.state.autoMeteor ? 1 : 0}`;
     if (forceRebuild || host.dataset.weatherKey !== nextKey) {
       host.dataset.weatherKey = nextKey;
       host.innerHTML = this.buildWeatherWidgetInnerHtml(now);
+      this.bindWeatherInspectClicks(host);
       host.querySelector('[data-action="toggle-weather-info"]')?.addEventListener('click', () => {
         this.weatherPopoverOpen = !this.weatherPopoverOpen;
+        this.syncWeatherWidget(true);
+      });
+      host.querySelector('[data-action="toggle-auto-meteor"]')?.addEventListener('click', () => {
+        const enabled = this.state.toggleAutoMeteor();
+        audio.playSfx('ui-tab');
+        this.onToggleAutoMeteor?.(enabled);
         this.syncWeatherWidget(true);
       });
       return;
@@ -1921,6 +2035,19 @@ export class GameHud {
     if (timerEl && timerEl.textContent !== nextText) {
       timerEl.textContent = nextText;
     }
+  }
+
+  private bindWeatherInspectClicks(scope: ParentNode): void {
+    scope.querySelectorAll<HTMLElement>('[data-weather-inspect]').forEach((el) => {
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const wid = el.dataset.weatherInspect as WeatherId | undefined;
+        if (!wid) return;
+        audio.playSfx('ui-tab');
+        this.weatherInspectId = wid;
+        this.syncWeatherWidget(true);
+      });
+    });
   }
 
   private renderActivePotionsDock(now = Date.now()): string {

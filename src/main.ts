@@ -183,10 +183,12 @@ async function bootstrap(): Promise<void> {
     },
     (weatherId) => {
       scene.setWeather(weatherId);
-      const minBossHp = Math.round(gameState.getTotalPlotDps() * 90 + gameState.getTapDamage() * 300);
-      scene.spawnWeatherMeteor(weatherId, gameState.getOreHpScale(), minBossHp);
-      const wDef = getWeatherById(weatherId);
-      hud?.pushToast(`☄️ ${wDef.name} Meteor crashed into the pit!`);
+      if (gameState.autoMeteor) {
+        const minBossHp = Math.round(gameState.getTotalPlotDps() * 90 + gameState.getTapDamage() * 300);
+        scene.spawnWeatherMeteor(weatherId, gameState.getOreHpScale(), minBossHp);
+        const wDef = getWeatherById(weatherId);
+        hud?.pushToast(`☄️ ${wDef.name} Meteor crashed into the pit!`);
+      }
       if (weatherId === 'celestial') {
         audio.playSfx('rare-fanfare', { volume: 0.65 });
       }
@@ -199,14 +201,28 @@ async function bootstrap(): Promise<void> {
     },
     (zoomed) => {
       scene.setTutorialSellShopZoom(zoomed);
+    },
+    (enabled) => {
+      if (enabled) {
+        if (!scene.hasAliveMeteor()) {
+          const minBossHp = Math.round(gameState.getTotalPlotDps() * 90 + gameState.getTapDamage() * 300);
+          scene.spawnWeatherMeteor(gameState.weatherId, gameState.getOreHpScale(), minBossHp);
+        }
+        hud?.pushToast('Auto Meteor: ON');
+      } else {
+        scene.clearWeatherMeteor();
+        hud?.pushToast('Auto Meteor: OFF');
+      }
     }
   );
 
-  scene.spawnWeatherMeteor(
-    gameState.weatherId,
-    gameState.getOreHpScale(),
-    Math.round(gameState.getTotalPlotDps() * 90 + gameState.getTapDamage() * 300)
-  );
+  if (gameState.autoMeteor) {
+    scene.spawnWeatherMeteor(
+      gameState.weatherId,
+      gameState.getOreHpScale(),
+      Math.round(gameState.getTotalPlotDps() * 90 + gameState.getTapDamage() * 300)
+    );
+  }
   audio.setSceneMode('mine');
   cgLoadingStop();
   cgGameplayStart();

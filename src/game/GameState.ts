@@ -30,6 +30,7 @@ import {
   rollWorldMiner,
   rollWorldOre,
   WEATHER_METEOR_CHIBIS,
+  WEATHER_METEOR_DICE_CHANCE,
   WeatherOreDef,
   WORLD_MINERS,
   WorldId,
@@ -163,6 +164,7 @@ export interface SavePayload {
   chestOres: Record<string, number>;
   chestCapacity: number;
   autoSell: boolean;
+  autoMeteor?: boolean;
   discovered: string[];
   activeBoosts?: Record<string, number>;
   unlockedWorlds?: WorldId[];
@@ -187,15 +189,33 @@ const WORLD_UPGRADE_COST_SCALE: Record<WorldId, number> = {
   starwell: 22_500_000,
 };
 
+const WEATHER_UPGRADE_COST_SCALE: Record<WeatherId, number> = {
+  light_rain: 1_200,
+  snow_rain: 25_000,
+  bloodmoon: 750_000,
+  void: 15_000_000,
+  celestial: 35_000_000,
+};
+
 /**
- * Scales plot upgrade costs by the chibi's home world economy and a mild
- * intra-world rarity premium (`+12%` per baseDps multiple above anchor)
+ * Scales plot upgrade costs by the chibi's home world (or weather meteor) economy
+ * and a mild intra-world rarity premium (`+12%` per baseDps multiple above anchor)
  * so Exotic/Secret chibis stay slightly pricier without punishing progression.
  */
 export function getChibiUpgradeCostMult(chibiId: string): number {
   const chibi = getChibiById(chibiId);
+  if (!chibi) return 1;
   const minerEntry = WORLD_MINERS.find((wm) => wm.chibiId === chibiId);
-  if (!chibi || !minerEntry) return 1;
+  if (!minerEntry) {
+    for (const [weatherId, entries] of Object.entries(WEATHER_METEOR_CHIBIS) as Array<
+      [WeatherId, readonly { chibiId: string; chancePct: number; rarity: string }[]]
+    >) {
+      if (entries.some((e) => e.chibiId === chibiId)) {
+        return WEATHER_UPGRADE_COST_SCALE[weatherId] ?? 1;
+      }
+    }
+    return 1;
+  }
 
   const worldScale = WORLD_UPGRADE_COST_SCALE[minerEntry.worldId] ?? 1;
 
@@ -242,6 +262,7 @@ export class GameState {
   public chestOres: Record<string, number> = {};
   public chestCapacity = 5000;
   public autoSell = false;
+  public autoMeteor = true;
   public discovered = new Set<string>(['astral-recruit']);
   public activeBoosts: Record<string, number> = {};
   public towerBestFloor = 0;
@@ -979,15 +1000,8 @@ export class GameState {
     const gemsAwarded = Math.max(10, Math.round(baseGems * gemMult));
     this.gems += gemsAwarded;
 
-    const diceChanceByWeather: Record<WeatherId, number> = {
-      light_rain: 0.15,
-      snow_rain: 0.22,
-      bloodmoon: 0.35,
-      void: 0.5,
-      celestial: 0.75,
-    };
     let diceAwarded = 0;
-    if (rng() < (diceChanceByWeather[weatherId] ?? 0.2)) {
+    if (rng() < (WEATHER_METEOR_DICE_CHANCE[weatherId] ?? 0.2)) {
       diceAwarded = 1;
       this.enchantDice += 1;
     }
@@ -1064,6 +1078,12 @@ export class GameState {
     this.cash += earned;
     this.emit();
     return { earned, bonusApplied };
+  }
+
+  public toggleAutoMeteor(): boolean {
+    this.autoMeteor = !this.autoMeteor;
+    this.emit();
+    return this.autoMeteor;
   }
 
   public toggleAutoSell(): number {
@@ -1953,6 +1973,7 @@ export class GameState {
         chestOres: this.chestOres,
         chestCapacity: this.chestCapacity,
         autoSell: this.autoSell,
+        autoMeteor: this.autoMeteor,
         discovered: Array.from(this.discovered),
         activeBoosts: this.activeBoosts,
         unlockedWorlds: this.unlockedWorlds,
@@ -2096,6 +2117,7 @@ export class GameState {
       }
       if (typeof data.chestCapacity === 'number') this.chestCapacity = data.chestCapacity;
       if (typeof data.autoSell === 'boolean') this.autoSell = data.autoSell;
+      if (typeof data.autoMeteor === 'boolean') this.autoMeteor = data.autoMeteor;
       if (Array.isArray(data.discovered)) {
         const cleaned = new Set<string>();
         for (const rawId of data.discovered) {

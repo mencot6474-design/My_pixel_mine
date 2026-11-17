@@ -243,11 +243,19 @@ export const WEATHER_METEOR_CHIBIS: Record<
   WeatherId,
   readonly { chibiId: string; chancePct: number; rarity: ItemRarity }[]
 > = {
-  light_rain: [],
-  snow_rain: [],
-  bloodmoon: [],
-  void: [],
-  celestial: [],
+  light_rain: [{ chibiId: 'stormwraith', chancePct: 22, rarity: 'exotic' }],
+  snow_rain: [{ chibiId: 'frostblood', chancePct: 22, rarity: 'exotic' }],
+  bloodmoon: [{ chibiId: 'glitch-monarch', chancePct: 18, rarity: 'secret' }],
+  void: [{ chibiId: 'singularity', chancePct: 15, rarity: 'secret' }],
+  celestial: [{ chibiId: 'eclipse-seraph', chancePct: 12, rarity: 'secret' }],
+};
+
+export const WEATHER_METEOR_DICE_CHANCE: Record<WeatherId, number> = {
+  light_rain: 0.15,
+  snow_rain: 0.22,
+  bloodmoon: 0.35,
+  void: 0.5,
+  celestial: 0.75,
 };
 
 export const WORLD_MINERS: readonly WorldMinerEntry[] = [
@@ -541,7 +549,33 @@ export function getMinersByWorld(worldId: WorldId): Array<{ entry: WorldMinerEnt
 
 export function getMinerRarity(chibiId: string): ItemRarity {
   const entry = WORLD_MINERS.find((m) => m.chibiId === chibiId);
-  return entry?.rarity ?? 'common';
+  if (entry) return entry.rarity;
+  return CHIBI_CATALOG.find((c) => c.id === chibiId)?.rarity ?? 'common';
+}
+
+export function getWeatherLimitedMiners(): Array<{
+  weatherId: WeatherId;
+  chibi: ChibiDef;
+  chancePct: number;
+  rarity: ItemRarity;
+}> {
+  const out: Array<{
+    weatherId: WeatherId;
+    chibi: ChibiDef;
+    chancePct: number;
+    rarity: ItemRarity;
+  }> = [];
+  for (const [weatherId, entries] of Object.entries(WEATHER_METEOR_CHIBIS) as Array<
+    [WeatherId, readonly { chibiId: string; chancePct: number; rarity: ItemRarity }[]]
+  >) {
+    for (const entry of entries) {
+      const chibi = CHIBI_CATALOG.find((c) => c.id === entry.chibiId);
+      if (chibi) {
+        out.push({ weatherId, chibi, chancePct: entry.chancePct, rarity: entry.rarity });
+      }
+    }
+  }
+  return out;
 }
 
 export function getMinerWorldId(chibiId: string): WorldId | null {

@@ -1,5 +1,5 @@
 import { assetUrl } from '../game/AssetUrl';
-import { ENCHANTS, GEM_SHOP_ITEMS, ItemRarity, ORES, PICKAXES } from '../game/GameData';
+import { ENCHANTS, GEM_SHOP_ITEMS, ItemRarity, ORES, PICKAXES, WEATHER_ORES } from '../game/GameData';
 import type { ResearchIconKind } from '../game/ResearchData';
 import { WEATHERS, type WeatherId } from '../game/WeatherData';
 import {
@@ -30,7 +30,7 @@ const HUD_ART_KEYS = new Set([
   'enchant',
   'lock',
 ]);
-const ORE_ART_IDS = new Set(ORES.map((o) => o.id));
+const ORE_ART_IDS = new Set([...ORES.map((o) => o.id), ...WEATHER_ORES.map((o) => o.id)]);
 
 export function oreIconSvg(
   color: string,

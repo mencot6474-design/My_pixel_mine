@@ -12,6 +12,7 @@ import {
   getNextChibiStarTier,
   getOreById,
   getOresByWorld,
+  getWeatherLimitedMiners,
   getWorldById,
   RARITY_BORDER,
   WEATHER_ORES,
@@ -57,7 +58,8 @@ export class CollectionModalsUi {
 
   private getResolvedIndexInspectId(): string | null {
     if (this.indexWorldId === 'weather') {
-      const allIds = WEATHER_ORES.map((o) => o.id);
+      const weatherMiners = getWeatherLimitedMiners();
+      const allIds = [...WEATHER_ORES.map((o) => o.id), ...weatherMiners.map((m) => m.chibi.id)];
       if (this.indexInspectId && allIds.includes(this.indexInspectId)) return this.indexInspectId;
       this.indexInspectId = allIds[0] ?? null;
       return this.indexInspectId;
@@ -99,7 +101,34 @@ export class CollectionModalsUi {
           ],
         });
       }
-      return renderEmptyInspectorPanel('Select any Weather Meteor Ore to inspect details.');
+      const wMiner = getWeatherLimitedMiners().find((m) => m.chibi.id === targetId);
+      if (wMiner) {
+        const wDef = getWeatherById(wMiner.weatherId);
+        const owned = this.state.miners[wMiner.chibi.id] || 0;
+        const onPlot = this.state.plotMiners.filter((id) => id === wMiner.chibi.id).length;
+        return renderInspectorPanel({
+          rarity: wMiner.rarity,
+          title: wMiner.chibi.name,
+          subtitle: `${wDef.name} • Limited Chibi`,
+          badgesHtml: statusBadge,
+          artHtml: chibiPortraitHtml(wMiner.chibi, { usePose: true }),
+          dimmed: !unlocked,
+          stats: [
+            ['Drop Chance', fmtPct(wMiner.chancePct), 'text-[#7dd3fc]'],
+            ['Base DPS', `${fmtShort(wMiner.chibi.baseDps)}/s`, 'text-[#facc15]'],
+            ['Sell Value', fmtMoney(getMinerSellValue(wMiner.chibi.id)), 'text-[#4ade80]'],
+            ['Owned', `x${fmtInt(owned)} (${fmtInt(onPlot)} on Plot)`, 'text-white'],
+          ],
+          actionHtml: `
+            <button
+              type="button"
+              class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border border-sky-300/60 bg-[linear-gradient(135deg,#38bdf8_0%,#6366f1_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_4px_12px_-2px_rgba(56,189,248,0.4)] text-white text-[13px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95 [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]"
+              data-review-chibi="${wMiner.chibi.id}"
+            >Review</button>
+          `,
+        });
+      }
+      return renderEmptyInspectorPanel('Select any Weather Meteor Ore or Limited Chibi to inspect details.');
     }
 
     const worldDef = getWorldById(this.indexWorldId);
@@ -159,7 +188,7 @@ export class CollectionModalsUi {
   private buildIndexCardsHtml(): string {
     const selectedId = this.getResolvedIndexInspectId();
     if (this.indexWorldId === 'weather') {
-      return WEATHER_ORES.map((wOre) => {
+      const oreCards = WEATHER_ORES.map((wOre) => {
         const unlocked = this.state.discovered.has(wOre.id);
         const isSel = selectedId === wOre.id;
         const wDef = getWeatherById(wOre.weatherId);
@@ -173,6 +202,25 @@ export class CollectionModalsUi {
           </div>
         `;
       }).join('');
+      const minerCards = getWeatherLimitedMiners()
+        .map(({ weatherId, chibi, rarity, chancePct }) => {
+          const unlocked = this.state.discovered.has(chibi.id);
+          const isSel = selectedId === chibi.id;
+          const wDef = getWeatherById(weatherId);
+          return `
+            <div class="${rarityCardClasses(rarity, `${unlocked ? '' : 'locked'} ${isSel ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.45)]' : ''}`.trim())}" style="${rarityVars(rarity)}" data-index-id="${chibi.id}" title="${chibi.name} (${wDef.name} • ${fmtPct(chancePct)})">
+              <div class="mam-card-art">
+                ${chibiPortraitHtml(chibi, { usePose: true })}
+              </div>
+              <div class="mam-card-name mam-outline-sm">${chibi.name}</div>
+              <div class="mam-card-bottom">
+                <span class="mam-card-pct mam-outline-sm">${wDef.shortName}</span>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+      return `${oreCards}${minerCards}`;
     }
 
     const ores = getOresByWorld(this.indexWorldId);
@@ -250,7 +298,7 @@ export class CollectionModalsUi {
           }).join('')}
           <button class="${TW_TAB_BTN} mam-outline-sm ${this.indexWorldId === 'weather' ? 'active' : ''}" data-index-world="weather">
             <span class="inline-flex items-center gap-1">${meteorIconHtml('celestial', 16, 'Weather')} Weather</span>
-            <span class="text-[11px] font-bold opacity-85">(${WEATHER_ORES.filter((o) => this.state.discovered.has(o.id)).length}/${WEATHER_ORES.length})</span>
+            <span class="text-[11px] font-bold opacity-85">(${WEATHER_ORES.filter((o) => this.state.discovered.has(o.id)).length + getWeatherLimitedMiners().filter((m) => this.state.discovered.has(m.chibi.id)).length}/${WEATHER_ORES.length + getWeatherLimitedMiners().length})</span>
           </button>
         </div>
 

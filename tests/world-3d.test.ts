@@ -26,7 +26,7 @@ import {
   getResearchTreeMaxPoints,
   RESEARCH_NODES,
 } from '../src/game/ResearchData';
-import { GameState } from '../src/game/GameState';
+import { GameState, getChibiUpgradeCostMult } from '../src/game/GameState';
 import { rollWeatherDef, WEATHER_DURATION_MS, WEATHERS } from '../src/game/WeatherData';
 import { fmtMoney, fmtShort } from '../src/game/NumberFormat';
 import { createEnchantAura3D, createEnchantDice3D, EnchantBillboard2D } from '../src/game3d/AuraModels3D';
@@ -100,8 +100,8 @@ describe('Pure 3D Mine World', () => {
     expect(applyNodeDamagePure(node, 20)).toBeNull();
   });
 
-  it('registers all 30 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
-    expect(CHIBI_CATALOG.length).toBe(30);
+  it('registers all 35 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
+    expect(CHIBI_CATALOG.length).toBe(35);
     expect(getChibiById('solar-striker')?.spriteUrl).toBe('/chibi/solar-striker/idle.webp');
     expect(getChibiById('solar-striker')?.poses.attack).toBe('/chibi/solar-striker/attack.webp');
     expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.idle, 4)).toBe(0);
@@ -1542,10 +1542,23 @@ describe('Pure 3D Mine World', () => {
     const gemsBefore = gs.gems;
     const reward = gs.onMeteorBroken('celestial', () => 0.1);
     expect(reward.weatherOre.id).toBe('astral-nova-fragment');
+    expect(reward.chibiId).toBe('eclipse-seraph');
+    expect(gs.discovered.has('eclipse-seraph')).toBe(true);
     expect(reward.weatherOreQty).toBeGreaterThanOrEqual(3);
     expect(gs.discovered.has('astral-nova-fragment')).toBe(true);
     expect(gs.chestOres['astral-nova-fragment']).toBe(reward.weatherOreQty);
     expect(gs.gems).toBeGreaterThan(gemsBefore);
     expect(gs.enchantDice).toBeGreaterThanOrEqual(2);
+
+    const voidReward = gs.onMeteorBroken('void', () => 0.05);
+    expect(voidReward.chibiId).toBe('singularity');
+    expect(gs.discovered.has('singularity')).toBe(true);
+
+    // Weather Limited Chibi upgrade cost scales monotonically by tier instead of falling back to 1
+    expect(getChibiUpgradeCostMult('stormwraith')).toBeGreaterThan(1000);
+    expect(getChibiUpgradeCostMult('frostblood')).toBeGreaterThan(getChibiUpgradeCostMult('stormwraith'));
+    expect(getChibiUpgradeCostMult('glitch-monarch')).toBeGreaterThan(getChibiUpgradeCostMult('frostblood'));
+    expect(getChibiUpgradeCostMult('singularity')).toBeGreaterThan(getChibiUpgradeCostMult('glitch-monarch'));
+    expect(getChibiUpgradeCostMult('eclipse-seraph')).toBeGreaterThan(getChibiUpgradeCostMult('singularity'));
   });
 });
