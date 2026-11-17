@@ -1561,4 +1561,68 @@ describe('Pure 3D Mine World', () => {
     expect(getChibiUpgradeCostMult('singularity')).toBeGreaterThan(getChibiUpgradeCostMult('glitch-monarch'));
     expect(getChibiUpgradeCostMult('eclipse-seraph')).toBeGreaterThan(getChibiUpgradeCostMult('singularity'));
   });
+
+  it('supports Core middle utility branch, Auto-Sell rarity filter, Ore Lock, and DPS breakdown', () => {
+    const gs = new GameState();
+    gs.cash = 1e24;
+
+    // Core middle branch requires Strike I -> Prospector's Eye -> Chibi Magnetism -> Deep Extraction
+    expect(gs.upgradeResearch('core-find-1')).toBe(false);
+    expect(gs.upgradeResearch('core-strike-1')).toBe(true);
+    expect(gs.upgradeResearch('core-find-1')).toBe(true);
+    expect(gs.upgradeResearch('core-charluck-1')).toBe(true);
+    expect(gs.upgradeResearch('core-output-1')).toBe(true);
+
+    // Auto-Sell rarity filter sells matching unlocked ores directly into cash
+    gs.cash = 0;
+    gs.chestOres = { coalite: 4, ochrite: 2 };
+    const filterRes = gs.toggleAutoSellRarity('common');
+    expect(filterRes.active).toBe(true);
+    expect(filterRes.earned).toBe(4 * gs.getEffectiveOreSellValue('coalite'));
+    expect(gs.chestOres['coalite']).toBeUndefined();
+    expect(gs.chestOres['ochrite']).toBe(2);
+
+    // Locked ores are protected from both Auto-Sell and Sell Ores
+    expect(gs.toggleOreLock('ochrite')).toBe(true);
+    const sellRes = gs.sellAllChestOres();
+    expect(sellRes.earned).toBe(0);
+    expect(gs.chestOres['ochrite']).toBe(2);
+
+    // onOreBroken auto-sells common ore directly when common auto-sell is active
+    const cashBeforeBreak = gs.cash;
+    gs.onOreBroken('common', () => 0.01); // rolls coalite (common)
+    expect(gs.chestOres['coalite']).toBeUndefined();
+    expect(gs.cash).toBeGreaterThan(cashBeforeBreak);
+
+    // DPS breakdown sorts placed chibis descending and sums percentages to ~100%
+    const c0 = CHIBI_CATALOG[0].id;
+    const c1 = CHIBI_CATALOG[1].id;
+    gs.miners[c0] = 1;
+    gs.miners[c1] = 1;
+    gs.equipBestMiners();
+    const bd = gs.getDpsBreakdown();
+    expect(bd.units.length).toBe(2);
+    expect(bd.units[0].dps).toBeGreaterThanOrEqual(bd.units[1].dps);
+    expect(bd.totalPlotDps).toBe(bd.units[0].dps + bd.units[1].dps);
+    expect(Math.round(bd.units[0].pct + bd.units[1].pct)).toBe(100);
+    expect(bd.tapDamage).toBe(gs.getTapDamage());
+
+    // Hotbar auto-compacts 1..9 when an item is removed/unequipped or sold
+    gs.ores = { coalite: 5, ochrite: 3, copperine: 2 };
+    gs.hotbar = ['coalite', 'ochrite', 'copperine', null, null, null, null, null, null];
+    gs.selectedHotbarSlot = 2; // copperine
+    gs.toggleEquipOre('coalite'); // unequips slot 0 -> shifts ochrite->0, copperine->1
+    expect(gs.hotbar.slice(0, 3)).toEqual(['ochrite', 'copperine', null]);
+    expect(gs.selectedHotbarSlot).toBe(1);
+    gs.sellOre('ochrite', true); // removes slot 0 -> shifts copperine->0
+    expect(gs.hotbar.slice(0, 2)).toEqual(['copperine', null]);
+    expect(gs.selectedHotbarSlot).toBe(0);
+
+    // Equip Best fills hotbar neatly starting from slot 1 (index 0) in rank order, followed by existing ores
+    gs.equipBestMiners();
+    expect(gs.hotbar[0]).toBe(gs.plotMiners[0]);
+    expect(gs.hotbar[1]).toBe(gs.plotMiners[1]);
+    expect(gs.hotbar[2]).toBe('copperine');
+    expect(gs.hotbar[3]).toBeNull();
+  });
 });

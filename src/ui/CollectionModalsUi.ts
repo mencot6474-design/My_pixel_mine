@@ -14,6 +14,7 @@ import {
   getOresByWorld,
   getWeatherLimitedMiners,
   getWorldById,
+  ItemRarity,
   RARITY_BORDER,
   WEATHER_ORES,
   WorldId,
@@ -647,8 +648,10 @@ export class CollectionModalsUi {
       if (qty <= 0) continue;
       const def = getOreById(id);
       if (!def) continue;
+      const locked = this.state.isOreLocked(def.id);
       cards.push(`
-        <div class="${rarityCardClasses(def.rarity)}" style="${rarityVars(def.rarity)}">
+        <div class="${rarityCardClasses(def.rarity)} relative" style="${rarityVars(def.rarity)}">
+          <button type="button" class="absolute top-1 right-1 z-[4] w-5 h-5 rounded-md flex items-center justify-center text-[11px] leading-none border cursor-pointer transition-transform hover:scale-110 ${locked ? 'bg-amber-500/90 border-amber-200 text-slate-950 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-slate-900/75 border-white/20 text-slate-300 opacity-75 hover:opacity-100'}" data-chest-lock-ore="${def.id}" title="${locked ? 'Unlock Ore (allow selling)' : 'Lock Ore (protect from Auto-Sell & Sell Ores)'}">${locked ? '🔒' : '🔓'}</button>
           <div class="mam-card-art">${oreIconSvg(def.color, def.secondaryColor, def.rarity, `ch_${def.id}`)}</div>
           <div class="mam-card-name mam-outline-sm">${def.name}</div>
           <div class="mam-card-bottom">
@@ -664,6 +667,41 @@ export class CollectionModalsUi {
       : '<div class="mam-placeholder-well col-span-full text-center p-7 text-[#fde68a] font-extrabold mam-outline-sm">Mine ores in the pit to fill your Chest!</div>';
   }
 
+  private renderChestAutoSellBar(): string {
+    const rarities: Array<{ id: ItemRarity; label: string }> = [
+      { id: 'common', label: 'Common' },
+      { id: 'uncommon', label: 'Uncommon' },
+      { id: 'rare', label: 'Rare' },
+      { id: 'epic', label: 'Epic' },
+    ];
+    const allOn = this.state.autoSell;
+    const pills = rarities
+      .map((r) => {
+        const active = allOn || this.state.isAutoSellRarity(r.id);
+        const border = RARITY_BORDER[r.id];
+        return `<button type="button" class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold border cursor-pointer transition-all ${
+          active
+            ? 'text-white shadow-[0_0_10px_rgba(255,255,255,0.18)]'
+            : 'bg-slate-900/65 text-slate-400 border-white/15 hover:text-white hover:border-white/30'
+        }" style="${active ? `border-color:${border};background:${border}33;` : ''}" data-autosell-rarity="${r.id}">${active ? '✓ ' : ''}${r.label}</button>`;
+      })
+      .join('');
+    return `
+      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-950/60 border border-white/12">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-[11px] font-black uppercase tracking-wider text-amber-200/90 mr-1">Auto-Sell:</span>
+          ${pills}
+          <button type="button" class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold border cursor-pointer transition-all ${
+            allOn
+              ? 'bg-emerald-500/30 border-emerald-300/70 text-emerald-100'
+              : 'bg-slate-900/65 border-white/15 text-slate-400 hover:text-white'
+          }" data-action="chest-toggle-autosell-all">${allOn ? '✓ All Ores' : 'All Ores'}</button>
+        </div>
+        <span class="text-[10px] font-bold text-slate-400">🔒 Locked ores are never sold</span>
+      </div>
+    `;
+  }
+
   public renderChestModal(): string {
     const count = this.state.getChestItemCount();
     const cap = this.state.getMaxChestCapacity();
@@ -677,6 +715,7 @@ export class CollectionModalsUi {
       iconHtml: hudIconHtml('chest', 26, 'Chest'),
       boxClass: `w-[640px] ${TW_SHOP_MODAL_RESP}`,
       bodyHtml: `
+        ${this.renderChestAutoSellBar()}
         <div class="${TW_MODAL_GRID_BASE} grid-cols-5 @max-[680px]:grid-cols-4 @max-[520px]:grid-cols-3 gap-2 flex-1 min-h-[180px]" data-chest-grid="true">
           ${cardsHtml}
         </div>
@@ -741,6 +780,53 @@ export class CollectionModalsUi {
     if (invPanel) {
       this.lastInvInspectorHtml = invPanel.innerHTML;
       this.bindInventoryInspectorEvents(root, invPanel);
+    }
+
+    this.bindChestEvents(root);
+  }
+
+  private bindChestGridEvents(scope: ParentNode): void {
+    scope.querySelectorAll('[data-chest-lock-ore]').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const oreId = (el as HTMLElement).dataset.chestLockOre;
+        if (!oreId) return;
+        const locked = this.state.toggleOreLock(oreId);
+        audio.playSfx('ui-tab');
+        this.pushToast(locked ? 'Ore locked (protected from Auto-Sell)' : 'Ore unlocked');
+        this.onRequestRender();
+      });
+    });
+  }
+
+  private bindChestEvents(root: HTMLElement): void {
+    this.bindChestGridEvents(root);
+    root.querySelectorAll('[data-autosell-rarity]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const rarity = (el as HTMLElement).dataset.autosellRarity as ItemRarity;
+        if (!rarity) return;
+        const res = this.state.toggleAutoSellRarity(rarity);
+        audio.playSfx(res.earned > 0 ? 'coin' : 'ui-tab');
+        if (res.active && res.earned > 0) {
+          this.pushToast(`Auto-Sell ${rarity} ON (+${fmtMoney(res.earned)})`);
+        } else {
+          this.pushToast(`Auto-Sell ${rarity} ${res.active ? 'ON' : 'OFF'}`);
+        }
+        this.onRequestRender();
+      });
+    });
+    const allBtn = root.querySelector('[data-action="chest-toggle-autosell-all"]');
+    if (allBtn) {
+      allBtn.addEventListener('click', () => {
+        const earned = this.state.toggleAutoSell();
+        audio.playSfx(earned > 0 ? 'coin' : 'ui-tab');
+        if (this.state.autoSell && earned > 0) {
+          this.pushToast(`Auto-Sell All ON (+${fmtMoney(earned)})`);
+        } else {
+          this.pushToast(`Auto-Sell All ${this.state.autoSell ? 'ON' : 'OFF'}`);
+        }
+        this.onRequestRender();
+      });
     }
   }
 
@@ -868,6 +954,7 @@ export class CollectionModalsUi {
       this.lastChestCardsHtml = nextHtml;
       grid.innerHTML = nextHtml;
       grid.scrollTop = prevScroll;
+      this.bindChestGridEvents(grid);
     }
   }
 

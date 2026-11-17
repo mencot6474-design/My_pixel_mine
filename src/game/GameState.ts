@@ -22,6 +22,7 @@ import {
   getWeatherOreByWeatherId,
   getWorldById,
   getWorldIndex,
+  ItemRarity,
   ORES,
   PICKAXE_RESTOCK_MS,
   PICKAXES,
@@ -164,6 +165,8 @@ export interface SavePayload {
   chestOres: Record<string, number>;
   chestCapacity: number;
   autoSell: boolean;
+  autoSellRarities?: ItemRarity[];
+  lockedOreIds?: string[];
   autoMeteor?: boolean;
   discovered: string[];
   activeBoosts?: Record<string, number>;
@@ -262,6 +265,8 @@ export class GameState {
   public chestOres: Record<string, number> = {};
   public chestCapacity = 5000;
   public autoSell = false;
+  public autoSellRarities = new Set<ItemRarity>();
+  public lockedOreIds = new Set<string>();
   public autoMeteor = true;
   public discovered = new Set<string>(['astral-recruit']);
   public activeBoosts: Record<string, number> = {};
@@ -417,6 +422,59 @@ export class GameState {
       if (st) total += st.dmg;
     }
     return total;
+  }
+
+  public getDpsBreakdown(): {
+    tapDamage: number;
+    totalPlotDps: number;
+    units: Array<{
+      slotIndex: number;
+      chibiId: string;
+      name: string;
+      rarity: ItemRarity;
+      dps: number;
+      pct: number;
+      stars: number;
+      enchantId: string | null;
+    }>;
+  } {
+    const tapDamage = this.getTapDamage();
+    const units: Array<{
+      slotIndex: number;
+      chibiId: string;
+      name: string;
+      rarity: ItemRarity;
+      dps: number;
+      pct: number;
+      stars: number;
+      enchantId: string | null;
+    }> = [];
+    let totalPlotDps = 0;
+    for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {
+      const unit = this.plotUnits[i];
+      const st = this.getPlotUnitStats(i);
+      if (!unit || !st) continue;
+      const chibi = getChibiById(unit.chibiId);
+      if (!chibi) continue;
+      totalPlotDps += st.dmg;
+      units.push({
+        slotIndex: i,
+        chibiId: unit.chibiId,
+        name: chibi.name,
+        rarity: chibi.rarity,
+        dps: st.dmg,
+        pct: 0,
+        stars: this.getChibiStar(chibi.id),
+        enchantId: unit.enchantId,
+      });
+    }
+    units.sort((a, b) => b.dps - a.dps);
+    if (totalPlotDps > 0) {
+      for (const u of units) {
+        u.pct = (u.dps / totalPlotDps) * 100;
+      }
+    }
+    return { tapDamage, totalPlotDps, units };
   }
 
   public getChibiStar(chibiId: string): number {
@@ -898,7 +956,9 @@ export class GameState {
     for (let i = 0; i < oreRolls; i++) {
       const ore = rollWorldOre(this.activeWorldId, rng, oreLuck);
       this.discovered.add(ore.id);
-      if (added < capLeft) {
+      if (this.shouldAutoSellOre(ore.id)) {
+        this.cash += this.getEffectiveOreSellValue(ore.id);
+      } else if (added < capLeft) {
         this.chestOres[ore.id] = (this.chestOres[ore.id] || 0) + 1;
         added++;
       }
@@ -958,7 +1018,9 @@ export class GameState {
     for (let i = 0; i < 4; i++) {
       const ore = rollWorldOre(this.activeWorldId, rng, oreLuck);
       this.discovered.add(ore.id);
-      if (added < capLeft) {
+      if (this.shouldAutoSellOre(ore.id)) {
+        this.cash += this.getEffectiveOreSellValue(ore.id);
+      } else if (added < capLeft) {
         this.chestOres[ore.id] = (this.chestOres[ore.id] || 0) + 1;
         added++;
       }
@@ -1025,10 +1087,30 @@ export class GameState {
     }
   }
 
-  private removeFromHotbar(itemId: string): void {
-    for (let i = 0; i < this.hotbar.length; i++) {
-      if (this.hotbar[i] === itemId) this.hotbar[i] = null;
+  private compactHotbar(): void {
+    const selectedItemId =
+      this.selectedHotbarSlot >= 0 && this.selectedHotbarSlot < 9
+        ? this.hotbar[this.selectedHotbarSlot]
+        : null;
+    const compact: (string | null)[] = this.hotbar.filter((id): id is string => Boolean(id));
+    while (compact.length < 9) compact.push(null);
+    this.hotbar = compact.slice(0, 9);
+    if (selectedItemId) {
+      this.selectedHotbarSlot = this.hotbar.indexOf(selectedItemId);
+    } else if (this.selectedHotbarSlot >= 0 && !this.hotbar[this.selectedHotbarSlot]) {
+      this.selectedHotbarSlot = -1;
     }
+  }
+
+  private removeFromHotbar(itemId: string): void {
+    let changed = false;
+    for (let i = 0; i < this.hotbar.length; i++) {
+      if (this.hotbar[i] === itemId) {
+        this.hotbar[i] = null;
+        changed = true;
+      }
+    }
+    if (changed) this.compactHotbar();
   }
 
   public takeAllFromChest(): number {
@@ -1058,13 +1140,70 @@ export class GameState {
     return cap > 0 && this.getChestItemCount() >= Math.floor(cap * 0.95);
   }
 
+  public isOreLocked(oreId: string): boolean {
+    return this.lockedOreIds.has(oreId);
+  }
+
+  public toggleOreLock(oreId: string): boolean {
+    if (this.lockedOreIds.has(oreId)) {
+      this.lockedOreIds.delete(oreId);
+    } else {
+      this.lockedOreIds.add(oreId);
+    }
+    this.emit();
+    return this.lockedOreIds.has(oreId);
+  }
+
+  public isAutoSellRarity(rarity: ItemRarity): boolean {
+    return this.autoSellRarities.has(rarity);
+  }
+
+  public shouldAutoSellOre(oreId: string): boolean {
+    if (this.lockedOreIds.has(oreId)) return false;
+    if (this.autoSell) return true;
+    const ore = getOreById(oreId);
+    return ore ? this.autoSellRarities.has(ore.rarity) : false;
+  }
+
+  public toggleAutoSellRarity(rarity: ItemRarity): { active: boolean; earned: number } {
+    const next = !this.autoSellRarities.has(rarity);
+    if (next) {
+      this.autoSellRarities.add(rarity);
+    } else {
+      this.autoSellRarities.delete(rarity);
+    }
+    let earned = 0;
+    if (next) {
+      const remaining: Record<string, number> = {};
+      for (const [id, qty] of Object.entries(this.chestOres)) {
+        if (qty <= 0) continue;
+        const ore = getOreById(id);
+        if (ore && ore.rarity === rarity && !this.lockedOreIds.has(id)) {
+          earned += this.getEffectiveOreSellValue(ore.id) * qty;
+          this.discovered.add(id);
+        } else {
+          remaining[id] = qty;
+        }
+      }
+      this.chestOres = remaining;
+      this.cash += earned;
+    }
+    this.emit();
+    return { active: next, earned };
+  }
+
   public sellAllChestOres(): { earned: number; bonusApplied: boolean } {
     const bonusApplied = this.isChestFullBonusReady();
     const mult = bonusApplied ? 1.35 : 1;
     let baseTotal = 0;
     let soldAny = false;
+    const remaining: Record<string, number> = {};
     for (const [id, qty] of Object.entries(this.chestOres)) {
       if (qty <= 0) continue;
+      if (this.lockedOreIds.has(id)) {
+        remaining[id] = qty;
+        continue;
+      }
       const ore = getOreById(id);
       if (ore) {
         baseTotal += this.getEffectiveOreSellValue(ore.id) * qty;
@@ -1074,7 +1213,7 @@ export class GameState {
     }
     if (!soldAny) return { earned: 0, bonusApplied: false };
     const earned = Math.round(baseTotal * mult);
-    this.chestOres = {};
+    this.chestOres = remaining;
     this.cash += earned;
     this.emit();
     return { earned, bonusApplied };
@@ -1090,15 +1229,20 @@ export class GameState {
     this.autoSell = !this.autoSell;
     let earned = 0;
     if (this.autoSell) {
+      const remaining: Record<string, number> = {};
       for (const [id, qty] of Object.entries(this.chestOres)) {
         if (qty <= 0) continue;
+        if (this.lockedOreIds.has(id)) {
+          remaining[id] = qty;
+          continue;
+        }
         const ore = getOreById(id);
         if (ore) {
           earned += this.getEffectiveOreSellValue(ore.id) * qty;
           this.discovered.add(id);
         }
       }
-      this.chestOres = {};
+      this.chestOres = remaining;
       this.cash += earned;
     }
     this.emit();
@@ -1109,6 +1253,7 @@ export class GameState {
     const existingIdx = this.hotbar.indexOf(itemId);
     if (existingIdx !== -1) {
       this.hotbar[existingIdx] = null;
+      this.compactHotbar();
       this.emit();
       return;
     }
@@ -1207,6 +1352,23 @@ export class GameState {
     for (const u of displacedUnits) {
       this.stashPlotUnit(u);
     }
+
+    const nextHotbar: (string | null)[] = Array(9).fill(null);
+    let hbIdx = 0;
+    for (const cand of candidates) {
+      if (hbIdx >= 9) break;
+      if (!nextHotbar.includes(cand.chibiId)) {
+        nextHotbar[hbIdx++] = cand.chibiId;
+      }
+    }
+    for (const item of this.hotbar) {
+      if (hbIdx >= 9) break;
+      if (item && !getChibiById(item) && !nextHotbar.includes(item)) {
+        nextHotbar[hbIdx++] = item;
+      }
+    }
+    this.hotbar = nextHotbar;
+    this.compactHotbar();
     this.emit();
   }
 
@@ -1973,6 +2135,8 @@ export class GameState {
         chestOres: this.chestOres,
         chestCapacity: this.chestCapacity,
         autoSell: this.autoSell,
+        autoSellRarities: Array.from(this.autoSellRarities),
+        lockedOreIds: Array.from(this.lockedOreIds),
         autoMeteor: this.autoMeteor,
         discovered: Array.from(this.discovered),
         activeBoosts: this.activeBoosts,
@@ -2059,6 +2223,7 @@ export class GameState {
       }
       if (Array.isArray(data.hotbar) && data.hotbar.length === 9) {
         this.hotbar = data.hotbar.map((slot) => (slot ? migrateOreId(slot) : null));
+        this.compactHotbar();
       }
       if (data.ownedPickaxes) this.ownedPickaxes = data.ownedPickaxes;
       if (data.ownedEnchants) this.ownedEnchants = data.ownedEnchants;
@@ -2117,6 +2282,12 @@ export class GameState {
       }
       if (typeof data.chestCapacity === 'number') this.chestCapacity = data.chestCapacity;
       if (typeof data.autoSell === 'boolean') this.autoSell = data.autoSell;
+      if (Array.isArray(data.autoSellRarities)) {
+        this.autoSellRarities = new Set(data.autoSellRarities);
+      }
+      if (Array.isArray(data.lockedOreIds)) {
+        this.lockedOreIds = new Set(data.lockedOreIds.map((id) => migrateOreId(id)).filter((id) => Boolean(getOreById(id))));
+      }
       if (typeof data.autoMeteor === 'boolean') this.autoMeteor = data.autoMeteor;
       if (Array.isArray(data.discovered)) {
         const cleaned = new Set<string>();

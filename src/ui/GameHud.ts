@@ -89,6 +89,8 @@ export class GameHud {
   private lastRegrowthActive = false;
   private weatherPopoverOpen = false;
   private weatherInspectId: WeatherId | null = null;
+  private dpsMeterOpen = false;
+  private lastDpsMeterHtml = '';
   private hotbarDrag: {
     fromSlot: number;
     itemId: string;
@@ -345,6 +347,7 @@ export class GameHud {
         this.lastRegrowthActive = regrowthActive;
         this.onSyncPlots(this.state.getEquippedPlotMinerIds());
       }
+      this.syncDpsMeterWidget();
     }, 1000);
 
     window.setInterval(() => {
@@ -1218,6 +1221,7 @@ export class GameHud {
       </div>
 
       ${this.renderActivePotionsDock()}
+      ${this.renderDpsMeterWidget()}
       ${this.renderActiveModal()}
       ${this.renderToastStack()}
     `;
@@ -1351,6 +1355,7 @@ export class GameHud {
       ${this.renderCurrencyRail({ topAlign: true, showCash: true, showAudioBelow: true })}
 
       ${this.renderActivePotionsDock()}
+      ${this.renderDpsMeterWidget()}
       ${this.renderActiveModal()}
       ${this.renderToastStack()}
     `;
@@ -1543,6 +1548,7 @@ export class GameHud {
     this.bindHotbarEvents(this.root);
     this.upgradesUi.bindUpgradesEvents(this.root);
     this.upgradesUi.bindWorldsEvents(this.root);
+    this.bindDpsMeterEvents();
     this.collectionUi.bindEvents(this.root);
     this.shopUi.bindEvents(this.root);
     this.towerUi.bindHubEvents(this.root);
@@ -1998,6 +2004,98 @@ export class GameHud {
       </button>
       ${popoverHtml}
     `;
+  }
+
+  private buildDpsMeterInnerHtml(): string {
+    const bd = this.state.getDpsBreakdown();
+    const total = bd.totalPlotDps;
+    const panelHtml = this.dpsMeterOpen
+      ? `
+        <div class="w-[248px] max-w-[calc(100vw-32px)] p-2.5 rounded-2xl border border-cyan-300/35 bg-[rgba(10,15,28,0.9)] backdrop-blur-md shadow-[0_12px_28px_rgba(0,0,0,0.55)] flex flex-col gap-1.5">
+          <div class="flex items-center justify-between text-[11px] font-black text-cyan-200 border-b border-white/10 pb-1">
+            <span>⚔️ Damage Breakdown</span>
+            <span class="text-amber-300">Tap: ${fmtShort(bd.tapDamage)}</span>
+          </div>
+          ${
+            bd.units.length > 0
+              ? `<div class="flex flex-col gap-1 max-h-[168px] overflow-y-auto mam-no-scrollbar pr-0.5" data-dps-scroll="true">
+                  ${bd.units
+                    .map((u) => {
+                      const pctStr = `${u.pct >= 10 ? Math.round(u.pct) : u.pct.toFixed(1)}%`;
+                      const starTag = u.stars > 0 ? ` <span class="text-amber-300">★${u.stars}</span>` : '';
+                      return `
+                        <button type="button" class="w-full text-left flex flex-col gap-0.5 px-1.5 py-1 rounded-lg hover:bg-white/10 cursor-pointer transition-colors" data-dps-inspect-slot="${u.slotIndex}" title="Inspect ${u.name} (Plot ${u.slotIndex + 1})">
+                          <div class="flex items-center justify-between text-[11px] font-bold text-slate-100 gap-2">
+                            <span class="truncate">${u.name}${starTag}</span>
+                            <span class="shrink-0 text-cyan-300 font-extrabold">${fmtShort(u.dps)} <span class="text-slate-400 font-bold">(${pctStr})</span></span>
+                          </div>
+                          <div class="h-1.5 w-full rounded-full bg-slate-800/90 overflow-hidden">
+                            <div class="h-full rounded-full bg-[linear-gradient(90deg,#38bdf8,#818cf8)]" style="width:${Math.min(100, Math.max(2, u.pct))}%"></div>
+                          </div>
+                        </button>
+                      `;
+                    })
+                    .join('')}
+                </div>`
+              : '<div class="text-[11px] font-bold text-slate-400 py-1">Place Chibis on plots to track DPS.</div>'
+          }
+        </div>
+      `
+      : '';
+
+    return `
+      ${panelHtml}
+      <button type="button" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-cyan-300/35 bg-[rgba(10,15,28,0.82)] backdrop-blur-md shadow-[0_6px_16px_rgba(0,0,0,0.45)] text-white text-[12px] font-extrabold cursor-pointer transition-all hover:border-cyan-300/60 hover:brightness-110 mam-outline-sm" data-action="toggle-dps-meter" title="Toggle DPS Breakdown">
+        <span class="text-cyan-300">⚔️ ${fmtShort(total)}/s</span>
+        <span class="text-slate-400">•</span>
+        <span class="text-amber-300">Tap ${fmtShort(bd.tapDamage)}</span>
+        <span class="text-[10px] text-slate-400">${this.dpsMeterOpen ? '▼' : '▲'}</span>
+      </button>
+    `;
+  }
+
+  private renderDpsMeterWidget(): string {
+    const inner = this.buildDpsMeterInnerHtml();
+    this.lastDpsMeterHtml = inner;
+    return `
+      <div class="absolute bottom-[14px] left-4 @max-[860px]:bottom-[78px] @max-[720px]:left-2.5 z-[5] flex flex-col items-start gap-1.5 pointer-events-auto" data-hud-dps="true">
+        ${inner}
+      </div>
+    `;
+  }
+
+  private bindDpsMeterEvents(): void {
+    const host = this.root.querySelector<HTMLElement>('[data-hud-dps="true"]');
+    if (!host) return;
+    const toggleBtn = host.querySelector<HTMLElement>('[data-action="toggle-dps-meter"]');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        this.dpsMeterOpen = !this.dpsMeterOpen;
+        audio.playSfx('ui-tab');
+        this.syncDpsMeterWidget();
+      });
+    }
+    host.querySelectorAll<HTMLElement>('[data-dps-inspect-slot]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const slot = Number(el.dataset.dpsInspectSlot);
+        if (!Number.isFinite(slot)) return;
+        audio.playSfx('ui-tab');
+        this.openPlotInspector(slot);
+      });
+    });
+  }
+
+  private syncDpsMeterWidget(): void {
+    const host = this.root.querySelector<HTMLElement>('[data-hud-dps="true"]');
+    if (!host) return;
+    const nextHtml = this.buildDpsMeterInnerHtml();
+    if (this.lastDpsMeterHtml === nextHtml) return;
+    const prevScroll = host.querySelector<HTMLElement>('[data-dps-scroll="true"]')?.scrollTop ?? 0;
+    this.lastDpsMeterHtml = nextHtml;
+    host.innerHTML = nextHtml;
+    const scroller = host.querySelector<HTMLElement>('[data-dps-scroll="true"]');
+    if (scroller && prevScroll > 0) scroller.scrollTop = prevScroll;
+    this.bindDpsMeterEvents();
   }
 
   private renderWeatherWidget(now = Date.now()): string {
