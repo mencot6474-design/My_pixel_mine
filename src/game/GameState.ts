@@ -168,18 +168,26 @@ export interface SavePayload {
 
 export type StateListener = (state: GameState) => void;
 
+const WORLD_UPGRADE_COST_SCALE: Record<WorldId, number> = {
+  underground: 1,
+  crystal: 40,
+  magma: 1_000,
+  ruins: 25_000,
+  astral: 750_000,
+  starwell: 22_500_000,
+};
+
 /**
- * Scales plot upgrade costs proportionally by the chibi's home world unlock economy
- * and its relative strength (`baseDps`) within that world.
- * Starter `astral-recruit` (Underground anchor) resolves to `1`.
+ * Scales plot upgrade costs by the chibi's home world economy and a mild
+ * intra-world rarity premium (`+12%` per baseDps multiple above anchor)
+ * so Exotic/Secret chibis stay slightly pricier without punishing progression.
  */
 export function getChibiUpgradeCostMult(chibiId: string): number {
   const chibi = getChibiById(chibiId);
   const minerEntry = WORLD_MINERS.find((wm) => wm.chibiId === chibiId);
   if (!chibi || !minerEntry) return 1;
 
-  const world = getWorldById(minerEntry.worldId);
-  const worldScale = world.unlockCost > 0 ? world.unlockCost / 2_500 : 1;
+  const worldScale = WORLD_UPGRADE_COST_SCALE[minerEntry.worldId] ?? 1;
 
   const worldMiners = getMinersByWorld(minerEntry.worldId);
   let anchorBaseDps = chibi.baseDps;
@@ -187,7 +195,8 @@ export function getChibiUpgradeCostMult(chibiId: string): number {
     if (m.chibi.baseDps < anchorBaseDps) anchorBaseDps = m.chibi.baseDps;
   }
   const charRatio = anchorBaseDps > 0 ? chibi.baseDps / anchorBaseDps : 1;
-  return worldScale * charRatio;
+  const mildRarityFactor = 1 + Math.max(0, charRatio - 1) * 0.12;
+  return worldScale * mildRarityFactor;
 }
 
 export class GameState {
@@ -317,7 +326,7 @@ export class GameState {
     const enc = getEnchantById(unit.enchantId);
     const encMult = enc ? enc.dmgMult : 1;
 
-    const lvlScale = (lvl: number) => Math.pow(1.22, lvl - 1);
+    const lvlScale = (lvl: number) => Math.pow(1.28, lvl - 1);
     const dmgResearchMult = 1 + this.getActiveResearchBonus('minerDmgPct');
     const weatherDmgMult = this.getWeatherDamageMult();
     const baseDmg = chibi.baseDps * lvlScale(unit.damageLevel) * pickMult * mut.mult * encMult * dmgResearchMult;
@@ -782,6 +791,33 @@ export class GameState {
     this.chestOres = {};
     if (taken > 0) this.emit();
     return taken;
+  }
+
+  public isChestFullBonusReady(): boolean {
+    const cap = this.getMaxChestCapacity();
+    return cap > 0 && this.getChestItemCount() >= Math.floor(cap * 0.95);
+  }
+
+  public sellAllChestOres(): { earned: number; bonusApplied: boolean } {
+    const bonusApplied = this.isChestFullBonusReady();
+    const mult = bonusApplied ? 1.35 : 1;
+    let baseTotal = 0;
+    let soldAny = false;
+    for (const [id, qty] of Object.entries(this.chestOres)) {
+      if (qty <= 0) continue;
+      const ore = getOreById(id);
+      if (ore) {
+        baseTotal += this.getEffectiveOreSellValue(ore.id) * qty;
+        this.discovered.add(id);
+        soldAny = true;
+      }
+    }
+    if (!soldAny) return { earned: 0, bonusApplied: false };
+    const earned = Math.round(baseTotal * mult);
+    this.chestOres = {};
+    this.cash += earned;
+    this.emit();
+    return { earned, bonusApplied };
   }
 
   public toggleAutoSell(): number {

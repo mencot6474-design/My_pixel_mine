@@ -537,8 +537,9 @@ export class CollectionModalsUi {
           <div class="relative z-[2] text-[12px] font-extrabold text-white tracking-wide [text-shadow:0_1px_4px_rgba(0,0,0,0.75)]" data-chest-cap-text="true">${fmtInt(count)}/${fmtShort(cap)} Items</div>
         </div>
 
-        <div class="flex justify-center items-center">
-          <button class="mam-sheen-hover relative overflow-hidden h-11 min-w-[240px] px-7 rounded-xl border border-emerald-300/45 bg-[linear-gradient(135deg,rgba(34,197,94,0.9),rgba(5,150,105,0.94))] shadow-[0_8px_20px_rgba(16,185,129,0.28),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[16px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 hover:-translate-y-0.5 hover:scale-[1.01] hover:brightness-110 active:translate-y-0.5 active:scale-[0.98] [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="chest-take-all">Take All</button>
+        <div class="flex flex-wrap justify-center items-center gap-3">
+          <button class="mam-sheen-hover relative overflow-hidden h-11 min-w-[200px] px-6 rounded-xl border border-emerald-300/45 bg-[linear-gradient(135deg,rgba(34,197,94,0.9),rgba(5,150,105,0.94))] shadow-[0_8px_20px_rgba(16,185,129,0.28),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[16px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 hover:-translate-y-0.5 hover:scale-[1.01] hover:brightness-110 active:translate-y-0.5 active:scale-[0.98] [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="chest-take-all">Take All</button>
+          <button class="mam-sheen-hover relative overflow-hidden h-11 min-w-[200px] px-6 rounded-xl border border-amber-300/50 bg-[linear-gradient(135deg,rgba(245,158,11,0.92),rgba(217,119,6,0.96))] shadow-[0_8px_20px_rgba(245,158,11,0.28),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[16px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 hover:-translate-y-0.5 hover:scale-[1.01] hover:brightness-110 active:translate-y-0.5 active:scale-[0.98] [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="chest-sell-ores">${this.state.isChestFullBonusReady() ? 'Sell Ores (+35%)' : 'Sell Ores'}</button>
         </div>
       `,
     });
@@ -693,6 +694,10 @@ export class CollectionModalsUi {
     if (fill) fill.style.width = `${pct}%`;
     const capText = root.querySelector<HTMLElement>('[data-chest-cap-text="true"]');
     if (capText) capText.textContent = `${fmtInt(count)}/${fmtShort(cap)} Items`;
+    const sellBtn = root.querySelector<HTMLElement>('[data-action="chest-sell-ores"]');
+    if (sellBtn) {
+      sellBtn.textContent = this.state.isChestFullBonusReady() ? 'Sell Ores (+35%)' : 'Sell Ores';
+    }
 
     const grid = root.querySelector<HTMLElement>('[data-chest-grid="true"]');
     if (!grid) return;

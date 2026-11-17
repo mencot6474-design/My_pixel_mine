@@ -1282,6 +1282,14 @@ export class GameHud {
           const taken = this.state.takeAllFromChest();
           audio.playSfx(taken > 0 ? 'coin-alt' : 'ui-error');
           this.pushToast(taken > 0 ? `Collected ${fmtInt(taken)} items!` : 'Chest is empty');
+        } else if (action === 'chest-sell-ores') {
+          const res = this.state.sellAllChestOres();
+          audio.playSfx(res.earned > 0 ? 'coin' : 'ui-error');
+          this.pushToast(
+            res.earned > 0
+              ? `Sold chest ores for ${fmtMoney(res.earned)}${res.bonusApplied ? ' (+35% Full-Chest Bonus!)' : ''}`
+              : 'No ores in chest to sell'
+          );
         } else if (action === 'shops-pill') {
           audio.playSfx('teleport', { volume: 0.45 });
           this.setSceneMode('shop');

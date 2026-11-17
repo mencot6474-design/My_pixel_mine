@@ -1096,8 +1096,9 @@ describe('Pure 3D Mine World', () => {
 
     const solar = inspectCosts('solar-striker');
     const frost = inspectCosts('frost-vanguard');
-    expect(solar.dmgCost).toBe(100);
+    expect(solar.dmgCost).toBe(56);
     expect(frost.dmgCost).toBeGreaterThan(solar.dmgCost);
+    expect(frost.dmgCost).toBeLessThan(starter.dmgCost * 2);
     expect(solar.speedCost).toBeGreaterThan(starter.speedCost);
     expect(frost.miningCost).toBeGreaterThan(solar.miningCost);
 
@@ -1108,12 +1109,29 @@ describe('Pure 3D Mine World', () => {
     const nebula = inspectCosts('nebula-archon');
     const chrono = inspectCosts('chrono-sovereign');
 
-    expect(volt.dmgCost).toBe(50_000);
-    expect(nebula.dmgCost).toBe(500_000_000_000);
+    expect(volt.dmgCost).toBe(2_000);
+    expect(nebula.dmgCost).toBe(37_500_000);
     expect(zephyr.dmgCost).toBeGreaterThan(volt.dmgCost);
     expect(vesper.dmgCost).toBeGreaterThan(zephyr.dmgCost);
     expect(seraph.dmgCost).toBeGreaterThan(vesper.dmgCost);
     expect(chrono.dmgCost).toBeGreaterThan(seraph.dmgCost);
+  });
+
+  it('applies +35% Full-Chest Sell Bonus when selling chest ores at >=95% capacity', () => {
+    const gs = new GameState();
+    gs.cash = 0;
+    gs.chestCapacity = 100;
+    gs.chestOres = { runestone: 95 };
+    const fullRes = gs.sellAllChestOres();
+    expect(fullRes.bonusApplied).toBe(true);
+    expect(fullRes.earned).toBe(Math.round(200_000 * 95 * 1.35));
+    expect(gs.chestOres).toEqual({});
+
+    gs.cash = 0;
+    gs.chestOres = { runestone: 50 };
+    const partialRes = gs.sellAllChestOres();
+    expect(partialRes.bonusApplied).toBe(false);
+    expect(partialRes.earned).toBe(200_000 * 50);
   });
 
   it('flags Frozen and higher mutations as protected high-tier rolls', () => {
