@@ -50,7 +50,7 @@ export const CHIBI_FRAME_INDEX: Record<ChibiAnimState, number> = {
 export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'astral-recruit',
-    name: 'Astral Recruit',
+    name: 'Onee',
     spriteUrl: '/chibi/astral-recruit/idle.png',
     poses: makePoses('astral-recruit'),
     frames: 4,
@@ -61,7 +61,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   },
   {
     id: 'solar-striker',
-    name: 'Solar Striker',
+    name: 'DreamQueen',
     spriteUrl: '/chibi/solar-striker/idle.png',
     poses: makePoses('solar-striker'),
     frames: 4,
@@ -72,7 +72,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   },
   {
     id: 'frost-vanguard',
-    name: 'Mistveil Shinobi',
+    name: 'Antagonis',
     spriteUrl: '/chibi/frost-vanguard/idle.png',
     poses: makePoses('frost-vanguard'),
     frames: 4,
@@ -83,7 +83,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   },
   {
     id: 'volt-kensei',
-    name: 'Ashenhorn',
+    name: 'BloomHell',
     spriteUrl: '/chibi/volt-kensei/idle.png',
     poses: makePoses('volt-kensei'),
     frames: 4,
@@ -94,7 +94,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   },
   {
     id: 'pyre-kitsune',
-    name: 'Ashflare',
+    name: 'Shadow',
     spriteUrl: '/chibi/pyre-kitsune/idle.png',
     poses: makePoses('pyre-kitsune'),
     frames: 4,
@@ -105,7 +105,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   },
   {
     id: 'zephyr-esper',
-    name: 'Blindveil',
+    name: 'Doom',
     spriteUrl: '/chibi/zephyr-esper/idle.png',
     poses: makePoses('zephyr-esper'),
     frames: 4,
@@ -217,7 +217,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   // === Worlds 1–5 Exotic & Secret Additions (10) ===
   {
     id: 'tropic-blaze',
-    name: 'Oni Brawler',
+    name: 'IMbot',
     spriteUrl: '/chibi/tropic-blaze/idle.png',
     poses: makePoses('tropic-blaze'),
     frames: 4,
@@ -228,7 +228,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   },
   {
     id: 'cyber-ki-brawler',
-    name: 'Inkcloud',
+    name: 'TheOne',
     spriteUrl: '/chibi/cyber-ki-brawler/idle.png',
     poses: makePoses('cyber-ki-brawler'),
     frames: 4,
@@ -261,7 +261,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   },
   {
     id: 'tidebound-corsair',
-    name: 'lastmonk',
+    name: 'BocilKematian',
     spriteUrl: '/chibi/tidebound-corsair/idle.png',
     poses: makePoses('tidebound-corsair'),
     frames: 4,
@@ -294,7 +294,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   },
   {
     id: 'rime-duchess',
-    name: 'DevileSmile',
+    name: 'BlackDragon',
     spriteUrl: '/chibi/rime-duchess/idle.png',
     poses: makePoses('rime-duchess'),
     frames: 4,
