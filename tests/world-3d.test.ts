@@ -1456,4 +1456,41 @@ describe('Pure 3D Mine World', () => {
     expect(res[0].tier.gemBonusPct).toBeCloseTo(0.15, 5);
     expect(state.getActiveStarDropAndGemBonus().gemBonusPct).toBeCloseTo(0.15, 5);
   });
+
+  it('prevents deploying 1 owned Chibi or 1 owned Enchant onto multiple plots', () => {
+    const state = new GameState();
+    state.removeMinerFromPlot(0);
+    const chibiId = CHIBI_CATALOG[0].id;
+    const secondChibiId = CHIBI_CATALOG[1].id;
+
+    state.miners[chibiId] = 1;
+    state.miners[secondChibiId] = 1;
+    state.hotbar[0] = chibiId;
+    state.hotbar[1] = secondChibiId;
+
+    // 1 owned Chibi -> can place on Plot 0, blocked on Plot 1
+    expect(state.placeHotbarItemOnPlot(0, 0)).toBe('placed');
+    expect(state.placeHotbarItemOnPlot(0, 1)).toBe('limit');
+    expect(state.plotMiners[1]).toBeNull();
+
+    // Increasing owned count to 2 allows placing on Plot 1
+    state.miners[chibiId] = 2;
+    expect(state.placeHotbarItemOnPlot(0, 1)).toBe('placed');
+    expect(state.plotMiners[1]).toBe(chibiId);
+
+    // Swap Plot 1 to secondChibiId and test 1 owned Enchant exclusivity
+    expect(state.placeHotbarItemOnPlot(1, 1)).toBe('replaced');
+    state.ownedEnchants['blazing'] = 1;
+    expect(state.getAvailableEnchantCount('blazing')).toBe(1);
+    expect(state.togglePlotEnchant(0, 'blazing')).toBe(true);
+    expect(state.getAvailableEnchantCount('blazing')).toBe(0);
+    expect(state.togglePlotEnchant(1, 'blazing')).toBe(false);
+    expect(state.getPlotUnit(1)?.enchantId).toBeNull();
+
+    // Unequipping from Plot 0 makes it available for Plot 1
+    expect(state.togglePlotEnchant(0, 'blazing')).toBe(true);
+    expect(state.getAvailableEnchantCount('blazing')).toBe(1);
+    expect(state.togglePlotEnchant(1, 'blazing')).toBe(true);
+    expect(state.getPlotUnit(1)?.enchantId).toBe('blazing');
+  });
 });

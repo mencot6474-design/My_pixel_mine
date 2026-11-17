@@ -35,7 +35,7 @@ async function bootstrap(): Promise<void> {
 
   const syncPickaxeCursor = (e: PointerEvent): void => {
     const canvas = threeRoot.querySelector('canvas');
-    const active = Boolean(canvas?.classList.contains('mam-mining-cursor'));
+    const active = Boolean(canvas && e.target === canvas && canvas.classList.contains('mam-mining-cursor'));
     if (!active) {
       pickaxeCursorEl.style.display = 'none';
       return;
@@ -83,6 +83,9 @@ async function bootstrap(): Promise<void> {
       } else if (res === 'placed') {
         audio.playSfx('place-chibi');
         hud?.pushToast(`Placed on Plot #${slotIndex + 1}`);
+      } else if (res === 'limit') {
+        audio.playSfx('ui-error');
+        hud?.pushToast('All owned copies are already on Plots!');
       } else if (res === 'inspect') {
         audio.playSfx('ui-open');
         hud?.openPlotInspector(slotIndex);

@@ -276,6 +276,17 @@ export class GameHud {
       }
     });
 
+    window.addEventListener(
+      'click',
+      (e) => {
+        if (this.state.selectedHotbarSlot === -1) return;
+        const target = e.target instanceof Element ? e.target : null;
+        if (target?.closest('[data-hotbar]')) return;
+        this.state.clearHotbarSelection();
+      },
+      true
+    );
+
     this.updateViewportScale();
     window.addEventListener('resize', () => this.updateViewportScale());
     window.visualViewport?.addEventListener('resize', () => this.updateViewportScale());
@@ -1670,6 +1681,9 @@ export class GameHud {
             } else if (res === 'same') {
               this.plotDropOps?.pulsePlot(dropPlot);
               this.pushToast(`${name} is already on Plot #${dropPlot + 1}`);
+            } else if (res === 'limit') {
+              audio.playSfx('ui-error');
+              this.pushToast(`All owned ${name} are already on Plots!`);
             } else if (res === 'not-miner') {
               this.pushToast('Only Miners can be placed on Plots!');
             }

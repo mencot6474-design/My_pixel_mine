@@ -475,9 +475,14 @@ export class GameState {
     return { oreDropBonusPct, gemBonusPct };
   }
 
-  private equipChibiOnPlot(slotIndex: number, chibiId: string): 'placed' | 'replaced' | 'same' {
+  private equipChibiOnPlot(slotIndex: number, chibiId: string): 'placed' | 'replaced' | 'same' | 'limit' {
     if (this.plotMiners[slotIndex] === chibiId && !(this.stashedUnits[chibiId]?.length)) {
       return 'same';
+    }
+    const owned = this.miners[chibiId] || 0;
+    const placedOther = this.plotMiners.filter((id, idx) => idx !== slotIndex && id === chibiId).length;
+    if (placedOther >= owned) {
+      return 'limit';
     }
     const prevUnit = this.plotUnits[slotIndex];
     const hadPrev = Boolean(this.plotMiners[slotIndex]);
@@ -492,7 +497,7 @@ export class GameState {
   public placeHotbarItemOnPlot(
     hotbarSlot: number,
     plotSlotIndex: number
-  ): 'placed' | 'replaced' | 'same' | 'not-miner' | 'invalid' {
+  ): 'placed' | 'replaced' | 'same' | 'limit' | 'not-miner' | 'invalid' {
     if (!Number.isInteger(hotbarSlot) || hotbarSlot < 0 || hotbarSlot >= 9) return 'invalid';
     if (!Number.isInteger(plotSlotIndex) || plotSlotIndex < 0 || plotSlotIndex >= STAGE_PEDESTAL_COUNT) {
       return 'invalid';
@@ -503,7 +508,7 @@ export class GameState {
     return this.equipChibiOnPlot(plotSlotIndex, itemId);
   }
 
-  public placeSelectedOnPlot(slotIndex: number): 'placed' | 'inspect' | 'need-select' {
+  public placeSelectedOnPlot(slotIndex: number): 'placed' | 'limit' | 'inspect' | 'need-select' {
     if (slotIndex < 0 || slotIndex >= STAGE_PEDESTAL_COUNT) return 'need-select';
     const selectedId =
       this.selectedHotbarSlot >= 0 && this.selectedHotbarSlot < 9
@@ -511,8 +516,8 @@ export class GameState {
         : null;
 
     if (selectedId && getChibiById(selectedId)) {
-      this.equipChibiOnPlot(slotIndex, selectedId);
-      return 'placed';
+      const res = this.equipChibiOnPlot(slotIndex, selectedId);
+      return res === 'limit' ? 'limit' : 'placed';
     }
 
     if (this.plotMiners[slotIndex]) {
@@ -673,13 +678,35 @@ export class GameState {
     return mut.name;
   }
 
+  public getAvailableEnchantCount(enchantId: string): number {
+    const totalOwned = this.ownedEnchants[enchantId] || 0;
+    if (totalOwned <= 0) return 0;
+    let used = 0;
+    for (const u of this.plotUnits) {
+      if (u?.enchantId === enchantId) used++;
+    }
+    for (const arr of Object.values(this.stashedUnits)) {
+      if (!Array.isArray(arr)) continue;
+      for (const u of arr) {
+        if (u?.enchantId === enchantId) used++;
+      }
+    }
+    return Math.max(0, totalOwned - used);
+  }
+
   public togglePlotEnchant(slotIndex: number, enchantId: string): boolean {
     const unit = this.plotUnits[slotIndex];
     const enc = ENCHANTS.find((e) => e.id === enchantId);
     if (!unit || !enc) return false;
-    const owned = this.ownedEnchants[enchantId] || 0;
-    if (owned <= 0) return false;
-    unit.enchantId = unit.enchantId === enchantId ? null : enchantId;
+
+    if (unit.enchantId === enchantId) {
+      unit.enchantId = null;
+      this.emit();
+      return true;
+    }
+
+    if (this.getAvailableEnchantCount(enchantId) <= 0) return false;
+    unit.enchantId = enchantId;
     this.emit();
     return true;
   }
@@ -800,6 +827,12 @@ export class GameState {
   public selectHotbarSlot(slot: number): void {
     if (slot < 0 || slot >= 9) return;
     this.selectedHotbarSlot = this.selectedHotbarSlot === slot ? -1 : slot;
+    this.emit();
+  }
+
+  public clearHotbarSelection(): void {
+    if (this.selectedHotbarSlot === -1) return;
+    this.selectedHotbarSlot = -1;
     this.emit();
   }
 
@@ -1906,6 +1939,7 @@ export class GameState {
         this.hotbar = data.hotbar.map((slot) => (slot ? migrateOreId(slot) : null));
       }
       if (data.ownedPickaxes) this.ownedPickaxes = data.ownedPickaxes;
+      if (data.ownedEnchants) this.ownedEnchants = data.ownedEnchants;
       if (Array.isArray(data.plotMiners)) {
         this.plotMiners = Array.from({ length: STAGE_PEDESTAL_COUNT }, (_, i) => data.plotMiners?.[i] ?? null);
       }
@@ -1918,6 +1952,24 @@ export class GameState {
         }
         this.plotUnits = Array.from({ length: STAGE_PEDESTAL_COUNT }, (_, i) => data.plotUnits?.[i] ?? null);
       }
+      // Sanitize excess plot placements beyond owned chibi count
+      const placedCounts: Record<string, number> = {};
+      for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {
+        const cid = this.plotMiners[i];
+        if (!cid) continue;
+        const owned = this.miners[cid] || 0;
+        const seen = placedCounts[cid] || 0;
+        if (seen >= owned) {
+          const excess = this.plotUnits[i];
+          if (excess?.pickaxeId) {
+            this.ownedPickaxes[excess.pickaxeId] = (this.ownedPickaxes[excess.pickaxeId] || 0) + 1;
+          }
+          this.plotMiners[i] = null;
+          this.plotUnits[i] = null;
+        } else {
+          placedCounts[cid] = seen + 1;
+        }
+      }
       if (data.stashedUnits && typeof data.stashedUnits === 'object') {
         const nextStash: Record<string, PlotUnitState[]> = {};
         for (const [cid, arr] of Object.entries(data.stashedUnits)) {
@@ -1927,7 +1979,6 @@ export class GameState {
         }
         this.stashedUnits = nextStash;
       }
-      if (data.ownedEnchants) this.ownedEnchants = data.ownedEnchants;
       if (typeof data.enchantDice === 'number') this.enchantDice = data.enchantDice;
       if (typeof data.selectedHotbarSlot === 'number') this.selectedHotbarSlot = data.selectedHotbarSlot;
       if (data.chestMiners) this.chestMiners = data.chestMiners;

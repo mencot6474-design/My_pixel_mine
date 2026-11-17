@@ -313,6 +313,11 @@ export class MineScene3D {
         return;
       }
 
+      if (e.target !== dom) {
+        dom.classList.remove('mam-mining-cursor');
+        return;
+      }
+
       const hit = this.raycastAt(e.clientX, e.clientY);
       const hoveredSlot = hit?.userData.kind === 'pedestal' ? Number(hit.userData.slotIndex) : -1;
       const hoveredNode = hit?.userData.kind === 'ore-node' ? Number(hit.userData.nodeId) : -1;
@@ -321,25 +326,9 @@ export class MineScene3D {
       this.pit.setHoveredNode(hoveredNode);
 
       let overMineArea =
-        hoveredNode >= 0 || hit?.userData.kind === 'tower-ore' || hit?.userData.kind === 'tower-boss';
+        hoveredNode >= 0 || hit?.userData.kind === 'tower-ore' || hit?.userData.kind === 'tower-core';
       if (!overMineArea && this.mode === 'mine' && !this.crateHovered && hoveredSlot < 0) {
-        const rect = dom.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          this.pointer.set(
-            ((e.clientX - rect.left) / rect.width) * 2 - 1,
-            -((e.clientY - rect.top) / rect.height) * 2 + 1
-          );
-          this.raycaster.setFromCamera(this.pointer, this.camera);
-          const dirY = this.raycaster.ray.direction.y;
-          if (Math.abs(dirY) > 0.001) {
-            const t = -this.raycaster.ray.origin.y / dirY;
-            if (t > 0) {
-              const px = this.raycaster.ray.origin.x + this.raycaster.ray.direction.x * t;
-              const pz = this.raycaster.ray.origin.z + this.raycaster.ray.direction.z * t;
-              overMineArea = Math.abs(px) <= 7.0 && Math.abs(pz) <= 5.2;
-            }
-          }
-        }
+        overMineArea = this.getPitFloorHit(e.clientX, e.clientY) !== null;
       }
       dom.classList.toggle('mam-mining-cursor', overMineArea);
     });
@@ -370,7 +359,34 @@ export class MineScene3D {
       endDrag(e.pointerId);
       if (!wasClick) return;
 
+      if (e.target !== dom) {
+        dom.classList.remove('mam-mining-cursor');
+        return;
+      }
+
       const hit = this.raycastAt(e.clientX, e.clientY);
+      if (!hit && this.mode === 'mine') {
+        const pitPt = this.getPitFloorHit(e.clientX, e.clientY);
+        if (pitPt) {
+          const alive = this.pit.getAliveNodesInfo();
+          if (alive.length > 0) {
+            const nearby = alive.filter((n) => Math.hypot(n.worldX - pitPt.x, n.worldZ - pitPt.z) <= 6.5);
+            const pool = nearby.length > 0 ? nearby : alive;
+            let best = pool[0];
+            for (let i = 1; i < pool.length; i++) {
+              if (pool[i].hp > best.hp) best = pool[i];
+            }
+            const res = this.pit.hitNode(best.id, this.tapDamage, true);
+            if (res) {
+              this.emitDamageScreen(res.dmgDealt, best.worldX, best.worldY + 0.9, best.worldZ, true);
+              if (res.broken) {
+                this.callbacks.onOreBroken?.(res.variantKey);
+              }
+            }
+          }
+        }
+        return;
+      }
       if (!hit) return;
       if (hit.userData.kind === 'ore-node') {
         const res = this.pit.hitNode(Number(hit.userData.nodeId || 0), this.tapDamage, true);
@@ -463,6 +479,27 @@ export class MineScene3D {
 
   public pulsePedestal(slotIndex: number): void {
     this.pedestals[slotIndex]?.triggerChibiShowcase(1.4);
+  }
+
+  private getPitFloorHit(clientX: number, clientY: number): { x: number; z: number } | null {
+    const dom = this.renderer.domElement;
+    const rect = dom.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    this.pointer.set(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1
+    );
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    const dirY = this.raycaster.ray.direction.y;
+    if (Math.abs(dirY) <= 0.001) return null;
+    const t = -this.raycaster.ray.origin.y / dirY;
+    if (t <= 0) return null;
+    const px = this.raycaster.ray.origin.x + this.raycaster.ray.direction.x * t;
+    const pz = this.raycaster.ray.origin.z + this.raycaster.ray.direction.z * t;
+    if (Math.abs(px) <= 7.0 && Math.abs(pz) <= 5.2) {
+      return { x: px, z: pz };
+    }
+    return null;
   }
 
   private raycastAt(clientX: number, clientY: number): THREE.Object3D | null {

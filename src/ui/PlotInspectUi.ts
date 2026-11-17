@@ -202,15 +202,17 @@ export class PlotInspectUi {
     }
 
     return ENCHANTS.map((e) => {
-      const owned = this.state.ownedEnchants[e.id] || 0;
-      const eq = owned > 0 && unit.enchantId === e.id;
+      const totalOwned = this.state.ownedEnchants[e.id] || 0;
+      const spare = this.state.getAvailableEnchantCount(e.id);
+      const eq = unit.enchantId === e.id;
+      const available = eq || spare > 0;
       return `
-        <div class="${TW_STRIP_CARD} ${eq ? 'equipped' : ''} ${owned <= 0 ? 'locked' : ''}" style="${rarityVars(e.rarity)}" data-enchant-id="${e.id}" title="${owned > 0 ? 'Click to Equip' : 'Locked — Obtain from Enchant Roll'}">
+        <div class="${TW_STRIP_CARD} ${eq ? 'equipped' : ''} ${available ? '' : 'locked'}" style="${rarityVars(e.rarity)}" data-enchant-id="${e.id}" title="${eq ? 'Click to Unequip' : spare > 0 ? 'Click to Equip (1 per Chibi)' : totalOwned > 0 ? 'In Use on another Chibi' : 'Locked — Roll in Enhance Altar'}">
           ${eq ? '<span class="absolute top-0.5 right-1 text-[13px] font-black text-[#4ade80] [text-shadow:0_1px_2px_#000]">✓</span>' : ''}
           <div class="mam-card-name mam-outline-sm">${e.name}</div>
           <div class="flex-1 min-h-0 flex items-center justify-center pointer-events-none">${enchantAuraIconHtml(e.id, e.color, 36, e.name)}</div>
           <div class="mam-card-bottom">
-            <span class="mam-card-qty mam-outline-sm">${owned > 0 ? `x${owned}` : 'Locked'}</span>
+            <span class="mam-card-qty mam-outline-sm">${eq ? 'Equipped' : spare > 0 ? `x${spare}` : totalOwned > 0 ? 'In Use' : 'Locked'}</span>
           </div>
         </div>
       `;
@@ -392,7 +394,7 @@ export class PlotInspectUi {
         if (!id) return;
         if (!this.state.togglePlotEnchant(slot, id)) {
           audio.playSfx('ui-error');
-          this.pushToast('Locked! Obtain from Enchant Roll (coming soon)');
+          this.pushToast('Locked! Roll Enchants in Enhance Altar');
         } else {
           audio.playEnchantEquip();
           this.onRequestRender();
