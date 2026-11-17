@@ -1,5 +1,6 @@
 import { audio } from '../audio/AudioManager';
 import { GameState } from '../game/GameState';
+import { CG_ADS_ENABLED, cgRequestRewardedAd } from '../sdk/crazygames';
 import { fmtInt, fmtMoney, fmtShort } from '../game/NumberFormat';
 import {
   getGlobalGemGainBonus,
@@ -67,7 +68,11 @@ export class TowerUi {
         </div>
         ${
           this.state.towerKeys < TOWER_MAX_KEYS
-            ? `<button class="px-2.5 py-1 rounded-xl border border-amber-300/45 bg-[linear-gradient(135deg,rgba(245,158,11,0.85),rgba(180,83,9,0.92))] text-white text-[12px] font-black cursor-pointer hover:brightness-110 active:scale-95" data-action="tower-buy-key">+1 Key (${fmtMoney(keyCost)})</button>`
+            ? `<button class="px-2.5 py-1 rounded-xl border border-amber-300/45 bg-[linear-gradient(135deg,rgba(245,158,11,0.85),rgba(180,83,9,0.92))] text-white text-[12px] font-black cursor-pointer hover:brightness-110 active:scale-95" data-action="tower-buy-key">+1 Key (${fmtMoney(keyCost)})</button>${
+                CG_ADS_ENABLED
+                  ? `<button class="px-2.5 py-1 rounded-xl border border-emerald-300/45 bg-[linear-gradient(135deg,rgba(16,185,129,0.88),rgba(4,120,87,0.94))] text-white text-[12px] font-black cursor-pointer hover:brightness-110 active:scale-95" data-action="tower-ad-key">🎬 +1 Key (Ad)</button>`
+                  : ''
+              }`
             : ''
         }
         <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border border-pink-400/35 bg-[rgba(24,14,38,0.85)] text-[13px] font-black text-pink-200" data-tower-gems-pill="true">
@@ -310,11 +315,38 @@ export class TowerUi {
         </span>`;
 
     const invulLeft = run.isBossWave ? Math.max(0, run.bossInvulLeft ?? 0) : 0;
-    const hpLabel = run.isBossWave
+    const hpPctLabel = Math.max(0, Math.min(100, Math.round(hpPct)));
+    const hpLabel = `${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP (${hpPctLabel}%)`;
+    const bossShieldBadge = run.isBossWave
       ? invulLeft > 0
-        ? `🛡️ INVULNERABLE (${invulLeft.toFixed(1)}s) • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`
-        : `BOSS • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`
-      : `WAVE ${run.wave}/9 (${aliveOres}/${TOWER_ORE_ROCKS_PER_WAVE} Rocks) • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`;
+        ? `<span class="px-2 py-0.5 rounded-full border border-cyan-300/70 bg-cyan-950/90 text-cyan-200 text-[10px] font-black tracking-wider animate-pulse" data-tower-boss-shield="true">🛡️ SHIELD ${invulLeft.toFixed(1)}s</span>`
+        : `<span class="px-2 py-0.5 rounded-full border border-rose-400/70 bg-rose-950/90 text-rose-200 text-[10px] font-black tracking-wider" data-tower-boss-shield="true">⚡ VULNERABLE</span>`
+      : `<span class="px-2 py-0.5 rounded-full border border-cyan-300/60 bg-cyan-950/90 text-cyan-200 text-[10px] font-black tracking-wider" data-tower-wave-rocks="true">⛏️ ${aliveOres}/${TOWER_ORE_ROCKS_PER_WAVE} ROCKS LEFT</span>`;
+    const barHeaderHtml = `
+      <div class="w-full flex items-center justify-between gap-2 px-1">
+        <div class="inline-flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full ${
+            run.isBossWave
+              ? 'bg-rose-400 shadow-[0_0_8px_#fb7185] animate-ping'
+              : 'bg-cyan-400 shadow-[0_0_8px_#22d3ee] animate-pulse'
+          }"></span>
+          <span class="text-[12px] font-black uppercase tracking-wider ${
+            run.isBossWave ? 'text-amber-200' : 'text-cyan-200'
+          } [text-shadow:0_2px_6px_rgba(0,0,0,0.9)]">${
+            run.isBossWave ? 'SERAPHIM AI OVERLORD' : `WAVE ${run.wave}/9 • DATA NODES`
+          }</span>
+        </div>
+        ${bossShieldBadge}
+      </div>
+    `;
+    const barFillBg = run.isBossWave
+      ? invulLeft > 0
+        ? 'linear-gradient(90deg,#0891b2,#22d3ee,#38bdf8)'
+        : 'linear-gradient(90deg,#be123c,#ef4444,#f59e0b)'
+      : 'linear-gradient(90deg,#0284c7,#38bdf8,#8b5cf6)';
+    const barFrameCls = run.isBossWave
+      ? 'h-8 rounded-xl border-2 border-amber-300/70 shadow-[0_8px_24px_rgba(244,63,94,0.35),inset_0_2px_6px_rgba(0,0,0,0.75)]'
+      : 'h-8 rounded-xl border-2 border-cyan-300/60 shadow-[0_8px_22px_rgba(56,189,248,0.28),inset_0_2px_6px_rgba(0,0,0,0.75)]';
 
     return `
       <div class="${TW_TOP_CENTER}">
@@ -326,7 +358,7 @@ export class TowerUi {
 
       ${currencyRailHtml}
 
-      <div class="fixed top-[66px] left-1/2 -translate-x-1/2 w-[min(600px,calc(100%-24px))] flex flex-col items-center gap-2 pointer-events-none z-20">
+      <div class="fixed top-[66px] left-1/2 -translate-x-1/2 w-[min(600px,calc(100%-24px))] flex flex-col items-center gap-1.5 pointer-events-none z-20">
         <div class="flex items-center gap-2 flex-wrap justify-center">
           <span class="px-3 py-1 rounded-full border border-cyan-300/45 bg-[rgba(10,16,32,0.86)] backdrop-blur-md text-[13px] font-black text-white">
             FLOOR ${run.floor} • WAVE ${run.wave}/${run.maxWaves}
@@ -342,9 +374,17 @@ export class TowerUi {
           </span>
         </div>
 
-        <div class="relative w-full h-7 rounded-full border border-cyan-300/45 bg-[rgba(8,12,24,0.88)] shadow-[0_6px_18px_rgba(0,0,0,0.55)] overflow-hidden flex items-center justify-center">
-          <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-75" data-tower-hp-fill="true" style="width:${hpPct}%;background:linear-gradient(90deg,${run.isBossWave ? '#f59e0b,#ef4444' : '#38bdf8,#8b5cf6'})"></div>
-          <div class="relative z-[2] text-[13px] font-black text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.85)]" data-tower-hp-text="true">
+        ${barHeaderHtml}
+
+        <div class="relative w-full ${barFrameCls} bg-[rgba(8,12,24,0.92)] overflow-hidden flex items-center justify-center">
+          <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-75" data-tower-hp-fill="true" style="width:${hpPct}%;background:${barFillBg}"></div>
+          <div class="absolute inset-x-0 top-0 h-[38%] bg-gradient-to-b from-white/25 to-transparent pointer-events-none"></div>
+          <div class="absolute inset-0 flex justify-evenly pointer-events-none">
+            <span class="w-px h-full bg-black/35"></span>
+            <span class="w-px h-full bg-black/35"></span>
+            <span class="w-px h-full bg-black/35"></span>
+          </div>
+          <div class="relative z-[2] text-[13px] font-black tabular-nums text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.95)]" data-tower-hp-text="true">
             ${hpLabel}
           </div>
         </div>
@@ -371,15 +411,36 @@ export class TowerUi {
     const hpPct = run.maxHp > 0 ? Math.max(0, Math.min(100, (run.hp / run.maxHp) * 100)) : 0;
     const aliveOres = run.waveOres.filter((o) => o.alive).length;
     const fill = root.querySelector<HTMLElement>('[data-tower-hp-fill="true"]');
-    if (fill) fill.style.width = `${hpPct}%`;
+    const invulLeft = run.isBossWave ? Math.max(0, run.bossInvulLeft ?? 0) : 0;
+    if (fill) {
+      fill.style.width = `${hpPct}%`;
+      if (run.isBossWave) {
+        fill.style.background =
+          invulLeft > 0
+            ? 'linear-gradient(90deg,#0891b2,#22d3ee,#38bdf8)'
+            : 'linear-gradient(90deg,#be123c,#ef4444,#f59e0b)';
+      }
+    }
     const hpText = root.querySelector<HTMLElement>('[data-tower-hp-text="true"]');
     if (hpText) {
-      const invulLeft = run.isBossWave ? Math.max(0, run.bossInvulLeft ?? 0) : 0;
-      hpText.textContent = run.isBossWave
-        ? invulLeft > 0
-          ? `🛡️ INVULNERABLE (${invulLeft.toFixed(1)}s) • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`
-          : `BOSS • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`
-        : `WAVE ${run.wave}/9 (${aliveOres}/${TOWER_ORE_ROCKS_PER_WAVE} Rocks) • ${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP`;
+      const hpPctLabel = Math.max(0, Math.min(100, Math.round(hpPct)));
+      hpText.textContent = `${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP (${hpPctLabel}%)`;
+    }
+    const waveRocksBadge = root.querySelector<HTMLElement>('[data-tower-wave-rocks="true"]');
+    if (waveRocksBadge && !run.isBossWave) {
+      waveRocksBadge.textContent = `⛏️ ${aliveOres}/${TOWER_ORE_ROCKS_PER_WAVE} ROCKS LEFT`;
+    }
+    const shieldBadge = root.querySelector<HTMLElement>('[data-tower-boss-shield="true"]');
+    if (shieldBadge && run.isBossWave) {
+      if (invulLeft > 0) {
+        shieldBadge.className =
+          'px-2 py-0.5 rounded-full border border-cyan-300/70 bg-cyan-950/90 text-cyan-200 text-[10px] font-black tracking-wider animate-pulse';
+        shieldBadge.textContent = `🛡️ SHIELD ${invulLeft.toFixed(1)}s`;
+      } else {
+        shieldBadge.className =
+          'px-2 py-0.5 rounded-full border border-rose-400/70 bg-rose-950/90 text-rose-200 text-[10px] font-black tracking-wider';
+        shieldBadge.textContent = '⚡ VULNERABLE';
+      }
     }
     const oresBadge = root.querySelector<HTMLElement>('[data-tower-ores-badge="true"]');
     if (oresBadge && !run.isBossWave) {
@@ -429,6 +490,28 @@ export class TowerUi {
         this.pushToast('Not enough Cash!');
       }
       this.onRequestRender();
+    });
+
+    root.querySelector('[data-action="tower-ad-key"]')?.addEventListener('click', () => {
+      if (this.state.towerKeys >= TOWER_MAX_KEYS) {
+        audio.playSfx('ui-error');
+        this.pushToast('Tower Keys are already full!');
+        return;
+      }
+      cgRequestRewardedAd(
+        () => {
+          if (this.state.grantFreeTowerKey()) {
+            audio.playSfx('coin-alt');
+            this.pushToast('+1 Free Tower Key!');
+          }
+          this.onRequestRender();
+        },
+        () => {
+          audio.playSfx('ui-error');
+          this.pushToast('Ad not available right now.');
+        },
+        (muted) => audio.setAdMuted(muted)
+      );
     });
 
     root.querySelector('[data-action="tower-enter-run"]')?.addEventListener('click', () => {

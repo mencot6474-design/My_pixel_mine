@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { assetUrl } from '../game/AssetUrl';
-import { ChibiAnimState, ChibiDef } from './ChibiCatalog';
+import {
+  ChibiAnimState,
+  ChibiDef,
+  LEFT_FACING_ATTACK_IDS,
+  LEFT_FACING_WALK_IDS,
+} from './ChibiCatalog';
 
 interface LoadedPoseMeta {
   texture: THREE.Texture;
@@ -221,12 +226,23 @@ export class ChibiSprite3D {
     if (state !== 'attack') {
       this.attackSwingTimer = 0;
     }
+    this.applyFacing();
     void this.applyPose(state);
   }
 
   public setFacing(sign: 1 | -1): void {
     this.facing = sign;
-    this.mesh.scale.x = sign;
+    this.applyFacing();
+  }
+
+  private applyFacing(): void {
+    const invert =
+      this.animState === 'dash'
+        ? (this.def.walkFacesLeft ?? LEFT_FACING_WALK_IDS.has(this.def.id))
+        : this.animState === 'attack'
+          ? LEFT_FACING_ATTACK_IDS.has(this.def.id)
+          : false;
+    this.mesh.scale.x = invert ? -this.facing : this.facing;
   }
 
   public triggerAttack(durationSec = 0.42): void {

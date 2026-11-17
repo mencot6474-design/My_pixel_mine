@@ -102,8 +102,8 @@ describe('Pure 3D Mine World', () => {
 
   it('registers all 30 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
     expect(CHIBI_CATALOG.length).toBe(30);
-    expect(getChibiById('solar-striker')?.spriteUrl).toBe('/chibi/solar-striker/idle.png');
-    expect(getChibiById('solar-striker')?.poses.attack).toBe('/chibi/solar-striker/attack.png');
+    expect(getChibiById('solar-striker')?.spriteUrl).toBe('/chibi/solar-striker/idle.webp');
+    expect(getChibiById('solar-striker')?.poses.attack).toBe('/chibi/solar-striker/attack.webp');
     expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.idle, 4)).toBe(0);
     expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.dash, 4)).toBe(0.25);
     expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.attack, 4)).toBe(0.5);
@@ -202,7 +202,8 @@ describe('Pure 3D Mine World', () => {
     expect(gs.getWorldIndexProgress('astral')).toEqual({ found: 0, total: 13, pct: 0 });
     expect(gs.getWorldIndexProgress('starwell')).toEqual({ found: 0, total: 13, pct: 0 });
     expect(gs.hotbar.every((s) => s === null)).toBe(true);
-    expect(gs.plotMiners.every((s) => s === null)).toBe(true);
+    expect(gs.plotMiners[0]).toBe('astral-recruit');
+    expect(gs.plotMiners.slice(1).every((s) => s === null)).toBe(true);
     gs.onOreBroken('geode', () => 0.01);
     expect(gs.getChestItemCount()).toBeGreaterThan(0);
     const taken = gs.takeAllFromChest();
@@ -255,8 +256,8 @@ describe('Pure 3D Mine World', () => {
   it('buys Gem Shop potions into Backpack, activates via useGemPotion, and applies gameplay multipliers', () => {
     expect(GEM_SHOP_ITEMS.length).toBe(8);
     for (const pot of GEM_SHOP_ITEMS) {
-      expect(existsSync(resolve(process.cwd(), 'public', 'potions', `${pot.id}.png`))).toBe(true);
-      expect(gemPotionIconHtml(pot.id, 64, pot.name, pot.color)).toContain(`potions/${pot.id}.png`);
+      expect(existsSync(resolve(process.cwd(), 'public', 'potions', `${pot.id}.webp`))).toBe(true);
+      expect(gemPotionIconHtml(pot.id, 64, pot.name, pot.color)).toContain(`potions/${pot.id}.webp`);
     }
     const gs = new GameState();
     let emits = 0;
@@ -593,10 +594,10 @@ describe('Pure 3D Mine World', () => {
     expect(taken).toBe(6);
     expect(gs.hotbar.slice(0, 3)).toEqual(['solar-striker', 'coalite', 'ochrite']);
 
-    // Selecting an ore slot must not place it on a plot pedestal
+    // Selecting an ore slot must not place it on an empty plot pedestal
     gs.selectHotbarSlot(1);
-    expect(gs.placeSelectedOnPlot(0)).toBe('need-select');
-    expect(gs.plotMiners[0]).toBeNull();
+    expect(gs.placeSelectedOnPlot(1)).toBe('need-select');
+    expect(gs.plotMiners[1]).toBeNull();
 
     // Selling out an ore clears it from the hotbar
     expect(gs.sellOre('coalite', true)).toBeGreaterThan(0);
@@ -1011,8 +1012,8 @@ describe('Pure 3D Mine World', () => {
     expect(WEATHER_DURATION_MS).toBe(180_000);
     expect(WEATHERS.map((w) => w.id)).toEqual(['light_rain', 'snow_rain', 'bloodmoon', 'void', 'celestial']);
     for (const w of WEATHERS) {
-      expect(existsSync(resolve(process.cwd(), 'public', 'weathers', `${w.id}.png`))).toBe(true);
-      expect(weatherIconHtml(w.id, 38, w.name)).toContain(`weathers/${w.id}.png`);
+      expect(existsSync(resolve(process.cwd(), 'public', 'weathers', `${w.id}.webp`))).toBe(true);
+      expect(weatherIconHtml(w.id, 38, w.name)).toContain(`weathers/${w.id}.webp`);
     }
     const totalChance = WEATHERS.reduce((sum, w) => sum + w.chancePct, 0);
     expect(totalChance).toBe(100);
@@ -1177,8 +1178,8 @@ describe('Pure 3D Mine World', () => {
     for (const id of w6Ids) {
       const def = getChibiById(id);
       expect(def).toBeDefined();
-      expect(def?.poses.idle).toBe(`/chibi/${id}/idle.png`);
-      expect(def?.poses.pose).toBe(`/chibi/${id}/pose.png`);
+      expect(def?.poses.idle).toBe(`/chibi/${id}/idle.webp`);
+      expect(def?.poses.pose).toBe(`/chibi/${id}/pose.webp`);
     }
   });
 
@@ -1289,8 +1290,8 @@ describe('Pure 3D Mine World', () => {
     for (let i = 0; i < PICKAXES.length; i++) {
       const p = PICKAXES[i];
       expect(DEFAULT_PICKAXE_STOCK[p.id]).toBeGreaterThanOrEqual(1);
-      expect(existsSync(resolve(process.cwd(), 'public', 'pickaxes', `${p.id}.png`))).toBe(true);
-      expect(pickaxeIconHtml(p.id, 64, p.name)).toContain(`pickaxes/${p.id}.png`);
+      expect(existsSync(resolve(process.cwd(), 'public', 'pickaxes', `${p.id}.webp`))).toBe(true);
+      expect(pickaxeIconHtml(p.id, 64, p.name)).toContain(`pickaxes/${p.id}.webp`);
       if (i > 0) {
         const prev = PICKAXES[i - 1];
         expect(p.cost).toBeGreaterThan(prev.cost);
@@ -1332,27 +1333,27 @@ describe('Pure 3D Mine World', () => {
     ] as const;
 
     for (const k of hudKeys) {
-      expect(existsSync(resolve(process.cwd(), 'public', 'hud', `${k}.png`))).toBe(true);
-      expect(hudIconHtml(k, 28, k)).toContain(`hud/${k}.png`);
+      expect(existsSync(resolve(process.cwd(), 'public', 'hud', `${k}.webp`))).toBe(true);
+      expect(hudIconHtml(k, 28, k)).toContain(`hud/${k}.webp`);
     }
-    expect(existsSync(resolve(process.cwd(), 'public', 'hud', 'tower.png'))).toBe(true);
-    expect(towerIconHtml(24)).toContain('hud/tower.png');
+    expect(existsSync(resolve(process.cwd(), 'public', 'hud', 'tower.webp'))).toBe(true);
+    expect(towerIconHtml(24)).toContain('hud/tower.webp');
   });
 
   it('serves 2D fantasy PNG art for all 10 Enchant Auras and Enchanted Dice', () => {
     for (const enc of ENCHANTS) {
-      expect(existsSync(resolve(process.cwd(), 'public', 'enchants', `${enc.id}.png`))).toBe(true);
-      expect(enchantAuraIconHtml(enc.id, enc.color, 46, enc.name)).toContain(`enchants/${enc.id}.png`);
+      expect(existsSync(resolve(process.cwd(), 'public', 'enchants', `${enc.id}.webp`))).toBe(true);
+      expect(enchantAuraIconHtml(enc.id, enc.color, 46, enc.name)).toContain(`enchants/${enc.id}.webp`);
     }
-    expect(existsSync(resolve(process.cwd(), 'public', 'enchants', 'enchant_dice.png'))).toBe(true);
-    expect(enchantDiceIconHtml(34)).toContain('enchants/enchant_dice.png');
+    expect(existsSync(resolve(process.cwd(), 'public', 'enchants', 'enchant_dice.webp'))).toBe(true);
+    expect(enchantDiceIconHtml(34)).toContain('enchants/enchant_dice.webp');
   });
 
   it('serves 2D fantasy PNG art for all 48 World 1–6 ores', () => {
     expect(ORES.length).toBe(48);
     for (const ore of ORES) {
-      expect(existsSync(resolve(process.cwd(), 'public', 'ores', `${ore.id}.png`))).toBe(true);
-      expect(oreIconSvg(ore.color, ore.secondaryColor, ore.rarity, `ix_${ore.id}`)).toContain(`ores/${ore.id}.png`);
+      expect(existsSync(resolve(process.cwd(), 'public', 'ores', `${ore.id}.webp`))).toBe(true);
+      expect(oreIconSvg(ore.color, ore.secondaryColor, ore.rarity, `ix_${ore.id}`)).toContain(`ores/${ore.id}.webp`);
     }
   });
 
@@ -1377,7 +1378,7 @@ describe('Pure 3D Mine World', () => {
     shop.update(0.05, 1.0, 'shop', cam);
     const shopAnchors = shop.getShopAnchors(cam, 1280, 720, new THREE.Vector3());
     expect(shopAnchors).toHaveLength(5);
-    expect(existsSync(resolve(process.cwd(), 'public', 'pickaxes', 'sunwheel.png'))).toBe(true);
+    expect(existsSync(resolve(process.cwd(), 'public', 'pickaxes', 'sunwheel.webp'))).toBe(true);
   });
 
   it('supports Chibi Star-Up (★0–★5) while protecting placed plot units and boosting DPS/mining speed', () => {

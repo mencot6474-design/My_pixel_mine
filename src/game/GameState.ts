@@ -218,8 +218,11 @@ export class GameState {
   public ores: Record<string, number> = {};
   public others: Record<string, number> = {};
   public hotbar: (string | null)[] = Array(9).fill(null);
-  public plotMiners: (string | null)[] = Array(STAGE_PEDESTAL_COUNT).fill(null);
-  public plotUnits: (PlotUnitState | null)[] = Array(STAGE_PEDESTAL_COUNT).fill(null);
+  public plotMiners: (string | null)[] = ['astral-recruit', ...Array(STAGE_PEDESTAL_COUNT - 1).fill(null)];
+  public plotUnits: (PlotUnitState | null)[] = [
+    GameState.createFreshUnit('astral-recruit'),
+    ...Array(STAGE_PEDESTAL_COUNT - 1).fill(null),
+  ];
   public stashedUnits: Record<string, PlotUnitState[]> = {};
   public chibiStars: Record<string, number> = {};
   public ownedPickaxes: Record<string, number> = {};
@@ -1777,6 +1780,21 @@ export class GameState {
     this.towerKeys += 1;
     this.emit();
     return 'bought';
+  }
+
+  public grantFreeTowerKey(): boolean {
+    this.syncTowerKeys();
+    if (this.towerKeys >= TOWER_MAX_KEYS) return false;
+    this.towerKeys += 1;
+    this.emit();
+    return true;
+  }
+
+  public grantAdGems(amount = 150): number {
+    const safeAmount = Math.max(1, Math.floor(amount));
+    this.gems += safeAmount;
+    this.emit();
+    return safeAmount;
   }
 
   private save(): void {

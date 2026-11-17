@@ -1,4 +1,5 @@
 import { audio } from '../audio/AudioManager';
+import { cgHappyTime } from '../sdk/crazygames';
 import { getChibiById } from '../game3d/ChibiCatalog';
 import {
   ENCHANTS,
@@ -261,6 +262,7 @@ export class PlotInspectUi {
     const updated = this.state.getPlotUnit(slot);
     if (updated && isHighTierMutation(updated.mutationId)) {
       audio.playMutationRoll(true);
+      cgHappyTime();
       this.pendingMutationConfirm = {
         slot,
         mutId: updated.mutationId,

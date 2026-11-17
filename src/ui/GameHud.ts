@@ -1,8 +1,9 @@
 import { audio } from '../audio/AudioManager';
+import { cgHappyTime, cgTryMidgameAd } from '../sdk/crazygames';
 import { getChibiById } from '../game3d/ChibiCatalog';
 import { OreHpScreen, PlotAnchorScreen, SceneMode } from '../game3d/MineScene3D';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
-import { AltarPedestalAnchor, ShopStationAnchor, ShopStationId } from '../game3d/ShopWorld3D';
+import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId } from '../game3d/ShopWorld3D';
 import {
   ENCHANT_DICE_GEM_COST,
   ENCHANTS,
@@ -46,9 +47,6 @@ import {
   TW_HOTBAR_SLOT,
   TW_PLUS_BTN,
   TW_QUICK_BTN_CHEST,
-  TW_QUICK_BTN_DAILY,
-  TW_QUICK_BTN_QUEST,
-  TW_QUICK_BTN_TRADE,
   TW_SHOP_DOCK_BTN_BASE,
   TW_SHOP_SIGN_BASE,
   TW_SHOPS_PILL,
@@ -62,6 +60,7 @@ import {
 import { PlotInspectUi } from './PlotInspectUi';
 import { ShopModalsUi } from './ShopModalsUi';
 import { TowerUi } from './TowerUi';
+import { TutorialUi } from './TutorialUi';
 import { UpgradesWorldsUi } from './UpgradesWorldsUi';
 
 export class GameHud {
@@ -74,6 +73,7 @@ export class GameHud {
   private oreBarLayerEl: HTMLElement | null = null;
   private dmgLayerEl: HTMLElement | null = null;
   private shopLayerEl: HTMLElement | null = null;
+  private shopBubbleLayerEl: HTMLElement | null = null;
   private toasts: Array<{ id: number; text: string }> = [];
   private nextToastId = 1;
   private enchantSpinning = false;
@@ -110,6 +110,7 @@ export class GameHud {
   private readonly upgradesUi: UpgradesWorldsUi;
   private readonly plotInspectUi: PlotInspectUi;
   private readonly towerUi: TowerUi;
+  private readonly tutorialUi: TutorialUi;
 
   constructor(
     private readonly root: HTMLElement,
@@ -133,7 +134,10 @@ export class GameHud {
       highlightPlot: (slotIndex: number | null) => void;
       pulsePlot: (slotIndex: number) => void;
     },
-    private readonly onWeatherChange?: (weatherId: WeatherId) => void
+    private readonly onWeatherChange?: (weatherId: WeatherId) => void,
+    private readonly onSetTutorialPitZoom?: (zoomed: boolean) => void,
+    private readonly onSetTutorialChestZoom?: (zoomed: boolean) => void,
+    private readonly onSetTutorialSellShopZoom?: (zoomed: boolean) => void
   ) {
     this.shopUi = new ShopModalsUi(this.state, (msg) => this.pushToast(msg));
     this.collectionUi = new CollectionModalsUi(
@@ -163,6 +167,30 @@ export class GameHud {
       () => this.setSceneMode('shop'),
       () => this.render()
     );
+    this.tutorialUi = new TutorialUi(
+      (zoomed) => this.onSetTutorialPitZoom?.(zoomed),
+      (zoomed) => this.onSetTutorialChestZoom?.(zoomed),
+      (zoomed) => this.onSetTutorialSellShopZoom?.(zoomed)
+    );
+    this.tutorialUi.mount();
+    this.root.addEventListener(
+      'click',
+      (e) => {
+        if (!this.tutorialUi.isActive()) return;
+        const target = e.target as HTMLElement | null;
+        if (!target) return;
+        if (target.closest('[data-inspect-action="up-dmg"]')) {
+          window.setTimeout(() => this.tutorialUi.notifyUpgraded(), 20);
+        } else if (target.closest('[data-action="chest-take-all"]')) {
+          window.setTimeout(() => this.tutorialUi.notifyChestTaken(), 20);
+        } else if (target.closest('[data-sell-key]')) {
+          window.setTimeout(() => this.tutorialUi.notifySellOreSelected(), 20);
+        } else if (target.closest('[data-action="sell-selected"]')) {
+          window.setTimeout(() => this.tutorialUi.notifySellCompleted(), 20);
+        }
+      },
+      true
+    );
 
     this.plotLayerEl = document.createElement('div');
     this.plotLayerEl.id = 'plotOverlayLayer';
@@ -183,6 +211,11 @@ export class GameHud {
     this.shopLayerEl.id = 'shopOverlayLayer';
     this.shopLayerEl.className = 'fixed inset-0 pointer-events-none z-[16]';
     document.body.appendChild(this.shopLayerEl);
+
+    this.shopBubbleLayerEl = document.createElement('div');
+    this.shopBubbleLayerEl.id = 'shopBubbleLayer';
+    this.shopBubbleLayerEl.className = 'fixed inset-0 pointer-events-none z-[14] overflow-hidden';
+    document.body.appendChild(this.shopBubbleLayerEl);
 
     this.state.subscribe(() => {
       this.onSyncPlots(this.state.getEquippedPlotMinerIds());
@@ -437,6 +470,14 @@ export class GameHud {
     this.render();
   }
 
+  public updateChestAnchor(anchor: { x: number; y: number; visible: boolean }): void {
+    this.tutorialUi.updateChestAnchor(anchor.x, anchor.y, anchor.visible);
+  }
+
+  public notifyTutorialOreBroken(): void {
+    this.tutorialUi.notifyOreBroken();
+  }
+
   public updatePlotAnchors(anchors: PlotAnchorScreen[]): void {
     if (!this.plotLayerEl) return;
     if (this.inspectedSlot !== null || this.activeModal !== 'none') {
@@ -494,6 +535,10 @@ export class GameHud {
         lbl.style.top = `${a.labelY}px`;
       }
     }
+    const plot0 = anchors.find((a) => a.slotIndex === 0);
+    if (plot0) {
+      this.tutorialUi.updatePlotAnchor(plot0.labelX, plot0.labelY, plot0.visible);
+    }
   }
 
   public openModal(kind: ModalKind): void {
@@ -519,7 +564,8 @@ export class GameHud {
   }
 
   public setSceneMode(mode: SceneMode): void {
-    if (this.sceneMode === 'tower' && mode !== 'tower' && this.state.towerRun) {
+    const leavingTower = this.sceneMode === 'tower' && mode !== 'tower';
+    if (leavingTower && this.state.towerRun) {
       this.state.abandonTowerRun();
     }
     if (mode !== 'altar') {
@@ -551,6 +597,9 @@ export class GameHud {
       this.syncTowerSceneVisual();
     } else {
       audio.setSceneMode(mode);
+      if (leavingTower) {
+        cgTryMidgameAd(() => {}, (muted) => audio.setAdMuted(muted));
+      }
     }
     this.render();
   }
@@ -595,6 +644,7 @@ export class GameHud {
       if (res.milestoneUnlocked) {
         this.pushToast(`Tower Milestone Floor ${res.milestoneUnlocked} Unlocked!`);
       }
+      cgHappyTime();
       this.syncTowerSceneVisual();
       this.render();
     } else if (res.waveCleared) {
@@ -814,6 +864,44 @@ export class GameHud {
       el.style.left = `${a.x}px`;
       el.style.top = `${a.y}px`;
     }
+    if (this.tutorialUi.isActive()) {
+      this.tutorialUi.syncDomArrow();
+    }
+  }
+
+  public updateShopChibiBubbles(bubbles: ShopChibiBubbleAnchor[]): void {
+    if (!this.shopBubbleLayerEl) return;
+    if (this.sceneMode !== 'shop' || this.activeModal !== 'none' || bubbles.length === 0) {
+      if (this.shopBubbleLayerEl.innerHTML !== '') {
+        this.shopBubbleLayerEl.innerHTML = '';
+        this.shopBubbleLayerEl.dataset.keys = '';
+      }
+      return;
+    }
+
+    const key = bubbles.map((b) => `${b.id}:${b.text}`).join('|');
+    if (this.shopBubbleLayerEl.dataset.keys !== key) {
+      this.shopBubbleLayerEl.dataset.keys = key;
+      this.shopBubbleLayerEl.innerHTML = bubbles
+        .map(
+          (b) => `
+          <div class="absolute -translate-x-1/2 -translate-y-full pointer-events-none" data-chibi-bubble="${b.id}">
+            <div class="relative px-3 py-1.5 rounded-2xl border-2 border-slate-900 bg-white text-slate-950 text-[12px] font-black leading-tight whitespace-nowrap shadow-[0_6px_16px_rgba(0,0,0,0.45)]">
+              ${b.text}
+              <span class="absolute left-1/2 -bottom-[7px] -translate-x-1/2 w-3 h-3 bg-white border-r-2 border-b-2 border-slate-900 rotate-45"></span>
+            </div>
+          </div>
+        `
+        )
+        .join('');
+    }
+
+    for (const b of bubbles) {
+      const el = this.shopBubbleLayerEl.querySelector<HTMLElement>(`[data-chibi-bubble="${b.id}"]`);
+      if (!el) continue;
+      el.style.left = `${Math.round(b.x)}px`;
+      el.style.top = `${Math.round(b.y)}px`;
+    }
   }
 
   public updateAltarAnchors(anchors: AltarPedestalAnchor[]): void {
@@ -850,6 +938,9 @@ export class GameHud {
       if (!el) continue;
       el.style.left = `${a.x}px`;
       el.style.top = `${a.y}px`;
+    }
+    if (this.tutorialUi.isActive()) {
+      this.tutorialUi.syncDomArrow();
     }
   }
 
@@ -995,17 +1086,8 @@ export class GameHud {
 
       const chestCount = this.state.getChestItemCount();
       const quickButtonsHtml = `
-        <button class="${TW_QUICK_BTN_DAILY} mam-outline-sm" title="Daily Rewards" data-action="quick-daily">
-          <span class="${TW_BADGE_BASE} min-w-[17px] h-[17px] px-1 text-[11px]">1</span>${hudIconHtml('daily', 20, 'Daily')}
-        </button>
         <button class="${TW_QUICK_BTN_CHEST} mam-outline-sm" title="Chest (${fmtInt(chestCount)})" data-action="open-chest">
           ${hudIconHtml('chest', 22, 'Chest')}
-        </button>
-        <button class="${TW_QUICK_BTN_QUEST} mam-outline-sm" title="Quests" data-action="quick-quest">
-          ${hudIconHtml('quest', 20, 'Quests')}
-        </button>
-        <button class="${TW_QUICK_BTN_TRADE} mam-outline-sm" data-action="quick-trade">
-          ${hudIconHtml('trade', 20, 'Trade')} <span>Trade</span>
         </button>
       `;
 
@@ -1083,6 +1165,7 @@ export class GameHud {
         const nextGrid = this.root.querySelector<HTMLElement>('.mam-grid');
         if (nextGrid) nextGrid.scrollTop = prevGridScroll;
       }
+      this.tutorialUi.syncView(this.sceneMode, this.activeModal, this.inspectedSlot);
     }
   }
 
@@ -1375,15 +1458,12 @@ export class GameHud {
           audio.playSfx('ui-tab');
           this.weatherPopoverOpen = !this.weatherPopoverOpen;
           this.syncWeatherWidget(true);
-        } else if (
-          action === 'open-shop' ||
-          action === 'gems-plus' ||
-          action === 'quick-daily' ||
-          action === 'quick-quest' ||
-          action === 'quick-trade'
-        ) {
-          audio.playSfx('ui-click');
-          this.pushToast('Coming soon!');
+        } else if (action === 'open-shop') {
+          audio.playSfx('ui-open');
+          this.setSceneMode('shop');
+        } else if (action === 'gems-plus') {
+          audio.playSfx('ui-open');
+          this.openModal('gem-shop');
         }
       });
     });

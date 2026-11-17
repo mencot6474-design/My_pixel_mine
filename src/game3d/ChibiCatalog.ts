@@ -29,14 +29,27 @@ export interface ChibiDef {
   baseDps: number;
   poseScale?: number;
   smoothFilter?: boolean;
+  walkFacesLeft?: boolean;
 }
+
+export const LEFT_FACING_WALK_IDS = new Set<string>([
+  'astral-recruit',
+  'solar-striker',
+  'seraph-paladin',
+  'eclipse-warlord',
+  'chrono-sovereign',
+  'cyber-ki-brawler',
+  'tidebound-corsair',
+]);
+
+export const LEFT_FACING_ATTACK_IDS = new Set<string>(['eclipse-warlord']);
 
 function makePoses(id: string): ChibiPoseUrls {
   return {
-    idle: `/chibi/${id}/idle.png`,
-    walk: `/chibi/${id}/walk.png`,
-    attack: `/chibi/${id}/attack.png`,
-    pose: `/chibi/${id}/pose.png`,
+    idle: `/chibi/${id}/idle.webp`,
+    walk: `/chibi/${id}/walk.webp`,
+    attack: `/chibi/${id}/attack.webp`,
+    pose: `/chibi/${id}/pose.webp`,
   };
 }
 
@@ -51,7 +64,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'astral-recruit',
     name: 'Onee',
-    spriteUrl: '/chibi/astral-recruit/idle.png',
+    spriteUrl: '/chibi/astral-recruit/idle.webp',
     poses: makePoses('astral-recruit'),
     frames: 4,
     rarity: 'common',
@@ -62,7 +75,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'solar-striker',
     name: 'DreamQueen',
-    spriteUrl: '/chibi/solar-striker/idle.png',
+    spriteUrl: '/chibi/solar-striker/idle.webp',
     poses: makePoses('solar-striker'),
     frames: 4,
     rarity: 'uncommon',
@@ -73,7 +86,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'frost-vanguard',
     name: 'Antagonis',
-    spriteUrl: '/chibi/frost-vanguard/idle.png',
+    spriteUrl: '/chibi/frost-vanguard/idle.webp',
     poses: makePoses('frost-vanguard'),
     frames: 4,
     rarity: 'rare',
@@ -84,7 +97,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'volt-kensei',
     name: 'BloomHell',
-    spriteUrl: '/chibi/volt-kensei/idle.png',
+    spriteUrl: '/chibi/volt-kensei/idle.webp',
     poses: makePoses('volt-kensei'),
     frames: 4,
     rarity: 'uncommon',
@@ -95,7 +108,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'pyre-kitsune',
     name: 'Shadow',
-    spriteUrl: '/chibi/pyre-kitsune/idle.png',
+    spriteUrl: '/chibi/pyre-kitsune/idle.webp',
     poses: makePoses('pyre-kitsune'),
     frames: 4,
     rarity: 'rare',
@@ -106,7 +119,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'zephyr-esper',
     name: 'Doom',
-    spriteUrl: '/chibi/zephyr-esper/idle.png',
+    spriteUrl: '/chibi/zephyr-esper/idle.webp',
     poses: makePoses('zephyr-esper'),
     frames: 4,
     rarity: 'epic',
@@ -117,7 +130,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'mantis-monarch',
     name: 'KuboJin',
-    spriteUrl: '/chibi/mantis-monarch/idle.png',
+    spriteUrl: '/chibi/mantis-monarch/idle.webp',
     poses: makePoses('mantis-monarch'),
     frames: 4,
     rarity: 'rare',
@@ -128,7 +141,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'vortex-mimic',
     name: 'youngShine',
-    spriteUrl: '/chibi/vortex-mimic/idle.png',
+    spriteUrl: '/chibi/vortex-mimic/idle.webp',
     poses: makePoses('vortex-mimic'),
     frames: 4,
     rarity: 'epic',
@@ -139,7 +152,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'vesper-ward',
     name: 'holychill',
-    spriteUrl: '/chibi/vesper-ward/idle.png',
+    spriteUrl: '/chibi/vesper-ward/idle.webp',
     poses: makePoses('vesper-ward'),
     frames: 4,
     rarity: 'legendary',
@@ -150,7 +163,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'tempest-drake',
     name: 'Dekok',
-    spriteUrl: '/chibi/tempest-drake/idle.png',
+    spriteUrl: '/chibi/tempest-drake/idle.webp',
     poses: makePoses('tempest-drake'),
     frames: 4,
     rarity: 'epic',
@@ -161,7 +174,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'titan-dread',
     name: 'danuu.D',
-    spriteUrl: '/chibi/titan-dread/idle.png',
+    spriteUrl: '/chibi/titan-dread/idle.webp',
     poses: makePoses('titan-dread'),
     frames: 4,
     rarity: 'legendary',
@@ -172,7 +185,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'seraph-paladin',
     name: 'Perryy.B',
-    spriteUrl: '/chibi/seraph-paladin/idle.png',
+    spriteUrl: '/chibi/seraph-paladin/idle.webp',
     poses: makePoses('seraph-paladin'),
     frames: 4,
     rarity: 'mythic',
@@ -183,7 +196,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'nebula-archon',
     name: 'VoidClaw',
-    spriteUrl: '/chibi/nebula-archon/idle.png',
+    spriteUrl: '/chibi/nebula-archon/idle.webp',
     poses: makePoses('nebula-archon'),
     frames: 4,
     rarity: 'legendary',
@@ -194,7 +207,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'eclipse-warlord',
     name: 'BangJoo',
-    spriteUrl: '/chibi/eclipse-warlord/idle.png',
+    spriteUrl: '/chibi/eclipse-warlord/idle.webp',
     poses: makePoses('eclipse-warlord'),
     frames: 4,
     rarity: 'rainbow',
@@ -205,7 +218,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'chrono-sovereign',
     name: 'LouisBerg',
-    spriteUrl: '/chibi/chrono-sovereign/idle.png',
+    spriteUrl: '/chibi/chrono-sovereign/idle.webp',
     poses: makePoses('chrono-sovereign'),
     frames: 4,
     rarity: 'mythic',
@@ -218,7 +231,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'tropic-blaze',
     name: 'IMbot',
-    spriteUrl: '/chibi/tropic-blaze/idle.png',
+    spriteUrl: '/chibi/tropic-blaze/idle.webp',
     poses: makePoses('tropic-blaze'),
     frames: 4,
     rarity: 'exotic',
@@ -229,7 +242,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'cyber-ki-brawler',
     name: 'TheOne',
-    spriteUrl: '/chibi/cyber-ki-brawler/idle.png',
+    spriteUrl: '/chibi/cyber-ki-brawler/idle.webp',
     poses: makePoses('cyber-ki-brawler'),
     frames: 4,
     rarity: 'secret',
@@ -240,7 +253,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'aqua-blitz',
     name: 'Chainwrath',
-    spriteUrl: '/chibi/aqua-blitz/idle.png',
+    spriteUrl: '/chibi/aqua-blitz/idle.webp',
     poses: makePoses('aqua-blitz'),
     frames: 4,
     rarity: 'exotic',
@@ -251,7 +264,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'glacier-tide',
     name: 'Clops Blazing',
-    spriteUrl: '/chibi/glacier-tide/idle.png',
+    spriteUrl: '/chibi/glacier-tide/idle.webp',
     poses: makePoses('glacier-tide'),
     frames: 4,
     rarity: 'secret',
@@ -262,7 +275,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'tidebound-corsair',
     name: 'BocilKematian',
-    spriteUrl: '/chibi/tidebound-corsair/idle.png',
+    spriteUrl: '/chibi/tidebound-corsair/idle.webp',
     poses: makePoses('tidebound-corsair'),
     frames: 4,
     rarity: 'exotic',
@@ -273,7 +286,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'chroma-quill',
     name: 'MasterOgoy',
-    spriteUrl: '/chibi/chroma-quill/idle.png',
+    spriteUrl: '/chibi/chroma-quill/idle.webp',
     poses: makePoses('chroma-quill'),
     frames: 4,
     rarity: 'secret',
@@ -284,7 +297,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'lotus-frost',
     name: 'Ibnuu.G',
-    spriteUrl: '/chibi/lotus-frost/idle.png',
+    spriteUrl: '/chibi/lotus-frost/idle.webp',
     poses: makePoses('lotus-frost'),
     frames: 4,
     rarity: 'exotic',
@@ -295,7 +308,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'rime-duchess',
     name: 'BlackDragon',
-    spriteUrl: '/chibi/rime-duchess/idle.png',
+    spriteUrl: '/chibi/rime-duchess/idle.webp',
     poses: makePoses('rime-duchess'),
     frames: 4,
     rarity: 'secret',
@@ -306,7 +319,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'zephyr-raven',
     name: 'VoidRaven',
-    spriteUrl: '/chibi/zephyr-raven/idle.png',
+    spriteUrl: '/chibi/zephyr-raven/idle.webp',
     poses: makePoses('zephyr-raven'),
     frames: 4,
     rarity: 'exotic',
@@ -317,7 +330,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'nebula-hex',
     name: 'VoidWarlord',
-    spriteUrl: '/chibi/nebula-hex/idle.png',
+    spriteUrl: '/chibi/nebula-hex/idle.webp',
     poses: makePoses('nebula-hex'),
     frames: 4,
     rarity: 'secret',
@@ -330,7 +343,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'draconic-blademaster',
     name: 'RunicBlade',
-    spriteUrl: '/chibi/draconic-blademaster/idle.png',
+    spriteUrl: '/chibi/draconic-blademaster/idle.webp',
     poses: makePoses('draconic-blademaster'),
     frames: 4,
     rarity: 'legendary',
@@ -341,7 +354,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'aegis-wyrm',
     name: 'TheFools',
-    spriteUrl: '/chibi/aegis-wyrm/idle.png',
+    spriteUrl: '/chibi/aegis-wyrm/idle.webp',
     poses: makePoses('aegis-wyrm'),
     frames: 4,
     rarity: 'rainbow',
@@ -352,7 +365,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'ashen-titan',
     name: 'VoidBugs',
-    spriteUrl: '/chibi/ashen-titan/idle.png',
+    spriteUrl: '/chibi/ashen-titan/idle.webp',
     poses: makePoses('ashen-titan'),
     frames: 4,
     rarity: 'mythic',
@@ -363,7 +376,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'vesper-reaver',
     name: 'High Entity',
-    spriteUrl: '/chibi/vesper-reaver/idle.png',
+    spriteUrl: '/chibi/vesper-reaver/idle.webp',
     poses: makePoses('vesper-reaver'),
     frames: 4,
     rarity: 'exotic',
@@ -374,7 +387,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   {
     id: 'null-prism',
     name: 'TheBoss',
-    spriteUrl: '/chibi/null-prism/idle.png',
+    spriteUrl: '/chibi/null-prism/idle.webp',
     poses: makePoses('null-prism'),
     frames: 4,
     rarity: 'secret',

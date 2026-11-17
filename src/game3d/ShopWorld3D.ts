@@ -9,10 +9,93 @@ import {
   createAltarSubHand,
 } from './AltarSpinFx3D';
 import { ArtBillboard2D, EnchantBillboard2D } from './AuraModels3D';
+import { getChibiById } from './ChibiCatalog';
+import { ChibiSprite3D } from './ChibiSprite3D';
 import { mountGlbProp } from './GlbAssets3D';
 import { HellAltarEyeController } from './HellAltarEye3D';
 
 export type ShopStationId = 'pickaxe' | 'sell' | 'gems' | 'altar' | 'tower';
+
+export interface ShopChibiBubbleAnchor {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+}
+
+interface PlazaWaypoint {
+  x: number;
+  z: number;
+  shopId: ShopStationId | 'walk';
+}
+
+interface PlazaWalker {
+  slotKey: string;
+  chibiId: string;
+  sprite: ChibiSprite3D;
+  x: number;
+  z: number;
+  targetX: number;
+  targetZ: number;
+  targetShop: ShopStationId | 'walk';
+  pauseTimer: number;
+  bubbleText: string | null;
+  bubbleTimer: number;
+  nextBubbleCooldown: number;
+  facingRight: boolean;
+}
+
+const PLAZA_WAYPOINTS: readonly PlazaWaypoint[] = [
+  { x: -7.8, z: -2.4, shopId: 'pickaxe' },
+  { x: -5.1, z: 4.5, shopId: 'sell' },
+  { x: 7.6, z: -2.4, shopId: 'gems' },
+  { x: -2.3, z: -2.1, shopId: 'altar' },
+  { x: 2.3, z: 2.1, shopId: 'altar' },
+  { x: 0.0, z: -6.4, shopId: 'tower' },
+  { x: 0.5, z: 6.2, shopId: 'walk' },
+  { x: 5.2, z: 3.9, shopId: 'walk' },
+];
+
+const PLAZA_BUBBLE_LINES: Record<ShopStationId | 'walk', readonly string[]> = {
+  pickaxe: [
+    'Ooh, shiny pickaxes!',
+    'Can I hold the big one?!',
+    'So sharp!',
+    'Upgrade my pickaxe!',
+  ],
+  sell: [
+    'Time to get rich!',
+    'Sell! Sell! Sell!',
+    'Look at all that Cash!',
+    'No discounts today!',
+  ],
+  gems: [
+    'Ooh, glowing potions!',
+    'Do they sell soda?!',
+    'I want the shiny pink one!',
+    'Gem shopping spree!',
+  ],
+  altar: [
+    'Magic sparkles!',
+    'Give me a lucky enchant!',
+    'Spin the wheel!',
+    'Whoa, floating runes!',
+  ],
+  tower: [
+    'That tower is huge!',
+    'Ready for the Boss!',
+    'Who lives up there?!',
+    'Let us climb the Tower!',
+  ],
+  walk: [
+    'Nice weather today!',
+    'Wait, I am broke!',
+    'Where is the snack shop?!',
+    'Don’t forget to upgrade me!',
+    'Ooh, pretty plaza!',
+    'My feet are tired!',
+  ],
+};
 
 export interface ShopStationAnchor {
   id: ShopStationId;
@@ -57,6 +140,8 @@ export class ShopWorld3D {
   private readonly altarPedestals: AltarPedestalEntry[] = [];
   private readonly floatingShards: THREE.Mesh[] = [];
   private readonly altarParticles = new AltarParticleSystem();
+  private readonly plazaWalkers = new Map<string, PlazaWalker>();
+  private readonly plazaProjVec = new THREE.Vector3();
   private readonly hellEye = new HellAltarEyeController();
   private clockDial!: AltarClockDialParts;
   private clockHand!: AltarClockHandParts;
@@ -386,7 +471,7 @@ export class ShopWorld3D {
       });
     }
 
-    const altarEmblem = this.addShopEmblem('/hud/enchant.png', '#e879f9', 0, 2.7, -0.5, 1.55, 2.5);
+    const altarEmblem = this.addShopEmblem('/hud/enchant.webp', '#e879f9', 0, 2.7, -0.5, 1.55, 2.5);
     void altarEmblem;
 
     const altarHit = this.createHitbox(0, 1.55, -0.5, 5.8, 3.0, 5.8, 'shop-altar');
@@ -515,7 +600,7 @@ export class ShopWorld3D {
       targetHeight: 0.9,
     });
 
-    this.addShopEmblem('/pickaxes/sunwheel.png', '#38bdf8', cx, 4.7, cz, 1.55, 0);
+    this.addShopEmblem('/pickaxes/sunwheel.webp', '#38bdf8', cx, 4.7, cz, 1.55, 0);
 
     const pickHit = this.createHitbox(cx, 2.2, cz, 5.4, 4.6, 4.6, 'shop-pickaxe');
     this.shopGroup.add(pickHit);
@@ -569,7 +654,7 @@ export class ShopWorld3D {
       targetHeight: 0.65,
     });
 
-    this.addShopEmblem('/hud/trade.png', '#4ade80', sx, 4.05, sz, 1.48, 1.0);
+    this.addShopEmblem('/hud/trade.webp', '#4ade80', sx, 4.05, sz, 1.48, 1.0);
 
     const sellHit = this.createHitbox(sx, 2.1, sz, 5.6, 4.4, 4.4, 'shop-sell');
     this.shopGroup.add(sellHit);
@@ -703,7 +788,7 @@ export class ShopWorld3D {
       targetHeight: 0.72,
     });
 
-    this.addShopEmblem('/hud/gem.png', '#f472b6', gx, 6.85, gz, 1.55, 1.8);
+    this.addShopEmblem('/hud/gem.webp', '#f472b6', gx, 6.85, gz, 1.55, 1.8);
 
     const gemHit = this.createHitbox(gx, 2.3, gz, 5.4, 5.0, 4.6, 'shop-gems');
     this.shopGroup.add(gemHit);
@@ -812,7 +897,7 @@ export class ShopWorld3D {
     towerRing.position.set(0, 1.43, -11.4);
     this.shopGroup.add(towerRing);
 
-    this.addShopEmblem('/hud/tower.png', '#38bdf8', 0, 8.55, -11.4, 1.78, 0.8);
+    this.addShopEmblem('/hud/tower.webp', '#38bdf8', 0, 8.55, -11.4, 1.78, 0.8);
 
     const towerHit = this.createHitbox(0, 4.5, -11.4, 8.2, 7.8, 7.2, 'shop-tower');
     this.shopGroup.add(towerHit);
@@ -1025,6 +1110,7 @@ export class ShopWorld3D {
       for (let i = 0; i < this.plazaCrystals.length; i++) {
         this.plazaCrystals[i].rotation.y = elapsed * 0.9 + i;
       }
+      this.updatePlazaWalkers(dt, elapsed, camera);
     }
 
     if (mode === 'altar') {
@@ -1165,5 +1251,138 @@ export class ShopWorld3D {
         highlighted,
       };
     });
+  }
+
+  public syncPlazaMiners(chibiIds: (string | null)[]): void {
+    const activeKeys = new Set<string>();
+    for (let i = 0; i < chibiIds.length; i++) {
+      const id = chibiIds[i];
+      if (!id) continue;
+      const def = getChibiById(id);
+      if (!def) continue;
+      const key = `${i}:${id}`;
+      activeKeys.add(key);
+
+      if (!this.plazaWalkers.has(key)) {
+        const sprite = new ChibiSprite3D(def, 1.55);
+        const startWp = PLAZA_WAYPOINTS[i % PLAZA_WAYPOINTS.length];
+        const nextWp = PLAZA_WAYPOINTS[(i + 2) % PLAZA_WAYPOINTS.length];
+        const startX = startWp.x + ((i % 3) - 1) * 0.7;
+        const startZ = startWp.z + (i % 2 === 0 ? 0.5 : -0.5);
+        sprite.group.position.set(startX, 0.08, startZ);
+        sprite.setAnimState('dash');
+        this.shopGroup.add(sprite.group);
+
+        this.plazaWalkers.set(key, {
+          slotKey: key,
+          chibiId: id,
+          sprite,
+          x: startX,
+          z: startZ,
+          targetX: nextWp.x + (Math.random() - 0.5) * 1.1,
+          targetZ: nextWp.z + (Math.random() - 0.5) * 1.1,
+          targetShop: nextWp.shopId,
+          pauseTimer: 0,
+          bubbleText: null,
+          bubbleTimer: 0,
+          nextBubbleCooldown: 1.5 + i * 1.3 + Math.random() * 2.5,
+          facingRight: true,
+        });
+      }
+    }
+
+    for (const [key, walker] of this.plazaWalkers.entries()) {
+      if (!activeKeys.has(key)) {
+        this.shopGroup.remove(walker.sprite.group);
+        this.plazaWalkers.delete(key);
+      }
+    }
+  }
+
+  private pickBubbleLine(shopId: ShopStationId | 'walk'): string {
+    const pool = PLAZA_BUBBLE_LINES[shopId];
+    return pool[Math.floor(Math.random() * pool.length)] ?? 'So cool!';
+  }
+
+  private updatePlazaWalkers(dt: number, elapsed: number, camera?: THREE.Camera): void {
+    const walkSpeed = 2.05;
+    for (const w of this.plazaWalkers.values()) {
+      if (w.bubbleTimer > 0) {
+        w.bubbleTimer = Math.max(0, w.bubbleTimer - dt);
+        if (w.bubbleTimer <= 0) {
+          w.bubbleText = null;
+        }
+      }
+      if (w.nextBubbleCooldown > 0) {
+        w.nextBubbleCooldown -= dt;
+      }
+
+      if (w.pauseTimer > 0) {
+        w.pauseTimer -= dt;
+        w.sprite.setAnimState('idle');
+        if (w.pauseTimer <= 0) {
+          const next = PLAZA_WAYPOINTS[Math.floor(Math.random() * PLAZA_WAYPOINTS.length)];
+          w.targetX = next.x + (Math.random() - 0.5) * 1.3;
+          w.targetZ = next.z + (Math.random() - 0.5) * 1.3;
+          w.targetShop = next.shopId;
+          w.sprite.setAnimState('dash');
+        }
+      } else {
+        const dx = w.targetX - w.x;
+        const dz = w.targetZ - w.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist < 0.2) {
+          w.pauseTimer = 2.0 + Math.random() * 2.4;
+          w.sprite.setAnimState('idle');
+          if (w.nextBubbleCooldown <= 0) {
+            w.bubbleText = this.pickBubbleLine(w.targetShop);
+            w.bubbleTimer = 3.2;
+            w.nextBubbleCooldown = 5.5 + Math.random() * 4.5;
+          }
+        } else {
+          const step = Math.min(dist, walkSpeed * dt);
+          const vx = (dx / dist) * step;
+          const vz = (dz / dist) * step;
+          w.x += vx;
+          w.z += vz;
+          const screenDx = camera ? camera.matrixWorld.elements[0] * dx + camera.matrixWorld.elements[2] * dz : dx;
+          if (Math.abs(screenDx) > 0.04) {
+            w.facingRight = screenDx >= 0;
+          }
+          w.sprite.setAnimState('dash');
+          if (w.nextBubbleCooldown <= 0 && Math.random() < dt * 0.25) {
+            w.bubbleText = this.pickBubbleLine('walk');
+            w.bubbleTimer = 2.9;
+            w.nextBubbleCooldown = 6.0 + Math.random() * 4.5;
+          }
+        }
+      }
+
+      w.sprite.group.position.set(w.x, 0.08, w.z);
+      w.sprite.setFacing(w.facingRight ? 1 : -1);
+      if (camera) {
+        w.sprite.update(dt, elapsed, camera);
+      }
+    }
+  }
+
+  public getPlazaBubbleAnchors(
+    camera: THREE.Camera,
+    width: number,
+    height: number
+  ): ShopChibiBubbleAnchor[] {
+    const out: ShopChibiBubbleAnchor[] = [];
+    for (const w of this.plazaWalkers.values()) {
+      if (!w.bubbleText || w.bubbleTimer <= 0) continue;
+      this.plazaProjVec.set(w.x, 2.02, w.z).project(camera);
+      if (this.plazaProjVec.z <= -1 || this.plazaProjVec.z >= 1) continue;
+      out.push({
+        id: w.slotKey,
+        x: (this.plazaProjVec.x * 0.5 + 0.5) * width,
+        y: (-this.plazaProjVec.y * 0.5 + 0.5) * height,
+        text: w.bubbleText,
+      });
+    }
+    return out;
   }
 }

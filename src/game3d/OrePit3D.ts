@@ -4,6 +4,7 @@ import { getOresByWorld, type OreDef, type WorldId } from '../game/GameData';
 import {
   MAX_PIT_NODE_COUNT,
   type MineWorldPalette,
+  ORE_VARIANTS,
   type OreVariantDef,
   type OreVariantKey,
   rollOreVariant,
@@ -233,7 +234,7 @@ export class OreBillboard2D {
     if (oreId === this.oreId) return;
     this.oreId = oreId;
 
-    void loadPublicSpriteTexture(`/ores/${oreId}.png`)
+    void loadPublicSpriteTexture(`/ores/${oreId}.webp`)
       .then((tex) => {
         if (this.oreId !== oreId) return;
         this.spriteMat.map = tex;
@@ -630,6 +631,36 @@ export class OrePit3D {
     node.geodeRing.visible = variant.key === 'geode';
     (node.geodeRing.material as THREE.MeshBasicMaterial).color.copy(ringColor);
 
+    node.oreSprite.setOre(oreDef.id, baseSize);
+  }
+
+  public spawnTutorialCenterOre(hp: number): void {
+    const node = this.nodes[0];
+    if (!node) return;
+    const variant = ORE_VARIANTS.find((v) => v.key === 'geode') ?? rollOreVariant();
+    const oreDef = pickWorldOreForVariant(this.activeWorldId, variant.key);
+    const safeHp = Math.max(10, Math.round(hp));
+    const baseSize = 2.05;
+
+    node.variant = variant;
+    node.oreDef = oreDef;
+    node.x = 0;
+    node.z = 0;
+    node.hp = safeHp;
+    node.maxHp = safeHp;
+    node.alive = true;
+    node.respawnTimer = 0;
+    node.squashAmt = 0.2;
+    node.flashTimer = 0;
+    node.spawnScale = 1;
+
+    node.root.position.set(0, 0, 0);
+    node.root.visible = true;
+    node.hitMesh.visible = true;
+
+    const ringColor = new THREE.Color(oreDef.color).lerp(new THREE.Color('#ffffff'), 0.15);
+    node.geodeRing.visible = true;
+    (node.geodeRing.material as THREE.MeshBasicMaterial).color.copy(ringColor);
     node.oreSprite.setOre(oreDef.id, baseSize);
   }
 

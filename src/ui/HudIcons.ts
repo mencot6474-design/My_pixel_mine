@@ -41,7 +41,7 @@ export function oreIconSvg(
 ): string {
   const inferredId = oreId || (idSeed.includes('_') ? idSeed.slice(idSeed.lastIndexOf('_') + 1) : idSeed);
   if (ORE_ART_IDS.has(inferredId)) {
-    const artUrl = assetUrl(`/ores/${inferredId}.png`);
+    const artUrl = assetUrl(`/ores/${inferredId}.webp`);
     return `<img class="mam-3d-icon drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]" src="${artUrl}" width="64" height="64" alt="${inferredId}" />`;
   }
   const url3d = get3dOreIconUrl(color, secondary, rarity, inferredId);
@@ -199,7 +199,7 @@ export const HUD_ICONS = {
 } as const;
 
 export function towerIconHtml(sizePx = 22): string {
-  const artUrl = assetUrl('/hud/tower.png');
+  const artUrl = assetUrl('/hud/tower.webp');
   return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="Gem Tower" />`;
 }
 
@@ -208,7 +208,7 @@ export function hudIconHtml(key: keyof typeof HUD_ICONS & Hud3dIconKey, sizePx: 
     return pickaxeIconHtml('sunwheel', sizePx, alt || 'Pickaxe');
   }
   if (HUD_ART_KEYS.has(key)) {
-    const artUrl = assetUrl(`/hud/${key}.png`);
+    const artUrl = assetUrl(`/hud/${key}.webp`);
     return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
   }
   const url3d = get3dHudIconUrl(key);
@@ -220,13 +220,13 @@ export function hudIconHtml(key: keyof typeof HUD_ICONS & Hud3dIconKey, sizePx: 
 
 export function pickaxeIconHtml(pickaxeId: string, sizePx: number, alt = 'Pickaxe'): string {
   const safeId = PICKAXE_ART_IDS.has(pickaxeId) ? pickaxeId : 'starter';
-  const artUrl = assetUrl(`/pickaxes/${safeId}.png`);
+  const artUrl = assetUrl(`/pickaxes/${safeId}.webp`);
   return `<img class="mam-3d-icon drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
 }
 
 export function gemPotionIconHtml(potionId: string, sizePx: number, alt = 'Potion', color = '#38bdf8'): string {
   if (POTION_ART_IDS.has(potionId)) {
-    const artUrl = assetUrl(`/potions/${potionId}.png`);
+    const artUrl = assetUrl(`/potions/${potionId}.webp`);
     return `<img class="mam-3d-icon drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
   }
   return otherItemSvg('potion', color);
@@ -234,7 +234,7 @@ export function gemPotionIconHtml(potionId: string, sizePx: number, alt = 'Potio
 
 export function enchantAuraIconHtml(enchantId: string, color: string, sizePx: number, alt = 'Aura'): string {
   if (ENCHANT_ART_IDS.has(enchantId)) {
-    const artUrl = assetUrl(`/enchants/${enchantId}.png`);
+    const artUrl = assetUrl(`/enchants/${enchantId}.webp`);
     return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
   }
   return `<svg viewBox="0 0 40 40" width="${sizePx}" height="${sizePx}" aria-hidden="true">
@@ -244,13 +244,13 @@ export function enchantAuraIconHtml(enchantId: string, color: string, sizePx: nu
 }
 
 export function enchantDiceIconHtml(sizePx = 34): string {
-  const artUrl = assetUrl('/enchants/enchant_dice.png');
+  const artUrl = assetUrl('/enchants/enchant_dice.webp');
   return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="Enchanted Dice" />`;
 }
 
 export function weatherIconHtml(weatherId: WeatherId, sizePx = 38, alt = 'Weather'): string {
   if (WEATHER_ART_IDS.has(weatherId)) {
-    const artUrl = assetUrl(`/weathers/${weatherId}.png`);
+    const artUrl = assetUrl(`/weathers/${weatherId}.webp`);
     return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="${alt}" />`;
   }
   switch (weatherId) {

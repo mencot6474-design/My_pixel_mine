@@ -139,14 +139,14 @@ export class FieldMiner3D {
       pos.z += (dz / dist) * step;
       pos.y = PIT_FLOOR_Y;
       if (renderVisuals) {
-        this.sprite.setAnimState('dash'); // walk.png
+        this.sprite.setAnimState('dash'); // walk.webp
       }
     } else {
       if (renderVisuals && Math.abs(target.worldX - pos.x) > 0.05) {
         this.sprite.setFacing(target.worldX >= pos.x ? 1 : -1);
       }
       if (renderVisuals) {
-        this.sprite.setAnimState('attack'); // attack.png
+        this.sprite.setAnimState('attack'); // attack.webp
       }
       this.attackCooldown -= dtSec;
       if (this.attackCooldown <= 0) {

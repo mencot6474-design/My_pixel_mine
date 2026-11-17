@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { getEnchantById } from '../game/GameData';
 import { TowerWaveOreState } from '../game/TowerData';
+import { ArtBillboard2D } from './AuraModels3D';
 import { ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
 import { OreVariantKey } from './MineWorldPalette';
@@ -285,10 +286,7 @@ export class TowerArena3D {
   private readonly monolithGroup = new THREE.Group();
   private readonly monolithPedestal: THREE.Mesh;
   private readonly monolithCoreMat: THREE.MeshStandardMaterial;
-  private readonly haloRing1: THREE.Mesh;
-  private readonly haloRing2: THREE.Mesh;
-  private readonly seraphCage: THREE.Mesh;
-  private readonly seraphWings: Array<{ pivot: THREE.Group; side: number; pairIdx: number; baseZRot: number }> = [];
+  private readonly bossSprite: ArtBillboard2D;
   private readonly seraphDrones: Array<{ group: THREE.Group; angleOffset: number }> = [];
   private readonly baseRingMat: THREE.MeshBasicMaterial;
   private readonly trimRingMat: THREE.MeshBasicMaterial;
@@ -632,111 +630,18 @@ export class TowerArena3D {
       roughness: 0.24,
       metalness: 0.85,
     });
-    const bossGoldMat = new THREE.MeshStandardMaterial({
-      color: 0xfacc15,
-      emissive: 0xd97706,
-      emissiveIntensity: 0.55,
-      roughness: 0.2,
-      metalness: 0.82,
-    });
     const cyanLaserMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, fog: false });
 
-    // 7a. Armored Spherical AI Chassis + Top/Bottom Mecha Spire Crowns
-    const chassisSphere = new THREE.Mesh(new THREE.SphereGeometry(1.12, 28, 22), bossArmorMat);
-    chassisSphere.castShadow = true;
-    this.monolithGroup.add(chassisSphere);
-
-    const topCrown = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.85, 8), bossArmorMat);
-    topCrown.position.y = 1.32;
-    const botCrown = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.95, 8), bossArmorMat);
-    botCrown.rotation.x = Math.PI;
-    botCrown.position.y = -1.35;
-    this.monolithGroup.add(topCrown, botCrown);
-
-    // Geodesic wireframe shield cage around the AI chassis
-    this.seraphCage = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(1.32, 1),
-      new THREE.MeshBasicMaterial({
-        color: 0x22d3ee,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.55,
-      })
-    );
-    this.monolithGroup.add(this.seraphCage);
-
-    // 7b. Mechanical Cyber-Optic Lens (Front Seraphim Eye facing the arena)
-    const opticBezel = new THREE.Mesh(new THREE.TorusGeometry(0.64, 0.11, 12, 32), bossGoldMat);
-    opticBezel.position.z = 0.96;
-    const opticIris = new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.58, 0.12, 28), this.monolithCoreMat);
-    opticIris.rotation.x = Math.PI / 2;
-    opticIris.position.z = 0.95;
-    const opticPupil = new THREE.Mesh(
-      new THREE.SphereGeometry(0.32, 20, 16),
-      new THREE.MeshBasicMaterial({ color: 0x020617 })
-    );
-    opticPupil.position.z = 1.02;
-    const opticLaserDot = new THREE.Mesh(
-      new THREE.SphereGeometry(0.11, 12, 12),
-      new THREE.MeshBasicMaterial({ color: 0xffffff })
-    );
-    opticLaserDot.position.z = 1.3;
-    this.monolithGroup.add(opticBezel, opticIris, opticPupil, opticLaserDot);
-
-    // 7c. 6 Articulated Laser-Blade Seraphim Wings (3 pairs on Left & Right)
-    const wingSpecs: ReadonlyArray<{ y: number; span: number; zAngle: number; len: number }> = [
-      { y: 0.72, span: 1.25, zAngle: 0.42, len: 2.35 },
-      { y: 0.04, span: 1.38, zAngle: 0.05, len: 2.65 },
-      { y: -0.64, span: 1.2, zAngle: -0.38, len: 2.15 },
-    ];
-    for (let pairIdx = 0; pairIdx < wingSpecs.length; pairIdx++) {
-      const spec = wingSpecs[pairIdx];
-      for (const side of [-1, 1]) {
-        const pivot = new THREE.Group();
-        pivot.position.set(side * spec.span, spec.y, -0.18);
-        const baseZRot = side * spec.zAngle;
-        pivot.rotation.z = baseZRot;
-        pivot.rotation.y = -side * 0.22;
-
-        // Mechanical thruster mount
-        const mount = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.24, 0.28), bossArmorMat);
-        mount.position.x = side * 0.22;
-        pivot.add(mount);
-
-        const jointNode = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), bossGoldMat);
-        jointNode.position.set(side * 0.42, 0, 0.08);
-        pivot.add(jointNode);
-
-        // Primary swept laser blade feather
-        const mainBlade = new THREE.Mesh(new THREE.ConeGeometry(0.24, spec.len, 4), this.monolithCoreMat);
-        mainBlade.rotation.z = -side * (Math.PI / 2);
-        mainBlade.scale.set(0.45, 1, 1.35);
-        mainBlade.position.set(side * (0.45 + spec.len * 0.5), 0, 0);
-        pivot.add(mainBlade);
-
-        // Secondary neon cyan plasma edge feather
-        const subBlade = new THREE.Mesh(new THREE.ConeGeometry(0.13, spec.len * 0.78, 4), cyanLaserMat);
-        subBlade.rotation.z = -side * (Math.PI / 2);
-        subBlade.position.set(side * (0.5 + spec.len * 0.38), -0.18, 0.06);
-        pivot.add(subBlade);
-
-        this.monolithGroup.add(pivot);
-        this.seraphWings.push({ pivot, side, pairIdx, baseZRot });
-      }
-    }
-
-    // 7d. Interlocking Ophanim Gyroscope Rings + 4 Orbital Attack Drones
-    this.haloRing1 = new THREE.Mesh(
-      new THREE.TorusGeometry(2.15, 0.07, 10, 40),
-      bossGoldMat
-    );
-    this.haloRing1.rotation.x = 1.05;
-    this.haloRing2 = new THREE.Mesh(
-      new THREE.TorusGeometry(2.52, 0.055, 10, 40),
-      new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x06b6d4, emissiveIntensity: 0.75, metalness: 0.6 })
-    );
-    this.haloRing2.rotation.y = 1.1;
-    this.monolithGroup.add(this.haloRing1, this.haloRing2);
+    // 7a. 2.5D Seraphim AI Overlord Boss Sprite + Orbital Attack Drones
+    this.bossSprite = new ArtBillboard2D('/hud/tower_boss.webp', '#22d3ee', {
+      baseSize: 4.5,
+      centerY: 0.5,
+      showPedestalBase: false,
+      haloScale: 1.25,
+      bobAmp: 0.1,
+      swayAmp: 0.02,
+    });
+    this.monolithGroup.add(this.bossSprite.root);
 
     for (let d = 0; d < 4; d++) {
       const droneGroup = new THREE.Group();
@@ -750,7 +655,7 @@ export class TowerArena3D {
       this.seraphDrones.push({ group: droneGroup, angleOffset: (d / 4) * Math.PI * 2 });
     }
 
-    this.monolithGroup.position.set(0, 3.15, ARENA_CENTER_Z);
+    this.monolithGroup.position.set(0, 1.15, ARENA_CENTER_Z);
     this.group.add(this.monolithGroup);
 
     // 7b. Five Wave Ore Rock Slots (active on Waves 1..9)
@@ -1247,18 +1152,9 @@ export class TowerArena3D {
       const pulse = 1 + hitFactor * 0.14;
       const bossScale = this.bossMode ? 1.18 : 1.0;
       this.monolithGroup.scale.setScalar(bossScale * pulse);
-      this.monolithGroup.position.y = 3.15 + Math.sin(elapsed * 2.1) * 0.18;
-      this.monolithGroup.rotation.y = Math.sin(elapsed * 1.35) * 0.26;
-      this.monolithGroup.rotation.z = Math.cos(elapsed * 1.1) * 0.05;
-      this.seraphCage.rotation.y = elapsed * 0.85;
-      this.seraphCage.rotation.x = -elapsed * 0.55;
-      this.haloRing1.rotation.z = elapsed * 1.4;
-      this.haloRing2.rotation.x = elapsed * -1.1;
+      this.monolithGroup.position.y = 1.15 + Math.sin(elapsed * 2.1) * 0.14;
+      this.bossSprite.updateTransform(dt, elapsed, this.bounceTimer > 0, false, camera);
 
-      for (const w of this.seraphWings) {
-        const flap = Math.sin(elapsed * 3.4 - w.pairIdx * 0.65) * 0.16 + hitFactor * 0.28;
-        w.pivot.rotation.z = w.baseZRot + w.side * flap;
-      }
       for (const d of this.seraphDrones) {
         const a = d.angleOffset + elapsed * 1.75;
         d.group.position.set(Math.cos(a) * 3.1, Math.sin(elapsed * 2.8 + d.angleOffset) * 0.45, Math.sin(a) * 1.85);

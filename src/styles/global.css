@@ -12,16 +12,49 @@
     user-select: none;
     background: #0f172a;
     font-family: 'Fredoka', sans-serif;
-    cursor: var(--mam-cursor, auto);
+    cursor: auto;
   }
 
-  button,
-  [role='button'],
-  #hudRoot,
-  #threeRoot canvas,
-  .mam-card,
-  .mam-strip-card {
-    cursor: var(--mam-cursor, auto) !important;
+  #threeRoot canvas.mam-mining-cursor {
+    cursor: none !important;
+  }
+
+  @keyframes mamPickaxeSwing {
+    0% {
+      transform: translate(-22%, -78%) rotate(0deg) scale(1);
+    }
+    28% {
+      transform: translate(-16%, -86%) rotate(26deg) scale(1.14);
+    }
+    66% {
+      transform: translate(-34%, -64%) rotate(-48deg) scale(1.06);
+    }
+    100% {
+      transform: translate(-22%, -78%) rotate(0deg) scale(1);
+    }
+  }
+
+  #mamPickaxeCursor {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 48px;
+    height: 48px;
+    pointer-events: none;
+    z-index: 95;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7));
+  }
+
+  #mamPickaxeCursor img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform: translate(-22%, -78%) rotate(0deg) scale(1);
+    transform-origin: 76% 76%;
+  }
+
+  #mamPickaxeCursor.is-swinging img {
+    animation: mamPickaxeSwing 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   button,

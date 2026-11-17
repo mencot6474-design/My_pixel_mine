@@ -512,6 +512,10 @@ export class ArtBillboard2D {
 
     void loadPublicSpriteTexture(publicPath)
       .then((tex) => {
+        const img = tex.image as { width?: number; height?: number } | undefined;
+        if (img?.width && img?.height && img.height > 0) {
+          this.spriteMesh.scale.set(img.width / img.height, 1, 1);
+        }
         this.spriteMat.map = tex;
         this.spriteMat.opacity = 1;
         this.spriteMat.needsUpdate = true;
@@ -570,7 +574,7 @@ export class ArtBillboard2D {
  */
 export class EnchantBillboard2D extends ArtBillboard2D {
   constructor(enchantId: string, color: string, baseSize = 1.38, phase = 0) {
-    super(`/enchants/${enchantId}.png`, color, {
+    super(`/enchants/${enchantId}.webp`, color, {
       baseSize,
       phase,
       centerY: 0.54,

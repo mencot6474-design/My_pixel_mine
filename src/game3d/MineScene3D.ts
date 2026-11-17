@@ -7,7 +7,7 @@ import { DEFAULT_WORLD_PALETTE, MineWorldPalette, OreVariantKey, STAGE_PEDESTAL_
 import { OrePit3D } from './OrePit3D';
 import { PlotPedestal3D } from './PlotPedestal3D';
 import { getHazardStripeTexture } from './ProceduralTextures3D';
-import { AltarPedestalAnchor, ShopStationAnchor, ShopStationId, ShopWorld3D } from './ShopWorld3D';
+import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId, ShopWorld3D } from './ShopWorld3D';
 import { TowerArena3D, TowerFighterConfig, TowerOreBarScreen } from './TowerArena3D';
 import { TowerWaveOreState } from '../game/TowerData';
 import { getWeatherById, WeatherId } from '../game/WeatherData';
@@ -39,9 +39,11 @@ export interface MineSceneCallbacks {
   onChestClick?: () => void;
   onPedestalClick?: (slotIndex: number) => void;
   onPlotAnchors?: (anchors: PlotAnchorScreen[]) => void;
+  onChestAnchor?: (anchor: { x: number; y: number; visible: boolean }) => void;
   onOreBars?: (bars: OreHpScreen[]) => void;
   onShopStationClick?: (station: ShopStationId) => void;
   onShopAnchors?: (anchors: ShopStationAnchor[]) => void;
+  onShopChibiBubbles?: (bubbles: ShopChibiBubbleAnchor[]) => void;
   onAltarAnchors?: (anchors: AltarPedestalAnchor[]) => void;
   onTowerMonolithClick?: () => { dmg: number } | void;
   onTowerTargetClick?: (targetOreIndex: number | null) => { dmg: number; broken?: boolean } | void;
@@ -103,6 +105,8 @@ export class MineScene3D {
   private rafId = 0;
   private lastTime = performance.now();
   private focusedPlotIndex: number | null = null;
+  private tutorialFocusChest = false;
+  private tutorialFocusSellShop = false;
   private currentLookAt = new THREE.Vector3(0, 0.55, -0.55);
   private readonly projVec = new THREE.Vector3();
 
@@ -315,6 +319,29 @@ export class MineScene3D {
       this.crateHovered = hit?.userData.kind === 'chest';
       this.pedestals.forEach((p, idx) => p.setHovered(idx === hoveredSlot || idx === this.dragHighlightPlot));
       this.pit.setHoveredNode(hoveredNode);
+
+      let overMineArea =
+        hoveredNode >= 0 || hit?.userData.kind === 'tower-ore' || hit?.userData.kind === 'tower-boss';
+      if (!overMineArea && this.mode === 'mine' && !this.crateHovered && hoveredSlot < 0) {
+        const rect = dom.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          this.pointer.set(
+            ((e.clientX - rect.left) / rect.width) * 2 - 1,
+            -((e.clientY - rect.top) / rect.height) * 2 + 1
+          );
+          this.raycaster.setFromCamera(this.pointer, this.camera);
+          const dirY = this.raycaster.ray.direction.y;
+          if (Math.abs(dirY) > 0.001) {
+            const t = -this.raycaster.ray.origin.y / dirY;
+            if (t > 0) {
+              const px = this.raycaster.ray.origin.x + this.raycaster.ray.direction.x * t;
+              const pz = this.raycaster.ray.origin.z + this.raycaster.ray.direction.z * t;
+              overMineArea = Math.abs(px) <= 7.0 && Math.abs(pz) <= 5.2;
+            }
+          }
+        }
+      }
+      dom.classList.toggle('mam-mining-cursor', overMineArea);
     });
 
     const endDrag = (pointerId?: number): void => {
@@ -521,6 +548,19 @@ export class MineScene3D {
       this.camera.position.lerp(targetCam, damp);
       this.currentLookAt.lerp(targetLook, damp);
       this.camera.lookAt(this.currentLookAt);
+    } else if (this.tutorialFocusChest && this.mode === 'mine') {
+      const cPos = this.crateGroup.position;
+      const targetCam = new THREE.Vector3(cPos.x + 0.8, cPos.y + 4.3, cPos.z + 7.2);
+      const targetLook = new THREE.Vector3(cPos.x, cPos.y + 0.65, cPos.z);
+      this.camera.position.lerp(targetCam, damp);
+      this.currentLookAt.lerp(targetLook, damp);
+      this.camera.lookAt(this.currentLookAt);
+    } else if (this.tutorialFocusSellShop && this.mode === 'shop') {
+      const targetCam = new THREE.Vector3(-4.6, 5.2, 11.4);
+      const targetLook = new THREE.Vector3(-6.95, 2.3, 2.8);
+      this.camera.position.lerp(targetCam, damp);
+      this.currentLookAt.lerp(targetLook, damp);
+      this.camera.lookAt(this.currentLookAt);
     } else {
       this.orbitYaw += (this.targetOrbitYaw - this.orbitYaw) * damp;
       this.orbitPitch += (this.targetOrbitPitch - this.orbitPitch) * damp;
@@ -543,6 +583,7 @@ export class MineScene3D {
       this.emitPlotAnchors();
       this.emitOreBars();
       this.callbacks.onShopAnchors?.([]);
+      this.callbacks.onShopChibiBubbles?.([]);
       this.callbacks.onAltarAnchors?.([]);
       this.callbacks.onTowerOreBars?.([]);
     } else if (this.mode === 'shop') {
@@ -551,12 +592,14 @@ export class MineScene3D {
       const w = this.mountEl.clientWidth || 1;
       const h = this.mountEl.clientHeight || 1;
       this.callbacks.onShopAnchors?.(this.shopWorld.getShopAnchors(this.camera, w, h, this.projVec));
+      this.callbacks.onShopChibiBubbles?.(this.shopWorld.getPlazaBubbleAnchors(this.camera, w, h));
       this.callbacks.onAltarAnchors?.([]);
       this.callbacks.onTowerOreBars?.([]);
     } else if (this.mode === 'altar') {
       this.callbacks.onPlotAnchors?.([]);
       this.callbacks.onOreBars?.([]);
       this.callbacks.onShopAnchors?.([]);
+      this.callbacks.onShopChibiBubbles?.([]);
       const w = this.mountEl.clientWidth || 1;
       const h = this.mountEl.clientHeight || 1;
       this.callbacks.onAltarAnchors?.(this.shopWorld.getAltarAnchors(this.camera, w, h, this.projVec));
@@ -649,10 +692,24 @@ export class MineScene3D {
     }
 
     this.callbacks.onPlotAnchors(anchors);
+
+    if (this.callbacks.onChestAnchor) {
+      const cPos = this.crateGroup.position;
+      this.projVec.set(cPos.x, cPos.y + 1.35, cPos.z).project(this.camera);
+      const visible = this.focusedPlotIndex === null && this.projVec.z > -1 && this.projVec.z < 1;
+      this.callbacks.onChestAnchor({
+        x: (this.projVec.x * 0.5 + 0.5) * w,
+        y: (-this.projVec.y * 0.5 + 0.5) * h,
+        visible,
+      });
+    }
   }
 
   public setMode(mode: SceneMode): void {
     this.mode = mode;
+    if (mode !== 'mine' && mode !== 'tower') {
+      this.renderer.domElement.classList.remove('mam-mining-cursor');
+    }
     if (mode !== 'altar') {
       this.shopWorld.cancelSpin();
     }
@@ -800,6 +857,41 @@ export class MineScene3D {
     this.focusedPlotIndex = slotIndex;
   }
 
+  public setTutorialPitZoom(zoomed: boolean): void {
+    this.tutorialFocusChest = false;
+    if (zoomed) {
+      this.focusedPlotIndex = null;
+      this.targetOrbitYaw = 0;
+      this.targetOrbitPitch = 0.06;
+      this.targetCamRadius = 8.4;
+      this.pit.spawnTutorialCenterOre(Math.max(100, this.tapDamage * 10));
+    } else {
+      this.targetOrbitYaw = 0;
+      this.targetOrbitPitch = 0;
+      this.targetCamRadius = 16.5;
+    }
+  }
+
+  public setTutorialChestZoom(zoomed: boolean): void {
+    this.tutorialFocusChest = zoomed;
+    this.tutorialFocusSellShop = false;
+    if (zoomed) {
+      this.focusedPlotIndex = null;
+    } else {
+      this.targetOrbitYaw = 0;
+      this.targetOrbitPitch = 0;
+      this.targetCamRadius = 16.5;
+    }
+  }
+
+  public setTutorialSellShopZoom(zoomed: boolean): void {
+    this.tutorialFocusSellShop = zoomed;
+    this.tutorialFocusChest = false;
+    if (zoomed) {
+      this.focusedPlotIndex = null;
+    }
+  }
+
   public syncPlotUnitStats(slotIndex: number, dmg: number, speed: number, miningMult: number): void {
     this.slotCombatStats.set(slotIndex, { dmg, speed, miningMult });
     this.fieldMiners.get(slotIndex)?.setCombatStats(dmg, speed, miningMult);
@@ -822,6 +914,7 @@ export class MineScene3D {
         this.setPlotChibi(i, nextId);
       }
     }
+    this.shopWorld.syncPlazaMiners(chibiIds);
   }
 
   public setPlotChibi(slotIndex: number, chibiId: string | null): void {

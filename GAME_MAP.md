@@ -28,7 +28,7 @@ GAME_MAP.md                     Peta struktur file & anchor (dokumen ini)
 === ENTRY & TESTS ===
 src/main.ts                     139 baris — Bootstrap Three.js scene (`MineScene3D`), `GameState`, `GameHud` (+ plot drop ops,
                                             weather & CC0 `AudioManager` sync), CrazyGames SDK init, Tower callbacks & game loop
-tests/world-3d.test.ts        1.382 baris — 35 Vitest unit & integration specs (3D world, Altar dial/dice & 2.5D billboard pedestals,
+tests/world-3d.test.ts        1.458 baris — 37 Vitest unit & integration specs (3D world, Altar dial/dice & 2.5D billboard pedestals,
                                             Equip Best stat preservation, pure ore damage, research trees
                                             incl. Core-only tap damage, +300K Core Vault Expansion, & W1-W6
                                             denseOreScale HP x10 / Drop x3, Gem Tower 10-wave 5-ore + 3D Seraphim Boss
@@ -36,14 +36,15 @@ tests/world-3d.test.ts        1.382 baris — 35 Vitest unit & integration specs
                                             + 5-floor milestones, Shop Plaza, Megacorp Mainframe Arena, background mining,
                                             hotbar drag reorder & hotbar-to-plot swap/equip, 5-Weather 5% Celestial buffs,
                                             world/chibi-scaled upgrade costs, Frozen+ mutation roll protection, 30 chibis,
-                                            Exotic/Secret tiers, buffed miner drops, & World 6 Starwell)
+                                            Exotic/Secret tiers, buffed miner drops, World 6 Starwell, Chibi Star-Up & World Resonance synergy)
 
 === GAME DATA & STATE ===
-src/game/GameData.ts            472 baris — World (`underground`..`starwell` W1-W6), `ORES` 111 (48 ores),
+src/game/GameData.ts            550 baris — World (`underground`..`starwell` W1-W6), `ORES` 111 (48 ores),
                                             `WORLD_MINERS` 173 (30 miners: 5/world incl. Exotic & Secret),
                                             `PICKAXES` 219 (12 tiers W1–W6), `MUTATIONS` 234, `ENCHANTS` 248 (`ENCHANT_DICE_GEM_COST` 246),
                                             `isHighTierMutation` 310 (`frozen`..`unreal`), `GEM_SHOP_ITEMS` 320,
-                                            `rollMutation` 436, `rollWorldOre` 463, `rollWorldMiner` 468
+                                            `rollMutation` 436, `CHIBI_STAR_TIERS` 478, `WORLD_RESONANCE_TIERS` 506,
+                                            `computeWorldResonances` 519, `rollWorldOre` 541, `rollWorldMiner` 546
 src/game/ResearchData.ts      1.533 baris — `ResearchTreeId` (`core` | WorldId) 3, `DENSE_ORE_HP_MULT` (10) /
                                             `DENSE_ORE_DROP_MULT` (3) 19–20, `RESEARCH_TREE_META` 63,
                                             `formatNodeEffectLine` 129, `getNodeNextCost` 164, `CORE_NODES` 172
@@ -57,12 +58,13 @@ src/game/TowerData.ts           359 baris — `TOWER_MAX_KEYS` (5), `TOWER_KEY_R
 src/game/WeatherData.ts         187 baris — `WeatherId` (`light_rain` | `snow_rain` | `bloodmoon` | `void` | `celestial`) 1,
                                             `WEATHER_DURATION_MS` (3m) 3, `WEATHERS` 33 (Celestial 5%: 10x Ore / 4x Gem / 5x DMG),
                                             `getWeatherById` 175, `rollWeatherDef` 179
-src/game/GameState.ts         1.859 baris — `PlotUnitState` 129, `SavePayload` 139, `getChibiUpgradeCostMult` 185
-                                            (skala biaya upgrade per world & mild rarity premium), `GameState` 202: plot loadout/
-                                            leveling, `rollPlotMutation` 555, buffed `onOreBroken` miner drops 717,
+src/game/GameState.ts         1.978 baris — `PlotUnitState` 135, `SavePayload` 145, `getChibiUpgradeCostMult` 192
+                                            (skala biaya upgrade per world & mild rarity premium), `GameState` 209: plot loadout/
+                                            leveling, Chibi Star-Up (`getChibiStar` 395, `starUpChibi` 415, `autoStarUpAll` 431),
+                                            World Resonance synergy (`getActiveWorldResonances` 447), `rollPlotMutation` 662, buffed `onOreBroken` miner drops 824,
                                             chests (+35% Full-Chest `sellAllChestOres`), inventory/ore stack, hotbar 1..9, shop stock, potions, research,
-                                            altar enchant, weather sync/timer/buffs, `getOreHpScale` 1167 /
-                                            `getOreOutputMult` 1185 (`denseOreScale`), global gem bonus, Gem Tower
+                                            altar enchant, weather sync/timer/buffs, `getOreHpScale` 1275 /
+                                            `getOreOutputMult` 1293 (`denseOreScale`), global gem bonus, Gem Tower
                                             10-wave/strike-only state/keys/runs/sweep (+ 5s Boss Invul & 5s Blessing Auto-Pick), localStorage save
 src/game/AssetUrl.ts             11 baris — `assetUrl` (resolusi URL aset `public/` terhadap `BASE_URL` `./` agar aman di subpath)
 src/game/NumberFormat.ts         45 baris — `fmtShort` 22, `fmtMoney` 33, `fmtInt` 37, `fmtPct` 41
@@ -73,27 +75,27 @@ src/sdk/crazygames.ts           180 baris — CrazyGames SDK v3 wrapper (`isCraz
                                             `cgGameplayStart` 80, `cgHappyTime` 100, `cgRequestRewardedAd` 108)
 
 === UI HUD, MODALS & CSS (Modular Architecture) ===
-src/ui/GameHud.ts             1.832 baris — `GameHud`: Thin UI coordinator; manages 3D overlay layers (incl. Tower ore bars),
+src/ui/GameHud.ts             1.856 baris — `GameHud`: Thin UI coordinator; manages 3D overlay layers (incl. Tower ore bars),
                                             viewport scaling (`updateViewportScale`), currency rail + audio mute toggle, Weather top-left
                                             3D HUD (`renderWeatherWidget`), hotbar 1..9 (click + drag reorder + plot drop),
-                                            active potion pills, Shop Plaza HUD, Altar HUD + Auto Roll (`triggerSingleEnchantRoll`),
+                                            active potion pills, World Resonance HUD badges, Shop Plaza HUD, Altar HUD + Auto Roll (`triggerSingleEnchantRoll`),
                                             100ms Tower timer tick (incl. 5s Blessing auto-pick) & real chibi strike dispatch
 src/ui/HudShared.ts             240 baris — `chibiPortraitHtml` 6 (smooth/pixel portrait), shared types (`ModalKind` 16,
                                             `ModalThemeId` 28, `InvTab` 30), rarity/ring helpers (`rarityCardClasses` 33 incl.
                                             `exotic`/`secret`, `rarityVars`, `applyInspectRing`), `refreshPotionTimersInDom`,
                                             dark-glass Tailwind `TW_*` constants, shared shell builders (`renderModalShell` 148,
                                             `renderInspectorPanel` 184)
-src/ui/CollectionModalsUi.ts    908 baris — `CollectionModalsUi` 36: Index modal (6 worlds + Inspector + Chibi 4-pose `Review` `<dialog>`),
-                                            Backpack/Inventory (Equip Best / Search / Inspect), Chest modal & live updaters
+src/ui/CollectionModalsUi.ts    966 baris — `CollectionModalsUi` 39: Index modal (6 worlds + Inspector + Chibi 4-pose `Review` `<dialog>`),
+                                            Backpack/Inventory (Equip Best / Auto Star-Up / Star-Up Miner / Search / Inspect), Chest modal & live updaters
 src/ui/ShopModalsUi.ts          632 baris — `ShopModalsUi` 42: Pickaxe Shop, Gem Shop, Sell Shop + Inspectors & updaters
 src/ui/TowerUi.ts               479 baris — `TowerUi` 19: Gem Tower Hub Dark-Glass modal (`renderTowerHubModal` 44:
                                             Keys, 5-Floor Checkpoints & Milestones, Anomalies, Quick Sweep, Run Summary) &
                                             3D Arena HUD (`renderTowerArenaHud`, 5s Boss Invul shield label, 5s Blessing auto-pick timer)
 src/ui/UpgradesWorldsUi.ts      596 baris — `UpgradesWorldsUi` 17: Research/Upgrades tree & World Teleport full-banner
                                             modal (`buildWorldsListHtml` 308 pakai `public/worlds/*.jpg`) & live updaters
-src/ui/PlotInspectUi.ts         398 baris — `PlotInspectUi` 25: Plot Inspector overlay, live updater & modal
+src/ui/PlotInspectUi.ts         408 baris — `PlotInspectUi` 27: Plot Inspector overlay (incl. ★Star & World Resonance), live updater & modal
                                             konfirmasi peringatan roll mutasi Frozen+ (`renderMutationConfirmOverlay`
-                                            209: `Stop (Keep)` / `Continue`, proteksi obtain & overwrite)
+                                            219: `Stop (Keep)` / `Continue`, proteksi obtain & overwrite)
 src/ui/HudIcons.ts              366 baris — SVG, 2D fantasy art (`public/{enchants,hud,ores,pickaxes,potions,weathers}/*.png`), & 3D-thumbnail icon helpers (`HUD_ICONS`, `hudIconHtml`,
                                             `weatherIconHtml`, `towerIconHtml`, `pickaxeIconHtml`, `gemPotionIconHtml`,
                                             `enchantAuraIconHtml`, `enchantDiceIconHtml`, `researchIconHtml`)
@@ -103,9 +105,9 @@ src/styles/hud.css              992 baris — Modern Dark-Glass + Luminous Gradi
                                             `.rarity-exotic`, `.rarity-secret`, `.mam-hotbar-dragging` / `.mam-hotbar-drop-target`, keyframes, a11y)
 
 === 3D WORLD & RENDERERS ===
-src/game3d/MineScene3D.ts       824 baris — Main Three.js scene controller: switches `mine` / `shop` / `altar` / `tower`,
-                                            runs background pit/miner ticks, weather sky/fog/lighting (`setWeather` 683,
-                                            `applyWeatherAtmosphere` 667), raycasts & emits plot/station/tower-ore anchors
+src/game3d/MineScene3D.ts       861 baris — Main Three.js scene controller: switches `mine` / `shop` / `altar` / `tower`,
+                                            runs background pit/miner ticks, weather sky/fog/lighting (`setWeather` 720,
+                                            `applyWeatherAtmosphere` 704), raycasts & emits plot/station/tower-ore anchors
 src/game3d/MineEnvironment3D.ts 531 baris — Surrounding terrain, sky dome (`skyHandle` `WeatherSkyMaterialHandle` 32,
                                             `setWeatherSky` 498), cliff walls, Sanctuary gate pillars & world lighting
 src/game3d/WeatherSkyShader.ts  237 baris — Animated GLSL Atmospheric Sky Shader (`createWeatherSkyMaterial` 184:
@@ -155,11 +157,11 @@ public/worlds/                  6 full-bleed teleport banner JPGs (`underground`
 
 | Tugas / Area | File & Simbol |
 |---|---|
-| Ore, Miner (`Exotic`/`Secret`), Pickaxe, Mutation, World | `src/game/GameData.ts` (`ORES`, `WORLD_MINERS`, `RARITY_BORDER`, `WORLDS`, `isHighTierMutation`, `ENCHANTS`) |
+| Ore, Miner (`Exotic`/`Secret`), Star-Up & World Resonance | `src/game/GameData.ts` (`ORES`, `WORLD_MINERS`, `CHIBI_STAR_TIERS`, `WORLD_RESONANCE_TIERS`, `computeWorldResonances`) |
 | Research tree nodes, Core Strike/Vault & `denseOreScale` | `src/game/ResearchData.ts` (`CORE_NODES`, `STARWELL_NODES`, `RESEARCH_NODES`, `DENSE_ORE_HP_MULT`, `getNodeNextCost`) |
 | Gem Tower scaling, Anomalies, Blessings, Milestones | `src/game/TowerData.ts` (`getTowerFloorDef`, `TOWER_BLESSINGS`, `TOWER_MILESTONES`) |
 | Weather config, probabilities & multipliers | `src/game/WeatherData.ts` (`WEATHERS`, `WEATHER_DURATION_MS`, `rollWeatherDef`) |
-| State, Upgrade cost nerf, Save/Load, Hotbar/Plot, Weather | `src/game/GameState.ts` (`GameState`, `getChibiUpgradeCostMult`, `getOreHpScale`, `getOreOutputMult`, `rollPlotMutation`, `syncWeather`) |
+| State, Star-Up, Resonance, Save/Load, Hotbar/Plot, Weather | `src/game/GameState.ts` (`GameState`, `starUpChibi`, `autoStarUpAll`, `getActiveWorldResonances`, `getChibiUpgradeCostMult`, `syncWeather`) |
 | Responsive HUD scale, Topbar, Weather HUD, Altar Auto Roll, Hotbar | `src/ui/GameHud.ts` (`updateViewportScale`, `render`, `setSceneMode`, `triggerSingleEnchantRoll`) |
 | Shared Modal Shell, Inspector Shell, Tailwind `TW_*` | `src/ui/HudShared.ts` (`renderModalShell`, `renderInspectorPanel`, `TW_*`) |
 | Pickaxe Shop, Gem Shop, Sell Shop + Inspectors | `src/ui/ShopModalsUi.ts` (`ShopModalsUi`) |

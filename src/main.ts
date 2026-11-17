@@ -1,12 +1,15 @@
 import './styles/global.css';
 import './styles/hud.css';
 import { audio } from './audio/AudioManager';
+import { assetUrl } from './game/AssetUrl';
 import { GameState } from './game/GameState';
-import { get3dPickaxeCursorUrl, init3dHudIcons } from './game3d/HudIcon3DRenderer';
+import { init3dHudIcons } from './game3d/HudIcon3DRenderer';
 import { MineScene3D } from './game3d/MineScene3D';
 import { STAGE_PEDESTAL_COUNT, WORLD_PALETTES } from './game3d/MineWorldPalette';
 import {
+  cgBindAudioMuteListener,
   cgGameplayStart,
+  cgGameplayStop,
   cgInit,
   cgLoadingStart,
   cgLoadingStop,
@@ -15,17 +18,45 @@ import { GameHud } from './ui/GameHud';
 
 async function bootstrap(): Promise<void> {
   window.addEventListener('contextmenu', (e) => e.preventDefault());
-  cgLoadingStart();
   await cgInit();
+  cgBindAudioMuteListener((muted) => audio.setPortalMuted(muted));
+  cgLoadingStart();
   init3dHudIcons();
-  const cursorUrl = get3dPickaxeCursorUrl();
-  if (cursorUrl) {
-    document.documentElement.style.setProperty('--mam-cursor', `url("${cursorUrl}") 4 4, auto`);
-  }
+
+  const pickaxeCursorEl = document.createElement('div');
+  pickaxeCursorEl.id = 'mamPickaxeCursor';
+  pickaxeCursorEl.style.display = 'none';
+  pickaxeCursorEl.innerHTML = `<img src="${assetUrl('/pickaxes/sunwheel.webp')}" alt="" />`;
+  document.body.appendChild(pickaxeCursorEl);
 
   const threeRoot = document.getElementById('threeRoot');
   const hudRoot = document.getElementById('hudRoot');
   if (!threeRoot || !hudRoot) return;
+
+  const syncPickaxeCursor = (e: PointerEvent): void => {
+    const canvas = threeRoot.querySelector('canvas');
+    const active = Boolean(canvas?.classList.contains('mam-mining-cursor'));
+    if (!active) {
+      pickaxeCursorEl.style.display = 'none';
+      return;
+    }
+    pickaxeCursorEl.style.display = 'block';
+    pickaxeCursorEl.style.left = `${e.clientX}px`;
+    pickaxeCursorEl.style.top = `${e.clientY}px`;
+  };
+  window.addEventListener('pointermove', syncPickaxeCursor, true);
+  window.addEventListener(
+    'pointerdown',
+    (e) => {
+      syncPickaxeCursor(e);
+      if (pickaxeCursorEl.style.display === 'block') {
+        pickaxeCursorEl.classList.remove('is-swinging');
+        void pickaxeCursorEl.offsetWidth;
+        pickaxeCursorEl.classList.add('is-swinging');
+      }
+    },
+    true
+  );
 
   const gameState = new GameState();
   let hud: GameHud | null = null;
@@ -34,6 +65,7 @@ async function bootstrap(): Promise<void> {
     onOreBroken: (variantKey) => {
       gameState.onOreBroken(variantKey);
       audio.playOreBreak(variantKey);
+      hud?.notifyTutorialOreBroken();
     },
     onOreDamage: (dmg, sx, sy, isClick) => {
       hud?.spawnDamagePopup(dmg, sx, sy, isClick);
@@ -59,6 +91,9 @@ async function bootstrap(): Promise<void> {
     onPlotAnchors: (anchors) => {
       hud?.updatePlotAnchors(anchors);
     },
+    onChestAnchor: (anchor) => {
+      hud?.updateChestAnchor(anchor);
+    },
     onOreBars: (bars) => {
       hud?.updateOreBars(bars);
     },
@@ -68,6 +103,9 @@ async function bootstrap(): Promise<void> {
     },
     onShopAnchors: (anchors) => {
       hud?.updateShopAnchors(anchors);
+    },
+    onShopChibiBubbles: (bubbles) => {
+      hud?.updateShopChibiBubbles(bubbles);
     },
     onAltarAnchors: (anchors) => {
       hud?.updateAltarAnchors(anchors);
@@ -128,12 +166,33 @@ async function bootstrap(): Promise<void> {
       if (weatherId === 'celestial') {
         audio.playSfx('rare-fanfare', { volume: 0.65 });
       }
+    },
+    (zoomed) => {
+      scene.setTutorialPitZoom(zoomed);
+    },
+    (zoomed) => {
+      scene.setTutorialChestZoom(zoomed);
+    },
+    (zoomed) => {
+      scene.setTutorialSellShopZoom(zoomed);
     }
   );
 
   audio.setSceneMode('mine');
   cgLoadingStop();
   cgGameplayStart();
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      cgGameplayStop();
+    } else {
+      cgGameplayStart();
+    }
+  });
+  window.addEventListener('blur', () => cgGameplayStop());
+  window.addEventListener('focus', () => {
+    if (!document.hidden) cgGameplayStart();
+  });
 }
 
 void bootstrap();

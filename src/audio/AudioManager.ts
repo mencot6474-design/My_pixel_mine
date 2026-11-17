@@ -98,6 +98,7 @@ export class AudioManager {
   private sfxVolume = 0.58;
   private userMuted = false;
   private adMuted = false;
+  private portalMuted = false;
   private hiddenMuted = false;
   private unlocked = false;
   private gestureBound = false;
@@ -117,7 +118,7 @@ export class AudioManager {
   }
 
   public isEffectivelyMuted(): boolean {
-    return this.userMuted || this.adMuted || this.hiddenMuted;
+    return this.userMuted || this.adMuted || this.portalMuted || this.hiddenMuted;
   }
 
   public toggleMuted(): boolean {
@@ -139,6 +140,11 @@ export class AudioManager {
 
   public setAdMuted(muted: boolean): void {
     this.adMuted = muted;
+    this.syncAudioState();
+  }
+
+  public setPortalMuted(muted: boolean): void {
+    this.portalMuted = muted;
     this.syncAudioState();
   }
 

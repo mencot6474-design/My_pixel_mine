@@ -11,6 +11,10 @@ interface CrazyGamesSDKWindow extends Window {
         gameplayStart: () => void;
         gameplayStop: () => void;
         happytime: () => void;
+        settings?: {
+          muteAudio?: boolean;
+        };
+        addSettingsChangeListener?: (listener: (settings: { muteAudio?: boolean }) => void) => void;
       };
       ad?: {
         requestAd: (
@@ -28,7 +32,9 @@ interface CrazyGamesSDKWindow extends Window {
 
 const win = window as CrazyGamesSDKWindow;
 
-let sdkReady = false;
+/** Set to true once the game is upgraded from CrazyGames Basic Launch to monetized ads. */
+export const CG_ADS_ENABLED = false;
+
 let gameplayRunning = false;
 let lastMidgameAt = 0;
 const MIDGAME_COOLDOWN_MS = 180_000;
@@ -37,7 +43,7 @@ export function isCrazyGamesEnv(): boolean {
   try {
     if (location.search.includes('crazygames=1')) return true;
     const sdk = win.CrazyGames?.SDK;
-    if (sdk && sdk.environment === 'crazygames') return true;
+    if (sdk?.environment && sdk.environment !== 'disabled') return true;
     if (window.self !== window.top && document.referrer.includes('crazygames')) return true;
   } catch {
     // ignore cross-origin check failures
@@ -53,9 +59,6 @@ export async function cgInit(): Promise<void> {
       sdk.init(),
       new Promise<void>((resolve) => window.setTimeout(resolve, 1500)),
     ]);
-    if (sdk.environment && sdk.environment !== 'disabled') {
-      sdkReady = true;
-    }
   } catch {
     // safe fallback outside CrazyGames portal
   }
@@ -105,13 +108,30 @@ export function cgHappyTime(): void {
   }
 }
 
+export function cgBindAudioMuteListener(onMuteChange: (muted: boolean) => void): void {
+  try {
+    const game = win.CrazyGames?.SDK?.game;
+    if (!game) return;
+    if (typeof game.settings?.muteAudio === 'boolean') {
+      onMuteChange(game.settings.muteAudio);
+    }
+    game.addSettingsChangeListener?.((settings) => {
+      if (typeof settings?.muteAudio === 'boolean') {
+        onMuteChange(settings.muteAudio);
+      }
+    });
+  } catch {
+    // ignore
+  }
+}
+
 export function cgRequestRewardedAd(
   onReward: AdCallback,
   onUnavailable?: AdCallback,
   setAudioMuted?: (muted: boolean) => void
 ): boolean {
   const sdk = win.CrazyGames?.SDK;
-  if (!sdk?.ad || sdk.environment === 'disabled' || (!sdkReady && !isCrazyGamesEnv())) {
+  if (!CG_ADS_ENABLED || !sdk?.ad || sdk.environment === 'disabled') {
     onUnavailable?.();
     return false;
   }
@@ -148,7 +168,7 @@ export function cgRequestRewardedAd(
 
 export function cgTryMidgameAd(onDone: AdCallback, setAudioMuted?: (muted: boolean) => void): void {
   const sdk = win.CrazyGames?.SDK;
-  if (!sdk?.ad || !sdkReady || !isCrazyGamesEnv()) {
+  if (!CG_ADS_ENABLED || !sdk?.ad || sdk.environment === 'disabled') {
     onDone();
     return;
   }

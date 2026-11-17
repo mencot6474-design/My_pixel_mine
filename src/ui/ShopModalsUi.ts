@@ -1,5 +1,6 @@
 import { getChibiById } from '../game3d/ChibiCatalog';
 import { audio } from '../audio/AudioManager';
+import { CG_ADS_ENABLED, cgRequestRewardedAd } from '../sdk/crazygames';
 import {
   GEM_SHOP_ITEMS,
   getGemShopItemById,
@@ -251,6 +252,9 @@ export class ShopModalsUi {
       theme: 'gem-shop',
       iconHtml: hudIconHtml('gem', 26, 'Gem Shop'),
       boxClass: `w-[980px] ${TW_SHOP_MODAL_RESP}`,
+      headerExtraHtml: CG_ADS_ENABLED
+        ? `<button class="ml-auto mr-1 px-3 py-1.5 rounded-xl border border-emerald-300/50 bg-[linear-gradient(135deg,rgba(16,185,129,0.9),rgba(4,120,87,0.95))] text-white text-[12.5px] font-black cursor-pointer hover:brightness-110 active:scale-95 whitespace-nowrap mam-outline-sm" data-action="gem-shop-ad-gems">🎬 +150 Gems (Ad)</button>`
+        : undefined,
       bodyHtml: `
         <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto">
           <div class="${TW_MODAL_GRID_BASE} grid-cols-4 gap-2.5 flex-1 min-h-[220px] @max-[920px]:flex-none @max-[920px]:max-h-[340px] p-0.5 @max-[720px]:grid-cols-2">
@@ -492,6 +496,23 @@ export class ShopModalsUi {
         }
         this.updateGemShopLive(root);
       });
+    });
+
+    scope.querySelector('[data-action="gem-shop-ad-gems"]')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cgRequestRewardedAd(
+        () => {
+          const gained = this.state.grantAdGems(150);
+          audio.playSfx('coin-alt');
+          this.pushToast(`+${fmtInt(gained)} Free Gems!`);
+          this.updateGemShopLive(root);
+        },
+        () => {
+          audio.playSfx('ui-error');
+          this.pushToast('Ad not available right now.');
+        },
+        (muted) => audio.setAdMuted(muted)
+      );
     });
 
     scope.querySelectorAll('[data-insp-shop-use-gem]').forEach((el) => {
