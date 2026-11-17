@@ -1,15 +1,20 @@
 import { CHIBI_CATALOG, getChibiById } from '../game3d/ChibiCatalog';
 import { MAX_PIT_NODE_COUNT, OreVariantKey, STAGE_PEDESTAL_COUNT } from '../game3d/MineWorldPalette';
 import {
+  CHIBI_MAX_STARS,
+  computeWorldResonances,
   DEFAULT_PICKAXE_STOCK,
   ENCHANT_DICE_GEM_COST,
   EnchantDef,
   ENCHANTS,
+  getChibiStarTier,
   getEnchantById,
   getGemShopItemById,
   getMinerSellValue,
   getMinersByWorld,
+  getMinerWorldId,
   getMutationById,
+  getNextChibiStarTier,
   getOreById,
   getOresByWorld,
   getPickaxeById,
@@ -25,6 +30,7 @@ import {
   rollWorldOre,
   WORLD_MINERS,
   WorldId,
+  WorldResonanceStatus,
   WORLDS,
 } from './GameData';
 import {
@@ -158,6 +164,7 @@ export interface SavePayload {
   activeBoosts?: Record<string, number>;
   unlockedWorlds?: WorldId[];
   researchLevels?: Partial<ResearchLevelsMap>;
+  chibiStars?: Record<string, number>;
   stashedUnits?: Record<string, PlotUnitState[]>;
   tower?: TowerSaveData;
   weather?: {
@@ -214,6 +221,7 @@ export class GameState {
   public plotMiners: (string | null)[] = Array(STAGE_PEDESTAL_COUNT).fill(null);
   public plotUnits: (PlotUnitState | null)[] = Array(STAGE_PEDESTAL_COUNT).fill(null);
   public stashedUnits: Record<string, PlotUnitState[]> = {};
+  public chibiStars: Record<string, number> = {};
   public ownedPickaxes: Record<string, number> = {};
   public ownedEnchants: Record<string, number> = {
     blazing: 2,
@@ -329,13 +337,31 @@ export class GameState {
     const lvlScale = (lvl: number) => Math.pow(1.28, lvl - 1);
     const dmgResearchMult = 1 + this.getActiveResearchBonus('minerDmgPct');
     const weatherDmgMult = this.getWeatherDamageMult();
-    const baseDmg = chibi.baseDps * lvlScale(unit.damageLevel) * pickMult * mut.mult * encMult * dmgResearchMult;
+    const starTier = getChibiStarTier(this.getChibiStar(chibi.id));
+    const resonanceDmgMult = 1 + this.getWorldResonanceDmgBonusPct(getMinerWorldId(chibi.id));
+    const baseDmg =
+      chibi.baseDps *
+      lvlScale(unit.damageLevel) *
+      pickMult *
+      mut.mult *
+      encMult *
+      dmgResearchMult *
+      starTier.dmgMult *
+      resonanceDmgMult;
     const dmg = Math.round(baseDmg * weatherDmgMult);
     const nextDmg = Math.round(
-      chibi.baseDps * lvlScale(unit.damageLevel + 1) * pickMult * mut.mult * encMult * dmgResearchMult * weatherDmgMult
+      chibi.baseDps *
+        lvlScale(unit.damageLevel + 1) *
+        pickMult *
+        mut.mult *
+        encMult *
+        dmgResearchMult *
+        starTier.dmgMult *
+        resonanceDmgMult *
+        weatherDmgMult
     );
     const speed = 10 + (unit.speedLevel - 1) * 2;
-    const miningMult = Number((1 + (unit.miningSpeedLevel - 1) * 0.1).toFixed(1));
+    const miningMult = Number((1 + (unit.miningSpeedLevel - 1) * 0.1 + starTier.miningSpeedBonus).toFixed(2));
     const worth = Math.round(baseDmg * 12);
 
     const upgradeCostMult = getChibiUpgradeCostMult(chibi.id);
@@ -364,6 +390,86 @@ export class GameState {
       if (st) total += st.dmg;
     }
     return total;
+  }
+
+  public getChibiStar(chibiId: string): number {
+    const raw = this.chibiStars[chibiId] ?? 0;
+    return Math.max(0, Math.min(CHIBI_MAX_STARS, Math.floor(raw)));
+  }
+
+  public getSpareChibiDuplicates(chibiId: string): number {
+    const totalOwned = this.miners[chibiId] || 0;
+    if (totalOwned <= 1) return 0;
+    const placedCount = this.plotMiners.filter((id) => id === chibiId).length;
+    const minKeep = Math.max(1, placedCount);
+    return Math.max(0, totalOwned - minKeep);
+  }
+
+  public canStarUpChibi(chibiId: string): boolean {
+    if (!getChibiById(chibiId)) return false;
+    const next = getNextChibiStarTier(this.getChibiStar(chibiId));
+    if (!next) return false;
+    return this.getSpareChibiDuplicates(chibiId) >= next.dupCost;
+  }
+
+  public starUpChibi(chibiId: string): { ok: true; newStar: number } | { ok: false; reason: 'max' | 'insufficient' | 'invalid' } {
+    if (!getChibiById(chibiId) || (this.miners[chibiId] || 0) <= 0) {
+      return { ok: false, reason: 'invalid' };
+    }
+    const current = this.getChibiStar(chibiId);
+    const next = getNextChibiStarTier(current);
+    if (!next) return { ok: false, reason: 'max' };
+    if (this.getSpareChibiDuplicates(chibiId) < next.dupCost) {
+      return { ok: false, reason: 'insufficient' };
+    }
+    this.miners[chibiId] = Math.max(1, (this.miners[chibiId] || 0) - next.dupCost);
+    this.chibiStars[chibiId] = next.star;
+    this.emit();
+    return { ok: true, newStar: next.star };
+  }
+
+  public autoStarUpAll(): number {
+    let upgrades = 0;
+    for (const chibiId of Object.keys(this.miners)) {
+      if (!getChibiById(chibiId) || (this.miners[chibiId] || 0) <= 1) continue;
+      let next = getNextChibiStarTier(this.getChibiStar(chibiId));
+      while (next && this.getSpareChibiDuplicates(chibiId) >= next.dupCost) {
+        this.miners[chibiId] = Math.max(1, (this.miners[chibiId] || 0) - next.dupCost);
+        this.chibiStars[chibiId] = next.star;
+        upgrades++;
+        next = getNextChibiStarTier(next.star);
+      }
+    }
+    if (upgrades > 0) this.emit();
+    return upgrades;
+  }
+
+  public getActiveWorldResonances(): WorldResonanceStatus[] {
+    return computeWorldResonances(this.plotMiners);
+  }
+
+  public getWorldResonanceDmgBonusPct(worldId: WorldId | null): number {
+    if (!worldId) return 0;
+    const match = this.getActiveWorldResonances().find((r) => r.worldId === worldId);
+    return match ? match.tier.dmgBonusPct : 0;
+  }
+
+  public getActiveStarDropAndGemBonus(): { oreDropBonusPct: number; gemBonusPct: number } {
+    let oreDropBonusPct = 0;
+    let gemBonusPct = 0;
+    for (const unit of this.plotUnits) {
+      if (!unit) continue;
+      const tier = getChibiStarTier(this.getChibiStar(unit.chibiId));
+      if (tier.dropBonusPct > 0) {
+        oreDropBonusPct += tier.dropBonusPct;
+        gemBonusPct += tier.dropBonusPct;
+      }
+    }
+    for (const res of this.getActiveWorldResonances()) {
+      oreDropBonusPct += res.tier.oreDropBonusPct;
+      gemBonusPct += res.tier.gemBonusPct;
+    }
+    return { oreDropBonusPct, gemBonusPct };
   }
 
   private equipChibiOnPlot(slotIndex: number, chibiId: string): 'placed' | 'replaced' | 'same' {
@@ -451,8 +557,9 @@ export class GameState {
     const mut = getMutationById(u.mutationId);
     const enc = getEnchantById(u.enchantId);
     const encMult = enc ? enc.dmgMult : 1;
+    const starMult = getChibiStarTier(this.getChibiStar(u.chibiId)).dmgMult;
     const lvlScale = Math.pow(1.22, u.damageLevel - 1);
-    return chibi.baseDps * lvlScale * pickMult * mut.mult * encMult;
+    return chibi.baseDps * lvlScale * pickMult * mut.mult * encMult * starMult;
   }
 
   private stashPlotUnit(unit: PlotUnitState | null): void {
@@ -750,7 +857,8 @@ export class GameState {
 
     if (variantKey === 'geode' || rng() < 0.18 + findBonus * 0.5) {
       const baseGem = variantKey === 'geode' ? 3 : 1;
-      const mult = (1 + getGlobalGemGainBonus(this.towerBestFloor)) * this.getWeatherGemDropMult();
+      const { gemBonusPct } = this.getActiveStarDropAndGemBonus();
+      const mult = (1 + getGlobalGemGainBonus(this.towerBestFloor) + gemBonusPct) * this.getWeatherGemDropMult();
       this.gems += Math.max(baseGem, Math.round(baseGem * mult));
     }
 
@@ -1183,7 +1291,8 @@ export class GameState {
   }
 
   public getOreOutputMult(): number {
-    let mult = 1 + this.getActiveResearchBonus('oreOutputPct');
+    const { oreDropBonusPct } = this.getActiveStarDropAndGemBonus();
+    let mult = 1 + this.getActiveResearchBonus('oreOutputPct') + oreDropBonusPct;
     if (this.isBoostActive('ore-elixir-1')) mult += 0.1;
     if (this.isBoostActive('ore-elixir-2')) mult += 0.25;
     if (this.isBoostActive('ore-elixir-3')) mult += 0.5;
@@ -1696,6 +1805,7 @@ export class GameState {
         activeBoosts: this.activeBoosts,
         unlockedWorlds: this.unlockedWorlds,
         researchLevels: this.researchLevels,
+        chibiStars: this.chibiStars,
         tower: {
           bestFloor: this.towerBestFloor,
           keys: this.towerKeys,
@@ -1741,6 +1851,15 @@ export class GameState {
         this.activeWorldId = 'underground';
       }
       if (data.miners) this.miners = data.miners;
+      if (data.chibiStars && typeof data.chibiStars === 'object') {
+        const nextStars: Record<string, number> = {};
+        for (const [id, star] of Object.entries(data.chibiStars)) {
+          if (typeof star === 'number' && star > 0 && getChibiById(id)) {
+            nextStars[id] = Math.max(0, Math.min(CHIBI_MAX_STARS, Math.floor(star)));
+          }
+        }
+        this.chibiStars = nextStars;
+      }
       if (data.ores) {
         const nextOres: Record<string, number> = {};
         for (const [rawId, count] of Object.entries(data.ores)) {

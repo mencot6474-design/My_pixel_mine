@@ -95,6 +95,9 @@ export class MineScene3D {
   private targetCamRadius = 16.5;
   private isDragging = false;
   private dragMoved = false;
+  private activePointerId: number | null = null;
+  private dragStartX = 0;
+  private dragStartY = 0;
   private lastDragX = 0;
   private lastDragY = 0;
   private rafId = 0;
@@ -271,21 +274,34 @@ export class MineScene3D {
 
   private bindEvents(): void {
     const dom = this.renderer.domElement;
+    dom.style.touchAction = 'none';
 
     dom.addEventListener('contextmenu', (e) => e.preventDefault());
 
     dom.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 && e.button !== 2) return;
       this.isDragging = true;
       this.dragMoved = false;
+      this.activePointerId = e.pointerId;
+      this.dragStartX = e.clientX;
+      this.dragStartY = e.clientY;
       this.lastDragX = e.clientX;
       this.lastDragY = e.clientY;
+      try {
+        dom.setPointerCapture(e.pointerId);
+      } catch {
+        // Ignore if pointer capture is unsupported in synthetic environments
+      }
     });
 
     window.addEventListener('pointermove', (e) => {
       if (this.isDragging) {
+        if (this.activePointerId !== null && e.pointerId !== this.activePointerId) return;
         const dx = e.clientX - this.lastDragX;
         const dy = e.clientY - this.lastDragY;
-        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) this.dragMoved = true;
+        if (!this.dragMoved && Math.hypot(e.clientX - this.dragStartX, e.clientY - this.dragStartY) > 6) {
+          this.dragMoved = true;
+        }
         this.lastDragX = e.clientX;
         this.lastDragY = e.clientY;
         this.targetOrbitYaw = Math.max(-1.35, Math.min(1.35, this.targetOrbitYaw - dx * 0.005));
@@ -301,9 +317,30 @@ export class MineScene3D {
       this.pit.setHoveredNode(hoveredNode);
     });
 
-    window.addEventListener('pointerup', (e) => {
-      const wasClick = this.isDragging && !this.dragMoved && e.button === 0;
+    const endDrag = (pointerId?: number): void => {
+      if (pointerId !== undefined) {
+        try {
+          if (dom.hasPointerCapture(pointerId)) dom.releasePointerCapture(pointerId);
+        } catch {
+          // Ignore
+        }
+      }
       this.isDragging = false;
+      this.activePointerId = null;
+    };
+
+    window.addEventListener('pointercancel', (e) => {
+      if (this.activePointerId === null || e.pointerId === this.activePointerId) {
+        endDrag(e.pointerId);
+      }
+    });
+
+    window.addEventListener('blur', () => endDrag());
+
+    window.addEventListener('pointerup', (e) => {
+      if (this.activePointerId !== null && e.pointerId !== this.activePointerId) return;
+      const wasClick = this.isDragging && !this.dragMoved && e.button === 0;
+      endDrag(e.pointerId);
       if (!wasClick) return;
 
       const hit = this.raycastAt(e.clientX, e.clientY);
@@ -766,7 +803,7 @@ export class MineScene3D {
   public syncPlotUnitStats(slotIndex: number, dmg: number, speed: number, miningMult: number): void {
     this.slotCombatStats.set(slotIndex, { dmg, speed, miningMult });
     this.fieldMiners.get(slotIndex)?.setCombatStats(dmg, speed, miningMult);
-    this.syncTowerFighters();
+    if (this.mode === 'tower') this.syncTowerFighters();
   }
 
   public syncPlotEnchant(slotIndex: number, enchantId: string | null): void {
@@ -774,7 +811,7 @@ export class MineScene3D {
     this.slotEnchants[slotIndex] = enchantId;
     this.pedestals[slotIndex]?.setEnchant(enchantId);
     this.fieldMiners.get(slotIndex)?.setEnchant(enchantId);
-    this.syncTowerFighters();
+    if (this.mode === 'tower') this.syncTowerFighters();
   }
 
   public syncPlotMiners(chibiIds: (string | null)[]): void {

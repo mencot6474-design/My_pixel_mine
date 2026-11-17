@@ -1011,6 +1011,19 @@ export class GameHud {
 
       const activeWorld = getWorldById(this.state.activeWorldId);
       const upgradeCount = this.state.getAffordableResearchCount();
+      const resonances = this.state.getActiveWorldResonances();
+      const resonanceStripHtml = resonances.length
+        ? `<div class="absolute top-[68px] @max-[720px]:top-[54px] left-1/2 -translate-x-1/2 flex items-center gap-1.5 flex-wrap justify-center pointer-events-none">
+            ${resonances
+              .map((r) => {
+                const extras: string[] = [`+${Math.round(r.tier.dmgBonusPct * 100)}% DMG`];
+                if (r.tier.oreDropBonusPct > 0) extras.push(`+${Math.round(r.tier.oreDropBonusPct * 100)}% Ore`);
+                if (r.tier.gemBonusPct > 0) extras.push(`+${Math.round(r.tier.gemBonusPct * 100)}% Gem`);
+                return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-violet-400/50 bg-[rgba(15,23,42,0.78)] backdrop-blur-md text-[11px] font-extrabold text-violet-200 shadow-[0_4px_12px_rgba(0,0,0,0.4)] mam-outline-sm">✦ ${r.worldName} (${r.count}) • ${extras.join(' • ')}</span>`;
+              })
+              .join('')}
+          </div>`
+        : '';
 
       this.root.innerHTML = `
       ${this.renderWeatherWidget()}
@@ -1032,6 +1045,7 @@ export class GameHud {
           </span>
         </button>
       </div>
+      ${resonanceStripHtml}
 
       <div class="absolute left-4 @max-[720px]:left-2.5 top-1/2 -translate-y-1/2 flex flex-col gap-2.5 @max-[720px]:gap-2">
         <button class="${TW_SIDE_BTN_RAINBOW}" data-action="open-shop">
@@ -1278,6 +1292,16 @@ export class GameHud {
           this.state.equipBestMiners();
           audio.playSfx('place-chibi');
           this.pushToast('Equipped best miners to Plot!');
+        } else if (action === 'auto-star-up') {
+          const upgrades = this.state.autoStarUpAll();
+          if (upgrades > 0) {
+            audio.playSfx('upgrade');
+            this.pushToast(`Starred up ${upgrades}x!`);
+            this.collectionUi.updateInventoryModalLive(this.root);
+          } else {
+            audio.playSfx('ui-error');
+            this.pushToast('No Chibi has enough spare duplicates!');
+          }
         } else if (action === 'chest-take-all') {
           const taken = this.state.takeAllFromChest();
           audio.playSfx(taken > 0 ? 'coin-alt' : 'ui-error');

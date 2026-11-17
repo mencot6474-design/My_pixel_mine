@@ -460,6 +460,84 @@ export function getMinerRarity(chibiId: string): ItemRarity {
   return entry?.rarity ?? 'common';
 }
 
+export function getMinerWorldId(chibiId: string): WorldId | null {
+  const entry = WORLD_MINERS.find((m) => m.chibiId === chibiId);
+  return entry?.worldId ?? null;
+}
+
+export const CHIBI_MAX_STARS = 5;
+
+export interface ChibiStarTierDef {
+  star: number;
+  dupCost: number;
+  dmgMult: number;
+  miningSpeedBonus: number;
+  dropBonusPct: number;
+}
+
+export const CHIBI_STAR_TIERS: readonly ChibiStarTierDef[] = [
+  { star: 0, dupCost: 0, dmgMult: 1.0, miningSpeedBonus: 0, dropBonusPct: 0 },
+  { star: 1, dupCost: 2, dmgMult: 1.25, miningSpeedBonus: 0, dropBonusPct: 0 },
+  { star: 2, dupCost: 4, dmgMult: 1.6, miningSpeedBonus: 0, dropBonusPct: 0 },
+  { star: 3, dupCost: 7, dmgMult: 2.1, miningSpeedBonus: 0.05, dropBonusPct: 0 },
+  { star: 4, dupCost: 12, dmgMult: 2.8, miningSpeedBonus: 0.1, dropBonusPct: 0 },
+  { star: 5, dupCost: 20, dmgMult: 3.8, miningSpeedBonus: 0.15, dropBonusPct: 0.1 },
+];
+
+export function getChibiStarTier(star: number): ChibiStarTierDef {
+  const clamped = Math.max(0, Math.min(CHIBI_MAX_STARS, Math.floor(star)));
+  return CHIBI_STAR_TIERS[clamped] ?? CHIBI_STAR_TIERS[0];
+}
+
+export function getNextChibiStarTier(star: number): ChibiStarTierDef | null {
+  const clamped = Math.max(0, Math.floor(star));
+  if (clamped >= CHIBI_MAX_STARS) return null;
+  return CHIBI_STAR_TIERS[clamped + 1] ?? null;
+}
+
+export interface WorldResonanceTierDef {
+  minCount: number;
+  dmgBonusPct: number;
+  oreDropBonusPct: number;
+  gemBonusPct: number;
+  label: string;
+}
+
+export const WORLD_RESONANCE_TIERS: readonly WorldResonanceTierDef[] = [
+  { minCount: 2, dmgBonusPct: 0.15, oreDropBonusPct: 0, gemBonusPct: 0, label: 'Duo Resonance' },
+  { minCount: 3, dmgBonusPct: 0.3, oreDropBonusPct: 0.1, gemBonusPct: 0, label: 'Trio Resonance' },
+  { minCount: 5, dmgBonusPct: 0.6, oreDropBonusPct: 0.25, gemBonusPct: 0.15, label: 'Full World Roster' },
+];
+
+export interface WorldResonanceStatus {
+  worldId: WorldId;
+  worldName: string;
+  count: number;
+  tier: WorldResonanceTierDef;
+}
+
+export function computeWorldResonances(plotChibiIds: Array<string | null>): WorldResonanceStatus[] {
+  const counts = new Map<WorldId, number>();
+  for (const id of plotChibiIds) {
+    if (!id) continue;
+    const wid = getMinerWorldId(id);
+    if (!wid) continue;
+    counts.set(wid, (counts.get(wid) ?? 0) + 1);
+  }
+  const active: WorldResonanceStatus[] = [];
+  for (const world of WORLDS) {
+    const count = counts.get(world.id) ?? 0;
+    let bestTier: WorldResonanceTierDef | null = null;
+    for (const tier of WORLD_RESONANCE_TIERS) {
+      if (count >= tier.minCount) bestTier = tier;
+    }
+    if (bestTier) {
+      active.push({ worldId: world.id, worldName: world.name, count, tier: bestTier });
+    }
+  }
+  return active;
+}
+
 export function rollWorldOre(worldId: WorldId, rng: () => number = Math.random, luckMult = 1): OreDef {
   const pool = getOresByWorld(worldId);
   return weightedPickByLuck(pool, (o) => o.chancePct, luckMult, rng);

@@ -3,7 +3,9 @@ import { getChibiById } from '../game3d/ChibiCatalog';
 import {
   ENCHANTS,
   getMinerRarity,
+  getMinerWorldId,
   getMutationById,
+  getWorldById,
   isHighTierMutation,
   MUTATIONS,
   PICKAXES,
@@ -59,15 +61,23 @@ export class PlotInspectUi {
     const rarity = getMinerRarity(chibi.id);
     const mut = getMutationById(unit.mutationId);
     const rColor = RARITY_BORDER[rarity];
+    const star = this.state.getChibiStar(chibi.id);
+    const worldId = getMinerWorldId(chibi.id);
+    const resBonusPct = this.state.getWorldResonanceDmgBonusPct(worldId);
+    const worldName = worldId ? getWorldById(worldId).name : null;
 
     root.innerHTML = `
       <button class="absolute top-4 @max-[720px]:top-2.5 left-1/2 -translate-x-1/2 px-[34px] py-[7px] rounded-[6px] border-2 border-[#7c2d12] bg-[linear-gradient(180deg,#fb923c,#ea580c)] shadow-[0_3px_0_#7c2d12] text-white text-[19px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-[140ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:scale-[1.03] hover:brightness-[1.08] active:translate-y-0.5 active:scale-[0.97] active:shadow-[0_1px_0_#7c2d12] mam-outline-sm" data-inspect-action="exit">Exit</button>
 
       <div class="absolute left-7 @max-[920px]:left-3 top-[38%] @max-[920px]:top-14 -translate-y-1/2 @max-[920px]:translate-y-0 w-[245px] @max-[920px]:w-[208px] px-3.5 py-3 rounded-2xl bg-[rgba(12,16,28,0.84)] backdrop-blur-xl border border-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_36px_rgba(0,0,0,0.55)] flex flex-col gap-[3px]">
-        <div class="text-[20px] font-black leading-[1.1] mam-outline-sm">${chibi.name}</div>
+        <div class="flex items-center justify-between gap-1.5">
+          <div class="text-[20px] font-black leading-[1.1] mam-outline-sm truncate">${chibi.name}</div>
+          ${star > 0 ? `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/25 border border-amber-400/70 text-amber-300 text-[11px] font-black shrink-0">★${star}</span>` : ''}
+        </div>
         <div class="text-[15px] font-extrabold mam-outline-sm" style="color:${rColor}">
           ${rarity[0].toUpperCase() + rarity.slice(1)} <span style="color:#fff">•</span> <span class="${mut.id === 'rainbow' ? 'mam-rainbow-text' : ''}" style="${mut.id === 'rainbow' ? '' : `color:${mut.color}`}">${mut.name}</span>
         </div>
+        ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black text-violet-300 mam-outline-sm">✦ ${worldName} Resonance (+${Math.round(resBonusPct * 100)}% DMG)</div>` : ''}
         <div class="text-[13px] font-bold text-[#e2e8f0] mt-0.5 mam-outline-sm">
           Lv. ${unit.damageLevel} • Speed ${stats.speed} • Mining x${stats.miningMult}
         </div>

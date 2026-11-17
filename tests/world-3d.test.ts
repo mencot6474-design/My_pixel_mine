@@ -1379,4 +1379,80 @@ describe('Pure 3D Mine World', () => {
     expect(shopAnchors).toHaveLength(5);
     expect(existsSync(resolve(process.cwd(), 'public', 'pickaxes', 'sunwheel.png'))).toBe(true);
   });
+
+  it('supports Chibi Star-Up (★0–★5) while protecting placed plot units and boosting DPS/mining speed', () => {
+    const state = new GameState();
+    state.miners['astral-recruit'] = 4;
+    state.hotbar[0] = 'astral-recruit';
+    state.selectedHotbarSlot = 0;
+    state.placeSelectedOnPlot(0);
+
+    // 1 placed on plot -> 3 spare duplicates available (keeps at least 1)
+    expect(state.getSpareChibiDuplicates('astral-recruit')).toBe(3);
+    const baseStats = state.getPlotUnitStats(0)!;
+    expect(baseStats).toBeTruthy();
+
+    // ★1 costs 2 duplicates -> leaves 2 owned (1 placed + 1 spare)
+    const r1 = state.starUpChibi('astral-recruit');
+    expect(r1).toEqual({ ok: true, newStar: 1 });
+    expect(state.getChibiStar('astral-recruit')).toBe(1);
+    expect(state.miners['astral-recruit']).toBe(2);
+    expect(state.getSpareChibiDuplicates('astral-recruit')).toBe(1);
+
+    const star1Stats = state.getPlotUnitStats(0)!;
+    expect(star1Stats.dmg).toBeGreaterThan(baseStats.dmg);
+
+    // Cannot ★2 (needs 4 spares, only 1 spare left)
+    expect(state.starUpChibi('astral-recruit')).toEqual({ ok: false, reason: 'insufficient' });
+
+    // Give plenty of spares and auto-star-up to ★5
+    state.miners['astral-recruit'] = 100;
+    const upgraded = state.autoStarUpAll();
+    expect(upgraded).toBe(4); // ★2, ★3, ★4, ★5
+    expect(state.getChibiStar('astral-recruit')).toBe(5);
+    const star5Stats = state.getPlotUnitStats(0)!;
+    expect(star5Stats.miningMult).toBeGreaterThan(baseStats.miningMult);
+    expect(state.getActiveStarDropAndGemBonus().oreDropBonusPct).toBeCloseTo(0.1, 5);
+  });
+
+  it('activates World Resonance synergy buffs for 2, 3, and 5 same-world Chibis on plots', () => {
+    const state = new GameState();
+    const ugIds = ['astral-recruit', 'solar-striker', 'frost-vanguard', 'tropic-blaze', 'cyber-ki-brawler'];
+    for (const id of ugIds) {
+      state.miners[id] = 1;
+    }
+
+    state.hotbar[0] = ugIds[0];
+    state.selectedHotbarSlot = 0;
+    state.placeSelectedOnPlot(0);
+    expect(state.getActiveWorldResonances()).toHaveLength(0);
+
+    // 2 Underground chibis -> Duo Resonance (+15% DMG)
+    state.hotbar[0] = ugIds[1];
+    state.placeSelectedOnPlot(1);
+    let res = state.getActiveWorldResonances();
+    expect(res).toHaveLength(1);
+    expect(res[0].worldId).toBe('underground');
+    expect(res[0].tier.dmgBonusPct).toBeCloseTo(0.15, 5);
+
+    // 3 Underground chibis -> Trio Resonance (+30% DMG, +10% Ore Drop)
+    state.hotbar[0] = ugIds[2];
+    state.placeSelectedOnPlot(2);
+    res = state.getActiveWorldResonances();
+    expect(res[0].tier.dmgBonusPct).toBeCloseTo(0.3, 5);
+    expect(res[0].tier.oreDropBonusPct).toBeCloseTo(0.1, 5);
+    expect(state.getOreOutputMult()).toBeCloseTo(1.1, 5);
+
+    // 5 Underground chibis -> Full World Roster (+60% DMG, +25% Ore Drop, +15% Gem Gain)
+    state.hotbar[0] = ugIds[3];
+    state.placeSelectedOnPlot(3);
+    state.hotbar[0] = ugIds[4];
+    state.placeSelectedOnPlot(4);
+    res = state.getActiveWorldResonances();
+    expect(res[0].count).toBe(5);
+    expect(res[0].tier.dmgBonusPct).toBeCloseTo(0.6, 5);
+    expect(res[0].tier.oreDropBonusPct).toBeCloseTo(0.25, 5);
+    expect(res[0].tier.gemBonusPct).toBeCloseTo(0.15, 5);
+    expect(state.getActiveStarDropAndGemBonus().gemBonusPct).toBeCloseTo(0.15, 5);
+  });
 });

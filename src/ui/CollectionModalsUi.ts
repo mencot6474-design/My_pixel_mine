@@ -3,10 +3,13 @@ import { assetUrl } from '../game/AssetUrl';
 import { CHIBI_CATALOG, getChibiById } from '../game3d/ChibiCatalog';
 import {
   GEM_SHOP_ITEMS,
+  getChibiStarTier,
   getGemShopItemById,
   getMinerRarity,
   getMinerSellValue,
   getMinersByWorld,
+  getMinerWorldId,
+  getNextChibiStarTier,
   getOreById,
   getOresByWorld,
   getWorldById,
@@ -266,23 +269,53 @@ export class CollectionModalsUi {
       const hotbarIdx = this.state.hotbar.indexOf(def.id);
       const isEq = hotbarIdx !== -1;
       const onPlot = this.state.plotMiners.filter((id) => id === def.id).length;
+      const star = this.state.getChibiStar(def.id);
+      const starTier = getChibiStarTier(star);
+      const nextTier = getNextChibiStarTier(star);
+      const spare = this.state.getSpareChibiDuplicates(def.id);
+      const worldId = getMinerWorldId(def.id);
+      const worldName = worldId ? getWorldById(worldId).name : 'Unknown';
+      const canStarUp = Boolean(nextTier && spare >= nextTier.dupCost);
+      const starBonusParts = [`+${Math.round((starTier.dmgMult - 1) * 100)}% DPS`];
+      if (starTier.miningSpeedBonus > 0) starBonusParts.push(`+${Math.round(starTier.miningSpeedBonus * 100)}% Spd`);
+      if (starTier.dropBonusPct > 0) starBonusParts.push(`+${Math.round(starTier.dropBonusPct * 100)}% Drop/Gem`);
 
       return renderInspectorPanel({
         rarity,
         title: def.name,
-        subtitle: 'Backpack • Chibi Miner',
-        badgesHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] font-black border ${isEq ? 'bg-[#14532d]/60 border-[#4ade80]/70 text-[#86efac]' : 'bg-[#1e293b] border-[#475569] text-[#cbd5e1]'}">${isEq ? `Hotbar #${hotbarIdx + 1}` : 'Not Equipped'}</span>`,
+        subtitle: `Backpack • ${worldName} Miner`,
+        badgesHtml: `
+          <div class="flex items-center justify-center gap-1 flex-wrap">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black border ${isEq ? 'bg-[#14532d]/60 border-[#4ade80]/70 text-[#86efac]' : 'bg-[#1e293b] border-[#475569] text-[#cbd5e1]'}">${isEq ? `Hotbar #${hotbarIdx + 1}` : 'Not Equipped'}</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black border ${star > 0 ? 'bg-amber-500/20 border-amber-400/70 text-amber-300' : 'bg-[#1e293b] border-[#475569] text-[#94a3b8]'}">${'★'.repeat(Math.max(1, star))}${star === 0 ? ' 0' : ` ${star}/5`}</span>
+          </div>
+        `,
         artHtml: chibiPortraitHtml(def),
         stats: [
-          ['Owned', `x${fmtInt(qty)}`, 'text-white'],
-          ['Base DPS', `${fmtShort(def.baseDps)}/s`, 'text-[#facc15]'],
+          ['Owned', `x${fmtInt(qty)} (${fmtInt(spare)} spare)`, 'text-white'],
+          ['Effective DPS', `${fmtShort(Math.round(def.baseDps * starTier.dmgMult))}/s`, 'text-[#facc15]'],
+          ['Star Bonus', star > 0 ? starBonusParts.join(' • ') : 'None (★0)', star > 0 ? 'text-amber-300' : 'text-[#94a3b8]'],
           ['On Plot', `${fmtInt(onPlot)} placed`, 'text-[#7dd3fc]'],
-          ['Sell Value', fmtMoney(getMinerSellValue(def.id)), 'text-[#4ade80]'],
         ],
         actionHtml: `
-          <button class="w-full h-10 rounded-[7px] border-2 ${isEq ? 'border-[#7c2d12] bg-[linear-gradient(180deg,#fb923c,#ea580c)] shadow-[0_3px_0_#7c2d12]' : 'border-[#14532d] bg-[linear-gradient(180deg,#4ade80,#16a34a)] shadow-[0_3px_0_#14532d]'} text-white text-[14px] font-black cursor-pointer hover:brightness-110 active:translate-y-0.5 mam-outline-sm" data-insp-inv-action="toggle-miner" data-insp-id="${def.id}">
-            ${isEq ? 'Unequip from Hotbar' : 'Equip to Hotbar'}
-          </button>
+          <div class="flex flex-col gap-1.5">
+            <button class="w-full h-9 rounded-[7px] border-2 ${isEq ? 'border-[#7c2d12] bg-[linear-gradient(180deg,#fb923c,#ea580c)] shadow-[0_3px_0_#7c2d12]' : 'border-[#14532d] bg-[linear-gradient(180deg,#4ade80,#16a34a)] shadow-[0_3px_0_#14532d]'} text-white text-[13px] font-black cursor-pointer hover:brightness-110 active:translate-y-0.5 mam-outline-sm" data-insp-inv-action="toggle-miner" data-insp-id="${def.id}">
+              ${isEq ? 'Unequip from Hotbar' : 'Equip to Hotbar'}
+            </button>
+            <button class="w-full h-9 rounded-[7px] border-2 ${
+              !nextTier
+                ? 'border-amber-600/60 bg-amber-950/60 text-amber-300 cursor-default'
+                : canStarUp
+                  ? 'border-[#854d0e] bg-[linear-gradient(180deg,#facc15,#eab308)] shadow-[0_3px_0_#854d0e] text-[#1e293b] cursor-pointer hover:brightness-110 active:translate-y-0.5'
+                  : 'border-slate-700 bg-slate-800/80 text-slate-400 cursor-not-allowed opacity-75'
+            } text-[12.5px] font-black" data-insp-inv-action="star-up-miner" data-insp-id="${def.id}" ${!nextTier || !canStarUp ? 'disabled' : ''}>
+              ${
+                nextTier
+                  ? `★ Star Up → ★${nextTier.star} (${fmtInt(spare)}/${nextTier.dupCost} dupes)`
+                  : '★ MAX STAR (★5) ★'
+              }
+            </button>
+          </div>
         `,
       });
     }
@@ -360,23 +393,30 @@ export class CollectionModalsUi {
     if (this.invTab === 'all' || this.invTab === 'miners') {
       const minerList = Object.entries(this.state.miners)
         .filter(([, qty]) => qty > 0)
-        .map(([id, qty]) => ({ def: getChibiById(id) ?? CHIBI_CATALOG[0], qty }))
-        .sort((a, b) => b.def.baseDps - a.def.baseDps);
+        .map(([id, qty]) => {
+          const def = getChibiById(id) ?? CHIBI_CATALOG[0];
+          const star = this.state.getChibiStar(def.id);
+          const effDps = Math.round(def.baseDps * getChibiStarTier(star).dmgMult);
+          return { def, qty, star, effDps };
+        })
+        .sort((a, b) => b.effDps - a.effDps);
 
-      for (const { def, qty } of minerList) {
+      for (const { def, qty, star, effDps } of minerList) {
         if (q && !def.name.toLowerCase().includes(q)) continue;
         const rarity = getMinerRarity(def.id);
-        const isEquipped = this.state.hotbar.includes(def.id);
+        const hotbarIdx = this.state.hotbar.indexOf(def.id);
+        const isEquipped = hotbarIdx !== -1;
         const isInsp = selTarget?.kind === 'miner' && selTarget.id === def.id;
         cards.push(`
           <div class="${rarityCardClasses(rarity, isInsp ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.4)]' : '')}" style="${rarityVars(rarity)}" data-equip-miner="${def.id}" title="Click to Equip / Unequip">
-            ${isEquipped ? '<span class="mam-equipped-tag">EQ</span>' : ''}
+            ${star > 0 ? `<span class="absolute bottom-1 left-1 z-[4] px-1 py-px rounded bg-amber-500/90 border border-amber-200/70 text-[#0f172a] text-[9px] font-black leading-none">★${star}</span>` : ''}
+            ${isEquipped ? `<span class="mam-equipped-tag">${hotbarIdx + 1}</span>` : ''}
             <div class="mam-card-art">
               ${chibiPortraitHtml(def)}
             </div>
-            <div class="mam-card-name mam-outline-sm truncate ${isEquipped ? '!text-left pl-1 pr-[24px]' : 'px-1'}">${def.name}</div>
+            <div class="mam-card-name mam-outline-sm truncate ${isEquipped ? '!text-left pl-1 pr-[22px]' : 'px-1'}">${def.name}</div>
             <div class="mam-card-bottom">
-              <span class="mam-card-dps mam-outline-sm">${fmtShort(def.baseDps)}</span>
+              <span class="mam-card-dps mam-outline-sm">${fmtShort(effDps)}</span>
               <span class="mam-card-qty mam-outline-sm">x${fmtInt(qty)}</span>
             </div>
           </div>
@@ -413,13 +453,14 @@ export class CollectionModalsUi {
 
       for (const { def, qty } of oreList) {
         if (q && !def.name.toLowerCase().includes(q)) continue;
-        const isEquipped = this.state.hotbar.includes(def.id);
+        const hotbarIdx = this.state.hotbar.indexOf(def.id);
+        const isEquipped = hotbarIdx !== -1;
         const isInsp = selTarget?.kind === 'ore' && selTarget.id === def.id;
         cards.push(`
           <div class="${rarityCardClasses(def.rarity, isInsp ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.4)]' : '')}" style="${rarityVars(def.rarity)}" data-equip-ore="${def.id}" title="${def.name} (${fmtMoney(def.sellValue)}) — Click to Equip / Unequip">
-            ${isEquipped ? '<span class="mam-equipped-tag">EQ</span>' : ''}
+            ${isEquipped ? `<span class="mam-equipped-tag">${hotbarIdx + 1}</span>` : ''}
             <div class="mam-card-art">${oreIconSvg(def.color, def.secondaryColor, def.rarity, `inv_${def.id}`)}</div>
-            <div class="mam-card-name mam-outline-sm truncate ${isEquipped ? '!text-left pl-1 pr-[24px]' : 'px-1'}">${def.name}</div>
+            <div class="mam-card-name mam-outline-sm truncate ${isEquipped ? '!text-left pl-1 pr-[22px]' : 'px-1'}">${def.name}</div>
             <div class="mam-card-bottom">
               <span class="mam-card-val mam-outline-sm">${fmtMoney(def.sellValue)}</span>
               <span class="mam-card-qty mam-outline-sm">x${fmtInt(qty)}</span>
@@ -447,10 +488,15 @@ export class CollectionModalsUi {
       iconHtml: hudIconHtml('backpack', 26, 'Inventory'),
       boxClass: `w-[980px] ${TW_SHOP_MODAL_RESP}`,
       headerExtraHtml: `
-        <button class="mam-equip-best-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-emerald-300/45 bg-[linear-gradient(135deg,rgba(34,197,94,0.88),rgba(5,150,105,0.92))] shadow-[0_6px_16px_rgba(16,185,129,0.28),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[14px] font-extrabold cursor-pointer transition-[transform,filter,box-shadow] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="equip-best">
-          ${hudIconHtml('sparkle', 18, 'Equip Best')}
-          <span>Equip Best</span>
-        </button>
+        <div class="flex items-center gap-1.5">
+          <button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-amber-300/45 bg-[linear-gradient(135deg,rgba(245,158,11,0.88),rgba(217,119,6,0.92))] shadow-[0_6px_16px_rgba(245,158,11,0.25),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[13px] font-extrabold cursor-pointer transition-[transform,filter] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="auto-star-up" title="Merge all spare Chibi duplicates into Stars">
+            <span>★ Auto Star-Up</span>
+          </button>
+          <button class="mam-equip-best-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-emerald-300/45 bg-[linear-gradient(135deg,rgba(34,197,94,0.88),rgba(5,150,105,0.92))] shadow-[0_6px_16px_rgba(16,185,129,0.28),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[14px] font-extrabold cursor-pointer transition-[transform,filter,box-shadow] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="equip-best">
+            ${hudIconHtml('sparkle', 18, 'Equip Best')}
+            <span>Equip Best</span>
+          </button>
+        </div>
       `,
       bodyHtml: `
         <div class="flex items-center gap-2 flex-wrap">
@@ -660,6 +706,18 @@ export class CollectionModalsUi {
           audio.playSfx('ui-tab');
           this.invInspectTarget = { kind: 'miner', id };
           this.state.toggleEquipMiner(id);
+        } else if (act === 'star-up-miner') {
+          this.invInspectTarget = { kind: 'miner', id };
+          const res = this.state.starUpChibi(id);
+          if (res.ok) {
+            const def = getChibiById(id);
+            audio.playSfx('upgrade');
+            this.pushToast(`${def?.name ?? id} reached ★${res.newStar}!`);
+            this.updateInventoryModalLive(root);
+          } else {
+            audio.playSfx('ui-error');
+            this.pushToast(res.reason === 'max' ? 'Already MAX ★5!' : 'Not enough spare duplicates!');
+          }
         } else if (act === 'toggle-ore') {
           audio.playSfx('ui-tab');
           this.invInspectTarget = { kind: 'ore', id };
