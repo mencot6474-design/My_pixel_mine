@@ -997,15 +997,58 @@ export class GameHud {
     document.documentElement.style.setProperty('--mam-float-scale', floatScale.toFixed(4));
   }
 
+  private renderAudioToggleBtn(floating = true): string {
+    const muted = audio.isMuted();
+    const audioIcon = muted
+      ? `<svg viewBox="0 0 28 28" width="24" height="24" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="mam-spk-mute" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#fda4af"/>
+              <stop offset="100%" stop-color="#e11d48"/>
+            </linearGradient>
+          </defs>
+          <path d="M5 10.5H8.8L14.5 5.5V22.5L8.8 17.5H5C3.9 17.5 3 16.6 3 15.5V12.5C3 11.4 3.9 10.5 5 10.5Z" fill="url(#mam-spk-mute)" stroke="#ffe4e6" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M18.5 10.5L24.5 16.5M24.5 10.5L18.5 16.5" stroke="#fb7185" stroke-width="2.6" stroke-linecap="round"/>
+        </svg>`
+      : `<svg viewBox="0 0 28 28" width="24" height="24" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="mam-spk-on" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#bae6fd"/>
+              <stop offset="100%" stop-color="#0284c7"/>
+            </linearGradient>
+          </defs>
+          <path d="M5 10.5H8.8L14.5 5.5V22.5L8.8 17.5H5C3.9 17.5 3 16.6 3 15.5V12.5C3 11.4 3.9 10.5 5 10.5Z" fill="url(#mam-spk-on)" stroke="#e0f2fe" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M18.2 9.8C19.6 11.2 19.6 16.8 18.2 18.2" stroke="#38bdf8" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M21.4 6.8C24.2 9.8 24.2 18.2 21.4 21.2" stroke="#7dd3fc" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>`;
+
+    const frameCls = muted
+      ? 'border-rose-400/60 bg-[linear-gradient(160deg,rgba(136,19,55,0.82),rgba(15,23,42,0.92))] shadow-[0_8px_22px_rgba(225,29,72,0.28),inset_0_1px_0_rgba(255,255,255,0.28)]'
+      : 'border-sky-300/60 bg-[linear-gradient(160deg,rgba(14,116,144,0.82),rgba(15,23,42,0.92))] shadow-[0_8px_22px_rgba(56,189,248,0.32),inset_0_1px_0_rgba(255,255,255,0.32)]';
+    const placementCls = floating ? 'absolute top-[14px] right-4 z-[15]' : 'mt-0.5';
+
+    return `
+      <button
+        class="${placementCls} w-12 h-12 rounded-2xl border-[1.5px] ${frameCls} backdrop-blur-xl flex items-center justify-center cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95 pointer-events-auto"
+        data-action="toggle-audio"
+        title="${muted ? 'Unmute Audio' : 'Mute Audio'}"
+        aria-label="${muted ? 'Unmute Audio' : 'Mute Audio'}"
+      >
+        ${audioIcon}
+      </button>
+    `;
+  }
+
   private renderCurrencyRail(opts: {
     topAlign?: boolean;
     showGemsPlus?: boolean;
     showCash?: boolean;
+    showAudioBelow?: boolean;
     quickButtonsHtml?: string;
   }): string {
     const posCls = opts.topAlign
-      ? 'top-[14px]'
-      : 'top-[42%] -translate-y-1/2 [[data-hud-compact=true]_&]:top-16 [[data-hud-compact=true]_&]:translate-y-0 [[data-hud-short=true]_&]:top-[36%]';
+      ? 'top-[14px] right-4'
+      : 'top-[42%] right-4 -translate-y-1/2 [[data-hud-compact=true]_&]:top-[72px] [[data-hud-compact=true]_&]:translate-y-0 [[data-hud-short=true]_&]:top-[36%]';
     const plusBtn = opts.showGemsPlus
       ? `<button class="${TW_PLUS_BTN} mam-outline-sm" data-action="gems-plus">+</button>`
       : '';
@@ -1015,22 +1058,11 @@ export class GameHud {
         </div>`
       : '';
     const quickRow = opts.quickButtonsHtml ? `<div class="flex items-center gap-2 mt-0.5">${opts.quickButtonsHtml}</div>` : '';
-    const muted = audio.isMuted();
-    const audioIcon = muted
-      ? `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#f87171" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#f87171" fill-opacity="0.2"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></svg>`
-      : `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#38bdf8" fill-opacity="0.22"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`;
+    const audioBelow = opts.showAudioBelow ? this.renderAudioToggleBtn(false) : '';
 
     return `
-      <div class="absolute right-4 ${posCls} flex flex-col items-end gap-1.5">
+      <div class="absolute ${posCls} flex flex-col items-end gap-1.5">
         <div class="flex items-center gap-2">
-          <button
-            class="w-11 h-11 rounded-2xl border ${muted ? 'border-rose-400/50' : 'border-sky-300/40'} bg-[rgba(12,16,28,0.86)] backdrop-blur-xl shadow-[0_8px_20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.2)] flex items-center justify-center cursor-pointer transition-[transform,filter,border-color] duration-150 hover:brightness-110 active:scale-95 pointer-events-auto"
-            data-action="toggle-audio"
-            title="${muted ? 'Unmute Audio' : 'Mute Audio'}"
-            aria-label="${muted ? 'Unmute Audio' : 'Mute Audio'}"
-          >
-            ${audioIcon}
-          </button>
           <div class="${TW_CURRENCY_BAR}">
             ${hudIconHtml('gem', 28, 'Gems')}
             <span class="text-[20px] font-extrabold text-white mam-outline-sm" data-hud-gems="true">${fmtInt(this.state.gems)}</span>
@@ -1039,6 +1071,7 @@ export class GameHud {
         </div>
         ${cashBar}
         ${quickRow}
+        ${audioBelow}
       </div>
     `;
   }
@@ -1067,7 +1100,7 @@ export class GameHud {
   public render(): void {
     const viewKey = `${this.sceneMode}:${this.activeModal}:${this.inspectedSlot ?? 'none'}`;
     const sameView = viewKey === this.lastRenderViewKey;
-    const prevGridScroll = sameView ? this.root.querySelector<HTMLElement>('.mam-grid')?.scrollTop ?? 0 : 0;
+    const savedScrolls = sameView ? captureRootScrolls(this.root) : [];
     this.lastRenderViewKey = viewKey;
 
     if (this.plotLayerEl && this.activeModal === 'none' && this.inspectedSlot === null && this.sceneMode === 'mine') {
@@ -1156,6 +1189,7 @@ export class GameHud {
         </button>
       </div>
 
+      ${this.renderAudioToggleBtn()}
       ${this.renderCurrencyRail({ showGemsPlus: true, showCash: true, quickButtonsHtml })}
 
       <div class="absolute bottom-[14px] left-1/2 -translate-x-1/2 max-w-[calc(100%-16px)] flex items-end gap-1.5 @max-[860px]:gap-1 pointer-events-auto" data-hud-hotbar="true">
@@ -1172,9 +1206,8 @@ export class GameHud {
       refreshPotionTimersInDom(this.root, this.state);
       this.renderToasts();
     } finally {
-      if (prevGridScroll > 0) {
-        const nextGrid = this.root.querySelector<HTMLElement>('.mam-grid');
-        if (nextGrid) nextGrid.scrollTop = prevGridScroll;
+      if (savedScrolls.length > 0) {
+        restoreRootScrolls(this.root, savedScrolls);
       }
       this.tutorialUi.syncView(this.sceneMode, this.activeModal, this.inspectedSlot);
     }
@@ -1249,7 +1282,7 @@ export class GameHud {
   private renderTowerHud(): void {
     this.syncTowerSceneVisual();
     this.root.innerHTML = this.towerUi.renderTowerArenaHud(
-      this.renderCurrencyRail({ topAlign: true }),
+      this.renderCurrencyRail({ topAlign: true, showAudioBelow: true }),
       this.renderToastStack()
     );
     this.bindEvents();
@@ -1295,7 +1328,7 @@ export class GameHud {
         </button>
       </div>
 
-      ${this.renderCurrencyRail({ topAlign: true, showCash: true })}
+      ${this.renderCurrencyRail({ topAlign: true, showCash: true, showAudioBelow: true })}
 
       ${this.renderActivePotionsDock()}
       ${this.renderActiveModal()}
@@ -1332,6 +1365,7 @@ export class GameHud {
         <button class="px-[46px] py-2 rounded-lg border-[2.5px] border-[#431407] bg-[linear-gradient(180deg,#ea580c_0%,#c2410c_60%,#9a3412_100%)] shadow-[inset_0_2px_0_rgba(255,255,255,0.35),0_5px_0_#431407,0_8px_18px_rgba(0,0,0,0.55)] text-white text-[20px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-[140ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:scale-[1.04] hover:brightness-[1.09] active:translate-y-[3px] active:scale-[0.96] active:shadow-[inset_0_2px_0_rgba(255,255,255,0.22),0_2px_0_#431407,0_4px_10px_rgba(0,0,0,0.45)] mam-outline" data-action="altar-back">Back</button>
       </div>
 
+      ${this.renderAudioToggleBtn()}
       ${this.renderCurrencyRail({})}
 
       <div class="absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(1240px,calc(100%-24px))] flex flex-col items-center gap-2 pointer-events-auto">
@@ -1945,6 +1979,54 @@ export class GameHud {
       const qty = this.state.ownedEnchants[e.id] || 0;
       const qtyEl = this.root.querySelector<HTMLElement>(`[data-altar-qty="${e.id}"]`);
       if (qtyEl) qtyEl.textContent = qty > 0 ? `x${fmtInt(qty)}` : '';
+    }
+  }
+}
+
+interface SavedScrollEntry {
+  path: number[];
+  scrollTop: number;
+  scrollLeft: number;
+}
+
+function getElementPath(root: HTMLElement, el: HTMLElement): number[] {
+  const path: number[] = [];
+  let cur: HTMLElement | null = el;
+  while (cur && cur !== root) {
+    const parent: HTMLElement | null = cur.parentElement;
+    if (!parent) return [];
+    const idx = Array.prototype.indexOf.call(parent.children, cur);
+    if (idx < 0) return [];
+    path.unshift(idx);
+    cur = parent;
+  }
+  return cur === root ? path : [];
+}
+
+function captureRootScrolls(root: HTMLElement): SavedScrollEntry[] {
+  const entries: SavedScrollEntry[] = [];
+  const all = root.querySelectorAll<HTMLElement>('*');
+  for (const el of all) {
+    if (el.scrollTop > 0 || el.scrollLeft > 0) {
+      const path = getElementPath(root, el);
+      if (path.length > 0) {
+        entries.push({ path, scrollTop: el.scrollTop, scrollLeft: el.scrollLeft });
+      }
+    }
+  }
+  return entries;
+}
+
+function restoreRootScrolls(root: HTMLElement, entries: SavedScrollEntry[]): void {
+  for (const entry of entries) {
+    let cur: Element | null = root;
+    for (const idx of entry.path) {
+      cur = cur.children.item(idx);
+      if (!cur) break;
+    }
+    if (cur instanceof HTMLElement) {
+      if (entry.scrollTop > 0) cur.scrollTop = entry.scrollTop;
+      if (entry.scrollLeft > 0) cur.scrollLeft = entry.scrollLeft;
     }
   }
 }
