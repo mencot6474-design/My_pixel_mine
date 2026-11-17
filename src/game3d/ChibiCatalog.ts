@@ -182,7 +182,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   },
   {
     id: 'nebula-archon',
-    name: 'SwiftCrow',
+    name: 'VoidClaw',
     spriteUrl: '/chibi/nebula-archon/idle.png',
     poses: makePoses('nebula-archon'),
     frames: 4,
