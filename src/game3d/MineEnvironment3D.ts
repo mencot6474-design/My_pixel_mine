@@ -1,19 +1,12 @@
 import * as THREE from 'three';
 import type { WeatherId } from '../game/WeatherData';
 import type { MineWorldPalette } from './MineWorldPalette';
+import { CaveRailwayHandle, createCaveRailway } from './CaveRailway3D';
+import { ChestVaultStationHandle, createChestVaultStation } from './ChestVaultStation3D';
 import { mountGlbProp } from './GlbAssets3D';
 import { loadPublicSpriteTexture } from './OrePit3D';
-import {
-  getCobblePathTexture,
-  getHazardStripeTexture,
-  getTerrainTexture,
-} from './ProceduralTextures3D';
+import { getCobblePathTexture, getTerrainTexture } from './ProceduralTextures3D';
 import { createWeatherSkyMaterial, WeatherSkyMaterialHandle } from './WeatherSkyShader';
-
-interface MovingOrePacket {
-  mesh: THREE.Mesh;
-  progress: number;
-}
 
 interface CloudCluster {
   group: THREE.Group;
@@ -35,7 +28,6 @@ export class MineEnvironment3D {
   private readonly terrainMat: THREE.MeshStandardMaterial;
   private readonly cobbleMat: THREE.MeshStandardMaterial;
   private readonly cliffMat: THREE.MeshStandardMaterial;
-  private readonly trimMat: THREE.MeshStandardMaterial;
   private readonly crystalAccentMat: THREE.MeshStandardMaterial;
   private readonly foliagePrimaryMat: THREE.MeshStandardMaterial;
   private readonly foliageSecondaryMat: THREE.MeshStandardMaterial;
@@ -43,7 +35,8 @@ export class MineEnvironment3D {
 
   private readonly clouds: CloudCluster[] = [];
   private readonly skyIslands: FloatingIsland[] = [];
-  private readonly conveyorPackets: MovingOrePacket[] = [];
+  private readonly caveRailway: CaveRailwayHandle;
+  private readonly chestVault: ChestVaultStationHandle;
   private readonly dustPoints: THREE.Points;
 
   constructor(palette: MineWorldPalette) {
@@ -100,11 +93,6 @@ export class MineEnvironment3D {
       roughness: 0.86,
       metalness: 0.06,
       flatShading: true,
-    });
-    this.trimMat = new THREE.MeshStandardMaterial({
-      map: getHazardStripeTexture(palette.crystalColor),
-      roughness: 0.42,
-      metalness: 0.2,
     });
     this.crystalAccentMat = new THREE.MeshStandardMaterial({
       color: palette.crystalColor,
@@ -212,17 +200,26 @@ export class MineEnvironment3D {
     // 5. REAR PORTAL SANCTUARY (Pure 3D Quarry Pillars & Lintel)
     this.buildSanctuaryGate(darkMetalMat, steelMat);
 
-    // 6. Left Mining Portal: Clean Stone Cave Arch + Timber Brace + Sloped Descent Rail + Coal Cart
-    this.buildLeftMineTunnel();
+    // 6. Left Mining Cave Mountain: Multi-Tiered Quarry Cliff + Timber Portal + Continuous Steel Railway + 2-Car Train
+    this.caveRailway = createCaveRailway({
+      crystalColor: palette.crystalColor,
+      cliffColor: palette.cliffColor,
+      foliageColor: palette.foliageColor,
+    });
+    this.group.add(this.caveRailway.group);
 
-    // 7. Right Loot Vault Pad: Inclined Conveyor Rising Out of Sunken Pit -> Clean Vault Pad
-    this.buildRightConveyorAndDeck(darkMetalMat);
+    // 7. Right Loot Vault Station: Procedural Escalator Bridge Rising from Pit -> Connected Vault Sanctuary
+    this.chestVault = createChestVaultStation({
+      crystalColor: palette.crystalColor,
+      cliffColor: palette.cliffColor,
+    });
+    this.group.add(this.chestVault.group);
 
     // 8. True 3D Low-Poly Trees & Quarry Stones Only (Zero Blurry Billboard Image Trees)
     const meadowProps: [string, number, number, number, number, number][] = [
-      ['/models/fantasy-town/tree-high-round.glb', -10.65, -3.35, 3.65, 0.35, 0.17],
-      ['/models/fantasy-town/tree-crooked.glb', -10.55, 2.75, 3.25, -0.4, 0.17],
-      ['/models/mini-dungeon/rocks.glb', -10.15, 4.35, 0.85, 0.8, 0.17],
+      ['/models/fantasy-town/tree-high-round.glb', -11.75, -4.15, 3.65, 0.35, 0.17],
+      ['/models/fantasy-town/tree-crooked.glb', -11.75, 3.75, 3.25, -0.4, 0.17],
+      ['/models/mini-dungeon/rocks.glb', -10.15, 4.65, 0.85, 0.8, 0.17],
       ['/models/fantasy-town/tree-crooked.glb', 10.55, -3.35, 3.45, -0.5, 0.17],
       ['/models/fantasy-town/tree-high-round.glb', 10.65, 2.85, 3.35, 1.2, 0.17],
       ['/models/mini-dungeon/rocks.glb', 10.15, 4.35, 0.85, -0.6, 0.17],
@@ -348,133 +345,6 @@ export class MineEnvironment3D {
     this.group.add(g);
   }
 
-  private buildLeftMineTunnel(): void {
-    // Anchored cleanly to OrePit3D left rail spur (world z = +0.15, pit wall edge = world x -5.9 => local x +3.2)
-    const g = new THREE.Group();
-    g.position.set(-9.1, 0, 0.15);
-
-    // Cohesive stone cave mound matching active Sector cliff color + dark interior
-    const moundMain = new THREE.Mesh(new THREE.IcosahedronGeometry(1.72, 0), this.cliffMat);
-    moundMain.position.set(-0.92, 1.15, 0);
-    moundMain.scale.set(0.95, 1.02, 1.22);
-    moundMain.castShadow = true;
-    moundMain.receiveShadow = true;
-
-    const caveDark = new THREE.Mesh(
-      new THREE.BoxGeometry(0.9, 1.75, 1.55),
-      new THREE.MeshBasicMaterial({ color: 0x0f172a })
-    );
-    caveDark.position.set(-0.22, 0.88, 0);
-    g.add(moundMain, caveDark);
-
-    // Flanking stone boulders matching pit rocks + timber portal + single lantern
-    mountGlbProp('/models/mini-dungeon/rocks.glb', g, {
-      position: [-0.45, 0, 1.38],
-      rotationY: 0.4,
-      targetHeight: 1.05,
-      alignBottomY: 0,
-    });
-    mountGlbProp('/models/mini-dungeon/rocks.glb', g, {
-      position: [-0.55, 0, -1.32],
-      rotationY: -0.7,
-      targetHeight: 1.15,
-      alignBottomY: 0,
-    });
-    mountGlbProp('/models/mini-dungeon/wood-support.glb', g, {
-      position: [0.35, 0, 0],
-      rotationY: Math.PI / 2,
-      targetHeight: 1.98,
-      alignBottomY: 0,
-    });
-    mountGlbProp('/models/fantasy-town/lantern.glb', g, {
-      position: [0.68, 0, -0.92],
-      targetHeight: 1.68,
-      alignBottomY: 0,
-    });
-
-    // Clean level rail bed on upper terrace + sloped stone chute descending into the sunken pit
-    const ballastMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.92 });
-    const ballast = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.03, 1.18), ballastMat);
-    ballast.position.set(0.75, 0.015, 0);
-    ballast.receiveShadow = true;
-    g.add(ballast);
-
-    for (const tx of [-0.3, 0.7, 1.6]) {
-      mountGlbProp('/models/train/track-detailed.glb', g, {
-        position: [tx, 0, 0],
-        rotationY: Math.PI / 2,
-        targetWidth: 1.02,
-        alignBottomY: 0.015,
-      });
-    }
-
-    // Sloped track ramp smoothly descending from terrace (local x=2.05, y=0) down into sunken pit (x=3.35, y=-0.66)
-    const rampGroup = new THREE.Group();
-    rampGroup.position.set(2.68, -0.33, 0);
-    rampGroup.rotation.z = -0.47;
-    const rampBed = new THREE.Mesh(new THREE.BoxGeometry(1.48, 0.14, 1.16), ballastMat);
-    rampBed.position.y = -0.06;
-    rampBed.receiveShadow = true;
-    rampGroup.add(rampBed);
-    mountGlbProp('/models/train/track-detailed.glb', rampGroup, {
-      position: [0, 0, 0],
-      rotationY: Math.PI / 2,
-      targetWidth: 1.44,
-      alignBottomY: 0.01,
-    });
-    g.add(rampGroup);
-
-    // Real Kenney Coal Minecart parked cleanly on the level upper track outside the descent
-    mountGlbProp('/models/train/train-carriage-coal.glb', g, {
-      position: [1.15, 0, 0],
-      rotationY: Math.PI / 2,
-      targetHeight: 0.92,
-      alignBottomY: 0.13,
-    });
-
-    this.group.add(g);
-  }
-
-  private buildRightConveyorAndDeck(darkMetalMat: THREE.Material): void {
-    // Clean, Uncluttered Quarry Loot Vault Pad (shifted right so inclined conveyor never collides with wall or chest!)
-    const deck = new THREE.Group();
-    deck.position.set(8.45, 0, 1.7);
-
-    const baseStep = new THREE.Mesh(new THREE.BoxGeometry(2.65, 0.14, 2.65), this.cliffMat);
-    baseStep.position.y = 0.07;
-    baseStep.receiveShadow = true;
-
-    const baseSlab = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.14, 2.35), darkMetalMat);
-    baseSlab.position.y = 0.19;
-    baseSlab.receiveShadow = true;
-    baseSlab.castShadow = true;
-
-    const vaultRim = new THREE.Mesh(new THREE.BoxGeometry(2.42, 0.06, 2.42), this.trimMat);
-    vaultRim.position.y = 0.24;
-
-    deck.add(baseStep, baseSlab, vaultRim);
-    this.group.add(deck);
-
-    // Inclined Ore Conveyor / Escalator rising cleanly THROUGH the open right pit gateway up to the Vault Pad edge
-    const convGroup = new THREE.Group();
-    convGroup.position.set(6.28, -0.36, 1.7);
-    convGroup.rotation.z = 0.32;
-    mountGlbProp('/models/factory/conveyor-long.glb', convGroup, {
-      position: [0, 0, 0],
-      targetDepth: 0.88,
-      alignBottomY: 0,
-    });
-    this.group.add(convGroup);
-
-    for (let i = 0; i < 2; i++) {
-      const pkt = new THREE.Mesh(new THREE.DodecahedronGeometry(0.14, 0), this.crystalAccentMat);
-      pkt.position.set(5.5, -0.18, 1.7);
-      pkt.castShadow = true;
-      this.group.add(pkt);
-      this.conveyorPackets.push({ mesh: pkt, progress: i * 0.5 });
-    }
-  }
-
   public setPalette(palette: MineWorldPalette): void {
     this.terrainMat.map = getTerrainTexture(palette.terrainColor, palette.foliageColor);
     this.terrainMat.needsUpdate = true;
@@ -486,11 +356,10 @@ export class MineEnvironment3D {
     this.foliagePrimaryMat.color.set(palette.foliageColor);
     this.foliageSecondaryMat.color.set(palette.foliageColor).offsetHSL(0.02, -0.05, 0.07);
 
-    this.trimMat.map = getHazardStripeTexture(palette.crystalColor);
-    this.trimMat.needsUpdate = true;
-
     this.crystalAccentMat.color.set(palette.crystalColor);
     this.crystalAccentMat.emissive.set(palette.crystalColor);
+    this.caveRailway.setPalette(palette.crystalColor, palette.cliffColor, palette.foliageColor);
+    this.chestVault.setPalette(palette.crystalColor, palette.cliffColor);
     this.dustMat.color.set(palette.crystalColor);
   }
 
@@ -507,7 +376,12 @@ export class MineEnvironment3D {
     this.skyDome.position.copy(camPos);
   }
 
-  public update(dtSec: number, elapsed: number): void {
+  public update(
+    dtSec: number,
+    elapsed: number,
+    chestHovered = false,
+    chestBounce = 0
+  ): void {
     for (const isl of this.skyIslands) {
       isl.group.position.y = isl.baseY + Math.sin(elapsed * 0.8 + isl.phase) * 0.22;
     }
@@ -517,14 +391,15 @@ export class MineEnvironment3D {
       if (c.group.position.x > 26) c.group.position.x = -26;
     }
 
-    for (const pkt of this.conveyorPackets) {
-      pkt.progress = (pkt.progress + dtSec * 0.55) % 1;
-      pkt.mesh.position.x = 5.5 + pkt.progress * 1.6;
-      pkt.mesh.position.y = -0.18 + pkt.progress * 0.54 + Math.sin(pkt.progress * Math.PI) * 0.04;
-      pkt.mesh.rotation.y += dtSec * 2.5;
-    }
+    this.caveRailway.update(dtSec, elapsed);
+    this.chestVault.update(dtSec, elapsed, chestHovered, chestBounce);
 
     this.dustPoints.rotation.y = Math.sin(elapsed * 0.1) * 0.06;
     this.dustPoints.position.y = Math.sin(elapsed * 0.6) * 0.12;
+  }
+
+  public dispose(): void {
+    this.caveRailway.dispose();
+    this.chestVault.dispose();
   }
 }

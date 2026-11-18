@@ -17,7 +17,6 @@ import {
   getSlashArcTexture,
   getWoodPlankTexture,
 } from './ProceduralTextures3D';
-import { mountGlbProp } from './GlbAssets3D';
 
 export const PIT_NODE_COUNT = 1;
 export const PIT_CENTER_Z = 0.65;
@@ -348,9 +347,6 @@ export class OrePit3D {
     floor.receiveShadow = true;
     this.group.add(floor);
 
-    // Embedded Minecart Rail Spur inside left pit portal
-    this.buildInnerPitRails();
-
     // Full-Height Excavated Quarry Retaining Walls (rising from pit bed y=0 up to y=+0.86, above courtyard y=+0.68)
     this.wallMat = new THREE.MeshStandardMaterial({
       color: palette.cliffColor,
@@ -462,28 +458,6 @@ export class OrePit3D {
     this.clickableMeshes.push(this.meteorNode.hitMesh);
 
     this.setPalette(palette, true);
-  }
-
-  private buildInnerPitRails(): void {
-    const railGroup = new THREE.Group();
-    const sleeperMat = new THREE.MeshStandardMaterial({
-      map: getWoodPlankTexture(),
-      roughness: 0.85,
-    });
-
-    // Short spur rail cleanly entering through the left portal wall with an unloading stop
-    mountGlbProp('/models/train/track-detailed.glb', railGroup, {
-      position: [-5.4, 0.02, -0.5],
-      rotationY: Math.PI / 2,
-      targetWidth: 1.02,
-      alignBottomY: 0,
-    });
-    const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 0.88), sleeperMat);
-    bumper.position.set(-4.84, 0.12, -0.5);
-    bumper.castShadow = true;
-    railGroup.add(bumper);
-
-    this.group.add(railGroup);
   }
 
   private createNodeSlot(id: number): InternalOreNode {

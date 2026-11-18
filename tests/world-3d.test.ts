@@ -57,6 +57,14 @@ import {
   getChibiById,
   getChibiFrameUvOffset,
 } from '../src/game3d/ChibiCatalog';
+import {
+  createCaveRailway,
+  CaveRailwayHandle,
+} from '../src/game3d/CaveRailway3D';
+import {
+  createChestVaultStation,
+  createProceduralTreasureChest,
+} from '../src/game3d/ChestVaultStation3D';
 import { ChibiSprite3D } from '../src/game3d/ChibiSprite3D';
 import { FieldMiner3D } from '../src/game3d/FieldMiner3D';
 import { DEFAULT_WORLD_PALETTE, rollOreVariant, STAGE_PEDESTAL_COUNT } from '../src/game3d/MineWorldPalette';
@@ -1732,5 +1740,65 @@ describe('Pure 3D Mine World', () => {
     mgr.setAdMuted(false);
     expect(mgr.isMuted()).toBe(true);
     expect(mgr.isEffectivelyMuted()).toBe(true);
+  });
+
+  it('builds grounded multi-part procedural chest & connected escalator vault station with instanced cleats and dispose cleanup', () => {
+    const chest = createProceduralTreasureChest({ scale: 1.08, gemColor: '#38bdf8' });
+    chest.group.updateMatrixWorld(true);
+    const chestBox = new THREE.Box3().setFromObject(chest.group);
+    expect(chestBox.min.y).toBeGreaterThanOrEqual(-0.02);
+    expect(chestBox.min.y).toBeLessThanOrEqual(0.02);
+
+    let chestMeshCount = 0;
+    let chestInstancedCount = 0;
+    chest.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) chestInstancedCount += 1;
+      if (obj instanceof THREE.Mesh) chestMeshCount += 1;
+    });
+    expect(chestMeshCount).toBeGreaterThan(10);
+    expect(chestInstancedCount).toBe(1);
+
+    chest.setInteraction(true, 1.0, 0);
+    expect(chest.lidPivot.rotation.x).toBeLessThan(-0.2);
+
+    const station = createChestVaultStation({ crystalColor: '#38bdf8', cliffColor: '#78716c' });
+    station.group.updateMatrixWorld(true);
+    let stationInstancedCount = 0;
+    station.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) stationInstancedCount += 1;
+    });
+    expect(stationInstancedCount).toBe(1);
+
+    expect(() => {
+      station.setPalette('#f97316', '#292524');
+      station.update(0.016, 1.2, true, 0.5);
+      chest.setAccentColor('#f97316');
+      chest.dispose();
+      station.dispose();
+    }).not.toThrow();
+  });
+
+  it('builds grand procedural cave cliff, continuous railway, and animated 2-car minecart train with dispose cleanup', () => {
+    const cave: CaveRailwayHandle = createCaveRailway({
+      crystalColor: '#38bdf8',
+      cliffColor: '#78716c',
+      foliageColor: '#16a34a',
+    });
+    cave.group.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(cave.group);
+    expect(box.max.y).toBeGreaterThan(3.5);
+
+    let instancedCount = 0;
+    cave.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) instancedCount += 1;
+    });
+    expect(instancedCount).toBe(1);
+
+    expect(() => {
+      cave.setPalette('#c084fc', '#44403c', '#059669');
+      cave.update(0.05, 2.5);
+      cave.update(0.05, 6.0);
+      cave.dispose();
+    }).not.toThrow();
   });
 });

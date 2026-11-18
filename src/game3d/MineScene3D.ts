@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ChibiDef, getChibiById } from './ChibiCatalog';
+import { createProceduralTreasureChest, ProceduralChestHandle } from './ChestVaultStation3D';
 import { FieldMiner3D } from './FieldMiner3D';
 import { mountGlbProp, preloadCommonMineModels } from './GlbAssets3D';
 import { MineEnvironment3D } from './MineEnvironment3D';
@@ -84,7 +85,7 @@ export class MineScene3D {
   private tapDamage = 45;
 
   private readonly crateGroup = new THREE.Group();
-  private readonly crateTrimMat: THREE.MeshStandardMaterial;
+  private readonly chestVisual: ProceduralChestHandle;
   private crateBounce = 0;
   private crateHovered = false;
 
@@ -239,31 +240,20 @@ export class MineScene3D {
       this.clickableMeshes.push(m);
     }
 
-    // Right Wing Treasure Chest Prop
-    this.crateGroup.position.set(8.45, 0.27, 1.7);
-    this.crateTrimMat = new THREE.MeshStandardMaterial({
-      color: 0xf59e0b,
-      emissive: 0xf59e0b,
-      emissiveIntensity: 0.25,
-      roughness: 0.25,
+    // Right Wing Stylized Procedural Treasure Chest on Elevated Vault Dais
+    this.crateGroup.position.set(8.45, 0.48, 1.7);
+    this.chestVisual = createProceduralTreasureChest({
+      scale: 1.08,
+      gemColor: palette.crystalColor,
     });
-    const ringTrim = new THREE.Mesh(new THREE.TorusGeometry(0.92, 0.055, 8, 24), this.crateTrimMat);
-    ringTrim.rotation.x = Math.PI / 2;
-    ringTrim.position.y = 0.04;
-    this.crateGroup.add(ringTrim);
-
-    mountGlbProp('/models/mini-dungeon/chest.glb', this.crateGroup, {
-      position: [0, 0.02, 0],
-      rotationY: -0.45,
-      targetWidth: 0.96,
-      alignBottomY: 0,
-    });
+    this.chestVisual.group.rotation.y = -Math.PI / 2;
+    this.crateGroup.add(this.chestVisual.group);
 
     const crateHit = new THREE.Mesh(
-      new THREE.BoxGeometry(2.2, 2.2, 2.2),
+      new THREE.BoxGeometry(2.2, 2.0, 2.2),
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
     );
-    crateHit.position.y = 0.95;
+    crateHit.position.y = 0.72;
     crateHit.userData = { kind: 'chest' };
     this.crateGroup.add(crateHit);
 
@@ -543,7 +533,7 @@ export class MineScene3D {
     this.lastTime = now;
     this.elapsed += dtSec;
 
-    this.env.update(dtSec, this.elapsed);
+    this.env.update(dtSec, this.elapsed, this.crateHovered, this.crateBounce);
     this.pedestals.forEach((p) => p.update(dtSec, this.elapsed, this.camera));
     this.pit.update(dtSec, this.elapsed, this.camera);
     this.shopWorld.update(dtSec, this.elapsed, this.mode, this.camera);
@@ -589,9 +579,9 @@ export class MineScene3D {
     if (this.crateBounce > 0) {
       this.crateBounce = Math.max(0, this.crateBounce - dtSec * 1.4);
     }
-    const crateScale = (this.crateHovered ? 1.09 : 1.0) + this.crateBounce * 0.45;
-    this.crateGroup.scale.set(crateScale, Math.max(0.82, crateScale - this.crateBounce * 0.35), crateScale);
-    this.crateTrimMat.emissiveIntensity = this.crateHovered ? 0.65 : 0.25;
+    const crateScale = (this.crateHovered ? 1.07 : 1.0) + this.crateBounce * 0.32;
+    this.crateGroup.scale.set(crateScale, Math.max(0.84, crateScale - this.crateBounce * 0.25), crateScale);
+    this.chestVisual.setInteraction(this.crateHovered, this.crateBounce, this.elapsed);
 
     const damp = 1 - Math.exp(-dtSec * 16);
     if (this.focusedPlotIndex !== null && this.pedestals[this.focusedPlotIndex]) {
@@ -862,6 +852,7 @@ export class MineScene3D {
     if (this.activePalette !== palette) {
       this.activePalette = palette;
       this.env.setPalette(palette);
+      this.chestVisual.setAccentColor(palette.crystalColor);
       this.pit.setPalette(palette, true);
       this.applyWeatherAtmosphere();
       this.callbacks.onOreBars?.([]);
@@ -1039,6 +1030,8 @@ export class MineScene3D {
       cancelAnimationFrame(this.rafId);
       this.rafId = 0;
     }
+    this.chestVisual.dispose();
+    this.env.dispose();
     this.renderer.dispose();
   }
 }
