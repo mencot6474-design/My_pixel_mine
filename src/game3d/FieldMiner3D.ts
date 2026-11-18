@@ -3,8 +3,173 @@ import { getEnchantById } from '../game/GameData';
 import { type WeatherId } from '../game/WeatherData';
 import { ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
+import { disposeObject3D } from './ChestVaultStation3D';
 import { OreVariantKey, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
 import { OrePit3D, PIT_FLOOR_Y } from './OrePit3D';
+import {
+  createAnimeParticlePoints,
+  ENCHANT_SECONDARY_COLOR,
+  getEnchantSigilTexture,
+  getPedestalHoloRingTexture,
+} from './PlotPedestal3D';
+
+/**
+ * Shared ground halo + Enchant sigil + rising particle emitter for field Chibis
+ * (reused across Mine Pit miners and Battle Tower arena fighters; no obstructing vertical aura shell).
+ */
+export class ChibiFieldFxController {
+  private readonly hostGroup: THREE.Group;
+  private readonly slotIndex: number;
+  private readonly baseHaloGroup: THREE.Group;
+  private readonly baseRingMesh: THREE.Mesh;
+  private readonly baseRingMat: THREE.MeshBasicMaterial;
+  private readonly rainbowTmp = new THREE.Color();
+
+  private enchantId: string | null = null;
+  private enchantRainbow = false;
+  private accentColorHex = '#38bdf8';
+  private auraGroup: THREE.Group | null = null;
+  private sigilMesh: THREE.Mesh | null = null;
+  private sigilMat: THREE.MeshBasicMaterial | null = null;
+  private moteGeo: THREE.BufferGeometry | null = null;
+  private moteMat: THREE.ShaderMaterial | null = null;
+
+  constructor(hostGroup: THREE.Group, defAccentColor: string, slotIndex: number) {
+    this.hostGroup = hostGroup;
+    this.slotIndex = slotIndex;
+    this.baseHaloGroup = new THREE.Group();
+
+    const holoTex = getPedestalHoloRingTexture();
+    this.baseRingMat = new THREE.MeshBasicMaterial({
+      ...(holoTex ? { map: holoTex } : {}),
+      color: defAccentColor,
+      transparent: true,
+      opacity: 0.44,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.baseRingMesh = new THREE.Mesh(
+      holoTex ? new THREE.PlaneGeometry(1.42, 1.42) : new THREE.RingGeometry(0.42, 0.56, 24),
+      this.baseRingMat
+    );
+    this.baseRingMesh.rotation.x = -Math.PI / 2;
+    this.baseRingMesh.position.y = 0.022;
+    this.baseHaloGroup.add(this.baseRingMesh);
+    this.hostGroup.add(this.baseHaloGroup);
+  }
+
+  public getAccentColor(): string {
+    return this.accentColorHex;
+  }
+
+  public setEnchant(enchantId: string | null): void {
+    if (enchantId === this.enchantId) return;
+    this.clearEnchantFx();
+    this.enchantId = enchantId;
+    this.enchantRainbow = false;
+    this.accentColorHex = '#38bdf8';
+    this.baseRingMat.opacity = 0.44;
+    if (!enchantId) return;
+
+    const enc = getEnchantById(enchantId);
+    if (!enc) return;
+
+    this.enchantRainbow = enc.rarity === 'rainbow';
+    this.accentColorHex = enc.color;
+    this.baseRingMat.opacity = 0.24;
+
+    const secHex = ENCHANT_SECONDARY_COLOR[enchantId] ?? '#ffffff';
+    const g = new THREE.Group();
+    const sigilTex = getEnchantSigilTexture();
+
+    this.sigilMat = new THREE.MeshBasicMaterial({
+      ...(sigilTex ? { map: sigilTex } : {}),
+      color: enc.color,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.sigilMesh = new THREE.Mesh(
+      sigilTex ? new THREE.PlaneGeometry(1.62, 1.62) : new THREE.RingGeometry(0.46, 0.72, 24),
+      this.sigilMat
+    );
+    this.sigilMesh.rotation.x = -Math.PI / 2;
+    this.sigilMesh.position.y = 0.028;
+    g.add(this.sigilMesh);
+
+    const innerWash = new THREE.Mesh(
+      sigilTex ? new THREE.PlaneGeometry(1.12, 1.12) : new THREE.RingGeometry(0.24, 0.42, 20),
+      new THREE.MeshBasicMaterial({
+        ...(sigilTex ? { map: sigilTex } : {}),
+        color: secHex,
+        transparent: true,
+        opacity: 0.36,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+    );
+    innerWash.rotation.x = -Math.PI / 2;
+    innerWash.position.y = 0.025;
+    g.add(innerWash);
+
+    // Particles only around active field chibis (keeps face & target ore unobstructed)
+    const particles = createAnimeParticlePoints(enc.color, secHex, {
+      count: 24,
+      minRadius: 0.42,
+      maxRadius: 0.68,
+      baseY: 0.08,
+      sizeScale: 0.92,
+    });
+    this.moteGeo = particles.geo;
+    this.moteMat = particles.mat;
+    g.add(particles.points);
+
+    this.auraGroup = g;
+    this.hostGroup.add(g);
+  }
+
+  private clearEnchantFx(): void {
+    if (!this.auraGroup) return;
+    this.hostGroup.remove(this.auraGroup);
+    disposeObject3D(this.auraGroup);
+    this.moteGeo?.dispose();
+    this.moteMat?.dispose();
+    this.auraGroup = null;
+    this.sigilMesh = null;
+    this.sigilMat = null;
+    this.moteGeo = null;
+    this.moteMat = null;
+  }
+
+  public update(elapsed: number): void {
+    this.baseRingMesh.rotation.z = elapsed * 0.14 + this.slotIndex * 0.85;
+    if (this.sigilMesh) {
+      this.sigilMesh.rotation.z = -elapsed * 0.12 - this.slotIndex * 0.6;
+    }
+    if (this.moteMat) {
+      this.moteMat.uniforms.uTime.value = elapsed;
+    }
+    if (this.enchantRainbow) {
+      const hue = (elapsed * 0.18 + this.slotIndex * 0.14) % 1;
+      if (this.sigilMat) {
+        this.sigilMat.color.setHSL(hue, 0.92, 0.62);
+      }
+      if (this.moteMat) {
+        this.rainbowTmp.setHSL(hue, 0.92, 0.62);
+        this.moteMat.uniforms.uColorA.value.copy(this.rainbowTmp);
+        this.rainbowTmp.setHSL((hue + 0.18) % 1, 0.96, 0.72);
+        this.moteMat.uniforms.uColorB.value.copy(this.rainbowTmp);
+      }
+    }
+  }
+
+  public dispose(): void {
+    this.clearEnchantFx();
+    this.hostGroup.remove(this.baseHaloGroup);
+    disposeObject3D(this.baseHaloGroup);
+  }
+}
 
 export class FieldMiner3D {
   public readonly sprite: ChibiSprite3D;
@@ -16,8 +181,7 @@ export class FieldMiner3D {
   private dmg = 10;
   private walkSpeed = 2.6;
   private attackInterval = 0.85;
-  private enchantId: string | null = null;
-  private auraGroup: THREE.Group | null = null;
+  private readonly fx: ChibiFieldFxController;
 
   constructor(def: ChibiDef, slotIndex: number) {
     this.def = def;
@@ -28,38 +192,12 @@ export class FieldMiner3D {
     const spreadX = (slotIndex - (STAGE_PEDESTAL_COUNT - 1) / 2) * 1.15;
     this.sprite.group.position.set(spreadX, PIT_FLOOR_Y, -1.05);
     this.sprite.setAnimState('idle');
+
+    this.fx = new ChibiFieldFxController(this.sprite.group, def.accentColor, slotIndex);
   }
 
   public setEnchant(enchantId: string | null): void {
-    if (enchantId === this.enchantId) return;
-    if (this.auraGroup) {
-      this.sprite.group.remove(this.auraGroup);
-      this.auraGroup = null;
-    }
-    this.enchantId = enchantId;
-    if (!enchantId) return;
-
-    const enc = getEnchantById(enchantId);
-    if (!enc) return;
-
-    const g = new THREE.Group();
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.42, 0.68, 24),
-      new THREE.MeshBasicMaterial({
-        color: enc.color,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.52,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      })
-    );
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.04;
-    g.add(ring);
-
-    this.auraGroup = g;
-    this.sprite.group.add(g);
+    this.fx.setEnchant(enchantId);
   }
 
   public setCombatStats(dmg: number, speed: number, miningMult: number): void {
@@ -103,6 +241,7 @@ export class FieldMiner3D {
       if (renderVisuals) {
         this.sprite.setAnimState('idle');
         this.sprite.update(dtSec, elapsed, camera);
+        this.fx.update(elapsed);
       }
       return;
     }
@@ -170,10 +309,12 @@ export class FieldMiner3D {
 
     if (renderVisuals) {
       this.sprite.update(dtSec, elapsed, camera);
+      this.fx.update(elapsed);
     }
   }
 
   public dispose(): void {
+    this.fx.dispose();
     this.sprite.dispose();
   }
 }

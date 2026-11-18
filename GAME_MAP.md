@@ -125,8 +125,8 @@ src/styles/hud.css            1.040 baris — Modern Dark-Glass + Luminous Gradi
                                             `.rarity-exotic`, `.rarity-secret`, `.mam-hotbar-dragging` / `.mam-hotbar-drop-target`, keyframes, a11y)
 
 === 3D WORLD & RENDERERS ===
-src/game3d/MineScene3D.ts     1.107 baris — Main Three.js scene controller: switches `mine` / `shop` / `altar` / `tower`, `SRGBColorSpace` renderer,
-                                            cyber-holographic rear `"My Chibi"` stage (`2.44m` pedestal pitch, illuminated cyber stairwell), procedural Cyber Loot Chest on Refinery Dais,
+src/game3d/MineScene3D.ts     1.131 baris — Main Three.js scene controller: switches `mine` / `shop` / `altar` / `tower`, `SRGBColorSpace` renderer,
+                                            cyber-holographic rear `"My Chibi"` stage (`2.44m` pedestal pitch, steel bay dividers, rear busbar & illuminated cyber stairwell), procedural Cyber Loot Chest on Refinery Dais,
                                             `setAdPaused` pause/resume, background pit/miner ticks, pit-floor click auto-target,
                                             weather sky/fog/safe-zone shop lighting (`setWeather`, `applyWeatherAtmosphere`), syncs 3D pedestal labels (`syncPlotLabel`) & plot/station/tower-ore anchors, & `destroy()` (`pedestals`, `shopWorld`, `weatherFx.dispose`)
 src/game3d/MineEnvironment3D.ts 618 baris — Dark basalt / cyber-industrial deck terrain + thin perimeter neon trims (`skyHandle`, `setWeatherSky`),
@@ -141,11 +141,11 @@ src/game3d/WeatherSkyShader.ts  237 baris — Animated GLSL Atmospheric Sky Shad
 src/game3d/WeatherFx3D.ts       238 baris — `WeatherFx3D` 74: 3D weather particles (rain/snow/embers/void/starfall)
                                             with `setShopMode()` safe-zone boost (`fog: false`), radial/streak canvas textures & `dispose()`
 src/game3d/MineWorldPalette.ts  113 baris — `WORLD_PALETTES` 25 (6 worlds incl. `starwell`), `ORE_VARIANTS` 99, `rollOreVariant` 105
-src/game3d/OrePit3D.ts          959 baris — Dark basalt pit floor, basalt retaining walls + diagonal yellow/black hazard stripe collar + thin neon rim + corner beacon piers,
-                                            shared `OreBillboard2D` 2D ore sprites (`public/ores/*.webp`) & Weather Meteor node (`public/meteors/*.webp`),
+src/game3d/OrePit3D.ts         1.246 baris — Dark basalt pit floor, basalt retaining walls + diagonal yellow/black hazard stripe collar + thin neon rim + corner beacon piers,
+                                            2.5D-grounded `OreBillboard2D` (3D basalt rubble + crystal collar skirt, cracked crater AO socket decal, feathered Geode glow seams, Weather Meteor crater impact),
                                             hit VFX, `getAliveNodesInfo`, & `applyNodeDamagePure` 39
-src/game3d/PlotPedestal3D.ts  1.023 baris — Multi-tiered cyber pedestals (grounded holo-pad, flush octagonal rim + 4 corner brackets, clean Anime-RPG 3-layer Enchant Aura w/ calm ground sigil, Fresnel vertical aura shader veil & GPU lifetime-shaded 4-point star embers/energy streak wisps, world-space nametag sejajar di `y = 2.68m`) & `dispose()`
-src/game3d/FieldMiner3D.ts      179 baris — Active chibi miner placement, swing/background mining tick & movement in mine
+src/game3d/PlotPedestal3D.ts  1.252 baris — ZZZ/HSR Cyber-Showcase Plot Podiums (chamfered dock bay w/ cooling fins, edge-lit seam strip, titanium dais, front `01..05` numeric apron plaque, waist-high rear projector stanchions, dual-shell outward-flaring thick Anime-RPG Aura + 34 GPU star embers/streak wisps via shared `createAnimeParticlePoints`, world-space nametag sejajar di `y = 2.68m`) & `dispose()`
+src/game3d/FieldMiner3D.ts      320 baris — Active chibi miner placement & shared `ChibiFieldFxController` (calm RPG feathered ground halo + Enchant ground sigil & rising GPU particles via `createAnimeParticlePoints`, tanpa aura shell vertikal), swing/background mining tick & `dispose()`
 src/game3d/ChibiCatalog.ts      465 baris — `CHIBI_CATALOG` 63 (35 chibi poses WebP: 30 world + 5 weather-limited, `ChibiRarity` `common`..`secret`,
                                             baseDps, `smoothFilter` W1–W6, world roster, `getChibiFrameUvOffset`)
 src/game3d/ChibiSprite3D.ts     390 baris — Animated 2D-in-3D upright billboard sprite (`triggerAttack`, `smoothFilter` linear/mipmap vs nearest, camera-pitch tilt, normalized pose sizing, alpha-clipped directional shadow + soft AO contact shadow)
@@ -159,9 +159,9 @@ src/game3d/ShopWorld3D.ts       701 baris — 3D Neo-Cyber Shop Plaza controller
 src/game3d/SeraphimBoss3D.ts  1.722 baris — Full 3D hard-surface Corrupted Seraphim AI Overlord Boss (`createSeraphimBoss3D`, zero `BoxGeometry`):
                                             beveled `ExtrudeGeometry` + `LatheGeometry` + tapered `TubeGeometry` armor, V-fin visor helmet + curved horns,
                                             curved layered pauldrons + aerodynamic arms + 5-clawed hands, dangling cables, & 6 curved feather-blade wings + `update()` + `dispose()`
-src/game3d/TowerArena3D.ts    1.127 baris — Battle Tower combat/entity controller (coordinates `TowerCityEnvironment3D` + `SeraphimBoss3D`), elevated Holographic AI Core,
+src/game3d/TowerArena3D.ts    1.117 baris — Battle Tower combat/entity controller (coordinates `TowerCityEnvironment3D` + `SeraphimBoss3D`), elevated Holographic AI Core,
                                             full 3D Seraphim Boss mounted slightly behind crater center (`BOSS_CENTER_Z`), feet-level crater shockwave + anti-gravity rocks + ground-to-body sparks,
-                                            5 wave ore slots (Waves 1–9), Chibi Fighters, slash VFX, & `dispose()`
+                                            5 wave ore slots (Waves 1–9 dengan 2.5D basalt collar & feathered `getGeodeGlowTexture`), Chibi Fighters (`ChibiFieldFxController`: ground halo/sigil + rising GPU particles, tanpa aura shell vertikal), feathered summon pads, slash VFX, & `dispose()`
 src/game3d/TowerCityEnvironment3D.ts 1.575 baris — Procedural "Ruined Cyber City & Deep Central Meteor Crater" (`createTowerCityEnvironment`):
                                             raised holed highway (`y = 0.52`), recessed crater (`y = 0.08`) with jagged charred fissures + core embers,
                                             crater fire embers + dark ash flakes (`InstancedMesh`) + street electric sparks, dented guardrails,

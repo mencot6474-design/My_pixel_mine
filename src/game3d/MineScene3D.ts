@@ -213,11 +213,35 @@ export class MineScene3D {
     rackDeck.castShadow = true;
     this.env.group.add(stageBase, rackDeck);
 
-    // Glowing Holographic Stage Projection Panel + Front Perimeter Neon Trim
-    const holoRunwayStrip = new THREE.Mesh(new THREE.PlaneGeometry(12.6, 1.55), this.stageHoloMat);
+    // Clean Rear Stage Holo Underglow Strip + Sculpted Steel Bay Dividers Between Plots (zero pedestal overlap)
+    const holoRunwayStrip = new THREE.Mesh(new THREE.PlaneGeometry(12.2, 0.48), this.stageHoloMat);
     holoRunwayStrip.rotation.x = -Math.PI / 2;
-    holoRunwayStrip.position.set(0, 0.275, -4.32);
+    holoRunwayStrip.position.set(0, 0.273, -5.56);
     this.env.group.add(holoRunwayStrip);
+
+    const bayDivMat = new THREE.MeshStandardMaterial({
+      color: 0x131b2b,
+      roughness: 0.45,
+      metalness: 0.5,
+      flatShading: true,
+    });
+    const bayDivGeo = new THREE.BoxGeometry(0.11, 0.06, 1.88);
+    const bayDivLedGeo = new THREE.BoxGeometry(0.035, 0.025, 1.72);
+    for (let i = 0; i < STAGE_PEDESTAL_COUNT - 1; i++) {
+      const divX = (i - (STAGE_PEDESTAL_COUNT - 2) / 2) * 2.44;
+      const divBar = new THREE.Mesh(bayDivGeo, bayDivMat);
+      divBar.position.set(divX, 0.298, -4.32);
+      divBar.castShadow = true;
+      divBar.receiveShadow = true;
+      const divLed = new THREE.Mesh(bayDivLedGeo, this.stageNeonMat);
+      divLed.position.set(divX, 0.33, -4.32);
+      this.env.group.add(divBar, divLed);
+    }
+
+    const rearBusConduit = new THREE.Mesh(new THREE.BoxGeometry(11.4, 0.08, 0.18), bayDivMat);
+    rearBusConduit.position.set(0, 0.305, -5.24);
+    rearBusConduit.castShadow = true;
+    this.env.group.add(rearBusConduit);
 
     for (const sx of [-1, 1]) {
       const rackFrontTrim = new THREE.Mesh(new THREE.BoxGeometry(5.58, 0.06, 0.1), this.stageNeonMat);

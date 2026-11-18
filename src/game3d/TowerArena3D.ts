@@ -1,10 +1,11 @@
 import * as THREE from 'three';
-import { getEnchantById } from '../game/GameData';
 import { TowerWaveOreState } from '../game/TowerData';
 import { ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
+import { ChibiFieldFxController } from './FieldMiner3D';
 import { OreVariantKey } from './MineWorldPalette';
-import { OreBillboard2D } from './OrePit3D';
+import { getGeodeGlowTexture, OreBillboard2D } from './OrePit3D';
+import { getPedestalHoloRingTexture } from './PlotPedestal3D';
 import { createSeraphimBoss3D, SeraphimBossHandle } from './SeraphimBoss3D';
 import { createTowerCityEnvironment, TowerCityEnvironmentHandle } from './TowerCityEnvironment3D';
 
@@ -88,6 +89,7 @@ interface TowerWaveRockSlot {
 interface TowerChibiFighter {
   slotIndex: number;
   sprite: ChibiSprite3D;
+  fx: ChibiFieldFxController;
   spawnPos: THREE.Vector3;
   attackPos: THREE.Vector3;
   targetOreIndex: number;
@@ -98,7 +100,6 @@ interface TowerChibiFighter {
   lungeTimer: number;
   enchantId: string | null;
   colorHex: string;
-  auraGroup: THREE.Group | null;
 }
 
 const ARENA_CENTER_Z = -1.6;
@@ -326,16 +327,20 @@ export class TowerArena3D {
     );
     this.group.add(eclipseGroup);
 
-    // 3. Five Front-Arc Chibi Summoning Runes (Flush on Highway Crater Floor y = 0.08)
+    // 3. Five Front-Arc Chibi Summoning Runes (Feathered Holo Rings Flush on Highway Crater Floor y = 0.08)
+    const summonHoloTex = getPedestalHoloRingTexture();
     for (let i = 0; i < 5; i++) {
       const sp = this.getSpawnPos(i);
       const pad = new THREE.Mesh(
-        new THREE.RingGeometry(0.46, 0.68, 20),
+        summonHoloTex ? new THREE.PlaneGeometry(1.48, 1.48) : new THREE.RingGeometry(0.46, 0.68, 20),
         new THREE.MeshBasicMaterial({
+          ...(summonHoloTex ? { map: summonHoloTex } : {}),
           color: 0x38bdf8,
           side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.25,
+          opacity: 0.16,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
         })
       );
       pad.rotation.x = -Math.PI / 2;
@@ -466,16 +471,22 @@ export class TowerArena3D {
     const oreSprite = new OreBillboard2D(1.58);
     root.add(oreSprite.root);
 
+    const geodeTex = getGeodeGlowTexture();
     const ringMat = new THREE.MeshBasicMaterial({
+      ...(geodeTex ? { map: geodeTex } : {}),
       color: 0x38bdf8,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.68,
+      opacity: geodeTex ? 0.72 : 0.56,
+      blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
-    const ringMesh = new THREE.Mesh(new THREE.RingGeometry(0.82, 1.04, 24), ringMat);
+    const ringMesh = new THREE.Mesh(
+      geodeTex ? new THREE.PlaneGeometry(2.12, 2.12) : new THREE.RingGeometry(0.82, 1.04, 24),
+      ringMat
+    );
     ringMesh.rotation.x = -Math.PI / 2;
-    ringMesh.position.y = 0.03;
+    ringMesh.position.y = 0.032;
     root.add(ringMesh);
 
     const hitMesh = new THREE.Mesh(
@@ -546,6 +557,7 @@ export class TowerArena3D {
 
     for (const [slot, f] of this.fighters.entries()) {
       if (!incoming.has(slot)) {
+        f.fx.dispose();
         this.fightersGroup.remove(f.sprite.group);
         f.sprite.dispose();
         this.fighters.delete(slot);
@@ -555,6 +567,7 @@ export class TowerArena3D {
     for (const cfg of configs) {
       let existing = this.fighters.get(cfg.slotIndex);
       if (existing && existing.sprite.group.userData?.chibiId !== cfg.def.id) {
+        existing.fx.dispose();
         this.fightersGroup.remove(existing.sprite.group);
         existing.sprite.dispose();
         this.fighters.delete(cfg.slotIndex);
@@ -570,10 +583,12 @@ export class TowerArena3D {
         sprite.setAnimState('dash');
         sprite.setFacing(spawnPos.x <= 0 ? 1 : -1);
         this.fightersGroup.add(sprite.group);
+        const fx = new ChibiFieldFxController(sprite.group, cfg.def.accentColor, cfg.slotIndex);
 
         existing = {
           slotIndex: cfg.slotIndex,
           sprite,
+          fx,
           spawnPos,
           attackPos,
           targetOreIndex: -1,
@@ -584,7 +599,6 @@ export class TowerArena3D {
           lungeTimer: 0,
           enchantId: null,
           colorHex: '#38bdf8',
-          auraGroup: null,
         };
         this.fighters.set(cfg.slotIndex, existing);
       } else {
@@ -599,43 +613,15 @@ export class TowerArena3D {
     for (let i = 0; i < this.summonPads.length; i++) {
       const mat = this.summonPads[i].material as THREE.MeshBasicMaterial;
       const active = this.fighters.has(i);
-      mat.opacity = active ? 0.72 : 0.16;
+      mat.opacity = active ? 0.34 : 0.12;
     }
   }
 
   private applyFighterEnchant(f: TowerChibiFighter, enchantId: string | null): void {
     if (f.enchantId === enchantId) return;
-    if (f.auraGroup) {
-      f.sprite.group.remove(f.auraGroup);
-      f.auraGroup = null;
-    }
     f.enchantId = enchantId;
-    if (!enchantId) {
-      f.colorHex = '#38bdf8';
-      return;
-    }
-    const enc = getEnchantById(enchantId);
-    if (!enc) return;
-    f.colorHex = enc.color;
-
-    const g = new THREE.Group();
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.42, 0.68, 24),
-      new THREE.MeshBasicMaterial({
-        color: enc.color,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.56,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      })
-    );
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.04;
-    g.add(ring);
-
-    f.auraGroup = g;
-    f.sprite.group.add(g);
+    f.fx.setEnchant(enchantId);
+    f.colorHex = f.fx.getAccentColor();
   }
 
   public resetFloorCharge(): void {
@@ -711,6 +697,7 @@ export class TowerArena3D {
 
       const baseSize = state.variantKey === 'geode' ? 2.02 : state.variantKey === 'vein' ? 1.7 : 1.44;
       slot.oreSprite.setOre(state.oreId, baseSize);
+      slot.oreSprite.setCollarAccent(state.color);
       slot.ringMat.color.set(state.color);
 
       if (newlySpawned) {
@@ -940,6 +927,7 @@ export class TowerArena3D {
           rock.flashTimer -= safeDt;
         }
         rock.oreSprite.updateTransform(elapsed, rock.phase, rock.squashAmt, rock.spawnScale, flashing, camera);
+        rock.ringMesh.rotation.z = elapsed * 0.18 + rock.phase;
       }
     }
 
@@ -1088,6 +1076,7 @@ export class TowerArena3D {
         }
       }
 
+      f.fx.update(elapsed);
       if (camera) {
         f.sprite.update(safeDt, elapsed, camera);
       }
@@ -1098,6 +1087,7 @@ export class TowerArena3D {
     this.bossModel.dispose();
     this.cityEnv.dispose();
     for (const f of this.fighters.values()) {
+      f.fx.dispose();
       f.sprite.dispose();
     }
     this.fighters.clear();

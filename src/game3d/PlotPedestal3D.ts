@@ -193,7 +193,7 @@ function drawMutationBadgeIcon(
   ctx.restore();
 }
 
-const ENCHANT_SECONDARY_COLOR: Record<string, string> = {
+export const ENCHANT_SECONDARY_COLOR: Record<string, string> = {
   blazing: '#fde047',
   glacial: '#e0f2fe',
   quaking: '#fbbf24',
@@ -209,7 +209,7 @@ const ENCHANT_SECONDARY_COLOR: Record<string, string> = {
 let cachedPedestalHoloTex: THREE.CanvasTexture | null | undefined;
 let cachedEnchantSigilTex: THREE.CanvasTexture | null | undefined;
 
-function getPedestalHoloRingTexture(): THREE.CanvasTexture | null {
+export function getPedestalHoloRingTexture(): THREE.CanvasTexture | null {
   if (cachedPedestalHoloTex !== undefined) return cachedPedestalHoloTex;
   if (typeof document === 'undefined') {
     cachedPedestalHoloTex = null;
@@ -265,7 +265,7 @@ function getPedestalHoloRingTexture(): THREE.CanvasTexture | null {
   return tex;
 }
 
-function getEnchantSigilTexture(): THREE.CanvasTexture | null {
+export function getEnchantSigilTexture(): THREE.CanvasTexture | null {
   if (cachedEnchantSigilTex !== undefined) return cachedEnchantSigilTex;
   if (typeof document === 'undefined') {
     cachedEnchantSigilTex = null;
@@ -337,9 +337,10 @@ function getEnchantSigilTexture(): THREE.CanvasTexture | null {
   return tex;
 }
 
-function createAnimeAuraShaderMaterial(
+export function createAnimeAuraShaderMaterial(
   primaryHex: string,
-  secondaryHex: string
+  secondaryHex: string,
+  baseOpacity = 0.68
 ): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     transparent: true,
@@ -350,7 +351,7 @@ function createAnimeAuraShaderMaterial(
       uColorA: { value: new THREE.Color(primaryHex) },
       uColorB: { value: new THREE.Color(secondaryHex) },
       uTime: { value: 0 },
-      uOpacity: { value: 0.42 },
+      uOpacity: { value: baseOpacity },
     },
     vertexShader: `
       varying vec2 vUv;
@@ -376,22 +377,32 @@ function createAnimeAuraShaderMaterial(
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
         float ndotv = abs(dot(N, V));
-        float rim = pow(clamp(1.0 - ndotv, 0.0, 1.0), 1.45) * 0.92 + 0.08;
-        float vFade = smoothstep(0.0, 0.24, vUv.y) * smoothstep(1.0, 0.26, vUv.y);
-        float waveA = 0.5 + 0.5 * sin(vUv.x * 25.1327 + sin(vUv.y * 3.5 - uTime * 0.95) * 0.85);
-        float waveB = 0.5 + 0.5 * sin(vUv.x * 12.5663 + vUv.y * 4.5 - uTime * 1.35);
-        float streaks = smoothstep(0.38, 0.96, waveA * 0.6 + waveB * 0.4);
-        float glow = vFade * (0.34 + streaks * 0.66) * rim;
-        vec3 col = mix(uColorB, uColorA, vUv.y * 0.65 + streaks * 0.35);
-        gl_FragColor = vec4(col, glow * uOpacity);
+        float rim = pow(clamp(1.0 - ndotv, 0.0, 1.0), 1.12) * 0.9 + 0.1;
+        float vFade = smoothstep(0.0, 0.2, vUv.y) * smoothstep(1.0, 0.24, vUv.y);
+        float waveA = 0.5 + 0.5 * sin(vUv.x * 25.1327 + sin(vUv.y * 3.5 - uTime * 1.05) * 0.9);
+        float waveB = 0.5 + 0.5 * sin(vUv.x * 12.5663 + vUv.y * 4.5 - uTime * 1.45);
+        float streaks = smoothstep(0.24, 0.92, waveA * 0.56 + waveB * 0.44);
+        float glow = vFade * (0.48 + streaks * 0.72) * rim;
+        vec3 col = mix(uColorB, uColorA, vUv.y * 0.55 + streaks * 0.25);
+        col = mix(col, vec3(1.0), clamp(streaks * rim * 0.36, 0.0, 0.45));
+        gl_FragColor = vec4(col, clamp(glow * uOpacity, 0.0, 1.0));
       }
     `,
   });
 }
 
+export interface AnimeParticleOptions {
+  count?: number;
+  minRadius?: number;
+  maxRadius?: number;
+  baseY?: number;
+  sizeScale?: number;
+}
+
 function createAnimeParticleShaderMaterial(
   primaryHex: string,
-  secondaryHex: string
+  secondaryHex: string,
+  sizeScale = 1
 ): THREE.ShaderMaterial {
   const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1;
   return new THREE.ShaderMaterial({
@@ -402,7 +413,7 @@ function createAnimeParticleShaderMaterial(
       uColorA: { value: new THREE.Color(primaryHex) },
       uColorB: { value: new THREE.Color(secondaryHex) },
       uTime: { value: 0 },
-      uPixelRatio: { value: dpr },
+      uPixelRatio: { value: dpr * sizeScale },
     },
     vertexShader: `
       uniform float uTime;
@@ -420,9 +431,10 @@ function createAnimeParticleShaderMaterial(
         vKind = aSeed.z;
 
         vec3 pos = position;
+        float flare = 1.0 + p * 0.24;
+        pos.x = pos.x * flare + sin(uTime * 1.35 + aSeed.x * 6.283) * 0.055 * (1.0 - p);
+        pos.z = pos.z * flare + cos(uTime * 1.15 + aSeed.x * 9.42) * 0.04 * (1.0 - p);
         pos.y += p * (aSeed.z > 0.5 ? 1.55 : 1.38);
-        pos.x += sin(uTime * 1.35 + aSeed.x * 6.283) * 0.065 * (1.0 - p);
-        pos.z += cos(uTime * 1.15 + aSeed.x * 9.42) * 0.045 * (1.0 - p);
 
         vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);
         gl_Position = projectionMatrix * mvPos;
@@ -432,7 +444,7 @@ function createAnimeParticleShaderMaterial(
         float curve = scaleIn * scaleOut;
         vAlpha = curve;
 
-        float baseSize = aSeed.z > 0.5 ? 16.5 : 13.5 + mod(aSeed.x * 7.3, 1.0) * 6.5;
+        float baseSize = aSeed.z > 0.5 ? 21.0 : 17.5 + mod(aSeed.x * 7.3, 1.0) * 8.0;
         gl_PointSize = baseSize * curve * uPixelRatio * (14.5 / max(1.0, -mvPos.z));
       }
     `,
@@ -471,6 +483,114 @@ function createAnimeParticleShaderMaterial(
       }
     `,
   });
+}
+
+/**
+ * Shared GPU-driven star-ember + vertical streak wisp particle emitter for enchanted Chibis.
+ */
+export function createAnimeParticlePoints(
+  primaryHex: string,
+  secondaryHex: string,
+  options: AnimeParticleOptions = {}
+): { points: THREE.Points; geo: THREE.BufferGeometry; mat: THREE.ShaderMaterial } {
+  const count = options.count ?? 34;
+  const minR = options.minRadius ?? 0.44;
+  const maxR = options.maxRadius ?? 0.77;
+  const baseY = options.baseY ?? 0.28;
+  const sizeScale = options.sizeScale ?? 1;
+
+  const pos = new Float32Array(count * 3);
+  const seeds = new Float32Array(count * 3);
+  const lifetimes = new Float32Array(count);
+  const span = Math.max(0.05, maxR - minR);
+
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2 + (i % 3) * 0.19;
+    const r = minR + ((i % 4) / 3) * span;
+    pos[i * 3] = Math.cos(a) * r;
+    pos[i * 3 + 1] = baseY + (i % 5) * 0.04;
+    pos[i * 3 + 2] = Math.sin(a) * r;
+
+    seeds[i * 3] = (i * 0.37) % 1;
+    seeds[i * 3 + 1] = 0.78 + (i % 4) * 0.16;
+    seeds[i * 3 + 2] = i % 3 === 0 ? 1.0 : 0.0;
+    lifetimes[i] = 1.85 + (i % 5) * 0.24;
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 3));
+  geo.setAttribute('aLifetime', new THREE.BufferAttribute(lifetimes, 1));
+  const mat = createAnimeParticleShaderMaterial(primaryHex, secondaryHex, sizeScale);
+  const points = new THREE.Points(geo, mat);
+  return { points, geo, mat };
+}
+
+function createChamferPadGeometry(
+  width: number,
+  height: number,
+  depth: number,
+  chamfer: number,
+  bevel = 0.015
+): THREE.ExtrudeGeometry {
+  const hw = width * 0.5;
+  const hd = depth * 0.5;
+  const c = Math.min(chamfer, hw * 0.42, hd * 0.42);
+  const shape = new THREE.Shape();
+  shape.moveTo(-hw + c, -hd);
+  shape.lineTo(hw - c, -hd);
+  shape.lineTo(hw, -hd + c);
+  shape.lineTo(hw, hd - c);
+  shape.lineTo(hw - c, hd);
+  shape.lineTo(-hw + c, hd);
+  shape.lineTo(-hw, hd - c);
+  shape.lineTo(-hw, -hd + c);
+  shape.closePath();
+
+  const innerH = Math.max(0.015, height - bevel * 2);
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: innerH,
+    bevelEnabled: true,
+    bevelThickness: bevel,
+    bevelSize: bevel,
+    bevelSegments: 1,
+    curveSegments: 1,
+  });
+  geo.rotateX(-Math.PI / 2);
+  geo.translate(0, bevel, 0);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function createSlotPlaqueTexture(slotIndex: number): THREE.CanvasTexture | null {
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 48;
+  const ctx = c.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.fillStyle = '#09111f';
+  ctx.fillRect(0, 0, c.width, c.height);
+
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.72)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(3, 3, c.width - 6, c.height - 6);
+
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+  ctx.fillRect(8, 12, 6, 24);
+  ctx.fillRect(c.width - 14, 12, 6, 24);
+
+  ctx.fillStyle = '#e0f2fe';
+  ctx.font = '900 22px "Nunito", "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`0${slotIndex + 1}`, c.width * 0.5, c.height * 0.52);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
 }
 
 function drawOutlinedCanvasText(
@@ -514,6 +634,7 @@ export class PlotPedestal3D {
   private auraSigilMesh: THREE.Mesh | null = null;
   private auraGroundMat: THREE.MeshBasicMaterial | null = null;
   private auraVeilMat: THREE.ShaderMaterial | null = null;
+  private auraOuterVeilMat: THREE.ShaderMaterial | null = null;
   private auraMoteGeo: THREE.BufferGeometry | null = null;
   private auraMoteMat: THREE.ShaderMaterial | null = null;
   private readonly tmpScale = new THREE.Vector3(1, 1, 1);
@@ -521,6 +642,7 @@ export class PlotPedestal3D {
   private readonly labelMat: THREE.SpriteMaterial;
   private readonly labelSprite: THREE.Sprite;
   private labelTex: THREE.CanvasTexture | null = null;
+  private slotPlaqueTex: THREE.CanvasTexture | null = null;
   private lastLabelSignature = '';
   private currentLabelInfo: PlotLabelInfo | null = null;
   private hasLabel = false;
@@ -531,75 +653,179 @@ export class PlotPedestal3D {
     this.index = index;
     this.group.position.set(x, 0, z);
 
-    const baseMat = new THREE.MeshStandardMaterial({
-      color: 0x1b263b,
-      roughness: 0.44,
-      metalness: 0.4,
+    const armorDarkMat = new THREE.MeshStandardMaterial({
+      color: 0x131b2b,
+      roughness: 0.52,
+      metalness: 0.42,
       flatShading: true,
     });
-    const lowerBase = new THREE.Mesh(new THREE.CylinderGeometry(0.74, 0.84, 0.14, 8), baseMat);
-    lowerBase.position.y = 0.07;
-    lowerBase.rotation.y = Math.PI / 8;
-    lowerBase.receiveShadow = true;
-    lowerBase.castShadow = true;
+    const baseMat = new THREE.MeshStandardMaterial({
+      color: 0x1e2c44,
+      roughness: 0.42,
+      metalness: 0.46,
+      flatShading: true,
+    });
+    const titaniumMat = new THREE.MeshStandardMaterial({
+      color: 0x354764,
+      roughness: 0.3,
+      metalness: 0.58,
+      flatShading: true,
+    });
 
-    const upperCap = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.62, 0.7, 0.13, 8),
-      new THREE.MeshStandardMaterial({
-        color: 0x26354f,
-        roughness: 0.34,
-        metalness: 0.36,
-        flatShading: true,
-      })
-    );
-    upperCap.position.y = 0.205;
-    upperCap.rotation.y = Math.PI / 8;
-    upperCap.receiveShadow = true;
-    upperCap.castShadow = true;
-    this.group.add(lowerBase, upperCap);
-
-    // Clean Grounded Cyber Holo-Pad & Architectural Rim Ring (zero dizzy orbiting hoops)
+    // Clean Grounded Cyber Holo-Pad & Edge-Lit Acrylic Collar (zero dizzy orbiting hoops)
     this.ringMat = new THREE.MeshStandardMaterial({
       color: 0x22d3ee,
       emissive: 0x22d3ee,
-      emissiveIntensity: 0.85,
-      roughness: 0.24,
-      metalness: 0.34,
+      emissiveIntensity: 0.92,
+      roughness: 0.22,
+      metalness: 0.3,
       flatShading: true,
     });
+
+    // Tier 1: Wide Chamfered Composite Display Bay Foundation + Lateral Cooling Fins (y = 0 .. 0.088)
+    const bayDock = new THREE.Mesh(
+      createChamferPadGeometry(1.94, 0.088, 1.78, 0.28, 0.016),
+      armorDarkMat
+    );
+    bayDock.receiveShadow = true;
+    bayDock.castShadow = true;
+    this.group.add(bayDock);
+
+    // Side Heavy Bumper Guards + Vertical Cooling Louvers
+    const guardGeo = createChamferPadGeometry(0.14, 0.11, 1.04, 0.04, 0.012);
+    const ventGeo = new THREE.BoxGeometry(0.04, 0.06, 0.16);
+    for (const sx of [-1, 1]) {
+      const guard = new THREE.Mesh(guardGeo, baseMat);
+      guard.position.set(sx * 0.92, 0.055, -0.02);
+      guard.castShadow = true;
+      guard.receiveShadow = true;
+      this.group.add(guard);
+
+      for (const vz of [-0.32, 0, 0.32]) {
+        const vent = new THREE.Mesh(ventGeo, titaniumMat);
+        vent.position.set(sx * 0.995, 0.105, vz);
+        this.group.add(vent);
+      }
+    }
+
+    // Recessed Edge-Lit Acrylic Seam Strip (y = 0.088 .. 0.112)
+    const edgeSeamRing = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.79, 0.81, 0.024, 8),
+      this.ringMat
+    );
+    edgeSeamRing.position.y = 0.1;
+    edgeSeamRing.rotation.y = Math.PI / 8;
+
+    // Tier 2: Stepped Octagonal Machinery Dais + Brushed Titanium Collar (y = 0.112 .. 0.242)
+    const machineryPlinth = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.68, 0.78, 0.128, 8),
+      baseMat
+    );
+    machineryPlinth.position.y = 0.176;
+    machineryPlinth.rotation.y = Math.PI / 8;
+    machineryPlinth.receiveShadow = true;
+    machineryPlinth.castShadow = true;
+
+    const topBevelRim = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.63, 0.69, 0.036, 8),
+      titaniumMat
+    );
+    topBevelRim.position.y = 0.256;
+    topBevelRim.rotation.y = Math.PI / 8;
+    topBevelRim.receiveShadow = true;
+    this.group.add(edgeSeamRing, machineryPlinth, topBevelRim);
+
+    // Tier 3: Sleek Front-Angled Numeric Slot Plaque ("01" .. "05") Mounted Proud on Forward Apron
+    const frontApron = new THREE.Mesh(
+      createChamferPadGeometry(0.58, 0.095, 0.24, 0.05, 0.012),
+      titaniumMat
+    );
+    frontApron.position.set(0, 0.02, 0.84);
+    frontApron.rotation.x = 0.34;
+    frontApron.castShadow = true;
+
+    this.slotPlaqueTex = createSlotPlaqueTexture(index);
+    const plaqueMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      ...(this.slotPlaqueTex ? { map: this.slotPlaqueTex } : { color: 0x0f172a }),
+    });
+    const plaqueFace = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.16), plaqueMat);
+    plaqueFace.position.set(0, 0.099, 0);
+    plaqueFace.rotation.x = -Math.PI / 2;
+    frontApron.add(plaqueFace);
+    this.group.add(frontApron);
+
+    // Tier 4: ZZZ/HSR Low-Profile Rear Holographic Display Stanchions & Power Manifold (waist height 0.74m)
+    const rearManifold = new THREE.Mesh(
+      createChamferPadGeometry(1.18, 0.18, 0.26, 0.08, 0.014),
+      armorDarkMat
+    );
+    rearManifold.position.set(0, 0.04, -0.78);
+    rearManifold.castShadow = true;
+    rearManifold.receiveShadow = true;
+    const manifoldGlow = new THREE.Mesh(
+      createChamferPadGeometry(0.84, 0.035, 0.06, 0.01, 0.006),
+      this.ringMat
+    );
+    manifoldGlow.position.set(0, 0.22, -0.78);
+    this.group.add(rearManifold, manifoldGlow);
+
+    const stanchionGeo = createChamferPadGeometry(0.14, 0.56, 0.18, 0.03, 0.012);
+    const stanchionCapGeo = createChamferPadGeometry(0.18, 0.06, 0.22, 0.04, 0.01);
+    const stanchionBladeGeo = new THREE.BoxGeometry(0.035, 0.44, 0.045);
+    for (const sx of [-1, 1]) {
+      const pylonPivot = new THREE.Group();
+      pylonPivot.position.set(sx * 0.76, 0.08, -0.68);
+      pylonPivot.rotation.z = -sx * 0.12;
+      pylonPivot.rotation.x = 0.08;
+
+      const body = new THREE.Mesh(stanchionGeo, baseMat);
+      body.castShadow = true;
+      body.receiveShadow = true;
+      const cap = new THREE.Mesh(stanchionCapGeo, titaniumMat);
+      cap.position.y = 0.56;
+      cap.castShadow = true;
+      const glowBlade = new THREE.Mesh(stanchionBladeGeo, this.ringMat);
+      glowBlade.position.set(-sx * 0.072, 0.28, 0.045);
+
+      pylonPivot.add(body, cap, glowBlade);
+      this.group.add(pylonPivot);
+    }
+
+    // Core Frosted Emitter Lens & Recessed Octagonal Neon Collar (top y = 0.275 .. 0.282)
     const pedHoloTex = getPedestalHoloRingTexture();
     this.holoDiscMat = new THREE.MeshBasicMaterial({
       color: 0x22d3ee,
       ...(pedHoloTex ? { map: pedHoloTex } : {}),
       transparent: true,
-      opacity: pedHoloTex ? 0.68 : 0.32,
+      opacity: pedHoloTex ? 0.74 : 0.34,
       blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
     const holoLensDisc = new THREE.Mesh(
-      pedHoloTex ? new THREE.PlaneGeometry(1.22, 1.22) : new THREE.RingGeometry(0.24, 0.56, 24),
+      pedHoloTex ? new THREE.PlaneGeometry(1.18, 1.18) : new THREE.RingGeometry(0.24, 0.54, 24),
       this.holoDiscMat
     );
     holoLensDisc.rotation.x = -Math.PI / 2;
-    holoLensDisc.position.y = 0.274;
+    holoLensDisc.position.y = 0.276;
 
-    const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(0.615, 0.028, 6, 8), this.ringMat);
+    const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(0.59, 0.025, 6, 8), this.ringMat);
     ringMesh.rotation.x = Math.PI / 2;
     ringMesh.rotation.z = Math.PI / 8;
     ringMesh.position.y = 0.282;
 
-    const clawGeo = new THREE.CylinderGeometry(0.044, 0.062, 0.065, 6);
-    const diodeGeo = new THREE.CylinderGeometry(0.026, 0.03, 0.03, 6);
+    const clawGeo = new THREE.CylinderGeometry(0.04, 0.056, 0.072, 6);
+    const diodeGeo = new THREE.CylinderGeometry(0.024, 0.028, 0.028, 6);
     for (let i = 0; i < 4; i++) {
       const ang = Math.PI / 4 + (i * Math.PI) / 2;
-      const rx = Math.cos(ang) * 0.648;
-      const rz = Math.sin(ang) * 0.648;
-      const claw = new THREE.Mesh(clawGeo, baseMat);
-      claw.position.set(rx, 0.248, rz);
+      const rx = Math.cos(ang) * 0.635;
+      const rz = Math.sin(ang) * 0.635;
+      const claw = new THREE.Mesh(clawGeo, titaniumMat);
+      claw.position.set(rx, 0.254, rz);
       claw.castShadow = true;
       const diode = new THREE.Mesh(diodeGeo, this.ringMat);
-      diode.position.set(rx, 0.292, rz);
+      diode.position.set(rx, 0.295, rz);
       this.group.add(claw, diode);
     }
 
@@ -669,6 +895,7 @@ export class PlotPedestal3D {
       this.auraSigilMesh = null;
       this.auraGroundMat = null;
       this.auraVeilMat = null;
+      this.auraOuterVeilMat = null;
       this.auraMoteGeo?.dispose();
       this.auraMoteGeo = null;
       this.auraMoteMat?.dispose();
@@ -725,42 +952,36 @@ export class PlotPedestal3D {
     this.auraSigilMesh = groundSigil;
     this.auraGroundMat = groundMat;
 
-    // 2. Smooth Vertical Fresnel Rim Aura Veil (frames silhouette cleanly, keeps face 100% clear)
-    const veilMat = createAnimeAuraShaderMaterial(enc.color, secondaryHex);
+    // 2. Concentric Thick Outward-Flared Fresnel Rim Aura Shells (parallel to rear stanchions, keeps face clear)
+    const veilMat = createAnimeAuraShaderMaterial(enc.color, secondaryHex, 0.72);
     const auraVeil = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.58, 0.8, 1.48, 28, 1, true),
+      new THREE.CylinderGeometry(0.76, 0.58, 1.62, 28, 1, true),
       veilMat
     );
-    auraVeil.position.y = 1.01;
-    auraGroup.add(auraVeil);
+    auraVeil.position.y = 1.06;
+
+    const outerVeilMat = createAnimeAuraShaderMaterial(secondaryHex, enc.color, 0.42);
+    const outerAuraVeil = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.9, 0.64, 1.7, 28, 1, true),
+      outerVeilMat
+    );
+    outerAuraVeil.position.y = 1.1;
+
+    auraGroup.add(auraVeil, outerAuraVeil);
     this.auraVeilMat = veilMat;
+    this.auraOuterVeilMat = outerVeilMat;
 
     // 3. GPU Lifetime-Shaded Anime Aura Wisps & Vertical Energy Streaks (smooth birth/death fade)
-    const moteCount = 26;
-    const pos = new Float32Array(moteCount * 3);
-    const seeds = new Float32Array(moteCount * 3);
-    const lifetimes = new Float32Array(moteCount);
-    for (let i = 0; i < moteCount; i++) {
-      const a = (i / moteCount) * Math.PI * 2 + (i % 3) * 0.19;
-      const r = 0.44 + (i % 4) * 0.11;
-      pos[i * 3] = Math.cos(a) * r;
-      pos[i * 3 + 1] = 0.28 + (i % 5) * 0.04;
-      pos[i * 3 + 2] = Math.sin(a) * r;
-
-      seeds[i * 3] = (i * 0.37) % 1;
-      seeds[i * 3 + 1] = 0.78 + (i % 4) * 0.16;
-      seeds[i * 3 + 2] = i % 3 === 0 ? 1.0 : 0.0;
-      lifetimes[i] = 1.85 + (i % 5) * 0.24;
-    }
-    const moteGeo = new THREE.BufferGeometry();
-    moteGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    moteGeo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 3));
-    moteGeo.setAttribute('aLifetime', new THREE.BufferAttribute(lifetimes, 1));
-    const moteMat = createAnimeParticleShaderMaterial(enc.color, secondaryHex);
-    const motes = new THREE.Points(moteGeo, moteMat);
-    auraGroup.add(motes);
-    this.auraMoteGeo = moteGeo;
-    this.auraMoteMat = moteMat;
+    const particles = createAnimeParticlePoints(enc.color, secondaryHex, {
+      count: 34,
+      minRadius: 0.44,
+      maxRadius: 0.77,
+      baseY: 0.28,
+      sizeScale: 1,
+    });
+    auraGroup.add(particles.points);
+    this.auraMoteGeo = particles.geo;
+    this.auraMoteMat = particles.mat;
 
     this.auraGroup = auraGroup;
     this.group.add(auraGroup);
@@ -799,13 +1020,15 @@ export class PlotPedestal3D {
     }
     if (this.auraGroup) {
       const phase = elapsed + this.index * 0.65;
-      if (this.enchantIsRainbow && this.auraGroundMat && this.auraVeilMat && this.auraMoteMat) {
+      if (this.enchantIsRainbow && this.auraGroundMat && this.auraVeilMat && this.auraOuterVeilMat && this.auraMoteMat) {
         const hue = (phase * 0.08) % 1;
         this.auraGroundMat.color.setHSL(hue, 0.85, 0.62);
         (this.auraMoteMat.uniforms.uColorA.value as THREE.Color).setHSL(hue, 0.88, 0.62);
         (this.auraMoteMat.uniforms.uColorB.value as THREE.Color).setHSL((hue + 0.28) % 1, 0.92, 0.7);
         (this.auraVeilMat.uniforms.uColorA.value as THREE.Color).setHSL(hue, 0.85, 0.62);
         (this.auraVeilMat.uniforms.uColorB.value as THREE.Color).setHSL((hue + 0.3) % 1, 0.9, 0.68);
+        (this.auraOuterVeilMat.uniforms.uColorA.value as THREE.Color).setHSL((hue + 0.3) % 1, 0.88, 0.66);
+        (this.auraOuterVeilMat.uniforms.uColorB.value as THREE.Color).setHSL(hue, 0.85, 0.6);
         this.ringMat.color.setHSL(hue, 0.82, 0.6);
         this.ringMat.emissive.setHSL(hue, 0.82, 0.56);
       }
@@ -814,10 +1037,14 @@ export class PlotPedestal3D {
       }
       if (this.auraVeilMat) {
         this.auraVeilMat.uniforms.uTime.value = phase;
-        this.auraVeilMat.uniforms.uOpacity.value = 0.36 + Math.sin(phase * 1.8) * 0.08;
+        this.auraVeilMat.uniforms.uOpacity.value = 0.7 + Math.sin(phase * 1.8) * 0.12;
+      }
+      if (this.auraOuterVeilMat) {
+        this.auraOuterVeilMat.uniforms.uTime.value = phase + 0.7;
+        this.auraOuterVeilMat.uniforms.uOpacity.value = 0.4 + Math.sin(phase * 1.8) * 0.08;
       }
       if (this.auraGroundMat) {
-        this.auraGroundMat.opacity = 0.52 + Math.sin(phase * 1.8) * 0.1;
+        this.auraGroundMat.opacity = 0.76 + Math.sin(phase * 1.8) * 0.12;
       }
       if (this.auraMoteMat) {
         this.auraMoteMat.uniforms.uTime.value = phase;
@@ -1016,6 +1243,8 @@ export class PlotPedestal3D {
     this.auraMoteMat = null;
     this.labelTex?.dispose();
     this.labelTex = null;
+    this.slotPlaqueTex?.dispose();
+    this.slotPlaqueTex = null;
     this.labelMat.dispose();
     this.chibiSprite?.dispose();
     disposeObject3D(this.group);
