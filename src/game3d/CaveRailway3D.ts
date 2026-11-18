@@ -806,9 +806,32 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
   enableShadows(couplerBar);
   railGroup.add(couplerBar);
 
-  // Place carts cleanly on initial frame before update() ticks
+  // Place carts cleanly at initial shuttle phase before update() ticks
   const CAR_SPACING = 1.24;
-  let prevLeadX = -7.85;
+  let shuttleClock = 3.2;
+
+  const sampleShuttleState = (clockSec: number): { leadX: number; unloading: boolean } => {
+    const cycleSec = 14.0;
+    const u = (clockSec % cycleSec) / cycleSec;
+    let shuttleT: number;
+    if (u < 0.36) {
+      const p = u / 0.36;
+      shuttleT = 0.5 - 0.5 * Math.cos(Math.PI * p);
+    } else if (u < 0.54) {
+      shuttleT = 1;
+    } else if (u < 0.88) {
+      const p = (u - 0.54) / 0.34;
+      shuttleT = 0.5 + 0.5 * Math.cos(Math.PI * p);
+    } else {
+      shuttleT = 0;
+    }
+    return {
+      leadX: -10.65 + shuttleT * (-5.65 - -10.65),
+      unloading: shuttleT > 0.95,
+    };
+  };
+
+  let prevLeadX = sampleShuttleState(shuttleClock).leadX;
   let wheelAngle = 0;
 
   const positionTrain = (leadX: number): void => {
@@ -844,7 +867,7 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
     couplerBar.scale.set(1, Math.max(0.4, Math.hypot(linkDx, linkDy) - 0.85), 1);
   };
 
-  positionTrain(-7.85);
+  positionTrain(prevLeadX);
 
   const setPalette = (
     crystalColor: number | string,
@@ -858,33 +881,11 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
     foliageMat.color.set(foliageColor);
   };
 
-  let shuttleClock = 3.2;
-
   const update = (dtSec: number, elapsed: number): void => {
     const safeDt = Math.min(Math.max(0, dtSec), 0.1);
     shuttleClock += safeDt;
 
-    // Smooth shuttle cycle (~14s): emerges from cave (-10.65) down to pit unloading spur (-5.65), pauses, returns
-    const cycleSec = 14.0;
-    const u = (shuttleClock % cycleSec) / cycleSec;
-    let shuttleT: number;
-    if (u < 0.36) {
-      // Smooth ease-in-out roll down toward pit
-      const p = u / 0.36;
-      shuttleT = 0.5 - 0.5 * Math.cos(Math.PI * p);
-    } else if (u < 0.54) {
-      // Pause at pit unloading spur while crystals glow
-      shuttleT = 1;
-    } else if (u < 0.88) {
-      // Haul back up ramp into cave tunnel
-      const p = (u - 0.54) / 0.34;
-      shuttleT = 0.5 + 0.5 * Math.cos(Math.PI * p);
-    } else {
-      // Brief load pause inside cave
-      shuttleT = 0;
-    }
-
-    const leadX = -10.65 + shuttleT * (-5.65 - -10.65);
+    const { leadX, unloading } = sampleShuttleState(shuttleClock);
     positionTrain(leadX);
 
     // Gentle sway on portal hanging lanterns & crystal pulse
@@ -894,7 +895,7 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
     });
 
     const pulse = Math.sin(elapsed * 2.6) * 0.14;
-    crystalMat.emissiveIntensity = 0.82 + pulse + (shuttleT > 0.95 ? 0.25 : 0);
+    crystalMat.emissiveIntensity = 0.82 + pulse + (unloading ? 0.25 : 0);
     lanternGlowMat.emissiveIntensity = 1.45 + Math.sin(elapsed * 4.5) * 0.18;
   };
 

@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { getEnchantById } from '../game/GameData';
 import { TowerWaveOreState } from '../game/TowerData';
-import { ArtBillboard2D } from './AuraModels3D';
 import { ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
 import { OreVariantKey } from './MineWorldPalette';
 import { OreBillboard2D } from './OrePit3D';
+import { createSeraphimBoss3D, SeraphimBossHandle } from './SeraphimBoss3D';
+import { createTowerCityEnvironment, TowerCityEnvironmentHandle } from './TowerCityEnvironment3D';
 
 export interface TowerFighterConfig {
   slotIndex: number;
@@ -37,22 +38,22 @@ export interface TowerOreBarScreen {
   variantKey: OreVariantKey;
 }
 
-interface ShardOrbiter {
-  mesh: THREE.Mesh;
-  radius: number;
-  speed: number;
-  angle: number;
-  baseY: number;
-}
-
-interface VoidDebrisRock {
-  mesh: THREE.Mesh;
+interface BossGravityRockSeed {
   radius: number;
   angle: number;
   speed: number;
   baseY: number;
+  scale: [number, number, number];
   rotSpeedX: number;
   rotSpeedY: number;
+  phase: number;
+}
+
+interface BossHaloArcHandle {
+  mesh: THREE.Mesh;
+  mat: THREE.MeshBasicMaterial;
+  phase: number;
+  period: number;
 }
 
 interface SlashVfx {
@@ -112,68 +113,46 @@ const WAVE_ORE_POSITIONS: ReadonlyArray<[number, number]> = [
   [0, ARENA_CENTER_Z - 2.35],
 ];
 
-function createVoidEclipseSkyTexture(): THREE.Texture | null {
-  if (typeof document === 'undefined') return null;
-  const c = document.createElement('canvas');
-  c.width = 1024;
-  c.height = 512;
-  const ctx = c.getContext('2d');
-  if (!ctx) return null;
-
-  // Deep Megacorp Cyberspace gradient
-  const grad = ctx.createLinearGradient(0, 0, 0, 512);
-  grad.addColorStop(0.0, '#01030a');
-  grad.addColorStop(0.28, '#030b1c');
-  grad.addColorStop(0.54, '#071736');
-  grad.addColorStop(0.72, '#0c1e42');
-  grad.addColorStop(0.86, '#050e24');
-  grad.addColorStop(1.0, '#01040c');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 1024, 512);
-
-  // Cyberspace wireframe latitude & meridian grid lines
-  ctx.strokeStyle = 'rgba(6, 182, 212, 0.22)';
-  ctx.lineWidth = 1.2;
-  for (let x = 0; x <= 1024; x += 32) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, 420);
-    ctx.stroke();
-  }
-  for (let y = 24; y <= 400; y += 28) {
-    ctx.strokeStyle = y % 56 === 24 ? 'rgba(56, 189, 248, 0.26)' : 'rgba(217, 70, 239, 0.16)';
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(1024, y);
-    ctx.stroke();
+function createBossLightningArcGeometry(
+  start: THREE.Vector3,
+  end: THREE.Vector3,
+  seed: number
+): THREE.BufferGeometry {
+  const segs = 5;
+  const pts: THREE.Vector3[] = [];
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs;
+    const p = new THREE.Vector3().lerpVectors(start, end, t);
+    if (i > 0 && i < segs) {
+      const env = Math.sin(t * Math.PI);
+      const jx = ((((seed * (i + 2) * 19) % 15) - 7) / 7) * 0.24 * env;
+      const jy = ((((seed * (i + 5) * 23) % 15) - 7) / 7) * 0.24 * env;
+      p.x += jx;
+      p.y += jy;
+    }
+    pts.push(p);
   }
 
-  // Vertical digital data stream rain columns in the sky dome
-  for (let i = 0; i < 64; i++) {
-    const sx = (i * 173 + 19) % 1024;
-    const sy = (i * 97 + 14) % 300;
-    const sh = 45 + (i % 5) * 28;
-    const sGrad = ctx.createLinearGradient(sx, sy, sx, sy + sh);
-    const isMag = i % 4 === 0;
-    sGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    sGrad.addColorStop(0.7, isMag ? 'rgba(232, 121, 249, 0.45)' : 'rgba(34, 211, 238, 0.45)');
-    sGrad.addColorStop(1, isMag ? 'rgba(250, 232, 255, 0.9)' : 'rgba(207, 250, 254, 0.9)');
-    ctx.fillStyle = sGrad;
-    ctx.fillRect(sx - 1.5, sy, 3, sh);
-  }
+  const verts: number[] = [];
+  const halfW = 0.032;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i];
+    const b = pts[i + 1];
+    const perp = new THREE.Vector3(-(b.y - a.y), b.x - a.x, 0).normalize().multiplyScalar(halfW * (1 - (i / pts.length) * 0.35));
+    verts.push(
+      a.x + perp.x, a.y + perp.y, a.z,
+      b.x + perp.x, b.y + perp.y, b.z,
+      a.x - perp.x, a.y - perp.y, a.z,
 
-  // Glowing cyberspace data nodes at grid intersections
-  for (let i = 0; i < 180; i++) {
-    const sx = ((i * 293 + 47) % 32) * 32;
-    const sy = 24 + ((i * 157 + 23) % 13) * 28;
-    ctx.fillStyle = i % 4 === 0 ? 'rgba(244, 114, 182, 0.85)' : 'rgba(56, 189, 248, 0.85)';
-    ctx.fillRect(sx - 2, sy - 2, 4, 4);
+      a.x - perp.x, a.y - perp.y, a.z,
+      b.x + perp.x, b.y + perp.y, b.z,
+      b.x - perp.x, b.y - perp.y, b.z
+    );
   }
-
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.needsUpdate = true;
-  return tex;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  geo.computeVertexNormals();
+  return geo;
 }
 
 function createEclipseCoronaGlowTexture(): THREE.Texture | null {
@@ -209,88 +188,20 @@ function createEclipseCoronaGlowTexture(): THREE.Texture | null {
   return tex;
 }
 
-function createArenaRuneFloorTexture(): THREE.Texture | null {
-  if (typeof document === 'undefined') return null;
-  const c = document.createElement('canvas');
-  c.width = 512;
-  c.height = 512;
-  const ctx = c.getContext('2d');
-  if (!ctx) return null;
-
-  const cx = 256;
-  const cy = 256;
-  const bg = ctx.createRadialGradient(cx, cy, 18, cx, cy, 256);
-  bg.addColorStop(0.0, '#082f49');
-  bg.addColorStop(0.42, '#071329');
-  bg.addColorStop(0.82, '#030816');
-  bg.addColorStop(1.0, '#01040c');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, 512, 512);
-
-  // Fine PCB cyber-grid lines
-  ctx.strokeStyle = 'rgba(6, 182, 212, 0.15)';
-  ctx.lineWidth = 1;
-  for (let g = 0; g <= 512; g += 24) {
-    ctx.beginPath();
-    ctx.moveTo(g, 0);
-    ctx.lineTo(g, 512);
-    ctx.moveTo(0, g);
-    ctx.lineTo(512, g);
-    ctx.stroke();
-  }
-
-  // Concentric mainframe timing rings
-  for (const [r, col, w] of [
-    [68, 'rgba(34, 211, 238, 0.68)', 3],
-    [128, 'rgba(232, 121, 249, 0.48)', 2.5],
-    [188, 'rgba(56, 189, 248, 0.55)', 3],
-    [236, 'rgba(34, 211, 238, 0.72)', 3.5],
-  ] as const) {
-    ctx.strokeStyle = col;
-    ctx.lineWidth = w;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  // 16 Radial PCB circuit bus traces with glowing solder nodes
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * Math.PI * 2;
-    const r0 = i % 2 === 0 ? 58 : 128;
-    const r1 = 236;
-    ctx.strokeStyle = i % 2 === 0 ? 'rgba(34, 211, 238, 0.55)' : 'rgba(232, 121, 249, 0.45)';
-    ctx.lineWidth = i % 2 === 0 ? 3 : 2;
-    ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
-    ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
-    ctx.stroke();
-
-    const nx = cx + Math.cos(a) * 188;
-    const ny = cy + Math.sin(a) * 188;
-    ctx.fillStyle = i % 2 === 0 ? '#22d3ee' : '#f472b6';
-    ctx.beginPath();
-    ctx.arc(nx, ny, 4.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.needsUpdate = true;
-  return tex;
-}
-
 export class TowerArena3D {
   public readonly group = new THREE.Group();
   public readonly clickables: THREE.Object3D[] = [];
 
+  private readonly cityEnv: TowerCityEnvironmentHandle;
   private readonly monolithGroup = new THREE.Group();
-  private readonly monolithPedestal: THREE.Mesh;
-  private readonly monolithCoreMat: THREE.MeshStandardMaterial;
-  private readonly bossSprite: ArtBillboard2D;
-  private readonly seraphDrones: Array<{ group: THREE.Group; angleOffset: number }> = [];
-  private readonly baseRingMat: THREE.MeshBasicMaterial;
-  private readonly trimRingMat: THREE.MeshBasicMaterial;
-  private readonly pillarCapMat: THREE.MeshStandardMaterial;
+  private readonly bossModel: SeraphimBossHandle;
+  private readonly bossArcs: BossHaloArcHandle[] = [];
+  private readonly bossFeetFxGroup = new THREE.Group();
+  private readonly bossGravityRocksInst: THREE.InstancedMesh;
+  private readonly bossGravityRockSeeds: BossGravityRockSeed[] = [];
+  private readonly bossGravityDummy = new THREE.Object3D();
+  private readonly bossFloorPulseMesh: THREE.Mesh;
+  private readonly bossFloorPulseMat: THREE.MeshBasicMaterial;
   private readonly hitMesh: THREE.Mesh;
 
   private readonly waveOresGroup = new THREE.Group();
@@ -303,12 +214,8 @@ export class TowerArena3D {
   private readonly aiWireframeSphere: THREE.Mesh;
   private readonly aiGyroRing1: THREE.Mesh;
   private readonly aiGyroRing2: THREE.Mesh;
-  private readonly abyssRing1: THREE.Mesh;
-  private readonly abyssRing2: THREE.Mesh;
-  private readonly abyssDebris: VoidDebrisRock[] = [];
-  private readonly emberMotes: ShardOrbiter[] = [];
-  private readonly orbiters: ShardOrbiter[] = [];
   private readonly summonPads: THREE.Mesh[] = [];
+  private readonly ownedTextures: THREE.Texture[] = [];
 
   private readonly fightersGroup = new THREE.Group();
   private readonly fighters = new Map<number, TowerChibiFighter>();
@@ -328,24 +235,16 @@ export class TowerArena3D {
   constructor() {
     this.group.visible = false;
 
-    // 1. Megacorp Cyberspace Grid Sky Dome
-    const skyTex = createVoidEclipseSkyTexture();
-    const skyDome = new THREE.Mesh(
-      new THREE.SphereGeometry(96, 32, 20),
-      new THREE.MeshBasicMaterial({
-        map: skyTex ?? undefined,
-        color: skyTex ? 0xffffff : 0x030b1c,
-        side: THREE.BackSide,
-        fog: false,
-      })
-    );
-    this.group.add(skyDome);
+    // 1. Ruined Cyber City Highway, Central Meteor Crater, & Skyscraper Horizon
+    this.cityEnv = createTowerCityEnvironment();
+    this.group.add(this.cityEnv.group);
 
-    // 2. Colossal Holographic AI Mainframe Core in the Upper-Rear Sky
+    // 2. Colossal Holographic AI Mainframe Core Hovering Above the Vanishing Cyber Highway
     const eclipseGroup = new THREE.Group();
-    eclipseGroup.position.set(0, 1.35, -32);
+    eclipseGroup.position.set(0, 7.6, -42);
 
     const coronaGlowTex = createEclipseCoronaGlowTexture();
+    if (coronaGlowTex) this.ownedTextures.push(coronaGlowTex);
     this.eclipseHaloMat = new THREE.MeshBasicMaterial({
       map: coronaGlowTex ?? undefined,
       color: 0x06b6d4,
@@ -426,172 +325,7 @@ export class TowerArena3D {
     );
     this.group.add(eclipseGroup);
 
-    // 3. Megacorp Server Monolith Skyscrapers & Vertical Data Stream Laser Columns
-    this.abyssRing1 = new THREE.Mesh(
-      new THREE.TorusGeometry(13.2, 0.11, 8, 64),
-      new THREE.MeshBasicMaterial({ color: 0x06b6d4, transparent: true, opacity: 0.62 })
-    );
-    this.abyssRing1.position.set(0, 0.2, ARENA_CENTER_Z);
-    this.abyssRing1.rotation.x = Math.PI / 2 - 0.08;
-
-    this.abyssRing2 = new THREE.Mesh(
-      new THREE.TorusGeometry(15.4, 0.08, 8, 64),
-      new THREE.MeshBasicMaterial({ color: 0xe879f9, transparent: true, opacity: 0.48 })
-    );
-    this.abyssRing2.position.set(0, -0.4, ARENA_CENTER_Z);
-    this.abyssRing2.rotation.x = Math.PI / 2 + 0.1;
-    this.group.add(this.abyssRing1, this.abyssRing2);
-
-    const serverTowerMat = new THREE.MeshStandardMaterial({
-      color: 0x050b18,
-      roughness: 0.3,
-      metalness: 0.75,
-    });
-    const cyanNeonMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, fog: false });
-    const magNeonMat = new THREE.MeshBasicMaterial({ color: 0xe879f9, fog: false });
-    const cyanBeamMat = new THREE.MeshBasicMaterial({
-      color: 0x06b6d4,
-      transparent: true,
-      opacity: 0.34,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      fog: false,
-    });
-    const magBeamMat = new THREE.MeshBasicMaterial({
-      color: 0xd946ef,
-      transparent: true,
-      opacity: 0.3,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      fog: false,
-    });
-
-    // Background arc of Megacorp Server Monoliths + Vertical Data Stream Pillars
-    for (let i = 0; i < 16; i++) {
-      const ang = Math.PI * 0.82 + (i / 15) * Math.PI * 1.36;
-      const dist = 21 + (i % 3) * 3.8;
-      const tx = Math.cos(ang) * dist;
-      const tz = ARENA_CENTER_Z + Math.sin(ang) * dist;
-      const th = 14 + (i % 4) * 4.5;
-      const tw = 1.6 + (i % 2) * 0.6;
-
-      const tower = new THREE.Mesh(new THREE.BoxGeometry(tw, th, tw), serverTowerMat);
-      tower.position.set(tx, th * 0.32 - 6, tz);
-      tower.lookAt(0, tower.position.y, ARENA_CENTER_Z);
-
-      const ledStrip = new THREE.Mesh(
-        new THREE.BoxGeometry(0.14, th * 0.92, 0.08),
-        i % 2 === 0 ? cyanNeonMat : magNeonMat
-      );
-      ledStrip.position.z = tw * 0.5 + 0.03;
-      tower.add(ledStrip);
-      this.group.add(tower);
-
-      // Vertical Data Stream Pillar shooting into cyberspace
-      if (i % 2 === 0) {
-        const beamX = Math.cos(ang + 0.05) * (dist - 3.2);
-        const beamZ = ARENA_CENTER_Z + Math.sin(ang + 0.05) * (dist - 3.2);
-        const beam = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.14, 0.14, 38, 8),
-          i % 4 === 0 ? cyanBeamMat : magBeamMat
-        );
-        beam.position.set(beamX, 7.0, beamZ);
-        this.group.add(beam);
-      }
-    }
-
-    // Floating Holographic Data Cubes orbiting the mainframe abyss
-    for (let i = 0; i < 8; i++) {
-      const cubeMat = new THREE.MeshStandardMaterial({
-        color: 0x08142c,
-        emissive: i % 2 === 0 ? 0x06b6d4 : 0xd946ef,
-        emissiveIntensity: 0.75,
-        roughness: 0.2,
-        metalness: 0.8,
-        wireframe: i % 2 === 1,
-      });
-      const cube = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.85, 0.85), cubeMat);
-      this.group.add(cube);
-      this.abyssDebris.push({
-        mesh: cube,
-        radius: 13.8 + (i % 3) * 1.9,
-        angle: (i / 8) * Math.PI * 2,
-        speed: 0.07 + (i % 2) * 0.03,
-        baseY: -0.8 + (i % 4) * 1.15,
-        rotSpeedX: 0.45 + (i % 3) * 0.15,
-        rotSpeedY: 0.55 + (i % 2) * 0.2,
-      });
-    }
-
-    // 4. Stepped Cyber-Carbon Mainframe Platform + PCB Circuit Floor
-    const plinthLower = new THREE.Mesh(
-      new THREE.CylinderGeometry(10.2, 7.8, 2.2, 16),
-      new THREE.MeshStandardMaterial({ color: 0x050b18, roughness: 0.4, metalness: 0.7 })
-    );
-    plinthLower.position.set(0, -1.25, ARENA_CENTER_Z);
-    this.group.add(plinthLower);
-
-    const runeTex = createArenaRuneFloorTexture();
-    const floorDeck = new THREE.Mesh(
-      new THREE.CylinderGeometry(10.6, 10.8, 0.32, 32),
-      new THREE.MeshStandardMaterial({
-        map: runeTex ?? undefined,
-        color: runeTex ? 0xffffff : 0x071329,
-        roughness: 0.28,
-        metalness: 0.55,
-      })
-    );
-    floorDeck.position.set(0, -0.08, ARENA_CENTER_Z);
-    floorDeck.receiveShadow = true;
-    this.group.add(floorDeck);
-
-    this.trimRingMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, side: THREE.DoubleSide });
-    const trimRing = new THREE.Mesh(new THREE.RingGeometry(9.7, 10.15, 48), this.trimRingMat);
-    trimRing.rotation.x = -Math.PI / 2;
-    trimRing.position.set(0, 0.09, ARENA_CENTER_Z);
-    this.group.add(trimRing);
-
-    this.baseRingMat = new THREE.MeshBasicMaterial({ color: 0xe879f9, side: THREE.DoubleSide });
-    const innerRing = new THREE.Mesh(new THREE.RingGeometry(2.2, 2.55, 36), this.baseRingMat);
-    innerRing.rotation.x = -Math.PI / 2;
-    innerRing.position.set(0, 0.1, ARENA_CENTER_Z);
-    this.group.add(innerRing);
-
-    // 5. Eight Cyber-Server Pylon Towers with Neon LED Strips & Hologram Data Nodes
-    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x070e20, roughness: 0.28, metalness: 0.78 });
-    this.pillarCapMat = new THREE.MeshStandardMaterial({
-      color: 0x22d3ee,
-      emissive: 0x06b6d4,
-      emissiveIntensity: 0.95,
-      roughness: 0.15,
-      wireframe: true,
-    });
-    for (let i = 0; i < 8; i++) {
-      const ang = (i * Math.PI) / 4 + Math.PI / 8;
-      const isFrontLane = Math.sin(ang) > 0.5;
-      const colHeight = isFrontLane ? 2.4 : 4.4 + (i % 2) * 0.8;
-      const px = Math.cos(ang) * 9.0;
-      const pz = ARENA_CENTER_Z + Math.sin(ang) * 9.0;
-
-      const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.68, colHeight, 0.68), pillarMat);
-      pillar.position.set(px, colHeight * 0.5, pz);
-      pillar.lookAt(0, pillar.position.y, ARENA_CENTER_Z);
-      pillar.castShadow = true;
-
-      // Glowing vertical LED strip on the inner face of each server pylon
-      const pylonLed = new THREE.Mesh(
-        new THREE.BoxGeometry(0.12, colHeight * 0.86, 0.06),
-        i % 2 === 0 ? cyanNeonMat : magNeonMat
-      );
-      pylonLed.position.z = 0.35;
-      pillar.add(pylonLed);
-
-      const cap = new THREE.Mesh(new THREE.OctahedronGeometry(0.46, 0), this.pillarCapMat);
-      cap.position.set(px, colHeight + 0.56, pz);
-      this.group.add(pillar, cap);
-    }
-
-    // 6. Five Front-Arc Chibi Summoning Runes
+    // 3. Five Front-Arc Chibi Summoning Runes (Flush on Highway Crater Floor y = 0.08)
     for (let i = 0; i < 5; i++) {
       const sp = this.getSpawnPos(i);
       const pad = new THREE.Mesh(
@@ -609,56 +343,96 @@ export class TowerArena3D {
       this.summonPads.push(pad);
     }
 
-    // 7. Central Boss: 3D Seraphim AI Overlord (active on Wave 10 Boss)
-    this.monolithPedestal = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.75, 2.25, 0.72, 12),
-      new THREE.MeshStandardMaterial({ color: 0x070e20, roughness: 0.28, metalness: 0.78 })
-    );
-    this.monolithPedestal.position.set(0, 0.42, ARENA_CENTER_Z);
-    this.group.add(this.monolithPedestal);
-
-    this.monolithCoreMat = new THREE.MeshStandardMaterial({
-      color: 0xf43f5e,
-      emissive: 0xdc2626,
-      emissiveIntensity: 0.95,
-      roughness: 0.14,
-      metalness: 0.45,
-    });
-
-    const bossArmorMat = new THREE.MeshStandardMaterial({
-      color: 0x0b132b,
-      roughness: 0.24,
-      metalness: 0.85,
-    });
-    const cyanLaserMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, fog: false });
-
-    // 7a. 2.5D Seraphim AI Overlord Boss Sprite + Orbital Attack Drones
-    this.bossSprite = new ArtBillboard2D('/hud/tower_boss.webp', '#22d3ee', {
-      baseSize: 4.5,
-      centerY: 0.5,
-      showPedestalBase: false,
-      haloScale: 1.25,
-      bobAmp: 0.1,
-      swayAmp: 0.02,
-    });
-    this.monolithGroup.add(this.bossSprite.root);
-
-    for (let d = 0; d < 4; d++) {
-      const droneGroup = new THREE.Group();
-      const dBody = new THREE.Mesh(new THREE.OctahedronGeometry(0.32, 0), bossArmorMat);
-      const dRing = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.04, 8, 20), cyanLaserMat);
-      dRing.rotation.x = Math.PI / 2;
-      const dEye = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 12), this.monolithCoreMat);
-      dEye.position.z = 0.24;
-      droneGroup.add(dBody, dRing, dEye);
-      this.monolithGroup.add(droneGroup);
-      this.seraphDrones.push({ group: droneGroup, angleOffset: (d / 4) * Math.PI * 2 });
-    }
-
-    this.monolithGroup.position.set(0, 1.15, ARENA_CENTER_Z);
+    // 4. Central Full-3D Procedural "Corrupted Seraphim AI Overlord" Boss (Grounded over Crater Center y = 0.08)
+    this.bossModel = createSeraphimBoss3D({ scale: 1.02 });
+    this.monolithGroup.add(this.bossModel.group);
+    this.monolithGroup.position.set(0, 0.08, ARENA_CENTER_Z);
     this.group.add(this.monolithGroup);
 
-    // 7b. Five Wave Ore Rock Slots (active on Waves 1..9)
+    // 4b. Crater Floor Boss Feet Aura: Contact Shadow, Dim Red-Orange Shockwave, Anti-Gravity Rocks & Ground-to-Body Sparks
+    this.bossFeetFxGroup.position.set(0, 0.08, ARENA_CENTER_Z);
+    this.group.add(this.bossFeetFxGroup);
+
+    const bossShadowMesh = new THREE.Mesh(
+      new THREE.CircleGeometry(1.18, 24),
+      new THREE.MeshBasicMaterial({
+        color: 0x020306,
+        transparent: true,
+        opacity: 0.72,
+        depthWrite: false,
+      })
+    );
+    bossShadowMesh.rotation.x = -Math.PI / 2;
+    bossShadowMesh.position.y = 0.008;
+    this.bossFeetFxGroup.add(bossShadowMesh);
+
+    this.bossFloorPulseMat = new THREE.MeshBasicMaterial({
+      color: 0xea580c,
+      transparent: true,
+      opacity: 0.34,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.bossFloorPulseMesh = new THREE.Mesh(new THREE.RingGeometry(1.45, 1.82, 36), this.bossFloorPulseMat);
+    this.bossFloorPulseMesh.rotation.x = -Math.PI / 2;
+    this.bossFloorPulseMesh.position.y = 0.014;
+    this.bossFeetFxGroup.add(this.bossFloorPulseMesh);
+
+    const GRAVITY_ROCK_COUNT = 9;
+    const gravRockGeo = new THREE.DodecahedronGeometry(1.0, 0);
+    const gravRockMat = new THREE.MeshStandardMaterial({
+      color: 0x1a1e2a,
+      roughness: 0.92,
+      metalness: 0.08,
+      flatShading: true,
+    });
+    this.bossGravityRocksInst = new THREE.InstancedMesh(gravRockGeo, gravRockMat, GRAVITY_ROCK_COUNT);
+    this.bossGravityRocksInst.castShadow = true;
+    this.bossGravityRocksInst.receiveShadow = true;
+    for (let i = 0; i < GRAVITY_ROCK_COUNT; i++) {
+      this.bossGravityRockSeeds.push({
+        radius: 1.45 + (i % 3) * 0.34,
+        angle: (i / GRAVITY_ROCK_COUNT) * Math.PI * 2,
+        speed: 0.28 + (i % 3) * 0.07,
+        baseY: 0.2 + (i % 4) * 0.09,
+        scale: [0.15 + (i % 3) * 0.03, 0.11 + (i % 2) * 0.03, 0.13 + ((i + 1) % 3) * 0.03],
+        rotSpeedX: 0.7 + (i % 3) * 0.25,
+        rotSpeedY: 0.8 + (i % 2) * 0.35,
+        phase: i * 0.9,
+      });
+    }
+    this.bossFeetFxGroup.add(this.bossGravityRocksInst);
+
+    // Asymmetrical Short Lightning Arcs Crackling Between Crater Floor Fissures & Lower Boss Body
+    const groundArcSpecs: [THREE.Vector3, THREE.Vector3, number][] = [
+      [new THREE.Vector3(-1.35, 0.02, 0.25), new THREE.Vector3(-0.55, 0.78, 0.04), 13],
+      [new THREE.Vector3(1.42, 0.02, 0.18), new THREE.Vector3(0.62, 0.86, 0.04), 29],
+      [new THREE.Vector3(-0.88, 0.02, -0.55), new THREE.Vector3(-0.42, 1.05, -0.05), 41],
+      [new THREE.Vector3(1.05, 0.02, -0.48), new THREE.Vector3(0.48, 0.65, 0.02), 59],
+      [new THREE.Vector3(-0.22, 0.02, 0.85), new THREE.Vector3(0.18, 0.54, 0.08), 73],
+    ];
+    groundArcSpecs.forEach(([p0, p1, seed], idx) => {
+      const arcMat = new THREE.MeshBasicMaterial({
+        color: idx % 2 === 0 ? 0xfb923c : 0xfde68a,
+        transparent: true,
+        opacity: 0.78,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const arcMesh = new THREE.Mesh(createBossLightningArcGeometry(p0, p1, seed), arcMat);
+      arcMesh.visible = false;
+      this.bossFeetFxGroup.add(arcMesh);
+      this.bossArcs.push({
+        mesh: arcMesh,
+        mat: arcMat,
+        phase: idx * 0.74,
+        period: 1.35 + (idx % 3) * 0.55,
+      });
+    });
+
+    // 5. Five Wave Ore Rock Slots (active on Waves 1..9)
     this.group.add(this.waveOresGroup);
     for (let i = 0; i < WAVE_ORE_POSITIONS.length; i++) {
       const slot = this.createWaveOreSlot(i);
@@ -667,52 +441,16 @@ export class TowerArena3D {
       this.clickables.push(slot.hitMesh);
     }
 
-    // 8. Astral Orbiters + Drifting Void Embers
-    for (let i = 0; i < 8; i++) {
-      const mesh = new THREE.Mesh(
-        new THREE.OctahedronGeometry(0.24, 0),
-        new THREE.MeshStandardMaterial({
-          color: i % 2 === 0 ? 0x38bdf8 : 0xf472b6,
-          emissive: i % 2 === 0 ? 0x0284c7 : 0xdb2777,
-          emissiveIntensity: 0.6,
-          roughness: 0.18,
-        })
-      );
-      this.group.add(mesh);
-      this.orbiters.push({
-        mesh,
-        radius: 3.1 + (i % 3) * 0.9,
-        speed: 0.6 + (i % 4) * 0.18,
-        angle: (i / 8) * Math.PI * 2,
-        baseY: 1.95 + (i % 3) * 0.78,
-      });
-    }
-
-    for (let i = 0; i < 16; i++) {
-      const mote = new THREE.Mesh(
-        new THREE.OctahedronGeometry(0.11, 0),
-        new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? 0xc084fc : 0xfbbf24, transparent: true, opacity: 0.68 })
-      );
-      this.group.add(mote);
-      this.emberMotes.push({
-        mesh: mote,
-        radius: 8.4 + (i % 4) * 1.15,
-        speed: 0.22 + (i % 3) * 0.09,
-        angle: (i / 16) * Math.PI * 2,
-        baseY: 0.4 + (i % 5) * 0.85,
-      });
-    }
-
-    // 9. Animated Chibi Fighters & Slash VFX Layers
+    // 6. Animated Chibi Fighters & Slash VFX Layers
     this.group.add(this.fightersGroup);
     this.group.add(this.slashGroup);
 
-    // 10. Boss Monolith Raycast Hitbox (keep at index 0 of clickables)
+    // 7. Boss Monolith Raycast Hitbox (keep at index 0 of clickables)
     this.hitMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.5, 2.5, 5.2, 12),
+      new THREE.CylinderGeometry(2.6, 2.6, 5.2, 12),
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
     );
-    this.hitMesh.position.set(0, 3.0, ARENA_CENTER_Z);
+    this.hitMesh.position.set(0, 2.6, ARENA_CENTER_Z);
     this.hitMesh.userData = { kind: 'tower-core' };
     this.group.add(this.hitMesh);
     this.clickables.unshift(this.hitMesh);
@@ -945,7 +683,7 @@ export class TowerArena3D {
     }
 
     this.monolithGroup.visible = opts.isBossWave;
-    this.monolithPedestal.visible = opts.isBossWave;
+    this.bossFeetFxGroup.visible = opts.isBossWave;
     this.hitMesh.visible = opts.isBossWave;
 
     this.waveOresGroup.visible = !opts.isBossWave;
@@ -980,13 +718,7 @@ export class TowerArena3D {
       }
     }
 
-    const useBossColors = opts.isBossWave && opts.isCheckpointFloor;
-    this.monolithCoreMat.color.set(useBossColors ? '#f59e0b' : opts.isBossWave ? '#f43f5e' : '#38bdf8');
-    this.monolithCoreMat.emissive.set(opts.isBossWave ? '#dc2626' : opts.anomalyColorHex);
-    this.baseRingMat.color.set(opts.isBossWave ? '#facc15' : opts.anomalyColorHex);
-    this.trimRingMat.color.set(opts.isBossWave ? '#f43f5e' : '#22d3ee');
-    this.pillarCapMat.color.set(opts.isBossWave ? '#facc15' : opts.anomalyColorHex);
-    this.pillarCapMat.emissive.set(opts.isBossWave ? '#ef4444' : '#06b6d4');
+    this.cityEnv.setBossState(opts.isBossWave, this.bossMode, opts.anomalyColorHex);
     this.eclipseCoronaMat.color.set(opts.isBossWave ? '#ef4444' : '#22d3ee');
     this.eclipseHaloMat.color.set(opts.isBossWave ? '#f43f5e' : opts.anomalyColorHex);
     (this.aiWireframeSphere.material as THREE.MeshBasicMaterial).color.set(
@@ -1023,8 +755,8 @@ export class TowerArena3D {
     this.bounceTimer = Math.max(this.bounceTimer, intensity);
     if (spawnSlash) {
       const slashColor = this.bossMode ? '#facc15' : this.anomalyColorHex;
-      this.spawnSlashArc(slashColor, (Math.random() - 0.5) * 1.4, 1.35, (Math.random() - 0.5) * 0.45, 2.75, ARENA_CENTER_Z + 1.05);
-      this.spawnSlashArc('#e879f9', (Math.random() - 0.5) * 1.4 + Math.PI * 0.5, 1.15, (Math.random() - 0.5) * 0.45, 2.75, ARENA_CENTER_Z + 1.05);
+      this.spawnSlashArc(slashColor, (Math.random() - 0.5) * 1.4, 1.35, (Math.random() - 0.5) * 0.45, 2.2, ARENA_CENTER_Z + 1.05);
+      this.spawnSlashArc('#f97316', (Math.random() - 0.5) * 1.4 + Math.PI * 0.5, 1.15, (Math.random() - 0.5) * 0.45, 2.2, ARENA_CENTER_Z + 1.05);
     }
   }
 
@@ -1070,7 +802,7 @@ export class TowerArena3D {
   }
 
   public getMonolithWorldPos(): THREE.Vector3 {
-    return new THREE.Vector3(0, 3.15, ARENA_CENTER_Z);
+    return new THREE.Vector3(0, 2.55, ARENA_CENTER_Z);
   }
 
   public getConfiguredFighterCount(): number {
@@ -1143,35 +875,68 @@ export class TowerArena3D {
     onFighterStrike?: (ev: TowerStrikeEvent) => void
   ): void {
     if (!this.group.visible) return;
+    const safeDt = Math.min(Math.max(0, dt), 0.1);
+    this.cityEnv.update(safeDt, elapsed);
     if (this.bounceTimer > 0) {
-      this.bounceTimer = Math.max(0, this.bounceTimer - dt);
+      this.bounceTimer = Math.max(0, this.bounceTimer - safeDt);
     }
 
     if (this.bossWave) {
       const hitFactor = this.bounceTimer > 0 ? this.bounceTimer / 0.24 : 0;
-      const pulse = 1 + hitFactor * 0.14;
-      const bossScale = this.bossMode ? 1.18 : 1.0;
+      const pulse = 1 + hitFactor * 0.08;
+      const bossScale = this.bossMode ? 1.08 : 1.0;
       this.monolithGroup.scale.setScalar(bossScale * pulse);
-      this.monolithGroup.position.y = 1.15 + Math.sin(elapsed * 2.1) * 0.14;
-      this.bossSprite.updateTransform(dt, elapsed, this.bounceTimer > 0, false, camera);
+      this.monolithGroup.position.y = 0.08;
+      this.bossModel.update(safeDt, elapsed, hitFactor);
 
-      for (const d of this.seraphDrones) {
-        const a = d.angleOffset + elapsed * 1.75;
-        d.group.position.set(Math.cos(a) * 3.1, Math.sin(elapsed * 2.8 + d.angleOffset) * 0.45, Math.sin(a) * 1.85);
-        d.group.rotation.y = -a + Math.PI / 2;
+      // Brief asymmetrical lightning arcs crackling between crater cracks and Boss lower body
+      for (let i = 0; i < this.bossArcs.length; i++) {
+        const arc = this.bossArcs[i];
+        const cycle = (elapsed + arc.phase) % arc.period;
+        const on = cycle < 0.1 || (cycle > 0.18 && cycle < 0.24);
+        arc.mesh.visible = on;
+        if (on) {
+          arc.mat.opacity = 0.58 + Math.sin(elapsed * 45 + i) * 0.24;
+        }
       }
+
+      // Low anti-gravity crater rock fragments hovering slowly around Boss's feet
+      for (let i = 0; i < this.bossGravityRockSeeds.length; i++) {
+        const rs = this.bossGravityRockSeeds[i];
+        const a = rs.angle + elapsed * rs.speed;
+        this.bossGravityDummy.position.set(
+          Math.cos(a) * rs.radius,
+          rs.baseY + Math.sin(elapsed * 1.8 + rs.phase) * 0.075,
+          Math.sin(a) * rs.radius
+        );
+        this.bossGravityDummy.rotation.set(
+          elapsed * rs.rotSpeedX + rs.phase,
+          elapsed * rs.rotSpeedY,
+          rs.phase
+        );
+        this.bossGravityDummy.scale.set(rs.scale[0], rs.scale[1], rs.scale[2]);
+        this.bossGravityDummy.updateMatrix();
+        this.bossGravityRocksInst.setMatrixAt(i, this.bossGravityDummy.matrix);
+      }
+      this.bossGravityRocksInst.instanceMatrix.needsUpdate = true;
+
+      // Subtle dim pulsing red-orange shockwave on crater floor beneath Boss's feet
+      const wavePhase = (elapsed * 0.62) % 1;
+      const waveScale = 0.85 + wavePhase * 0.45;
+      this.bossFloorPulseMesh.scale.setScalar(waveScale);
+      this.bossFloorPulseMat.opacity = Math.max(0, (1 - wavePhase) * 0.34);
     } else {
       for (const rock of this.waveRocks) {
         if (!rock.alive) continue;
         if (rock.spawnScale < 1) {
-          rock.spawnScale = Math.min(1, rock.spawnScale + dt * 5.2);
+          rock.spawnScale = Math.min(1, rock.spawnScale + safeDt * 5.2);
         }
         if (rock.squashAmt > 0.001) {
-          rock.squashAmt = Math.max(0, rock.squashAmt - dt * 2.5);
+          rock.squashAmt = Math.max(0, rock.squashAmt - safeDt * 2.5);
         }
         const flashing = rock.flashTimer > 0;
         if (flashing) {
-          rock.flashTimer -= dt;
+          rock.flashTimer -= safeDt;
         }
         rock.oreSprite.updateTransform(elapsed, rock.phase, rock.squashAmt, rock.spawnScale, flashing, camera);
       }
@@ -1182,44 +947,11 @@ export class TowerArena3D {
     this.aiWireframeSphere.rotation.x = Math.sin(elapsed * 0.3) * 0.25;
     this.aiGyroRing1.rotation.z = elapsed * 0.65;
     this.aiGyroRing2.rotation.x = -elapsed * 0.52;
-    this.abyssRing1.rotation.z = elapsed * 0.14;
-    this.abyssRing2.rotation.z = -elapsed * 0.11;
-
-    for (const r of this.abyssDebris) {
-      const a = r.angle + elapsed * r.speed;
-      r.mesh.position.set(
-        Math.cos(a) * r.radius,
-        r.baseY + Math.sin(elapsed * 1.1 + r.angle) * 0.45,
-        ARENA_CENTER_Z + Math.sin(a) * r.radius
-      );
-      r.mesh.rotation.x += dt * r.rotSpeedX;
-      r.mesh.rotation.y += dt * r.rotSpeedY;
-    }
-
-    for (const o of this.orbiters) {
-      const a = o.angle + elapsed * o.speed;
-      o.mesh.position.set(
-        Math.cos(a) * o.radius,
-        o.baseY + Math.sin(elapsed * 2 + o.angle) * 0.25,
-        ARENA_CENTER_Z + Math.sin(a) * o.radius
-      );
-      o.mesh.rotation.y = elapsed * 1.6 + o.angle;
-    }
-
-    for (const m of this.emberMotes) {
-      const a = m.angle + elapsed * m.speed;
-      m.mesh.position.set(
-        Math.cos(a) * m.radius,
-        m.baseY + ((elapsed * 0.65 + m.angle) % 3.4),
-        ARENA_CENTER_Z + Math.sin(a) * m.radius
-      );
-      m.mesh.rotation.y = elapsed * 2.2 + m.angle;
-    }
 
     // Update Active Slash VFX
     for (let i = this.slashes.length - 1; i >= 0; i--) {
       const s = this.slashes[i];
-      s.age += dt;
+      s.age += safeDt;
       const p = Math.min(1, s.age / s.maxAge);
       s.mesh.scale.setScalar(s.baseScale * (0.5 + p * 0.75));
       s.mat.opacity = Math.max(0, (1 - p) * 0.95);
@@ -1261,14 +993,14 @@ export class TowerArena3D {
           }
 
           if (dist > 0.22 && f.lungeTimer <= 0) {
-            const step = Math.min(dist, f.walkSpeed * dt);
+            const step = Math.min(dist, f.walkSpeed * safeDt);
             pos.x += (dx / dist) * step;
             pos.z += (dz / dist) * step;
             pos.y = 0.08;
             f.sprite.setAnimState('dash');
           } else {
             f.sprite.setAnimState('attack');
-            f.attackCooldown -= dt;
+            f.attackCooldown -= safeDt;
             if (f.attackCooldown <= 0) {
               f.attackCooldown = f.attackInterval;
               f.lungeTimer = 0.18;
@@ -1285,7 +1017,7 @@ export class TowerArena3D {
             }
 
             if (f.lungeTimer > 0) {
-              f.lungeTimer = Math.max(0, f.lungeTimer - dt);
+              f.lungeTimer = Math.max(0, f.lungeTimer - safeDt);
               const t = Math.sin((f.lungeTimer / 0.18) * Math.PI);
               const toRockX = targetRock.x - desiredX;
               const toRockZ = targetRock.z - desiredZ;
@@ -1308,14 +1040,14 @@ export class TowerArena3D {
         const dist = Math.hypot(dx, dz);
 
         if (dist > 0.2 && f.lungeTimer <= 0) {
-          const step = Math.min(dist, f.walkSpeed * dt);
+          const step = Math.min(dist, f.walkSpeed * safeDt);
           pos.x += (dx / dist) * step;
           pos.z += (dz / dist) * step;
           pos.y = 0.08;
           f.sprite.setAnimState('dash');
         } else {
           f.sprite.setAnimState('attack');
-          f.attackCooldown -= dt;
+          f.attackCooldown -= safeDt;
           if (f.attackCooldown <= 0) {
             f.attackCooldown = f.attackInterval;
             f.lungeTimer = 0.18;
@@ -1326,7 +1058,7 @@ export class TowerArena3D {
               (Math.random() - 0.5) * 1.9,
               0.92,
               (Math.random() - 0.5) * 0.45,
-              2.75,
+              2.15,
               ARENA_CENTER_Z + 1.05
             );
             onFighterStrike?.({
@@ -1335,13 +1067,13 @@ export class TowerArena3D {
               attackInterval: f.attackInterval,
               dmg: Math.max(1, Math.round(f.dmg * f.attackInterval)),
               wx: (Math.random() - 0.5) * 0.9,
-              wy: 2.6 + Math.random() * 0.8,
+              wy: 2.0 + Math.random() * 0.7,
               wz: ARENA_CENTER_Z + 0.5,
             });
           }
 
           if (f.lungeTimer > 0) {
-            f.lungeTimer = Math.max(0, f.lungeTimer - dt);
+            f.lungeTimer = Math.max(0, f.lungeTimer - safeDt);
             const t = Math.sin((f.lungeTimer / 0.18) * Math.PI);
             const toCenterX = -f.attackPos.x;
             const toCenterZ = ARENA_CENTER_Z - f.attackPos.z;
@@ -1356,8 +1088,39 @@ export class TowerArena3D {
       }
 
       if (camera) {
-        f.sprite.update(dt, elapsed, camera);
+        f.sprite.update(safeDt, elapsed, camera);
       }
     }
+  }
+
+  public dispose(): void {
+    this.bossModel.dispose();
+    this.cityEnv.dispose();
+    for (const f of this.fighters.values()) {
+      f.sprite.dispose();
+    }
+    this.fighters.clear();
+
+    const disposedGeos = new Set<THREE.BufferGeometry>();
+    const disposedMats = new Set<THREE.Material>();
+    this.group.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      if (!disposedGeos.has(child.geometry)) {
+        disposedGeos.add(child.geometry);
+        child.geometry.dispose();
+      }
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const mat of mats) {
+        if (disposedMats.has(mat)) continue;
+        disposedMats.add(mat);
+        mat.dispose();
+      }
+    });
+
+    for (const tex of this.ownedTextures) {
+      tex.dispose();
+    }
+    this.ownedTextures.length = 0;
+    this.slashes.length = 0;
   }
 }

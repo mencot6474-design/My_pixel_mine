@@ -403,6 +403,7 @@ export interface ArtBillboardOptions {
   bobAmp?: number;
   swayAmp?: number;
   haloScale?: number;
+  tintHex?: number | string;
 }
 
 /**
@@ -455,14 +456,15 @@ export class ArtBillboard2D {
       side: THREE.DoubleSide,
     });
     this.haloMesh = new THREE.Mesh(
-      haloTex ? new THREE.PlaneGeometry(haloScale, haloScale) : new THREE.CircleGeometry(0.58, 24),
+      haloTex ? new THREE.PlaneGeometry(Math.max(0.01, haloScale), Math.max(0.01, haloScale)) : new THREE.CircleGeometry(0.58, 24),
       this.haloMat
     );
     this.haloMesh.position.set(0, centerY, -0.06);
+    this.haloMesh.visible = haloScale > 0;
     this.visualGroup.add(this.haloMesh);
 
     this.spriteMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
+      color: opts.tintHex ?? 0xffffff,
       transparent: true,
       alphaTest: 0.12,
       side: THREE.DoubleSide,

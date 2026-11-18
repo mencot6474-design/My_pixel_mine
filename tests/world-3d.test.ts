@@ -71,7 +71,9 @@ import { DEFAULT_WORLD_PALETTE, rollOreVariant, STAGE_PEDESTAL_COUNT } from '../
 import { applyNodeDamagePure, BASE_ORE_RESPAWN_SEC, OrePit3D, PIT_NODE_COUNT } from '../src/game3d/OrePit3D';
 import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
 import { ShopWorld3D } from '../src/game3d/ShopWorld3D';
+import { createSeraphimBoss3D } from '../src/game3d/SeraphimBoss3D';
 import { TowerArena3D } from '../src/game3d/TowerArena3D';
+import { createTowerCityEnvironment } from '../src/game3d/TowerCityEnvironment3D';
 import { enchantAuraIconHtml, enchantDiceIconHtml, gemPotionIconHtml, hudIconHtml, oreIconSvg, pickaxeIconHtml, towerIconHtml, weatherIconHtml } from '../src/ui/HudIcons';
 import {
   getGlobalGemGainBonus,
@@ -1800,5 +1802,52 @@ describe('Pure 3D Mine World', () => {
       cave.update(0.05, 6.0);
       cave.dispose();
     }).not.toThrow();
+  });
+
+  it('builds ruined Cyber City highway, central meteor crater, instanced skyline & billboards for Battle Tower with full dispose cleanup', () => {
+    const cityEnv = createTowerCityEnvironment();
+    cityEnv.group.updateMatrixWorld(true);
+    let instancedCount = 0;
+    cityEnv.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) instancedCount += 1;
+    });
+    // Rubble + Rebar + 6 Instanced Window Grid layers + Crater Embers + Ash Flakes
+    expect(instancedCount).toBe(10);
+
+    expect(() => {
+      cityEnv.setBossState(false, false, '#22d3ee');
+      cityEnv.update(0.016, 1.5);
+      cityEnv.setBossState(true, true, '#f43f5e');
+      cityEnv.update(0.05, 3.0);
+      cityEnv.dispose();
+    }).not.toThrow();
+
+    const arena = new TowerArena3D();
+    arena.group.visible = true;
+    arena.setFloorVisual(true, '#f43f5e', 5, 10, false);
+    arena.update(0.016, 1.2);
+    let arenaInstancedCount = 0;
+    arena.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) arenaInstancedCount += 1;
+    });
+    // 10 from cityEnv + 1 Boss anti-gravity crater rocks
+    expect(arenaInstancedCount).toBe(11);
+    expect(() => arena.dispose()).not.toThrow();
+  });
+
+  it('builds procedural 3D hard-surface Corrupted Seraphim Boss with 6 animated wing pivots, chest reactor rings, and dispose cleanup', () => {
+    const boss = createSeraphimBoss3D({ scale: 1.02 });
+    boss.group.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(boss.group);
+    expect(box.min.y).toBeGreaterThanOrEqual(0);
+    expect(box.max.y).toBeGreaterThan(3.8);
+    expect(boss.wingPivots.length).toBe(6);
+
+    const prevOuterRot = boss.reactorRingOuter.rotation.z;
+    const prevWingYaw = boss.wingPivots[0].rotation.y;
+    boss.update(0.016, 1.4, 0.5);
+    expect(boss.reactorRingOuter.rotation.z).not.toBe(prevOuterRot);
+    expect(boss.wingPivots[0].rotation.y).not.toBe(prevWingYaw);
+    expect(() => boss.dispose()).not.toThrow();
   });
 });

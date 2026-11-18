@@ -131,6 +131,7 @@ export class MineScene3D {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setSize(w, h);
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.06;
     this.renderer.shadowMap.enabled = true;
@@ -780,8 +781,8 @@ export class MineScene3D {
       this.targetCamRadius = 12.2;
       this.lookAtPos.set(0, 1.05, -2.4);
     } else if (mode === 'tower') {
-      this.scene.background = new THREE.Color(0x020614);
-      this.scene.fog = new THREE.Fog(0x040b1e, 38, 96);
+      this.scene.background = new THREE.Color(0x030714);
+      this.scene.fog = new THREE.Fog(0x050b1c, 26, 76);
       this.targetOrbitYaw = 0;
       this.targetOrbitPitch = -0.34;
       this.targetCamRadius = 16.4;
@@ -1032,6 +1033,7 @@ export class MineScene3D {
     }
     this.chestVisual.dispose();
     this.env.dispose();
+    this.towerArena.dispose();
     this.renderer.dispose();
   }
 }
