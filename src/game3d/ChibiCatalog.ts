@@ -36,13 +36,12 @@ export const LEFT_FACING_WALK_IDS = new Set<string>([
   'astral-recruit',
   'solar-striker',
   'seraph-paladin',
-  'eclipse-warlord',
   'chrono-sovereign',
   'cyber-ki-brawler',
   'tidebound-corsair',
 ]);
 
-export const LEFT_FACING_ATTACK_IDS = new Set<string>(['eclipse-warlord']);
+export const LEFT_FACING_ATTACK_IDS = new Set<string>([]);
 
 function makePoses(id: string): ChibiPoseUrls {
   return {
@@ -96,7 +95,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   },
   {
     id: 'volt-kensei',
-    name: 'BloomHell',
+    name: 'BladeGhost',
     spriteUrl: '/chibi/volt-kensei/idle.webp',
     poses: makePoses('volt-kensei'),
     frames: 4,
@@ -140,12 +139,12 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   },
   {
     id: 'vortex-mimic',
-    name: 'youngShine',
+    name: 'CrazyMan',
     spriteUrl: '/chibi/vortex-mimic/idle.webp',
     poses: makePoses('vortex-mimic'),
     frames: 4,
     rarity: 'epic',
-    accentColor: '#a78bfa',
+    accentColor: '#22d3ee',
     baseDps: 430,
     smoothFilter: true,
   },
@@ -285,12 +284,12 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
   },
   {
     id: 'chroma-quill',
-    name: 'MasterOgoy',
+    name: 'AkaneFlare',
     spriteUrl: '/chibi/chroma-quill/idle.webp',
     poses: makePoses('chroma-quill'),
     frames: 4,
     rarity: 'secret',
-    accentColor: '#f472b6',
+    accentColor: '#fb7185',
     baseDps: 1_250,
     smoothFilter: true,
   },
