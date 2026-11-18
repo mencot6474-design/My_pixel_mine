@@ -1,3 +1,4 @@
+import { audio } from '../audio/AudioManager';
 import { assetUrl } from '../game/AssetUrl';
 import {
   getOreById,
@@ -18,7 +19,6 @@ import {
 import { getWeatherById } from '../game/WeatherData';
 import { hudIconHtml, oreIconSvg, weatherIconHtml } from './HudIcons';
 import {
-  applyInspectRing,
   rarityCardClasses,
   rarityVars,
   renderEmptyInspectorPanel,
@@ -31,12 +31,27 @@ import {
 
 export type ForgeTab = 'all' | RelicCategory;
 
+const VALID_FORGE_TABS = new Set<ForgeTab>(['all', 'world', 'weather', 'tower']);
+const FORGE_ACTIONS = new Set([
+  'forge-tab',
+  'inspect-forge',
+  'forge-ore-info',
+  'forge-ore-info-close',
+  'forge-craft',
+  'forge-equip-toggle',
+  'forge-unequip',
+]);
+
 export class ForgeModalUi {
   public forgeTab: ForgeTab = 'all';
   public inspectedRelicId: string | null = RELICS[0]?.id ?? null;
   public inspectedOreSourceId: string | null = null;
 
-  constructor(private readonly state: GameState) {}
+  constructor(
+    private readonly state: GameState,
+    private readonly pushToast: (text: string) => void,
+    private readonly onRequestRender: () => void
+  ) {}
 
   public resetInspect(): void {
     this.inspectedOreSourceId = null;
@@ -356,12 +371,82 @@ export class ForgeModalUi {
     `;
   }
 
-  public updateForgeInspectorDom(modalRoot: HTMLElement): void {
-    const inspector = modalRoot.querySelector<HTMLElement>('[data-forge-inspector="true"]');
-    if (!inspector) return;
-    inspector.innerHTML = this.renderForgeInspector();
-    modalRoot.querySelectorAll<HTMLElement>('[data-action="inspect-forge"]').forEach((el) => {
-      applyInspectRing(el, el.dataset.id === this.inspectedRelicId);
+  public handleAction(
+    action: string | undefined,
+    dataset: { id?: string; tab?: string; oreId?: string }
+  ): boolean {
+    if (action === 'forge-tab') {
+      audio.playSfx('ui-tab');
+      const nextTab = dataset.tab as ForgeTab | undefined;
+      this.forgeTab = nextTab && VALID_FORGE_TABS.has(nextTab) ? nextTab : 'all';
+      this.onRequestRender();
+      return true;
+    }
+    if (action === 'inspect-forge') {
+      audio.playSfx('ui-click');
+      this.inspectedRelicId = dataset.id ?? null;
+      this.inspectedOreSourceId = null;
+      this.onRequestRender();
+      return true;
+    }
+    if (action === 'forge-ore-info') {
+      audio.playSfx('ui-click');
+      const oreId = dataset.oreId ?? null;
+      this.inspectedOreSourceId = this.inspectedOreSourceId === oreId ? null : oreId;
+      this.onRequestRender();
+      return true;
+    }
+    if (action === 'forge-ore-info-close') {
+      audio.playSfx('ui-close');
+      this.inspectedOreSourceId = null;
+      this.onRequestRender();
+      return true;
+    }
+    if (action === 'forge-craft') {
+      const id = dataset.id;
+      if (id && this.state.craftRelic(id)) {
+        audio.playSfx('coin-alt');
+        this.pushToast('Relic forged!');
+        this.onRequestRender();
+      } else {
+        audio.playSfx('ui-error');
+        this.pushToast('Missing materials or Gems!');
+      }
+      return true;
+    }
+    if (action === 'forge-equip-toggle' || action === 'forge-unequip') {
+      const id = dataset.id;
+      if (id) {
+        const res = this.state.toggleEquipRelic(id);
+        if (res === 'equipped') {
+          audio.playSfx('ui-open');
+          this.pushToast('Relic equipped!');
+        } else if (res === 'unequipped') {
+          audio.playSfx('ui-close');
+          this.pushToast('Relic unequipped');
+        } else if (res === 'full') {
+          audio.playSfx('ui-error');
+          this.pushToast('All 3 Relic slots full!');
+        }
+        this.onRequestRender();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  public bindEvents(modalRoot: HTMLElement): void {
+    modalRoot.querySelectorAll<HTMLElement>('[data-action]').forEach((el) => {
+      const action = el.dataset.action;
+      if (!action || !FORGE_ACTIONS.has(action)) return;
+      el.addEventListener('click', (e) => {
+        if (action === 'forge-ore-info-close') e.stopPropagation();
+        this.handleAction(action, {
+          id: el.dataset.id,
+          tab: el.dataset.tab,
+          oreId: el.dataset.oreId,
+        });
+      });
     });
   }
 }

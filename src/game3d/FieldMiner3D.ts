@@ -220,6 +220,11 @@ export class FieldMiner3D {
     onOreHit?: (dmg: number, wx: number, wy: number, wz: number) => void,
     renderVisuals = true
   ): void {
+    if (renderVisuals) {
+      this.fx.update(elapsed);
+      this.sprite.setAccentColor(this.fx.getAccentColor());
+    }
+
     const aliveNodes = pit.getAliveNodesInfo();
     let target = aliveNodes.find((n) => n.id === this.targetNodeId);
 
@@ -246,7 +251,6 @@ export class FieldMiner3D {
       if (renderVisuals) {
         this.sprite.setAnimState('idle');
         this.sprite.update(dtSec, elapsed, camera);
-        this.fx.update(elapsed);
       }
       return;
     }
@@ -300,7 +304,6 @@ export class FieldMiner3D {
         const accentColor = this.fx.getAccentColor();
         if (renderVisuals) {
           this.comboStep = (this.comboStep + 1) % 3;
-          this.sprite.setAccentColor(accentColor);
           this.sprite.triggerAttack(Math.min(0.44, this.attackInterval * 0.75), step);
         }
         const res = pit.hitNode(
@@ -331,7 +334,6 @@ export class FieldMiner3D {
 
     if (renderVisuals) {
       this.sprite.update(dtSec, elapsed, camera);
-      this.fx.update(elapsed);
     }
   }
 

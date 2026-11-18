@@ -708,6 +708,8 @@ export class TowerArena3D {
       if (newlySpawned) {
         slot.spawnScale = 0.12;
         slot.squashAmt = 0.24;
+        slot.recoilAmt = 0;
+        slot.recoilDirX = 1;
       }
     }
 

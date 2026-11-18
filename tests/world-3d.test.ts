@@ -1416,6 +1416,62 @@ describe('Pure 3D Mine World', () => {
     fm.dispose();
   });
 
+  it('updates FieldMiner3D rainbow accent color on the same frame before striking', () => {
+    const chibi = CHIBI_CATALOG[0];
+    const oreNode = {
+      id: 0,
+      hp: 9999,
+      maxHp: 9999,
+      alive: true,
+      worldX: 0,
+      worldY: 0,
+      worldZ: 0.65,
+      variantKey: 'common' as const,
+    };
+    const struckColors: Array<string | undefined> = [];
+    const fakePit = {
+      getAliveNodesInfo: () => [oreNode],
+      hitNode: (
+        _id: number,
+        _dmg: number,
+        _heavy: boolean,
+        _shards?: number,
+        attackFx?: { accentColor?: string }
+      ) => {
+        struckColors.push(attackFx?.accentColor);
+        return { broken: false, dmgDealt: 10, variantKey: 'common' as const };
+      },
+    } as unknown as OrePit3D;
+
+    const fm = new FieldMiner3D(chibi, 0);
+    fm.setEnchant('spellbound');
+    const refFx = new ChibiFieldFxController(new THREE.Group(), chibi.accentColor, 0);
+    refFx.setEnchant('spellbound');
+
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(0, 11.7, 15.6);
+
+    // Walk into range and fire first strike at elapsed=0.1..1.5
+    let t = 0;
+    for (let i = 0; i < 15; i++) {
+      t += 0.1;
+      fm.update(0.1, t, cam, fakePit, undefined, undefined, true);
+    }
+    const strikesBeforeJump = struckColors.length;
+    expect(strikesBeforeJump).toBeGreaterThanOrEqual(1);
+
+    // Jump elapsed on the exact tick a strike triggers (dt=0.9 > attackInterval 0.85)
+    const jumpElapsed = 4.25;
+    refFx.update(jumpElapsed);
+    const expectedSameFrameColor = refFx.getAccentColor();
+    fm.update(0.9, jumpElapsed, cam, fakePit, undefined, undefined, true);
+    expect(struckColors.length).toBeGreaterThan(strikesBeforeJump);
+    expect(struckColors[strikesBeforeJump]).toBe(expectedSameFrameColor);
+
+    refFx.dispose();
+    fm.dispose();
+  });
+
   it('scales all 12 Shop Pickaxes monotonically in cost, DMG multiplier, and stock without exploits', () => {
     expect(PICKAXES.length).toBe(12);
     expect(PICKAXES.map((p) => p.id).slice(-5)).toEqual([
@@ -2162,8 +2218,11 @@ describe('Pure 3D Mine World', () => {
   it('spawns 4-layer AttackImpactFxController pools with oldest-recycling caps and full dispose', () => {
     const fx = new AttackImpactFxController({ floorY: 0.045 });
     const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
-    cam.position.set(0, 11.7, 15.6);
+    cam.position.set(6, 11.7, 15.6);
+    cam.lookAt(0, 0, 0);
 
+    // Cache tilted camera via update(), then verify frame-0 orientation right on spawnImpact()
+    fx.update(0.016, cam);
     fx.spawnImpact({
       targetX: 0,
       targetY: 0.95,
@@ -2180,14 +2239,45 @@ describe('Pure 3D Mine World', () => {
     expect(afterOne.streaks).toBeGreaterThanOrEqual(8);
     expect(afterOne.shockwaves).toBe(1);
 
+    // Verify frame-0 slash, hitspark, and streak meshes already received camera+velocity alignment on spawn
+    for (const idx of [0, 2, 3]) {
+      const q = fx.group.children[idx]?.quaternion;
+      expect(q).toBeDefined();
+      expect(Math.abs(q.x) + Math.abs(q.y)).toBeGreaterThan(0.01);
+    }
+
+    // Verify fresh controller handles no-camera safely and honors explicit opts.camera without prior update()
+    const freshNoCam = new AttackImpactFxController({ floorY: 0.045 });
+    expect(() =>
+      freshNoCam.spawnImpact({ targetX: 0, targetY: 1.0, targetZ: 0, accentColor: '#38bdf8', comboStep: 0 })
+    ).not.toThrow();
+    freshNoCam.dispose();
+
+    const freshWithCam = new AttackImpactFxController({ floorY: 0.045 });
+    freshWithCam.spawnImpact({
+      targetX: 0,
+      targetY: 1.0,
+      targetZ: 0,
+      accentColor: '#38bdf8',
+      comboStep: 0,
+      camera: cam,
+    });
+    for (const idx of [0, 1, 2]) {
+      const q = freshWithCam.group.children[idx]?.quaternion;
+      expect(q).toBeDefined();
+      expect(Math.abs(q.x) + Math.abs(q.y)).toBeGreaterThan(0.01);
+    }
+    freshWithCam.dispose();
+
     for (let i = 0; i < 20; i++) {
       fx.spawnImpact({ targetX: 0, targetY: 1.0, targetZ: 0, accentColor: '#38bdf8', comboStep: i % 3 });
     }
     const capped = fx.getActiveCounts();
-    expect(capped.slashes).toBeLessThanOrEqual(18);
-    expect(capped.hitsparks).toBeLessThanOrEqual(16);
-    expect(capped.streaks).toBeLessThanOrEqual(64);
-    expect(capped.shockwaves).toBeLessThanOrEqual(12);
+    expect(capped.slashes).toBe(18);
+    expect(capped.hitsparks).toBe(16);
+    expect(capped.streaks).toBe(64);
+    expect(capped.shockwaves).toBe(12);
+    expect(fx.group.children.length).toBeLessThanOrEqual(110);
 
     let instanced = 0;
     fx.group.traverse((obj) => {
@@ -2227,6 +2317,70 @@ describe('Pure 3D Mine World', () => {
 
     pit.update(0.016, 0.5, cam);
     expect(() => pit.dispose()).not.toThrow();
+  });
+
+  it('resets residual ore recoilAmt to 0 when OrePit3D nodes respawn or TowerArena3D spawns a new wave', () => {
+    const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    pit.group.visible = true;
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(0, 11.7, 15.6);
+
+    const info = pit.getAliveNodesInfo()[0];
+    const broke = pit.hitNode(info.id, info.maxHp + 100, true, undefined, {
+      attackerX: info.worldX - 1.3,
+    });
+    expect(broke?.broken).toBe(true);
+
+    // Respawn the broken node and tick transform once
+    pit.update(BASE_ORE_RESPAWN_SEC + 0.1, 1.0, cam);
+    pit.update(0.016, 1.016, cam);
+
+    const respawned = pit.getAliveNodesInfo()[0];
+    expect(respawned).toBeDefined();
+    // Locate the active OreBillboard2D visualGroup inside pit.group (position matches respawned x, z)
+    const nodeRoot = pit.group.children.find(
+      (c) =>
+        c.visible &&
+        Math.abs(c.position.x - respawned.worldX) < 0.01 &&
+        Math.abs(c.position.z - (respawned.worldZ - 0.65)) < 0.01 &&
+        c.children[0]?.children[0]?.children[0] instanceof THREE.Group
+    );
+    const visualGroup = nodeRoot?.children[0]?.children[0]?.children[0] as THREE.Group | undefined;
+    expect(visualGroup).toBeDefined();
+    expect(visualGroup!.rotation.z).toBe(0);
+    pit.dispose();
+
+    const arena = new TowerArena3D();
+    arena.group.visible = true;
+    arena.syncWaveState({
+      floor: 1,
+      wave: 1,
+      isBossWave: false,
+      isCheckpointFloor: false,
+      waveOres: rollTowerWaveOres(1, 1),
+      anomalyColorHex: '#38bdf8',
+      equippedMinerCount: 1,
+      paused: false,
+    });
+    arena.triggerOreHitBounce(0, false, { attackerX: -6.0 });
+    // Advance to wave 2 immediately (newlySpawned = true)
+    arena.syncWaveState({
+      floor: 1,
+      wave: 2,
+      isBossWave: false,
+      isCheckpointFloor: false,
+      waveOres: rollTowerWaveOres(1, 2),
+      anomalyColorHex: '#38bdf8',
+      equippedMinerCount: 1,
+      paused: false,
+    });
+    arena.update(0.016, 0.5, cam);
+    const rock0Hit = arena.getActiveClickables()[0];
+    const rock0Root = rock0Hit?.parent;
+    const rock0Visual = rock0Root?.children[0]?.children[0]?.children[0] as THREE.Group | undefined;
+    expect(rock0Visual).toBeDefined();
+    expect(rock0Visual!.rotation.z).toBe(0);
+    arena.dispose();
   });
 
   it('unifies 4-layer AttackImpactFxController and fighter accent color sync in TowerArena3D while keeping 11 InstancedMeshes', () => {

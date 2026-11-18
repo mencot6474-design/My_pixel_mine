@@ -394,26 +394,6 @@ export function getWoodPlankTexture(): THREE.Texture {
   });
 }
 
-export function getSlashArcTexture(): THREE.Texture {
-  return paintCachedTexture('slash-arc', 128, 128, 1, 1, [255, 255, 255, 0], (ctx) => {
-    ctx.clearRect(0, 0, 128, 128);
-    ctx.save();
-    ctx.translate(64, 64);
-    const grad = ctx.createRadialGradient(0, 0, 26, 0, 0, 60);
-    grad.addColorStop(0.0, 'rgba(255,255,255,0)');
-    grad.addColorStop(0.45, 'rgba(243,230,0,0.85)');
-    grad.addColorStop(0.8, 'rgba(255,255,255,1)');
-    grad.addColorStop(1.0, 'rgba(255,255,255,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(0, 0, 58, -Math.PI * 0.65, Math.PI * 0.25);
-    ctx.arc(-10, 6, 46, Math.PI * 0.25, -Math.PI * 0.65, true);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  });
-}
-
 export function getCobblePathTexture(_stoneHex: string): THREE.Texture {
   return paintCachedTexture('cobble3-cyber-basalt', 256, 256, 4, 3, [21, 30, 48, 255], (ctx) => {
     // Dark basalt / cyber-industrial deck concrete matching Neo-Cyber City Plaza

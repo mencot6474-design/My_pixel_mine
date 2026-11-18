@@ -2,6 +2,14 @@ import { assetUrl } from '../game/AssetUrl';
 import { RARITY_BORDER, ItemRarity } from '../game/GameData';
 import { GameState } from '../game/GameState';
 import { ChibiDef } from '../game3d/ChibiCatalog';
+import type { PlotLabelInfo } from '../game3d/PlotPedestal3D';
+
+export interface PlotDropOps {
+  raycastPlotAt: (clientX: number, clientY: number) => number | null;
+  highlightPlot: (slotIndex: number | null) => void;
+  pulsePlot: (slotIndex: number) => void;
+  syncPlotLabel?: (slotIndex: number, info: PlotLabelInfo | null) => void;
+}
 
 export function chibiPortraitHtml(
   chibi: ChibiDef,
@@ -69,9 +77,8 @@ export function refreshPotionTimersInDom(root: ParentNode, state: GameState): vo
       el.classList.remove('is-active');
       el.closest('[data-inv-potion-card="true"]')?.classList.remove('is-boost-active');
     } else {
-      const mm = Math.floor(rem / 60);
-      const ss = String(rem % 60).padStart(2, '0');
-      const nextText = el.dataset.timerCompact === 'true' ? `${mm}:${ss}` : `Active ${mm}:${ss}`;
+      const timeStr = formatCountdownTimer(rem);
+      const nextText = el.dataset.timerCompact === 'true' ? timeStr : `Active ${timeStr}`;
       if (el.textContent !== nextText) el.textContent = nextText;
       el.classList.add('is-active');
       el.closest('[data-inv-potion-card="true"]')?.classList.add('is-boost-active');
@@ -238,4 +245,60 @@ export function renderInspectorPanel(opts: {
 
 export function renderEmptyInspectorPanel(msg: string): string {
   return `<div class="mam-placeholder-well flex-1 w-full flex flex-col items-center justify-center gap-2 text-center text-[13px] font-bold text-[#94a3b8] px-4 py-8">${msg}</div>`;
+}
+
+export function formatCountdownTimer(sec: number): string {
+  const safeSec = Number.isFinite(sec) ? Math.max(0, Math.floor(sec)) : 0;
+  const mm = Math.floor(safeSec / 60);
+  const ss = String(safeSec % 60).padStart(2, '0');
+  return `${mm}:${ss}`;
+}
+
+export interface SavedScrollEntry {
+  path: number[];
+  scrollTop: number;
+  scrollLeft: number;
+}
+
+export function getElementPath(root: HTMLElement, el: HTMLElement): number[] {
+  const path: number[] = [];
+  let cur: HTMLElement | null = el;
+  while (cur && cur !== root) {
+    const parent: HTMLElement | null = cur.parentElement;
+    if (!parent) return [];
+    const idx = Array.prototype.indexOf.call(parent.children, cur);
+    if (idx < 0) return [];
+    path.unshift(idx);
+    cur = parent;
+  }
+  return cur === root ? path : [];
+}
+
+export function captureRootScrolls(root: HTMLElement): SavedScrollEntry[] {
+  const entries: SavedScrollEntry[] = [];
+  const all = root.querySelectorAll<HTMLElement>('*');
+  for (const el of all) {
+    if (el.scrollTop > 0 || el.scrollLeft > 0) {
+      const path = getElementPath(root, el);
+      if (path.length > 0) {
+        entries.push({ path, scrollTop: el.scrollTop, scrollLeft: el.scrollLeft });
+      }
+    }
+  }
+  return entries;
+}
+
+export function restoreRootScrolls(root: HTMLElement, entries: SavedScrollEntry[]): void {
+  for (const entry of entries) {
+    let cur: Element | null = root;
+    for (const idx of entry.path) {
+      cur = cur.children.item(idx);
+      if (!cur) break;
+    }
+    if (cur && (typeof HTMLElement === 'undefined' || cur instanceof HTMLElement)) {
+      const htmlEl = cur as HTMLElement;
+      if (entry.scrollTop > 0) htmlEl.scrollTop = entry.scrollTop;
+      if (entry.scrollLeft > 0) htmlEl.scrollLeft = entry.scrollLeft;
+    }
+  }
 }

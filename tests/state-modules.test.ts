@@ -1,0 +1,382 @@
+import { describe, expect, it } from 'vitest';
+import { ORES } from '../src/game/GameData';
+import { GameState, getChibiUpgradeCostMult } from '../src/game/GameState';
+import {
+  createEmptyResearchLevels,
+  deserializeSaveJson,
+  isValidIndexId,
+  migrateOreId,
+  serializeSavePayload,
+} from '../src/game/GameStateSave';
+import {
+  autoStarUpAllUnits,
+  computeDpsBreakdown,
+  computePlotUnitStats,
+  createFreshPlotUnit,
+  equipBestUnitsToPlots,
+  getAvailableEnchantUnitsCount,
+  starUpUnit,
+  toggleUnitEnchant,
+} from '../src/game/PlotUnitsDomain';
+import { RELICS } from '../src/game/RelicData';
+import { TOWER_BOSS_INVUL_SEC, TOWER_KEY_REGEN_MS, TOWER_MAX_KEYS } from '../src/game/TowerData';
+import {
+  applyTowerTargetDamageDomain,
+  getTowerEffectiveDpsDomain,
+  quickSweepTowerDomain,
+  startTowerRunDomain,
+  stepTowerTickDomain,
+  syncTowerKeysDomain,
+} from '../src/game/TowerRunDomain';
+import {
+  onMeteorBrokenDomain,
+  onOreBrokenDomain,
+  sellAllChestOresDomain,
+  shouldAutoSellOreDomain,
+  swapHotbarSlotsDomain,
+} from '../src/game/LootChestDomain';
+import {
+  buyPickaxeDomain,
+  getWeatherDamageMultDomain,
+  refreshPickaxeStockIfDueDomain,
+  scaleWeatherMultDomain,
+  sellBatchDomain,
+  syncWeatherDomain,
+  useGemPotionDomain,
+} from '../src/game/ShopWeatherDomain';
+
+describe('Tahap C GameState Domain Modules', () => {
+  describe('GameStateSave (Task 1)', () => {
+    it('migrates legacy ore IDs, validates index entries, and creates empty research maps', () => {
+      expect(migrateOreId('topaz')).toBe('glowquartz');
+      expect(migrateOreId('eternium')).toBe('immortite');
+      expect(migrateOreId(ORES[0].id)).toBe(ORES[0].id);
+
+      expect(isValidIndexId(ORES[0].id)).toBe(true);
+      expect(isValidIndexId('astral-recruit')).toBe(true);
+      expect(isValidIndexId('non-existent-item')).toBe(false);
+
+      const empty = createEmptyResearchLevels();
+      expect(Object.keys(empty).sort()).toEqual([
+        'astral',
+        'core',
+        'crystal',
+        'magma',
+        'ruins',
+        'starwell',
+        'underground',
+      ]);
+    });
+
+    it('serializes, migrates legacy saves, refunds excess plot pickaxes, and ignores corrupt JSON', () => {
+      const state = new GameState();
+      const firstOre = ORES[0].id;
+      const relic0 = RELICS[0].id;
+      const relic1 = RELICS[1].id;
+
+      const legacyPayload = {
+        cash: 999,
+        gems: 555,
+        miners: { 'astral-recruit': 1 },
+        ores: { topaz: 4, [firstOre]: 2 },
+        chestOres: { sapphire: 3 },
+        others: { 'summon-scroll': 2, 'ore-elixir-1': 1 },
+        hotbar: ['topaz', null, null, null, null, null, null, null, null],
+        plotMiners: ['astral-recruit', 'astral-recruit', null, null, null, null, null, null],
+        plotUnits: [
+          null,
+          {
+            chibiId: 'astral-recruit',
+            damageLevel: 2,
+            speedLevel: 1,
+            miningSpeedLevel: 1,
+            pickaxeId: 'copper',
+            mutationId: 'normal',
+            enchantId: null,
+          },
+          null,
+          null,
+          null,
+          {
+            chibiId: 'astral-recruit',
+            damageLevel: 1,
+            speedLevel: 1,
+            miningSpeedLevel: 1,
+            pickaxeId: 'iron',
+            mutationId: 'normal',
+            enchantId: null,
+          },
+        ],
+        stashedUnits: {
+          'astral-recruit': [
+            {
+              chibiId: 'astral-recruit',
+              damageLevel: 3,
+              speedLevel: 1,
+              miningSpeedLevel: 1,
+              pickaxeId: 'gold',
+              mutationId: 'normal',
+              enchantId: null,
+            },
+          ],
+        },
+        lockedOreIds: ['ruby'],
+        craftedRelics: [relic0],
+        equippedRelics: [relic1, relic0, relic0],
+        discovered: ['topaz', 'fake-item'],
+        tower: { bestFloor: 12, keys: 99, lastKeyRegenAt: 1000, claimedMilestones: [5, 'bad'] },
+        weather: { id: 'not-a-weather', expiresAt: 5000 },
+      };
+
+      const compactCalled = { count: 0 };
+      deserializeSaveJson(state, JSON.stringify(legacyPayload), () => {
+        compactCalled.count++;
+      });
+
+      expect(compactCalled.count).toBe(1);
+      expect(state.cash).toBe(999);
+      expect(state.ores['glowquartz']).toBe(4);
+      expect(state.ores[firstOre]).toBe(2);
+      expect(state.chestOres['frostquartz']).toBe(3);
+      expect(state.others['summon-scroll']).toBeUndefined();
+      expect(state.others['ore-elixir-1']).toBe(1);
+      expect(state.hotbar[0]).toBe('glowquartz');
+      // Slot 1 exceeded owned count (1) and slot 5 was trimmed beyond pedestal count
+      expect(state.plotMiners[1]).toBeNull();
+      expect(state.ownedPickaxes['copper']).toBe(1);
+      expect(state.ownedPickaxes['iron']).toBe(1);
+      expect(state.stashedUnits['astral-recruit']?.[0].pickaxeId).toBe('');
+      expect(state.lockedOreIds.has('prismite')).toBe(true);
+      expect(state.equippedRelics).toEqual([relic0]);
+      expect(state.discovered.has('glowquartz')).toBe(true);
+      expect(state.discovered.has('fake-item')).toBe(false);
+      expect(state.towerKeys).toBe(TOWER_MAX_KEYS);
+      expect(state.towerClaimedMilestones).toEqual([5]);
+      expect(state.weatherId).not.toBe('not-a-weather');
+
+      const serialized = serializeSavePayload(state);
+      expect(serialized.cash).toBe(999);
+      expect(serialized.craftedRelics).toEqual([relic0]);
+
+      // Corrupt JSON leaves current state untouched without throwing
+      deserializeSaveJson(state, '{corrupt json', () => {});
+      expect(state.cash).toBe(999);
+    });
+  });
+
+  describe('PlotUnitsDomain (Task 2)', () => {
+    it('computes upgrade scaling, unit stats, DPS breakdown, and fresh unit defaults', () => {
+      const state = new GameState();
+      expect(getChibiUpgradeCostMult('astral-recruit')).toBeGreaterThanOrEqual(1);
+      expect(createFreshPlotUnit('astral-recruit')).toEqual({
+        chibiId: 'astral-recruit',
+        damageLevel: 1,
+        speedLevel: 1,
+        miningSpeedLevel: 1,
+        pickaxeId: '',
+        mutationId: 'normal',
+        enchantId: null,
+      });
+
+      const stats = computePlotUnitStats(state, 0);
+      expect(stats).not.toBeNull();
+      expect(stats?.dmg).toBeGreaterThan(0);
+
+      const dps = computeDpsBreakdown(state);
+      expect(dps.units).toHaveLength(1);
+      expect(dps.totalPlotDps).toBe(dps.units[0].dps);
+    });
+
+    it('handles Star-Up validation, 1-per-unit Enchant exclusivity, and stash preservation in equipBest', () => {
+      const state = new GameState();
+      expect(starUpUnit(state, 'non-existent')).toEqual({ ok: false, reason: 'invalid' });
+      expect(starUpUnit(state, 'astral-recruit')).toEqual({ ok: false, reason: 'insufficient' });
+
+      state.miners['astral-recruit'] = 10;
+      expect(starUpUnit(state, 'astral-recruit')).toEqual({ ok: true, newStar: 1 });
+      expect(autoStarUpAllUnits(state)).toBeGreaterThanOrEqual(1);
+
+      state.miners['solar-striker'] = 1;
+      state.cash = 1_000_000;
+      state.upgradePlotDamage(0);
+      if (state.plotUnits[0]) state.plotUnits[0].enchantId = 'blazing';
+      state.ownedEnchants['blazing'] = 1;
+      expect(getAvailableEnchantUnitsCount(state, 'blazing')).toBe(0);
+
+      state.removeMinerFromPlot(0);
+      // Stashed upgraded unit keeps its enchant reservation
+      expect(getAvailableEnchantUnitsCount(state, 'blazing')).toBe(0);
+
+      equipBestUnitsToPlots(state);
+      const astralSlot = state.plotMiners.indexOf('astral-recruit');
+      expect(astralSlot).toBeGreaterThanOrEqual(0);
+      expect(state.plotUnits[astralSlot]?.damageLevel).toBeGreaterThanOrEqual(2);
+      expect(toggleUnitEnchant(state, astralSlot, 'blazing')).toBe(true);
+      expect(getAvailableEnchantUnitsCount(state, 'blazing')).toBe(1);
+    });
+  });
+
+  describe('TowerRunDomain (Task 3)', () => {
+    it('regenerates Tower keys on elapsed interval and enforces key guards on start & sweep', () => {
+      const state = new GameState();
+      state.towerKeys = 1;
+      state.towerLastKeyRegenAt = 1_000;
+      let savedCount = 0;
+      syncTowerKeysDomain(state, 1_000 + TOWER_KEY_REGEN_MS * 2 + 50, () => {
+        savedCount++;
+      });
+      expect(state.towerKeys).toBe(3);
+      expect(savedCount).toBe(1);
+
+      expect(quickSweepTowerDomain(state, 5000)).toEqual({ ok: false, gemsAwarded: 0 });
+      state.towerBestFloor = 5;
+      const sweep = quickSweepTowerDomain(state, 5000);
+      expect(sweep.ok).toBe(true);
+      expect(sweep.gemsAwarded).toBeGreaterThan(0);
+
+      state.towerKeys = 0;
+      expect(startTowerRunDomain(state, 1, 5000)).toBe(false);
+    });
+
+    it('enforces Wave 10 Boss invulnerability, blessing auto-pick, and tower DPS calculation', () => {
+      const state = new GameState();
+      const t0 = 10_000;
+      expect(startTowerRunDomain(state, 1, t0, () => 0.1)).toBe(true);
+      expect(getTowerEffectiveDpsDomain(state)).toBeGreaterThan(0);
+
+      // Jump to Wave 10 Boss manually inside towerRun
+      if (state.towerRun) {
+        state.towerRun.wave = 10;
+        state.towerRun.isBossWave = true;
+        state.towerRun.hp = 500;
+        state.towerRun.maxHp = 500;
+        state.towerRun.bossInvulLeft = TOWER_BOSS_INVUL_SEC;
+      }
+
+      // Blocked while invulnerable
+      const invulHit = applyTowerTargetDamageDomain(state, null, 9999);
+      expect(invulHit.dmgDealt).toBe(0);
+
+      // Step down boss invulnerability, then defeat boss -> triggers pendingBlessings
+      stepTowerTickDomain(state, TOWER_BOSS_INVUL_SEC + 0.1);
+      expect(state.towerRun?.bossInvulLeft).toBe(0);
+      const bossKill = applyTowerTargetDamageDomain(state, null, 9999, () => 0.1);
+      expect(bossKill.floorCleared).toBe(true);
+      expect(state.towerRun?.pendingBlessings).not.toBeNull();
+
+      // Blessing auto-picks after 5s countdown
+      const autoRes = stepTowerTickDomain(state, 5.5, () => 0);
+      expect(autoRes.status).toBe('blessing-auto-picked');
+      expect(state.towerRun?.floor).toBe(2);
+      expect(state.towerRun?.wave).toBe(1);
+    });
+  });
+
+  describe('LootChestDomain (Task 4)', () => {
+    it('swaps hotbar slots while tracking selection and obeys ore lock over auto-sell', () => {
+      const state = new GameState();
+      state.hotbar = ['item-a', 'item-b', null, null, null, null, null, null, null];
+      state.selectedHotbarSlot = 0;
+
+      expect(swapHotbarSlotsDomain(state, 0, 1)).toBe(true);
+      expect(state.hotbar[0]).toBe('item-b');
+      expect(state.hotbar[1]).toBe('item-a');
+      expect(state.selectedHotbarSlot).toBe(1);
+      expect(swapHotbarSlotsDomain(state, 2, 0)).toBe(false);
+
+      const firstOre = ORES[0];
+      state.autoSellRarities.add(firstOre.rarity);
+      expect(shouldAutoSellOreDomain(state, firstOre.id)).toBe(true);
+      state.lockedOreIds.add(firstOre.id);
+      expect(shouldAutoSellOreDomain(state, firstOre.id)).toBe(false);
+    });
+
+    it('processes ore/meteor drops, respects chest lock, and applies +35% full-chest bonus', () => {
+      const state = new GameState();
+      state.cash = 0;
+      const lockedOre = ORES[0];
+      const unlockedOre = ORES[1];
+      state.chestOres[lockedOre.id] = 10;
+      state.lockedOreIds.add(lockedOre.id);
+      state.chestOres[unlockedOre.id] = state.getMaxChestCapacity();
+
+      const sale = sellAllChestOresDomain(state);
+      expect(sale.bonusApplied).toBe(true);
+      expect(sale.earned).toBeGreaterThan(0);
+      expect(state.chestOres[lockedOre.id]).toBe(10);
+      expect(state.chestOres[unlockedOre.id]).toBeUndefined();
+
+      state.chestOres = {};
+      onOreBrokenDomain(state, 'geode', () => 0);
+      expect(Object.keys(state.chestOres).length).toBeGreaterThanOrEqual(1);
+
+      const meteorRes = onMeteorBrokenDomain(state, 'celestial', () => 0);
+      expect(meteorRes.weatherOreQty).toBeGreaterThanOrEqual(1);
+      expect(meteorRes.gemsAwarded).toBeGreaterThanOrEqual(10);
+    });
+  });
+
+  describe('ShopWeatherDomain (Task 5)', () => {
+    it('refreshes pickaxe stock when due, validates pickaxe purchases, and sells mixed batches once', () => {
+      const state = new GameState();
+      state.pickaxeStock['sunwheel'] = 0;
+      state.pickaxeRestockAt = 10_000;
+      expect(refreshPickaxeStockIfDueDomain(state, 9_999)).toBe(false);
+      expect(refreshPickaxeStockIfDueDomain(state, 10_000)).toBe(true);
+      expect(state.pickaxeStock['sunwheel']).toBeGreaterThan(0);
+
+      state.cash = 0;
+      expect(buyPickaxeDomain(state, 'sunwheel', 10_001)).toBe('no_cash');
+      state.pickaxeStock['sunwheel'] = 0;
+      expect(buyPickaxeDomain(state, 'sunwheel', 10_001)).toBe('sold_out');
+
+      state.pickaxeStock['sunwheel'] = 1;
+      state.cash = 100_000;
+      expect(buyPickaxeDomain(state, 'sunwheel', 10_001)).toBe('bought');
+      expect(state.ownedPickaxes['sunwheel']).toBe(1);
+
+      const firstOre = ORES[0].id;
+      state.ores[firstOre] = 2;
+      state.miners['astral-recruit'] = 2; // 1 on plot, 1 sellable
+      let emitted = 0;
+      const earned = sellBatchDomain(
+        state,
+        [`ore:${firstOre}`, 'miner:astral-recruit', 'pickaxe:sunwheel'],
+        () => {
+          emitted++;
+        }
+      );
+      expect(earned).toBeGreaterThan(0);
+      expect(emitted).toBe(1);
+      expect(state.ores[firstOre]).toBeUndefined();
+      expect(state.miners['astral-recruit']).toBe(1);
+      expect(state.ownedPickaxes['sunwheel']).toBeUndefined();
+    });
+
+    it('stacks gem potion durations and scales positive weather buffs with equipped relics', () => {
+      const state = new GameState();
+      state.others['ore-elixir-1'] = 2;
+      expect(useGemPotionDomain(state, 'ore-elixir-1', 50_000)).toBe(true);
+      const firstExpiry = state.activeBoosts['ore-elixir-1'];
+      expect(firstExpiry).toBeGreaterThan(50_000);
+      expect(useGemPotionDomain(state, 'ore-elixir-1', 55_000)).toBe(true);
+      expect(state.activeBoosts['ore-elixir-1']).toBe(firstExpiry + (firstExpiry - 50_000));
+      expect(useGemPotionDomain(state, 'ore-elixir-1', 60_000)).toBe(false);
+
+      state.weatherExpiresAt = 100_000;
+      expect(syncWeatherDomain(state, 99_999)).toBeNull();
+      const rolled = syncWeatherDomain(state, 100_000, () => 0.95);
+      expect(rolled).not.toBeNull();
+      expect(scaleWeatherMultDomain(state, 0.8)).toBe(0.8);
+
+      const weatherRelic = RELICS.find((r) => (r.effects.weatherBuffPct ?? 0) > 0);
+      expect(weatherRelic).toBeDefined();
+      if (weatherRelic) {
+        state.equippedRelics = [weatherRelic.id];
+        const buff = weatherRelic.effects.weatherBuffPct ?? 0;
+        expect(scaleWeatherMultDomain(state, 1.5)).toBeCloseTo(1 + 0.5 * (1 + buff), 6);
+        expect(getWeatherDamageMultDomain(state)).toBeGreaterThanOrEqual(1);
+      }
+    });
+  });
+});

@@ -16,6 +16,7 @@ export interface AttackImpactSpawnOptions {
   attackerX?: number;
   attackerZ?: number;
   shockwaveScale?: number;
+  camera?: THREE.Camera;
 }
 
 interface PooledMeshBase {
@@ -81,6 +82,7 @@ export class AttackImpactFxController {
   private readonly tmpCamRight = new THREE.Vector3();
   private readonly tmpCamUp = new THREE.Vector3();
   private readonly tmpVel = new THREE.Vector3();
+  private lastCamera?: THREE.Camera;
 
   constructor(opts?: { floorY?: number }) {
     this.floorY = opts?.floorY ?? 0.045;
@@ -110,10 +112,38 @@ export class AttackImpactFxController {
     });
   }
 
+  private prepareCameraAxes(camera?: THREE.Camera): void {
+    if (!camera) return;
+    this.tmpCamRight.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    this.tmpCamUp.set(0, 1, 0).applyQuaternion(camera.quaternion);
+  }
+
+  private orientBillboard(mesh: THREE.Mesh, roll: number, tiltX: number, camera?: THREE.Camera): void {
+    if (camera) {
+      mesh.quaternion.copy(camera.quaternion);
+      mesh.rotateZ(roll);
+      if (tiltX !== 0) mesh.rotateX(tiltX);
+    } else {
+      mesh.rotation.set(tiltX, 0, roll);
+    }
+  }
+
+  private orientStreak(st: StreakItem, camera?: THREE.Camera): void {
+    if (!camera) return;
+    this.tmpVel.set(st.vx, st.vy, st.vz);
+    const screenX = this.tmpVel.dot(this.tmpCamRight);
+    const screenY = this.tmpVel.dot(this.tmpCamUp);
+    const angle = Math.atan2(screenY, screenX) - Math.PI / 2;
+    st.mesh.quaternion.copy(camera.quaternion);
+    st.mesh.rotateZ(angle);
+  }
+
   public spawnImpact(opts: AttackImpactSpawnOptions): void {
     const heavy = Boolean(opts.heavy);
     const step = (((opts.comboStep ?? 0) % 3) + 3) % 3;
     const isSmash = heavy || step === 2;
+    const activeCam = opts.camera ?? this.lastCamera;
+    this.prepareCameraAxes(activeCam);
 
     // Direction vector pointing from target toward attacker (keeps VFX visible on front flank)
     let toAttackerX = 0;
@@ -150,8 +180,9 @@ export class AttackImpactFxController {
         contactZ
       );
       const startScale = 0.72 * scaleMul;
+      const tiltX = (Math.random() - 0.5) * 0.35;
       mesh.scale.set(startScale * flipX, startScale, startScale);
-      mesh.rotation.z = roll;
+      this.orientBillboard(mesh, roll, tiltX, activeCam);
       this.pushPooled(this.slashes, MAX_SLASHES, {
         mesh,
         mat,
@@ -159,7 +190,7 @@ export class AttackImpactFxController {
         dur: isSmash ? 0.21 : 0.17,
         roll,
         rollVel,
-        tiltX: (Math.random() - 0.5) * 0.35,
+        tiltX,
         flipX,
         startScale,
         endScale: 1.28 * scaleMul,
@@ -180,7 +211,7 @@ export class AttackImpactFxController {
     const sparkMesh = new THREE.Mesh(this.sharedHitsparkGeo, sparkMat);
     sparkMesh.position.set(contactX, contactY, contactZ + 0.06);
     const sparkRoll = (Math.random() - 0.5) * 0.45;
-    sparkMesh.rotation.z = sparkRoll;
+    this.orientBillboard(sparkMesh, sparkRoll, 0, activeCam);
     const peakSparkScale = isSmash ? 1.48 : 1.08;
     sparkMesh.scale.setScalar(0.42);
     this.pushPooled(this.hitsparks, MAX_HITSPARKS, {
@@ -211,7 +242,7 @@ export class AttackImpactFxController {
       );
       const baseScale = (isSmash ? 1.15 : 0.88) * (0.75 + Math.random() * 0.45);
       sMesh.scale.setScalar(baseScale);
-      this.pushPooled(this.streaks, MAX_STREAKS, {
+      const streakItem: StreakItem = {
         mesh: sMesh,
         mat: sMat,
         age: 0,
@@ -220,7 +251,9 @@ export class AttackImpactFxController {
         vy: 1.5 + Math.random() * 3.1,
         vz: Math.sin(ang) * speed,
         baseScale,
-      });
+      };
+      this.orientStreak(streakItem, activeCam);
+      this.pushPooled(this.streaks, MAX_STREAKS, streakItem);
     }
 
     // 4. Ground Shockwave Ring
@@ -243,19 +276,18 @@ export class AttackImpactFxController {
   }
 
   public update(dtSec: number, camera?: THREE.Camera): void {
+    if (camera) this.lastCamera = camera;
+    const activeCam = camera ?? this.lastCamera;
     let rem = Math.max(0, dtSec);
     while (rem > 0) {
       const step = Math.min(0.1, rem);
       rem -= step;
-      this.stepPools(step, camera);
+      this.stepPools(step, activeCam);
     }
   }
 
   private stepPools(dtSec: number, camera?: THREE.Camera): void {
-    if (camera) {
-      this.tmpCamRight.set(1, 0, 0).applyQuaternion(camera.quaternion);
-      this.tmpCamUp.set(0, 1, 0).applyQuaternion(camera.quaternion);
-    }
+    this.prepareCameraAxes(camera);
 
     for (let i = this.slashes.length - 1; i >= 0; i--) {
       const s = this.slashes[i];
@@ -272,13 +304,7 @@ export class AttackImpactFxController {
       s.roll += s.rollVel * dtSec;
       s.mat.opacity = 0.96 * Math.pow(1 - p, 1.45);
       s.mesh.scale.set(scale * s.flipX, scale, scale);
-      if (camera) {
-        s.mesh.quaternion.copy(camera.quaternion);
-        s.mesh.rotateZ(s.roll);
-        s.mesh.rotateX(s.tiltX);
-      } else {
-        s.mesh.rotation.set(s.tiltX, 0, s.roll);
-      }
+      this.orientBillboard(s.mesh, s.roll, s.tiltX, camera);
     }
 
     for (let i = this.hitsparks.length - 1; i >= 0; i--) {
@@ -295,12 +321,7 @@ export class AttackImpactFxController {
       h.roll += h.rollVel * dtSec;
       h.mat.opacity = p < 0.2 ? 0.98 : 0.98 * Math.pow(1 - (p - 0.2) / 0.8, 1.3);
       h.mesh.scale.setScalar(Math.max(0.05, pop));
-      if (camera) {
-        h.mesh.quaternion.copy(camera.quaternion);
-        h.mesh.rotateZ(h.roll);
-      } else {
-        h.mesh.rotation.set(0, 0, h.roll);
-      }
+      this.orientBillboard(h.mesh, h.roll, 0, camera);
     }
 
     for (let i = this.streaks.length - 1; i >= 0; i--) {
@@ -322,14 +343,7 @@ export class AttackImpactFxController {
       st.mesh.scale.set(Math.max(0.04, widthScale), Math.max(0.08, lenScale), 1);
       st.mat.opacity = 0.94 * (1 - p);
 
-      if (camera) {
-        this.tmpVel.set(st.vx, st.vy, st.vz);
-        const screenX = this.tmpVel.dot(this.tmpCamRight);
-        const screenY = this.tmpVel.dot(this.tmpCamUp);
-        const angle = Math.atan2(screenY, screenX) - Math.PI / 2;
-        st.mesh.quaternion.copy(camera.quaternion);
-        st.mesh.rotateZ(angle);
-      }
+      this.orientStreak(st, camera);
     }
 
     for (let i = this.shockwaves.length - 1; i >= 0; i--) {
@@ -368,6 +382,7 @@ export class AttackImpactFxController {
   }
 
   public dispose(): void {
+    this.lastCamera = undefined;
     this.clearPool(this.slashes);
     this.clearPool(this.hitsparks);
     this.clearPool(this.streaks);

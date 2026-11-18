@@ -538,7 +538,7 @@ export class OreBillboard2D {
     this.visualGroup.scale.set(sx, sy, 1);
     // Keep rock firmly grounded in its stone crater (zero idle hover float)
     this.visualGroup.position.set(tremor + recoilX, 0, 0);
-    this.visualGroup.rotation.z = -recoilX * 0.42;
+    this.visualGroup.rotation.z = recoilX === 0 ? 0 : -recoilX * 0.42;
     const collarMult = (this.baseSize / 1.45) * Math.max(0.08, Math.min(1.06, scaleMult));
     this.shadowDisc.scale.setScalar(collarMult * (1 + squashAmt * 0.25));
     this.rockSkirtGroup.scale.set(
@@ -906,6 +906,8 @@ export class OrePit3D {
     n.alive = true;
     n.respawnTimer = 0;
     n.squashAmt = 0.25;
+    n.recoilAmt = 0;
+    n.recoilDirX = 1;
     n.flashTimer = 0.14;
     n.spawnScale = 1;
     n.dropY = 12;
@@ -977,6 +979,8 @@ export class OrePit3D {
     node.alive = true;
     node.respawnTimer = 0;
     node.squashAmt = instant ? 0 : 0.24;
+    node.recoilAmt = 0;
+    node.recoilDirX = 1;
     node.flashTimer = 0;
     node.spawnScale = instant ? 1 : 0.08;
 
@@ -1013,6 +1017,8 @@ export class OrePit3D {
     node.alive = true;
     node.respawnTimer = 0;
     node.squashAmt = 0.2;
+    node.recoilAmt = 0;
+    node.recoilDirX = 1;
     node.flashTimer = 0;
     node.spawnScale = 1;
 
