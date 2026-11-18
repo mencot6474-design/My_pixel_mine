@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { TowerWaveOreState } from '../game/TowerData';
+import { AttackImpactFxController } from './AttackImpactFx3D';
 import { ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
 import { ChibiFieldFxController } from './FieldMiner3D';
@@ -26,6 +27,10 @@ export interface TowerStrikeEvent {
   wx: number;
   wy: number;
   wz: number;
+  accentColor?: string;
+  comboStep?: number;
+  attackerX?: number;
+  attackerZ?: number;
 }
 
 export interface TowerOreBarScreen {
@@ -57,14 +62,6 @@ interface BossHaloArcHandle {
   period: number;
 }
 
-interface SlashVfx {
-  mesh: THREE.Mesh;
-  mat: THREE.MeshBasicMaterial;
-  age: number;
-  maxAge: number;
-  baseScale: number;
-}
-
 interface TowerWaveRockSlot {
   index: number;
   x: number;
@@ -81,6 +78,8 @@ interface TowerWaveRockSlot {
   color: string;
   variantKey: OreVariantKey;
   squashAmt: number;
+  recoilAmt: number;
+  recoilDirX: number;
   flashTimer: number;
   spawnScale: number;
   phase: number;
@@ -97,6 +96,7 @@ interface TowerChibiFighter {
   walkSpeed: number;
   attackInterval: number;
   attackCooldown: number;
+  comboStep: number;
   lungeTimer: number;
   enchantId: string | null;
   colorHex: string;
@@ -221,8 +221,7 @@ export class TowerArena3D {
 
   private readonly fightersGroup = new THREE.Group();
   private readonly fighters = new Map<number, TowerChibiFighter>();
-  private readonly slashGroup = new THREE.Group();
-  private readonly slashes: SlashVfx[] = [];
+  private readonly impactFx = new AttackImpactFxController({ floorY: 0.11 });
   private fighterConfigs: TowerFighterConfig[] = [];
 
   private bounceTimer = 0;
@@ -447,9 +446,9 @@ export class TowerArena3D {
       this.clickables.push(slot.hitMesh);
     }
 
-    // 6. Animated Chibi Fighters & Slash VFX Layers
+    // 6. Animated Chibi Fighters & Unified Cyber-Anime Impact VFX Layers
     this.group.add(this.fightersGroup);
-    this.group.add(this.slashGroup);
+    this.group.add(this.impactFx.group);
 
     // 7. Boss Monolith Raycast Hitbox (keep at index 0 of clickables)
     this.hitMesh = new THREE.Mesh(
@@ -514,6 +513,8 @@ export class TowerArena3D {
       color: '#38bdf8',
       variantKey: 'common',
       squashAmt: 0,
+      recoilAmt: 0,
+      recoilDirX: 1,
       flashTimer: 0,
       spawnScale: 1,
       phase: index * 1.1,
@@ -582,6 +583,7 @@ export class TowerArena3D {
         sprite.group.position.copy(spawnPos);
         sprite.setAnimState('dash');
         sprite.setFacing(spawnPos.x <= 0 ? 1 : -1);
+        sprite.setAccentColor(cfg.def.accentColor);
         this.fightersGroup.add(sprite.group);
         const fx = new ChibiFieldFxController(sprite.group, cfg.def.accentColor, cfg.slotIndex);
 
@@ -596,9 +598,10 @@ export class TowerArena3D {
           walkSpeed: 4.1 + Math.max(0, cfg.speed - 10) * 0.14,
           attackInterval: Math.max(0.32, 0.85 / Math.max(1, cfg.miningMult)),
           attackCooldown: 0.14 + cfg.slotIndex * 0.08,
+          comboStep: 0,
           lungeTimer: 0,
           enchantId: null,
-          colorHex: '#38bdf8',
+          colorHex: cfg.def.accentColor,
         };
         this.fighters.set(cfg.slotIndex, existing);
       } else {
@@ -618,10 +621,12 @@ export class TowerArena3D {
   }
 
   private applyFighterEnchant(f: TowerChibiFighter, enchantId: string | null): void {
-    if (f.enchantId === enchantId) return;
-    f.enchantId = enchantId;
-    f.fx.setEnchant(enchantId);
+    if (f.enchantId !== enchantId) {
+      f.enchantId = enchantId;
+      f.fx.setEnchant(enchantId);
+    }
     f.colorHex = f.fx.getAccentColor();
+    f.sprite.setAccentColor(f.colorHex);
   }
 
   public resetFloorCharge(): void {
@@ -743,50 +748,44 @@ export class TowerArena3D {
     this.bounceTimer = Math.max(this.bounceTimer, intensity);
     if (spawnSlash) {
       const slashColor = this.bossMode ? '#facc15' : this.anomalyColorHex;
-      this.spawnSlashArc(slashColor, (Math.random() - 0.5) * 1.4, 1.35, (Math.random() - 0.5) * 0.45, 2.65, BOSS_CENTER_Z + 1.05);
-      this.spawnSlashArc('#f97316', (Math.random() - 0.5) * 1.4 + Math.PI * 0.5, 1.15, (Math.random() - 0.5) * 0.45, 2.65, BOSS_CENTER_Z + 1.05);
+      this.impactFx.spawnImpact({
+        targetX: (Math.random() - 0.5) * 0.45,
+        targetY: 2.65,
+        targetZ: BOSS_CENTER_Z + 1.05,
+        accentColor: slashColor,
+        heavy: true,
+        comboStep: 2,
+        shockwaveScale: 1.65,
+      });
     }
   }
 
-  public triggerOreHitBounce(oreIndex: number, broken = false): void {
+  public triggerOreHitBounce(
+    oreIndex: number,
+    broken = false,
+    attackFx?: { accentColor?: string; comboStep?: number; attackerX?: number; attackerZ?: number }
+  ): void {
     const rock = this.waveRocks[oreIndex];
     if (!rock) return;
     rock.squashAmt = broken ? 0.46 : 0.36;
+    rock.recoilDirX =
+      attackFx?.attackerX !== undefined
+        ? Math.sign(rock.x - attackFx.attackerX) || 1
+        : Math.random() < 0.5
+          ? 1
+          : -1;
+    rock.recoilAmt = broken ? 0.24 : 0.16;
     rock.flashTimer = 0.09;
-    this.spawnSlashArc(rock.color, (Math.random() - 0.5) * 1.8, broken ? 1.18 : 0.88, rock.x, 1.05, rock.z + 0.45);
-  }
-
-  private spawnSlashArc(
-    colorHex: string,
-    rollAngle: number,
-    baseScale = 1.0,
-    wx = 0,
-    wy = 2.75,
-    wz = ARENA_CENTER_Z + 1.05
-  ): void {
-    if (this.slashes.length >= 16) {
-      const oldest = this.slashes.shift();
-      if (oldest) {
-        this.slashGroup.remove(oldest.mesh);
-        oldest.mesh.geometry.dispose();
-        oldest.mat.dispose();
-      }
-    }
-    const mat = new THREE.MeshBasicMaterial({
-      color: colorHex,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.95,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
+    this.impactFx.spawnImpact({
+      targetX: rock.x,
+      targetY: 1.05,
+      targetZ: rock.z,
+      accentColor: attackFx?.accentColor ?? rock.color,
+      heavy: broken,
+      comboStep: attackFx?.comboStep,
+      attackerX: attackFx?.attackerX,
+      attackerZ: attackFx?.attackerZ,
     });
-    const mesh = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.55, 22, 1, 0, Math.PI * 1.15), mat);
-    mesh.position.set(wx + (Math.random() - 0.5) * 0.3, wy + (Math.random() - 0.5) * 0.35, wz);
-    mesh.rotation.z = rollAngle;
-    mesh.rotation.x = (Math.random() - 0.5) * 0.45;
-    mesh.scale.setScalar(baseScale * 0.5);
-    this.slashGroup.add(mesh);
-    this.slashes.push({ mesh, mat, age: 0, maxAge: 0.22, baseScale });
   }
 
   public getMonolithWorldPos(): THREE.Vector3 {
@@ -922,11 +921,22 @@ export class TowerArena3D {
         if (rock.squashAmt > 0.001) {
           rock.squashAmt = Math.max(0, rock.squashAmt - safeDt * 2.5);
         }
+        if (rock.recoilAmt > 0.001) {
+          rock.recoilAmt = Math.max(0, rock.recoilAmt - safeDt * 1.35);
+        }
         const flashing = rock.flashTimer > 0;
         if (flashing) {
           rock.flashTimer -= safeDt;
         }
-        rock.oreSprite.updateTransform(elapsed, rock.phase, rock.squashAmt, rock.spawnScale, flashing, camera);
+        rock.oreSprite.updateTransform(
+          elapsed,
+          rock.phase,
+          rock.squashAmt,
+          rock.spawnScale,
+          flashing,
+          camera,
+          rock.recoilAmt * rock.recoilDirX
+        );
         rock.ringMesh.rotation.z = elapsed * 0.18 + rock.phase;
       }
     }
@@ -937,23 +947,13 @@ export class TowerArena3D {
     this.aiGyroRing1.rotation.z = elapsed * 0.65;
     this.aiGyroRing2.rotation.x = -elapsed * 0.52;
 
-    // Update Active Slash VFX
-    for (let i = this.slashes.length - 1; i >= 0; i--) {
-      const s = this.slashes[i];
-      s.age += safeDt;
-      const p = Math.min(1, s.age / s.maxAge);
-      s.mesh.scale.setScalar(s.baseScale * (0.5 + p * 0.75));
-      s.mat.opacity = Math.max(0, (1 - p) * 0.95);
-      if (p >= 1) {
-        this.slashGroup.remove(s.mesh);
-        s.mesh.geometry.dispose();
-        s.mat.dispose();
-        this.slashes.splice(i, 1);
-      }
-    }
+    this.impactFx.update(safeDt, camera);
 
     // Update Animated Chibi Fighters (dash to target -> attack -> deal damage ONLY on real swing)
     for (const f of this.fighters.values()) {
+      f.fx.update(elapsed);
+      f.colorHex = f.fx.getAccentColor();
+      f.sprite.setAccentColor(f.colorHex);
       const pos = f.sprite.group.position;
 
       if (this.paused) {
@@ -993,7 +993,9 @@ export class TowerArena3D {
             if (f.attackCooldown <= 0) {
               f.attackCooldown = f.attackInterval;
               f.lungeTimer = 0.18;
-              f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75));
+              const step = f.comboStep;
+              f.comboStep = (f.comboStep + 1) % 3;
+              f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), step);
               onFighterStrike?.({
                 slotIndex: f.slotIndex,
                 targetOreIndex: targetRock.index,
@@ -1002,6 +1004,10 @@ export class TowerArena3D {
                 wx: targetRock.x,
                 wy: 1.05,
                 wz: targetRock.z,
+                accentColor: f.colorHex,
+                comboStep: step,
+                attackerX: pos.x,
+                attackerZ: pos.z,
               });
             }
 
@@ -1011,8 +1017,8 @@ export class TowerArena3D {
               const toRockX = targetRock.x - desiredX;
               const toRockZ = targetRock.z - desiredZ;
               const len = Math.max(0.01, Math.hypot(toRockX, toRockZ));
-              pos.x = desiredX + (toRockX / len) * t * 0.1;
-              pos.z = desiredZ + (toRockZ / len) * t * 0.1;
+              pos.x = desiredX + (toRockX / len) * t * 0.08;
+              pos.z = desiredZ + (toRockZ / len) * t * 0.08;
             } else {
               pos.x = desiredX;
               pos.z = desiredZ;
@@ -1040,16 +1046,20 @@ export class TowerArena3D {
           if (f.attackCooldown <= 0) {
             f.attackCooldown = f.attackInterval;
             f.lungeTimer = 0.18;
-            f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75));
+            const step = f.comboStep;
+            f.comboStep = (f.comboStep + 1) % 3;
+            f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), step);
             this.bounceTimer = Math.max(this.bounceTimer, 0.09);
-            this.spawnSlashArc(
-              this.bossMode ? '#facc15' : f.colorHex,
-              (Math.random() - 0.5) * 1.9,
-              0.92,
-              (Math.random() - 0.5) * 0.45,
-              2.45,
-              BOSS_CENTER_Z + 1.05
-            );
+            this.impactFx.spawnImpact({
+              targetX: (Math.random() - 0.5) * 0.55,
+              targetY: 2.45,
+              targetZ: BOSS_CENTER_Z + 1.05,
+              accentColor: f.colorHex,
+              comboStep: step,
+              attackerX: pos.x,
+              attackerZ: pos.z,
+              shockwaveScale: 1.45,
+            });
             onFighterStrike?.({
               slotIndex: f.slotIndex,
               targetOreIndex: null,
@@ -1058,6 +1068,10 @@ export class TowerArena3D {
               wx: (Math.random() - 0.5) * 1.1,
               wy: 2.15 + Math.random() * 0.45,
               wz: ARENA_CENTER_Z + 0.45,
+              accentColor: f.colorHex,
+              comboStep: step,
+              attackerX: pos.x,
+              attackerZ: pos.z,
             });
           }
 
@@ -1067,8 +1081,8 @@ export class TowerArena3D {
             const toCenterX = -f.attackPos.x;
             const toCenterZ = ARENA_CENTER_Z - f.attackPos.z;
             const len = Math.max(0.01, Math.hypot(toCenterX, toCenterZ));
-            pos.x = f.attackPos.x + (toCenterX / len) * t * 0.45;
-            pos.z = f.attackPos.z + (toCenterZ / len) * t * 0.45;
+            pos.x = f.attackPos.x + (toCenterX / len) * t * 0.26;
+            pos.z = f.attackPos.z + (toCenterZ / len) * t * 0.26;
           } else {
             pos.x = f.attackPos.x;
             pos.z = f.attackPos.z;
@@ -1076,7 +1090,6 @@ export class TowerArena3D {
         }
       }
 
-      f.fx.update(elapsed);
       if (camera) {
         f.sprite.update(safeDt, elapsed, camera);
       }
@@ -1084,6 +1097,7 @@ export class TowerArena3D {
   }
 
   public dispose(): void {
+    this.impactFx.dispose();
     this.bossModel.dispose();
     this.cityEnv.dispose();
     for (const f of this.fighters.values()) {
@@ -1112,6 +1126,5 @@ export class TowerArena3D {
       tex.dispose();
     }
     this.ownedTextures.length = 0;
-    this.slashes.length = 0;
   }
 }

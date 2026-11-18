@@ -622,7 +622,7 @@ export class MineScene3D {
       );
       const shownDmg = res ? res.dmg : strike.dmg;
       if (res && res.dmg > 0 && strike.targetOreIndex !== null) {
-        this.towerArena.triggerOreHitBounce(strike.targetOreIndex, Boolean(res.broken));
+        this.towerArena.triggerOreHitBounce(strike.targetOreIndex, Boolean(res.broken), strike);
       }
       if (shownDmg > 0) {
         this.emitDamageScreen(shownDmg, strike.wx, strike.wy, strike.wz, false);
@@ -1123,6 +1123,7 @@ export class MineScene3D {
     this.pedestals.forEach((p) => p.dispose());
     this.chestVisual.dispose();
     this.env.dispose();
+    this.pit.dispose();
     this.shopWorld.dispose();
     this.towerArena.dispose();
     this.weatherFx.dispose();

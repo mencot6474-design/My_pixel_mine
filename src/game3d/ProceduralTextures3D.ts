@@ -434,3 +434,167 @@ export function getCobblePathTexture(_stoneHex: string): THREE.Texture {
     }
   });
 }
+
+function paintConcaveStar(
+  ctx: CanvasRenderingContext2D,
+  mid: number,
+  outerR: number,
+  innerR: number,
+  rotationRad = 0
+): void {
+  ctx.save();
+  ctx.translate(mid, mid);
+  ctx.rotate(rotationRad);
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = (i * Math.PI) / 4;
+    const rad = i % 2 === 0 ? outerR : innerR;
+    const px = Math.cos(a) * rad;
+    const py = Math.sin(a) * rad;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+/** Tapered asymmetric anime crescent slash with outer tintable glow and white-hot core. */
+export function getDualSlashArcTexture(): THREE.Texture {
+  return paintCachedTexture('vfx-dual-slash-v1', 256, 256, 1, 1, [255, 255, 255, 0], (ctx) => {
+    ctx.clearRect(0, 0, 256, 256);
+    const mid = 128;
+
+    // Outer colored glow crescent (wide tapered sweep)
+    ctx.save();
+    ctx.translate(mid, mid);
+    const outerGrad = ctx.createRadialGradient(0, 0, 44, 0, 0, 122);
+    outerGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0)');
+    outerGrad.addColorStop(0.38, 'rgba(255, 255, 255, 0.25)');
+    outerGrad.addColorStop(0.68, 'rgba(255, 255, 255, 0.72)');
+    outerGrad.addColorStop(0.9, 'rgba(255, 255, 255, 0.22)');
+    outerGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = outerGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, 118, -Math.PI * 0.72, Math.PI * 0.28);
+    ctx.arc(-18, 12, 92, Math.PI * 0.28, -Math.PI * 0.72, true);
+    ctx.closePath();
+    ctx.fill();
+
+    // Inner razor-sharp white-hot blade ribbon
+    const coreGrad = ctx.createRadialGradient(0, 0, 60, 0, 0, 114);
+    coreGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0)');
+    coreGrad.addColorStop(0.45, 'rgba(255, 255, 255, 0.65)');
+    coreGrad.addColorStop(0.74, 'rgba(255, 255, 255, 1)');
+    coreGrad.addColorStop(0.94, 'rgba(255, 255, 255, 0.3)');
+    coreGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = coreGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, 110, -Math.PI * 0.66, Math.PI * 0.22);
+    ctx.arc(-12, 8, 96, Math.PI * 0.22, -Math.PI * 0.66, true);
+    ctx.closePath();
+    ctx.fill();
+
+    // Fine trailing energy wisps near arc apex
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(2, -2, 113, -Math.PI * 0.48, Math.PI * 0.08);
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+/** 4-point sharp anime impact cross star with diagonal needles and bright flash core. */
+export function getHitSparkStarTexture(): THREE.Texture {
+  return paintCachedTexture('vfx-hitspark-star-v1', 128, 128, 1, 1, [255, 255, 255, 0], (ctx) => {
+    ctx.clearRect(0, 0, 128, 128);
+    const mid = 64;
+
+    const halo = ctx.createRadialGradient(mid, mid, 2, mid, mid, 58);
+    halo.addColorStop(0.0, 'rgba(255, 255, 255, 1)');
+    halo.addColorStop(0.24, 'rgba(255, 255, 255, 0.72)');
+    halo.addColorStop(0.6, 'rgba(255, 255, 255, 0.16)');
+    halo.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = halo;
+    ctx.fillRect(0, 0, 128, 128);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+    paintConcaveStar(ctx, mid, 60, 10, 0);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.52)';
+    paintConcaveStar(ctx, mid, 38, 5, Math.PI / 4);
+  });
+}
+
+/** Crisp cyber-anime ground shockwave ring with radial energy streaks. */
+export function getShockwaveRingTexture(): THREE.Texture {
+  return paintCachedTexture('vfx-shockwave-ring-v1', 256, 256, 1, 1, [255, 255, 255, 0], (ctx) => {
+    ctx.clearRect(0, 0, 256, 256);
+    const mid = 128;
+
+    const ringGrad = ctx.createRadialGradient(mid, mid, 58, mid, mid, 124);
+    ringGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0)');
+    ringGrad.addColorStop(0.45, 'rgba(255, 255, 255, 0.14)');
+    ringGrad.addColorStop(0.72, 'rgba(255, 255, 255, 0.92)');
+    ringGrad.addColorStop(0.86, 'rgba(255, 255, 255, 0.5)');
+    ringGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = ringGrad;
+    ctx.beginPath();
+    ctx.arc(mid, mid, 124, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2 + (i % 2) * 0.1;
+      const r0 = 76 + (i % 3) * 6;
+      const r1 = 114 + (i % 2) * 7;
+      ctx.beginPath();
+      ctx.moveTo(mid + Math.cos(a) * r0, mid + Math.sin(a) * r0);
+      ctx.lineTo(mid + Math.cos(a) * r1, mid + Math.sin(a) * r1);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Compact 4-point wind-up glint flash for chibi anticipation frames. */
+export function getWindupGlintTexture(): THREE.Texture {
+  return paintCachedTexture('vfx-windup-glint-v1', 128, 128, 1, 1, [255, 255, 255, 0], (ctx) => {
+    ctx.clearRect(0, 0, 128, 128);
+    const mid = 64;
+
+    const glow = ctx.createRadialGradient(mid, mid, 2, mid, mid, 44);
+    glow.addColorStop(0.0, 'rgba(255, 255, 255, 0.98)');
+    glow.addColorStop(0.35, 'rgba(255, 255, 255, 0.55)');
+    glow.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, 128, 128);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+    paintConcaveStar(ctx, mid, 56, 7, 0);
+  });
+}
+
+/** Elongated diamond spark streak texture for directional hit burst particles. */
+export function getSparkStreakTexture(): THREE.Texture {
+  return paintCachedTexture('vfx-spark-streak-v1', 64, 128, 1, 1, [255, 255, 255, 0], (ctx) => {
+    ctx.clearRect(0, 0, 64, 128);
+    const grad = ctx.createRadialGradient(32, 64, 4, 32, 64, 58);
+    grad.addColorStop(0.0, 'rgba(255, 255, 255, 1)');
+    grad.addColorStop(0.35, 'rgba(255, 255, 255, 0.78)');
+    grad.addColorStop(0.8, 'rgba(255, 255, 255, 0.14)');
+    grad.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = grad;
+
+    ctx.beginPath();
+    ctx.moveTo(32, 4);
+    ctx.lineTo(52, 64);
+    ctx.lineTo(32, 124);
+    ctx.lineTo(12, 64);
+    ctx.closePath();
+    ctx.fill();
+  });
+}

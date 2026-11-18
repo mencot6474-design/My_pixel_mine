@@ -53,6 +53,7 @@ import {
   createAltarClockHand,
   createAltarSubHand,
 } from '../src/game3d/AltarSpinFx3D';
+import { AttackImpactFxController } from '../src/game3d/AttackImpactFx3D';
 import {
   CHIBI_CATALOG,
   CHIBI_FRAME_INDEX,
@@ -68,11 +69,18 @@ import {
   createProceduralTreasureChest,
 } from '../src/game3d/ChestVaultStation3D';
 import { ChibiSprite3D } from '../src/game3d/ChibiSprite3D';
-import { FieldMiner3D } from '../src/game3d/FieldMiner3D';
+import { ChibiFieldFxController, FieldMiner3D } from '../src/game3d/FieldMiner3D';
 import { MineEnvironment3D } from '../src/game3d/MineEnvironment3D';
 import { DEFAULT_WORLD_PALETTE, rollOreVariant, STAGE_PEDESTAL_COUNT } from '../src/game3d/MineWorldPalette';
 import { applyNodeDamagePure, BASE_ORE_RESPAWN_SEC, OrePit3D, PIT_NODE_COUNT } from '../src/game3d/OrePit3D';
 import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
+import {
+  getDualSlashArcTexture,
+  getHitSparkStarTexture,
+  getShockwaveRingTexture,
+  getSparkStreakTexture,
+  getWindupGlintTexture,
+} from '../src/game3d/ProceduralTextures3D';
 import { createShopCyberPlaza } from '../src/game3d/ShopCyberPlaza3D';
 import { ShopWorld3D } from '../src/game3d/ShopWorld3D';
 import { createSeraphimBoss3D } from '../src/game3d/SeraphimBoss3D';
@@ -1281,6 +1289,44 @@ describe('Pure 3D Mine World', () => {
     sprite.dispose();
   });
 
+  it('cycles 3-beat attack combos with tinted ghost afterimages and wind-up glint while preserving child indices', () => {
+    const sprite = new ChibiSprite3D(CHIBI_CATALOG[1], 1.95, 0);
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(0, 11.7, 15.6);
+
+    const pivot = sprite.group.children[0] as THREE.Group;
+    const animGroup = pivot.children[0] as THREE.Group;
+    const primaryMesh = animGroup.children[0] as THREE.Mesh;
+    expect(primaryMesh.customDepthMaterial).toBeInstanceOf(THREE.MeshDepthMaterial);
+    expect(pivot.children.length).toBeGreaterThanOrEqual(3); // animGroup + 2 afterimages
+    expect(animGroup.children.length).toBeGreaterThanOrEqual(2); // mesh + wind-up glint
+
+    const ghost0 = pivot.children[1] as THREE.Mesh;
+    const glintMesh = animGroup.children[1] as THREE.Mesh;
+
+    sprite.setAccentColor('#f59e0b');
+    sprite.setFacing(1);
+    sprite.setAnimState('attack');
+
+    for (const expectedStep of [0, 1, 2]) {
+      sprite.triggerAttack(0.4);
+      expect(sprite.getComboStep()).toBe(expectedStep);
+      sprite.update(0.04, 1.0 + expectedStep, cam); // p = 0.10 (wind-up)
+      expect(animGroup.position.x).toBeLessThan(0);
+      expect(glintMesh.visible).toBe(true);
+
+      sprite.update(0.1, 1.1 + expectedStep, cam); // p = 0.35 (strike lunge)
+      expect(animGroup.position.x).toBeGreaterThan(0.05);
+      expect(ghost0.visible).toBe(true);
+      expect((ghost0.material as THREE.MeshBasicMaterial).color.getHexString()).toBe('f59e0b');
+    }
+
+    sprite.update(0.4, 5.0, cam); // settle finished
+    expect(ghost0.visible).toBe(false);
+    expect(glintMesh.visible).toBe(false);
+    expect(() => sprite.dispose()).not.toThrow();
+  });
+
   it('positions FieldMiner3D on the flanking edge of an ore node when attacking so the chibi body does not clip inside', () => {
     const oreNode = {
       id: 0,
@@ -1308,6 +1354,66 @@ describe('Pure 3D Mine World', () => {
       expect(fm.sprite.group.position.z).toBeGreaterThan(oreNode.worldZ);
       fm.dispose();
     }
+  });
+
+  it('returns chibi def.accentColor when unenchanted, cycles rainbow accent, and forwards combo/attackFx from FieldMiner3D', () => {
+    const chibi = CHIBI_CATALOG[1]; // solar-striker (#f59e0b)
+    const host = new THREE.Group();
+    const fx = new ChibiFieldFxController(host, chibi.accentColor, 0);
+    expect(fx.getAccentColor()).toBe(chibi.accentColor);
+
+    fx.setEnchant('blazing');
+    expect(fx.getAccentColor()).toBe('#f97316');
+
+    fx.setEnchant(null);
+    expect(fx.getAccentColor()).toBe(chibi.accentColor);
+
+    fx.setEnchant('spellbound'); // rainbow
+    fx.update(0.1);
+    const c1 = fx.getAccentColor();
+    fx.update(1.2);
+    const c2 = fx.getAccentColor();
+    expect(c1).not.toBe(c2);
+    fx.dispose();
+
+    const receivedFx: Array<{ accentColor?: string; attackerX?: number; comboStep?: number } | undefined> = [];
+    const oreNode = {
+      id: 0,
+      hp: 9999,
+      maxHp: 9999,
+      alive: true,
+      worldX: 0,
+      worldY: 0,
+      worldZ: 0.65,
+      variantKey: 'common' as const,
+    };
+    const fakePit = {
+      getAliveNodesInfo: () => [oreNode],
+      hitNode: (
+        _id: number,
+        _dmg: number,
+        _heavy: boolean,
+        _shards?: number,
+        attackFx?: { accentColor?: string; attackerX?: number; comboStep?: number }
+      ) => {
+        receivedFx.push(attackFx);
+        return { broken: false, dmgDealt: 10, variantKey: 'common' as const };
+      },
+    } as unknown as OrePit3D;
+
+    const fm = new FieldMiner3D(chibi, 0);
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(0, 11.7, 15.6);
+    for (let i = 0; i < 30; i++) {
+      fm.update(0.1, (i + 1) * 0.1, cam, fakePit, undefined, undefined, true);
+    }
+    expect(receivedFx.length).toBeGreaterThanOrEqual(2);
+    expect(receivedFx[0]?.accentColor).toBe(chibi.accentColor);
+    expect(typeof receivedFx[0]?.attackerX).toBe('number');
+    expect(receivedFx.slice(0, 3).map((x) => x?.comboStep)).toEqual(
+      [0, 1, 2].slice(0, Math.min(3, receivedFx.length))
+    );
+    fm.dispose();
   });
 
   it('scales all 12 Shop Pickaxes monotonically in cost, DMG multiplier, and stock without exploits', () => {
@@ -2036,5 +2142,189 @@ describe('Pure 3D Mine World', () => {
       ped.update(0.016, 2.2);
       ped.dispose();
     }).not.toThrow();
+  });
+
+  it('caches headless-safe SRGB cyber-anime VFX textures in ProceduralTextures3D', () => {
+    const slashA = getDualSlashArcTexture();
+    const slashB = getDualSlashArcTexture();
+    const spark = getHitSparkStarTexture();
+    const ring = getShockwaveRingTexture();
+    const glint = getWindupGlintTexture();
+    const streak = getSparkStreakTexture();
+
+    expect(slashA).toBe(slashB);
+    for (const tex of [slashA, spark, ring, glint, streak]) {
+      expect(tex).toBeInstanceOf(THREE.Texture);
+      expect(tex.colorSpace).toBe(THREE.SRGBColorSpace);
+    }
+  });
+
+  it('spawns 4-layer AttackImpactFxController pools with oldest-recycling caps and full dispose', () => {
+    const fx = new AttackImpactFxController({ floorY: 0.045 });
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(0, 11.7, 15.6);
+
+    fx.spawnImpact({
+      targetX: 0,
+      targetY: 0.95,
+      targetZ: 0,
+      accentColor: '#f59e0b',
+      comboStep: 2,
+      heavy: true,
+      attackerX: -1.3,
+      attackerZ: 0.36,
+    });
+    const afterOne = fx.getActiveCounts();
+    expect(afterOne.slashes).toBe(2);
+    expect(afterOne.hitsparks).toBe(1);
+    expect(afterOne.streaks).toBeGreaterThanOrEqual(8);
+    expect(afterOne.shockwaves).toBe(1);
+
+    for (let i = 0; i < 20; i++) {
+      fx.spawnImpact({ targetX: 0, targetY: 1.0, targetZ: 0, accentColor: '#38bdf8', comboStep: i % 3 });
+    }
+    const capped = fx.getActiveCounts();
+    expect(capped.slashes).toBeLessThanOrEqual(18);
+    expect(capped.hitsparks).toBeLessThanOrEqual(16);
+    expect(capped.streaks).toBeLessThanOrEqual(64);
+    expect(capped.shockwaves).toBeLessThanOrEqual(12);
+
+    let instanced = 0;
+    fx.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) instanced++;
+    });
+    expect(instanced).toBe(0);
+
+    fx.update(0.12, cam);
+    fx.update(0.4, cam);
+    const expired = fx.getActiveCounts();
+    expect(expired.slashes + expired.hitsparks + expired.streaks + expired.shockwaves).toBe(0);
+
+    expect(() => fx.dispose()).not.toThrow();
+  });
+
+  it('drives 4-layer AttackImpactFxController and OreBillboard2D horizontal recoil from OrePit3D.hitNode', () => {
+    const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    pit.group.visible = true;
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(0, 11.7, 15.6);
+
+    const info = pit.getAliveNodesInfo()[0];
+    expect(info).toBeDefined();
+
+    const res = pit.hitNode(info.id, 10, false, undefined, {
+      accentColor: '#fb7185',
+      attackerX: info.worldX - 1.3,
+      attackerZ: info.worldZ + 0.36,
+      comboStep: 2,
+    });
+    expect(res?.dmgDealt).toBe(10);
+    const counts = pit.getImpactFxCounts();
+    expect(counts.slashes).toBe(2);
+    expect(counts.hitsparks).toBe(1);
+    expect(counts.streaks).toBeGreaterThanOrEqual(8);
+    expect(counts.shockwaves).toBe(1);
+
+    pit.update(0.016, 0.5, cam);
+    expect(() => pit.dispose()).not.toThrow();
+  });
+
+  it('unifies 4-layer AttackImpactFxController and fighter accent color sync in TowerArena3D while keeping 11 InstancedMeshes', () => {
+    const arena = new TowerArena3D();
+    arena.group.visible = true;
+    arena.syncFighters([
+      { slotIndex: 0, def: CHIBI_CATALOG[1], enchantId: null, dmg: 30, speed: 12, miningMult: 1.2 }, // solar-striker #f59e0b
+    ]);
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(0, 9.2, 14.8);
+    cam.lookAt(0, 2.2, -1.6);
+
+    const wave1Ores = rollTowerWaveOres(1, 1);
+    arena.syncWaveState({
+      floor: 1,
+      wave: 1,
+      isBossWave: false,
+      isCheckpointFloor: false,
+      waveOres: wave1Ores,
+      anomalyColorHex: '#38bdf8',
+      equippedMinerCount: 1,
+      paused: false,
+    });
+
+    const strikes: Array<{ accentColor?: string; comboStep?: number }> = [];
+    for (let i = 0; i < 45; i++) {
+      arena.update(0.05, (i + 1) * 0.05, cam, (ev) => {
+        strikes.push({ accentColor: ev.accentColor, comboStep: ev.comboStep });
+        if (ev.targetOreIndex !== null) {
+          arena.triggerOreHitBounce(ev.targetOreIndex, false, ev);
+        }
+      });
+    }
+    expect(strikes.length).toBeGreaterThan(0);
+    expect(strikes[0].accentColor).toBe(CHIBI_CATALOG[1].accentColor);
+
+    arena.setFloorVisual(true, '#facc15', 2, 5, false);
+    arena.triggerHitBounce(0.24, true);
+
+    let instanced = 0;
+    arena.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) instanced++;
+    });
+    expect(instanced).toBe(11);
+    expect(() => arena.dispose()).not.toThrow();
+  });
+
+  it('tints Wave 10 Boss fighter impact VFX with fighter accent/enchant color instead of hardcoded gold', () => {
+    const arena = new TowerArena3D();
+    arena.group.visible = true;
+    const chibi = CHIBI_CATALOG[4]; // pyre-kitsune (#fb7185)
+    arena.syncFighters([{ slotIndex: 0, def: chibi, enchantId: null, dmg: 30, speed: 12, miningMult: 1.2 }]);
+    arena.setFloorVisual(true, '#facc15', 1, 5, false);
+
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(0, 9.2, 14.8);
+    cam.lookAt(0, 2.2, -1.6);
+
+    // Clear any leftover FX, then advance until the first Boss fighter strike fires
+    arena.update(0.5, 0.5, cam);
+    let struck = false;
+    for (let i = 0; i < 45 && !struck; i++) {
+      arena.update(0.05, 0.6 + i * 0.05, cam, () => {
+        struck = true;
+      });
+    }
+    expect(struck).toBe(true);
+
+    const slashTex = getDualSlashArcTexture();
+    const slashColors: string[] = [];
+    arena.group.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const mat = obj.material;
+      if (mat instanceof THREE.MeshBasicMaterial && mat.map === slashTex) {
+        slashColors.push(`#${mat.color.getHexString()}`);
+      }
+    });
+    expect(slashColors).toContain(chibi.accentColor);
+    arena.dispose();
+  });
+
+  it('keeps ghost afterimage opacity at 0 before pose texture loads so untextured quads never flash', () => {
+    const sprite = new ChibiSprite3D(CHIBI_CATALOG[1], 1.95, 0);
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(0, 11.7, 15.6);
+
+    const pivot = sprite.group.children[0] as THREE.Group;
+    const ghost0 = pivot.children[1] as THREE.Mesh;
+    const ghostMat = ghost0.material as THREE.MeshBasicMaterial;
+    expect(ghostMat.map).toBeNull();
+
+    sprite.setFacing(1);
+    sprite.setAnimState('attack');
+    sprite.triggerAttack(0.4, 0);
+    sprite.update(0.14, 1.0, cam); // p = 0.35 (ghost window)
+    expect(ghost0.visible).toBe(true);
+    expect(ghostMat.opacity).toBe(0);
+
+    sprite.dispose();
   });
 });

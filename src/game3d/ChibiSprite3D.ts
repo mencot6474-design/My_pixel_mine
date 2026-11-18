@@ -6,6 +6,7 @@ import {
   LEFT_FACING_ATTACK_IDS,
   LEFT_FACING_WALK_IDS,
 } from './ChibiCatalog';
+import { getWindupGlintTexture } from './ProceduralTextures3D';
 
 interface LoadedPoseMeta {
   texture: THREE.Texture;
@@ -102,6 +103,10 @@ export class ChibiSprite3D {
   private readonly shadowDisc: THREE.Mesh;
   private readonly shadowMat: THREE.MeshBasicMaterial;
   private readonly baseShadowOpacity: number;
+  private readonly ghostMeshes: THREE.Mesh[] = [];
+  private readonly ghostMats: THREE.MeshBasicMaterial[] = [];
+  private readonly glintMesh: THREE.Mesh;
+  private readonly glintMat: THREE.MeshBasicMaterial;
 
   private readonly def: ChibiDef;
   private readonly spriteHeight: number;
@@ -110,9 +115,12 @@ export class ChibiSprite3D {
 
   private animState: ChibiAnimState = 'idle';
   private facing: 1 | -1 = 1;
+  private accentColorHex: string;
   private showcaseTimer = 0;
   private attackSwingTimer = 0;
   private attackSwingDuration = 0.42;
+  private attackComboStep = 0;
+  private nextComboStep = 0;
   private idlePixelHeight: number | null = null;
   private disposed = false;
 
@@ -120,6 +128,7 @@ export class ChibiSprite3D {
     this.def = def;
     this.spriteHeight = spriteHeight;
     this.phaseOffset = phaseOffset;
+    this.accentColorHex = def.accentColor;
 
     this.material = new THREE.MeshBasicMaterial({
       transparent: true,
@@ -140,7 +149,40 @@ export class ChibiSprite3D {
     this.mesh.customDepthMaterial = this.depthMaterial;
     this.mesh.castShadow = false;
     this.animGroup.add(this.mesh);
+
+    this.glintMat = new THREE.MeshBasicMaterial({
+      map: getWindupGlintTexture(),
+      color: this.accentColorHex,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    this.glintMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.48, 0.48), this.glintMat);
+    this.glintMesh.position.set(0, spriteHeight * 0.56, 0.04);
+    this.glintMesh.visible = false;
+    this.animGroup.add(this.glintMesh);
+
     this.spritePivot.add(this.animGroup);
+
+    for (let i = 0; i < 2; i++) {
+      const gMat = new THREE.MeshBasicMaterial({
+        color: this.accentColorHex,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      const gMesh = new THREE.Mesh(new THREE.PlaneGeometry(spriteHeight * 0.85, spriteHeight), gMat);
+      gMesh.position.set(0, spriteHeight * 0.5, -0.04 - i * 0.03);
+      gMesh.visible = false;
+      this.ghostMats.push(gMat);
+      this.ghostMeshes.push(gMesh);
+      this.spritePivot.add(gMesh);
+    }
+
     this.group.add(this.spritePivot);
 
     const shadowTex = getSoftContactShadowTexture();
@@ -207,6 +249,16 @@ export class ChibiSprite3D {
       this.mesh.geometry.dispose();
       this.mesh.geometry = new THREE.PlaneGeometry(width, h);
       this.mesh.position.y = h * 0.5;
+      this.glintMesh.position.y = h * 0.56;
+
+      for (let i = 0; i < this.ghostMeshes.length; i++) {
+        const gm = this.ghostMeshes[i];
+        gm.geometry.dispose();
+        gm.geometry = new THREE.PlaneGeometry(width, h);
+        gm.position.y = h * 0.5;
+        this.ghostMats[i].map = meta.texture;
+        this.ghostMats[i].needsUpdate = true;
+      }
 
       this.material.map = meta.texture;
       this.material.opacity = 1;
@@ -245,7 +297,23 @@ export class ChibiSprite3D {
     this.mesh.scale.x = invert ? -this.facing : this.facing;
   }
 
-  public triggerAttack(durationSec = 0.42): void {
+  public setAccentColor(hex: string): void {
+    if (this.accentColorHex === hex) return;
+    this.accentColorHex = hex;
+    this.glintMat.color.set(hex);
+    for (const gm of this.ghostMats) {
+      gm.color.set(hex);
+    }
+  }
+
+  public getComboStep(): number {
+    return this.attackComboStep;
+  }
+
+  public triggerAttack(durationSec = 0.42, comboStep?: number): void {
+    this.attackComboStep =
+      comboStep !== undefined ? ((comboStep % 3) + 3) % 3 : this.nextComboStep;
+    this.nextComboStep = (this.attackComboStep + 1) % 3;
     this.attackSwingDuration = Math.max(0.22, durationSec);
     this.attackSwingTimer = this.attackSwingDuration;
   }
@@ -290,6 +358,10 @@ export class ChibiSprite3D {
     let scaleX = 1;
     let scaleY = 1;
     let shadowScale = 1;
+    let showGlint = false;
+    let glintProgress = 0;
+    let showGhosts = false;
+    let ghostAlpha = 0;
 
     if (this.animState === 'aura') {
       const hover = Math.sin(t * 1.7) * 0.05;
@@ -303,8 +375,80 @@ export class ChibiSprite3D {
         this.attackSwingTimer = Math.max(0, this.attackSwingTimer - dtSec);
         const p = 1 - this.attackSwingTimer / this.attackSwingDuration;
 
-        if (p < 0.2) {
-          // Phase 1: Quick anticipation coil & pullback
+        if (p >= 0.02 && p <= 0.24) {
+          showGlint = true;
+          glintProgress = (p - 0.02) / 0.22;
+        }
+        if (p >= 0.16 && p <= 0.64) {
+          showGhosts = true;
+          ghostAlpha = 1 - (p - 0.16) / 0.48;
+        }
+
+        if (this.attackComboStep === 1) {
+          // Beat 1: Quick low coil -> wider snap cross dash -> fast settle
+          if (p < 0.18) {
+            const k = p / 0.18;
+            const ease = k * k;
+            posX = -this.facing * 0.13 * ease;
+            posY = 0.01 * ease;
+            rotZ = this.facing * 0.14 * ease;
+            scaleY = 1 - 0.06 * ease;
+            scaleX = 1 + 0.05 * ease;
+            shadowScale = 1.04;
+          } else if (p < 0.44) {
+            const k = (p - 0.18) / 0.26;
+            const snap = 1 - (1 - k) * (1 - k);
+            const arc = Math.sin(k * Math.PI);
+            posX = this.facing * (-0.13 + 0.34 * snap);
+            posY = 0.01 + 0.06 * arc;
+            rotZ = this.facing * (0.14 - 0.38 * snap);
+            scaleY = 0.94 + 0.08 * arc;
+            scaleX = 1.05 + 0.06 * arc;
+            shadowScale = 1.1;
+          } else {
+            const k = (p - 0.44) / 0.56;
+            const rem = 1 - (1 - Math.pow(1 - k, 3));
+            posX = this.facing * 0.21 * rem;
+            posY = 0.015 * rem;
+            rotZ = -this.facing * 0.24 * rem;
+            scaleY = 1 + 0.025 * rem;
+            scaleX = 1 - 0.02 * rem;
+            shadowScale = 1.07 - 0.05 * (1 - rem);
+          }
+        } else if (this.attackComboStep === 2) {
+          // Beat 2: Deep spring crouch -> high airborne jump smash -> landing bounce
+          if (p < 0.22) {
+            const k = p / 0.22;
+            const ease = k * k;
+            posX = -this.facing * 0.14 * ease;
+            posY = 0;
+            rotZ = this.facing * 0.2 * ease;
+            scaleY = 1 - 0.1 * ease;
+            scaleX = 1 + 0.08 * ease;
+            shadowScale = 1.06;
+          } else if (p < 0.48) {
+            const k = (p - 0.22) / 0.26;
+            const snap = 1 - (1 - k) * (1 - k);
+            const arc = Math.sin(k * Math.PI);
+            posX = this.facing * (-0.14 + 0.36 * snap);
+            posY = 0.19 * arc;
+            rotZ = this.facing * (0.2 - 0.48 * snap);
+            scaleY = 0.9 + 0.2 * arc;
+            scaleX = 1.08 - 0.11 * arc;
+            shadowScale = 1.02 - 0.12 * arc;
+          } else {
+            const k = (p - 0.48) / 0.52;
+            const rem = 1 - (1 - Math.pow(1 - k, 3));
+            const landing = Math.sin(Math.min(1, k * 2.2) * Math.PI);
+            posX = this.facing * 0.22 * rem;
+            posY = 0.02 * rem;
+            rotZ = -this.facing * 0.28 * rem;
+            scaleY = 1 - 0.05 * landing + 0.03 * rem;
+            scaleX = 1 + 0.04 * landing;
+            shadowScale = 1.1 - 0.08 * (1 - rem);
+          }
+        } else if (p < 0.2) {
+          // Beat 0 Phase 1: Quick anticipation coil & pullback
           const k = p / 0.2;
           const ease = k * k;
           posX = -this.facing * 0.11 * ease;
@@ -314,24 +458,24 @@ export class ChibiSprite3D {
           scaleX = 1 + 0.03 * ease;
           shadowScale = 1.02;
         } else if (p < 0.44) {
-          // Phase 2: Snappy forward strike lunge & upright extension (slash reaches target, body stays outside)
+          // Beat 0 Phase 2: Snappy forward strike lunge & upright extension
           const k = (p - 0.2) / 0.24;
           const snap = 1 - (1 - k) * (1 - k);
           const arc = Math.sin(k * Math.PI);
-          posX = this.facing * (-0.11 + 0.25 * snap);
-          posY = 0.02 + 0.09 * arc;
-          rotZ = this.facing * (0.16 - 0.38 * snap);
-          scaleY = 0.96 + 0.11 * arc;
+          posX = this.facing * (-0.11 + 0.27 * snap);
+          posY = 0.02 + 0.1 * arc;
+          rotZ = this.facing * (0.16 - 0.4 * snap);
+          scaleY = 0.96 + 0.12 * arc;
           scaleX = 1.03 - 0.07 * arc;
           shadowScale = 1.08;
         } else {
-          // Phase 3: Smooth follow-through settle into ready stance
+          // Beat 0 Phase 3: Smooth follow-through settle into ready stance
           const k = (p - 0.44) / 0.56;
           const settle = 1 - Math.pow(1 - k, 3);
           const rem = 1 - settle;
-          posX = this.facing * 0.14 * rem;
+          posX = this.facing * 0.16 * rem;
           posY = 0.02 * rem;
-          rotZ = -this.facing * 0.22 * rem;
+          rotZ = -this.facing * 0.24 * rem;
           scaleY = 1 + 0.03 * rem;
           scaleX = 1 - 0.015 * rem;
           shadowScale = 1.06 - 0.05 * settle;
@@ -370,6 +514,33 @@ export class ChibiSprite3D {
     this.animGroup.rotation.z = rotZ;
     this.animGroup.scale.set(scaleX, scaleY, 1);
 
+    this.glintMesh.visible = showGlint;
+    if (showGlint) {
+      const pulse = Math.sin(glintProgress * Math.PI);
+      this.glintMesh.position.x = -this.facing * 0.16;
+      this.glintMesh.rotation.z = glintProgress * Math.PI * 0.75;
+      this.glintMesh.scale.setScalar(0.36 + pulse * 0.84);
+      this.glintMat.opacity = 0.94 * pulse;
+    }
+
+    const baseHeightOffset = this.mesh.position.y;
+    for (let i = 0; i < this.ghostMeshes.length; i++) {
+      const gm = this.ghostMeshes[i];
+      const gMat = this.ghostMats[i];
+      gm.visible = showGhosts;
+      if (showGhosts) {
+        const trailDist = 0.14 + i * 0.15;
+        gm.position.set(
+          posX - this.facing * trailDist,
+          baseHeightOffset + posY * (0.72 - i * 0.2),
+          -0.04 - i * 0.03
+        );
+        gm.rotation.z = rotZ * (0.65 - i * 0.22);
+        gm.scale.set(this.mesh.scale.x * scaleX, scaleY, 1);
+        gMat.opacity = gMat.map ? Math.max(0, (0.48 - i * 0.18) * ghostAlpha) : 0;
+      }
+    }
+
     const yaw = this.spritePivot.rotation.y;
     const heightFactor = Math.max(0.42, 1 - posY * 1.45);
     this.shadowDisc.rotation.y = yaw;
@@ -384,6 +555,12 @@ export class ChibiSprite3D {
     this.mesh.geometry.dispose();
     this.material.dispose();
     this.depthMaterial.dispose();
+    this.glintMesh.geometry.dispose();
+    this.glintMat.dispose();
+    for (let i = 0; i < this.ghostMeshes.length; i++) {
+      this.ghostMeshes[i].geometry.dispose();
+      this.ghostMats[i].dispose();
+    }
     this.shadowDisc.geometry.dispose();
     this.shadowMat.dispose();
   }

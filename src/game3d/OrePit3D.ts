@@ -11,10 +11,10 @@ import {
   rollOreVariant,
   WORLD_PALETTES,
 } from './MineWorldPalette';
+import { AttackImpactFxController } from './AttackImpactFx3D';
 import {
   getHazardStripeTexture,
   getQuarryFloorTexture,
-  getSlashArcTexture,
 } from './ProceduralTextures3D';
 
 export const PIT_NODE_COUNT = 1;
@@ -64,18 +64,18 @@ export interface OreHitResult {
   meteorWeatherId?: WeatherId;
 }
 
+export interface OreAttackFxOptions {
+  accentColor?: string;
+  attackerX?: number;
+  attackerZ?: number;
+  comboStep?: number;
+}
+
 interface ShardParticle {
   mesh: THREE.Mesh;
   vx: number;
   vy: number;
   vz: number;
-  age: number;
-  dur: number;
-}
-
-interface SlashFx {
-  mesh: THREE.Mesh;
-  mat: THREE.MeshBasicMaterial;
   age: number;
   dur: number;
 }
@@ -518,7 +518,8 @@ export class OreBillboard2D {
     squashAmt: number,
     scaleMult: number,
     flashActive: boolean,
-    camera?: THREE.Camera
+    camera?: THREE.Camera,
+    recoilX = 0
   ): void {
     if (camera) {
       this.root.getWorldPosition(this.tmpWorldPos);
@@ -536,7 +537,8 @@ export class OreBillboard2D {
     const tremor = squashAmt > 0.005 ? Math.sin(elapsed * 64 + phase) * squashAmt * 0.14 : 0;
     this.visualGroup.scale.set(sx, sy, 1);
     // Keep rock firmly grounded in its stone crater (zero idle hover float)
-    this.visualGroup.position.set(tremor, 0, 0);
+    this.visualGroup.position.set(tremor + recoilX, 0, 0);
+    this.visualGroup.rotation.z = -recoilX * 0.42;
     const collarMult = (this.baseSize / 1.45) * Math.max(0.08, Math.min(1.06, scaleMult));
     this.shadowDisc.scale.setScalar(collarMult * (1 + squashAmt * 0.25));
     this.rockSkirtGroup.scale.set(
@@ -570,6 +572,8 @@ interface InternalOreNode {
   alive: boolean;
   respawnTimer: number;
   squashAmt: number;
+  recoilAmt: number;
+  recoilDirX: number;
   flashTimer: number;
   spawnScale: number;
   x: number;
@@ -591,8 +595,9 @@ export class OrePit3D {
   private readonly shardMat: THREE.MeshStandardMaterial;
   private readonly sharedShardGeo = new THREE.OctahedronGeometry(0.11, 0);
   private readonly shardPool: ShardParticle[] = [];
-  private readonly slashPool: SlashFx[] = [];
-  private readonly slashGeo = new THREE.PlaneGeometry(1.6, 1.6);
+  private readonly impactFx = new AttackImpactFxController({ floorY: 0.045 });
+  private readonly ownedGeos: THREE.BufferGeometry[] = [];
+  private readonly ownedMats: THREE.Material[] = [];
   private readonly nodes: InternalOreNode[] = [];
 
   private activePalette!: MineWorldPalette;
@@ -613,7 +618,9 @@ export class OrePit3D {
       roughness: 0.85,
       metalness: 0.05,
     });
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(11.8, 0.14, 6.8), this.floorMat);
+    const floorGeo = new THREE.BoxGeometry(11.8, 0.14, 6.8);
+    this.ownedGeos.push(floorGeo);
+    const floor = new THREE.Mesh(floorGeo, this.floorMat);
     floor.position.y = -0.05;
     floor.receiveShadow = true;
     this.group.add(floor);
@@ -656,27 +663,25 @@ export class OrePit3D {
       [pitW / 2, 2.56, 0.36, wallH, 1.68],
     ];
     for (const [wx, wz, ww, wh, wd] of wallSpecs) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(ww, wh, wd), this.wallMat);
+      const wallGeo = new THREE.BoxGeometry(ww, wh, wd);
+      const wall = new THREE.Mesh(wallGeo, this.wallMat);
       wall.position.set(wx, wh * 0.5, wz);
       wall.castShadow = true;
       wall.receiveShadow = true;
       this.group.add(wall);
 
-      const trim = new THREE.Mesh(
-        new THREE.BoxGeometry(ww > wd ? ww : 0.34, 0.11, wd > ww ? wd : 0.34),
-        this.trimMat
-      );
+      const trimGeo = new THREE.BoxGeometry(ww > wd ? ww : 0.34, 0.11, wd > ww ? wd : 0.34);
+      const trim = new THREE.Mesh(trimGeo, this.trimMat);
       trim.position.set(wx, wh + 0.04, wz);
       trim.castShadow = true;
       this.group.add(trim);
 
       const isHoriz = ww > wd;
-      const neonRim = new THREE.Mesh(
-        new THREE.BoxGeometry(isHoriz ? ww + 0.04 : 0.06, 0.035, isHoriz ? 0.06 : wd + 0.04),
-        this.pitNeonMat
-      );
+      const neonGeo = new THREE.BoxGeometry(isHoriz ? ww + 0.04 : 0.06, 0.035, isHoriz ? 0.06 : wd + 0.04);
+      const neonRim = new THREE.Mesh(neonGeo, this.pitNeonMat);
       neonRim.position.set(wx, wh + 0.115, wz);
       this.group.add(neonRim);
+      this.ownedGeos.push(wallGeo, trimGeo, neonGeo);
     }
 
     // Stepped inner basalt retaining ledge along bottom perimeter
@@ -686,7 +691,9 @@ export class OrePit3D {
       [0, pitD / 2 - 0.26, 11.4, 0.28],
     ];
     for (const [bx, bz, bw, bd] of benchSpecs) {
-      const bench = new THREE.Mesh(new THREE.BoxGeometry(bw, 0.26, bd), this.wallMat);
+      const benchGeo = new THREE.BoxGeometry(bw, 0.26, bd);
+      this.ownedGeos.push(benchGeo);
+      const bench = new THREE.Mesh(benchGeo, this.wallMat);
       bench.position.set(bx, 0.13, bz);
       bench.receiveShadow = true;
       bench.castShadow = true;
@@ -709,6 +716,8 @@ export class OrePit3D {
     const postGeo = new THREE.CylinderGeometry(0.24, 0.28, 1.04, 8);
     const beaconCollarGeo = new THREE.CylinderGeometry(0.26, 0.26, 0.09, 8);
     const capGeo = new THREE.CylinderGeometry(0.18, 0.27, 0.14, 8);
+    this.ownedGeos.push(postGeo, beaconCollarGeo, capGeo);
+    this.ownedMats.push(postMat, steelCapMat);
     for (const sx of [-1, 1]) {
       for (const sz of [-1, 1]) {
         const px = sx * (pitW / 2);
@@ -750,6 +759,7 @@ export class OrePit3D {
     this.meteorNode.geodeRing.scale.setScalar(1.95);
     this.group.add(this.meteorNode.root);
     this.clickableMeshes.push(this.meteorNode.hitMesh);
+    this.group.add(this.impactFx.group);
 
     this.setPalette(palette, true);
   }
@@ -799,6 +809,8 @@ export class OrePit3D {
       alive: true,
       respawnTimer: 0,
       squashAmt: 0,
+      recoilAmt: 0,
+      recoilDirX: 1,
       flashTimer: 0,
       spawnScale: 1,
       x: 0,
@@ -1024,7 +1036,8 @@ export class OrePit3D {
     nodeId: number,
     dmg: number,
     heavy: boolean,
-    shardCount = heavy ? 9 : 4
+    shardCount = heavy ? 9 : 4,
+    attackFx?: OreAttackFxOptions
   ): OreHitResult | null {
     const node =
       nodeId === this.meteorNode.id ? this.meteorNode : this.nodes.find((n) => n.id === nodeId);
@@ -1037,10 +1050,26 @@ export class OrePit3D {
     if (!pure) return null;
 
     node.squashAmt = heavy ? 0.46 : 0.34;
+    node.recoilDirX =
+      attackFx?.attackerX !== undefined
+        ? Math.sign(node.x - attackFx.attackerX) || 1
+        : Math.random() < 0.5
+          ? 1
+          : -1;
+    node.recoilAmt = heavy ? 0.24 : 0.16;
     node.flashTimer = 0.09;
     if (this.group.visible) {
       this.spawnShardsAt(node.x, node.z, pure.broken ? (node.isMeteor ? 28 : 14) : shardCount);
-      this.spawnSlashAt(node.x, node.z, heavy);
+      this.impactFx.spawnImpact({
+        targetX: node.x,
+        targetY: 0.92,
+        targetZ: node.z,
+        accentColor: attackFx?.accentColor ?? (heavy ? '#fbbf24' : this.activePalette.crystalColor),
+        heavy,
+        comboStep: attackFx?.comboStep,
+        attackerX: attackFx?.attackerX,
+        attackerZ: attackFx?.attackerZ !== undefined ? attackFx.attackerZ - PIT_CENTER_Z : undefined,
+      });
     }
 
     const meteorWeatherId = node.isMeteor && pure.broken ? (node.meteorWeatherId ?? undefined) : undefined;
@@ -1063,27 +1092,8 @@ export class OrePit3D {
     };
   }
 
-  private spawnSlashAt(lx: number, lz: number, heavy: boolean): void {
-    if (this.slashPool.length >= 10) return;
-    const mat = new THREE.MeshBasicMaterial({
-      map: getSlashArcTexture(),
-      color: heavy ? 0xfbbf24 : 0xffffff,
-      transparent: true,
-      opacity: 0.95,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    });
-    const mesh = new THREE.Mesh(this.slashGeo, mat);
-    mesh.position.set(lx, 0.9, lz);
-    mesh.rotation.set(
-      (Math.random() - 0.5) * 0.6,
-      (Math.random() - 0.5) * 0.8,
-      Math.random() * Math.PI * 2
-    );
-    const s = heavy ? 1.15 : 0.78;
-    mesh.scale.setScalar(s);
-    this.group.add(mesh);
-    this.slashPool.push({ mesh, mat, age: 0, dur: 0.16 });
+  public getImpactFxCounts(): { slashes: number; hitsparks: number; streaks: number; shockwaves: number } {
+    return this.impactFx.getActiveCounts();
   }
 
   private spawnShardsAt(lx: number, lz: number, count: number): void {
@@ -1199,13 +1209,25 @@ export class OrePit3D {
         node.squashAmt = Math.max(0, node.squashAmt - dtSec * 2.5);
       }
 
+      if (node.recoilAmt > 0.001) {
+        node.recoilAmt = Math.max(0, node.recoilAmt - dtSec * 1.35);
+      }
+
       const hoverMult = (node.id === this.hoveredNodeId ? 1.1 : 1.0) * node.spawnScale;
       const flashing = node.flashTimer > 0;
       if (flashing) {
         node.flashTimer -= dtSec;
       }
 
-      node.oreSprite.updateTransform(elapsed, node.phase, node.squashAmt, hoverMult, flashing, camera);
+      node.oreSprite.updateTransform(
+        elapsed,
+        node.phase,
+        node.squashAmt,
+        hoverMult,
+        flashing,
+        camera,
+        node.recoilAmt * node.recoilDirX
+      );
 
       if (node.geodeRing.visible) {
         node.geodeRing.rotation.z = elapsed * 0.18 + node.phase;
@@ -1229,18 +1251,35 @@ export class OrePit3D {
       p.mesh.scale.setScalar(1 - p.age / p.dur);
     }
 
-    for (let i = this.slashPool.length - 1; i >= 0; i--) {
-      const fx = this.slashPool[i];
-      fx.age += dtSec;
-      if (fx.age >= fx.dur) {
-        this.group.remove(fx.mesh);
-        fx.mat.dispose();
-        this.slashPool.splice(i, 1);
-        continue;
-      }
-      const p = fx.age / fx.dur;
-      fx.mat.opacity = 1 - p;
-      fx.mesh.scale.setScalar(0.8 + p * 0.65);
+    this.impactFx.update(dtSec, camera);
+  }
+
+  public dispose(): void {
+    this.impactFx.dispose();
+    for (const p of this.shardPool) {
+      this.group.remove(p.mesh);
     }
+    this.shardPool.length = 0;
+
+    for (const node of [...this.nodes, this.meteorNode]) {
+      node.oreSprite.dispose();
+      node.geodeRing.geometry.dispose();
+      (node.geodeRing.material as THREE.Material).dispose();
+      node.hitMesh.geometry.dispose();
+      (node.hitMesh.material as THREE.Material).dispose();
+    }
+
+    for (const geo of this.ownedGeos) {
+      geo.dispose();
+    }
+    for (const mat of this.ownedMats) {
+      mat.dispose();
+    }
+    this.floorMat.dispose();
+    this.wallMat.dispose();
+    this.trimMat.dispose();
+    this.pitNeonMat.dispose();
+    this.shardMat.dispose();
+    this.sharedShardGeo.dispose();
   }
 }

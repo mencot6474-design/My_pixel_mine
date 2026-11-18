@@ -27,7 +27,8 @@ export class ChibiFieldFxController {
 
   private enchantId: string | null = null;
   private enchantRainbow = false;
-  private accentColorHex = '#38bdf8';
+  private readonly defaultAccentColor: string;
+  private accentColorHex: string;
   private auraGroup: THREE.Group | null = null;
   private sigilMesh: THREE.Mesh | null = null;
   private sigilMat: THREE.MeshBasicMaterial | null = null;
@@ -37,6 +38,8 @@ export class ChibiFieldFxController {
   constructor(hostGroup: THREE.Group, defAccentColor: string, slotIndex: number) {
     this.hostGroup = hostGroup;
     this.slotIndex = slotIndex;
+    this.defaultAccentColor = defAccentColor;
+    this.accentColorHex = defAccentColor;
     this.baseHaloGroup = new THREE.Group();
 
     const holoTex = getPedestalHoloRingTexture();
@@ -67,7 +70,7 @@ export class ChibiFieldFxController {
     this.clearEnchantFx();
     this.enchantId = enchantId;
     this.enchantRainbow = false;
-    this.accentColorHex = '#38bdf8';
+    this.accentColorHex = this.defaultAccentColor;
     this.baseRingMat.opacity = 0.44;
     if (!enchantId) return;
 
@@ -152,11 +155,12 @@ export class ChibiFieldFxController {
     }
     if (this.enchantRainbow) {
       const hue = (elapsed * 0.18 + this.slotIndex * 0.14) % 1;
+      this.rainbowTmp.setHSL(hue, 0.92, 0.62);
+      this.accentColorHex = `#${this.rainbowTmp.getHexString()}`;
       if (this.sigilMat) {
-        this.sigilMat.color.setHSL(hue, 0.92, 0.62);
+        this.sigilMat.color.copy(this.rainbowTmp);
       }
       if (this.moteMat) {
-        this.rainbowTmp.setHSL(hue, 0.92, 0.62);
         this.moteMat.uniforms.uColorA.value.copy(this.rainbowTmp);
         this.rainbowTmp.setHSL((hue + 0.18) % 1, 0.96, 0.72);
         this.moteMat.uniforms.uColorB.value.copy(this.rainbowTmp);
@@ -178,6 +182,7 @@ export class FieldMiner3D {
 
   private targetNodeId = -1;
   private attackCooldown = 0;
+  private comboStep = 0;
   private dmg = 10;
   private walkSpeed = 2.6;
   private attackInterval = 0.85;
@@ -291,10 +296,27 @@ export class FieldMiner3D {
       this.attackCooldown -= dtSec;
       if (this.attackCooldown <= 0) {
         this.attackCooldown = this.attackInterval;
+        const step = this.comboStep;
+        const accentColor = this.fx.getAccentColor();
         if (renderVisuals) {
-          this.sprite.triggerAttack(Math.min(0.44, this.attackInterval * 0.75));
+          this.comboStep = (this.comboStep + 1) % 3;
+          this.sprite.setAccentColor(accentColor);
+          this.sprite.triggerAttack(Math.min(0.44, this.attackInterval * 0.75), step);
         }
-        const res = pit.hitNode(target.id, this.dmg * this.attackInterval, false);
+        const res = pit.hitNode(
+          target.id,
+          this.dmg * this.attackInterval,
+          false,
+          undefined,
+          renderVisuals
+            ? {
+                accentColor,
+                attackerX: pos.x,
+                attackerZ: pos.z,
+                comboStep: step,
+              }
+            : undefined
+        );
         if (res) {
           if (renderVisuals) {
             onOreHit?.(res.dmgDealt, target.worldX, target.worldY + 0.95, target.worldZ);
