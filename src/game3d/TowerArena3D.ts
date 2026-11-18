@@ -102,6 +102,7 @@ interface TowerChibiFighter {
 }
 
 const ARENA_CENTER_Z = -1.6;
+const BOSS_CENTER_Z = ARENA_CENTER_Z - 1.35;
 const SUMMON_RADIUS = 6.3;
 const ATTACK_RADIUS = 2.65;
 
@@ -343,14 +344,14 @@ export class TowerArena3D {
       this.summonPads.push(pad);
     }
 
-    // 4. Central Full-3D Procedural "Corrupted Seraphim AI Overlord" Boss (Grounded over Crater Center y = 0.08)
+    // 4. Central Full-3D Procedural "Corrupted Seraphim AI Overlord" Boss (Slightly behind Crater Center so chibis & damage numbers stay clear)
     this.bossModel = createSeraphimBoss3D({ scale: 1.02 });
     this.monolithGroup.add(this.bossModel.group);
-    this.monolithGroup.position.set(0, 0.08, ARENA_CENTER_Z);
+    this.monolithGroup.position.set(0, 0.08, BOSS_CENTER_Z);
     this.group.add(this.monolithGroup);
 
     // 4b. Crater Floor Boss Feet Aura: Contact Shadow, Dim Red-Orange Shockwave, Anti-Gravity Rocks & Ground-to-Body Sparks
-    this.bossFeetFxGroup.position.set(0, 0.08, ARENA_CENTER_Z);
+    this.bossFeetFxGroup.position.set(0, 0.08, BOSS_CENTER_Z);
     this.group.add(this.bossFeetFxGroup);
 
     const bossShadowMesh = new THREE.Mesh(
@@ -404,13 +405,13 @@ export class TowerArena3D {
     }
     this.bossFeetFxGroup.add(this.bossGravityRocksInst);
 
-    // Asymmetrical Short Lightning Arcs Crackling Between Crater Floor Fissures & Lower Boss Body
+    // Asymmetrical Short Lightning Arcs Crackling Between Crater Floor Fissures & Elevated Lower Boss Body
     const groundArcSpecs: [THREE.Vector3, THREE.Vector3, number][] = [
-      [new THREE.Vector3(-1.35, 0.02, 0.25), new THREE.Vector3(-0.55, 0.78, 0.04), 13],
-      [new THREE.Vector3(1.42, 0.02, 0.18), new THREE.Vector3(0.62, 0.86, 0.04), 29],
-      [new THREE.Vector3(-0.88, 0.02, -0.55), new THREE.Vector3(-0.42, 1.05, -0.05), 41],
-      [new THREE.Vector3(1.05, 0.02, -0.48), new THREE.Vector3(0.48, 0.65, 0.02), 59],
-      [new THREE.Vector3(-0.22, 0.02, 0.85), new THREE.Vector3(0.18, 0.54, 0.08), 73],
+      [new THREE.Vector3(-1.35, 0.02, 0.25), new THREE.Vector3(-0.48, 1.08, 0.04), 13],
+      [new THREE.Vector3(1.42, 0.02, 0.18), new THREE.Vector3(0.52, 1.2, 0.04), 29],
+      [new THREE.Vector3(-0.88, 0.02, -0.55), new THREE.Vector3(-0.36, 1.46, -0.05), 41],
+      [new THREE.Vector3(1.05, 0.02, -0.48), new THREE.Vector3(0.42, 0.98, 0.02), 59],
+      [new THREE.Vector3(-0.22, 0.02, 0.85), new THREE.Vector3(0.16, 0.94, 0.08), 73],
     ];
     groundArcSpecs.forEach(([p0, p1, seed], idx) => {
       const arcMat = new THREE.MeshBasicMaterial({
@@ -447,10 +448,10 @@ export class TowerArena3D {
 
     // 7. Boss Monolith Raycast Hitbox (keep at index 0 of clickables)
     this.hitMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.6, 2.6, 5.2, 12),
+      new THREE.CylinderGeometry(2.7, 2.7, 5.4, 12),
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
     );
-    this.hitMesh.position.set(0, 2.6, ARENA_CENTER_Z);
+    this.hitMesh.position.set(0, 3.15, BOSS_CENTER_Z);
     this.hitMesh.userData = { kind: 'tower-core' };
     this.group.add(this.hitMesh);
     this.clickables.unshift(this.hitMesh);
@@ -755,8 +756,8 @@ export class TowerArena3D {
     this.bounceTimer = Math.max(this.bounceTimer, intensity);
     if (spawnSlash) {
       const slashColor = this.bossMode ? '#facc15' : this.anomalyColorHex;
-      this.spawnSlashArc(slashColor, (Math.random() - 0.5) * 1.4, 1.35, (Math.random() - 0.5) * 0.45, 2.2, ARENA_CENTER_Z + 1.05);
-      this.spawnSlashArc('#f97316', (Math.random() - 0.5) * 1.4 + Math.PI * 0.5, 1.15, (Math.random() - 0.5) * 0.45, 2.2, ARENA_CENTER_Z + 1.05);
+      this.spawnSlashArc(slashColor, (Math.random() - 0.5) * 1.4, 1.35, (Math.random() - 0.5) * 0.45, 2.65, BOSS_CENTER_Z + 1.05);
+      this.spawnSlashArc('#f97316', (Math.random() - 0.5) * 1.4 + Math.PI * 0.5, 1.15, (Math.random() - 0.5) * 0.45, 2.65, BOSS_CENTER_Z + 1.05);
     }
   }
 
@@ -802,7 +803,7 @@ export class TowerArena3D {
   }
 
   public getMonolithWorldPos(): THREE.Vector3 {
-    return new THREE.Vector3(0, 2.55, ARENA_CENTER_Z);
+    return new THREE.Vector3(0, 2.85, BOSS_CENTER_Z);
   }
 
   public getConfiguredFighterCount(): number {
@@ -1058,17 +1059,17 @@ export class TowerArena3D {
               (Math.random() - 0.5) * 1.9,
               0.92,
               (Math.random() - 0.5) * 0.45,
-              2.15,
-              ARENA_CENTER_Z + 1.05
+              2.45,
+              BOSS_CENTER_Z + 1.05
             );
             onFighterStrike?.({
               slotIndex: f.slotIndex,
               targetOreIndex: null,
               attackInterval: f.attackInterval,
               dmg: Math.max(1, Math.round(f.dmg * f.attackInterval)),
-              wx: (Math.random() - 0.5) * 0.9,
-              wy: 2.0 + Math.random() * 0.7,
-              wz: ARENA_CENTER_Z + 0.5,
+              wx: (Math.random() - 0.5) * 1.1,
+              wy: 2.15 + Math.random() * 0.45,
+              wz: ARENA_CENTER_Z + 0.45,
             });
           }
 

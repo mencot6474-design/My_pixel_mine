@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { AudioManager } from '../src/audio/AudioManager';
 import {
   cgBindAdLifecycle,
+  cgBindAudioMuteListener,
   cgGameplayStart,
   cgGameplayStop,
   cgHappyTime,
@@ -14,6 +15,7 @@ import {
   cgRequestRewardedAd,
   cgTryMidgameAd,
   isAdPlaying,
+  isCrazyGamesEnv,
 } from '../src/sdk/crazygames';
 import {
   DEFAULT_PICKAXE_STOCK,
@@ -1742,6 +1744,46 @@ describe('Pure 3D Mine World', () => {
     mgr.setAdMuted(false);
     expect(mgr.isMuted()).toBe(true);
     expect(mgr.isEffectivelyMuted()).toBe(true);
+
+    // Uninitialized CrazyGames SDK on external hosts (e.g. GitHub Pages) where init() rejects
+    // and .game / .ad getters throw must never crash startup
+    const prevWin = (globalThis as any).window;
+    let gameGetterAccessCount = 0;
+    const mockSdk = {
+      environment: 'crazygames',
+      init: () => Promise.reject(new Error('Unauthorized domain')),
+      get game() {
+        gameGetterAccessCount++;
+        throw new Error('CrazySDK is not initialized yet.');
+      },
+      get ad() {
+        gameGetterAccessCount++;
+        throw new Error('CrazySDK is not initialized yet.');
+      },
+    };
+    (globalThis as any).window = {
+      CrazyGames: { SDK: mockSdk },
+      setTimeout,
+      clearTimeout,
+      location: { search: '' },
+      self: {},
+      top: {},
+    };
+    try {
+      await expect(cgInit()).resolves.toBeUndefined();
+      expect(isCrazyGamesEnv()).toBe(false);
+      expect(() => {
+        cgBindAudioMuteListener(() => {});
+        cgLoadingStart();
+        cgLoadingStop();
+        cgGameplayStart();
+        cgHappyTime();
+        cgGameplayStop();
+      }).not.toThrow();
+      expect(gameGetterAccessCount).toBe(0);
+    } finally {
+      (globalThis as any).window = prevWin;
+    }
   });
 
   it('builds grounded multi-part procedural chest & connected escalator vault station with instanced cleats and dispose cleanup', () => {
@@ -1835,13 +1877,45 @@ describe('Pure 3D Mine World', () => {
     expect(() => arena.dispose()).not.toThrow();
   });
 
-  it('builds procedural 3D hard-surface Corrupted Seraphim Boss with 6 animated wing pivots, chest reactor rings, and dispose cleanup', () => {
+  it('builds procedural 3D hard-surface Corrupted Seraphim Boss with zero BoxGeometry, 6 curved wing pivots, 5-clawed hands, and elevated rear positioning', () => {
     const boss = createSeraphimBoss3D({ scale: 1.02 });
     boss.group.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(boss.group);
-    expect(box.min.y).toBeGreaterThanOrEqual(0);
-    expect(box.max.y).toBeGreaterThan(3.8);
+    expect(box.min.y).toBeGreaterThanOrEqual(0.6);
+    expect(box.max.y).toBeGreaterThan(4.5);
     expect(boss.wingPivots.length).toBe(6);
+
+    let boxCount = 0;
+    let extrudeCount = 0;
+    let latheCount = 0;
+    let tubeCount = 0;
+    let hasNaN = false;
+    boss.group.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const geo = obj.geometry;
+      if (geo instanceof THREE.BoxGeometry) boxCount++;
+      if (geo instanceof THREE.ExtrudeGeometry) extrudeCount++;
+      if (geo instanceof THREE.LatheGeometry) latheCount++;
+      if (geo instanceof THREE.TubeGeometry) tubeCount++;
+      const pos = geo.getAttribute('position');
+      if (pos) {
+        for (let i = 0; i < pos.count; i++) {
+          if (!Number.isFinite(pos.getX(i)) || !Number.isFinite(pos.getY(i)) || !Number.isFinite(pos.getZ(i))) {
+            hasNaN = true;
+            break;
+          }
+        }
+      }
+    });
+    expect(boxCount).toBe(0);
+    expect(extrudeCount).toBeGreaterThan(20);
+    expect(latheCount).toBeGreaterThan(8);
+    expect(tubeCount).toBeGreaterThan(15);
+    expect(hasNaN).toBe(false);
+
+    const arena = new TowerArena3D();
+    expect(arena.getMonolithWorldPos().z).toBeLessThan(-1.6);
+    arena.dispose();
 
     const prevOuterRot = boss.reactorRingOuter.rotation.z;
     const prevWingYaw = boss.wingPivots[0].rotation.y;

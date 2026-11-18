@@ -44,12 +44,23 @@ let gameplayRunning = false;
 let adPlaying = false;
 let lastMidgameAt = 0;
 let adLifecycle: AdLifecycleHandlers = {};
+let initializedSdkRef: CrazyGamesSDKInstance | null = null;
 const MIDGAME_COOLDOWN_MS = 180_000;
 
-function getCrazyGamesSdk(): CrazyGamesSDKInstance | null {
+function getRawCrazyGamesSdk(): CrazyGamesSDKInstance | null {
   if (typeof window === 'undefined') return null;
-  const sdk = (window as CrazyGamesSDKWindow).CrazyGames?.SDK;
-  if (!sdk || sdk.environment === 'disabled') return null;
+  try {
+    const sdk = (window as CrazyGamesSDKWindow).CrazyGames?.SDK;
+    if (!sdk || sdk.environment === 'disabled') return null;
+    return sdk;
+  } catch {
+    return null;
+  }
+}
+
+function getCrazyGamesSdk(): CrazyGamesSDKInstance | null {
+  const sdk = getRawCrazyGamesSdk();
+  if (!sdk || initializedSdkRef !== sdk) return null;
   return sdk;
 }
 
@@ -74,33 +85,49 @@ export function isCrazyGamesEnv(): boolean {
 }
 
 export async function cgInit(): Promise<void> {
-  const sdk = getCrazyGamesSdk();
+  const sdk = getRawCrazyGamesSdk();
+  initializedSdkRef = null;
   if (!sdk) return;
+  let timerId: number | undefined;
   try {
-    await Promise.race([
-      sdk.init(),
-      new Promise<void>((resolve) => window.setTimeout(resolve, 1500)),
-    ]);
+    const initTask = Promise.resolve(sdk.init()).then(
+      () => {
+        try {
+          initializedSdkRef = sdk.environment !== 'disabled' ? sdk : null;
+        } catch {
+          initializedSdkRef = null;
+        }
+      },
+      () => {
+        initializedSdkRef = null;
+      }
+    );
+    const timeoutTask = new Promise<void>((resolve) => {
+      timerId = window.setTimeout(resolve, 1500);
+    });
+    await Promise.race([initTask, timeoutTask]);
   } catch {
-    // safe fallback outside CrazyGames portal
+    initializedSdkRef = null;
+  } finally {
+    if (timerId !== undefined) {
+      window.clearTimeout(timerId);
+    }
   }
 }
 
 export function cgLoadingStart(): void {
-  const sdk = getCrazyGamesSdk();
-  if (!sdk?.game) return;
   try {
-    sdk.game.loadingStart();
+    const sdk = getCrazyGamesSdk();
+    sdk?.game?.loadingStart();
   } catch {
     // ignore
   }
 }
 
 export function cgLoadingStop(): void {
-  const sdk = getCrazyGamesSdk();
-  if (!sdk?.game) return;
   try {
-    sdk.game.loadingStop();
+    const sdk = getCrazyGamesSdk();
+    sdk?.game?.loadingStop();
   } catch {
     // ignore
   }
@@ -109,10 +136,9 @@ export function cgLoadingStop(): void {
 export function cgGameplayStart(): void {
   if (gameplayRunning) return;
   gameplayRunning = true;
-  const sdk = getCrazyGamesSdk();
-  if (!sdk?.game) return;
   try {
-    sdk.game.gameplayStart();
+    const sdk = getCrazyGamesSdk();
+    sdk?.game?.gameplayStart();
   } catch {
     // ignore
   }
@@ -121,30 +147,28 @@ export function cgGameplayStart(): void {
 export function cgGameplayStop(): void {
   if (!gameplayRunning) return;
   gameplayRunning = false;
-  const sdk = getCrazyGamesSdk();
-  if (!sdk?.game) return;
   try {
-    sdk.game.gameplayStop();
+    const sdk = getCrazyGamesSdk();
+    sdk?.game?.gameplayStop();
   } catch {
     // ignore
   }
 }
 
 export function cgHappyTime(): void {
-  const sdk = getCrazyGamesSdk();
-  if (!sdk?.game) return;
   try {
-    sdk.game.happytime();
+    const sdk = getCrazyGamesSdk();
+    sdk?.game?.happytime();
   } catch {
     // ignore
   }
 }
 
 export function cgBindAudioMuteListener(onMuteChange: (muted: boolean) => void): void {
-  const sdk = getCrazyGamesSdk();
-  if (!sdk?.game) return;
   try {
-    const game = sdk.game;
+    const sdk = getCrazyGamesSdk();
+    const game = sdk?.game;
+    if (!game) return;
     if (typeof game.settings?.muteAudio === 'boolean') {
       onMuteChange(game.settings.muteAudio);
     }
@@ -164,8 +188,14 @@ function dispatchAdRequest(
   onFallback: AdCallback,
   setAudioMuted?: (muted: boolean) => void
 ): boolean {
-  const sdk = getCrazyGamesSdk();
-  if (!CG_ADS_ENABLED || !sdk?.ad || adPlaying) {
+  let adApi: NonNullable<CrazyGamesSDKInstance['ad']> | undefined;
+  try {
+    const sdk = getCrazyGamesSdk();
+    adApi = sdk?.ad;
+  } catch {
+    adApi = undefined;
+  }
+  if (!CG_ADS_ENABLED || !adApi || adPlaying) {
     onFallback();
     return false;
   }
@@ -192,7 +222,7 @@ function dispatchAdRequest(
   };
 
   try {
-    sdk.ad.requestAd(type, {
+    adApi.requestAd(type, {
       adStarted: () => {
         if (settled) return;
         setAdActiveState(true);
