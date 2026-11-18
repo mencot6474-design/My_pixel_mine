@@ -2,7 +2,7 @@
 
 3D voxel/chibi mining idle game built with **TypeScript + Vite + Three.js + Tailwind CSS v4** (`my_pixel_mine`).
 Read this map first to locate modules and line anchors quickly instead of reading large files end-to-end.
-Line numbers measured on **2026-11-18** after **Neo-Cyber City Plaza 3D Lobby Overhaul (`ShopCyberPlaza3D.ts` + `ShopWorld3D.ts` + safe-zone night lighting & Snow Rain visibility in `MineScene3D.ts`/`WeatherFx3D.ts`), Sculpted Non-Box `SeraphimBoss3D.ts` + Rear/Elevated Boss Positioning (`TowerArena3D.ts`), GitHub Pages CrazyGames SDK v3 Startup Hardening (`crazygames.ts`), Ruined Cyber City & Central Meteor Crater Battle Tower (`TowerCityEnvironment3D.ts`), Procedural 3D Chest Vault & Connected Ore Escalator (`ChestVaultStation3D.ts`), Grand Procedural Cave, Continuous Steel Railway & Hollow 2-Car Minecart Train (`CaveRailway3D.ts`), Global Fixed Modal Heights, & `.agent/` Standards/Skills**; re-measure with `Select-String` if files change.
+Line numbers measured on **2026-11-18** after **Neo-Cyber City Plaza Roundabout Curb, Contact Shadow & Trimmed Intersection Markings (`ShopCyberPlaza3D.ts` + `ShopWorld3D.ts` + safe-zone night lighting & Snow Rain visibility in `MineScene3D.ts`/`WeatherFx3D.ts`), Sculpted Non-Box `SeraphimBoss3D.ts` + Rear/Elevated Boss Positioning (`TowerArena3D.ts`), GitHub Pages CrazyGames SDK v3 Startup Hardening (`crazygames.ts`), Ruined Cyber City & Central Meteor Crater Battle Tower (`TowerCityEnvironment3D.ts`), Procedural 3D Chest Vault & Connected Ore Escalator (`ChestVaultStation3D.ts`), Grand Procedural Cave, Continuous Steel Railway & Hollow 2-Car Minecart Train (`CaveRailway3D.ts`), Global Fixed Modal Heights, & `.agent/` Standards/Skills**; re-measure with `Select-String` if files change.
 
 ## 1. ATURAN KERJA SINGKAT
 
@@ -34,8 +34,8 @@ GAME_MAP.md                     Peta struktur file & anchor (dokumen ini)
 === ENTRY & TESTS ===
 src/main.ts                     265 baris — Bootstrap Three.js scene (`MineScene3D`), `GameState`, `GameHud` (+ plot drop ops, `'limit'` toast,
                                             weather & CC0 `AudioManager` sync, tutorial-guarded `spawnMeteorIfAllowed`), CrazyGames SDK init & ad-pause lifecycle, Tower callbacks & game loop
-tests/world-3d.test.ts        1.964 baris — 47 Vitest unit & integration specs (3D world, Altar dial/dice & 2.5D billboard pedestals,
-                                            Neo-Cyber City Plaza (`ShopCyberPlaza3D` + `ShopWorld3D.dispose` + `WeatherFx3D`),
+tests/world-3d.test.ts        1.992 baris — 47 Vitest unit & integration specs (3D world, Altar dial/dice & 2.5D billboard pedestals,
+                                            Neo-Cyber City Plaza (`ShopCyberPlaza3D` roundabout shadow & trimmed lane clearance + `ShopWorld3D.dispose` + `WeatherFx3D`),
                                             Full 3D Sculpted Non-Box Seraphim Boss (`SeraphimBoss3D` + `TowerCityEnvironment3D` + `TowerArena3D.dispose`),
                                             procedural Chest Vault + Escalator & Cave Railway + hollow minecart, CrazyGames SDK v3 & ad-mute preservation,
                                             Equip Best stat preservation, Chibi/Enchant 1-per-unit plot exclusivity, pure ore damage, research trees
@@ -149,12 +149,12 @@ src/game3d/FieldMiner3D.ts      179 baris — Active chibi miner placement, swin
 src/game3d/ChibiCatalog.ts      465 baris — `CHIBI_CATALOG` 63 (35 chibi poses WebP: 30 world + 5 weather-limited, `ChibiRarity` `common`..`secret`,
                                             baseDps, `smoothFilter` W1–W6, world roster, `getChibiFrameUvOffset`)
 src/game3d/ChibiSprite3D.ts     390 baris — Animated 2D-in-3D upright billboard sprite (`triggerAttack`, `smoothFilter` linear/mipmap vs nearest, camera-pitch tilt, normalized pose sizing, alpha-clipped directional shadow + soft AO contact shadow)
-src/game3d/ShopCyberPlaza3D.ts 1.731 baris — Procedural "Neo-Cyber City Plaza" 3D Lobby (`createShopCyberPlaza`):
-                                            cyberpunk Gem Tower skyscraper + access terminals, circular roundabout curb + contact shadow + Neon Reactor Fountain,
-                                            4 cyberpunk container kiosks (Pickaxes, Sell, Gem Shop, Plasma Relic Forge) + vending machines & hologram signs,
-                                            dark concrete plaza deck + neon lanes, modern barriers/benches/streetlights (`InstancedMesh`), safe-zone lighting, & `dispose()`
-src/game3d/ShopWorld3D.ts       701 baris — 3D Neo-Cyber Shop Plaza controller (`ShopCyberPlaza3D`), Plaza walkers, &
-                                            6 emblem bangunan 2.5D (`ArtBillboard2D`), preserved hitboxes & station badges,
+src/game3d/ShopCyberPlaza3D.ts 1.731 baris — Procedural "Neo-Cyber City Plaza" 3D Lobby (`createShopCyberPlaza` 249):
+                                            open sky Gem Tower skyscraper + access terminals, circular roundabout curb + thin neon trim + radial contact shadow (`createRoundaboutShadowTexture`) + Neon Reactor Fountain,
+                                            4 high-clearance container kiosks (Pickaxes, Sell, Gem Shop, Plasma Relic Forge, `createShopPadMeshes`) + vending machines & hologram signs,
+                                            dark concrete plaza deck + trimmed neon road lanes, modern barriers/benches/streetlights (`InstancedMesh`), safe-zone lighting, & `dispose()`
+src/game3d/ShopWorld3D.ts       701 baris — 3D Neo-Cyber Shop Plaza controller (`ShopWorld3D` 140, `ShopCyberPlaza3D`), Plaza walkers, &
+                                            6 emblem bangunan 2.5D tinggi (`ArtBillboard2D`), preserved hitboxes & elevated `stationPositions` badges,
                                             Outer Space Altar clock room (10 pedestal 2.5D `EnchantBillboard2D`), & `dispose()`
 src/game3d/SeraphimBoss3D.ts  1.722 baris — Full 3D hard-surface Corrupted Seraphim AI Overlord Boss (`createSeraphimBoss3D`, zero `BoxGeometry`):
                                             beveled `ExtrudeGeometry` + `LatheGeometry` + tapered `TubeGeometry` armor, V-fin visor helmet + curved horns,
@@ -170,7 +170,7 @@ src/game3d/AltarSpinFx3D.ts     529 baris — `createAltarClockDial` 34, `create
                                             `createAltarSubHand` 254, `AltarParticleSystem` 308
 src/game3d/HellAltarEye3D.ts    372 baris — `HellAltarEyeController` 151: Outer Space starfield, cosmic astrolabe floor ring,
                                             & distant Pitch-Black Black Hole (`#000000` event horizon, photon ring, lensing arches, accretion disk)
-src/game3d/AuraModels3D.ts      584 baris — `createEnchantAura3D` 276, `createEnchantDice3D` 318, `ArtBillboard2D` 412 & `EnchantBillboard2D` 575 (2.5D sprites)
+src/game3d/AuraModels3D.ts      586 baris — `createEnchantAura3D` 276, `createEnchantDice3D` 318, `ArtBillboard2D` 413 & `EnchantBillboard2D` 577 (2.5D sprites)
 src/game3d/HudIcon3DRenderer.ts 2.002 baris — Offscreen WebGL renderer generating cached data-URL 3D icons (`buildStarwellOreModel` 1351)
                                             & 5 3D weather icons (`init3dHudIcons` 1842)
 src/game3d/ProceduralTextures3D.ts 441 baris — Procedural canvas textures (sky dome, terrain, quarry floor, cobble, etc.)
@@ -215,5 +215,5 @@ public/worlds/                  6 full-bleed teleport banner WebPs (`underground
 | Audio (BGM switcher, Web Audio Synth Roll/Spin SFX, Mute toggle) | `src/audio/AudioManager.ts` (`audio`, `playMutationRoll`, `playEnchantSpinStart`, `playEnchantSpinLand`) + `public/audio/` |
 | 3D Sky Shader, Weather FX, Ore Pit & 3D HUD Icons | `src/game3d/WeatherSkyShader.ts`, `WeatherFx3D.ts`, `OrePit3D.ts`, `HudIcon3DRenderer.ts` |
 | 3D Chest Vault, Escalator, Cave Mountain & Hollow Minecart | `src/game3d/ChestVaultStation3D.ts` (`createProceduralTreasureChest`, `createChestVaultStation`), `CaveRailway3D.ts` (`createCaveRailway`), `MineEnvironment3D.ts` |
-| 3D Shop Plaza, Outer Space Enchant Altar + Black Hole & Tower Arena | `src/game3d/ShopCyberPlaza3D.ts`, `src/game3d/ShopWorld3D.ts`, `src/game3d/HellAltarEye3D.ts`, `src/game3d/AltarSpinFx3D.ts`, `src/game3d/SeraphimBoss3D.ts`, `src/game3d/TowerArena3D.ts`, `src/game3d/TowerCityEnvironment3D.ts` |
+| 3D Shop Plaza, Outer Space Enchant Altar + Black Hole & Tower Arena | `src/game3d/ShopCyberPlaza3D.ts` (`createShopCyberPlaza`), `src/game3d/ShopWorld3D.ts` (`ShopWorld3D`), `src/game3d/HellAltarEye3D.ts`, `src/game3d/AltarSpinFx3D.ts`, `src/game3d/SeraphimBoss3D.ts` (`createSeraphimBoss3D`), `src/game3d/TowerArena3D.ts`, `src/game3d/TowerCityEnvironment3D.ts` (`createTowerCityEnvironment`) |
 | Rules, CrazyGames SDK v3, UI/HUD & Procedural 3D Skills | `.agent/rules/threejs-ts-standards.md`, `.agent/skills/{crazygames-sdk-v3,ui-hud-design,procedural-3d-assets}/SKILL.md` |
