@@ -9,12 +9,14 @@ import { init3dHudIcons } from './game3d/HudIcon3DRenderer';
 import { MineScene3D } from './game3d/MineScene3D';
 import { STAGE_PEDESTAL_COUNT, WORLD_PALETTES } from './game3d/MineWorldPalette';
 import {
+  cgBindAdLifecycle,
   cgBindAudioMuteListener,
   cgGameplayStart,
   cgGameplayStop,
   cgInit,
   cgLoadingStart,
   cgLoadingStop,
+  isAdPlaying,
 } from './sdk/crazygames';
 import { GameHud } from './ui/GameHud';
 
@@ -36,6 +38,10 @@ async function bootstrap(): Promise<void> {
   if (!threeRoot || !hudRoot) return;
 
   const syncPickaxeCursor = (e: PointerEvent): void => {
+    if (isAdPlaying()) {
+      pickaxeCursorEl.style.display = 'none';
+      return;
+    }
     const canvas = threeRoot.querySelector('canvas');
     const active = Boolean(canvas && e.target === canvas && canvas.classList.contains('mam-mining-cursor'));
     if (!active) {
@@ -223,23 +229,36 @@ async function bootstrap(): Promise<void> {
     }
   );
 
+  cgBindAdLifecycle({
+    setPaused: (paused) => {
+      scene.setAdPaused(paused);
+      hud?.setAdPaused(paused);
+      if (paused) {
+        pickaxeCursorEl.style.display = 'none';
+      }
+    },
+    setAudioMuted: (muted) => audio.setAdMuted(muted),
+  });
+
   if (!hud.isTutorialActive() && gameState.autoMeteor) {
     spawnMeteorIfAllowed(gameState.weatherId);
   }
   audio.setSceneMode('mine');
   cgLoadingStop();
-  cgGameplayStart();
+  if (!document.hidden) {
+    cgGameplayStart();
+  }
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       cgGameplayStop();
-    } else {
+    } else if (!isAdPlaying()) {
       cgGameplayStart();
     }
   });
   window.addEventListener('blur', () => cgGameplayStop());
   window.addEventListener('focus', () => {
-    if (!document.hidden) cgGameplayStart();
+    if (!document.hidden && !isAdPlaying()) cgGameplayStart();
   });
 }
 

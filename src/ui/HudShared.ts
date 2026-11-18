@@ -117,9 +117,9 @@ export const TW_ACTIVE_POT_PILL =
 export const TW_MODAL_BACKDROP =
   'fixed inset-0 bg-[rgba(4,7,15,0.58)] backdrop-blur-[5px] flex items-center justify-center p-3 pt-7 @max-[720px]:p-2 @max-[720px]:pt-6 pointer-events-auto z-40';
 export const TW_MODAL_BOX =
-  'mam-modal max-w-full min-h-[min(460px,100%)] max-h-[min(760px,calc(100%-18px))] flex flex-col pt-3 px-4 pb-4 gap-2.5';
+  'mam-modal max-w-full h-[min(640px,calc(100%-18px))] min-h-0 flex flex-col pt-3 px-4 pb-4 gap-2.5';
 export const TW_SHOP_MODAL_RESP =
-  '@max-[720px]:px-3 @max-[720px]:pt-2.5 @max-[720px]:pb-3 @max-[720px]:min-h-0 [[data-hud-short=true]_&]:min-h-0 [[data-hud-short=true]_&]:px-3.5 [[data-hud-short=true]_&]:py-2.5 [[data-hud-short=true]_&]:gap-2';
+  '@max-[720px]:px-3 @max-[720px]:pt-2.5 @max-[720px]:pb-3 [[data-hud-short=true]_&]:px-3.5 [[data-hud-short=true]_&]:py-2.5 [[data-hud-short=true]_&]:gap-2';
 export const TW_CLOSE_BTN =
   'w-9 h-9 @max-[720px]:w-8 @max-[720px]:h-8 shrink-0 rounded-xl border-[1.5px] border-rose-400/50 bg-[linear-gradient(135deg,rgba(225,29,72,0.92)_0%,rgba(159,18,57,0.95)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_16px_-2px_rgba(244,63,94,0.45)] text-white text-[17px] font-black cursor-pointer flex items-center justify-center transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-px hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95';
 export const TW_TAB_BTN =
@@ -144,7 +144,7 @@ export const TW_STRIP_CARD =
 export const TW_ALTAR_ROLL_BTN =
   'mam-altar-roll-btn relative overflow-hidden w-[280px] max-w-full h-[46px] rounded-2xl border-[1.5px] border-[#4ade80]/70 bg-[linear-gradient(135deg,#22c55e_0%,#059669_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_10px_28px_-4px_rgba(34,197,94,0.5)] text-white text-[20px] font-black cursor-pointer transition-[transform,filter,box-shadow,opacity] duration-150 ease-out [&:not(.is-empty):not(.is-spinning)]:hover:-translate-y-0.5 [&:not(.is-empty):not(.is-spinning)]:hover:brightness-110 [&:not(.is-empty):not(.is-spinning)]:active:scale-[0.96] [&.is-empty]:border-rose-400/60 [&.is-empty]:bg-[linear-gradient(135deg,#ef4444_0%,#b91c1c_100%)] [&.is-empty]:shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_24px_-4px_rgba(239,68,68,0.45)] [&.is-spinning]:border-purple-300/60 [&.is-spinning]:bg-[linear-gradient(135deg,#a855f7_0%,#6d28d9_100%)] [&.is-spinning]:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_10px_24px_-4px_rgba(168,85,247,0.5)] [&.is-spinning]:cursor-not-allowed [&.is-spinning]:pointer-events-none [&.is-spinning]:opacity-95';
 export const TW_ALTAR_AUTO_BTN =
-  'mam-sheen-hover relative overflow-hidden w-full px-[18px] py-2 rounded-lg border-[2.5px] border-[#0c4a6e] bg-[linear-gradient(180deg,#38bdf8_0%,#0284c7_100%)] shadow-[inset_0_2px_0_rgba(255,255,255,0.35),0_4px_0_#0c4a6e] text-white text-[14px] font-black cursor-pointer transition-[transform,filter,box-shadow,background] duration-[140ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:scale-[1.03] hover:brightness-[1.09] active:translate-y-[3px] active:scale-[0.96] active:shadow-[inset_0_2px_0_rgba(255,255,255,0.2),0_1px_0_#0c4a6e] [&.is-active]:border-[#7f1d1d] [&.is-active]:bg-[linear-gradient(180deg,#f87171_0%,#dc2626_100%)] [&.is-active]:shadow-[inset_0_2px_0_rgba(255,255,255,0.32),0_4px_0_#7f1d1d] [&.is-active]:active:shadow-[inset_0_2px_0_rgba(255,255,255,0.2),0_1px_0_#7f1d1d]';
+  'mam-sheen-hover relative overflow-hidden w-full px-[18px] py-2 rounded-xl border border-sky-300/60 bg-[linear-gradient(135deg,rgba(14,165,233,0.9)_0%,rgba(2,132,199,0.95)_100%)] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_8px_20px_-4px_rgba(14,165,233,0.45)] text-white text-[14px] font-black cursor-pointer transition-[transform,filter,box-shadow,background] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] [&.is-active]:border-rose-300/60 [&.is-active]:bg-[linear-gradient(135deg,rgba(244,63,94,0.9)_0%,rgba(190,18,60,0.95)_100%)] [&.is-active]:shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_8px_20px_-4px_rgba(244,63,94,0.45)]';
 
 export function renderModalShell(opts: {
   title: string;
@@ -211,7 +211,7 @@ export function renderInspectorPanel(opts: {
       ([label, val, valClass]) => `
       <div class="px-2.5 py-1.5 rounded-xl bg-white/[0.045] border border-white/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] flex flex-col items-start text-left min-w-0">
         <span class="text-[10px] font-bold uppercase tracking-wider text-[#94a3b8] leading-none">${label}</span>
-        <span class="text-[13px] font-black leading-tight mt-0.5 truncate max-w-full ${valClass ?? 'text-white'}">${val}</span>
+        <span class="text-[13px] font-black tabular-nums leading-tight mt-0.5 truncate max-w-full ${valClass ?? 'text-white'}">${val}</span>
       </div>
     `
     )

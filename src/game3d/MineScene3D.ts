@@ -106,6 +106,7 @@ export class MineScene3D {
   private lastDragY = 0;
   private rafId = 0;
   private lastTime = performance.now();
+  private adPaused = false;
   private focusedPlotIndex: number | null = null;
   private tutorialFocusChest = false;
   private tutorialFocusSellShop = false;
@@ -285,6 +286,7 @@ export class MineScene3D {
     dom.addEventListener('contextmenu', (e) => e.preventDefault());
 
     dom.addEventListener('pointerdown', (e) => {
+      if (this.adPaused) return;
       if (e.button !== 0 && e.button !== 2) return;
       this.isDragging = true;
       this.dragMoved = false;
@@ -301,6 +303,10 @@ export class MineScene3D {
     });
 
     window.addEventListener('pointermove', (e) => {
+      if (this.adPaused) {
+        dom.classList.remove('mam-mining-cursor');
+        return;
+      }
       if (this.isDragging) {
         if (this.activePointerId !== null && e.pointerId !== this.activePointerId) return;
         const dx = e.clientX - this.lastDragX;
@@ -359,7 +365,7 @@ export class MineScene3D {
       if (this.activePointerId !== null && e.pointerId !== this.activePointerId) return;
       const wasClick = this.isDragging && !this.dragMoved && e.button === 0;
       endDrag(e.pointerId);
-      if (!wasClick) return;
+      if (!wasClick || this.adPaused) return;
 
       if (e.target !== dom) {
         dom.classList.remove('mam-mining-cursor');
@@ -446,6 +452,7 @@ export class MineScene3D {
     dom.addEventListener(
       'wheel',
       (e) => {
+        if (this.adPaused) return;
         e.preventDefault();
         const maxRad = this.mode === 'shop' ? 38 : 28;
         this.targetCamRadius = Math.max(9, Math.min(maxRad, this.targetCamRadius + e.deltaY * 0.01));
@@ -526,6 +533,11 @@ export class MineScene3D {
   }
 
   private loop = (now: number): void => {
+    if (this.adPaused) {
+      this.lastTime = now;
+      this.rafId = 0;
+      return;
+    }
     const rawDt = Math.max(0, (now - this.lastTime) / 1000);
     const dtSec = Math.min(rawDt, 0.05);
     this.lastTime = now;
@@ -1003,8 +1015,30 @@ export class MineScene3D {
     return this.pedestals[slotIndex]?.getChibi() ?? null;
   }
 
+  public setAdPaused(paused: boolean): void {
+    if (this.adPaused === paused) return;
+    this.adPaused = paused;
+    if (paused) {
+      this.isDragging = false;
+      this.activePointerId = null;
+      this.renderer.domElement.classList.remove('mam-mining-cursor');
+      if (this.rafId) {
+        cancelAnimationFrame(this.rafId);
+        this.rafId = 0;
+      }
+    } else {
+      this.lastTime = performance.now();
+      if (!this.rafId) {
+        this.rafId = requestAnimationFrame(this.loop);
+      }
+    }
+  }
+
   public destroy(): void {
-    cancelAnimationFrame(this.rafId);
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = 0;
+    }
     this.renderer.dispose();
   }
 }

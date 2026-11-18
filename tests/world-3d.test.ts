@@ -2,6 +2,19 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
+import { AudioManager } from '../src/audio/AudioManager';
+import {
+  cgBindAdLifecycle,
+  cgGameplayStart,
+  cgGameplayStop,
+  cgHappyTime,
+  cgInit,
+  cgLoadingStart,
+  cgLoadingStop,
+  cgRequestRewardedAd,
+  cgTryMidgameAd,
+  isAdPlaying,
+} from '../src/sdk/crazygames';
 import {
   DEFAULT_PICKAXE_STOCK,
   ENCHANT_DICE_GEM_COST,
@@ -1667,5 +1680,57 @@ describe('Pure 3D Mine World', () => {
     expect(gs.toggleEquipRelic('ember_gauntlet')).toBe('full');
     expect(gs.toggleEquipRelic('prism_heart')).toBe('unequipped');
     expect(gs.toggleEquipRelic('ember_gauntlet')).toBe('equipped');
+  });
+
+  it('guards CrazyGames SDK v3 hooks safely on localhost and preserves user mute across ad mute', async () => {
+    await expect(cgInit()).resolves.toBeUndefined();
+    expect(() => {
+      cgLoadingStart();
+      cgLoadingStop();
+      cgGameplayStart();
+      cgHappyTime();
+      cgGameplayStop();
+    }).not.toThrow();
+
+    let pauseState = false;
+    cgBindAdLifecycle({
+      setPaused: (paused) => {
+        pauseState = paused;
+      },
+    });
+
+    let unavailableCalled = false;
+    let midgameDoneCalled = false;
+    expect(
+      cgRequestRewardedAd(
+        () => {},
+        () => {
+          unavailableCalled = true;
+        }
+      )
+    ).toBe(false);
+    expect(unavailableCalled).toBe(true);
+    cgTryMidgameAd(() => {
+      midgameDoneCalled = true;
+    });
+    expect(midgameDoneCalled).toBe(true);
+    expect(isAdPlaying()).toBe(false);
+    expect(pauseState).toBe(false);
+
+    const mgr = new AudioManager();
+    expect(mgr.isMuted()).toBe(false);
+    expect(mgr.isEffectivelyMuted()).toBe(false);
+    mgr.setAdMuted(true);
+    expect(mgr.isEffectivelyMuted()).toBe(true);
+    mgr.setAdMuted(false);
+    expect(mgr.isEffectivelyMuted()).toBe(false);
+
+    // User mute must remain preserved after ad unmutes
+    expect(mgr.toggleMuted()).toBe(true);
+    mgr.setAdMuted(true);
+    expect(mgr.isEffectivelyMuted()).toBe(true);
+    mgr.setAdMuted(false);
+    expect(mgr.isMuted()).toBe(true);
+    expect(mgr.isEffectivelyMuted()).toBe(true);
   });
 });

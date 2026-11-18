@@ -276,7 +276,7 @@ export class CollectionModalsUi {
       title: 'Index',
       theme: 'index',
       iconHtml: hudIconHtml('indexBook', 26, 'Index'),
-      boxClass: `w-[980px] h-[min(640px,88vh)] ${TW_SHOP_MODAL_RESP}`,
+      boxClass: `w-[980px] ${TW_SHOP_MODAL_RESP}`,
       headerExtraHtml: `
         <div class="relative flex-1 max-w-[440px] h-7 rounded-full bg-[rgba(12,15,28,0.85)] border border-white/15 shadow-[inset_0_2px_8px_rgba(0,0,0,0.65)] overflow-hidden flex items-center justify-center backdrop-blur-md">
           <div class="absolute left-0 top-0 bottom-0 bg-[linear-gradient(90deg,#a855f7,#ec4899,#38bdf8)] rounded-full transition-[width] duration-250 ease-out shadow-[0_0_12px_rgba(192,132,252,0.55)]" data-index-fill="true" style="width:${pct}%"></div>
@@ -305,7 +305,7 @@ export class CollectionModalsUi {
         </div>
 
         <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto">
-          <div class="${TW_MODAL_GRID_BASE} grid-cols-5 @max-[720px]:grid-cols-3 gap-2 flex-1 min-h-[360px] @max-[920px]:min-h-[220px] @max-[920px]:flex-none @max-[920px]:max-h-[340px]" data-index-grid="true">
+          <div class="${TW_MODAL_GRID_BASE} grid-cols-5 @max-[720px]:grid-cols-3 gap-2 flex-1 min-h-0 @max-[920px]:min-h-[200px] @max-[920px]:flex-none @max-[920px]:max-h-[340px]" data-index-grid="true">
             ${this.buildIndexCardsHtml()}
           </div>
           <div class="mam-inspector-well w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-index-inspector="true">
@@ -591,7 +591,7 @@ export class CollectionModalsUi {
       title: 'Inventory',
       theme: 'inventory',
       iconHtml: hudIconHtml('backpack', 26, 'Inventory'),
-      boxClass: `w-[980px] h-[min(640px,88vh)] ${TW_SHOP_MODAL_RESP}`,
+      boxClass: `w-[980px] ${TW_SHOP_MODAL_RESP}`,
       headerExtraHtml: `
         <div class="flex items-center gap-1.5">
           <button class="mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-amber-300/45 bg-[linear-gradient(135deg,rgba(245,158,11,0.88),rgba(217,119,6,0.92))] shadow-[0_6px_16px_rgba(245,158,11,0.25),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[13px] font-extrabold cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="auto-star-up" title="Merge all spare Chibi duplicates into Stars">

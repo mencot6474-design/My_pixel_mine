@@ -68,31 +68,31 @@ export class PlotInspectUi {
     const worldName = worldId ? getWorldById(worldId).name : null;
 
     root.innerHTML = `
-      <button class="absolute top-4 @max-[720px]:top-2.5 left-1/2 -translate-x-1/2 px-[34px] py-[7px] rounded-[6px] border-2 border-[#7c2d12] bg-[linear-gradient(180deg,#fb923c,#ea580c)] shadow-[0_3px_0_#7c2d12] text-white text-[19px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-[140ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:scale-[1.03] hover:brightness-[1.08] active:translate-y-0.5 active:scale-[0.97] active:shadow-[0_1px_0_#7c2d12] mam-outline-sm" data-inspect-action="exit">Exit</button>
+      <button class="absolute top-4 @max-[720px]:top-2.5 left-1/2 -translate-x-1/2 px-[34px] py-[7px] rounded-2xl border border-orange-300/60 bg-[linear-gradient(135deg,rgba(234,88,12,0.9),rgba(194,65,12,0.95))] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_8px_22px_-4px_rgba(234,88,12,0.45)] text-white text-[19px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-inspect-action="exit">Exit</button>
 
       <div class="absolute left-7 @max-[920px]:left-3 top-[38%] @max-[920px]:top-14 -translate-y-1/2 @max-[920px]:translate-y-0 w-[245px] @max-[920px]:w-[208px] px-3.5 py-3 rounded-2xl bg-[rgba(12,16,28,0.84)] backdrop-blur-xl border border-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_36px_rgba(0,0,0,0.55)] flex flex-col gap-[3px]">
         <div class="flex items-center justify-between gap-1.5">
           <div class="text-[20px] font-black leading-[1.1] mam-outline-sm truncate">${chibi.name}</div>
-          ${star > 0 ? `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/25 border border-amber-400/70 text-amber-300 text-[11px] font-black shrink-0">★${star}</span>` : ''}
+          ${star > 0 ? `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/25 border border-amber-400/70 text-amber-300 text-[11px] font-black tabular-nums shrink-0">★${star}</span>` : ''}
         </div>
         <div class="text-[15px] font-extrabold mam-outline-sm" style="color:${rColor}">
           ${rarity[0].toUpperCase() + rarity.slice(1)} <span style="color:#fff">•</span> <span class="${mut.id === 'rainbow' ? 'mam-rainbow-text' : ''}" style="${mut.id === 'rainbow' ? '' : `color:${mut.color}`}">${mut.name}</span>
         </div>
-        ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black text-violet-300 mam-outline-sm">✦ ${worldName} Resonance (+${Math.round(resBonusPct * 100)}% DMG)</div>` : ''}
-        <div class="text-[13px] font-bold text-[#e2e8f0] mt-0.5 mam-outline-sm">
+        ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black tabular-nums text-violet-300 mam-outline-sm">✦ ${worldName} Resonance (+${Math.round(resBonusPct * 100)}% DMG)</div>` : ''}
+        <div class="text-[13px] font-bold tabular-nums text-[#e2e8f0] mt-0.5 mam-outline-sm">
           Lv. ${unit.damageLevel} • Speed ${stats.speed} • Mining x${stats.miningMult}
         </div>
-        <div class="text-[24px] font-black text-[#f87171] leading-[1.1] mt-1.5 mam-outline">${fmtShort(stats.dmg)} dmg</div>
-        <div class="text-[14px] font-extrabold text-[#4ade80] mam-outline-sm">Worth ${fmtMoney(stats.worth)}</div>
-        <button class="mt-2 px-3 py-1.5 rounded-[7px] border-2 border-[#7f1d1d] bg-[linear-gradient(180deg,#f87171_0%,#dc2626_55%,#991b1b_100%)] shadow-[inset_0_2px_0_rgba(255,255,255,0.32),0_4px_0_#7f1d1d,0_6px_12px_rgba(0,0,0,0.4)] text-white text-[13px] font-extrabold cursor-pointer self-start transition-[transform,box-shadow] duration-100 ease-out active:translate-y-[3px] active:shadow-[0_1px_0_#7f1d1d] mam-outline-sm" data-inspect-action="pickup">Pick Up from Plot</button>
+        <div class="text-[24px] font-black tabular-nums text-[#f87171] leading-[1.1] mt-1.5 mam-outline">${fmtShort(stats.dmg)} dmg</div>
+        <div class="text-[14px] font-extrabold tabular-nums text-[#4ade80] mam-outline-sm">Worth ${fmtMoney(stats.worth)}</div>
+        <button class="mt-2 px-3 py-1.5 rounded-xl border border-rose-300/55 bg-[linear-gradient(135deg,rgba(239,68,68,0.88),rgba(153,27,27,0.94))] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_6px_16px_-2px_rgba(239,68,68,0.4)] text-white text-[13px] font-extrabold cursor-pointer self-start transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-inspect-action="pickup">Pick Up from Plot</button>
       </div>
 
       <button class="${TW_INSPECT_ARROW} left-[31%] @max-[920px]:left-3" data-inspect-action="prev">&lt;</button>
       <button class="${TW_INSPECT_ARROW} right-[31%] @max-[920px]:right-3" data-inspect-action="next">&gt;</button>
 
       <div class="absolute right-[22px] @max-[920px]:right-3 top-[48%] @max-[920px]:top-3 -translate-y-1/2 @max-[920px]:translate-y-0 flex flex-col items-end gap-1">
-        <div class="flex items-center gap-1.5 text-[22px] font-black text-[#67e8f9] mam-outline-sm" data-inspect-gems="true">${hudIconHtml('gem', 24, 'Gems')} <span>${fmtInt(this.state.gems)}</span></div>
-        <div class="text-[24px] font-black text-[#4ade80] mam-outline" data-inspect-cash="true">${fmtMoney(this.state.cash)}</div>
+        <div class="flex items-center gap-1.5 text-[22px] font-black tabular-nums text-[#67e8f9] mam-outline-sm" data-inspect-gems="true">${hudIconHtml('gem', 24, 'Gems')} <span>${fmtInt(this.state.gems)}</span></div>
+        <div class="text-[24px] font-black tabular-nums text-[#4ade80] mam-outline" data-inspect-cash="true">${fmtMoney(this.state.cash)}</div>
       </div>
 
       <div class="absolute bottom-[14px] left-1/2 -translate-x-1/2 w-[860px] max-w-[calc(100%-24px)] flex flex-col items-center gap-2 pointer-events-auto">
@@ -134,25 +134,25 @@ export class PlotInspectUi {
       const minMax = unit.miningSpeedLevel >= 16;
       return `
         <div class="${TW_STAT_CARD}">
-          <div class="text-[14px] font-extrabold text-[#e2e8f0] mam-outline-sm">Damage Level ${unit.damageLevel} / 100</div>
-          <div class="text-[16px] font-black mam-outline-sm">
+          <div class="text-[14px] font-extrabold tabular-nums text-[#e2e8f0] mam-outline-sm">Damage Level ${unit.damageLevel} / 100</div>
+          <div class="text-[16px] font-black tabular-nums mam-outline-sm">
             <span style="color:#ef4444">${fmtShort(stats.dmg)}</span> &gt; <span style="color:#4ade80">${fmtShort(stats.nextDmg)}</span>
           </div>
-          <button class="${TW_STAT_BTN} mam-outline-sm ${dmgMax ? 'maxed' : ''}" data-inspect-action="up-dmg">
+          <button class="${TW_STAT_BTN} tabular-nums mam-outline-sm ${dmgMax ? 'maxed' : ''}" data-inspect-action="up-dmg">
             ${dmgMax ? 'Max' : fmtMoney(stats.dmgCost)}
           </button>
         </div>
         <div class="${TW_STAT_CARD}">
-          <div class="text-[14px] font-extrabold text-[#e2e8f0] mam-outline-sm">Speed Level ${unit.speedLevel} / 17</div>
-          <div class="text-[16px] font-black mam-outline-sm" style="color:#4ade80">${stats.speed}</div>
-          <button class="${TW_STAT_BTN} mam-outline-sm ${spdMax ? 'maxed' : ''}" data-inspect-action="up-spd">
+          <div class="text-[14px] font-extrabold tabular-nums text-[#e2e8f0] mam-outline-sm">Speed Level ${unit.speedLevel} / 17</div>
+          <div class="text-[16px] font-black tabular-nums mam-outline-sm" style="color:#4ade80">${stats.speed}</div>
+          <button class="${TW_STAT_BTN} tabular-nums mam-outline-sm ${spdMax ? 'maxed' : ''}" data-inspect-action="up-spd">
             ${spdMax ? 'Max' : fmtMoney(stats.speedCost)}
           </button>
         </div>
         <div class="${TW_STAT_CARD}">
-          <div class="text-[14px] font-extrabold text-[#e2e8f0] mam-outline-sm">Mining Speed Level ${unit.miningSpeedLevel} / 16</div>
-          <div class="text-[16px] font-black mam-outline-sm" style="color:#4ade80">x${stats.miningMult}</div>
-          <button class="${TW_STAT_BTN} mam-outline-sm ${minMax ? 'maxed' : ''}" data-inspect-action="up-mine">
+          <div class="text-[14px] font-extrabold tabular-nums text-[#e2e8f0] mam-outline-sm">Mining Speed Level ${unit.miningSpeedLevel} / 16</div>
+          <div class="text-[16px] font-black tabular-nums mam-outline-sm" style="color:#4ade80">x${stats.miningMult}</div>
+          <button class="${TW_STAT_BTN} tabular-nums mam-outline-sm ${minMax ? 'maxed' : ''}" data-inspect-action="up-mine">
             ${minMax ? 'Max' : fmtMoney(stats.miningCost)}
           </button>
         </div>
@@ -184,7 +184,7 @@ export class PlotInspectUi {
           (m) => `
           <div class="${TW_STRIP_CARD} ${m.rarity === 'rainbow' ? 'rarity-rainbow' : ''} ${unit.mutationId === m.id ? 'equipped' : ''}" style="${rarityVars(m.rarity)}">
             <div class="mam-card-name mam-outline-sm ${m.id === 'rainbow' ? 'mam-rainbow-text' : ''}" style="${m.id === 'rainbow' ? '' : `color:${m.color}`}">${m.name}</div>
-            <div class="mam-outline-sm" style="font-size:15px;font-weight:900;color:#fca5a5">${m.mult}X</div>
+            <div class="mam-outline-sm tabular-nums" style="font-size:15px;font-weight:900;color:#fca5a5">${m.mult}X</div>
             <div class="mam-card-qty mam-outline-sm">${fmtPct(m.chancePct)}</div>
           </div>
         `
@@ -195,8 +195,8 @@ export class PlotInspectUi {
         ${mutCards}
         <div class="flex-[0_0_132px] py-1 px-2 flex flex-col items-center justify-center gap-1">
           <div class="mam-outline-sm ${curMut.id === 'rainbow' ? 'mam-rainbow-text' : ''}" style="font-size:18px;font-weight:900;${curMut.id === 'rainbow' ? '' : `color:${curMut.color}`}">${curMut.name}</div>
-          <div class="mam-outline-sm" style="display:flex;align-items:center;gap:4px;font-size:15px;font-weight:800;color:#f9a8d4">${hudIconHtml('gem', 20, 'Gems')} ${fmtInt(stats.mutationCost)}</div>
-          <button class="w-full h-9 rounded-[6px] border-2 border-[#7c2d12] bg-[linear-gradient(180deg,#fb923c,#ea580c)] shadow-[0_3px_0_#7c2d12] text-white text-[16px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-[120ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:scale-[1.03] hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] active:shadow-[0_1px_0_#7c2d12] mam-outline-sm" data-inspect-action="roll-mut">Roll</button>
+          <div class="mam-outline-sm tabular-nums" style="display:flex;align-items:center;gap:4px;font-size:15px;font-weight:800;color:#f9a8d4">${hudIconHtml('gem', 20, 'Gems')} ${fmtInt(stats.mutationCost)}</div>
+          <button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border border-orange-300/60 bg-[linear-gradient(135deg,rgba(249,115,22,0.92),rgba(194,65,12,0.96))] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_16px_-2px_rgba(234,88,12,0.42)] text-white text-[16px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-inspect-action="roll-mut">Roll</button>
         </div>
       `;
     }

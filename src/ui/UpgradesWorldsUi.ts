@@ -271,7 +271,7 @@ export class UpgradesWorldsUi {
             <button class="${TW_CLOSE_BTN} mam-close-rail-btn" data-action="close-modal" aria-label="Close Upgrades">✕</button>
           </div>
           <div class="flex items-center justify-end gap-3 flex-wrap w-full">
-            <div class="text-[20px] font-black text-[#facc15] [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]" data-upgrades-cash="true">${fmtMoney(this.state.cash)}</div>
+            <div class="text-[20px] font-black tabular-nums text-[#facc15] [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]" data-upgrades-cash="true">${fmtMoney(this.state.cash)}</div>
             ${nextWorldCta}
           </div>
           <div class="flex-1 min-h-0 flex items-stretch gap-3 @max-[920px]:flex-col @max-[920px]:overflow-x-hidden @max-[920px]:overflow-y-auto mam-no-scrollbar">

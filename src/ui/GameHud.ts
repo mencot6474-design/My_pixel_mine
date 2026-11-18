@@ -74,8 +74,10 @@ export class GameHud {
   private activeModal: ModalKind = 'none';
   private sceneMode: SceneMode = 'mine';
   private inspectedSlot: number | null = null;
+  private adPaused = false;
   private lastHotbarKey = '';
   private lastRenderViewKey = '';
+  private lastRenderedModal: ModalKind = 'none';
   private plotLayerEl: HTMLElement | null = null;
   private oreBarLayerEl: HTMLElement | null = null;
   private dmgLayerEl: HTMLElement | null = null;
@@ -310,6 +312,7 @@ export class GameHud {
     this.render();
 
     window.setInterval(() => {
+      if (this.adPaused) return;
       if (this.activeModal === 'pickaxe-shop') {
         this.state.refreshPickaxeStockIfDue();
         const el = this.root.querySelector('[data-restock-timer="true"]');
@@ -356,7 +359,7 @@ export class GameHud {
     }, 1000);
 
     window.setInterval(() => {
-      if (this.sceneMode !== 'tower' || !this.state.towerRun) return;
+      if (this.adPaused || this.sceneMode !== 'tower' || !this.state.towerRun) return;
       const tick = this.state.stepTowerTick(0.1);
       if (tick.status === 'timeout') {
         this.pushToast('Tower timer ended!');
@@ -402,7 +405,7 @@ export class GameHud {
                 <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[rgba(10,14,26,0.92)] border text-[10px] font-black uppercase tracking-wider text-white mam-outline-sm" style="border-color:${wDef.accentColor};color:${wDef.accentColor}">${meteorIconHtml(wDef.id, 16, wDef.name)} ${wDef.name} Meteor</div>
                 <div class="relative w-44 h-5 rounded-md border-2 bg-[rgba(12,16,28,0.94)] overflow-hidden flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.65)]" style="border-color:${wDef.accentColor}">
                   <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${wDef.glowColor},${wDef.accentColor})" data-ore-fill="true"></div>
-                  <div class="relative z-[2] text-[11px] font-black text-white leading-none mam-outline-sm" data-ore-text="true"></div>
+                  <div class="relative z-[2] text-[11px] font-black tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
                 </div>
               </div>
             `;
@@ -410,7 +413,7 @@ export class GameHud {
           return `
           <div class="absolute -translate-x-1/2 -translate-y-full w-24 h-4 rounded border-2 border-[#0f172a] bg-[rgba(15,23,42,0.9)] overflow-hidden flex items-center justify-center" data-ore-bar="${b.id}">
             <div class="absolute left-0 top-0 bottom-0 bg-[linear-gradient(180deg,#38bdf8,#0284c7)] transition-[width] duration-[80ms] ease-linear" data-ore-fill="true"></div>
-            <div class="relative z-[2] text-[11px] font-extrabold text-white leading-none mam-outline-sm" data-ore-text="true"></div>
+            <div class="relative z-[2] text-[11px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
           </div>
         `;
         })
@@ -458,7 +461,7 @@ export class GameHud {
             <div class="text-[11px] font-black leading-none whitespace-nowrap mam-outline-sm" style="color:${b.color}">${b.name}</div>
             <div class="w-24 h-4 rounded border-2 border-[#0f172a] bg-[rgba(15,23,42,0.92)] overflow-hidden relative flex items-center justify-center shadow-[0_3px_10px_rgba(0,0,0,0.55)]">
               <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[60ms] ease-linear" style="background:${b.color}" data-ore-fill="true"></div>
-              <div class="relative z-[2] text-[10px] font-extrabold text-white leading-none mam-outline-sm" data-ore-text="true"></div>
+              <div class="relative z-[2] text-[10px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
             </div>
           </div>
         `
@@ -490,7 +493,7 @@ export class GameHud {
     }
     const el = document.createElement('div');
     const sizeColor = isClick ? 'text-[22px] text-[#facc15]' : 'text-[20px] text-[#ef4444]';
-    el.className = `absolute font-black whitespace-nowrap will-change-[transform,opacity] animate-[mamDmgFloat_0.68s_cubic-bezier(0.22,1,0.36,1)_forwards] mam-outline ${sizeColor}`;
+    el.className = `absolute font-black tabular-nums whitespace-nowrap will-change-[transform,opacity] animate-[mamDmgFloat_0.68s_cubic-bezier(0.22,1,0.36,1)_forwards] mam-outline ${sizeColor}`;
     const jitterX = (Math.random() - 0.5) * 32;
     const jitterY = (Math.random() - 0.5) * 14;
     el.style.left = `${screenX + jitterX}px`;
@@ -578,6 +581,10 @@ export class GameHud {
     if (plot0) {
       this.tutorialUi.updatePlotAnchor(plot0.labelX, plot0.labelY, plot0.visible);
     }
+  }
+
+  public setAdPaused(paused: boolean): void {
+    this.adPaused = paused;
   }
 
   public isTutorialActive(): boolean {
@@ -1090,7 +1097,7 @@ export class GameHud {
       : '';
     const cashBar = opts.showCash
       ? `<div class="${TW_CURRENCY_BAR}">
-          <span class="text-[28px] font-black text-[#4ade80] tracking-[0.3px] mam-outline" data-hud-cash="true">${fmtMoney(this.state.cash)}</span>
+          <span class="text-[28px] font-black tabular-nums text-[#4ade80] tracking-[0.3px] mam-outline" data-hud-cash="true">${fmtMoney(this.state.cash)}</span>
         </div>`
       : '';
     const quickRow = opts.quickButtonsHtml ? `<div class="flex items-center gap-2 mt-0.5">${opts.quickButtonsHtml}</div>` : '';
@@ -1101,7 +1108,7 @@ export class GameHud {
         <div class="flex items-center gap-2">
           <div class="${TW_CURRENCY_BAR}">
             ${hudIconHtml('gem', 28, 'Gems')}
-            <span class="text-[20px] font-extrabold text-white mam-outline-sm" data-hud-gems="true">${fmtInt(this.state.gems)}</span>
+            <span class="text-[20px] font-extrabold tabular-nums text-white mam-outline-sm" data-hud-gems="true">${fmtInt(this.state.gems)}</span>
             ${plusBtn}
           </div>
         </div>
@@ -1136,8 +1143,10 @@ export class GameHud {
   public render(): void {
     const viewKey = `${this.sceneMode}:${this.activeModal}:${this.inspectedSlot ?? 'none'}`;
     const sameView = viewKey === this.lastRenderViewKey;
+    const shouldAnimateModal = this.activeModal !== 'none' && this.activeModal !== this.lastRenderedModal;
     const savedScrolls = sameView ? captureRootScrolls(this.root) : [];
     this.lastRenderViewKey = viewKey;
+    this.lastRenderedModal = this.activeModal;
 
     if (this.plotLayerEl && this.activeModal === 'none' && this.inspectedSlot === null && this.sceneMode === 'mine') {
       this.plotLayerEl.dataset.keys = '';
@@ -1189,12 +1198,12 @@ export class GameHud {
 
       this.root.innerHTML = `
       ${this.renderWeatherWidget()}
-      <div class="${TW_TOP_CENTER} flex items-center gap-2.5 @max-[720px]:gap-1.5 whitespace-nowrap">
-        <button class="${TW_SHOPS_PILL} mam-outline" data-action="shops-pill">
+      <div class="${TW_TOP_CENTER} flex flex-wrap items-center justify-center gap-2.5 @max-[720px]:gap-1.5">
+        <button class="${TW_SHOPS_PILL} whitespace-nowrap mam-outline" data-action="shops-pill">
           ${hudIconHtml('shops', 28, 'Shops')}
           <span>Shops</span>
         </button>
-        <button class="inline-flex items-center gap-2 @max-[720px]:gap-1.5 px-4 @max-[720px]:px-3 py-2 @max-[720px]:py-1.5 rounded-2xl border border-sky-300/45 bg-[linear-gradient(135deg,rgba(14,165,233,0.88),rgba(37,99,235,0.92))] backdrop-blur-md shadow-[0_8px_22px_rgba(37,99,235,0.32),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[15px] @max-[720px]:text-[13px] font-extrabold cursor-pointer transition-[transform,box-shadow,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.98] mam-outline-sm" data-action="open-worlds" title="Teleport & Unlock Worlds">
+        <button class="inline-flex items-center gap-2 @max-[720px]:gap-1.5 px-4 @max-[720px]:px-3 py-2 @max-[720px]:py-1.5 rounded-2xl border border-sky-300/45 bg-[linear-gradient(135deg,rgba(14,165,233,0.88),rgba(37,99,235,0.92))] backdrop-blur-md shadow-[0_8px_22px_rgba(37,99,235,0.32),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[15px] @max-[720px]:text-[13px] font-extrabold whitespace-nowrap cursor-pointer transition-[transform,box-shadow,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.98] mam-outline-sm" data-action="open-worlds" title="Teleport & Unlock Worlds">
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
             <circle cx="12" cy="12" r="9" fill="#0f172a" stroke="#bae6fd" stroke-width="2"/>
             <ellipse cx="12" cy="12" rx="4.5" ry="7.5" fill="none" stroke="#38bdf8" stroke-width="2"/>
@@ -1243,6 +1252,10 @@ export class GameHud {
       refreshPotionTimersInDom(this.root, this.state);
       this.renderToasts();
     } finally {
+      if (shouldAnimateModal) {
+        this.root.querySelector('[data-backdrop="true"]')?.classList.add('mam-backdrop-enter');
+        this.root.querySelector('.mam-modal')?.classList.add('mam-modal-enter');
+      }
       if (savedScrolls.length > 0) {
         restoreRootScrolls(this.root, savedScrolls);
       }
@@ -1292,7 +1305,7 @@ export class GameHud {
         return `
           <button class="${TW_HOTBAR_SLOT} cursor-grab active:cursor-grabbing select-none touch-none [&>*]:pointer-events-none ${rarityCardClasses(rarity, selectedCls)}" style="${rarityVars(rarity)}" data-hotbar="${idx}" title="${title} (Worth ${fmtMoney(worth)}) • Drag to move">
             <span class="${TW_HOTBAR_NUM} mam-outline-sm">${idx + 1}</span>
-            ${qty > 1 ? `<span class="absolute top-0.5 right-[4px] text-[10px] font-extrabold text-white z-[3] mam-outline-sm">x${fmtShort(qty)}</span>` : ''}
+            ${qty > 1 ? `<span class="absolute top-0.5 right-[4px] text-[10px] font-extrabold tabular-nums text-white z-[3] mam-outline-sm">x${fmtShort(qty)}</span>` : ''}
             <div class="mam-card-art">${artHtml}</div>
             <div class="mam-card-bottom mt-auto">
               <span class="mam-card-val mam-outline-sm">${fmtMoney(worth)}</span>
@@ -1394,10 +1407,10 @@ export class GameHud {
         <div class="mam-altar-card relative h-[102px] @max-[920px]:h-[86px] rounded-[7px] flex flex-col items-center justify-between py-[5px] px-1 transition-[transform,filter] duration-[140ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-[3px] hover:scale-[1.04] hover:brightness-[1.08] ${borderBg}" style="--rarity-border:${e.color};--rarity-bg:${e.color}33" data-altar-card="${e.id}">
           <div class="w-full flex items-center justify-center gap-1">
             <span class="text-[12px] font-black mam-outline-sm" style="color:${e.color}">${e.name}</span>
-            <span class="text-[11px] font-black text-[#facc15] mam-outline-sm" data-altar-qty="${e.id}">${qty > 0 ? `x${fmtInt(qty)}` : ''}</span>
+            <span class="text-[11px] font-black tabular-nums text-[#facc15] mam-outline-sm" data-altar-qty="${e.id}">${qty > 0 ? `x${fmtInt(qty)}` : ''}</span>
           </div>
           <div class="flex-1 min-h-0 flex items-center justify-center pointer-events-none [&>.mam-3d-icon]:w-[46px] [&>.mam-3d-icon]:h-[46px]">${enchantAuraIconHtml(e.id, e.color, 46, e.name)}</div>
-          <div class="text-[11px] font-black text-[#f8fafc] mam-outline-sm">${e.chancePct}%</div>
+          <div class="text-[11px] font-black tabular-nums text-[#f8fafc] mam-outline-sm">${e.chancePct}%</div>
         </div>
       `;
     }).join('');
@@ -1405,7 +1418,7 @@ export class GameHud {
     this.root.innerHTML = `
       ${this.renderWeatherWidget()}
       <div class="${TW_TOP_CENTER}">
-        <button class="px-[46px] py-2 rounded-lg border-[2.5px] border-[#431407] bg-[linear-gradient(180deg,#ea580c_0%,#c2410c_60%,#9a3412_100%)] shadow-[inset_0_2px_0_rgba(255,255,255,0.35),0_5px_0_#431407,0_8px_18px_rgba(0,0,0,0.55)] text-white text-[20px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-[140ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:scale-[1.04] hover:brightness-[1.09] active:translate-y-[3px] active:scale-[0.96] active:shadow-[inset_0_2px_0_rgba(255,255,255,0.22),0_2px_0_#431407,0_4px_10px_rgba(0,0,0,0.45)] mam-outline" data-action="altar-back">Back</button>
+        <button class="px-[46px] py-2 rounded-2xl border border-orange-300/60 bg-[linear-gradient(135deg,rgba(234,88,12,0.9)_0%,rgba(154,52,18,0.94)_100%)] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_8px_22px_-4px_rgba(234,88,12,0.45)] text-white text-[20px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline" data-action="altar-back">Back</button>
       </div>
 
       ${this.renderAudioToggleBtn()}
@@ -1413,13 +1426,13 @@ export class GameHud {
 
       <div class="absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(1240px,calc(100%-24px))] flex flex-col items-center gap-2 pointer-events-auto">
         <div class="flex items-stretch gap-2.5 flex-wrap justify-center">
-          <div class="min-w-[88px] rounded-lg border-2 border-[#7c3aed] bg-[radial-gradient(circle_at_50%_55%,rgba(168,85,247,0.25),rgba(15,23,42,0.94)_80%)] flex flex-col items-center justify-between gap-0.5 px-2 py-[5px] text-center">
+          <div class="min-w-[88px] rounded-xl border border-[#7c3aed]/70 bg-[radial-gradient(circle_at_50%_55%,rgba(168,85,247,0.25),rgba(15,23,42,0.94)_80%)] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] flex flex-col items-center justify-between gap-0.5 px-2 py-[5px] text-center">
             <div class="text-[12px] font-extrabold text-[#e2e8f0] leading-[1.1] mam-outline-sm">Enchanted<br/>Dice</div>
             <div class="flex items-center justify-center h-[34px] [&>.mam-3d-icon]:w-[34px] [&>.mam-3d-icon]:h-[34px]">${enchantDiceIconHtml(34)}</div>
-            <div class="text-[14px] font-black mam-outline-sm" data-altar-dice-count="true" style="color:${outOfRolls ? '#f87171' : '#4ade80'}">${fmtInt(this.state.enchantDice)}/1</div>
+            <div class="text-[14px] font-black tabular-nums mam-outline-sm" data-altar-dice-count="true" style="color:${outOfRolls ? '#f87171' : '#4ade80'}">${fmtInt(this.state.enchantDice)}/1</div>
           </div>
           <div class="flex flex-col gap-2 items-stretch justify-center">
-            <button class="mam-sheen-hover relative overflow-hidden w-full px-[18px] py-2 rounded-lg border-[2.5px] border-[#14532d] bg-[linear-gradient(180deg,#4ade80_0%,#16a34a_100%)] shadow-[inset_0_2px_0_rgba(255,255,255,0.35),0_4px_0_#14532d] text-white text-[15px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-[140ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:scale-[1.03] hover:brightness-[1.09] active:translate-y-[3px] active:scale-[0.96] active:shadow-[inset_0_2px_0_rgba(255,255,255,0.2),0_1px_0_#14532d] mam-outline-sm" data-action="buy-dice">Buy Dice (${ENCHANT_DICE_GEM_COST} Gems)</button>
+            <button class="mam-sheen-hover relative overflow-hidden w-full px-[18px] py-2 rounded-xl border border-emerald-300/60 bg-[linear-gradient(135deg,rgba(34,197,94,0.9)_0%,rgba(21,128,61,0.95)_100%)] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_8px_20px_-4px_rgba(34,197,94,0.45)] text-white text-[15px] font-black tabular-nums cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-action="buy-dice">Buy Dice (${ENCHANT_DICE_GEM_COST} Gems)</button>
             <button class="${TW_ALTAR_AUTO_BTN} mam-outline-sm ${this.enchantAutoRolling ? 'is-active' : ''}" data-action="toggle-auto-enchant">${this.enchantAutoRolling ? 'Stop' : 'Auto Roll'}</button>
           </div>
         </div>
@@ -2080,7 +2093,7 @@ export class GameHud {
         <div class="w-[248px] max-w-[calc(100vw-32px)] p-2.5 rounded-2xl border border-cyan-300/35 bg-[rgba(10,15,28,0.9)] backdrop-blur-md shadow-[0_12px_28px_rgba(0,0,0,0.55)] flex flex-col gap-1.5">
           <div class="flex items-center justify-between text-[11px] font-black text-cyan-200 border-b border-white/10 pb-1">
             <span>⚔️ Damage Breakdown</span>
-            <span class="text-amber-300">Tap: ${fmtShort(bd.tapDamage)}</span>
+            <span class="text-amber-300 tabular-nums">Tap: ${fmtShort(bd.tapDamage)}</span>
           </div>
           ${
             bd.units.length > 0
@@ -2093,7 +2106,7 @@ export class GameHud {
                         <button type="button" class="w-full text-left flex flex-col gap-0.5 px-1.5 py-1 rounded-lg hover:bg-white/10 cursor-pointer transition-colors" data-dps-inspect-slot="${u.slotIndex}" title="Inspect ${u.name} (Plot ${u.slotIndex + 1})">
                           <div class="flex items-center justify-between text-[11px] font-bold text-slate-100 gap-2">
                             <span class="truncate">${u.name}${starTag}</span>
-                            <span class="shrink-0 text-cyan-300 font-extrabold">${fmtShort(u.dps)} <span class="text-slate-400 font-bold">(${pctStr})</span></span>
+                            <span class="shrink-0 text-cyan-300 font-extrabold tabular-nums">${fmtShort(u.dps)} <span class="text-slate-400 font-bold">(${pctStr})</span></span>
                           </div>
                           <div class="h-1.5 w-full rounded-full bg-slate-800/90 overflow-hidden">
                             <div class="h-full rounded-full bg-[linear-gradient(90deg,#38bdf8,#818cf8)]" style="width:${Math.min(100, Math.max(2, u.pct))}%"></div>
@@ -2111,7 +2124,7 @@ export class GameHud {
 
     return `
       ${panelHtml}
-      <button type="button" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-cyan-300/35 bg-[rgba(10,15,28,0.82)] backdrop-blur-md shadow-[0_6px_16px_rgba(0,0,0,0.45)] text-white text-[12px] font-extrabold cursor-pointer transition-all hover:border-cyan-300/60 hover:brightness-110 mam-outline-sm" data-action="toggle-dps-meter" title="Toggle DPS Breakdown">
+      <button type="button" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-cyan-300/35 bg-[rgba(10,15,28,0.82)] backdrop-blur-md shadow-[0_6px_16px_rgba(0,0,0,0.45)] text-white text-[12px] font-extrabold tabular-nums cursor-pointer transition-all hover:border-cyan-300/60 hover:brightness-110 mam-outline-sm" data-action="toggle-dps-meter" title="Toggle DPS Breakdown">
         <span class="text-cyan-300">⚔️ ${fmtShort(total)}/s</span>
         <span class="text-slate-400">•</span>
         <span class="text-amber-300">Tap ${fmtShort(bd.tapDamage)}</span>

@@ -569,8 +569,11 @@ export class AudioManager {
 
   private syncAudioState(): void {
     const muted = this.isEffectivelyMuted();
+    if (muted) {
+      this.cancelEnchantSpinSfx();
+    }
     if (this.sfxGain && this.ctx) {
-      this.sfxGain.gain.setTargetAtTime(muted ? 0 : this.sfxVolume, this.ctx.currentTime, 0.02);
+      this.sfxGain.gain.setTargetAtTime(muted ? 0 : this.sfxVolume, this.ctx.currentTime, 0.015);
     }
     if (this.bgmAudio) {
       this.bgmAudio.volume = muted ? 0 : this.bgmVolume;

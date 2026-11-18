@@ -271,24 +271,28 @@
   .mam-card-dps {
     font-size: 13px;
     font-weight: 900;
+    font-variant-numeric: tabular-nums;
     color: #ef4444;
   }
 
   .mam-card-val {
     font-size: 12px;
     font-weight: 900;
+    font-variant-numeric: tabular-nums;
     color: #4ade80;
   }
 
   .mam-card-qty {
     font-size: 11px;
     font-weight: 800;
+    font-variant-numeric: tabular-nums;
     color: #f8fafc;
   }
 
   .mam-card-pct {
     font-size: 14px;
     font-weight: 900;
+    font-variant-numeric: tabular-nums;
     color: #f8fafc;
   }
 
@@ -849,6 +853,41 @@
 
   .mam-btn-shake {
     animation: mamBtnShake 0.28s ease-in-out;
+  }
+
+  .mam-backdrop-enter {
+    animation: mamBackdropFadeIn 0.16s ease-out;
+  }
+
+  .mam-modal-enter {
+    animation: mamModalEnter 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes mamBackdropFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes mamModalEnter {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mam-backdrop-enter,
+    .mam-modal-enter {
+      animation: none;
+    }
   }
 
   @keyframes mamPopClick {

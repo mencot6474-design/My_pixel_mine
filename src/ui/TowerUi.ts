@@ -390,7 +390,7 @@ export class TowerUi {
       </div>
 
       <div class="fixed bottom-3.5 left-1/2 -translate-x-1/2 w-[min(760px,calc(100%-24px))] rounded-2xl border border-white/15 bg-[rgba(10,14,26,0.84)] backdrop-blur-xl px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap shadow-[0_14px_34px_rgba(0,0,0,0.6)] pointer-events-auto z-20">
-        <div class="flex items-center gap-3 flex-wrap text-[13px] font-black">
+        <div class="flex items-center gap-3 flex-wrap text-[13px] font-black tabular-nums">
           <span class="text-pink-300" data-tower-run-gems="true">+${fmtInt(run.gemsEarned)} Gems</span>
           <span class="text-purple-300" data-tower-run-dice="true">+${run.diceEarned} Dice</span>
           <span class="text-cyan-300">${fmtShort(effDps)}/s DPS</span>

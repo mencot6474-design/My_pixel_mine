@@ -77,8 +77,8 @@ src/game/NumberFormat.ts         45 baris — `fmtShort` 22, `fmtMoney` 33, `fmt
 src/audio/AudioManager.ts       588 baris — Web Audio SFX pool + synth (`playMutationRoll`, `playEnchantSpinStart`, `playEnchantSpinLand`,
                                             `playEnchantEquip`) & HTMLAudio BGM switcher (`audio` singleton, `setSceneMode`,
                                             `playOreHit`, `playOreBreak`, `playSfx`, mute persistence & tab/ad auto-mute)
-src/sdk/crazygames.ts           200 baris — CrazyGames SDK v3 wrapper (`isCrazyGamesEnv` 36, `cgLoadingStart` 64,
-                                            `cgGameplayStart` 80, `cgHappyTime` 100, `cgRequestRewardedAd` 108)
+src/sdk/crazygames.ts           200 baris — CrazyGames SDK v3 wrapper (`isCrazyGamesEnv` 42, `cgLoadingStart` 67,
+                                            `cgGameplayStart` 83, `cgHappyTime` 103, `cgRequestRewardedAd` 128)
 
 === UI HUD, MODALS & CSS (Modular Architecture) ===
 src/ui/GameHud.ts             2.337 baris — `GameHud`: Thin UI coordinator; manages 3D overlay layers (incl. Tower ore bars & Meteor bar),
@@ -88,25 +88,25 @@ src/ui/GameHud.ts             2.337 baris — `GameHud`: Thin UI coordinator; ma
                                             World Resonance HUD badges, Shop Plaza HUD (+ `Forge` dock shortcut & responsive wrap), Altar HUD + Auto Roll (`triggerSingleEnchantRoll`),
                                             100ms Tower timer tick (incl. 5s Blessing auto-pick), `isTutorialActive` & real chibi strike dispatch
 src/ui/HudShared.ts             241 baris — `chibiPortraitHtml` 6 (smooth/pixel portrait), shared types (`ModalKind` 16 incl. `'forge'`,
-                                            `ModalThemeId` 28, `InvTab` 30), rarity/ring helpers (`rarityCardClasses` 33 incl.
+                                            `ModalThemeId` 29, `InvTab` 31), rarity/ring helpers (`rarityCardClasses` 34 incl.
                                             `exotic`/`secret`, `rarityVars`, `applyInspectRing`), `refreshPotionTimersInDom`,
                                             dark-glass Tailwind `TW_*` constants (incl. `TW_SHOP_DOCK_BTN_BASE`), shared shell builders (`renderModalShell` 149,
                                             `renderInspectorPanel` 185)
 src/ui/CollectionModalsUi.ts  1.185 baris — `CollectionModalsUi` 43: Index modal (6 worlds + Weather Index tab + Inspector + Chibi 4-pose `Review` `<dialog>`),
                                             Backpack/Inventory (Equip Best / Auto Star-Up / Star-Up Miner / Search / Inspect), Chest modal & live updaters
-src/ui/ForgeModalUi.ts          367 baris — `ForgeModalUi` 28: Relic Forge Dark-Glass modal (`renderForgeModal`: 3 equipped slots, All/World/Weather/Tower tabs,
+src/ui/ForgeModalUi.ts          367 baris — `ForgeModalUi` 34: Relic Forge Dark-Glass modal (`renderForgeModal`: 3 equipped slots, All/World/Weather/Tower tabs,
                                             12-relic grid, `renderForgeInspector` + `?` Ore Source Pop-up `renderOreSourcePopup`)
-src/ui/ShopModalsUi.ts          653 baris — `ShopModalsUi` 42: Pickaxe Shop, Gem Shop, Sell Shop + Inspectors & updaters
-src/ui/TowerUi.ts               561 baris — `TowerUi` 19: Gem Tower Hub Dark-Glass modal (`renderTowerHubModal` 44:
+src/ui/ShopModalsUi.ts          653 baris — `ShopModalsUi` 43: Pickaxe Shop, Gem Shop, Sell Shop + Inspectors & updaters
+src/ui/TowerUi.ts               561 baris — `TowerUi` 20: Gem Tower Hub Dark-Glass modal (`renderTowerHubModal` 45:
                                             Keys, 5-Floor Checkpoints & Milestones, Anomalies, Quick Sweep, Run Summary) &
                                             3D Arena HUD (`renderTowerArenaHud`, unified Boss & Wave HP bar styling, 5s Boss Invul shield, 5s Blessing auto-pick)
 src/ui/TutorialUi.ts            555 baris — `TutorialUi`: Interactive step-by-step onboarding spotlight, arrow guide & `onComplete` callback
 src/ui/UpgradesWorldsUi.ts      596 baris — `UpgradesWorldsUi` 17: Research/Upgrades tree & World Teleport full-banner
-                                            modal (`buildWorldsListHtml` 308 pakai `public/worlds/*.jpg`) & live updaters
-src/ui/PlotInspectUi.ts         412 baris — `PlotInspectUi` 27: Plot Inspector overlay (incl. ★Star, World Resonance & per-unit Enchant `In Use`/`Equipped` status), live updater & modal
+                                            modal (`buildWorldsListHtml` 308 pakai `public/worlds/*.webp`) & live updaters
+src/ui/PlotInspectUi.ts         412 baris — `PlotInspectUi` 28: Plot Inspector overlay (incl. ★Star, World Resonance & per-unit Enchant `In Use`/`Equipped` status), live updater & modal
                                             konfirmasi peringatan roll mutasi Frozen+ (`renderMutationConfirmOverlay`
-                                            219: `Stop (Keep)` / `Continue`, proteksi obtain & overwrite)
-src/ui/HudIcons.ts              371 baris — SVG, 2D fantasy art (`public/{enchants,hud,meteors,ores,pickaxes,potions,weathers}/*.png|webp`), & 3D-thumbnail icon helpers (`HUD_ICONS`, `hudIconHtml`,
+                                            222: `Stop (Keep)` / `Continue`, proteksi obtain & overwrite)
+src/ui/HudIcons.ts              371 baris — SVG, 2D fantasy art (`public/{enchants,hud,meteors,ores,pickaxes,potions,weathers}/*.webp`), & 3D-thumbnail icon helpers (`HUD_ICONS`, `hudIconHtml`,
                                             `weatherIconHtml`, `towerIconHtml`, `pickaxeIconHtml`, `gemPotionIconHtml`,
                                             `enchantAuraIconHtml`, `enchantDiceIconHtml`, `researchIconHtml`)
 src/styles/global.css            73 baris — Tailwind v4 entry (`@import "tailwindcss";`) + base font/reset + pickaxe cursor styles
@@ -119,14 +119,14 @@ src/game3d/MineScene3D.ts     1.010 baris — Main Three.js scene controller: sw
                                             runs background pit/miner ticks, pit-floor click auto-target highest-HP alive ore (`getPitFloorHit`),
                                             animated pickaxe cursor (`mine` / `tower-core` hover only, hidden behind modals),
                                             weather sky/fog/lighting (`setWeather`, `applyWeatherAtmosphere`), raycasts & emits plot/station/tower-ore anchors
-src/game3d/MineEnvironment3D.ts 530 baris — Surrounding terrain, sky dome (`skyHandle` `WeatherSkyMaterialHandle` 32,
+src/game3d/MineEnvironment3D.ts 530 baris — Surrounding terrain, sky dome (`skyHandle` `WeatherSkyMaterialHandle` 33,
                                             `setWeatherSky` 497), cliff walls, stone-framed 3:1 `"My Chibi Minerr"` Banner Wall (`game_banner.webp`) & world lighting
 src/game3d/WeatherSkyShader.ts  237 baris — Animated GLSL Atmospheric Sky Shader (`createWeatherSkyMaterial` 184:
                                             sky gradient, layered FBM clouds, stars/nebula, Bloodmoon & Celestial moons)
 src/game3d/WeatherFx3D.ts       213 baris — `WeatherFx3D` 74: 3D weather particles (rain/snow/embers/void/starfall)
                                             with soft radial/streak canvas textures
 src/game3d/MineWorldPalette.ts  113 baris — `WORLD_PALETTES` 25 (6 worlds incl. `starwell`), `ORE_VARIANTS` 99, `rollOreVariant` 105
-src/game3d/OrePit3D.ts          960 baris — Pit floor, shared `OreBillboard2D` 2D ore sprites (`public/ores/*.png`) & Weather Meteor node
+src/game3d/OrePit3D.ts          960 baris — Pit floor, shared `OreBillboard2D` 2D ore sprites (`public/ores/*.webp`) & Weather Meteor node
                                             (`public/meteors/*.webp`) + squash-on-hit, hit VFX (skipped when hidden),
                                             `getAliveNodesInfo` & `applyNodeDamagePure` 41
 src/game3d/PlotPedestal3D.ts    263 baris — Plot pedestals around the pit & camera-aligned enchant rings
@@ -145,7 +145,7 @@ src/game3d/AltarSpinFx3D.ts     529 baris — `createAltarClockDial` 34, `create
                                             `createAltarSubHand` 254, `AltarParticleSystem` 308
 src/game3d/HellAltarEye3D.ts    372 baris — `HellAltarEyeController` 151: Outer Space starfield, cosmic astrolabe floor ring,
                                             & distant Pitch-Black Black Hole (`#000000` event horizon, photon ring, lensing arches, accretion disk)
-src/game3d/AuraModels3D.ts      584 baris — `createEnchantAura3D` 276, `createEnchantDice3D` 318, `ArtBillboard2D` 412 & `EnchantBillboard2D` 571 (2.5D sprites)
+src/game3d/AuraModels3D.ts      584 baris — `createEnchantAura3D` 276, `createEnchantDice3D` 318, `ArtBillboard2D` 412 & `EnchantBillboard2D` 575 (2.5D sprites)
 src/game3d/HudIcon3DRenderer.ts 2.002 baris — Offscreen WebGL renderer generating cached data-URL 3D icons (`buildStarwellOreModel` 1351)
                                             & 5 3D weather icons (`init3dHudIcons` 1842)
 src/game3d/ProceduralTextures3D.ts 441 baris — Procedural canvas textures (sky dome, terrain, quarry floor, cobble, etc.)
@@ -154,17 +154,17 @@ src/game3d/GlbAssets3D.ts       135 baris — Async GLTF/GLB loader & cache (`mo
 === ASSETS (`public/`) ===
 public/audio/                   CC0 BGM (`bgm/bgm-{mine,shop,tower,boss}.mp3`) & 24 SFX (`sfx/*.ogg|wav|mp3`) + `LICENSE.txt`
 public/chibi/                   35 chibi (`<id>/{attack,idle,pose,walk}.webp` W1–W6 + 5 weather-limited non-pixel anime art, 140 files)
-public/enchants/                11 transparent PNG fantasy aura & dice icons (`blazing`..`spellbound`, `enchant_dice`)
+public/enchants/                11 transparent WebP fantasy aura & dice icons (`blazing`..`spellbound`, `enchant_dice`)
 public/hud/                     18 HUD & modal art icons (`shops`..`lock`, incl. `tower_boss.webp` & `game_banner.webp` 3:1 Mine banner)
 public/meteors/                 5 Weather Meteor `.webp` sprites (`light_rain`, `snow_rain`, `bloodmoon`, `void`, `celestial`)
 public/models/                  Kenney & fantasy `.glb` packs (`castle/`, `factory/`, `fantasy-town/`, `mini-dungeon/`,
                                 `modular-cave/`, `nature/`, `platformer/`, `retro-fantasy/`, `survival/`, `train/`)
-public/ores/                    53 transparent PNG fantasy ore icons (48 W1–W6 `underground`..`starwell` + 5 weather-limited)
-public/pickaxes/                12 transparent PNG fantasy pickaxe art icons (`starter`..`starwellcrown`)
-public/potions/                 8 transparent PNG fantasy potion art icons (`ore-elixir-1`..`mutation-luck-1`)
+public/ores/                    53 transparent WebP fantasy ore icons (48 W1–W6 `underground`..`starwell` + 5 weather-limited)
+public/pickaxes/                12 transparent WebP fantasy pickaxe art icons (`starter`..`starwellcrown`)
+public/potions/                 8 transparent WebP fantasy potion art icons (`ore-elixir-1`..`mutation-luck-1`)
 public/relics/                  12 transparent WebP 384×384 Relic Forge icons (`miner_lantern`..`commander_banner`)
-public/weathers/                5 transparent PNG fantasy weather emblem icons (`light_rain`..`celestial`)
-public/worlds/                  6 full-bleed teleport banner JPGs (`underground`, `crystal`, `magma`, `ruins`, `astral`, `starwell`)
+public/weathers/                5 transparent WebP fantasy weather emblem icons (`light_rain`..`celestial`)
+public/worlds/                  6 full-bleed teleport banner WebPs (`underground`, `crystal`, `magma`, `ruins`, `astral`, `starwell`)
 ```
 
 ---
