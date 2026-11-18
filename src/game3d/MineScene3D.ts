@@ -10,6 +10,8 @@ import { PlotLabelInfo, PlotPedestal3D } from './PlotPedestal3D';
 import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId, ShopWorld3D } from './ShopWorld3D';
 import { TowerArena3D, TowerFighterConfig, TowerOreBarScreen } from './TowerArena3D';
 import { TowerWaveOreState } from '../game/TowerData';
+import { GRAPHICS_PRESETS, GraphicsQuality } from '../game/GameSettings';
+import { OVERCLOCK_SPEED_MULT } from '../game/OverclockDomain';
 import { getWeatherById, WeatherId } from '../game/WeatherData';
 import { WeatherFx3D } from './WeatherFx3D';
 
@@ -81,6 +83,8 @@ export class MineScene3D {
   private dragHighlightPlot: number | null = null;
   private activePalette: MineWorldPalette = DEFAULT_WORLD_PALETTE;
   private activeWeatherId: WeatherId = 'light_rain';
+  private graphicsQuality: GraphicsQuality = 'high';
+  private overclockActive = false;
   private tapDamage = 45;
 
   private readonly crateGroup = new THREE.Group();
@@ -530,8 +534,10 @@ export class MineScene3D {
     window.addEventListener('resize', () => {
       const w = Math.max(1, this.mountEl.clientWidth);
       const h = Math.max(1, this.mountEl.clientHeight);
+      const preset = GRAPHICS_PRESETS[this.graphicsQuality];
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.maxPixelRatio));
       this.renderer.setSize(w, h);
     });
   }
@@ -635,8 +641,9 @@ export class MineScene3D {
       ? (dmg: number, wx: number, wy: number, wz: number) => this.emitDamageScreen(dmg, wx, wy, wz, false)
       : undefined;
 
+    const minerDt = inMine && this.overclockActive ? dtSec * OVERCLOCK_SPEED_MULT : dtSec;
     for (const fm of this.fieldMiners.values()) {
-      fm.update(dtSec, this.elapsed, this.camera, this.pit, this.callbacks.onOreBroken, hitCb, inMine);
+      fm.update(minerDt, this.elapsed, this.camera, this.pit, this.callbacks.onOreBroken, hitCb, inMine);
     }
 
     // If the browser tab was backgrounded/throttled (rawDt > 0.12s), catch up missed mine ticks seamlessly
@@ -1094,6 +1101,36 @@ export class MineScene3D {
 
   public getPlotChibi(slotIndex: number): ChibiDef | null {
     return this.pedestals[slotIndex]?.getChibi() ?? null;
+  }
+
+  public setOverclockActive(active: boolean): void {
+    if (this.overclockActive === active) return;
+    this.overclockActive = active;
+    if (active) {
+      this.stageNeonMat.color.setHex(0xf59e0b);
+      this.stageNeonMat.emissive.setHex(0xf59e0b);
+      this.stageNeonMat.emissiveIntensity = 1.85;
+      this.stageHoloMat.color.setHex(0xf59e0b);
+      this.rimLight.color.setHex(0xf59e0b);
+      this.rimLight.intensity = 1.25;
+    } else {
+      this.stageNeonMat.color.set(this.activePalette.crystalColor);
+      this.stageNeonMat.emissive.set(this.activePalette.crystalColor);
+      this.stageNeonMat.emissiveIntensity = 1.15;
+      this.stageHoloMat.color.set(this.activePalette.crystalColor);
+      this.rimLight.intensity = 0.72;
+      this.applyWeatherAtmosphere();
+    }
+  }
+
+  public setGraphicsQuality(quality: GraphicsQuality): void {
+    this.graphicsQuality = quality;
+    const preset = GRAPHICS_PRESETS[quality];
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.maxPixelRatio));
+    this.renderer.shadowMap.enabled = preset.shadowsEnabled;
+    this.sunLight.castShadow = preset.shadowsEnabled;
+    this.renderer.shadowMap.needsUpdate = true;
+    this.weatherFx.setQualityScale(preset.weatherParticleScale);
   }
 
   public setAdPaused(paused: boolean): void {

@@ -9,6 +9,7 @@ import {
 } from '../game/GameData';
 import { GameState } from '../game/GameState';
 import { fmtShort } from '../game/NumberFormat';
+import { type OverclockSnapshot } from '../game/OverclockDomain';
 import { WeatherId, WEATHERS } from '../game/WeatherData';
 import { getChibiById } from '../game3d/ChibiCatalog';
 import { enchantDiceIconHtml, gemPotionIconHtml, hudIconHtml, meteorIconHtml, weatherIconHtml } from './HudIcons';
@@ -225,32 +226,50 @@ export function buildWeatherWidgetInnerHtml(
     `;
 }
 
+const DPS_SWORD_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+  <path d="M19.5 4.5L11.2 12.8M19.5 4.5L15.2 4.9L9.8 10.3L13.7 14.2L19.1 8.8L19.5 4.5Z" fill="url(#mam-dps-blade)" stroke="#e0f2fe" stroke-width="1.3" stroke-linejoin="round"/>
+  <path d="M8.5 11.5L12.5 15.5M6.2 17.8L10.2 13.8M5 19L7.4 16.6" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="mam-dps-blade" x1="10" y1="5" x2="19" y2="14" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="55%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+  </defs>
+</svg>`;
+
+const DPS_CHEVRON_UP = `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true"><path d="M4 10L8 6L12 10" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const DPS_CHEVRON_DOWN = `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true"><path d="M4 6L8 10L12 6" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 /** Builds inner HTML for the bottom-left DPS Meter pill and breakdown panel. */
 export function buildDpsMeterInnerHtml(state: GameState, dpsMeterOpen: boolean): string {
   const bd = state.getDpsBreakdown();
   const total = bd.totalPlotDps;
   const panelHtml = dpsMeterOpen
     ? `
-        <div class="w-[248px] max-w-[calc(100vw-32px)] p-2.5 rounded-2xl border border-cyan-300/35 bg-[rgba(10,15,28,0.9)] backdrop-blur-md shadow-[0_12px_28px_rgba(0,0,0,0.55)] flex flex-col gap-1.5">
-          <div class="flex items-center justify-between text-[11px] font-black text-cyan-200 border-b border-white/10 pb-1">
-            <span>⚔️ Damage Breakdown</span>
-            <span class="text-amber-300 tabular-nums">Tap: ${fmtShort(bd.tapDamage)}</span>
+        <div class="mam-dps-panel flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-2 border-b border-white/10 pb-1.5">
+            <span class="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.06em] text-sky-200 mam-outline-sm">
+              ${DPS_SWORD_SVG}
+              <span>Damage Breakdown</span>
+            </span>
+            <span class="px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-300/40 text-[10.5px] font-black text-amber-200 tabular-nums">Tap ${fmtShort(bd.tapDamage)}</span>
           </div>
           ${
             bd.units.length > 0
-              ? `<div class="flex flex-col gap-1 max-h-[168px] overflow-y-auto mam-no-scrollbar pr-0.5" data-dps-scroll="true">
+              ? `<div class="flex flex-col gap-1.5 max-h-[172px] overflow-y-auto mam-no-scrollbar pr-0.5" data-dps-scroll="true">
                   ${bd.units
                     .map((u) => {
                       const pctStr = `${u.pct >= 10 ? Math.round(u.pct) : u.pct.toFixed(1)}%`;
                       const starTag = u.stars > 0 ? ` <span class="text-amber-300">★${u.stars}</span>` : '';
                       return `
-                        <button type="button" class="w-full text-left flex flex-col gap-0.5 px-1.5 py-1 rounded-lg hover:bg-white/10 cursor-pointer transition-colors" data-dps-inspect-slot="${u.slotIndex}" title="Inspect ${u.name} (Plot ${u.slotIndex + 1})">
-                          <div class="flex items-center justify-between text-[11px] font-bold text-slate-100 gap-2">
-                            <span class="truncate">${u.name}${starTag}</span>
-                            <span class="shrink-0 text-cyan-300 font-extrabold tabular-nums">${fmtShort(u.dps)} <span class="text-slate-400 font-bold">(${pctStr})</span></span>
+                        <button type="button" class="w-full text-left flex flex-col gap-1 px-2 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-sky-400/10 hover:border-sky-300/35 cursor-pointer transition-colors" data-dps-inspect-slot="${u.slotIndex}" title="Inspect ${u.name} (Plot ${u.slotIndex + 1})">
+                          <div class="flex items-center justify-between text-[11px] font-extrabold text-slate-100 gap-2">
+                            <span class="truncate"><span class="text-[9.5px] text-slate-400 font-black mr-1">#${u.slotIndex + 1}</span>${u.name}${starTag}</span>
+                            <span class="shrink-0 text-sky-300 font-black tabular-nums">${fmtShort(u.dps)} <span class="text-slate-400 font-bold text-[10px]">(${pctStr})</span></span>
                           </div>
-                          <div class="h-1.5 w-full rounded-full bg-slate-800/90 overflow-hidden">
-                            <div class="h-full rounded-full bg-[linear-gradient(90deg,#38bdf8,#818cf8)]" style="width:${Math.min(100, Math.max(2, u.pct))}%"></div>
+                          <div class="h-1.5 w-full rounded-full bg-slate-950/90 border border-white/10 overflow-hidden">
+                            <div class="h-full rounded-full bg-[linear-gradient(90deg,#0284c7,#38bdf8,#a855f7)]" style="width:${Math.min(100, Math.max(2, u.pct))}%"></div>
                           </div>
                         </button>
                       `;
@@ -265,11 +284,16 @@ export function buildDpsMeterInnerHtml(state: GameState, dpsMeterOpen: boolean):
 
   return `
       ${panelHtml}
-      <button type="button" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-cyan-300/35 bg-[rgba(10,15,28,0.82)] backdrop-blur-md shadow-[0_6px_16px_rgba(0,0,0,0.45)] text-white text-[12px] font-extrabold tabular-nums cursor-pointer transition-all hover:border-cyan-300/60 hover:brightness-110 mam-outline-sm" data-action="toggle-dps-meter" title="Toggle DPS Breakdown">
-        <span class="text-cyan-300">⚔️ ${fmtShort(total)}/s</span>
-        <span class="text-slate-400">•</span>
-        <span class="text-amber-300">Tap ${fmtShort(bd.tapDamage)}</span>
-        <span class="text-[10px] text-slate-400">${dpsMeterOpen ? '▼' : '▲'}</span>
+      <button type="button" class="mam-dps-pill text-white text-[12px] font-black tabular-nums cursor-pointer mam-outline-sm" data-action="toggle-dps-meter" title="Toggle DPS Breakdown">
+        <span class="mam-dps-emblem" aria-hidden="true">${DPS_SWORD_SVG}</span>
+        <span class="flex-1 min-w-0 flex items-center justify-between gap-2">
+          <span class="inline-flex items-center gap-1.5 min-w-0">
+            <span class="text-sky-300 truncate">${fmtShort(total)}/s</span>
+            <span class="w-1 h-1 rounded-full bg-slate-500 shrink-0"></span>
+            <span class="text-amber-300 shrink-0">Tap ${fmtShort(bd.tapDamage)}</span>
+          </span>
+          <span class="shrink-0 opacity-90" data-dps-chevron="${dpsMeterOpen ? 'down' : 'up'}">${dpsMeterOpen ? DPS_CHEVRON_DOWN : DPS_CHEVRON_UP}</span>
+        </span>
       </button>
     `;
 }
@@ -301,12 +325,22 @@ export class WeatherDpsHudUi {
     `;
   }
 
-  public renderDpsMeterWidget(): string {
+  public renderDpsMeterWidget(includeOverclock = false, now = Date.now()): string {
     const inner = buildDpsMeterInnerHtml(this.state, this.dpsMeterOpen);
     this.lastDpsMeterHtml = inner;
+    if (!includeOverclock) {
+      return `
+        <div class="absolute bottom-[14px] left-4 @max-[860px]:bottom-[78px] @max-[720px]:left-2.5 z-[5] w-[236px] @max-[1100px]:w-[218px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1.5 pointer-events-auto" data-hud-dps="true">
+          ${inner}
+        </div>
+      `;
+    }
     return `
-      <div class="absolute bottom-[14px] left-4 @max-[860px]:bottom-[78px] @max-[720px]:left-2.5 z-[5] flex flex-col items-start gap-1.5 pointer-events-auto" data-hud-dps="true">
-        ${inner}
+      <div class="absolute bottom-[14px] left-4 @max-[860px]:bottom-[78px] @max-[720px]:left-2.5 z-[5] w-[236px] @max-[1100px]:w-[218px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1.5 pointer-events-none">
+        <div class="w-full flex flex-col items-stretch gap-1.5 pointer-events-auto" data-hud-dps="true">
+          ${inner}
+        </div>
+        ${this.renderOverclockWidget(now)}
       </div>
     `;
   }
@@ -424,4 +458,79 @@ export class WeatherDpsHudUi {
       }
     }
   }
+
+  public renderOverclockWidget(now = Date.now()): string {
+    const snap = this.state.getOverclockSnapshot(now);
+    return `
+      <div class="w-full pointer-events-none select-none" data-hud-overclock="true">
+        ${buildOverclockGaugeInnerHtml(snap)}
+      </div>
+    `;
+  }
+
+  public syncOverclockWidget(root: HTMLElement, now = Date.now()): void {
+    const host = root.querySelector<HTMLElement>('[data-hud-overclock="true"]');
+    if (!host) return;
+    const snap = this.state.getOverclockSnapshot(now);
+    const key = snap.active
+      ? `active:${snap.remainingSec.toFixed(1)}`
+      : `charge:${Math.round(snap.chargePct)}`;
+    if (host.dataset.ocKey === key) return;
+    host.dataset.ocKey = key;
+    host.innerHTML = buildOverclockGaugeInnerHtml(snap);
+  }
+}
+
+const OVERCLOCK_BOLT_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+  <path d="M13.5 2L4.5 13.2H11.4L10.3 22L19.5 10.6H12.7L13.5 2Z" fill="url(#mam-oc-bolt)" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="mam-oc-bolt" x1="4" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="55%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#e879f9"/>
+    </linearGradient>
+  </defs>
+</svg>`;
+
+const OVERCLOCK_TICKS_HTML = '<div class="mam-fever-ticks" aria-hidden="true">' + '<span></span>'.repeat(10) + '</div>';
+
+export function buildOverclockGaugeInnerHtml(snap: OverclockSnapshot): string {
+  const pct = Math.max(0, Math.min(100, Math.round(snap.chargePct)));
+  if (snap.active) {
+    return `
+      <div class="mam-fever-shell is-active" data-overclock-state="active">
+        <div class="mam-fever-emblem">${OVERCLOCK_BOLT_SVG}</div>
+        <div class="flex-1 min-w-0 flex flex-col gap-1">
+          <div class="flex items-center justify-between gap-1.5 leading-none">
+            <span class="text-[11px] font-black italic uppercase tracking-[0.08em] text-[#fef08a] mam-outline-sm">OVERCLOCK ACTIVE</span>
+            <span class="px-1.5 py-0.5 rounded bg-amber-400/20 border border-amber-300/60 text-[11px] font-black tabular-nums text-white leading-none mam-outline-sm">${snap.remainingSec.toFixed(1)}s</span>
+          </div>
+          <div class="mam-fever-track">
+            <div class="mam-fever-fill" style="width:${pct}%"></div>
+            ${OVERCLOCK_TICKS_HTML}
+          </div>
+          <div class="flex items-center gap-1 text-[9.5px] font-black uppercase tracking-wider leading-none">
+            <span class="px-1.5 py-0.5 rounded bg-amber-500/25 border border-amber-300/50 text-amber-200">2x SPD</span>
+            <span class="px-1.5 py-0.5 rounded bg-fuchsia-500/25 border border-fuchsia-300/50 text-fuchsia-200">2x TAP</span>
+            <span class="px-1.5 py-0.5 rounded bg-sky-500/25 border border-sky-300/50 text-sky-200">+50% ORE</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="mam-fever-shell" data-overclock-state="charging">
+      <div class="mam-fever-emblem">${OVERCLOCK_BOLT_SVG}</div>
+      <div class="flex-1 min-w-0 flex flex-col gap-1">
+        <div class="flex items-center justify-between gap-1.5 leading-none">
+          <span class="text-[10.5px] font-black italic uppercase tracking-[0.1em] text-sky-200 mam-outline-sm">OVERCLOCK FEVER</span>
+          <span class="text-[11px] font-black tabular-nums text-white mam-outline-sm">${pct}%</span>
+        </div>
+        <div class="mam-fever-track">
+          <div class="mam-fever-fill" style="width:${pct}%"></div>
+          ${OVERCLOCK_TICKS_HTML}
+        </div>
+      </div>
+    </div>
+  `;
 }

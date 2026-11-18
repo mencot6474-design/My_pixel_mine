@@ -76,6 +76,7 @@ export class WeatherFx3D {
 
   private weatherId: WeatherId = 'light_rain';
   private shopMode = false;
+  private activeParticleCount = PARTICLE_COUNT;
   private readonly positions: Float32Array;
   private readonly speeds: Float32Array;
   private readonly drifts: Float32Array;
@@ -133,6 +134,19 @@ export class WeatherFx3D {
     this.applyParticleStyle();
   }
 
+  public setQualityScale(scale: number): void {
+    const clamped = Number.isFinite(scale) ? Math.max(0, Math.min(1, scale)) : 1;
+    this.activeParticleCount = Math.round(PARTICLE_COUNT * clamped);
+    this.geom.setDrawRange(0, this.activeParticleCount);
+    if (this.activeParticleCount <= 0) {
+      this.group.visible = false;
+    }
+  }
+
+  public getActiveParticleCount(): number {
+    return this.activeParticleCount;
+  }
+
   private applyParticleStyle(): void {
     const weatherId = this.weatherId;
     const scaleBoost = this.shopMode ? 1.65 : 1.0;
@@ -184,11 +198,13 @@ export class WeatherFx3D {
   }
 
   public update(dtSec: number, elapsed: number, active: boolean): void {
-    this.group.visible = active;
-    if (!active) return;
+    const enabled = active && this.activeParticleCount > 0;
+    this.group.visible = enabled;
+    if (!enabled) return;
 
     const w = this.weatherId;
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const count = this.activeParticleCount;
+    for (let i = 0; i < count; i++) {
       const idx = i * 3;
       const spd = this.speeds[i];
       const ph = this.drifts[i];

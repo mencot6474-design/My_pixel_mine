@@ -10,6 +10,7 @@ import {
   WORLDS,
 } from './GameData';
 import { getRelicById, MAX_EQUIPPED_RELICS } from './RelicData';
+import { BountyEntry, isValidBountyEntry } from './BountiesDomain';
 import { ResearchTreeId } from './ResearchData';
 import { TOWER_MAX_KEYS, TowerSaveData } from './TowerData';
 import { isValidWeatherId, WeatherId } from './WeatherData';
@@ -106,6 +107,9 @@ export interface SavePayload {
     id: WeatherId;
     expiresAt: number;
   };
+  lastSavedAt?: number;
+  bounties?: BountyEntry[];
+  bountiesCompleted?: number;
 }
 
 export interface SaveableGameState {
@@ -143,6 +147,9 @@ export interface SaveableGameState {
   towerClaimedMilestones: number[];
   weatherId: WeatherId;
   weatherExpiresAt: number;
+  lastSavedAt: number;
+  bounties: BountyEntry[];
+  bountiesCompleted: number;
 }
 
 /** Maps retired World 2–5 ore IDs onto current catalog ore IDs. */
@@ -228,6 +235,9 @@ export function serializeSavePayload(state: SaveableGameState): SavePayload {
       id: state.weatherId,
       expiresAt: state.weatherExpiresAt,
     },
+    lastSavedAt: state.lastSavedAt,
+    bounties: state.bounties,
+    bountiesCompleted: state.bountiesCompleted,
   };
 }
 
@@ -429,6 +439,15 @@ export function deserializeSaveJson(
       if (typeof data.weather.expiresAt === 'number' && Number.isFinite(data.weather.expiresAt)) {
         state.weatherExpiresAt = data.weather.expiresAt;
       }
+    }
+    if (typeof data.lastSavedAt === 'number' && Number.isFinite(data.lastSavedAt) && data.lastSavedAt > 0) {
+      state.lastSavedAt = data.lastSavedAt;
+    }
+    if (typeof data.bountiesCompleted === 'number' && Number.isFinite(data.bountiesCompleted) && data.bountiesCompleted >= 0) {
+      state.bountiesCompleted = Math.floor(data.bountiesCompleted);
+    }
+    if (Array.isArray(data.bounties)) {
+      state.bounties = data.bounties.filter((b): b is BountyEntry => isValidBountyEntry(b));
     }
   } catch {
     // Ignore corrupt saves

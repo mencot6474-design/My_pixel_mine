@@ -10,6 +10,7 @@ import {
 } from '../game3d/ShopWorld3D';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
 import { getEnchantById, getMinerRarity, getMutationById, RARITY_BORDER } from '../game/GameData';
+import { GameSettings, gameSettings } from '../game/GameSettings';
 import { GameState } from '../game/GameState';
 import { fmtShort } from '../game/NumberFormat';
 import { getWeatherById } from '../game/WeatherData';
@@ -223,7 +224,8 @@ export class WorldOverlayHudUi {
     private readonly onOpenShopStation: (station: ShopStationId) => void,
     private readonly syncPlotLabelFn?: (slotIndex: number, info: PlotLabelInfo | null) => void,
     private readonly onTutorialPlotAnchor?: (x: number, y: number, visible: boolean) => void,
-    private readonly onTutorialDomArrowSync?: () => void
+    private readonly onTutorialDomArrowSync?: () => void,
+    private readonly settings: GameSettings = gameSettings
   ) {}
 
   public mountLayers(): void {
@@ -392,6 +394,7 @@ export class WorldOverlayHudUi {
   }
 
   public spawnDamagePopup(dmg: number, screenX: number, screenY: number, isClick = false): void {
+    if (!this.settings.get().showDamagePopups) return;
     if (!this.dmgLayerEl || this.getUiContext().inspectedSlot !== null) return;
     if (this.dmgLayerEl.childElementCount >= 24) {
       this.dmgLayerEl.firstElementChild?.remove();

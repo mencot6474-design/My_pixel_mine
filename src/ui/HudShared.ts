@@ -3,6 +3,7 @@ import { RARITY_BORDER, ItemRarity } from '../game/GameData';
 import { GameState } from '../game/GameState';
 import { ChibiDef } from '../game3d/ChibiCatalog';
 import type { PlotLabelInfo } from '../game3d/PlotPedestal3D';
+import { hudIconHtml } from './HudIcons';
 
 export interface PlotDropOps {
   raycastPlotAt: (clientX: number, clientY: number) => number | null;
@@ -32,7 +33,10 @@ export type ModalKind =
   | 'upgrades'
   | 'worlds'
   | 'tower'
-  | 'forge';
+  | 'forge'
+  | 'settings'
+  | 'offline'
+  | 'bounties';
 
 export type ModalThemeId = Exclude<ModalKind, 'none'>;
 
@@ -97,7 +101,7 @@ export const TW_SIDE_BTN_UPGRADES = `${TW_SIDE_BTN_BASE} border-[1.5px] border-[
 export const TW_SIDE_BTN_INDEX = `${TW_SIDE_BTN_BASE} border-[1.5px] border-[#c084fc]/60 bg-[linear-gradient(160deg,rgba(107,33,168,0.78)_0%,rgba(16,12,34,0.9)_100%)]`;
 export const TW_SIDE_BTN_RAINBOW = `${TW_SIDE_BTN_BASE} border-[2px] border-transparent [background:linear-gradient(160deg,rgba(49,46,129,0.84)_0%,rgba(12,15,32,0.94)_100%)_padding-box,linear-gradient(135deg,#f43f5e,#f59e0b,#22c55e,#38bdf8,#c084fc)_border-box]`;
 export const TW_BADGE_BASE =
-  'absolute -top-[6px] -left-[6px] z-[4] rounded-lg bg-[linear-gradient(135deg,#fb7185_0%,#e11d48_100%)] border border-rose-200/60 shadow-[0_4px_12px_rgba(244,63,94,0.5)] text-white font-extrabold flex items-center justify-center';
+  'mam-notif-badge absolute -top-[7px] -left-[7px] z-[4] bg-[linear-gradient(135deg,#fb7185_0%,#e11d48_100%)] border border-rose-200/75 text-white font-black flex items-center justify-center leading-none';
 export const TW_CURRENCY_BAR =
   'flex items-center justify-end gap-2 min-w-[215px] @max-[720px]:min-w-[170px] py-[5px] pr-3 pl-7 @max-[720px]:pl-4 rounded-xl border border-white/15 backdrop-blur-md bg-[linear-gradient(90deg,rgba(12,16,28,0.1)_0%,rgba(12,16,28,0.72)_38%,rgba(14,20,36,0.88)_100%)] shadow-[0_8px_20px_rgba(0,0,0,0.4)]';
 export const TW_PLUS_BTN =
@@ -158,6 +162,7 @@ export function renderModalShell(opts: {
   theme?: ModalThemeId;
   iconHtml?: string;
   boxClass?: string;
+  autoHeight?: boolean;
   headerExtraHtml?: string;
   bodyHtml: string;
 }): string {
@@ -165,9 +170,12 @@ export function renderModalShell(opts: {
   const extraRow = opts.headerExtraHtml
     ? `<div class="flex items-center justify-end gap-2.5 flex-wrap w-full">${opts.headerExtraHtml}</div>`
     : '';
+  const modalBoxClass = opts.autoHeight
+    ? 'mam-modal max-w-full h-auto max-h-[calc(100%-18px)] min-h-0 flex flex-col pt-3 px-4 pb-4 gap-2.5'
+    : TW_MODAL_BOX;
   return `
     <div class="${TW_MODAL_BACKDROP}" data-backdrop="true">
-      <div class="${TW_MODAL_BOX} ${opts.boxClass ?? 'w-[780px]'}" ${themeAttr} role="dialog" aria-modal="true" aria-label="${opts.title}">
+      <div class="${modalBoxClass} ${opts.boxClass ?? 'w-[780px]'}" ${themeAttr} role="dialog" aria-modal="true" aria-label="${opts.title}">
         <div class="mam-modal-surface" aria-hidden="true"></div>
         <div class="mam-modal-rails" aria-hidden="true">
           <span class="mam-rail-stud is-tl"></span>
@@ -301,4 +309,67 @@ export function restoreRootScrolls(root: HTMLElement, entries: SavedScrollEntry[
       if (entry.scrollLeft > 0) htmlEl.scrollLeft = entry.scrollLeft;
     }
   }
+}
+
+export type ToastTone = 'overclock' | 'bounty' | 'meteor' | 'reward' | 'audio' | 'error' | 'info';
+
+const TOAST_SVG_BOLT = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13.5 2L4.5 13.2H11.4L10.3 22L19.5 10.6H12.7L13.5 2Z" fill="#fde047" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
+const TOAST_SVG_METEOR = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 5L11.5 12.5M14 5L9.5 9.5M19 10L14.5 14.5" stroke="#e9d5ff" stroke-width="1.8" stroke-linecap="round"/><circle cx="9" cy="15" r="5" fill="#c084fc" stroke="#f5d0fe" stroke-width="1.5"/></svg>`;
+const TOAST_SVG_ERROR = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5L21 19.5H3L12 3.5Z" fill="#fb7185" fill-opacity="0.25" stroke="#fb7185" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 9.5V13.8M12 16.8H12.01" stroke="#ffe4e6" stroke-width="2" stroke-linecap="round"/></svg>`;
+const TOAST_SVG_AUDIO = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 9.5H8L13.5 5V19L8 14.5H4.5A1.5 1.5 0 0 1 3 13V11A1.5 1.5 0 0 1 4.5 9.5Z" fill="#7dd3fc" stroke="#e0f2fe" stroke-width="1.4" stroke-linejoin="round"/><path d="M16.5 8.8C18.2 10.5 18.2 13.5 16.5 15.2M19.2 6.5C22 9.5 22 14.5 19.2 17.5" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+
+export function classifyToast(rawText: string): { tone: ToastTone; cleanText: string; iconHtml: string } {
+  const cleanText = rawText.replace(/^[\s⚡☄️★✦🔥💎🪙🎉]+/u, '').trim();
+  const lower = cleanText.toLowerCase();
+
+  if (lower.includes('overclock') || lower.includes('fever')) {
+    return { tone: 'overclock', cleanText, iconHtml: TOAST_SVG_BOLT };
+  }
+  if (lower.includes('bounty')) {
+    return { tone: 'bounty', cleanText, iconHtml: hudIconHtml('quest', 18, 'Bounty') };
+  }
+  if (lower.includes('meteor') || lower.includes('weather')) {
+    return { tone: 'meteor', cleanText, iconHtml: TOAST_SVG_METEOR };
+  }
+  if (
+    lower.includes('empty') ||
+    lower.includes('no ') ||
+    lower.includes('not enough') ||
+    lower.includes('cannot') ||
+    lower.includes('already') ||
+    lower.includes('unavailable') ||
+    lower.includes('ended') ||
+    lower.includes('select a miner')
+  ) {
+    return { tone: 'error', cleanText, iconHtml: TOAST_SVG_ERROR };
+  }
+  if (
+    lower.includes('audio') ||
+    lower.includes('graphics') ||
+    lower.includes('damage popups') ||
+    lower.includes('muted')
+  ) {
+    return { tone: 'audio', cleanText, iconHtml: TOAST_SVG_AUDIO };
+  }
+  if (
+    lower.includes('sold') ||
+    lower.includes('collected') ||
+    lower.includes('offline reward') ||
+    lower.includes('gem') ||
+    lower.includes('starred') ||
+    lower.includes('crafted')
+  ) {
+    return { tone: 'reward', cleanText, iconHtml: hudIconHtml('gem', 18, 'Reward') };
+  }
+  return { tone: 'info', cleanText, iconHtml: hudIconHtml('sparkle', 18, 'Notice') };
+}
+
+export function renderToastBannerHtml(rawText: string): string {
+  const { tone, cleanText, iconHtml } = classifyToast(rawText);
+  return `
+    <div class="mam-toast-banner" data-toast-tone="${tone}">
+      <span class="mam-toast-icon" aria-hidden="true">${iconHtml}</span>
+      <span class="text-[13.5px] font-extrabold text-white leading-snug mam-outline-sm">${cleanText}</span>
+    </div>
+  `;
 }

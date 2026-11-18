@@ -94,6 +94,10 @@ export class AudioManager {
   private bgmAudio: HTMLAudioElement | null = null;
   private desiredBgm: BgmKind = 'mine';
   private activeBgm: BgmKind | null = null;
+  private readonly baseBgmVolume = 0.28;
+  private readonly baseSfxVolume = 0.58;
+  private bgmVolumeScale = 1;
+  private sfxVolumeScale = 1;
   private bgmVolume = 0.28;
   private sfxVolume = 0.58;
   private userMuted = false;
@@ -145,6 +149,28 @@ export class AudioManager {
 
   public setPortalMuted(muted: boolean): void {
     this.portalMuted = muted;
+    this.syncAudioState();
+  }
+
+  public getBgmVolumeScale(): number {
+    return this.bgmVolumeScale;
+  }
+
+  public getSfxVolumeScale(): number {
+    return this.sfxVolumeScale;
+  }
+
+  public setBgmVolumeScale(scale: number): void {
+    if (!Number.isFinite(scale)) return;
+    this.bgmVolumeScale = Math.max(0, Math.min(1, scale));
+    this.bgmVolume = this.baseBgmVolume * this.bgmVolumeScale;
+    this.syncAudioState();
+  }
+
+  public setSfxVolumeScale(scale: number): void {
+    if (!Number.isFinite(scale)) return;
+    this.sfxVolumeScale = Math.max(0, Math.min(1, scale));
+    this.sfxVolume = this.baseSfxVolume * this.sfxVolumeScale;
     this.syncAudioState();
   }
 

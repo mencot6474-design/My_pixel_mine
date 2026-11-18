@@ -136,7 +136,42 @@ import {
   useGemPotionDomain,
 } from './ShopWeatherDomain';
 
-export type { PlotUnitState, ResearchLevelsMap, SavePayload };
+import {
+  claimOfflineEarningsDomain,
+  computeOfflineEarningsDomain,
+  type OfflineClaimResult,
+  type OfflineEarningsSummary,
+} from './OfflineEarningsDomain';
+import {
+  type BountyClaimResult,
+  type BountyEntry,
+  claimBountyDomain,
+  ensureBountiesPopulatedDomain,
+  getReadyBountyCountDomain,
+  recordBountyProgressDomain,
+} from './BountiesDomain';
+import {
+  chargeOverclockDomain,
+  createInitialOverclockState,
+  getOverclockSnapshotDomain,
+  isOverclockActiveDomain,
+  OVERCLOCK_BREAK_CHARGE,
+  OVERCLOCK_DROP_MULT,
+  OVERCLOCK_TAP_MULT,
+  type OverclockSnapshot,
+  type OverclockState,
+  stepOverclockDomain,
+} from './OverclockDomain';
+
+export type {
+  PlotUnitState,
+  ResearchLevelsMap,
+  SavePayload,
+  OfflineClaimResult,
+  OfflineEarningsSummary,
+  BountyClaimResult,
+  BountyEntry,
+};
 export { getChibiUpgradeCostMult };
 
 export type StateListener = (state: GameState) => void;
@@ -190,11 +225,19 @@ export class GameState {
   public readonly towerRunMeta: TowerRunMeta = { startFloor: 1, newRecord: false };
   public weatherId: WeatherId = rollWeatherDef().id;
   public weatherExpiresAt = Date.now() + WEATHER_DURATION_MS;
+  public lastSavedAt = 0;
+  public pendingOfflineEarnings: OfflineEarningsSummary | null = null;
+  public bounties: BountyEntry[] = [];
+  public bountiesCompleted = 0;
+  public readonly overclock: OverclockState = createInitialOverclockState();
+  private loadedLastSavedAt = 0;
 
   private readonly listeners = new Set<StateListener>();
 
   constructor() {
     this.load();
+    this.loadedLastSavedAt = this.lastSavedAt;
+    ensureBountiesPopulatedDomain(this);
     this.syncTowerKeys();
     this.syncWeather(Date.now(), Math.random, false);
   }
@@ -308,15 +351,21 @@ export class GameState {
   }
 
   public upgradePlotDamage(slotIndex: number): boolean {
-    return upgradeUnitDamage(this, slotIndex, () => this.emit());
+    const ok = upgradeUnitDamage(this, slotIndex, () => this.emit());
+    if (ok) recordBountyProgressDomain(this, 'upgrade_chibi', 1);
+    return ok;
   }
 
   public upgradePlotSpeed(slotIndex: number): boolean {
-    return upgradeUnitSpeed(this, slotIndex, () => this.emit());
+    const ok = upgradeUnitSpeed(this, slotIndex, () => this.emit());
+    if (ok) recordBountyProgressDomain(this, 'upgrade_chibi', 1);
+    return ok;
   }
 
   public upgradePlotMiningSpeed(slotIndex: number): boolean {
-    return upgradeUnitMiningSpeed(this, slotIndex, () => this.emit());
+    const ok = upgradeUnitMiningSpeed(this, slotIndex, () => this.emit());
+    if (ok) recordBountyProgressDomain(this, 'upgrade_chibi', 1);
+    return ok;
   }
 
   public buyOrEquipPickaxe(slotIndex: number, pickaxeId: string) {
@@ -324,7 +373,9 @@ export class GameState {
   }
 
   public rollPlotMutation(slotIndex: number, rng: () => number = Math.random): string | null {
-    return rollUnitMutation(this, slotIndex, rng, () => this.emit());
+    const res = rollUnitMutation(this, slotIndex, rng, () => this.emit());
+    if (res) recordBountyProgressDomain(this, 'roll_enchant_or_mut', 1);
+    return res;
   }
 
   public getAvailableEnchantCount(enchantId: string): number {
@@ -461,10 +512,16 @@ export class GameState {
   }
 
   public onOreBroken(variantKey: OreVariantKey, rng: () => number = Math.random): void {
+    recordBountyProgressDomain(this, 'mine_ores', 1);
+    if (variantKey === 'vein' || variantKey === 'geode') {
+      recordBountyProgressDomain(this, 'break_rare_ore', 1);
+    }
+    this.chargeOverclock(OVERCLOCK_BREAK_CHARGE);
     onOreBrokenDomain(this, variantKey, rng, () => this.emit());
   }
 
   public onMeteorBroken(weatherId: WeatherId, rng: () => number = Math.random) {
+    recordBountyProgressDomain(this, 'shatter_meteor', 1);
     return onMeteorBrokenDomain(this, weatherId, rng, () => this.emit());
   }
 
@@ -497,7 +554,9 @@ export class GameState {
   }
 
   public sellAllChestOres(): { earned: number; bonusApplied: boolean } {
-    return sellAllChestOresDomain(this, () => this.emit());
+    const res = sellAllChestOresDomain(this, () => this.emit());
+    if (res.earned > 0) recordBountyProgressDomain(this, 'sell_ores', 1);
+    return res;
   }
 
   public toggleAutoMeteor(): boolean {
@@ -525,11 +584,15 @@ export class GameState {
   }
 
   public sellOre(oreId: string, sellAll = true): number {
-    return sellOreDomain(this, oreId, sellAll, () => this.emit());
+    const earned = sellOreDomain(this, oreId, sellAll, () => this.emit());
+    if (earned > 0) recordBountyProgressDomain(this, 'sell_ores', 1);
+    return earned;
   }
 
   public sellAllOres(): number {
-    return sellAllOresDomain(this, () => this.emit());
+    const earned = sellAllOresDomain(this, () => this.emit());
+    if (earned > 0) recordBountyProgressDomain(this, 'sell_ores', 1);
+    return earned;
   }
 
   public getSellableMinerCount(chibiId: string): number {
@@ -611,11 +674,12 @@ export class GameState {
     });
   }
 
-  public getTapDamage(): number {
+  public getTapDamage(nowMs = Date.now()): number {
     const tapMult = 1 + this.getRelicBonus('tapDmgPct');
+    const overclockMult = this.isOverclockActive(nowMs) ? OVERCLOCK_TAP_MULT : 1;
     return Math.max(
       1,
-      Math.round((20 + this.getActiveResearchBonus('tapDamageFlat')) * tapMult * this.getWeatherDamageMult())
+      Math.round((20 + this.getActiveResearchBonus('tapDamageFlat')) * tapMult * this.getWeatherDamageMult() * overclockMult)
     );
   }
 
@@ -659,8 +723,9 @@ export class GameState {
     return mult;
   }
 
-  public getTotalOreDropMult(): number {
-    return this.getOreOutputMult() * this.getWeatherOreDropMult();
+  public getTotalOreDropMult(nowMs = Date.now()): number {
+    const overclockMult = this.isOverclockActive(nowMs) ? OVERCLOCK_DROP_MULT : 1;
+    return this.getOreOutputMult() * this.getWeatherOreDropMult() * overclockMult;
   }
 
   public getRespawnSpeedMult(): number {
@@ -779,6 +844,7 @@ export class GameState {
     this.enchantDice -= 1;
     const rolled = rollEnchantDef(rng);
     this.ownedEnchants[rolled.id] = (this.ownedEnchants[rolled.id] || 0) + 1;
+    recordBountyProgressDomain(this, 'roll_enchant_or_mut', 1);
     this.emit();
     return rolled;
   }
@@ -823,7 +889,11 @@ export class GameState {
     rawDmg: number,
     rng: () => number = Math.random
   ) {
-    return applyTowerTargetDamageDomain(this, targetOreIndex, rawDmg, rng, () => this.emit());
+    const res = applyTowerTargetDamageDomain(this, targetOreIndex, rawDmg, rng, () => this.emit());
+    if (res.waveCleared) {
+      recordBountyProgressDomain(this, 'clear_tower_wave', 1);
+    }
+    return res;
   }
 
   public applyTowerChibiStrike(
@@ -898,7 +968,65 @@ export class GameState {
     return safeAmount;
   }
 
+  public grantTutorialStarterReward(gems = 150, dice = 1): { gems: number; dice: number } {
+    const safeGems = Math.max(0, Math.floor(gems));
+    const safeDice = Math.max(0, Math.floor(dice));
+    this.gems += safeGems;
+    this.enchantDice += safeDice;
+    this.emit();
+    return { gems: safeGems, dice: safeDice };
+  }
+
+  public evaluateOfflineEarnings(nowMs = Date.now(), rng: () => number = Math.random): OfflineEarningsSummary | null {
+    if (this.pendingOfflineEarnings) return this.pendingOfflineEarnings;
+    const prevSavedAt = this.loadedLastSavedAt || this.lastSavedAt;
+    if (prevSavedAt <= 0) return null;
+    const prev = this.lastSavedAt;
+    this.lastSavedAt = prevSavedAt;
+    const summary = computeOfflineEarningsDomain(this, nowMs, rng);
+    this.lastSavedAt = prev;
+    this.loadedLastSavedAt = 0;
+    this.pendingOfflineEarnings = summary;
+    return summary;
+  }
+
+  public claimOfflineEarnings(multiplier: 1 | 2 = 1): OfflineClaimResult | null {
+    const summary = this.pendingOfflineEarnings;
+    if (!summary) return null;
+    this.pendingOfflineEarnings = null;
+    return claimOfflineEarningsDomain(this, summary, multiplier, () => this.emit());
+  }
+
+  public getReadyBountyCount(): number {
+    return getReadyBountyCountDomain(this.bounties);
+  }
+
+  public claimBounty(bountyId: string, rng: () => number = Math.random): BountyClaimResult | null {
+    return claimBountyDomain(this, bountyId, rng, () => this.emit());
+  }
+
+  public chargeOverclock(amount: number, nowMs = Date.now()): boolean {
+    return chargeOverclockDomain(this.overclock, amount, nowMs);
+  }
+
+  public stepOverclock(nowMs = Date.now()): boolean {
+    return stepOverclockDomain(this.overclock, nowMs);
+  }
+
+  public isOverclockActive(nowMs = Date.now()): boolean {
+    return isOverclockActiveDomain(this.overclock, nowMs);
+  }
+
+  public getOverclockSnapshot(nowMs = Date.now()): OverclockSnapshot {
+    return getOverclockSnapshotDomain(this.overclock, nowMs);
+  }
+
+  public touchSaveTimestamp(): void {
+    this.save();
+  }
+
   private save(): void {
+    this.lastSavedAt = Date.now();
     saveToLocalStorage(this);
   }
 

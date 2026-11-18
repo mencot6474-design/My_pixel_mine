@@ -9,6 +9,25 @@ import {
   serializeSavePayload,
 } from '../src/game/GameStateSave';
 import {
+  BOUNTY_SLOT_COUNT,
+  claimBountyDomain,
+  getReadyBountyCountDomain,
+  recordBountyProgressDomain,
+} from '../src/game/BountiesDomain';
+import {
+  chargeOverclockDomain,
+  createInitialOverclockState,
+  OVERCLOCK_DURATION_SEC,
+  stepOverclockDomain,
+} from '../src/game/OverclockDomain';
+import {
+  claimOfflineEarningsDomain,
+  computeOfflineEarningsDomain,
+  formatOfflineDuration,
+  OFFLINE_MAX_SEC,
+  OFFLINE_MIN_SEC,
+} from '../src/game/OfflineEarningsDomain';
+import {
   autoStarUpAllUnits,
   computeDpsBreakdown,
   computePlotUnitStats,
@@ -377,6 +396,150 @@ describe('Tahap C GameState Domain Modules', () => {
         expect(scaleWeatherMultDomain(state, 1.5)).toBeCloseTo(1 + 0.5 * (1 + buff), 6);
         expect(getWeatherDamageMultDomain(state)).toBeGreaterThanOrEqual(1);
       }
+    });
+  });
+
+  describe('OfflineEarningsDomain', () => {
+    it('returns null when away < 2m, clock skew is negative, or no plot DPS, and caps duration at 8h', () => {
+      const state = new GameState();
+      const baseNow = 1_000_000_000;
+
+      // < 2 minutes -> null
+      state.lastSavedAt = baseNow - (OFFLINE_MIN_SEC - 10) * 1000;
+      expect(computeOfflineEarningsDomain(state, baseNow, () => 0.5)).toBeNull();
+
+      // future timestamp (clock skew) -> null
+      state.lastSavedAt = baseNow + 60_000;
+      expect(computeOfflineEarningsDomain(state, baseNow, () => 0.5)).toBeNull();
+
+      // no miners on plots -> null
+      state.plotMiners = [null, null, null, null, null];
+      state.plotUnits = [null, null, null, null, null];
+      state.lastSavedAt = baseNow - 3600 * 1000;
+      expect(computeOfflineEarningsDomain(state, baseNow, () => 0.5)).toBeNull();
+
+      // restore 1 miner and test 12h away -> capped at 8h
+      state.miners['astral-recruit'] = 1;
+      state.plotMiners[0] = 'astral-recruit';
+      state.plotUnits[0] = createFreshPlotUnit('astral-recruit');
+      state.lastSavedAt = baseNow - 12 * 3600 * 1000;
+
+      const summary = computeOfflineEarningsDomain(state, baseNow, () => 0.5);
+      expect(summary).not.toBeNull();
+      expect(summary!.elapsedSec).toBe(OFFLINE_MAX_SEC);
+      expect(summary!.capped).toBe(true);
+      expect(summary!.cash).toBeGreaterThan(0);
+      expect(summary!.oresBroken).toBeGreaterThan(0);
+      expect(formatOfflineDuration(summary!.elapsedSec)).toBe('8h 00m');
+      expect(formatOfflineDuration(135)).toBe('2m 15s');
+    });
+
+    it('claims 1x or 2x offline rewards, respects chest capacity, and persists lastSavedAt in save payload', () => {
+      const state = new GameState();
+      const baseNow = 2_000_000_000;
+      state.lastSavedAt = baseNow - 3600 * 1000; // 1h away
+
+      const summary = computeOfflineEarningsDomain(state, baseNow, () => 0.25);
+      expect(summary).not.toBeNull();
+
+      const startCash = state.cash;
+      const startGems = state.gems;
+      const startChest = state.getChestItemCount();
+
+      const claimed = claimOfflineEarningsDomain(state, summary!, 2);
+      expect(claimed.cash).toBe(summary!.cash * 2);
+      expect(claimed.gems).toBe(summary!.gems * 2);
+      expect(state.cash).toBe(startCash + claimed.cash);
+      expect(state.gems).toBe(startGems + claimed.gems);
+      expect(state.getChestItemCount()).toBe(startChest + claimed.totalOresAdded);
+      expect(state.getChestItemCount()).toBeLessThanOrEqual(state.getMaxChestCapacity());
+
+      state.lastSavedAt = baseNow;
+      const raw = JSON.stringify(serializeSavePayload(state));
+      const restored = new GameState();
+      deserializeSaveJson(restored, raw);
+      expect(restored.lastSavedAt).toBe(baseNow);
+    });
+  });
+
+  describe('BountiesDomain', () => {
+    it('populates 3 unique contracts, tracks clamped progress, claims rewards with refill, and persists via save', () => {
+      const state = new GameState();
+      expect(state.bounties).toHaveLength(BOUNTY_SLOT_COUNT);
+      expect(new Set(state.bounties.map((b) => b.kind)).size).toBe(BOUNTY_SLOT_COUNT);
+
+      const first = state.bounties[0];
+      expect(claimBountyDomain(state, first.id, () => 0.3)).toBeNull();
+
+      const newlyReady = recordBountyProgressDomain(state, first.kind, first.target + 5);
+      expect(newlyReady).toBe(1);
+      expect(first.progress).toBe(first.target);
+      expect(getReadyBountyCountDomain(state.bounties)).toBe(1);
+
+      const startGems = state.gems;
+      const startCash = state.cash;
+      const startDice = state.enchantDice;
+
+      const claimed = claimBountyDomain(state, first.id, () => 0.4);
+      expect(claimed).not.toBeNull();
+      expect(state.bountiesCompleted).toBe(1);
+      if (claimed!.rewardKind === 'gems') {
+        expect(state.gems).toBe(startGems + claimed!.rewardAmount);
+      } else if (claimed!.rewardKind === 'dice') {
+        expect(state.enchantDice).toBe(startDice + claimed!.rewardAmount);
+      } else {
+        expect(state.cash).toBe(startCash + claimed!.rewardAmount);
+      }
+
+      // Slot refilled with a fresh contract keeping all 3 kinds unique
+      expect(state.bounties).toHaveLength(BOUNTY_SLOT_COUNT);
+      expect(new Set(state.bounties.map((b) => b.kind)).size).toBe(BOUNTY_SLOT_COUNT);
+      expect(state.bounties[0].id).not.toBe(first.id);
+
+      const raw = JSON.stringify(serializeSavePayload(state));
+      const restored = new GameState();
+      deserializeSaveJson(restored, raw);
+      expect(restored.bountiesCompleted).toBe(1);
+      expect(restored.bounties).toEqual(state.bounties);
+    });
+  });
+
+  describe('OverclockDomain', () => {
+    it('charges, decays after idle delay, auto-activates at 100% for 15s, and boosts tap/drop multipliers', () => {
+      const oc = createInitialOverclockState();
+      let now = 10_000;
+
+      // Charge 40%
+      expect(chargeOverclockDomain(oc, 40, now)).toBe(false);
+      expect(oc.charge).toBe(40);
+
+      // No decay during first 5s
+      stepOverclockDomain(oc, now + 4_000);
+      expect(oc.charge).toBe(40);
+
+      // Decay after 5s idle (2s past delay -> -3%)
+      stepOverclockDomain(oc, now + 7_000);
+      expect(oc.charge).toBeCloseTo(37, 2);
+
+      // Push to 100% -> auto-activates
+      now += 7_500;
+      expect(chargeOverclockDomain(oc, 70, now)).toBe(true);
+      expect(oc.activeUntil).toBe(now + OVERCLOCK_DURATION_SEC * 1000);
+
+      // Verify GameState multipliers boost while active and return to normal after expiry
+      const state = new GameState();
+      const baseTap = state.getTapDamage();
+      const baseDrop = state.getTotalOreDropMult();
+
+      expect(state.chargeOverclock(100, now)).toBe(true);
+      expect(state.isOverclockActive(now + 1000)).toBe(true);
+      expect(state.getTapDamage(now + 1000)).toBe(baseTap * 2);
+      expect(state.getTotalOreDropMult(now + 1000)).toBeCloseTo(baseDrop * 1.5, 6);
+
+      // Expires after 15s
+      state.stepOverclock(now + OVERCLOCK_DURATION_SEC * 1000 + 100);
+      expect(state.isOverclockActive(now + OVERCLOCK_DURATION_SEC * 1000 + 100)).toBe(false);
+      expect(state.getTapDamage(now + OVERCLOCK_DURATION_SEC * 1000 + 100)).toBe(baseTap);
     });
   });
 });

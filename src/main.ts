@@ -2,7 +2,9 @@ import './styles/global.css';
 import './styles/hud.css';
 import { audio } from './audio/AudioManager';
 import { assetUrl } from './game/AssetUrl';
+import { gameSettings, type GameSettingsData } from './game/GameSettings';
 import { GameState } from './game/GameState';
+import { OVERCLOCK_TAP_CHARGE } from './game/OverclockDomain';
 import { getWeatherById, type WeatherId } from './game/WeatherData';
 import { getChibiById } from './game3d/ChibiCatalog';
 import { init3dHudIcons } from './game3d/HudIcon3DRenderer';
@@ -93,6 +95,9 @@ async function bootstrap(): Promise<void> {
     onOreDamage: (dmg, sx, sy, isClick) => {
       hud?.spawnDamagePopup(dmg, sx, sy, isClick);
       audio.playOreHit(isClick);
+      if (isClick) {
+        gameState.chargeOverclock(OVERCLOCK_TAP_CHARGE);
+      }
     },
     onChestClick: () => {
       audio.playSfx('ui-open');
@@ -227,8 +232,20 @@ async function bootstrap(): Promise<void> {
       if (!scene.hasAliveMeteor()) {
         spawnMeteorIfAllowed(gameState.weatherId);
       }
+    },
+    (overclockActive) => {
+      scene.setOverclockActive(overclockActive);
+      syncWorldToScene();
     }
   );
+
+  const applySettings = (s: GameSettingsData): void => {
+    audio.setBgmVolumeScale(s.bgmVolume);
+    audio.setSfxVolumeScale(s.sfxVolume);
+    scene.setGraphicsQuality(s.graphicsQuality);
+  };
+  applySettings(gameSettings.get());
+  gameSettings.subscribe(applySettings);
 
   cgBindAdLifecycle({
     setPaused: (paused) => {
@@ -241,8 +258,14 @@ async function bootstrap(): Promise<void> {
     setAudioMuted: (muted) => audio.setAdMuted(muted),
   });
 
-  if (!hud.isTutorialActive() && gameState.autoMeteor) {
-    spawnMeteorIfAllowed(gameState.weatherId);
+  if (!hud.isTutorialActive()) {
+    const offlineSummary = gameState.evaluateOfflineEarnings(Date.now());
+    if (offlineSummary) {
+      hud.openModal('offline');
+    }
+    if (gameState.autoMeteor) {
+      spawnMeteorIfAllowed(gameState.weatherId);
+    }
   }
   audio.setSceneMode('mine');
   cgLoadingStop();
@@ -252,11 +275,13 @@ async function bootstrap(): Promise<void> {
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
+      gameState.touchSaveTimestamp();
       cgGameplayStop();
     } else if (!isAdPlaying()) {
       cgGameplayStart();
     }
   });
+  window.addEventListener('beforeunload', () => gameState.touchSaveTimestamp());
   window.addEventListener('blur', () => cgGameplayStop());
   window.addEventListener('focus', () => {
     if (!document.hidden && !isAdPlaying()) cgGameplayStart();

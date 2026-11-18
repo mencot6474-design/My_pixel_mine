@@ -9,6 +9,7 @@ import { WeatherId } from '../game/WeatherData';
 import { fmtInt, fmtMoney } from '../game/NumberFormat';
 import { getTowerFloorDef, TowerWaveOreState } from '../game/TowerData';
 import { AltarShopHudUi } from './AltarShopHudUi';
+import { BountiesModalUi } from './BountiesModalUi';
 import { CollectionModalsUi } from './CollectionModalsUi';
 import { ForgeModalUi } from './ForgeModalUi';
 import { HotbarHudUi, canDropHotbarOnPlot } from './HotbarHudUi';
@@ -19,20 +20,23 @@ import {
   ModalKind,
   PlotDropOps,
   refreshPotionTimersInDom,
+  renderToastBannerHtml,
   restoreRootScrolls,
   TW_BADGE_BASE,
   TW_CURRENCY_BAR,
   TW_PLUS_BTN,
   TW_QUICK_BTN_CHEST,
+  TW_QUICK_BTN_QUEST,
   TW_SHOPS_PILL,
   TW_SIDE_BTN_INDEX,
   TW_SIDE_BTN_RAINBOW,
   TW_SIDE_BTN_UPGRADES,
-  TW_TOAST_ITEM,
   TW_TOAST_STACK,
   TW_TOP_CENTER,
 } from './HudShared';
+import { OfflineModalUi } from './OfflineModalUi';
 import { PlotInspectUi } from './PlotInspectUi';
+import { SettingsModalUi } from './SettingsModalUi';
 import { ShopModalsUi } from './ShopModalsUi';
 import { TowerUi } from './TowerUi';
 import { TutorialUi } from './TutorialUi';
@@ -50,6 +54,7 @@ export class GameHud {
   private toasts: Array<{ id: number; text: string }> = [];
   private nextToastId = 1;
   private lastRegrowthActive = false;
+  private lastOverclockActive = false;
 
   private readonly shopUi: ShopModalsUi;
   private readonly forgeUi: ForgeModalUi;
@@ -62,6 +67,9 @@ export class GameHud {
   private readonly hotbarUi: HotbarHudUi;
   private readonly altarShopUi: AltarShopHudUi;
   private readonly worldOverlayUi: WorldOverlayHudUi;
+  private readonly settingsUi: SettingsModalUi;
+  private readonly offlineUi: OfflineModalUi;
+  private readonly bountiesUi: BountiesModalUi;
 
   constructor(
     private readonly root: HTMLElement,
@@ -86,9 +94,25 @@ export class GameHud {
     private readonly onSetTutorialChestZoom?: (zoomed: boolean) => void,
     private readonly onSetTutorialSellShopZoom?: (zoomed: boolean) => void,
     private readonly onToggleAutoMeteor?: (enabled: boolean) => void,
-    private readonly onTutorialComplete?: () => void
+    private readonly onTutorialComplete?: () => void,
+    private readonly onOverclockChange?: (active: boolean) => void
   ) {
     this.shopUi = new ShopModalsUi(this.state, (msg) => this.pushToast(msg));
+    this.settingsUi = new SettingsModalUi(
+      undefined,
+      (msg) => this.pushToast(msg),
+      () => this.render()
+    );
+    this.offlineUi = new OfflineModalUi(
+      this.state,
+      (msg) => this.pushToast(msg),
+      () => this.openModal('none')
+    );
+    this.bountiesUi = new BountiesModalUi(
+      this.state,
+      (msg) => this.pushToast(msg),
+      () => this.render()
+    );
     this.forgeUi = new ForgeModalUi(
       this.state,
       (msg) => this.pushToast(msg),
@@ -125,7 +149,12 @@ export class GameHud {
       (zoomed) => this.onSetTutorialPitZoom?.(zoomed),
       (zoomed) => this.onSetTutorialChestZoom?.(zoomed),
       (zoomed) => this.onSetTutorialSellShopZoom?.(zoomed),
-      () => this.onTutorialComplete?.()
+      () => this.onTutorialComplete?.(),
+      () => {
+        const reward = this.state.grantTutorialStarterReward();
+        audio.playSfx('rare-fanfare', { volume: 0.7 });
+        this.pushToast(`Starter Bonus: +${fmtInt(reward.gems)} Gems • +${fmtInt(reward.dice)} Enchant Dice!`);
+      }
     );
     this.weatherDpsUi = new WeatherDpsHudUi(
       this.state,
@@ -295,7 +324,22 @@ export class GameHud {
     }, 1000);
 
     window.setInterval(() => {
-      if (this.adPaused || this.sceneMode !== 'tower' || !this.state.towerRun) return;
+      if (this.adPaused) return;
+      this.state.stepOverclock();
+      const ocActive = this.state.isOverclockActive();
+      if (ocActive !== this.lastOverclockActive) {
+        this.lastOverclockActive = ocActive;
+        this.onOverclockChange?.(ocActive);
+        if (ocActive) {
+          audio.playSfx('rare-fanfare', { volume: 0.65 });
+          this.pushToast('⚡ OVERCLOCK ACTIVE! 2x Speed • 2x Tap • +50% Ore!');
+        }
+      }
+      if (this.sceneMode === 'mine') {
+        this.weatherDpsUi.syncOverclockWidget(this.root);
+      }
+
+      if (this.sceneMode !== 'tower' || !this.state.towerRun) return;
       const tick = this.state.stepTowerTick(0.1);
       if (tick.status === 'timeout') {
         this.pushToast('Tower timer ended!');
@@ -355,6 +399,9 @@ export class GameHud {
 
   public openModal(kind: ModalKind): void {
     const prev = this.activeModal;
+    if (prev === 'offline' && kind !== 'offline' && this.state.pendingOfflineEarnings) {
+      this.state.claimOfflineEarnings(1);
+    }
     this.activeModal = kind;
     if (kind !== 'index') {
       this.collectionUi.closeReviewDialog();
@@ -590,16 +637,32 @@ export class GameHud {
       ? 'border-rose-400/60 bg-[linear-gradient(160deg,rgba(136,19,55,0.82),rgba(15,23,42,0.92))] shadow-[0_8px_22px_rgba(225,29,72,0.28),inset_0_1px_0_rgba(255,255,255,0.28)]'
       : 'border-sky-300/60 bg-[linear-gradient(160deg,rgba(14,116,144,0.82),rgba(15,23,42,0.92))] shadow-[0_8px_22px_rgba(56,189,248,0.32),inset_0_1px_0_rgba(255,255,255,0.32)]';
     const placementCls = floating ? 'absolute top-[14px] right-4 z-[15]' : 'mt-0.5';
+    const gearIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+      <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" stroke="#e2e8f0" stroke-width="2"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="#94a3b8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    const gearFrameCls =
+      'border-slate-300/45 bg-[linear-gradient(160deg,rgba(51,65,85,0.82),rgba(15,23,42,0.92))] shadow-[0_8px_22px_rgba(15,23,42,0.45),inset_0_1px_0_rgba(255,255,255,0.24)]';
 
     return `
-      <button
-        class="${placementCls} w-12 h-12 rounded-2xl border-[1.5px] ${frameCls} backdrop-blur-xl flex items-center justify-center cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95 pointer-events-auto"
-        data-action="toggle-audio"
-        title="${muted ? 'Unmute Audio' : 'Mute Audio'}"
-        aria-label="${muted ? 'Unmute Audio' : 'Mute Audio'}"
-      >
-        ${audioIcon}
-      </button>
+      <div class="${placementCls} flex items-center gap-2 pointer-events-none">
+        <button
+          class="w-12 h-12 rounded-2xl border-[1.5px] ${gearFrameCls} backdrop-blur-xl flex items-center justify-center cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95 pointer-events-auto"
+          data-action="open-settings"
+          title="Settings"
+          aria-label="Open Settings"
+        >
+          ${gearIcon}
+        </button>
+        <button
+          class="w-12 h-12 rounded-2xl border-[1.5px] ${frameCls} backdrop-blur-xl flex items-center justify-center cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95 pointer-events-auto"
+          data-action="toggle-audio"
+          title="${muted ? 'Unmute Audio' : 'Mute Audio'}"
+          aria-label="${muted ? 'Unmute Audio' : 'Mute Audio'}"
+        >
+          ${audioIcon}
+        </button>
+      </div>
     `;
   }
 
@@ -643,9 +706,7 @@ export class GameHud {
   private renderToasts(): void {
     const el = this.root.querySelector('[data-toast-stack="true"]');
     if (!el) return;
-    el.innerHTML = this.toasts
-      .map((t) => `<div class="${TW_TOAST_ITEM} mam-outline-sm">${t.text}</div>`)
-      .join('');
+    el.innerHTML = this.toasts.map((t) => renderToastBannerHtml(t.text)).join('');
   }
 
   public render(): void {
@@ -680,7 +741,13 @@ export class GameHud {
       }
 
       const chestCount = this.state.getChestItemCount();
+      const readyBounties = this.state.getReadyBountyCount();
       const quickButtonsHtml = `
+        <button class="${TW_QUICK_BTN_QUEST} mam-outline-sm" title="Mining Bounties" data-action="open-bounties">
+          <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] mam-outline-sm ${readyBounties > 0 ? '' : 'hidden'}" data-bounties-badge="true">${readyBounties}</span>
+          ${hudIconHtml('quest', 20, 'Bounties')}
+          <span>Bounties</span>
+        </button>
         <button class="${TW_QUICK_BTN_CHEST} mam-outline-sm" title="Chest (${fmtInt(chestCount)})" data-action="open-chest">
           ${hudIconHtml('chest', 22, 'Chest')}
         </button>
@@ -746,7 +813,7 @@ export class GameHud {
       ${this.hotbarUi.renderHotbarSection()}
 
       ${this.weatherDpsUi.renderActivePotionsDock()}
-      ${this.weatherDpsUi.renderDpsMeterWidget()}
+      ${this.weatherDpsUi.renderDpsMeterWidget(true)}
       ${this.renderActiveModal()}
       ${this.renderToastStack()}
     `;
@@ -777,15 +844,19 @@ export class GameHud {
     if (this.activeModal === 'worlds') return this.upgradesUi.renderWorldsModal();
     if (this.activeModal === 'tower') return this.towerUi.renderTowerHubModal();
     if (this.activeModal === 'forge') return this.forgeUi.renderForgeModal();
+    if (this.activeModal === 'settings') return this.settingsUi.renderModal();
+    if (this.activeModal === 'offline') return this.offlineUi.renderModal();
+    if (this.activeModal === 'bounties') return this.bountiesUi.renderModal();
     return '';
   }
 
   private renderTowerHud(): void {
     this.syncTowerSceneVisual();
-    this.root.innerHTML = this.towerUi.renderTowerArenaHud(
-      this.renderCurrencyRail({ topAlign: true, showAudioBelow: true }),
-      this.renderToastStack()
-    );
+    this.root.innerHTML =
+      this.towerUi.renderTowerArenaHud(
+        this.renderCurrencyRail({ topAlign: true, showAudioBelow: true }),
+        this.renderToastStack()
+      ) + (this.activeModal === 'settings' ? this.renderActiveModal() : '');
     this.bindEvents();
     this.renderToasts();
   }
@@ -804,12 +875,13 @@ export class GameHud {
   }
 
   private renderAltarHud(): void {
-    this.root.innerHTML = this.altarShopUi.renderAltarHud({
-      weatherHtml: this.weatherDpsUi.renderWeatherWidget(),
-      audioBtnHtml: this.renderAudioToggleBtn(),
-      currencyRailHtml: this.renderCurrencyRail({}),
-      toastStackHtml: this.renderToastStack(),
-    });
+    this.root.innerHTML =
+      this.altarShopUi.renderAltarHud({
+        weatherHtml: this.weatherDpsUi.renderWeatherWidget(),
+        audioBtnHtml: this.renderAudioToggleBtn(),
+        currencyRailHtml: this.renderCurrencyRail({}),
+        toastStackHtml: this.renderToastStack(),
+      }) + (this.activeModal === 'settings' ? this.renderActiveModal() : '');
     this.bindEvents();
     this.renderToasts();
   }
@@ -821,6 +893,8 @@ export class GameHud {
 
     const coordinatorActions: Record<string, () => void> = {
       'open-index': () => this.toggleModal('index'),
+      'open-settings': () => this.toggleModal('settings'),
+      'open-bounties': () => this.toggleModal('bounties'),
       'toggle-audio': () => {
         const nextMuted = audio.toggleMuted();
         this.pushToast(nextMuted ? 'Audio Muted' : 'Audio On');
@@ -900,6 +974,9 @@ export class GameHud {
     this.shopUi.bindEvents(this.root);
     this.towerUi.bindHubEvents(this.root);
     this.towerUi.bindArenaEvents(this.root);
+    this.settingsUi.bindEvents(this.root);
+    this.offlineUi.bindEvents(this.root);
+    this.bountiesUi.bindEvents(this.root);
   }
 
   private updateCurrencyLiveValues(): void {
@@ -907,5 +984,11 @@ export class GameHud {
     if (gemsEl) gemsEl.textContent = fmtInt(this.state.gems);
     const cashEl = this.root.querySelector('[data-hud-cash="true"]');
     if (cashEl) cashEl.textContent = fmtMoney(this.state.cash);
+    const bountiesBadge = this.root.querySelector<HTMLElement>('[data-bounties-badge="true"]');
+    if (bountiesBadge) {
+      const ready = this.state.getReadyBountyCount();
+      bountiesBadge.textContent = String(ready);
+      bountiesBadge.classList.toggle('hidden', ready <= 0);
+    }
   }
 }

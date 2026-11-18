@@ -1,21 +1,20 @@
 import { assetUrl } from '../game/AssetUrl';
 import { audio } from '../audio/AudioManager';
+import { enchantDiceIconHtml, hudIconHtml } from './HudIcons';
+
+export const TUTORIAL_REWARD_GEMS = 150;
+export const TUTORIAL_REWARD_DICE = 1;
 
 export type TutorialStep =
   | 'welcome'
-  | 'ready'
   | 'mine-ore'
-  | 'ore-broken'
   | 'click-plot'
   | 'upgrade-dmg'
   | 'exit-plot'
-  | 'chest-intro'
   | 'click-chest'
   | 'take-all-chest'
   | 'close-chest'
-  | 'go-shop-intro'
   | 'go-shop'
-  | 'shop-plaza-intro'
   | 'click-sell-shop'
   | 'select-ore-sell'
   | 'click-sell-btn'
@@ -23,11 +22,20 @@ export type TutorialStep =
   | 'congrats'
   | 'done';
 
+export interface TutorialStageMeta {
+  stage: number;
+  total: number;
+  label: string;
+}
+
 const TUTORIAL_STORAGE_KEY = 'mam_tutorial_done_v1';
+const TUTORIAL_REWARD_KEY = 'mam_tutorial_rewarded_v1';
 
 type ArrowPlacement = 'above' | 'below' | 'beside';
 
 interface TutorialDialogCopy {
+  stage: number;
+  stageLabel: string;
   text: string;
   cta?: string;
   hint?: string;
@@ -40,54 +48,58 @@ interface TutorialDialogCopy {
 
 const DIALOG_COPY: Record<Exclude<TutorialStep, 'done'>, TutorialDialogCopy> = {
   welcome: {
-    text: 'Welcome, Miner! Are you ready to start mining?',
-    cta: "Let's Go! ▶",
-  },
-  ready: {
-    text: "Awesome! Follow my lead and let's dig in!",
-    cta: 'Next ▶',
+    stage: 1,
+    stageLabel: 'Mine',
+    text: 'Welcome, Miner! Ready to strike your first fortune and build your Chibi squad?',
+    cta: 'Start Mining!',
   },
   'mine-ore': {
-    text: 'Tap the glowing Geode ore in the center until it breaks!',
-    hint: 'Tap the ore rock (~10x taps)',
+    stage: 1,
+    stageLabel: 'Mine',
+    text: 'Tap the glowing Ore in the center until it shatters!',
+    hint: 'Tap the ore rock in the pit',
     badge: 'TAP THIS ORE',
     allowCanvas: true,
-  },
-  'ore-broken': {
-    text: 'Nice job! Broken ores are stored safely inside your Chest.',
-    cta: 'Next ▶',
+    topCard: true,
   },
   'click-plot': {
-    text: 'Time to upgrade your Chibi, Miner! Click Plot #1 where the arrow points.',
+    stage: 2,
+    stageLabel: 'Upgrade',
+    text: 'Awesome drop! Now click Plot #1 where the arrow points to power up Onee.',
     hint: 'Click Onee on Plot #1',
     badge: 'PLOT #1',
     allowCanvas: true,
   },
   'upgrade-dmg': {
-    text: "Hit the Upgrade DMG button to boost Onee's mining power!",
+    stage: 2,
+    stageLabel: 'Upgrade',
+    text: "Hit Upgrade DMG to boost Onee's mining power!",
     hint: 'Click Upgrade DMG',
     badge: 'UPGRADE DMG',
     domSelector: '[data-inspect-action="up-dmg"]',
     topCard: true,
   },
   'exit-plot': {
-    text: 'Great! Now click Exit to return to the Mine.',
+    stage: 2,
+    stageLabel: 'Upgrade',
+    text: 'Power boosted! Click Exit to return to the Mine.',
     hint: 'Click Exit',
     badge: 'EXIT',
     domSelector: '[data-inspect-action="exit"]',
     arrowPlacement: 'beside',
   },
-  'chest-intro': {
-    text: "Now let's collect your mined ores from the Chest!",
-    cta: 'Next ▶',
-  },
   'click-chest': {
-    text: 'Click the Chest where the arrow points to open it!',
+    stage: 3,
+    stageLabel: 'Collect',
+    text: 'Your mined ores are stored safely in your Chest. Click the 3D Chest to open it!',
     hint: 'Click the 3D Chest',
     badge: 'OPEN CHEST',
     allowCanvas: true,
+    topCard: true,
   },
   'take-all-chest': {
+    stage: 3,
+    stageLabel: 'Collect',
     text: 'Click Take All to move your mined ores into your Backpack!',
     hint: 'Click Take All',
     badge: 'TAKE ALL',
@@ -95,69 +107,80 @@ const DIALOG_COPY: Record<Exclude<TutorialStep, 'done'>, TutorialDialogCopy> = {
     topCard: true,
   },
   'close-chest': {
-    text: 'Awesome! Now close the Chest window.',
+    stage: 3,
+    stageLabel: 'Collect',
+    text: 'Loot secured! Close the Chest window.',
     hint: 'Click × to close',
     badge: 'CLOSE',
     domSelector: '[data-action="close-modal"]',
     arrowPlacement: 'beside',
   },
-  'go-shop-intro': {
-    text: "Now it's time to sell your ores for Cash at the Shop Plaza!",
-    cta: 'Next ▶',
-  },
   'go-shop': {
-    text: 'Click Shops at the top to travel to the Shop Plaza!',
+    stage: 4,
+    stageLabel: 'Sell',
+    text: 'Time to cash in! Click Shops at the top to travel to the Shop Plaza.',
     hint: 'Click Shops',
     badge: 'SHOPS',
     domSelector: '[data-action="shops-pill"]',
     arrowPlacement: 'below',
   },
-  'shop-plaza-intro': {
-    text: 'You are now at the Shop Plaza! Let’s visit the Sell Items shop.',
-    cta: 'Next ▶',
-  },
   'click-sell-shop': {
-    text: 'Click the Sell Items shop building where the arrow points!',
+    stage: 4,
+    stageLabel: 'Sell',
+    text: 'Welcome to Shop Plaza! Click the Sell Items shop building to trade ores.',
     hint: 'Click Sell Items shop',
     badge: 'SELL SHOP',
     domSelector: '[data-shop-station="sell"]',
     allowCanvas: true,
+    topCard: true,
   },
   'select-ore-sell': {
-    text: 'Click on an Ore in the list to select it for selling!',
+    stage: 4,
+    stageLabel: 'Sell',
+    text: 'Click an Ore card in your list to select it for selling!',
     hint: 'Click an Ore card',
     badge: 'SELECT ORE',
     domSelector: '[data-sell-key]',
     topCard: true,
   },
   'click-sell-btn': {
-    text: 'Now click the Sell button to trade your ore for Cash!',
+    stage: 4,
+    stageLabel: 'Sell',
+    text: 'Now hit Sell to trade your ore for Cash!',
     hint: 'Click Sell',
     badge: 'SELL ORE',
     domSelector: '[data-action="sell-selected"]',
     topCard: true,
   },
   'close-sell-shop': {
-    text: 'Cha-ching! Now close the Sell Shop window.',
+    stage: 4,
+    stageLabel: 'Sell',
+    text: 'Cha-ching! Close the Sell Shop to claim your Miner Starter Bonus.',
     hint: 'Click × to close',
     badge: 'CLOSE',
     domSelector: '[data-action="close-modal"]',
     arrowPlacement: 'beside',
   },
   congrats: {
-    text: 'Congratulations! You have completed the Miner Tutorial. Keep mining, upgrading, and unlocking new Worlds!',
-    cta: 'Start Playing! ✔',
+    stage: 5,
+    stageLabel: 'Reward',
+    text: 'Tutorial Complete! Claim your Starter Bonus to supercharge your mining empire!',
+    cta: 'Claim &amp; Start Playing!',
   },
 };
 
+export function getTutorialStageMeta(step: Exclude<TutorialStep, 'done'>): TutorialStageMeta {
+  const copy = DIALOG_COPY[step];
+  return { stage: copy.stage, total: 5, label: copy.stageLabel };
+}
+
 function crystalPointerSvg(dir: 'down' | 'up' | 'left' | 'right', accent = '#fbbf24'): string {
-  const rot =
-    dir === 'down' ? 0 : dir === 'up' ? 180 : dir === 'left' ? 90 : -90;
+  const rot = dir === 'down' ? 0 : dir === 'up' ? 180 : dir === 'left' ? 90 : -90;
   return `
-  <svg width="34" height="34" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"
+  <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"
     style="transform:rotate(${rot}deg)" class="drop-shadow-[0_6px_12px_rgba(0,0,0,0.85)]">
     <path d="M20 35L7 17L14.5 17L14.5 6L25.5 6L25.5 17L33 17L20 35Z" fill="${accent}" stroke="#0f172a" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M20 31L11.5 19.5H17V9H23V19.5H28.5L20 31Z" fill="white" fill-opacity="0.28"/>
+    <path d="M20 31L11.5 19.5H17V9H23V19.5H28.5L20 31Z" fill="white" fill-opacity="0.32"/>
   </svg>`;
 }
 
@@ -166,13 +189,95 @@ function badgePillHtml(text: string, variant: 'amber' | 'cyan' = 'amber'): strin
     variant === 'cyan'
       ? 'border-cyan-200/80 bg-[linear-gradient(135deg,#0891b2,#0284c7)] shadow-[0_6px_18px_rgba(6,182,212,0.55),inset_0_1px_0_rgba(255,255,255,0.45)]'
       : 'border-amber-200/80 bg-[linear-gradient(135deg,#f59e0b,#ea580c)] shadow-[0_6px_18px_rgba(245,158,11,0.55),inset_0_1px_0_rgba(255,255,255,0.45)]';
-  return `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full border ${palette} text-white text-[11px] font-black tracking-wider uppercase whitespace-nowrap [text-shadow:0_1px_2px_rgba(0,0,0,0.65)]">✦ ${text}</span>`;
+  return `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full border ${palette} text-white text-[11px] font-black tracking-wider uppercase whitespace-nowrap [text-shadow:0_1px_2px_rgba(0,0,0,0.65)]">${text}</span>`;
+}
+
+export function buildTutorialCardHtml(step: Exclude<TutorialStep, 'done'>): string {
+  const copy = DIALOG_COPY[step];
+  const meta = getTutorialStageMeta(step);
+  const hasCta = Boolean(copy.cta);
+  const oneePoseUrl = assetUrl('/chibi/astral-recruit/pose.webp');
+
+  const stageBarsHtml = Array.from({ length: meta.total }, (_, idx) => {
+    const filled = idx + 1 <= meta.stage;
+    const active = idx + 1 === meta.stage;
+    const barCls = active
+      ? 'bg-[linear-gradient(90deg,#38bdf8,#fde047)] shadow-[0_0_8px_rgba(56,189,248,0.7)]'
+      : filled
+        ? 'bg-sky-400/85'
+        : 'bg-slate-700/75';
+    return `<span class="flex-1 h-1.5 rounded-full ${barCls}"></span>`;
+  }).join('');
+
+  const rewardStripHtml =
+    step === 'congrats'
+      ? `
+        <div class="flex items-center gap-2 flex-wrap my-0.5">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-sky-300/50 bg-sky-500/15 text-[12px] font-black text-sky-200 tabular-nums">
+            ${hudIconHtml('gem', 18, 'Gems')} +${TUTORIAL_REWARD_GEMS} Gems
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-purple-300/50 bg-purple-500/15 text-[12px] font-black text-purple-200 tabular-nums">
+            ${enchantDiceIconHtml(18)} +${TUTORIAL_REWARD_DICE} Enchant Dice
+          </span>
+        </div>
+      `
+      : '';
+
+  const ctaBtnCls =
+    step === 'congrats'
+      ? 'border-amber-200/80 bg-[linear-gradient(135deg,#f59e0b,#ec4899)] shadow-[0_6px_18px_rgba(245,158,11,0.5),inset_0_1px_0_rgba(255,255,255,0.4)]'
+      : 'border-cyan-200/70 bg-[linear-gradient(135deg,#0284c7,#0ea5e9)] shadow-[0_6px_16px_rgba(14,165,233,0.45),inset_0_1px_0_rgba(255,255,255,0.38)]';
+
+  const skipBtnHtml =
+    step !== 'congrats'
+      ? `<button type="button" class="pointer-events-auto px-2 py-0.5 rounded-lg border border-white/15 bg-white/[0.05] hover:bg-white/[0.12] text-[10.5px] font-extrabold text-slate-300 hover:text-white cursor-pointer transition-colors" data-tutorial-skip="true" title="Skip Tutorial">Skip</button>`
+      : '';
+
+  const compactCls = hasCta ? '' : 'is-compact';
+  const textSizeCls = hasCta ? 'text-[14px] @max-[720px]:text-[13px]' : 'text-[12.5px] @max-[720px]:text-[12px]';
+
+  return `
+    <div class="mam-tut-card ${compactCls} ${hasCta ? 'cursor-pointer pointer-events-auto' : 'pointer-events-none'}" data-tutorial-card="true">
+      <div class="mam-tut-portrait-wrap">
+        <div class="mam-tut-portrait-halo" aria-hidden="true"></div>
+        <img src="${oneePoseUrl}" alt="Onee" class="mam-tut-portrait-img" />
+      </div>
+      <div class="flex-1 min-w-0 flex flex-col gap-1">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="mam-tut-nameplate">
+              <span class="text-[11px] font-black uppercase tracking-[0.08em] text-sky-200">ONEE</span>
+              <span class="text-[9.5px] font-bold uppercase tracking-wider text-slate-300">GUIDE</span>
+            </span>
+            <span class="text-[10.5px] font-black uppercase tracking-wider text-amber-300 tabular-nums">Stage ${meta.stage}/${meta.total} • ${meta.label}</span>
+          </div>
+          ${skipBtnHtml}
+        </div>
+        <div class="flex items-center gap-1 w-full" aria-hidden="true">${stageBarsHtml}</div>
+        <p class="${textSizeCls} font-extrabold leading-snug text-white m-0 mam-outline-sm">${copy.text}</p>
+        ${rewardStripHtml}
+        <div class="flex items-center justify-between gap-2 mt-0.5">
+          ${
+            copy.hint
+              ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-black text-amber-300 animate-pulse"><span class="w-1.5 h-1.5 rounded-full bg-amber-300"></span>${copy.hint}</span>`
+              : '<span class="text-[11px] font-bold text-slate-400">Click anywhere to continue</span>'
+          }
+          ${
+            copy.cta
+              ? `<button type="button" class="pointer-events-auto px-4 py-1.5 rounded-xl border ${ctaBtnCls} text-white text-[12.5px] font-black hover:brightness-110 active:scale-95 cursor-pointer transition-[transform,filter] duration-150 mam-outline-sm" data-tutorial-next="true">${copy.cta}</button>`
+              : ''
+          }
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 export class TutorialUi {
   private step: TutorialStep = 'done';
   private overlayEl: HTMLElement | null = null;
   private arrowEl: HTMLElement | null = null;
+  private highlightedEl: HTMLElement | null = null;
   private plotAnchorPos = { x: 0, y: 0, visible: false };
   private chestAnchorPos = { x: 0, y: 0, visible: false };
   private guardBound = false;
@@ -181,15 +286,17 @@ export class TutorialUi {
     private readonly onSetPitZoom: (zoomed: boolean) => void,
     private readonly onSetChestZoom: (zoomed: boolean) => void,
     private readonly onSetSellShopZoom: (zoomed: boolean) => void,
-    private readonly onComplete?: () => void
+    private readonly onComplete?: () => void,
+    private readonly onClaimReward?: () => void
   ) {
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
       this.step = 'done';
       return;
     }
     try {
+      const force = window.location.search.includes('tutorial=1');
       const done = localStorage.getItem(TUTORIAL_STORAGE_KEY) === '1';
-      this.step = done ? 'done' : 'welcome';
+      this.step = force || !done ? 'welcome' : 'done';
     } catch {
       this.step = 'done';
     }
@@ -208,6 +315,22 @@ export class TutorialUi {
     this.overlayEl = layer;
     this.bindInputGuard();
     this.render();
+  }
+
+  private clearTargetHighlight(): void {
+    if (this.highlightedEl) {
+      this.highlightedEl.classList.remove('mam-tut-target-ring');
+      this.highlightedEl = null;
+    }
+  }
+
+  private applyTargetHighlight(el: HTMLElement | null): void {
+    if (this.highlightedEl === el) return;
+    this.clearTargetHighlight();
+    if (el) {
+      el.classList.add('mam-tut-target-ring');
+      this.highlightedEl = el;
+    }
   }
 
   private bindInputGuard(): void {
@@ -265,19 +388,28 @@ export class TutorialUi {
   }
 
   public syncDomArrow(): void {
-    if (this.step === 'done' || !this.arrowEl) return;
+    if (this.step === 'done' || !this.arrowEl) {
+      this.clearTargetHighlight();
+      return;
+    }
     const copy = DIALOG_COPY[this.step];
-    if (!copy.domSelector) return;
+    if (!copy.domSelector) {
+      this.clearTargetHighlight();
+      return;
+    }
     const el = document.querySelector<HTMLElement>(copy.domSelector);
     if (!el) {
+      this.clearTargetHighlight();
       this.arrowEl.style.display = 'none';
       return;
     }
     const r = el.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) {
+      this.clearTargetHighlight();
       this.arrowEl.style.display = 'none';
       return;
     }
+    this.applyTargetHighlight(el);
     const placement = copy.arrowPlacement ?? 'above';
     if (placement === 'below') {
       this.arrowEl.style.display = 'block';
@@ -315,7 +447,8 @@ export class TutorialUi {
     }
     if (this.step === 'exit-plot' && inspectedSlot === null) {
       audio.playSfx('ui-close');
-      this.step = 'chest-intro';
+      this.onSetChestZoom(true);
+      this.step = 'click-chest';
       this.render();
       return;
     }
@@ -327,12 +460,14 @@ export class TutorialUi {
       return;
     }
     if (this.step === 'close-chest' && activeModal === 'none') {
-      this.step = 'go-shop-intro';
+      this.onSetChestZoom(false);
+      this.step = 'go-shop';
       this.render();
       return;
     }
     if (this.step === 'go-shop' && sceneMode === 'shop') {
-      this.step = 'shop-plaza-intro';
+      this.onSetSellShopZoom(true);
+      this.step = 'click-sell-shop';
       this.render();
       return;
     }
@@ -357,7 +492,8 @@ export class TutorialUi {
   public notifyOreBroken(): void {
     if (this.step !== 'mine-ore') return;
     audio.playSfx('rare-fanfare', { volume: 0.55 });
-    this.step = 'ore-broken';
+    this.onSetPitZoom(false);
+    this.step = 'click-plot';
     this.render();
   }
 
@@ -387,52 +523,36 @@ export class TutorialUi {
 
   public advance(): void {
     if (this.step === 'welcome') {
-      audio.playSfx('ui-click');
-      this.step = 'ready';
-      this.render();
-      return;
-    }
-    if (this.step === 'ready') {
       audio.playSfx('ui-open');
       this.onSetPitZoom(true);
       this.step = 'mine-ore';
       this.render();
       return;
     }
-    if (this.step === 'ore-broken') {
-      audio.playSfx('ui-open');
-      this.onSetPitZoom(false);
-      this.step = 'click-plot';
-      this.render();
-      return;
-    }
-    if (this.step === 'chest-intro') {
-      audio.playSfx('ui-open');
-      this.onSetChestZoom(true);
-      this.step = 'click-chest';
-      this.render();
-      return;
-    }
-    if (this.step === 'go-shop-intro') {
-      audio.playSfx('ui-click');
-      this.onSetChestZoom(false);
-      this.step = 'go-shop';
-      this.render();
-      return;
-    }
-    if (this.step === 'shop-plaza-intro') {
-      audio.playSfx('ui-open');
-      this.onSetSellShopZoom(true);
-      this.step = 'click-sell-shop';
-      this.render();
-      return;
-    }
     if (this.step === 'congrats') {
+      let alreadyRewarded = false;
+      try {
+        alreadyRewarded = localStorage.getItem(TUTORIAL_REWARD_KEY) === '1';
+        if (!alreadyRewarded) {
+          localStorage.setItem(TUTORIAL_REWARD_KEY, '1');
+        }
+      } catch {
+        // ignore storage errors
+      }
+      if (!alreadyRewarded) {
+        this.onClaimReward?.();
+      }
       this.complete();
     }
   }
 
+  public skip(): void {
+    audio.playSfx('ui-close');
+    this.complete();
+  }
+
   public complete(): void {
+    this.clearTargetHighlight();
     this.onSetPitZoom(false);
     this.onSetChestZoom(false);
     this.onSetSellShopZoom(false);
@@ -448,6 +568,7 @@ export class TutorialUi {
 
   public render(): void {
     if (!this.overlayEl) return;
+    this.clearTargetHighlight();
     if (this.step === 'done') {
       this.overlayEl.innerHTML = '';
       this.arrowEl = null;
@@ -456,7 +577,6 @@ export class TutorialUi {
 
     const copy = DIALOG_COPY[this.step];
     const hasCta = Boolean(copy.cta);
-    const oneeUrl = assetUrl('/chibi/astral-recruit/idle.webp');
 
     let pointerArrowHtml = '';
     if (copy.badge) {
@@ -498,43 +618,27 @@ export class TutorialUi {
     }
 
     const positionClass = copy.topCard
-      ? 'top-[14px] left-1/2 -translate-x-1/2'
-      : 'bottom-[96px] @max-[720px]:bottom-[84px] left-1/2 -translate-x-1/2';
+      ? 'top-[12px] left-1/2 mam-tut-scale-wrap is-top'
+      : hasCta
+        ? 'bottom-[90px] @max-[720px]:bottom-[74px] left-1/2 mam-tut-scale-wrap is-bottom'
+        : 'bottom-[14px] left-1/2 mam-tut-scale-wrap is-bottom';
+
+    const cardWidthCls = hasCta ? 'w-[min(540px,calc(100vw-24px))]' : 'w-[min(450px,calc(100vw-20px))]';
 
     this.overlayEl.innerHTML = `
-      ${hasCta ? '<div class="fixed inset-0 bg-slate-950/35 pointer-events-auto" data-tutorial-backdrop="true"></div>' : ''}
+      ${hasCta ? '<div class="fixed inset-0 bg-slate-950/42 backdrop-blur-[2px] pointer-events-auto" data-tutorial-backdrop="true"></div>' : ''}
       ${pointerArrowHtml}
-      <div class="fixed ${positionClass} w-[min(560px,calc(100vw-24px))] pointer-events-auto z-10">
-        <div class="relative flex items-end gap-3 rounded-2xl border-2 border-cyan-300/65 bg-[linear-gradient(155deg,rgba(15,23,42,0.96),rgba(30,41,59,0.95))] px-4 py-3 shadow-[0_14px_34px_rgba(0,0,0,0.65),0_0_24px_rgba(56,189,248,0.22)] backdrop-blur-md ${hasCta ? 'cursor-pointer' : ''}" data-tutorial-card="true">
-          <div class="w-[74px] h-[74px] @max-[720px]:w-[60px] @max-[720px]:h-[60px] shrink-0 rounded-xl border border-cyan-300/45 bg-[radial-gradient(circle_at_50%_65%,rgba(56,189,248,0.24),rgba(15,23,42,0.9))] flex items-center justify-center overflow-hidden">
-            <img src="${oneeUrl}" alt="Onee" class="w-[68px] h-[68px] @max-[720px]:w-[54px] @max-[720px]:h-[54px] object-contain" />
-          </div>
-          <div class="flex-1 min-w-0 flex flex-col gap-1.5">
-            <div class="flex items-center justify-between gap-2">
-              <span class="inline-flex items-center gap-1.5 text-[12px] font-black uppercase tracking-wider text-cyan-300">
-                <span>✦ Onee</span>
-                <span class="text-[10px] font-bold text-slate-400 normal-case tracking-normal">Guide</span>
-              </span>
-            </div>
-            <p class="text-[14px] @max-[720px]:text-[13px] font-bold leading-snug text-white m-0">${copy.text}</p>
-            <div class="flex items-center justify-between gap-2 mt-0.5">
-              ${
-                copy.hint
-                  ? `<span class="text-[11px] font-extrabold text-amber-300 animate-pulse">● ${copy.hint}</span>`
-                  : '<span class="text-[11px] font-bold text-slate-400">Click anywhere to continue</span>'
-              }
-              ${
-                copy.cta
-                  ? `<button class="px-3 py-1 rounded-xl border border-cyan-300/60 bg-[linear-gradient(135deg,#0284c7,#0ea5e9)] text-white text-[12px] font-black shadow-[0_3px_10px_rgba(14,165,233,0.4)] hover:brightness-110 active:scale-95 cursor-pointer" data-tutorial-next="true">${copy.cta}</button>`
-                  : ''
-              }
-            </div>
-          </div>
-        </div>
+      <div class="fixed ${positionClass} ${cardWidthCls} ${hasCta ? 'pointer-events-auto' : 'pointer-events-none'} z-10">
+        ${buildTutorialCardHtml(this.step)}
       </div>
     `;
 
     this.arrowEl = this.overlayEl.querySelector('#tutorialArrow');
+
+    this.overlayEl.querySelector('[data-tutorial-skip]')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.skip();
+    });
 
     this.overlayEl.querySelector('[data-tutorial-next]')?.addEventListener('click', (e) => {
       e.stopPropagation();

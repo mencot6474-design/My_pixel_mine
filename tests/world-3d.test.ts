@@ -2478,4 +2478,26 @@ describe('Pure 3D Mine World', () => {
 
     sprite.dispose();
   });
+
+  it('scales WeatherFx3D active particle draw range and visibility across graphics quality presets', () => {
+    const fx = new WeatherFx3D();
+    expect(fx.getActiveParticleCount()).toBe(120);
+
+    fx.setQualityScale(0.5);
+    fx.update(0.05, 1.0, true);
+    expect(fx.group.visible).toBe(true);
+    expect(fx.getActiveParticleCount()).toBe(60);
+
+    fx.setQualityScale(0);
+    fx.update(0.05, 1.1, true);
+    expect(fx.group.visible).toBe(false);
+    expect(fx.getActiveParticleCount()).toBe(0);
+
+    fx.setQualityScale(1);
+    fx.update(0.05, 1.2, true);
+    expect(fx.group.visible).toBe(true);
+    expect(fx.getActiveParticleCount()).toBe(120);
+
+    fx.dispose();
+  });
 });
