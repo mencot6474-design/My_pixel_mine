@@ -77,6 +77,11 @@ interface ShardParticle {
   vx: number;
   vy: number;
   vz: number;
+  rx: number;
+  ry: number;
+  rz: number;
+  baseScale: number;
+  bounces: number;
   age: number;
   dur: number;
 }
@@ -594,7 +599,9 @@ export class OrePit3D {
   private readonly trimMat: THREE.MeshStandardMaterial;
   private readonly pitNeonMat: THREE.MeshStandardMaterial;
   private readonly shardMat: THREE.MeshStandardMaterial;
-  private readonly sharedShardGeo = new THREE.OctahedronGeometry(0.11, 0);
+  private readonly rockChipMat: THREE.MeshStandardMaterial;
+  private readonly sharedShardGeo = new THREE.OctahedronGeometry(0.14, 0);
+  private readonly sharedRockGeo = new THREE.DodecahedronGeometry(0.125, 0);
   private readonly shardPool: ShardParticle[] = [];
   private readonly impactFx = new AttackImpactFxController({ floorY: 0.045 });
   private readonly ownedGeos: THREE.BufferGeometry[] = [];
@@ -742,10 +749,21 @@ export class OrePit3D {
       }
     }
 
+    this.sharedShardGeo.scale(0.75, 1.45, 0.75);
     this.shardMat = new THREE.MeshStandardMaterial({
       color: palette.crystalColor,
       emissive: palette.crystalColor,
-      emissiveIntensity: 0.45,
+      emissiveIntensity: 0.78,
+      roughness: 0.22,
+      metalness: 0.35,
+      flatShading: true,
+    });
+    this.rockChipMat = new THREE.MeshStandardMaterial({
+      color: '#2c364d',
+      emissive: '#0f172a',
+      emissiveIntensity: 0.2,
+      roughness: 0.78,
+      metalness: 0.18,
       flatShading: true,
     });
 
@@ -1073,17 +1091,38 @@ export class OrePit3D {
     node.recoilAmt = heavy ? 0.24 : 0.16;
     node.flashTimer = 0.09;
     if (this.group.visible) {
-      this.spawnShardsAt(node.x, node.z, pure.broken ? (node.isMeteor ? 28 : 14) : shardCount);
-      this.impactFx.spawnImpact({
-        targetX: node.x,
-        targetY: 0.92,
-        targetZ: node.z,
-        accentColor: attackFx?.accentColor ?? (heavy ? '#fbbf24' : this.activePalette.crystalColor),
-        heavy,
-        comboStep: attackFx?.comboStep,
-        attackerX: attackFx?.attackerX,
-        attackerZ: attackFx?.attackerZ !== undefined ? attackFx.attackerZ - PIT_CENTER_Z : undefined,
-      });
+      const fxAccent = attackFx?.accentColor ?? (heavy ? '#fbbf24' : this.activePalette.crystalColor);
+      this.spawnShardsAt(
+        node.x,
+        node.z,
+        pure.broken ? (node.isMeteor ? 32 : 18) : shardCount,
+        pure.broken,
+        node.isMeteor
+      );
+      if (pure.broken) {
+        const oreBreakColor = node.isMeteor
+          ? (node.meteorWeatherId ? getWeatherById(node.meteorWeatherId).accentColor : '#f472b6')
+          : this.activePalette.crystalColor;
+        this.impactFx.spawnShatter({
+          targetX: node.x,
+          targetY: node.isMeteor ? 1.15 : 0.92,
+          targetZ: node.z,
+          oreColor: oreBreakColor,
+          secondaryColor: fxAccent,
+          isMeteor: node.isMeteor,
+        });
+      } else {
+        this.impactFx.spawnImpact({
+          targetX: node.x,
+          targetY: 0.92,
+          targetZ: node.z,
+          accentColor: fxAccent,
+          heavy,
+          comboStep: attackFx?.comboStep,
+          attackerX: attackFx?.attackerX,
+          attackerZ: attackFx?.attackerZ !== undefined ? attackFx.attackerZ - PIT_CENTER_Z : undefined,
+        });
+      }
     }
 
     const meteorWeatherId = node.isMeteor && pure.broken ? (node.meteorWeatherId ?? undefined) : undefined;
@@ -1110,25 +1149,41 @@ export class OrePit3D {
     return this.impactFx.getActiveCounts();
   }
 
-  private spawnShardsAt(lx: number, lz: number, count: number): void {
+  private spawnShardsAt(lx: number, lz: number, count: number, isShatter = false, isMeteor = false): void {
+    const maxCap = 72;
     for (let i = 0; i < count; i++) {
-      if (this.shardPool.length >= 54) break;
-      const mesh = new THREE.Mesh(this.sharedShardGeo, this.shardMat);
+      if (this.shardPool.length >= maxCap) {
+        const oldest = this.shardPool.shift();
+        if (oldest) this.group.remove(oldest.mesh);
+      }
+      const isCrystal = isShatter ? i % 3 !== 2 : i % 2 === 0;
+      const mesh = new THREE.Mesh(
+        isCrystal ? this.sharedShardGeo : this.sharedRockGeo,
+        isCrystal ? this.shardMat : this.rockChipMat
+      );
       mesh.position.set(
-        lx + (Math.random() - 0.5) * 0.55,
-        0.65 + Math.random() * 0.55,
-        lz + (Math.random() - 0.5) * 0.55
+        lx + (Math.random() - 0.5) * (isShatter ? 0.8 : 0.5),
+        0.55 + Math.random() * (isShatter ? 0.85 : 0.5),
+        lz + (Math.random() - 0.5) * (isShatter ? 0.8 : 0.5)
       );
       const ang = Math.random() * Math.PI * 2;
-      const spd = 2.0 + Math.random() * 3.2;
+      const spd = (isShatter ? (isMeteor ? 3.8 : 2.8) : 1.8) + Math.random() * (isShatter ? 4.4 : 2.8);
+      const baseScale = (isShatter ? (isMeteor ? 1.15 : 0.85) : 0.65) + Math.random() * (isShatter ? 0.65 : 0.42);
+      mesh.scale.setScalar(baseScale);
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
       this.group.add(mesh);
       this.shardPool.push({
         mesh,
         vx: Math.cos(ang) * spd,
-        vy: 2.6 + Math.random() * 3.2,
+        vy: (isShatter ? (isMeteor ? 4.4 : 3.4) : 2.5) + Math.random() * (isShatter ? 4.0 : 2.6),
         vz: Math.sin(ang) * spd,
+        rx: (Math.random() - 0.5) * 16,
+        ry: (Math.random() - 0.5) * 14,
+        rz: (Math.random() - 0.5) * 16,
+        baseScale,
+        bounces: 0,
         age: 0,
-        dur: 0.48 + Math.random() * 0.22,
+        dur: (isShatter ? 0.68 : 0.48) + Math.random() * 0.28,
       });
     }
   }
@@ -1256,13 +1311,32 @@ export class OrePit3D {
         this.shardPool.splice(i, 1);
         continue;
       }
-      p.vy -= 14 * dtSec;
+      p.vy -= 15.5 * dtSec;
       p.mesh.position.x += p.vx * dtSec;
-      p.mesh.position.y = Math.max(0.08, p.mesh.position.y + p.vy * dtSec);
+      let nextY = p.mesh.position.y + p.vy * dtSec;
+      if (nextY <= 0.09) {
+        nextY = 0.09;
+        if (p.vy < -0.6 && p.bounces < 2) {
+          p.vy = -p.vy * 0.42;
+          p.vx *= 0.72;
+          p.vz *= 0.72;
+          p.rx *= 0.65;
+          p.rz *= 0.65;
+          p.bounces++;
+        } else {
+          p.vy = 0;
+          p.vx *= Math.max(0.2, 1 - dtSec * 6);
+          p.vz *= Math.max(0.2, 1 - dtSec * 6);
+        }
+      }
+      p.mesh.position.y = nextY;
       p.mesh.position.z += p.vz * dtSec;
-      p.mesh.rotation.x += dtSec * 8;
-      p.mesh.rotation.z += dtSec * 6;
-      p.mesh.scale.setScalar(1 - p.age / p.dur);
+      p.mesh.rotation.x += p.rx * dtSec;
+      p.mesh.rotation.y += p.ry * dtSec;
+      p.mesh.rotation.z += p.rz * dtSec;
+      const lifeRatio = p.age / p.dur;
+      const shrink = lifeRatio < 0.62 ? 1 : Math.max(0.04, 1 - (lifeRatio - 0.62) / 0.38);
+      p.mesh.scale.setScalar(p.baseScale * shrink);
     }
 
     this.impactFx.update(dtSec, camera);
@@ -1294,6 +1368,8 @@ export class OrePit3D {
     this.trimMat.dispose();
     this.pitNeonMat.dispose();
     this.shardMat.dispose();
+    this.rockChipMat.dispose();
     this.sharedShardGeo.dispose();
+    this.sharedRockGeo.dispose();
   }
 }

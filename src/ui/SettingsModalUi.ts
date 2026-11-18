@@ -34,12 +34,12 @@ export class SettingsModalUi {
     const qualityBtnsHtml = QUALITY_OPTIONS.map((opt) => {
       const isSelected = s.graphicsQuality === opt.id;
       const cls = isSelected
-        ? 'border-sky-300/80 bg-[linear-gradient(135deg,rgba(14,165,233,0.42),rgba(37,99,235,0.45))] text-white shadow-[0_0_16px_rgba(56,189,248,0.35),inset_0_1px_0_rgba(255,255,255,0.32)]'
-        : 'border-white/12 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white';
+        ? 'border-sky-300 bg-[linear-gradient(135deg,#0284c7,#1d4ed8)] text-white shadow-[0_0_16px_rgba(56,189,248,0.42),inset_0_1px_0_rgba(255,255,255,0.36)]'
+        : 'border-[#2a3b5c] bg-[#152036] text-slate-300 hover:bg-[#1e2d4d] hover:text-white';
       return `
         <button
           type="button"
-          class="flex-1 py-2.5 px-3 rounded-xl border text-[14px] font-black cursor-pointer transition-[transform,filter,background,border-color] duration-150 ease-out active:scale-[0.97] ${cls}"
+          class="flex-1 py-2.5 px-3 rounded-xl border-2 text-[14px] font-black cursor-pointer transition-[transform,filter,background,border-color] duration-150 ease-out active:scale-[0.97] ${cls}"
           data-settings-quality="${opt.id}"
           aria-pressed="${isSelected ? 'true' : 'false'}"
         >
@@ -50,12 +50,12 @@ export class SettingsModalUi {
 
     const togglePill = (on: boolean): string =>
       on
-        ? 'border-emerald-300/70 bg-[linear-gradient(135deg,rgba(34,197,94,0.88),rgba(5,150,105,0.92))] text-white shadow-[0_4px_14px_rgba(34,197,94,0.35)]'
-        : 'border-slate-500/45 bg-slate-800/80 text-slate-300';
+        ? 'border-emerald-300 bg-[linear-gradient(135deg,#22c55e,#059669)] text-white shadow-[0_4px_14px_rgba(34,197,94,0.4)]'
+        : 'border-[#3b4b6b] bg-[#1b2438] text-slate-300';
 
     const mutePill = muted
-      ? 'border-rose-400/70 bg-[linear-gradient(135deg,rgba(244,63,94,0.88),rgba(190,18,60,0.92))] text-white shadow-[0_4px_14px_rgba(244,63,94,0.35)]'
-      : 'border-sky-300/60 bg-[linear-gradient(135deg,rgba(14,165,233,0.82),rgba(2,132,199,0.9))] text-white shadow-[0_4px_14px_rgba(56,189,248,0.3)]';
+      ? 'border-rose-400 bg-[linear-gradient(135deg,#f43f5e,#be123c)] text-white shadow-[0_4px_14px_rgba(244,63,94,0.4)]'
+      : 'border-sky-300 bg-[linear-gradient(135deg,#0ea5e9,#0284c7)] text-white shadow-[0_4px_14px_rgba(56,189,248,0.35)]';
 
     const bodyHtml = `
       <div class="w-full flex flex-col gap-3.5 text-left">

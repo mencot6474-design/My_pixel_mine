@@ -60,13 +60,10 @@ export function canDropHotbarOnPlot(ctx: {
 
 /** Builds HTML for the Hotbar backpack/inventory toggle button (`). */
 export function renderHotbarBagButtonHtml(activeModal: ModalKind): string {
-  const bagBorder =
-    activeModal === 'inventory'
-      ? 'border-[#4ade80]/80 bg-[linear-gradient(160deg,rgba(34,197,94,0.85)_0%,rgba(21,128,61,0.92)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_0_16px_rgba(74,222,128,0.45)]'
-      : 'border-[#60a5fa]/60 bg-[linear-gradient(160deg,rgba(37,99,235,0.75)_0%,rgba(15,23,42,0.9)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_8px_20px_rgba(0,0,0,0.45)]';
+  const bagState = activeModal === 'inventory' ? 'is-open' : '';
   return `
-      <button class="${TW_HOTBAR_SLOT} backdrop-blur-md border-[1.5px] ${bagBorder}" data-action="toggle-inventory" title="Inventory (\`)">
-        <span class="${TW_HOTBAR_NUM} mam-outline-sm">\`</span>
+      <button class="${TW_HOTBAR_SLOT} mam-hotbar-bag ${bagState}" data-action="toggle-inventory" title="Inventory (\`)">
+        <span class="${TW_HOTBAR_NUM}">\`</span>
         <div class="mam-card-art">${hudIconHtml('backpack', 44, 'Backpack')}</div>
       </button>
     `;
@@ -77,12 +74,10 @@ export function renderHotbarSlotsHtml(state: GameState): string {
   return state.hotbar
     .map((itemId, idx) => {
       const isSelected = state.selectedHotbarSlot === idx;
-      const selectedCls = isSelected
-        ? 'shadow-[0_0_0_2.5px_#facc15,0_4px_12px_rgba(250,204,21,0.45)]'
-        : 'shadow-[0_3px_0_rgba(0,0,0,0.55)]';
+      const selectedCls = isSelected ? 'is-hotbar-selected' : '';
       const emptySlot = `
           <button class="${TW_HOTBAR_SLOT} mam-empty-slot select-none touch-none [&>*]:pointer-events-none ${selectedCls}" data-hotbar="${idx}">
-            <span class="${TW_HOTBAR_NUM} mam-outline-sm">${idx + 1}</span>
+            <span class="${TW_HOTBAR_NUM}">${idx + 1}</span>
           </button>
         `;
       if (!itemId) return emptySlot;
@@ -114,10 +109,10 @@ export function renderHotbarSlotsHtml(state: GameState): string {
 
       return `
           <button class="${TW_HOTBAR_SLOT} cursor-grab active:cursor-grabbing select-none touch-none [&>*]:pointer-events-none ${rarityCardClasses(rarity, selectedCls)}" style="${rarityVars(rarity)}" data-hotbar="${idx}" title="${title} (Worth ${fmtMoney(worth)}) • Drag to move">
-            <span class="${TW_HOTBAR_NUM} mam-outline-sm">${idx + 1}</span>
-            ${qty > 1 ? `<span class="absolute top-0.5 right-[4px] text-[10px] font-extrabold tabular-nums text-white z-[3] mam-outline-sm">x${fmtShort(qty)}</span>` : ''}
+            <span class="${TW_HOTBAR_NUM}">${idx + 1}</span>
+            ${qty > 1 ? `<span class="mam-hotbar-qty">x${fmtShort(qty)}</span>` : ''}
             <div class="mam-card-art">${artHtml}</div>
-            <div class="mam-card-bottom mt-auto">
+            <div class="mam-hotbar-val-bar">
               <span class="mam-card-val mam-outline-sm">${fmtMoney(worth)}</span>
             </div>
           </button>
@@ -163,8 +158,9 @@ export class HotbarHudUi {
 
   public renderHotbarSection(): string {
     return `
-      <div class="absolute bottom-[14px] left-1/2 -translate-x-1/2 max-w-[calc(100%-16px)] flex items-end gap-1.5 @max-[860px]:gap-1 pointer-events-auto" data-hud-hotbar="true">
+      <div class="mam-hotbar-dock absolute bottom-[12px] left-1/2 -translate-x-1/2 max-w-[calc(100%-16px)] @max-[860px]:gap-1 @max-[860px]:px-1.5 @max-[860px]:py-1.5 pointer-events-auto" data-hud-hotbar="true">
         ${renderHotbarSlotsHtml(this.state)}
+        <span class="mam-hotbar-divider" aria-hidden="true"></span>
         ${renderHotbarBagButtonHtml(this.getActiveModal())}
       </div>
     `;
@@ -182,7 +178,7 @@ export class HotbarHudUi {
   public updateHotbarLive(root: HTMLElement): void {
     const hotbar = root.querySelector<HTMLElement>('[data-hud-hotbar="true"]');
     if (!hotbar) return;
-    hotbar.innerHTML = `${renderHotbarSlotsHtml(this.state)}${renderHotbarBagButtonHtml(this.getActiveModal())}`;
+    hotbar.innerHTML = `${renderHotbarSlotsHtml(this.state)}<span class="mam-hotbar-divider" aria-hidden="true"></span>${renderHotbarBagButtonHtml(this.getActiveModal())}`;
     this.bindHotbarScope(root, hotbar);
   }
 

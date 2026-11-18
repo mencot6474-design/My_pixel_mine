@@ -1,8 +1,8 @@
 :root {
   --mam-font: 'Fredoka', sans-serif;
-  --mam-panel: rgba(12, 16, 28, 0.86);
-  --mam-panel-dark: rgba(8, 11, 20, 0.92);
-  --mam-border: rgba(255, 255, 255, 0.14);
+  --mam-panel: #0e1424;
+  --mam-panel-dark: #090d18;
+  --mam-border: #28354e;
   --mam-green: #22c55e;
   --mam-green-bright: #16c64f;
   --mam-orange: #ea6a1d;
@@ -11,9 +11,13 @@
   --mam-m-accent: #38bdf8;
   --mam-m-accent-hi: #7dd3fc;
   --mam-m-accent-deep: #2563eb;
+  --mam-m-surface-top: #121a30;
+  --mam-m-surface-bot: #090d19;
+  --mam-m-plaque-bg: #15223e;
+  --mam-m-border: #2a3b5c;
   --mam-m-ambient: rgba(56, 189, 248, 0.16);
-  --mam-m-glow: rgba(56, 189, 248, 0.38);
-  --mam-m-well-border: rgba(148, 163, 184, 0.18);
+  --mam-m-glow: rgba(56, 189, 248, 0.42);
+  --mam-m-well-border: #253452;
 }
 
 @supports (linear-gradient(in oklab, white, black)) {
@@ -340,136 +344,188 @@
   }
 
   /* ============================================================
-   * Modern Roblox Dark-Glass + Luminous Gradient Rail System
+   * Solid Cyber-Armor Modal Frame + Luminous Gradient Rail System
    * ============================================================ */
   .mam-modal[data-modal-theme='inventory'] {
     --mam-m-accent: #3b82f6;
-    --mam-m-accent-hi: #7dd3fc;
+    --mam-m-accent-hi: #93c5fd;
     --mam-m-accent-deep: #1d4ed8;
-    --mam-m-ambient: rgba(59, 130, 246, 0.2);
-    --mam-m-glow: rgba(56, 189, 248, 0.36);
-    --mam-m-well-border: rgba(96, 165, 250, 0.24);
+    --mam-m-surface-top: #111b33;
+    --mam-m-surface-bot: #090e1c;
+    --mam-m-plaque-bg: #14254a;
+    --mam-m-border: #2a4475;
+    --mam-m-ambient: rgba(59, 130, 246, 0.22);
+    --mam-m-glow: rgba(56, 189, 248, 0.42);
+    --mam-m-well-border: #233863;
   }
 
   .mam-modal[data-modal-theme='index'] {
     --mam-m-accent: #a855f7;
-    --mam-m-accent-hi: #e879f9;
+    --mam-m-accent-hi: #f0abfc;
     --mam-m-accent-deep: #7e22ce;
-    --mam-m-ambient: rgba(168, 85, 247, 0.2);
-    --mam-m-glow: rgba(192, 132, 252, 0.38);
-    --mam-m-well-border: rgba(192, 132, 252, 0.24);
+    --mam-m-surface-top: #1a1333;
+    --mam-m-surface-bot: #0d091c;
+    --mam-m-plaque-bg: #29184d;
+    --mam-m-border: #4a2d7d;
+    --mam-m-ambient: rgba(168, 85, 247, 0.22);
+    --mam-m-glow: rgba(192, 132, 252, 0.44);
+    --mam-m-well-border: #3a2463;
   }
 
   .mam-modal[data-modal-theme='chest'] {
     --mam-m-accent: #f59e0b;
     --mam-m-accent-hi: #fde047;
     --mam-m-accent-deep: #d97706;
-    --mam-m-ambient: rgba(245, 158, 11, 0.2);
-    --mam-m-glow: rgba(251, 191, 36, 0.36);
-    --mam-m-well-border: rgba(251, 191, 36, 0.24);
+    --mam-m-surface-top: #21190e;
+    --mam-m-surface-bot: #120d07;
+    --mam-m-plaque-bg: #382711;
+    --mam-m-border: #6b4b1c;
+    --mam-m-ambient: rgba(245, 158, 11, 0.22);
+    --mam-m-glow: rgba(251, 191, 36, 0.42);
+    --mam-m-well-border: #4f3817;
   }
 
   .mam-modal[data-modal-theme='pickaxe-shop'] {
     --mam-m-accent: #f97316;
     --mam-m-accent-hi: #fdba74;
     --mam-m-accent-deep: #c2410c;
-    --mam-m-ambient: rgba(249, 115, 22, 0.2);
-    --mam-m-glow: rgba(251, 146, 60, 0.36);
-    --mam-m-well-border: rgba(251, 146, 60, 0.24);
+    --mam-m-surface-top: #24160e;
+    --mam-m-surface-bot: #130b07;
+    --mam-m-plaque-bg: #3d2111;
+    --mam-m-border: #733d1e;
+    --mam-m-ambient: rgba(249, 115, 22, 0.22);
+    --mam-m-glow: rgba(251, 146, 60, 0.42);
+    --mam-m-well-border: #572f18;
   }
 
   .mam-modal[data-modal-theme='forge'] {
     --mam-m-accent: #f59e0b;
-    --mam-m-accent-hi: #fde68a;
+    --mam-m-accent-hi: #fef08a;
     --mam-m-accent-deep: #b45309;
-    --mam-m-ambient: rgba(245, 158, 11, 0.22);
-    --mam-m-glow: rgba(251, 191, 36, 0.4);
-    --mam-m-well-border: rgba(251, 191, 36, 0.28);
+    --mam-m-surface-top: #24180d;
+    --mam-m-surface-bot: #120c07;
+    --mam-m-plaque-bg: #3b240f;
+    --mam-m-border: #75491a;
+    --mam-m-ambient: rgba(245, 158, 11, 0.24);
+    --mam-m-glow: rgba(251, 191, 36, 0.46);
+    --mam-m-well-border: #593816;
   }
 
   .mam-modal[data-modal-theme='gem-shop'] {
     --mam-m-accent: #06b6d4;
     --mam-m-accent-hi: #67e8f9;
     --mam-m-accent-deep: #0e7490;
-    --mam-m-ambient: rgba(6, 182, 212, 0.22);
-    --mam-m-glow: rgba(34, 211, 238, 0.38);
-    --mam-m-well-border: rgba(34, 211, 238, 0.24);
+    --mam-m-surface-top: #0d1f2d;
+    --mam-m-surface-bot: #07111a;
+    --mam-m-plaque-bg: #103247;
+    --mam-m-border: #1d5775;
+    --mam-m-ambient: rgba(6, 182, 212, 0.24);
+    --mam-m-glow: rgba(34, 211, 238, 0.44);
+    --mam-m-well-border: #18445c;
   }
 
   .mam-modal[data-modal-theme='sell-shop'] {
     --mam-m-accent: #10b981;
     --mam-m-accent-hi: #6ee7b7;
     --mam-m-accent-deep: #047857;
-    --mam-m-ambient: rgba(16, 185, 129, 0.2);
-    --mam-m-glow: rgba(52, 211, 153, 0.36);
-    --mam-m-well-border: rgba(52, 211, 153, 0.24);
+    --mam-m-surface-top: #0d211b;
+    --mam-m-surface-bot: #07120f;
+    --mam-m-plaque-bg: #10362b;
+    --mam-m-border: #1d614d;
+    --mam-m-ambient: rgba(16, 185, 129, 0.22);
+    --mam-m-glow: rgba(52, 211, 153, 0.42);
+    --mam-m-well-border: #174a3b;
   }
 
   .mam-modal[data-modal-theme='upgrades'] {
     --mam-m-accent: #0ea5e9;
-    --mam-m-accent-hi: #67e8f9;
+    --mam-m-accent-hi: #7dd3fc;
     --mam-m-accent-deep: #0369a1;
-    --mam-m-ambient: rgba(14, 165, 233, 0.22);
-    --mam-m-glow: rgba(56, 189, 248, 0.38);
-    --mam-m-well-border: rgba(56, 189, 248, 0.24);
+    --mam-m-surface-top: #0e1d33;
+    --mam-m-surface-bot: #070f1c;
+    --mam-m-plaque-bg: #112d4d;
+    --mam-m-border: #1f4f7d;
+    --mam-m-ambient: rgba(14, 165, 233, 0.24);
+    --mam-m-glow: rgba(56, 189, 248, 0.44);
+    --mam-m-well-border: #193e63;
   }
 
   .mam-modal[data-modal-theme='worlds'] {
     --mam-m-accent: #d946ef;
-    --mam-m-accent-hi: #f472b6;
+    --mam-m-accent-hi: #f5a3ff;
     --mam-m-accent-deep: #9333ea;
-    --mam-m-ambient: rgba(217, 70, 239, 0.2);
-    --mam-m-glow: rgba(232, 121, 249, 0.38);
-    --mam-m-well-border: rgba(232, 121, 249, 0.24);
+    --mam-m-surface-top: #1f1233;
+    --mam-m-surface-bot: #10091c;
+    --mam-m-plaque-bg: #32184f;
+    --mam-m-border: #5c2a85;
+    --mam-m-ambient: rgba(217, 70, 239, 0.22);
+    --mam-m-glow: rgba(232, 121, 249, 0.44);
+    --mam-m-well-border: #462166;
   }
 
   .mam-modal[data-modal-theme='tower'] {
     --mam-m-accent: #8b5cf6;
     --mam-m-accent-hi: #38bdf8;
     --mam-m-accent-deep: #4f46e5;
-    --mam-m-ambient: rgba(139, 92, 246, 0.24);
-    --mam-m-glow: rgba(56, 189, 248, 0.42);
-    --mam-m-well-border: rgba(56, 189, 248, 0.26);
+    --mam-m-surface-top: #161536;
+    --mam-m-surface-bot: #0a0a1e;
+    --mam-m-plaque-bg: #221f54;
+    --mam-m-border: #3d3b8a;
+    --mam-m-ambient: rgba(139, 92, 246, 0.25);
+    --mam-m-glow: rgba(56, 189, 248, 0.46);
+    --mam-m-well-border: #2e2e6b;
   }
 
   .mam-modal[data-modal-theme='settings'] {
     --mam-m-accent: #38bdf8;
     --mam-m-accent-hi: #bae6fd;
     --mam-m-accent-deep: #0284c7;
+    --mam-m-surface-top: #121b2e;
+    --mam-m-surface-bot: #090e1a;
+    --mam-m-plaque-bg: #162642;
+    --mam-m-border: #2d4469;
     --mam-m-ambient: rgba(56, 189, 248, 0.2);
-    --mam-m-glow: rgba(56, 189, 248, 0.36);
-    --mam-m-well-border: rgba(148, 163, 184, 0.24);
+    --mam-m-glow: rgba(56, 189, 248, 0.4);
+    --mam-m-well-border: #233554;
   }
 
   .mam-modal[data-modal-theme='offline'] {
     --mam-m-accent: #f59e0b;
     --mam-m-accent-hi: #fde047;
     --mam-m-accent-deep: #d97706;
+    --mam-m-surface-top: #21180e;
+    --mam-m-surface-bot: #110c07;
+    --mam-m-plaque-bg: #362510;
+    --mam-m-border: #69481b;
     --mam-m-ambient: rgba(245, 158, 11, 0.22);
-    --mam-m-glow: rgba(250, 204, 21, 0.38);
-    --mam-m-well-border: rgba(251, 191, 36, 0.26);
+    --mam-m-glow: rgba(250, 204, 21, 0.42);
+    --mam-m-well-border: #4d3515;
   }
 
   .mam-modal[data-modal-theme='bounties'] {
     --mam-m-accent: #10b981;
     --mam-m-accent-hi: #6ee7b7;
     --mam-m-accent-deep: #059669;
-    --mam-m-ambient: rgba(16, 185, 129, 0.2);
-    --mam-m-glow: rgba(52, 211, 153, 0.38);
-    --mam-m-well-border: rgba(52, 211, 153, 0.26);
+    --mam-m-surface-top: #0d211c;
+    --mam-m-surface-bot: #07120f;
+    --mam-m-plaque-bg: #11362c;
+    --mam-m-border: #1e614e;
+    --mam-m-ambient: rgba(16, 185, 129, 0.22);
+    --mam-m-glow: rgba(52, 211, 153, 0.42);
+    --mam-m-well-border: #174a3c;
   }
 
   .mam-modal {
     position: relative;
-    background: linear-gradient(180deg var(--in-oklab), rgba(16, 21, 36, 0.9) 0%, rgba(9, 12, 22, 0.94) 100%);
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
-    border: 1.5px solid rgba(255, 255, 255, 0.14);
+    background: linear-gradient(180deg var(--in-oklab), var(--mam-m-surface-top, #121a30) 0%, var(--mam-m-surface-bot, #090d19) 100%);
+    border: 2px solid var(--mam-m-border, #2a3b5c);
     border-radius: 18px;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.18),
-      0 24px 64px -12px rgba(0, 0, 0, 0.78),
-      0 0 36px -12px var(--mam-m-glow);
+      0 0 0 1px #04070f,
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.55),
+      0 26px 64px -10px rgba(0, 0, 0, 0.88),
+      0 0 38px -10px var(--mam-m-glow);
   }
 
   .mam-modal > :not(.mam-modal-surface):not(.mam-modal-rails):not(.mam-modal-rail-head) {
@@ -485,15 +541,24 @@
     pointer-events: none;
     z-index: 0;
     background-image:
-      radial-gradient(ellipse 72% 48% at 18% 0%, var(--mam-m-ambient), transparent 68%),
-      radial-gradient(ellipse 50% 40% at 88% 100%, var(--mam-m-ambient), transparent 72%),
-      linear-gradient(to right, rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+      radial-gradient(ellipse 76% 42% at 16% 0%, var(--mam-m-ambient), transparent 68%),
+      radial-gradient(ellipse 52% 38% at 90% 100%, var(--mam-m-ambient), transparent 72%),
+      linear-gradient(to right, rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
     background-size:
       100% 100%,
       100% 100%,
-      28px 28px,
-      28px 28px;
+      26px 26px,
+      26px 26px;
+  }
+
+  .mam-modal-surface::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    pointer-events: none;
   }
 
   .mam-modal-rails {
@@ -508,64 +573,67 @@
   .mam-modal-rails::after {
     content: '';
     position: absolute;
-    left: 20px;
-    right: 20px;
-    height: 2.5px;
+    left: 24px;
+    right: 24px;
     border-radius: 9999px;
     pointer-events: none;
   }
 
   .mam-modal-rails::before {
-    top: -1px;
-    background: linear-gradient(90deg var(--in-oklab), transparent 0%, var(--mam-m-accent) 18%, var(--mam-m-accent-hi) 50%, var(--mam-m-accent) 82%, transparent 100%);
-    box-shadow: 0 0 12px var(--mam-m-glow);
+    top: -1.5px;
+    height: 3px;
+    background: linear-gradient(90deg var(--in-oklab), transparent 0%, var(--mam-m-accent) 16%, var(--mam-m-accent-hi) 50%, var(--mam-m-accent) 84%, transparent 100%);
+    box-shadow: 0 0 14px var(--mam-m-glow);
   }
 
   .mam-modal-rails::after {
-    bottom: -1px;
-    opacity: 0.72;
-    background: linear-gradient(90deg var(--in-oklab), transparent 8%, var(--mam-m-accent) 50%, transparent 92%);
+    bottom: -1.5px;
+    height: 2.5px;
+    opacity: 0.85;
+    background: linear-gradient(90deg var(--in-oklab), transparent 6%, var(--mam-m-accent) 50%, transparent 94%);
+    box-shadow: 0 0 10px var(--mam-m-glow);
   }
 
   .mam-rail-stud {
     position: absolute;
-    width: 12px;
-    height: 12px;
+    width: 15px;
+    height: 15px;
     border-color: var(--mam-m-accent-hi);
-    opacity: 0.78;
+    opacity: 0.92;
     pointer-events: none;
+    filter: drop-shadow(0 0 5px var(--mam-m-glow));
   }
 
   .mam-rail-stud.is-tl {
     top: 6px;
     left: 6px;
-    border-top: 2px solid var(--mam-m-accent-hi);
-    border-left: 2px solid var(--mam-m-accent-hi);
-    border-top-left-radius: 8px;
+    border-top: 2.5px solid var(--mam-m-accent-hi);
+    border-left: 2.5px solid var(--mam-m-accent-hi);
+    border-top-left-radius: 9px;
   }
 
   .mam-rail-stud.is-tr {
     top: 6px;
     right: 6px;
-    border-top: 2px solid var(--mam-m-accent-hi);
-    border-right: 2px solid var(--mam-m-accent-hi);
-    border-top-right-radius: 8px;
+    border-top: 2.5px solid var(--mam-m-accent-hi);
+    border-right: 2.5px solid var(--mam-m-accent-hi);
+    border-top-right-radius: 9px;
   }
 
   .mam-rail-stud.is-bl {
     bottom: 6px;
     left: 6px;
-    border-bottom: 2px solid var(--mam-m-accent-hi);
-    border-left: 2px solid var(--mam-m-accent-hi);
-    border-bottom-left-radius: 8px;
+    border-bottom: 2.5px solid var(--mam-m-accent-hi);
+    border-left: 2.5px solid var(--mam-m-accent-hi);
+    border-bottom-left-radius: 9px;
   }
 
   .mam-rail-stud.is-br {
     bottom: 6px;
     right: 6px;
-    border-bottom: 2px solid var(--mam-m-accent-hi);
-    border-right: 2px solid var(--mam-m-accent-hi);
-    border-bottom-right-radius: 8px;
+    border-bottom: 2.5px solid var(--mam-m-accent-hi);
+    border-right: 2.5px solid var(--mam-m-accent-hi);
+    border-bottom-right-radius: 9px;
   }
 
   .mam-modal-rail-head {
@@ -575,8 +643,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-top: -28px;
-    margin-bottom: 2px;
+    margin-top: -30px;
+    margin-bottom: 3px;
     pointer-events: none;
   }
 
@@ -586,33 +654,70 @@
     overflow: hidden;
     display: inline-flex;
     align-items: center;
-    gap: 9px;
-    min-height: 40px;
-    padding: 4px 16px 4px 6px;
-    border-radius: 13px;
-    border: 1.5px solid var(--mam-m-accent);
-    background: linear-gradient(135deg var(--in-oklab), rgba(16, 22, 38, 0.96) 0%, rgba(10, 14, 26, 0.98) 100%);
+    gap: 10px;
+    min-height: 44px;
+    padding: 5px 22px 5px 7px;
+    border-radius: 13px 18px 13px 13px;
+    border: 2px solid var(--mam-m-accent);
+    background: linear-gradient(135deg var(--in-oklab), var(--mam-m-plaque-bg, #15223e) 0%, #0b1120 72%, #080c17 100%);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.24),
-      0 8px 22px -4px var(--mam-m-glow),
-      0 6px 14px rgba(0, 0, 0, 0.55);
-    color: #f8fafc;
+      0 0 0 1px #04070f,
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.5),
+      0 10px 24px -4px var(--mam-m-glow),
+      0 8px 18px rgba(0, 0, 0, 0.72);
+    color: #ffffff;
     font-size: 20px;
     font-weight: 800;
     line-height: 1;
-    letter-spacing: 0.3px;
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.65);
+    letter-spacing: 0.45px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  }
+
+  .mam-title-plaque::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 14px;
+    right: 18px;
+    height: 2px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, var(--mam-m-accent-hi), var(--mam-m-accent), transparent);
+    pointer-events: none;
+  }
+
+  .mam-title-plaque::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 28px;
+    background: repeating-linear-gradient(
+      -52deg,
+      rgba(255, 255, 255, 0.08) 0px,
+      rgba(255, 255, 255, 0.08) 4px,
+      transparent 4px,
+      transparent 8px
+    );
+    pointer-events: none;
   }
 
   .mam-title-plaque-icon {
-    width: 30px;
-    height: 30px;
+    position: relative;
+    z-index: 1;
+    width: 32px;
+    height: 32px;
     border-radius: 9px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg var(--in-oklab), var(--mam-m-accent-hi) 0%, var(--mam-m-accent-deep) 100%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 0 12px var(--mam-m-glow);
+    border: 1.5px solid rgba(255, 255, 255, 0.45);
+    background: linear-gradient(145deg var(--in-oklab), var(--mam-m-accent-hi) 0%, var(--mam-m-accent) 48%, var(--mam-m-accent-deep) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.32),
+      0 0 14px var(--mam-m-glow);
   }
 
   .mam-close-rail-btn {
@@ -621,25 +726,28 @@
   }
 
   .mam-inspector-well {
-    background: linear-gradient(180deg var(--in-oklab), rgba(255, 255, 255, 0.045) 0%, rgba(8, 12, 22, 0.56) 100%);
-    border: 1px solid var(--mam-m-well-border);
+    background: linear-gradient(180deg var(--in-oklab), #101729 0%, #090e1b 100%);
+    border: 1.5px solid var(--mam-m-well-border);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.1),
-      inset 0 4px 16px rgba(0, 0, 0, 0.38);
+      inset 0 1px 0 rgba(255, 255, 255, 0.09),
+      inset 0 4px 16px rgba(0, 0, 0, 0.45);
   }
 
   .mam-tab-btn {
     position: relative;
     overflow: hidden;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, #1b253d 0%, #121a2d 100%);
+    border: 1.5px solid #2e3d5e;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 4px 10px rgba(0, 0, 0, 0.4);
     color: #cbd5e1;
     transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
   }
 
   .mam-tab-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background: linear-gradient(180deg, #243252 0%, #18233d 100%);
+    border-color: var(--mam-m-accent);
     color: #fff;
   }
 
@@ -648,19 +756,109 @@
     border-color: var(--mam-m-accent-hi);
     color: #fff;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.42),
       0 4px 16px -2px var(--mam-m-glow);
     transform: translateY(-1px);
   }
 
-  .mam-empty-slot {
-    background: rgba(12, 18, 32, 0.52);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1.5px solid rgba(255, 255, 255, 0.16);
+  /* ============================================================
+   * Cyber-Anime Tactical Hotbar Dock & Slots 1–9 (ZZZ / HSR Inspired)
+   * ============================================================ */
+  .mam-hotbar-dock {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px 8px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #151e34 0%, #0b101e 100%);
+    border: 2px solid #2b3c5e;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.14),
-      0 6px 16px rgba(0, 0, 0, 0.35);
+      0 0 0 1px #050811,
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      inset 0 -3px 0 rgba(0, 0, 0, 0.55),
+      0 14px 32px rgba(0, 0, 0, 0.78);
+  }
+
+  .mam-hotbar-dock::before {
+    content: '';
+    position: absolute;
+    top: -1.5px;
+    left: 28px;
+    right: 28px;
+    height: 2.5px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, transparent, #38bdf8 22%, #bae6fd 50%, #38bdf8 78%, transparent);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
+    pointer-events: none;
+  }
+
+  .mam-hotbar-divider {
+    width: 2px;
+    height: 46px;
+    border-radius: 9999px;
+    margin: 0 2px;
+    background: linear-gradient(180deg, transparent, #3b4f78 30%, #38bdf8 50%, #3b4f78 70%, transparent);
+    flex-shrink: 0;
+  }
+
+  .mam-hotbar-slot {
+    position: relative;
+    border-radius: 11px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      0 4px 0 #050812,
+      0 6px 12px rgba(0, 0, 0, 0.55);
+    transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.14s ease, box-shadow 0.14s ease, filter 0.14s ease;
+  }
+
+  .mam-hotbar-slot:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.09);
+  }
+
+  .mam-hotbar-slot:active {
+    transform: translateY(1px) scale(0.96);
+  }
+
+  .mam-hotbar-slot.is-hotbar-selected {
+    border-color: #facc15 !important;
+    transform: translateY(-4px);
+    box-shadow:
+      0 0 0 2px #facc15,
+      0 0 18px rgba(250, 204, 21, 0.58),
+      0 6px 14px rgba(0, 0, 0, 0.65) !important;
+  }
+
+  .mam-hotbar-slot.is-hotbar-selected::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10px;
+    right: 10px;
+    height: 2.5px;
+    z-index: 4;
+    border-radius: 0 0 4px 4px;
+    background: linear-gradient(90deg, #fde047, #ffffff, #fde047);
+    box-shadow: 0 0 8px #facc15;
+    pointer-events: none;
+  }
+
+  .mam-empty-slot {
+    background:
+      repeating-linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.018) 0px,
+        rgba(255, 255, 255, 0.018) 4px,
+        transparent 4px,
+        transparent 9px
+      ),
+      linear-gradient(180deg, #10182b 0%, #090e1a 100%);
+    border: 2px solid #263552;
+    box-shadow:
+      inset 0 2px 8px rgba(0, 0, 0, 0.65),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 3px 0 #050812;
   }
 
   .mam-empty-slot::after {
@@ -668,8 +866,85 @@
     position: absolute;
     inset: 6px;
     border-radius: 6px;
-    border: 1px dashed rgba(255, 255, 255, 0.14);
+    border: 1.5px solid #1b2740;
     pointer-events: none;
+  }
+
+  .mam-hotbar-keycap {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    z-index: 4;
+    min-width: 18px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 5px;
+    background: #0a1020;
+    border: 1px solid #3c5078;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 3px rgba(0, 0, 0, 0.7);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: #e2e8f0;
+  }
+
+  .mam-hotbar-slot.is-hotbar-selected .mam-hotbar-keycap {
+    background: #facc15;
+    border-color: #fef08a;
+    color: #090d18;
+    box-shadow: 0 0 8px rgba(250, 204, 21, 0.75);
+  }
+
+  .mam-hotbar-qty {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    z-index: 4;
+    padding: 1px 4px;
+    border-radius: 5px;
+    background: #0a1020;
+    border: 1px solid #3c5078;
+    font-size: 9.5px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    color: #f8fafc;
+  }
+
+  .mam-hotbar-val-bar {
+    position: relative;
+    z-index: 3;
+    width: calc(100% + 4px);
+    margin: auto -2px -2px;
+    padding: 1.5px 2px 2px;
+    background: linear-gradient(180deg, #0b1222 0%, #070b15 100%);
+    border-top: 1px solid #263552;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .mam-hotbar-bag {
+    border: 2px solid #60a5fa;
+    background: linear-gradient(160deg, #1d4ed8 0%, #152954 55%, #0c1733 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 4px 0 #071024,
+      0 8px 18px rgba(37, 99, 235, 0.35);
+  }
+
+  .mam-hotbar-bag.is-open {
+    border-color: #4ade80;
+    background: linear-gradient(160deg, #22c55e 0%, #15803d 65%, #0d4a26 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      0 0 18px rgba(74, 222, 128, 0.5),
+      0 4px 0 #072613;
   }
 
   .mam-hotbar-dragging {
@@ -688,9 +963,9 @@
 
   .mam-placeholder-well {
     border-radius: 14px;
-    border: 1.5px dashed var(--mam-m-well-border, rgba(255, 255, 255, 0.18));
-    background: rgba(255, 255, 255, 0.025);
-    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.3);
+    border: 1.5px dashed var(--mam-m-well-border, #28354e);
+    background: #0c1222;
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.4);
   }
 
   .mam-gloss-btn {
@@ -984,7 +1259,7 @@
   }
 
   #hudRoot[data-hud-pots-above="true"] .mam-active-pots {
-    bottom: 88px;
+    bottom: 108px;
     right: 12px;
     grid-template-columns: repeat(2, 138px);
   }
@@ -994,7 +1269,7 @@
   }
 
   #hudRoot[data-hud-compact="true"] .mam-active-pots {
-    bottom: 76px;
+    bottom: 94px;
     right: 8px;
     grid-template-columns: repeat(2, 126px);
     gap: 5px;
@@ -1005,7 +1280,7 @@
   }
 
   #hudRoot[data-hud-short="true"] .mam-active-pots {
-    bottom: 82px;
+    bottom: 106px;
     right: 10px;
     grid-template-columns: repeat(2, 132px);
     gap: 5px;
@@ -1074,22 +1349,20 @@
     align-items: center;
     gap: 10px;
     padding: 6px 12px 6px 8px;
-    background: linear-gradient(135deg, rgba(10, 15, 30, 0.9) 0%, rgba(15, 23, 42, 0.84) 100%);
-    backdrop-filter: blur(14px) saturate(135%);
-    -webkit-backdrop-filter: blur(14px) saturate(135%);
-    border: 1px solid rgba(56, 189, 248, 0.42);
+    background: linear-gradient(135deg, #0d1529 0%, #15213d 100%);
+    border: 1.5px solid #38bdf8;
     border-radius: 10px 14px 10px 14px;
     box-shadow:
-      0 8px 24px -6px rgba(0, 0, 0, 0.65),
+      0 8px 24px -6px rgba(0, 0, 0, 0.78),
       inset 0 1px 0 rgba(255, 255, 255, 0.22),
-      0 0 16px -4px rgba(56, 189, 248, 0.28);
+      0 0 16px -4px rgba(56, 189, 248, 0.34);
     clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
   .mam-fever-shell.is-active {
-    background: linear-gradient(135deg, rgba(30, 14, 48, 0.94) 0%, rgba(44, 16, 36, 0.9) 100%);
-    border-color: rgba(250, 204, 21, 0.9);
+    background: linear-gradient(135deg, #24103a 0%, #3a1430 100%);
+    border-color: #facc15;
     animation: mamFeverPulse 0.85s ease-in-out infinite alternate;
   }
 
@@ -1233,13 +1506,11 @@
     max-width: min(460px, 92vw);
     padding: 7px 14px 7px 9px;
     border-radius: 12px;
-    background: linear-gradient(135deg, rgba(10, 16, 32, 0.92) 0%, rgba(15, 23, 42, 0.88) 100%);
-    backdrop-filter: blur(14px) saturate(135%);
-    -webkit-backdrop-filter: blur(14px) saturate(135%);
-    border: 1px solid color-mix(in srgb, var(--toast-accent) 55%, rgba(255, 255, 255, 0.14));
-    border-left: 3.5px solid var(--toast-accent);
+    background: linear-gradient(135deg, #0d1529 0%, #15213d 100%);
+    border: 1.5px solid color-mix(in srgb, var(--toast-accent) 65%, #1e293b);
+    border-left: 4px solid var(--toast-accent);
     box-shadow:
-      0 10px 26px -6px rgba(0, 0, 0, 0.65),
+      0 10px 26px -6px rgba(0, 0, 0, 0.78),
       0 0 18px -4px var(--toast-glow),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
     animation: mamToastIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -1325,18 +1596,16 @@
     width: 100%;
     padding: 5px 10px 5px 7px;
     border-radius: 10px 12px 10px 12px;
-    background: linear-gradient(135deg, rgba(10, 16, 32, 0.9) 0%, rgba(15, 23, 42, 0.84) 100%);
-    backdrop-filter: blur(14px) saturate(135%);
-    -webkit-backdrop-filter: blur(14px) saturate(135%);
-    border: 1px solid rgba(56, 189, 248, 0.38);
+    background: linear-gradient(135deg, #0d1529 0%, #15213d 100%);
+    border: 1.5px solid #2e4a73;
     box-shadow:
-      0 8px 20px -6px rgba(0, 0, 0, 0.6),
+      0 8px 20px -6px rgba(0, 0, 0, 0.72),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
     transition: border-color 0.15s ease, filter 0.15s ease, transform 0.15s ease;
   }
 
   .mam-dps-pill:hover {
-    border-color: rgba(125, 211, 252, 0.72);
+    border-color: #7dd3fc;
     filter: brightness(1.08);
     transform: translateY(-1px);
   }
@@ -1350,8 +1619,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(145deg, rgba(14, 165, 233, 0.3) 0%, rgba(30, 58, 138, 0.58) 100%);
-    border: 1px solid rgba(125, 211, 252, 0.55);
+    background: linear-gradient(145deg, #0c4a6e 0%, #1e3a8a 100%);
+    border: 1px solid #7dd3fc;
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.32),
       0 0 10px rgba(56, 189, 248, 0.32);
@@ -1366,13 +1635,11 @@
     width: 100%;
     padding: 10px 11px;
     border-radius: 14px;
-    background: linear-gradient(160deg, rgba(10, 16, 32, 0.94) 0%, rgba(12, 18, 34, 0.9) 100%);
-    backdrop-filter: blur(16px) saturate(140%);
-    -webkit-backdrop-filter: blur(16px) saturate(140%);
-    border: 1px solid rgba(56, 189, 248, 0.42);
+    background: linear-gradient(160deg, #0e162b 0%, #090e1d 100%);
+    border: 1.5px solid #2e4a73;
     box-shadow:
-      0 14px 32px -6px rgba(0, 0, 0, 0.72),
-      0 0 20px -6px rgba(56, 189, 248, 0.28),
+      0 14px 32px -6px rgba(0, 0, 0, 0.8),
+      0 0 20px -6px rgba(56, 189, 248, 0.3),
       inset 0 1px 0 rgba(255, 255, 255, 0.22);
   }
 
@@ -1386,13 +1653,11 @@
     gap: 14px;
     padding: 14px 16px 14px 14px;
     border-radius: 18px;
-    background: linear-gradient(155deg, rgba(10, 15, 32, 0.96) 0%, rgba(16, 24, 48, 0.94) 100%);
-    backdrop-filter: blur(18px) saturate(145%);
-    -webkit-backdrop-filter: blur(18px) saturate(145%);
-    border: 1.5px solid rgba(56, 189, 248, 0.58);
+    background: linear-gradient(155deg, #0d152c 0%, #142140 100%);
+    border: 2px solid #38bdf8;
     box-shadow:
-      0 18px 46px -8px rgba(0, 0, 0, 0.78),
-      0 0 28px -6px rgba(56, 189, 248, 0.35),
+      0 18px 46px -8px rgba(0, 0, 0, 0.84),
+      0 0 28px -6px rgba(56, 189, 248, 0.4),
       inset 0 1px 0 rgba(255, 255, 255, 0.26);
     animation: mamTutCardIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
@@ -1402,7 +1667,7 @@
     gap: 10px;
     padding: 9px 12px 9px 10px;
     border-radius: 15px;
-    background: linear-gradient(155deg, rgba(10, 15, 32, 0.9) 0%, rgba(16, 24, 48, 0.88) 100%);
+    background: linear-gradient(155deg, #0d152c 0%, #142140 100%);
   }
 
   .mam-tut-card.is-compact .mam-tut-portrait-wrap {

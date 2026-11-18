@@ -68,12 +68,12 @@ export class PlotInspectUi {
     const worldName = worldId ? getWorldById(worldId).name : null;
 
     root.innerHTML = `
-      <button class="absolute top-4 @max-[720px]:top-2.5 left-1/2 -translate-x-1/2 px-[34px] py-[7px] rounded-2xl border border-orange-300/60 bg-[linear-gradient(135deg,rgba(234,88,12,0.9),rgba(194,65,12,0.95))] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_8px_22px_-4px_rgba(234,88,12,0.45)] text-white text-[19px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-inspect-action="exit">Exit</button>
+      <button class="absolute top-4 @max-[720px]:top-2.5 left-1/2 -translate-x-1/2 px-[34px] py-[7px] rounded-2xl border-2 border-orange-300 bg-[linear-gradient(135deg,#ea580c,#c2410c)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_0_#431407,0_8px_22px_-4px_rgba(234,88,12,0.45)] text-white text-[19px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-inspect-action="exit">Exit</button>
 
-      <div class="absolute left-7 @max-[920px]:left-3 top-[38%] @max-[920px]:top-14 -translate-y-1/2 @max-[920px]:translate-y-0 w-[245px] @max-[920px]:w-[208px] px-3.5 py-3 rounded-2xl bg-[rgba(12,16,28,0.84)] backdrop-blur-xl border border-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_36px_rgba(0,0,0,0.55)] flex flex-col gap-[3px]">
+      <div class="absolute left-7 @max-[920px]:left-3 top-[38%] @max-[920px]:top-14 -translate-y-1/2 @max-[920px]:translate-y-0 w-[245px] @max-[920px]:w-[208px] px-3.5 py-3 rounded-2xl bg-[linear-gradient(180deg,#141e36_0%,#0a1020_100%)] border-2 border-[#2a3b5c] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_36px_rgba(0,0,0,0.72)] flex flex-col gap-[3px]">
         <div class="flex items-center justify-between gap-1.5">
           <div class="text-[20px] font-black leading-[1.1] mam-outline-sm truncate">${chibi.name}</div>
-          ${star > 0 ? `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/25 border border-amber-400/70 text-amber-300 text-[11px] font-black tabular-nums shrink-0">★${star}</span>` : ''}
+          ${star > 0 ? `<span class="px-1.5 py-0.5 rounded-md bg-[#3b290a] border border-amber-400 text-amber-300 text-[11px] font-black tabular-nums shrink-0">★${star}</span>` : ''}
         </div>
         <div class="text-[15px] font-extrabold mam-outline-sm" style="color:${rColor}">
           ${rarity[0].toUpperCase() + rarity.slice(1)} <span style="color:#fff">•</span> <span class="${mut.id === 'rainbow' ? 'mam-rainbow-text' : ''}" style="${mut.id === 'rainbow' ? '' : `color:${mut.color}`}">${mut.name}</span>
@@ -84,7 +84,7 @@ export class PlotInspectUi {
         </div>
         <div class="text-[24px] font-black tabular-nums text-[#f87171] leading-[1.1] mt-1.5 mam-outline">${fmtShort(stats.dmg)} dmg</div>
         <div class="text-[14px] font-extrabold tabular-nums text-[#4ade80] mam-outline-sm">Worth ${fmtMoney(stats.worth)}</div>
-        <button class="mt-2 px-3 py-1.5 rounded-xl border border-rose-300/55 bg-[linear-gradient(135deg,rgba(239,68,68,0.88),rgba(153,27,27,0.94))] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_6px_16px_-2px_rgba(239,68,68,0.4)] text-white text-[13px] font-extrabold cursor-pointer self-start transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-inspect-action="pickup">Pick Up from Plot</button>
+        <button class="mt-2 px-3 py-1.5 rounded-xl border-2 border-rose-300 bg-[linear-gradient(135deg,#ef4444,#991b1b)] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_3px_0_#450a0a,0_6px_16px_-2px_rgba(239,68,68,0.45)] text-white text-[13px] font-extrabold cursor-pointer self-start transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-inspect-action="pickup">Pick Up from Plot</button>
       </div>
 
       <button class="${TW_INSPECT_ARROW} left-[31%] @max-[920px]:left-3" data-inspect-action="prev">&lt;</button>
@@ -103,7 +103,7 @@ export class PlotInspectUi {
           <button class="${TW_INSPECT_TAB} mam-outline-sm ${this.inspectTab === 'enchants' ? 'active' : ''}" data-inspect-tab="enchants">${hudIconHtml('enchant', 20, 'Enchants')} Enchants</button>
         </div>
 
-        <div class="mam-inspect-panel w-full p-2.5 rounded-2xl bg-[rgba(12,16,28,0.86)] backdrop-blur-xl border border-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_36px_rgba(0,0,0,0.6)] flex items-stretch gap-2 overflow-x-hidden [&.is-stats]:flex-wrap [&.is-pickaxe]:grid [&.is-pickaxe]:grid-cols-7 @max-[760px]:[&.is-pickaxe]:grid-cols-4 [&.is-pickaxe]:gap-1.5 [&.is-enchants]:grid [&.is-enchants]:grid-cols-10 @max-[760px]:[&.is-enchants]:grid-cols-5 [&.is-enchants]:gap-1.5 [&.is-mutation]:gap-1.5 @max-[760px]:[&.is-mutation]:flex-wrap [&_.mam-strip-card]:min-w-0 [&_.mam-strip-card]:w-auto [&_.mam-strip-card_.mam-card-name]:text-[11px] [&_.mam-strip-card_.mam-card-name]:leading-tight [&_.mam-strip-card_.mam-card-name]:whitespace-nowrap [&_.mam-strip-card_.mam-card-name]:overflow-hidden [&_.mam-strip-card_.mam-card-name]:text-ellipsis [&.is-mutation_.mam-strip-card]:flex-1 [&.is-mutation_.mam-strip-card]:h-[82px] [&.is-mutation_.mam-strip-card]:py-1 [&.is-mutation_.mam-strip-card]:px-0.5 [&.is-enchants_.mam-strip-card]:h-[84px] [&.is-enchants_.mam-strip-card]:py-1 [&.is-enchants_.mam-strip-card]:px-0.5 [&.is-pickaxe_.mam-strip-card]:h-[86px] [&.is-pickaxe_.mam-strip-card]:py-1 [&.is-pickaxe_.mam-strip-card]:px-0.5 ${
+        <div class="mam-inspect-panel w-full p-2.5 rounded-2xl bg-[linear-gradient(180deg,#141e36_0%,#0a1020_100%)] border-2 border-[#2a3b5c] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_36px_rgba(0,0,0,0.72)] flex items-stretch gap-2 overflow-x-hidden [&.is-stats]:flex-wrap [&.is-pickaxe]:grid [&.is-pickaxe]:grid-cols-7 @max-[760px]:[&.is-pickaxe]:grid-cols-4 [&.is-pickaxe]:gap-1.5 [&.is-enchants]:grid [&.is-enchants]:grid-cols-10 @max-[760px]:[&.is-enchants]:grid-cols-5 [&.is-enchants]:gap-1.5 [&.is-mutation]:gap-1.5 @max-[760px]:[&.is-mutation]:flex-wrap [&_.mam-strip-card]:min-w-0 [&_.mam-strip-card]:w-auto [&_.mam-strip-card_.mam-card-name]:text-[11px] [&_.mam-strip-card_.mam-card-name]:leading-tight [&_.mam-strip-card_.mam-card-name]:whitespace-nowrap [&_.mam-strip-card_.mam-card-name]:overflow-hidden [&_.mam-strip-card_.mam-card-name]:text-ellipsis [&.is-mutation_.mam-strip-card]:flex-1 [&.is-mutation_.mam-strip-card]:h-[82px] [&.is-mutation_.mam-strip-card]:py-1 [&.is-mutation_.mam-strip-card]:px-0.5 [&.is-enchants_.mam-strip-card]:h-[84px] [&.is-enchants_.mam-strip-card]:py-1 [&.is-enchants_.mam-strip-card]:px-0.5 [&.is-pickaxe_.mam-strip-card]:h-[86px] [&.is-pickaxe_.mam-strip-card]:py-1 [&.is-pickaxe_.mam-strip-card]:px-0.5 ${
           this.inspectTab === 'mutation'
             ? 'is-mutation'
             : this.inspectTab === 'enchants'
@@ -230,11 +230,11 @@ export class PlotInspectUi {
 
     return `
       <div class="fixed inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 pointer-events-auto" data-mut-confirm-backdrop="true" role="dialog" aria-modal="true" aria-label="${title}">
-        <div class="w-[min(420px,100%)] rounded-2xl border-2 bg-[rgba(12,16,28,0.96)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_20px_50px_rgba(0,0,0,0.75)] p-5 flex flex-col items-center gap-3.5 text-center" style="border-color:${mut.color}" data-mut-confirm-dialog="true">
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-300 text-[12px] font-black tracking-wide uppercase mam-outline-sm">
+        <div class="w-[min(420px,100%)] rounded-2xl border-2 bg-[linear-gradient(180deg,#141d34_0%,#0a0f1d_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_20px_50px_rgba(0,0,0,0.85)] p-5 flex flex-col items-center gap-3.5 text-center" style="border-color:${mut.color}" data-mut-confirm-dialog="true">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#362409] border border-amber-400 text-amber-300 text-[12px] font-black tracking-wide uppercase mam-outline-sm">
             <span>&#9888;&#65039;</span> ${title}
           </div>
-          <div class="w-full py-3 px-4 rounded-xl bg-white/[0.05] border flex flex-col items-center gap-0.5" style="border-color:${mut.color}66">
+          <div class="w-full py-3 px-4 rounded-xl bg-[#11192e] border flex flex-col items-center gap-0.5" style="border-color:${mut.color}">
             <div class="text-[24px] font-black leading-tight mam-outline" style="color:${mut.color}">${mut.name}</div>
             <div class="text-[16px] font-black text-[#fca5a5] mam-outline-sm">${mut.mult}X Damage &bull; ${fmtPct(mut.chancePct)}</div>
           </div>

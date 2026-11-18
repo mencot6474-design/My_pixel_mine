@@ -222,6 +222,31 @@ export class TowerArena3D {
   private readonly fightersGroup = new THREE.Group();
   private readonly fighters = new Map<number, TowerChibiFighter>();
   private readonly impactFx = new AttackImpactFxController({ floorY: 0.11 });
+  private readonly shardGroup = new THREE.Group();
+  private readonly sharedShardGeo = new THREE.OctahedronGeometry(0.14, 0);
+  private readonly sharedRockGeo = new THREE.DodecahedronGeometry(0.125, 0);
+  private readonly rockChipMat = new THREE.MeshStandardMaterial({
+    color: '#2c364d',
+    emissive: '#0f172a',
+    emissiveIntensity: 0.22,
+    roughness: 0.78,
+    metalness: 0.18,
+    flatShading: true,
+  });
+  private readonly shardPool: Array<{
+    mesh: THREE.Mesh;
+    ownsMat: boolean;
+    vx: number;
+    vy: number;
+    vz: number;
+    rx: number;
+    ry: number;
+    rz: number;
+    baseScale: number;
+    bounces: number;
+    age: number;
+    dur: number;
+  }> = [];
   private fighterConfigs: TowerFighterConfig[] = [];
 
   private bounceTimer = 0;
@@ -448,7 +473,9 @@ export class TowerArena3D {
 
     // 6. Animated Chibi Fighters & Unified Cyber-Anime Impact VFX Layers
     this.group.add(this.fightersGroup);
+    this.sharedShardGeo.scale(0.75, 1.45, 0.75);
     this.group.add(this.impactFx.group);
+    this.group.add(this.shardGroup);
 
     // 7. Boss Monolith Raycast Hitbox (keep at index 0 of clickables)
     this.hitMesh = new THREE.Mesh(
@@ -746,19 +773,80 @@ export class TowerArena3D {
     });
   }
 
+  private spawnTowerShardsAt(
+    lx: number,
+    ly: number,
+    lz: number,
+    colorHex: string,
+    count: number,
+    isShatter = false,
+    isBoss = false
+  ): void {
+    const maxCap = 64;
+    for (let i = 0; i < count; i++) {
+      if (this.shardPool.length >= maxCap) {
+        const oldest = this.shardPool.shift();
+        if (oldest) {
+          this.shardGroup.remove(oldest.mesh);
+          if (oldest.ownsMat) (oldest.mesh.material as THREE.Material).dispose();
+        }
+      }
+      const isCrystal = isBoss ? i % 4 !== 3 : isShatter ? i % 3 !== 2 : i % 2 === 0;
+      const mat = isCrystal
+        ? new THREE.MeshStandardMaterial({
+            color: colorHex,
+            emissive: colorHex,
+            emissiveIntensity: 0.82,
+            roughness: 0.22,
+            metalness: 0.35,
+            flatShading: true,
+          })
+        : this.rockChipMat;
+      const mesh = new THREE.Mesh(isCrystal ? this.sharedShardGeo : this.sharedRockGeo, mat);
+      mesh.position.set(
+        lx + (Math.random() - 0.5) * (isShatter ? 0.85 : 0.55),
+        ly + (Math.random() - 0.3) * (isShatter ? 0.75 : 0.45),
+        lz + (Math.random() - 0.5) * (isShatter ? 0.85 : 0.55)
+      );
+      const ang = Math.random() * Math.PI * 2;
+      const spd = (isShatter ? 3.0 : 2.0) + Math.random() * (isShatter ? 4.4 : 2.8);
+      const baseScale = (isShatter ? 0.9 : 0.68) + Math.random() * (isShatter ? 0.65 : 0.42);
+      mesh.scale.setScalar(baseScale);
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      this.shardGroup.add(mesh);
+      this.shardPool.push({
+        mesh,
+        ownsMat: isCrystal,
+        vx: Math.cos(ang) * spd,
+        vy: (isShatter ? 3.6 : 2.5) + Math.random() * (isShatter ? 3.8 : 2.5),
+        vz: Math.sin(ang) * spd,
+        rx: (Math.random() - 0.5) * 16,
+        ry: (Math.random() - 0.5) * 14,
+        rz: (Math.random() - 0.5) * 16,
+        baseScale,
+        bounces: 0,
+        age: 0,
+        dur: (isShatter ? 0.68 : 0.48) + Math.random() * 0.28,
+      });
+    }
+  }
+
   public triggerHitBounce(intensity = 0.24, spawnSlash = true): void {
     this.bounceTimer = Math.max(this.bounceTimer, intensity);
     if (spawnSlash) {
       const slashColor = this.bossMode ? '#facc15' : this.anomalyColorHex;
+      const tx = (Math.random() - 0.5) * 0.45;
+      const tz = BOSS_CENTER_Z + 1.05;
       this.impactFx.spawnImpact({
-        targetX: (Math.random() - 0.5) * 0.45,
+        targetX: tx,
         targetY: 2.65,
-        targetZ: BOSS_CENTER_Z + 1.05,
+        targetZ: tz,
         accentColor: slashColor,
         heavy: true,
         comboStep: 2,
         shockwaveScale: 1.65,
       });
+      this.spawnTowerShardsAt(tx, 2.35, tz, slashColor, 7, false, true);
     }
   }
 
@@ -778,16 +866,27 @@ export class TowerArena3D {
           : -1;
     rock.recoilAmt = broken ? 0.24 : 0.16;
     rock.flashTimer = 0.09;
-    this.impactFx.spawnImpact({
-      targetX: rock.x,
-      targetY: 1.05,
-      targetZ: rock.z,
-      accentColor: attackFx?.accentColor ?? rock.color,
-      heavy: broken,
-      comboStep: attackFx?.comboStep,
-      attackerX: attackFx?.attackerX,
-      attackerZ: attackFx?.attackerZ,
-    });
+    this.spawnTowerShardsAt(rock.x, 0.85, rock.z, rock.color, broken ? 18 : 5, broken, false);
+    if (broken) {
+      this.impactFx.spawnShatter({
+        targetX: rock.x,
+        targetY: 1.05,
+        targetZ: rock.z,
+        oreColor: rock.color,
+        secondaryColor: attackFx?.accentColor ?? '#fde047',
+      });
+    } else {
+      this.impactFx.spawnImpact({
+        targetX: rock.x,
+        targetY: 1.05,
+        targetZ: rock.z,
+        accentColor: attackFx?.accentColor ?? rock.color,
+        heavy: false,
+        comboStep: attackFx?.comboStep,
+        attackerX: attackFx?.attackerX,
+        attackerZ: attackFx?.attackerZ,
+      });
+    }
   }
 
   public getMonolithWorldPos(): THREE.Vector3 {
@@ -951,6 +1050,43 @@ export class TowerArena3D {
 
     this.impactFx.update(safeDt, camera);
 
+    for (let i = this.shardPool.length - 1; i >= 0; i--) {
+      const p = this.shardPool[i];
+      p.age += safeDt;
+      if (p.age >= p.dur) {
+        this.shardGroup.remove(p.mesh);
+        if (p.ownsMat) (p.mesh.material as THREE.Material).dispose();
+        this.shardPool.splice(i, 1);
+        continue;
+      }
+      p.vy -= 15.5 * safeDt;
+      p.mesh.position.x += p.vx * safeDt;
+      let nextY = p.mesh.position.y + p.vy * safeDt;
+      if (nextY <= 0.14) {
+        nextY = 0.14;
+        if (p.vy < -0.6 && p.bounces < 2) {
+          p.vy = -p.vy * 0.42;
+          p.vx *= 0.72;
+          p.vz *= 0.72;
+          p.rx *= 0.65;
+          p.rz *= 0.65;
+          p.bounces++;
+        } else {
+          p.vy = 0;
+          p.vx *= Math.max(0.2, 1 - safeDt * 6);
+          p.vz *= Math.max(0.2, 1 - safeDt * 6);
+        }
+      }
+      p.mesh.position.y = nextY;
+      p.mesh.position.z += p.vz * safeDt;
+      p.mesh.rotation.x += p.rx * safeDt;
+      p.mesh.rotation.y += p.ry * safeDt;
+      p.mesh.rotation.z += p.rz * safeDt;
+      const lifeRatio = p.age / p.dur;
+      const shrink = lifeRatio < 0.62 ? 1 : Math.max(0.04, 1 - (lifeRatio - 0.62) / 0.38);
+      p.mesh.scale.setScalar(p.baseScale * shrink);
+    }
+
     // Update Animated Chibi Fighters (dash to target -> attack -> deal damage ONLY on real swing)
     for (const f of this.fighters.values()) {
       f.fx.update(elapsed);
@@ -1062,6 +1198,7 @@ export class TowerArena3D {
               attackerZ: pos.z,
               shockwaveScale: 1.45,
             });
+            this.spawnTowerShardsAt((Math.random() - 0.5) * 0.55, 2.2, BOSS_CENTER_Z + 1.05, f.colorHex, 4, false, true);
             onFighterStrike?.({
               slotIndex: f.slotIndex,
               targetOreIndex: null,
@@ -1100,6 +1237,14 @@ export class TowerArena3D {
 
   public dispose(): void {
     this.impactFx.dispose();
+    for (const p of this.shardPool) {
+      this.shardGroup.remove(p.mesh);
+      if (p.ownsMat) (p.mesh.material as THREE.Material).dispose();
+    }
+    this.shardPool.length = 0;
+    this.sharedShardGeo.dispose();
+    this.sharedRockGeo.dispose();
+    this.rockChipMat.dispose();
     this.bossModel.dispose();
     this.cityEnv.dispose();
     for (const f of this.fighters.values()) {

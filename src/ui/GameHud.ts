@@ -3,7 +3,7 @@ import { cgHappyTime, cgTryMidgameAd } from '../sdk/crazygames';
 import { OreHpScreen, PlotAnchorScreen, SceneMode } from '../game3d/MineScene3D';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
 import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId } from '../game3d/ShopWorld3D';
-import { getWorldById } from '../game/GameData';
+import { getWorldById, getWorldIndex } from '../game/GameData';
 import { GameState } from '../game/GameState';
 import { WeatherId } from '../game/WeatherData';
 import { fmtInt, fmtMoney } from '../game/NumberFormat';
@@ -28,6 +28,7 @@ import {
   TW_QUICK_BTN_CHEST,
   TW_QUICK_BTN_QUEST,
   TW_SHOPS_PILL,
+  TW_TELEPORT_PILL,
   TW_SIDE_BTN_INDEX,
   TW_SIDE_BTN_RAINBOW,
   TW_SIDE_BTN_UPGRADES,
@@ -634,20 +635,20 @@ export class GameHud {
         </svg>`;
 
     const frameCls = muted
-      ? 'border-rose-400/60 bg-[linear-gradient(160deg,rgba(136,19,55,0.82),rgba(15,23,42,0.92))] shadow-[0_8px_22px_rgba(225,29,72,0.28),inset_0_1px_0_rgba(255,255,255,0.28)]'
-      : 'border-sky-300/60 bg-[linear-gradient(160deg,rgba(14,116,144,0.82),rgba(15,23,42,0.92))] shadow-[0_8px_22px_rgba(56,189,248,0.32),inset_0_1px_0_rgba(255,255,255,0.32)]';
+      ? 'border-rose-400 bg-[linear-gradient(160deg,#881337,#131b31)] shadow-[0_4px_0_#2b0714,0_8px_22px_rgba(225,29,72,0.32),inset_0_1px_0_rgba(255,255,255,0.28)]'
+      : 'border-sky-400 bg-[linear-gradient(160deg,#0e7490,#0f1c36)] shadow-[0_4px_0_#071022,0_8px_22px_rgba(56,189,248,0.34),inset_0_1px_0_rgba(255,255,255,0.32)]';
     const placementCls = floating ? 'absolute top-[14px] right-4 z-[15]' : 'mt-0.5';
     const gearIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
       <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" stroke="#e2e8f0" stroke-width="2"/>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="#94a3b8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`;
     const gearFrameCls =
-      'border-slate-300/45 bg-[linear-gradient(160deg,rgba(51,65,85,0.82),rgba(15,23,42,0.92))] shadow-[0_8px_22px_rgba(15,23,42,0.45),inset_0_1px_0_rgba(255,255,255,0.24)]';
+      'border-[#4b6085] bg-[linear-gradient(160deg,#2b3a55,#10182b)] shadow-[0_4px_0_#060a14,0_8px_22px_rgba(15,23,42,0.58),inset_0_1px_0_rgba(255,255,255,0.24)]';
 
     return `
       <div class="${placementCls} flex items-center gap-2 pointer-events-none">
         <button
-          class="w-12 h-12 rounded-2xl border-[1.5px] ${gearFrameCls} backdrop-blur-xl flex items-center justify-center cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95 pointer-events-auto"
+          class="w-12 h-12 rounded-2xl border-2 ${gearFrameCls} flex items-center justify-center cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95 pointer-events-auto"
           data-action="open-settings"
           title="Settings"
           aria-label="Open Settings"
@@ -655,7 +656,7 @@ export class GameHud {
           ${gearIcon}
         </button>
         <button
-          class="w-12 h-12 rounded-2xl border-[1.5px] ${frameCls} backdrop-blur-xl flex items-center justify-center cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95 pointer-events-auto"
+          class="w-12 h-12 rounded-2xl border-2 ${frameCls} flex items-center justify-center cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95 pointer-events-auto"
           data-action="toggle-audio"
           title="${muted ? 'Unmute Audio' : 'Mute Audio'}"
           aria-label="${muted ? 'Unmute Audio' : 'Mute Audio'}"
@@ -754,6 +755,7 @@ export class GameHud {
       `;
 
       const activeWorld = getWorldById(this.state.activeWorldId);
+      const activeWorldNum = Math.max(1, getWorldIndex(this.state.activeWorldId) + 1);
       const upgradeCount = this.state.getAffordableResearchCount();
       const resonances = this.state.getActiveWorldResonances();
       const resonanceStripHtml = resonances.length
@@ -763,7 +765,7 @@ export class GameHud {
                 const extras: string[] = [`+${Math.round(r.tier.dmgBonusPct * 100)}% DMG`];
                 if (r.tier.oreDropBonusPct > 0) extras.push(`+${Math.round(r.tier.oreDropBonusPct * 100)}% Ore`);
                 if (r.tier.gemBonusPct > 0) extras.push(`+${Math.round(r.tier.gemBonusPct * 100)}% Gem`);
-                return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-violet-400/50 bg-[rgba(15,23,42,0.78)] backdrop-blur-md text-[11px] font-extrabold text-violet-200 shadow-[0_4px_12px_rgba(0,0,0,0.4)] mam-outline-sm">✦ ${r.worldName} (${r.count}) • ${extras.join(' • ')}</span>`;
+                return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-violet-400 bg-[#151233] text-[11px] font-extrabold text-violet-200 shadow-[0_4px_12px_rgba(0,0,0,0.55)] mam-outline-sm">✦ ${r.worldName} (${r.count}) • ${extras.join(' • ')}</span>`;
               })
               .join('')}
           </div>`
@@ -776,17 +778,34 @@ export class GameHud {
           ${hudIconHtml('shops', 28, 'Shops')}
           <span>Shops</span>
         </button>
-        <button class="inline-flex items-center gap-2 @max-[720px]:gap-1.5 px-4 @max-[720px]:px-3 py-2 @max-[720px]:py-1.5 rounded-2xl border border-sky-300/45 bg-[linear-gradient(135deg,rgba(14,165,233,0.88),rgba(37,99,235,0.92))] backdrop-blur-md shadow-[0_8px_22px_rgba(37,99,235,0.32),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[15px] @max-[720px]:text-[13px] font-extrabold whitespace-nowrap cursor-pointer transition-[transform,box-shadow,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.98] mam-outline-sm" data-action="open-worlds" title="Teleport & Unlock Worlds">
-          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-            <circle cx="12" cy="12" r="9" fill="#0f172a" stroke="#bae6fd" stroke-width="2"/>
-            <ellipse cx="12" cy="12" rx="4.5" ry="7.5" fill="none" stroke="#38bdf8" stroke-width="2"/>
-            <circle cx="12" cy="12" r="2.2" fill="#facc15"/>
+        <button class="${TW_TELEPORT_PILL} whitespace-nowrap mam-outline" data-action="open-worlds" title="Teleport • World ${activeWorldNum}: ${activeWorld.name}">
+          <svg viewBox="0 0 32 32" width="28" height="28" class="shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.55)]" aria-hidden="true">
+            <defs>
+              <radialGradient id="mam-tp-core" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="32%" stop-color="#67e8f9"/>
+                <stop offset="68%" stop-color="#6366f1"/>
+                <stop offset="100%" stop-color="#1e1b4b"/>
+              </radialGradient>
+              <linearGradient id="mam-tp-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#e0f2fe"/>
+                <stop offset="50%" stop-color="#38bdf8"/>
+                <stop offset="100%" stop-color="#c084fc"/>
+              </linearGradient>
+            </defs>
+            <circle cx="16" cy="16" r="13" fill="url(#mam-tp-core)" stroke="url(#mam-tp-ring)" stroke-width="2.4"/>
+            <ellipse cx="16" cy="16" rx="12" ry="5.4" transform="rotate(-26 16 16)" fill="none" stroke="#bae6fd" stroke-width="1.8"/>
+            <ellipse cx="16" cy="16" rx="11" ry="4.4" transform="rotate(34 16 16)" fill="none" stroke="#e879f9" stroke-width="1.4" opacity="0.9"/>
+            <path d="M16 7.5L17.9 14.1L24.5 16L17.9 17.9L16 24.5L14.1 17.9L7.5 16L14.1 14.1Z" fill="#ffffff"/>
+            <circle cx="25.5" cy="7.5" r="1.7" fill="#fde047"/>
+            <circle cx="6.5" cy="24.5" r="1.3" fill="#67e8f9"/>
           </svg>
           <span>Teleport</span>
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[rgba(15,23,42,0.48)] border border-white/25 text-[12px] font-black">
-            <span class="w-2 h-2 rounded-full shrink-0" style="background:${activeWorld.iconColor};box-shadow:0 0 6px ${activeWorld.iconColor}"></span>
-            <span>${activeWorld.name}</span>
-          </span>
+          <span
+            class="absolute -top-2 -right-2 min-w-[23px] h-[23px] px-1 rounded-full border-2 border-[#090e1c] text-[12px] font-black tabular-nums leading-none text-white flex items-center justify-center shadow-[0_3px_10px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.45)] mam-outline-sm"
+            style="background:${activeWorld.iconColor}"
+            data-teleport-world-badge="true"
+          >${activeWorldNum}</span>
         </button>
       </div>
       ${resonanceStripHtml}

@@ -86,85 +86,133 @@ export function buildWeatherWidgetInnerHtml(
 
   const popoverHtml = opts.popoverOpen
     ? `
-      <div class="w-[315px] max-h-[76vh] overflow-y-auto mam-no-scrollbar rounded-2xl border border-white/15 bg-[rgba(10,14,24,0.95)] backdrop-blur-xl shadow-[0_18px_38px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.16)] p-2.5 flex flex-col gap-1.5">
-        <div class="flex items-center justify-between px-1 pb-1 border-b border-white/10">
-          <span class="text-[11px] font-black uppercase tracking-wider text-slate-300">Weather Forecast</span>
-          <span class="text-[10px] font-extrabold text-sky-300">Rolls every 3:00</span>
+      <div
+        class="relative w-[596px] @max-[640px]:w-[310px] max-w-[calc(100vw-24px)] max-h-[76vh] overflow-y-auto mam-no-scrollbar rounded-2xl border-2 bg-[linear-gradient(180deg,#121c33_0%,#090e1c_100%)] shadow-[0_0_0_1px_#04070f,0_20px_48px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.18)]"
+        style="border-color:${inspected.accentColor};box-shadow:0 0 0 1px #04070f,0 20px 48px rgba(0,0,0,0.88),0 0 28px -8px ${inspected.glowColor}66,inset 0 1px 0 rgba(255,255,255,0.18)"
+      >
+        <div
+          class="h-[3px] w-full"
+          style="background:linear-gradient(90deg,transparent 0%,${inspected.accentColor} 22%,#ffffff 50%,${inspected.accentColor} 78%,transparent 100%)"
+        ></div>
+        <div class="flex items-center justify-between gap-2 px-3 py-2 bg-[#0c1326] border-b border-[#253657]">
+          <div class="inline-flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${inspected.accentColor};box-shadow:0 0 8px ${inspected.glowColor}"></span>
+            <span class="text-[12px] font-black uppercase tracking-wider text-white mam-outline-sm">Weather Forecast</span>
+          </div>
+          <span class="px-2 py-0.5 rounded-lg bg-[#11203d] border border-sky-400/60 text-[10px] font-black text-sky-200 tabular-nums">Rolls every 3:00</span>
         </div>
-        ${WEATHERS.map((item) => {
-          const isActive = item.id === w.id;
-          const isInsp = item.id === inspected.id;
-          return `
-            <button
-              type="button"
-              class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-xl border cursor-pointer transition-[background,border-color] duration-150 ${
-                isInsp ? 'bg-white/12' : isActive ? 'bg-white/[0.06]' : 'bg-white/[0.03] border-white/8 hover:bg-white/[0.07]'
-              }"
-              style="${isInsp || isActive ? `border-color:${item.accentColor};${isInsp ? `box-shadow:0 0 12px ${item.glowColor}44` : ''}` : ''}"
-              data-weather-inspect="${item.id}"
-            >
-              <div class="w-8 h-8 shrink-0 flex items-center justify-center [&>.mam-3d-icon]:w-8 [&>.mam-3d-icon]:h-8">${weatherIconHtml(item.id, 32, item.name)}</div>
+
+        <div class="grid grid-cols-[276px_minmax(0,1fr)] @max-[640px]:grid-cols-1 gap-2.5 p-2.5 items-stretch">
+          <div class="flex flex-col gap-1.5">
+            ${WEATHERS.map((item) => {
+              const isActive = item.id === w.id;
+              const isInsp = item.id === inspected.id;
+              return `
+                <button
+                  type="button"
+                  class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-xl border-2 cursor-pointer transition-[transform,background,border-color,box-shadow] duration-150 ${
+                    isInsp
+                      ? 'bg-[#1a2948] translate-x-0.5'
+                      : isActive
+                        ? 'bg-[#142038] hover:bg-[#1a2845]'
+                        : 'bg-[#0e1629] border-[#22314f] hover:bg-[#16223b]'
+                  }"
+                  style="${isInsp || isActive ? `border-color:${item.accentColor};${isInsp ? `box-shadow:0 0 14px -2px ${item.glowColor}66,inset 0 1px 0 rgba(255,255,255,0.16)` : ''}` : ''}"
+                  data-weather-inspect="${item.id}"
+                >
+                  <div
+                    class="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center border border-[#32466b] [&>.mam-3d-icon]:w-8 [&>.mam-3d-icon]:h-8"
+                    style="background:radial-gradient(circle at 50% 45%,${item.glowColor}44,#0a1020 82%)"
+                  >
+                    ${weatherIconHtml(item.id, 32, item.name)}
+                  </div>
+                  <div class="flex-1 min-w-0 flex flex-col">
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="text-[12px] font-black leading-tight truncate mam-outline-sm" style="color:${item.accentColor}">${item.name}${isActive ? ' • Now' : ''}</span>
+                      <span class="text-[10px] font-black tabular-nums px-1.5 py-0.5 rounded-md bg-[#080d18] text-slate-100 border border-[#2d4066]">${item.chancePct}%</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-[10px] font-extrabold leading-tight mt-0.5 whitespace-nowrap">
+                      <span class="text-amber-300">${item.oreDropMult}x Ore</span>
+                      <span class="text-slate-500">•</span>
+                      <span class="text-fuchsia-300">${item.gemDropMult}x Gems</span>
+                      <span class="text-slate-500">•</span>
+                      <span class="text-rose-300">${item.damageMult}x DMG</span>
+                    </div>
+                  </div>
+                  ${isInsp ? `<span class="text-[12px] font-black shrink-0" style="color:${item.accentColor}" aria-hidden="true">▸</span>` : ''}
+                </button>
+              `;
+            }).join('')}
+          </div>
+
+          <div
+            class="rounded-xl border-2 bg-[#0a1020] p-2.5 flex flex-col gap-2 shadow-[inset_0_2px_12px_rgba(0,0,0,0.5)]"
+            style="border-color:${inspected.accentColor}88"
+          >
+            <div class="flex items-center gap-2.5 pb-2 border-b border-[#22314f]">
+              <div
+                class="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center border-2"
+                style="border-color:${inspected.accentColor};background:radial-gradient(circle at 50% 45%,${inspected.glowColor}55,#0d1529 85%)"
+              >
+                ${meteorIconHtml(inspected.id, 28, inspOre.meteorName)}
+              </div>
               <div class="flex-1 min-w-0 flex flex-col">
-                <div class="flex items-center justify-between gap-1">
-                  <span class="text-[12px] font-black leading-tight truncate mam-outline-sm" style="color:${item.accentColor}">${item.name}${isActive ? ' • Now' : ''}</span>
-                  <span class="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-black/40 text-slate-200 border border-white/10">${item.chancePct}%</span>
+                <span class="text-[13px] font-black leading-tight truncate mam-outline-sm" style="color:${inspected.accentColor}">${inspOre.meteorName} Drops</span>
+                <div class="flex items-center gap-1.5 mt-1">
+                  <span class="px-1.5 py-0.5 rounded-md bg-[#16223b] border border-[#2f4369] text-[9.5px] font-black text-slate-200 uppercase tracking-wide">1000x Pit HP</span>
+                  <span class="text-[10px] font-extrabold text-slate-400">Meteor Loot</span>
                 </div>
-                <div class="text-[10px] font-bold text-slate-300 leading-tight mt-0.5">${item.oreDropMult}x Ore • ${item.gemDropMult}x Gems • ${item.damageMult}x DMG</div>
-              </div>
-            </button>
-          `;
-        }).join('')}
-
-        <div class="mt-0.5 pt-2 border-t border-white/12 flex flex-col gap-1.5">
-          <div class="flex items-center justify-between gap-2 px-1">
-            <div class="inline-flex items-center gap-1.5 min-w-0">
-              ${meteorIconHtml(inspected.id, 20, inspOre.meteorName)}
-              <span class="text-[11px] font-black truncate mam-outline-sm" style="color:${inspected.accentColor}">${inspOre.meteorName} Drops</span>
-            </div>
-            <span class="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wide">1000x Pit HP</span>
-          </div>
-
-          <div class="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl bg-white/[0.04] border border-white/10">
-            <div class="inline-flex items-center gap-2 min-w-0">
-              <img class="w-6 h-6 object-contain shrink-0" src="${assetUrl(`/ores/${inspOre.id}.webp`)}" alt="${inspOre.name}" />
-              <div class="flex flex-col min-w-0">
-                <span class="text-[11px] font-black text-white truncate">${inspOre.name}</span>
-                <span class="text-[9.5px] font-bold text-slate-400">${inspOreQtyRange} per meteor</span>
               </div>
             </div>
-            <span class="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/35 shrink-0">100%</span>
-          </div>
 
-          <div class="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl bg-white/[0.04] border border-white/10">
-            <div class="inline-flex items-center gap-2 min-w-0">
-              ${
-                inspChibi
-                  ? `<img class="w-6 h-6 object-contain shrink-0 rounded-md bg-black/30" src="${assetUrl(inspChibi.poses.pose)}" alt="${inspChibi.name}" />`
-                  : `${hudIconHtml('lock', 20, 'Locked')}`
-              }
-              <div class="flex flex-col min-w-0">
-                <span class="text-[11px] font-black text-white truncate">${inspChibi ? inspChibi.name : 'Celestial Limited'}</span>
-                <span class="text-[9.5px] font-bold text-slate-400">${
-                  inspChibi && inspChibiEntries[0]
-                    ? `${inspChibiEntries[0].rarity.toUpperCase()} Chibi`
-                    : 'Coming Soon'
-                }</span>
+            <div class="flex flex-col gap-1.5 flex-1 justify-between">
+              <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-[#121c33] border border-[#2a3d61]">
+                <div class="inline-flex items-center gap-2 min-w-0">
+                  <div class="w-8 h-8 rounded-lg bg-[#0a1020] border border-[#2a3d61] flex items-center justify-center shrink-0">
+                    <img class="w-6 h-6 object-contain" src="${assetUrl(`/ores/${inspOre.id}.webp`)}" alt="${inspOre.name}" />
+                  </div>
+                  <div class="flex flex-col min-w-0">
+                    <span class="text-[12px] font-black text-white truncate">${inspOre.name}</span>
+                    <span class="text-[10px] font-bold text-slate-300">${inspOreQtyRange} per meteor</span>
+                  </div>
+                </div>
+                <span class="text-[10.5px] font-black tabular-nums px-2 py-0.5 rounded-lg bg-[#0d3325] text-emerald-300 border border-emerald-400 shrink-0">100%</span>
+              </div>
+
+              <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-[#121c33] border border-[#2a3d61]">
+                <div class="inline-flex items-center gap-2 min-w-0">
+                  <div class="w-8 h-8 rounded-lg bg-[#0a1020] border border-[#2a3d61] flex items-center justify-center shrink-0 overflow-hidden">
+                    ${
+                      inspChibi
+                        ? `<img class="w-7 h-7 object-contain" src="${assetUrl(inspChibi.poses.pose)}" alt="${inspChibi.name}" />`
+                        : `${hudIconHtml('lock', 20, 'Locked')}`
+                    }
+                  </div>
+                  <div class="flex flex-col min-w-0">
+                    <span class="text-[12px] font-black text-white truncate">${inspChibi ? inspChibi.name : 'Celestial Limited'}</span>
+                    <span class="text-[10px] font-bold text-slate-300">${
+                      inspChibi && inspChibiEntries[0]
+                        ? `${inspChibiEntries[0].rarity.toUpperCase()} Chibi`
+                        : 'Coming Soon'
+                    }</span>
+                  </div>
+                </div>
+                <span class="text-[10.5px] font-black tabular-nums px-2 py-0.5 rounded-lg ${
+                  inspChibi ? 'bg-[#36134a] text-fuchsia-300 border-fuchsia-400' : 'bg-[#1e293b] text-slate-300 border-[#334155]'
+                } border shrink-0">${inspChibi && inspChibiEntries[0] ? `${inspChibiEntries[0].chancePct}%` : 'Soon'}</span>
+              </div>
+
+              <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-[#121c33] border border-[#2a3d61]">
+                <div class="inline-flex items-center gap-2 min-w-0">
+                  <div class="w-8 h-8 rounded-lg bg-[#0a1020] border border-[#2a3d61] flex items-center justify-center shrink-0 [&>img]:w-6 [&>img]:h-6">${enchantDiceIconHtml(24)}</div>
+                  <div class="flex flex-col min-w-0">
+                    <span class="text-[12px] font-black text-white truncate">Enchant Dice + Gems</span>
+                    <span class="text-[10px] font-bold text-slate-300">Bonus meteor reward</span>
+                  </div>
+                </div>
+                <span class="text-[10.5px] font-black tabular-nums px-2 py-0.5 rounded-lg bg-[#0c2d4a] text-sky-300 border border-sky-400 shrink-0">${inspDicePct}%</span>
               </div>
             </div>
-            <span class="text-[10px] font-black px-1.5 py-0.5 rounded-md ${
-              inspChibi ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-400/35' : 'bg-slate-700/50 text-slate-300 border-white/15'
-            } border shrink-0">${inspChibi && inspChibiEntries[0] ? `${inspChibiEntries[0].chancePct}%` : 'Soon'}</span>
-          </div>
-
-          <div class="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl bg-white/[0.04] border border-white/10">
-            <div class="inline-flex items-center gap-2 min-w-0">
-              <div class="w-6 h-6 flex items-center justify-center shrink-0 [&>img]:w-5 [&>img]:h-5">${enchantDiceIconHtml(20)}</div>
-              <div class="flex flex-col min-w-0">
-                <span class="text-[11px] font-black text-white truncate">Enchant Dice + Gems</span>
-                <span class="text-[9.5px] font-bold text-slate-400">Bonus meteor reward</span>
-              </div>
-            </div>
-            <span class="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-sky-500/20 text-sky-300 border border-sky-400/35 shrink-0">${inspDicePct}%</span>
           </div>
         </div>
       </div>
@@ -173,21 +221,21 @@ export function buildWeatherWidgetInnerHtml(
 
   return `
       <button
-        class="group relative flex items-center gap-2.5 @max-[720px]:gap-2 pl-2 pr-3 py-1.5 rounded-2xl border backdrop-blur-xl bg-[rgba(12,16,28,0.84)] cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.98]"
-        style="border-color:${w.accentColor}99;box-shadow:0 0 18px ${w.glowColor}3d,inset 0_1px_0_rgba(255,255,255,0.22),0_10px_24px_rgba(0,0,0,0.52)"
+        class="group relative flex items-center gap-2.5 @max-[720px]:gap-2 pl-2 pr-3 py-1.5 rounded-2xl border-2 bg-[linear-gradient(135deg,#141e36_0%,#0b1121_100%)] cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.98]"
+        style="border-color:${w.accentColor};box-shadow:0 0 18px ${w.glowColor}44,inset 0 1px 0 rgba(255,255,255,0.22),0_4px_0 #050812,0_10px_24px rgba(0,0,0,0.65)"
         data-action="toggle-weather-info"
         title="${w.name} (${w.chancePct}%): ${w.oreDropMult}x Ore • ${w.gemDropMult}x Gems • ${w.damageMult}x Damage — Click for forecast"
       >
         <div
-          class="w-[42px] h-[42px] @max-[720px]:w-[36px] @max-[720px]:h-[36px] rounded-xl shrink-0 flex items-center justify-center border border-white/20 [&>.mam-3d-icon]:w-[38px] [&>.mam-3d-icon]:h-[38px] @max-[720px]:[&>.mam-3d-icon]:w-[32px] @max-[720px]:[&>.mam-3d-icon]:h-[32px]"
-          style="background:radial-gradient(circle at 50% 42%,${w.glowColor}55,rgba(15,23,42,0.92) 82%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25)"
+          class="w-[42px] h-[42px] @max-[720px]:w-[36px] @max-[720px]:h-[36px] rounded-xl shrink-0 flex items-center justify-center border border-[#3b4f78] [&>.mam-3d-icon]:w-[38px] [&>.mam-3d-icon]:h-[38px] @max-[720px]:[&>.mam-3d-icon]:w-[32px] @max-[720px]:[&>.mam-3d-icon]:h-[32px]"
+          style="background:radial-gradient(circle at 50% 42%,${w.glowColor}55,#0f172a 82%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25)"
         >
           ${weatherIconHtml(w.id, 38, w.name)}
         </div>
         <div class="flex flex-col items-start min-w-0 leading-none">
           <div class="flex items-center gap-1.5">
             <span class="text-[14px] @max-[720px]:text-[13px] font-black tracking-tight mam-outline-sm" style="color:${w.accentColor}">${w.name}</span>
-            <span class="px-1.5 py-[2px] rounded-md bg-white/10 border border-white/15 text-[10px] font-black text-white tabular-nums mam-outline-sm" data-hud-weather-timer="true">${timerTxt}</span>
+            <span class="px-1.5 py-[2px] rounded-md bg-[#0a1020] border border-[#2f4266] text-[10px] font-black text-white tabular-nums mam-outline-sm" data-hud-weather-timer="true">${timerTxt}</span>
           </div>
           <div class="flex items-center gap-1.5 mt-1 text-[11px] @max-[720px]:text-[10px] font-extrabold whitespace-nowrap mam-outline-sm">
             <span class="text-amber-300">${w.oreDropMult}x Ore</span>
@@ -200,10 +248,10 @@ export function buildWeatherWidgetInnerHtml(
       </button>
       <button
         type="button"
-        class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border backdrop-blur-xl cursor-pointer transition-[transform,filter,border-color,background] duration-150 hover:brightness-110 active:scale-[0.97] ${
+        class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border-2 cursor-pointer transition-[transform,filter,border-color,background] duration-150 hover:brightness-110 active:scale-[0.97] ${
           state.autoMeteor
-            ? 'border-cyan-300/60 bg-[rgba(12,24,42,0.88)] shadow-[0_4px_14px_rgba(34,211,238,0.22)]'
-            : 'border-white/15 bg-[rgba(12,16,28,0.82)]'
+            ? 'border-cyan-400 bg-[#0e223d] shadow-[0_3px_0_#061020,0_4px_14px_rgba(34,211,238,0.28)]'
+            : 'border-[#2a3b5c] bg-[#10182b] shadow-[0_3px_0_#060a14]'
         }"
         data-action="toggle-auto-meteor"
         aria-pressed="${state.autoMeteor}"
@@ -212,7 +260,7 @@ export function buildWeatherWidgetInnerHtml(
         ${meteorIconHtml(w.id, 16, 'Auto Meteor')}
         <span class="text-[11px] font-black text-slate-200 mam-outline-sm">Auto Meteor</span>
         <span class="relative inline-flex items-center w-9 h-[18px] rounded-full transition-colors duration-150 ${
-          state.autoMeteor ? 'bg-emerald-500/85' : 'bg-slate-600/85'
+          state.autoMeteor ? 'bg-emerald-500' : 'bg-slate-600'
         }">
           <span class="inline-block w-3.5 h-3.5 rounded-full bg-white shadow transition-transform duration-150 ${
             state.autoMeteor ? 'translate-x-[19px]' : 'translate-x-[3px]'
@@ -330,13 +378,13 @@ export class WeatherDpsHudUi {
     this.lastDpsMeterHtml = inner;
     if (!includeOverclock) {
       return `
-        <div class="absolute bottom-[14px] left-4 @max-[860px]:bottom-[78px] @max-[720px]:left-2.5 z-[5] w-[236px] @max-[1100px]:w-[218px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1.5 pointer-events-auto" data-hud-dps="true">
+        <div class="absolute bottom-[14px] left-4 [[data-hud-pots-above=true]_&]:bottom-[108px] @max-[860px]:bottom-[94px] @max-[720px]:left-2.5 z-[5] w-[236px] @max-[1100px]:w-[218px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1.5 pointer-events-auto" data-hud-dps="true">
           ${inner}
         </div>
       `;
     }
     return `
-      <div class="absolute bottom-[14px] left-4 @max-[860px]:bottom-[78px] @max-[720px]:left-2.5 z-[5] w-[236px] @max-[1100px]:w-[218px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1.5 pointer-events-none">
+      <div class="absolute bottom-[14px] left-4 [[data-hud-pots-above=true]_&]:bottom-[108px] @max-[860px]:bottom-[94px] @max-[720px]:left-2.5 z-[5] w-[236px] @max-[1100px]:w-[218px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1.5 pointer-events-none">
         <div class="w-full flex flex-col items-stretch gap-1.5 pointer-events-auto" data-hud-dps="true">
           ${inner}
         </div>

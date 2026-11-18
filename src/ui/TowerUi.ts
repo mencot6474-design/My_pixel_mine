@@ -307,8 +307,8 @@ export class TowerUi {
       : '';
 
     const waveBadge = run.isBossWave
-      ? `<span class="px-3 py-1 rounded-full border border-amber-300/60 bg-amber-950/80 backdrop-blur-md text-[12px] font-black text-amber-200">BOSS WAVE</span>`
-      : `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-cyan-300/40 bg-[rgba(10,16,32,0.84)] backdrop-blur-md text-[12px] font-black text-cyan-200" data-tower-ores-badge="true">
+      ? `<span class="px-3 py-1 rounded-full border-2 border-amber-400 bg-[#361b08] text-[12px] font-black text-amber-200">BOSS WAVE</span>`
+      : `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border-2 border-cyan-400 bg-[#0d182d] text-[12px] font-black text-cyan-200" data-tower-ores-badge="true">
           <span>${aliveOres}/${TOWER_ORE_ROCKS_PER_WAVE} ORES</span>
           <span class="inline-flex items-center gap-1" data-tower-ore-pips="true">${this.renderOrePipsHtml()}</span>
         </span>`;
@@ -359,23 +359,23 @@ export class TowerUi {
 
       <div class="fixed top-[66px] left-1/2 -translate-x-1/2 w-[min(600px,calc(100%-24px))] flex flex-col items-center gap-1.5 pointer-events-none z-20">
         <div class="flex items-center gap-2 flex-wrap justify-center">
-          <span class="px-3 py-1 rounded-full border border-cyan-300/45 bg-[rgba(10,16,32,0.86)] backdrop-blur-md text-[13px] font-black text-white">
+          <span class="px-3 py-1 rounded-full border-2 border-cyan-400 bg-[#0e192e] text-[13px] font-black text-white">
             FLOOR ${run.floor} • WAVE ${run.wave}/${run.maxWaves}
           </span>
           ${waveBadge}
-          <span class="px-3 py-1 rounded-full border border-white/20 bg-[rgba(10,16,32,0.84)] backdrop-blur-md text-[12px] font-extrabold" style="color:${floorDef.anomaly.color}">
+          <span class="px-3 py-1 rounded-full border-2 border-[#33466b] bg-[#0e192e] text-[12px] font-extrabold" style="color:${floorDef.anomaly.color}">
             ${floorDef.anomaly.name}
           </span>
-          <span class="px-3 py-1 rounded-full border ${
-            timerDanger ? 'border-rose-400/75 bg-rose-950/85 text-rose-200' : 'border-white/20 bg-[rgba(10,16,32,0.84)] text-cyan-200'
-          } backdrop-blur-md text-[13px] font-black tabular-nums" data-tower-timer="true">
+          <span class="px-3 py-1 rounded-full border-2 ${
+            timerDanger ? 'border-rose-400 bg-[#3b0b18] text-rose-200' : 'border-[#33466b] bg-[#0e192e] text-cyan-200'
+          } text-[13px] font-black tabular-nums" data-tower-timer="true">
             ⏱ ${run.timeLeft.toFixed(1)}s
           </span>
         </div>
 
         ${barHeaderHtml}
 
-        <div class="relative w-full ${barFrameCls} bg-[rgba(8,12,24,0.92)] overflow-hidden flex items-center justify-center">
+        <div class="relative w-full ${barFrameCls} bg-[#090e1c] overflow-hidden flex items-center justify-center">
           <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-75" data-tower-hp-fill="true" style="width:${hpPct}%;background:${barFillBg}"></div>
           <div class="absolute inset-x-0 top-0 h-[38%] bg-gradient-to-b from-white/25 to-transparent pointer-events-none"></div>
           <div class="absolute inset-0 flex justify-evenly pointer-events-none">
@@ -389,7 +389,7 @@ export class TowerUi {
         </div>
       </div>
 
-      <div class="fixed bottom-3.5 left-1/2 -translate-x-1/2 w-[min(760px,calc(100%-24px))] rounded-2xl border border-white/15 bg-[rgba(10,14,26,0.84)] backdrop-blur-xl px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap shadow-[0_14px_34px_rgba(0,0,0,0.6)] pointer-events-auto z-20">
+      <div class="fixed bottom-3.5 left-1/2 -translate-x-1/2 w-[min(760px,calc(100%-24px))] rounded-2xl border-2 border-[#2b3c5e] bg-[linear-gradient(180deg,#141e36_0%,#0a1020_100%)] px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap shadow-[0_14px_34px_rgba(0,0,0,0.75)] pointer-events-auto z-20">
         <div class="flex items-center gap-3 flex-wrap text-[13px] font-black tabular-nums">
           <span class="text-pink-300" data-tower-run-gems="true">+${fmtInt(run.gemsEarned)} Gems</span>
           <span class="text-purple-300" data-tower-run-dice="true">+${run.diceEarned} Dice</span>

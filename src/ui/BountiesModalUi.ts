@@ -37,23 +37,23 @@ export class BountiesModalUi {
             >
               Claim
             </button>`
-          : `<span class="min-w-[92px] text-center px-3 py-2 rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 text-[12px] font-extrabold uppercase tracking-wide">
+          : `<span class="min-w-[92px] text-center px-3 py-2 rounded-xl border border-[#2a3b5c] bg-[#162038] text-slate-400 text-[12px] font-extrabold uppercase tracking-wide">
               In Progress
             </span>`;
 
-        const cardBorder = ready ? 'border-emerald-400/55 bg-emerald-500/[0.07]' : 'border-white/10 bg-white/[0.03]';
+        const cardBorder = ready ? 'border-emerald-400 bg-[#0f2920]' : 'border-[#253654] bg-[#111a2e]';
         const barFill = ready
           ? 'bg-[linear-gradient(90deg,#22c55e,#4ade80)]'
           : 'bg-[linear-gradient(90deg,#0284c7,#38bdf8)]';
 
         return `
-          <div class="p-3.5 rounded-2xl border ${cardBorder} flex items-center justify-between gap-3">
+          <div class="p-3.5 rounded-2xl border-2 ${cardBorder} flex items-center justify-between gap-3">
             <div class="flex-1 min-w-0 flex flex-col gap-1.5 text-left">
               <div class="flex items-center justify-between gap-2 flex-wrap">
                 <span class="text-[14px] font-black text-white leading-tight">${b.title}</span>
-                <span class="text-[12px] font-black tabular-nums px-2 py-0.5 rounded-lg bg-slate-900/75 border border-white/10">${rewardHtml}</span>
+                <span class="text-[12px] font-black tabular-nums px-2 py-0.5 rounded-lg bg-[#090f1d] border border-[#2a3b5c]">${rewardHtml}</span>
               </div>
-              <div class="relative w-full h-3 rounded-full bg-slate-900/90 border border-white/10 overflow-hidden">
+              <div class="relative w-full h-3 rounded-full bg-[#090e1a] border border-[#253654] overflow-hidden">
                 <div class="h-full ${barFill} transition-[width] duration-200 ease-out" style="width:${pct}%"></div>
               </div>
               <div class="flex items-center justify-between text-[11px] font-extrabold text-slate-300 tabular-nums">

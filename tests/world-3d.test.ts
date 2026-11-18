@@ -2274,7 +2274,7 @@ describe('Pure 3D Mine World', () => {
     expect(capped.hitsparks).toBe(16);
     expect(capped.streaks).toBe(64);
     expect(capped.shockwaves).toBe(12);
-    expect(fx.group.children.length).toBeLessThanOrEqual(110);
+    expect(fx.group.children.length).toBeLessThanOrEqual(158);
 
     let instanced = 0;
     fx.group.traverse((obj) => {
@@ -2283,9 +2283,16 @@ describe('Pure 3D Mine World', () => {
     expect(instanced).toBe(0);
 
     fx.update(0.12, cam);
-    fx.update(0.4, cam);
+    fx.update(0.8, cam);
     const expired = fx.getActiveCounts();
     expect(expired.slashes + expired.hitsparks + expired.streaks + expired.shockwaves).toBe(0);
+
+    fx.spawnShatter({ targetX: 0, targetY: 1.0, targetZ: 0, oreColor: '#38bdf8', secondaryColor: '#fde047', camera: cam });
+    const shatterCounts = fx.getActiveCounts();
+    expect(shatterCounts.hitsparks).toBe(2);
+    expect(shatterCounts.shockwaves).toBe(2);
+    expect(shatterCounts.streaks).toBe(14);
+    expect(fx.group.children.length).toBeGreaterThan(20);
 
     expect(() => fx.dispose()).not.toThrow();
   });

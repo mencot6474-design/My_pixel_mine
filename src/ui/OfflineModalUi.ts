@@ -33,7 +33,7 @@ export class OfflineModalUi {
     const oresRow =
       summary.totalBonusOres > 0
         ? `
-          <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-white/[0.04] border border-white/10">
+          <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#141e35] border border-[#2b3c5e]">
             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">Chest Ores</span>
             <span class="text-[18px] font-black tabular-nums text-sky-300 mam-outline-sm">+${fmtInt(summary.totalBonusOres)}</span>
           </div>
@@ -69,11 +69,11 @@ export class OfflineModalUi {
         </div>
 
         <div class="grid ${gridCols} gap-2">
-          <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-white/[0.04] border border-white/10">
+          <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#141e35] border border-[#2b3c5e]">
             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">Cash</span>
             <span class="text-[18px] font-black tabular-nums text-[#4ade80] mam-outline-sm">+${fmtMoney(summary.cash)}</span>
           </div>
-          <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-white/[0.04] border border-white/10">
+          <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#141e35] border border-[#2b3c5e]">
             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">Gems</span>
             <span class="inline-flex items-center gap-1 text-[18px] font-black tabular-nums text-sky-200 mam-outline-sm">
               ${hudIconHtml('gem', 18, 'Gems')} +${fmtInt(summary.gems)}

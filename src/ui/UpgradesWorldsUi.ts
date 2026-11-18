@@ -287,7 +287,7 @@ export class UpgradesWorldsUi {
           </div>
           <div class="flex-1 min-h-0 flex items-stretch gap-3 @max-[920px]:flex-col @max-[920px]:overflow-x-hidden @max-[920px]:overflow-y-auto mam-no-scrollbar">
             <div class="w-[216px] @max-[920px]:w-full @max-[920px]:grid @max-[920px]:grid-cols-3 @max-[560px]:grid-cols-2 shrink-0 flex flex-col gap-2 overflow-x-hidden overflow-y-auto mam-no-scrollbar px-2 py-1" data-upgrades-sidebar-scroll="true">
-              <div class="relative rounded-xl border ${coreActiveCls} ${animTabId === 'core' ? 'mam-pop-click' : ''} bg-white/[0.05] p-2.5 flex flex-col items-center gap-1 cursor-pointer transition-[transform,filter,background-color] duration-150 hover:bg-white/[0.09] active:scale-[0.97]" data-research-tab="core">
+              <div class="relative rounded-xl border-2 ${coreActiveCls} ${animTabId === 'core' ? 'mam-pop-click' : ''} bg-[#141f38] p-2.5 flex flex-col items-center gap-1 cursor-pointer transition-[transform,filter,background-color] duration-150 hover:bg-[#1c2b4d] active:scale-[0.97]" data-research-tab="core">
                 <div class="flex items-center gap-1.5 text-[15px] font-black text-white">
                   <span class="w-2.5 h-2.5 rounded-full bg-[#38bdf8] shadow-[0_0_8px_#38bdf8]"></span>
                   <span>Core</span>

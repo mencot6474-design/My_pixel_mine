@@ -277,13 +277,17 @@ describe('Tahap B HUD Modules', () => {
       expect(slotsHtml).toContain('Onee');
       expect(slotsHtml).toContain(firstOre.name);
       expect(slotsHtml).toContain('x3');
+      expect(slotsHtml).toContain('mam-hotbar-keycap');
+      expect(slotsHtml).toContain('is-hotbar-selected');
       expect(slotsHtml).not.toContain(zeroOre.name);
 
       const closedBag = renderHotbarBagButtonHtml('none');
       const openBag = renderHotbarBagButtonHtml('inventory');
       expect(closedBag).toContain('data-action="toggle-inventory"');
-      expect(openBag).toContain('border-[#4ade80]/80');
-      expect(closedBag).toContain('border-[#60a5fa]/60');
+      expect(openBag).toContain('mam-hotbar-bag');
+      expect(openBag).toContain('is-open');
+      expect(closedBag).toContain('mam-hotbar-bag');
+      expect(closedBag).not.toContain('is-open');
     });
   });
 

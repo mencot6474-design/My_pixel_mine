@@ -19,6 +19,16 @@ export interface AttackImpactSpawnOptions {
   camera?: THREE.Camera;
 }
 
+export interface OreShatterSpawnOptions {
+  targetX: number;
+  targetY: number;
+  targetZ: number;
+  oreColor: string;
+  secondaryColor?: string;
+  isMeteor?: boolean;
+  camera?: THREE.Camera;
+}
+
 interface PooledMeshBase {
   mesh: THREE.Mesh;
   mat: THREE.MeshBasicMaterial;
@@ -54,15 +64,26 @@ interface ShockwaveItem extends PooledMeshBase {
   spinSpeed: number;
 }
 
+interface MoteItem extends PooledMeshBase {
+  vx: number;
+  vy: number;
+  vz: number;
+  baseScale: number;
+  phase: number;
+  roll: number;
+  rollVel: number;
+}
+
 const MAX_SLASHES = 18;
 const MAX_HITSPARKS = 16;
 const MAX_STREAKS = 64;
 const MAX_SHOCKWAVES = 12;
+const MAX_MOTES = 48;
 
 /**
- * Shared 4-layer cyber-anime impact VFX pool (directional dual-pass slash arc,
- * 4-point anime hitspark star, directional spark streaks, and ground shockwave ring)
- * reused across Mine Pit and Battle Tower without InstancedMesh side effects.
+ * Shared 5-layer cyber-anime impact & ore shatter VFX pool (directional dual-pass slash arc,
+ * 4-point anime hitspark star, directional spark streaks, ground shockwave ring, and rising
+ * luminescent crystal motes) reused across Mine Pit and Battle Tower without InstancedMesh side effects.
  */
 export class AttackImpactFxController {
   public readonly group = new THREE.Group();
@@ -70,13 +91,15 @@ export class AttackImpactFxController {
   private readonly floorY: number;
   private readonly sharedSlashGeo = new THREE.PlaneGeometry(1.75, 1.75);
   private readonly sharedHitsparkGeo = new THREE.PlaneGeometry(1.25, 1.25);
-  private readonly sharedStreakGeo = new THREE.PlaneGeometry(0.16, 0.72);
+  private readonly sharedStreakGeo = new THREE.PlaneGeometry(0.18, 0.82);
   private readonly sharedShockwaveGeo = new THREE.PlaneGeometry(1.0, 1.0);
+  private readonly sharedMoteGeo = new THREE.PlaneGeometry(0.42, 0.42);
 
   private readonly slashes: SlashItem[] = [];
   private readonly hitsparks: HitsparkItem[] = [];
   private readonly streaks: StreakItem[] = [];
   private readonly shockwaves: ShockwaveItem[] = [];
+  private readonly motes: MoteItem[] = [];
 
   private readonly tmpDir = new THREE.Vector2();
   private readonly tmpCamRight = new THREE.Vector3();
@@ -226,29 +249,29 @@ export class AttackImpactFxController {
 
     // 3. Directional Spark Streaks
     const streakTex = getSparkStreakTexture();
-    const streakCount = isSmash ? 9 : 5;
+    const streakCount = isSmash ? 11 : 6;
     const baseAngle = Math.atan2(toAttackerZ, toAttackerX);
     for (let i = 0; i < streakCount; i++) {
-      const spread = (Math.random() - 0.5) * Math.PI * 1.45;
+      const spread = (Math.random() - 0.5) * Math.PI * 1.55;
       const ang = baseAngle + spread;
-      const speed = (isSmash ? 4.4 : 3.2) + Math.random() * 2.8;
-      const streakColor = i % 3 === 0 ? '#ffffff' : opts.accentColor;
-      const sMat = this.createAdditiveMat(streakTex, streakColor, 0.94);
+      const speed = (isSmash ? 4.8 : 3.5) + Math.random() * 3.1;
+      const streakColor = i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? opts.accentColor : '#fde047';
+      const sMat = this.createAdditiveMat(streakTex, streakColor, 0.96);
       const sMesh = new THREE.Mesh(this.sharedStreakGeo, sMat);
       sMesh.position.set(
         contactX + (Math.random() - 0.5) * 0.24,
         contactY + (Math.random() - 0.5) * 0.24,
         contactZ + 0.04
       );
-      const baseScale = (isSmash ? 1.15 : 0.88) * (0.75 + Math.random() * 0.45);
+      const baseScale = (isSmash ? 1.22 : 0.94) * (0.75 + Math.random() * 0.5);
       sMesh.scale.setScalar(baseScale);
       const streakItem: StreakItem = {
         mesh: sMesh,
         mat: sMat,
         age: 0,
-        dur: (isSmash ? 0.21 : 0.18) + Math.random() * 0.05,
+        dur: (isSmash ? 0.24 : 0.2) + Math.random() * 0.06,
         vx: Math.cos(ang) * speed,
-        vy: 1.5 + Math.random() * 3.1,
+        vy: 1.7 + Math.random() * 3.4,
         vz: Math.sin(ang) * speed,
         baseScale,
       };
@@ -257,7 +280,7 @@ export class AttackImpactFxController {
     }
 
     // 4. Ground Shockwave Ring
-    const ringMat = this.createAdditiveMat(getShockwaveRingTexture(), opts.accentColor, isSmash ? 0.88 : 0.64);
+    const ringMat = this.createAdditiveMat(getShockwaveRingTexture(), opts.accentColor, isSmash ? 0.9 : 0.68);
     const ringMesh = new THREE.Mesh(this.sharedShockwaveGeo, ringMat);
     ringMesh.rotation.x = -Math.PI / 2;
     ringMesh.position.set(opts.targetX, this.floorY, opts.targetZ);
@@ -270,9 +293,156 @@ export class AttackImpactFxController {
       age: 0,
       dur: isSmash ? 0.26 : 0.22,
       startScale: startSw,
-      endScale: (isSmash ? 2.75 : 2.05) * swScale,
+      endScale: (isSmash ? 2.85 : 2.15) * swScale,
       spinSpeed: (Math.random() < 0.5 ? -1 : 1) * 2.4,
     });
+
+    // 5. Rising Luminescent Hit Motes
+    const moteTex = getHitSparkStarTexture();
+    const moteCount = isSmash ? 5 : 3;
+    for (let i = 0; i < moteCount; i++) {
+      const mColor = i % 2 === 0 ? opts.accentColor : '#ffffff';
+      const mMat = this.createAdditiveMat(moteTex, mColor, 0.9);
+      const mMesh = new THREE.Mesh(this.sharedMoteGeo, mMat);
+      mMesh.position.set(
+        contactX + (Math.random() - 0.5) * 0.45,
+        contactY + (Math.random() - 0.3) * 0.35,
+        contactZ + (Math.random() - 0.5) * 0.35
+      );
+      const baseScale = (isSmash ? 1.05 : 0.8) * (0.65 + Math.random() * 0.55);
+      const roll = Math.random() * Math.PI * 2;
+      mMesh.scale.setScalar(baseScale);
+      this.orientBillboard(mMesh, roll, 0, activeCam);
+      this.pushPooled(this.motes, MAX_MOTES, {
+        mesh: mMesh,
+        mat: mMat,
+        age: 0,
+        dur: 0.38 + Math.random() * 0.24,
+        vx: (Math.random() - 0.5) * 1.4,
+        vy: 1.5 + Math.random() * 1.6,
+        vz: (Math.random() - 0.5) * 1.4,
+        baseScale,
+        phase: Math.random() * Math.PI * 2,
+        roll,
+        rollVel: (Math.random() - 0.5) * 5.0,
+      });
+    }
+  }
+
+  /**
+   * Dedicated explosive ore-shatter burst: 8-point dual starburst nova, twin counter-spinning
+   * shockwave rings, 360-degree radial spark spray, and rising luminescent crystal motes.
+   */
+  public spawnShatter(opts: OreShatterSpawnOptions): void {
+    const isMeteor = Boolean(opts.isMeteor);
+    const activeCam = opts.camera ?? this.lastCamera;
+    this.prepareCameraAxes(activeCam);
+    const secColor = opts.secondaryColor ?? '#fde047';
+
+    // 1. Dual Counter-Rotated 8-Point Shatter Nova Flash
+    const starTex = getHitSparkStarTexture();
+    const spawnNova = (color: string, roll: number, peakScale: number, dur: number, zOff: number): void => {
+      const mat = this.createAdditiveMat(starTex, color, 1.0);
+      const mesh = new THREE.Mesh(this.sharedHitsparkGeo, mat);
+      mesh.position.set(opts.targetX, opts.targetY, opts.targetZ + zOff);
+      mesh.scale.setScalar(0.5);
+      this.orientBillboard(mesh, roll, 0, activeCam);
+      this.pushPooled(this.hitsparks, MAX_HITSPARKS, {
+        mesh,
+        mat,
+        age: 0,
+        dur,
+        roll,
+        rollVel: roll >= 0 ? 3.2 : -3.2,
+        peakScale,
+      });
+    };
+    spawnNova('#ffffff', 0.08, isMeteor ? 2.65 : 1.9, isMeteor ? 0.26 : 0.2, 0.14);
+    spawnNova(opts.oreColor, Math.PI / 4 + 0.08, isMeteor ? 2.35 : 1.65, isMeteor ? 0.3 : 0.23, 0.1);
+
+    // 2. Twin Counter-Spinning Ground Shockwaves (inner hot flash + outer colored blast)
+    const ringTex = getShockwaveRingTexture();
+    const spawnWave = (color: string, startS: number, endS: number, dur: number, spin: number, yOff: number): void => {
+      const mat = this.createAdditiveMat(ringTex, color, 0.94);
+      const mesh = new THREE.Mesh(this.sharedShockwaveGeo, mat);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(opts.targetX, this.floorY + yOff, opts.targetZ);
+      mesh.scale.setScalar(startS);
+      this.pushPooled(this.shockwaves, MAX_SHOCKWAVES, {
+        mesh,
+        mat,
+        age: 0,
+        dur,
+        startScale: startS,
+        endScale: endS,
+        spinSpeed: spin,
+      });
+    };
+    const scaleBoost = isMeteor ? 1.55 : 1.0;
+    spawnWave('#ffffff', 0.6 * scaleBoost, 2.6 * scaleBoost, 0.24, 3.6, 0.02);
+    spawnWave(opts.oreColor, 0.8 * scaleBoost, 3.85 * scaleBoost, 0.34, -2.8, 0.01);
+
+    // 3. 360-Degree Explosive Radial Spark Spray
+    const streakTex = getSparkStreakTexture();
+    const streakCount = isMeteor ? 22 : 14;
+    for (let i = 0; i < streakCount; i++) {
+      const ang = (i / streakCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.28;
+      const speed = (isMeteor ? 5.8 : 4.2) + Math.random() * 3.6;
+      const sColor = i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? opts.oreColor : secColor;
+      const sMat = this.createAdditiveMat(streakTex, sColor, 0.98);
+      const sMesh = new THREE.Mesh(this.sharedStreakGeo, sMat);
+      sMesh.position.set(
+        opts.targetX + Math.cos(ang) * 0.22,
+        opts.targetY + (Math.random() - 0.3) * 0.35,
+        opts.targetZ + Math.sin(ang) * 0.22
+      );
+      const baseScale = (isMeteor ? 1.45 : 1.15) * (0.75 + Math.random() * 0.5);
+      sMesh.scale.setScalar(baseScale);
+      const item: StreakItem = {
+        mesh: sMesh,
+        mat: sMat,
+        age: 0,
+        dur: (isMeteor ? 0.34 : 0.27) + Math.random() * 0.08,
+        vx: Math.cos(ang) * speed,
+        vy: 2.2 + Math.random() * 4.2,
+        vz: Math.sin(ang) * speed,
+        baseScale,
+      };
+      this.orientStreak(item, activeCam);
+      this.pushPooled(this.streaks, MAX_STREAKS, item);
+    }
+
+    // 4. Rising Luminescent Crystal Loot Motes
+    const moteCount = isMeteor ? 20 : 12;
+    for (let i = 0; i < moteCount; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const rad = 0.15 + Math.random() * (isMeteor ? 0.9 : 0.55);
+      const mColor = i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? opts.oreColor : secColor;
+      const mMat = this.createAdditiveMat(starTex, mColor, 0.96);
+      const mMesh = new THREE.Mesh(this.sharedMoteGeo, mMat);
+      mMesh.position.set(
+        opts.targetX + Math.cos(ang) * rad,
+        opts.targetY * 0.65 + Math.random() * 0.55,
+        opts.targetZ + Math.sin(ang) * rad
+      );
+      const baseScale = (isMeteor ? 1.45 : 1.15) * (0.65 + Math.random() * 0.65);
+      const roll = Math.random() * Math.PI * 2;
+      mMesh.scale.setScalar(baseScale);
+      this.orientBillboard(mMesh, roll, 0, activeCam);
+      this.pushPooled(this.motes, MAX_MOTES, {
+        mesh: mMesh,
+        mat: mMat,
+        age: 0,
+        dur: (isMeteor ? 0.72 : 0.56) + Math.random() * 0.28,
+        vx: Math.cos(ang) * (0.9 + Math.random() * 1.4),
+        vy: 1.9 + Math.random() * 2.4,
+        vz: Math.sin(ang) * (0.9 + Math.random() * 1.4),
+        baseScale,
+        phase: Math.random() * Math.PI * 2,
+        roll,
+        rollVel: (Math.random() - 0.5) * 6.5,
+      });
+    }
   }
 
   public update(dtSec: number, camera?: THREE.Camera): void {
@@ -362,6 +532,32 @@ export class AttackImpactFxController {
       sw.mesh.rotation.z += sw.spinSpeed * dtSec;
       sw.mat.opacity = 0.85 * Math.pow(1 - p, 1.5);
     }
+
+    for (let i = this.motes.length - 1; i >= 0; i--) {
+      const m = this.motes[i];
+      m.age += dtSec;
+      if (m.age >= m.dur) {
+        this.group.remove(m.mesh);
+        m.mat.dispose();
+        this.motes.splice(i, 1);
+        continue;
+      }
+      const p = m.age / m.dur;
+      const drag = Math.max(0.2, 1 - dtSec * 3.2);
+      m.vx *= drag;
+      m.vz *= drag;
+      m.vy = Math.max(0.55, m.vy - 1.8 * dtSec);
+      const sway = Math.sin(m.age * 11 + m.phase) * 0.45 * dtSec;
+      m.mesh.position.x += m.vx * dtSec + sway;
+      m.mesh.position.y += m.vy * dtSec;
+      m.mesh.position.z += m.vz * dtSec;
+      m.roll += m.rollVel * dtSec;
+      const twinkle = 0.72 + 0.28 * Math.sin(m.age * 24 + m.phase);
+      const scaleFade = p < 0.2 ? 0.4 + (p / 0.2) * 0.6 : 1 - (p - 0.2) / 0.8;
+      m.mesh.scale.setScalar(Math.max(0.05, m.baseScale * scaleFade * twinkle));
+      m.mat.opacity = 0.94 * Math.pow(1 - p, 1.25) * twinkle;
+      this.orientBillboard(m.mesh, m.roll, 0, camera);
+    }
   }
 
   public getActiveCounts(): { slashes: number; hitsparks: number; streaks: number; shockwaves: number } {
@@ -387,9 +583,11 @@ export class AttackImpactFxController {
     this.clearPool(this.hitsparks);
     this.clearPool(this.streaks);
     this.clearPool(this.shockwaves);
+    this.clearPool(this.motes);
     this.sharedSlashGeo.dispose();
     this.sharedHitsparkGeo.dispose();
     this.sharedStreakGeo.dispose();
     this.sharedShockwaveGeo.dispose();
+    this.sharedMoteGeo.dispose();
   }
 }
