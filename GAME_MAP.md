@@ -2,7 +2,7 @@
 
 3D voxel/chibi mining idle game built with **TypeScript + Vite + Three.js + Tailwind CSS v4** (`my_pixel_mine`).
 Read this map first to locate modules and line anchors quickly instead of reading large files end-to-end.
-Line numbers measured on **2026-11-19** after **Chibi Sprite & Name Overhaul (`AkaneFlare`, `CrazyMan`, `BangJoo`, `BladeGhost`, `IMbot` pose circle removal) & Relic Forge 12-Icon Transparency Cleanup (`public/relics/*.webp`)**, **Mine/Plaza 3D Props, Cave Radar & Animated Conduits Overhaul (`CyberProps3D.ts`, `CaveRailway3D.ts` rotating radar, `ChestVaultStation3D.ts` relocated refinery + single precision animated conduit, `MineEnvironment3D.ts` flowing overhead cables, `ShopCyberPlaza3D.ts` centered `'CYBER GEM MART'` + cyber-botanical trees & monolith pylons, `ShopWorld3D.ts` badge alignment)**, **Tahap C `GameState.ts` Modularization (`GameStateSave.ts`, `PlotUnitsDomain.ts`, `TowerRunDomain.ts`, `LootChestDomain.ts`, `ShopWeatherDomain.ts` + `tests/state-modules.test.ts`)**, **Tahap B `GameHud.ts` Modularization (`WeatherDpsHudUi.ts`, `HotbarHudUi.ts`, `AltarShopHudUi.ts`, `WorldOverlayHudUi.ts` + `ForgeModalUi.bindEvents` + `HudShared.ts` scroll/timer helpers, plus Tahap A VFX minors cleanup)**, **Unified Chibi 3-Beat Attack Combo & 4-Layer Cyber-Anime Impact VFX Overhaul (`AttackImpactFx3D.ts`, 3-beat `ChibiSprite3D` + afterimages + glint, `FieldMiner3D` / `TowerArena3D` live Enchant/Rainbow color sync, `OreBillboard2D` recoil)**, **Plot Pedestals, Aura VFX, 2.5D Ore Grounding & Field Chibi Rings Overhaul**, **Mine Visual Polish & Responsive Bugfix Pass**, **Cyber-Industrial MineScene3D Redesign**, **Neo-Cyber City Plaza Roundabout Curb**, **Sculpted Non-Box `SeraphimBoss3D.ts`**, **CrazyGames SDK v3 Startup Hardening**, & **Ruined Cyber City Battle Tower**; re-measure with `Select-String` if files change.
+Line numbers measured on **2026-11-19** after **Research World Tree Symmetric Overhaul (`buildStandardWorldTree` 12-node/58-pt blueprint across W1–W6, balanced Core Tap vs Chibi DPS, `public/research/*.webp` 13 fantasy 2D icons, & Dark-Glass node cards in `UpgradesWorldsUi.ts`)**, **Chibi Sprite & Name Overhaul (`AkaneFlare`, `CrazyMan`, `BangJoo`, `BladeGhost`, `IMbot` pose circle removal) & Relic Forge 12-Icon Transparency Cleanup (`public/relics/*.webp`)**, **Mine/Plaza 3D Props, Cave Radar & Animated Conduits Overhaul (`CyberProps3D.ts`, `CaveRailway3D.ts` rotating radar, `ChestVaultStation3D.ts` relocated refinery + single precision animated conduit, `MineEnvironment3D.ts` flowing overhead cables, `ShopCyberPlaza3D.ts` centered `'CYBER GEM MART'` + cyber-botanical trees & monolith pylons, `ShopWorld3D.ts` badge alignment)**, **Tahap C `GameState.ts` Modularization (`GameStateSave.ts`, `PlotUnitsDomain.ts`, `TowerRunDomain.ts`, `LootChestDomain.ts`, `ShopWeatherDomain.ts` + `tests/state-modules.test.ts`)**, **Tahap B `GameHud.ts` Modularization (`WeatherDpsHudUi.ts`, `HotbarHudUi.ts`, `AltarShopHudUi.ts`, `WorldOverlayHudUi.ts` + `ForgeModalUi.bindEvents` + `HudShared.ts` scroll/timer helpers, plus Tahap A VFX minors cleanup)**, **Unified Chibi 3-Beat Attack Combo & 4-Layer Cyber-Anime Impact VFX Overhaul (`AttackImpactFx3D.ts`, 3-beat `ChibiSprite3D` + afterimages + glint, `FieldMiner3D` / `TowerArena3D` live Enchant/Rainbow color sync, `OreBillboard2D` recoil)**, **Plot Pedestals, Aura VFX, 2.5D Ore Grounding & Field Chibi Rings Overhaul**, **Mine Visual Polish & Responsive Bugfix Pass**, **Cyber-Industrial MineScene3D Redesign**, **Neo-Cyber City Plaza Roundabout Curb**, **Sculpted Non-Box `SeraphimBoss3D.ts`**, **CrazyGames SDK v3 Startup Hardening**, & **Ruined Cyber City Battle Tower**; re-measure with `Select-String` if files change.
 
 ## 1. ATURAN KERJA SINGKAT
 
@@ -40,7 +40,7 @@ tests/hud-modules.test.ts         417 baris — 10 Vitest specs untuk modul UI T
                                             `HotbarHudUi`, `AltarShopHudUi`, `WorldOverlayHudUi`)
 tests/state-modules.test.ts       382 baris — 10 Vitest specs untuk 5 modul domain state Tahap C (`GameStateSave`, `PlotUnitsDomain`,
                                             `TowerRunDomain`, `LootChestDomain`, `ShopWeatherDomain`)
-tests/world-3d.test.ts        2.484 baris — 58 Vitest unit & integration specs (3D world, Altar dial/dice & 2.5D billboard pedestals,
+tests/world-3d.test.ts        2.481 baris — 58 Vitest unit & integration specs (3D world, Altar dial/dice & 2.5D billboard pedestals,
                                             Unified 3-beat `ChibiSprite3D` combo/afterimage/glint + 4-layer `AttackImpactFxController` + `FieldMiner3D` & `TowerArena3D` accent/rainbow sync,
                                             Cyber-Industrial Mine (`MineEnvironment3D` + Drop Shaft + Plasma Refinery + Void sky clearance + `PlotPedestal3D.dispose`),
                                             Neo-Cyber City Plaza (`ShopCyberPlaza3D` roundabout shadow & trimmed lane clearance + `ShopWorld3D.dispose` + `WeatherFx3D`),
@@ -65,11 +65,12 @@ src/game/GameData.ts            668 baris — World (`underground`..`starwell` W
                                             `computeWorldResonances` 637, `rollWorldOre` 659, `rollWorldMiner` 664
 src/game/RelicData.ts           289 baris — `MAX_EQUIPPED_RELICS` (3), `RELICS` (12 relics: 6 World, 3 Weather, 3 Tower; `5K`–`300K` Gems),
                                             `getRelicById`, `formatRelicEffects`
-src/game/ResearchData.ts      1.598 baris — `ResearchTreeId` (`core` | WorldId) 3, `DENSE_ORE_HP_MULT` (10) /
-                                            `DENSE_ORE_DROP_MULT` (3) 19–20, `RESEARCH_TREE_META` 63,
-                                            `formatNodeEffectLine` 129, `getNodeNextCost` 164, `CORE_NODES` 172
-                                            (Strike I–VI sole `tapDamageFlat`, Vault Expansion I–II `+300K`),
-                                            `STARWELL_NODES` 1391, `RESEARCH_NODES` 1574
+src/game/ResearchData.ts        920 baris — `ResearchTreeId` (`core` | WorldId) 3, `DENSE_ORE_HP_MULT` (10) /
+                                            `DENSE_ORE_DROP_MULT` (3) 19–20, `RESEARCH_TREE_META` 64,
+                                            `formatNodeEffectLine` 130, `getNodeNextCost` 165, `CORE_NODES` 173
+                                            (Strike I–VI balanced sole `tapDamageFlat`, Vault Expansion I–II `+300K`),
+                                            `buildStandardWorldTree` 452 (symmetric 12-node / 58-pt blueprint W1–W6),
+                                            `STARWELL_NODES` 857, `RESEARCH_NODES` 896
 src/game/TowerData.ts           360 baris — `TOWER_MAX_KEYS` (5), `TOWER_KEY_REGEN_MS` (10m), `TOWER_WAVES_PER_FLOOR` (10),
                                             `TOWER_ORE_ROCKS_PER_WAVE` (5), `TOWER_BLESSING_AUTO_PICK_SEC` (5), `TOWER_BOSS_INVUL_SEC` (5),
                                             `TOWER_CHECKPOINT_STEP` (5), `TOWER_ANOMALIES`, `TOWER_BLESSINGS`,
@@ -138,14 +139,14 @@ src/ui/TowerUi.ts               561 baris — `TowerUi` 20: Gem Tower Hub Dark-G
                                             Keys, 5-Floor Checkpoints & Milestones, Anomalies, Quick Sweep, Run Summary) &
                                             3D Arena HUD (`renderTowerArenaHud`, unified Boss & Wave HP bar styling, 5s Boss Invul shield, 5s Blessing auto-pick)
 src/ui/TutorialUi.ts            555 baris — `TutorialUi`: Interactive step-by-step onboarding spotlight, arrow guide & `onComplete` callback
-src/ui/UpgradesWorldsUi.ts      596 baris — `UpgradesWorldsUi` 17: Research/Upgrades tree & World Teleport full-banner
-                                            modal (`buildWorldsListHtml` 308 pakai `public/worlds/*.webp`) & live updaters
+src/ui/UpgradesWorldsUi.ts      620 baris — `UpgradesWorldsUi` 17: Research/Upgrades tree (opaque Dark-Glass nodes w/ world glow, edge-trimmed SVG lines & `.webp` icons) & World Teleport full-banner
+                                            modal (`buildWorldsListHtml` 315 pakai `public/worlds/*.webp`) & live updaters
 src/ui/PlotInspectUi.ts         412 baris — `PlotInspectUi` 28: Plot Inspector overlay (incl. ★Star, World Resonance & per-unit Enchant `In Use`/`Equipped` status), live updater & modal
                                             konfirmasi peringatan roll mutasi Frozen+ (`renderMutationConfirmOverlay`
                                             222: `Stop (Keep)` / `Continue`, proteksi obtain & overwrite)
-src/ui/HudIcons.ts              372 baris — SVG, 2D fantasy art (`public/{enchants,hud,meteors,ores,pickaxes,potions,weathers}/*.webp`), & 3D-thumbnail icon helpers (`HUD_ICONS`, `hudIconHtml`,
+src/ui/HudIcons.ts              314 baris — SVG, 2D fantasy art (`public/{enchants,hud,meteors,ores,pickaxes,potions,research,weathers}/*.webp`), & 3D-thumbnail icon helpers (`HUD_ICONS`, `hudIconHtml`,
                                             `weatherIconHtml`, `towerIconHtml`, `pickaxeIconHtml`, `gemPotionIconHtml`,
-                                            `enchantAuraIconHtml`, `enchantDiceIconHtml`, `researchIconHtml`)
+                                            `enchantAuraIconHtml`, `enchantDiceIconHtml`, `researchIconHtml` 305)
 src/styles/global.css            73 baris — Tailwind v4 entry (`@import "tailwindcss";`) + base font/reset + pickaxe cursor styles
 src/styles/hud.css            1.040 baris — Modern Dark-Glass + Luminous Gradient Rail system (`[data-modal-theme]` incl. `forge`,
                                             `.mam-modal` + anti-flicker entrance, `.mam-modal-rails`, `dialog.mam-review-dialog`, `.mam-grid` `max-content` rows, `.mam-no-scrollbar`, `.mam-chibi-smooth`,
@@ -218,6 +219,7 @@ public/ores/                    53 transparent WebP fantasy ore icons (48 W1–W
 public/pickaxes/                12 transparent WebP fantasy pickaxe art icons (`starter`..`starwellcrown`)
 public/potions/                 8 transparent WebP fantasy potion art icons (`ore-elixir-1`..`mutation-luck-1`)
 public/relics/                  12 edge-cleaned transparent WebP 384×384 Relic Forge icons (`miner_lantern`..`commander_banner`)
+public/research/                13 transparent 2D fantasy WebP 256×256 Research Node icons (`strike`, `chibi_power`, `world_mastery`, etc.)
 public/weathers/                5 transparent WebP fantasy weather emblem icons (`light_rain`..`celestial`)
 public/worlds/                  6 full-bleed teleport banner WebPs (`underground`, `crystal`, `magma`, `ruins`, `astral`, `starwell`)
 ```

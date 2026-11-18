@@ -115,11 +115,12 @@ export class UpgradesWorldsUi {
       `;
     }).join('');
 
-    const cellW = 88;
-    const cellH = 88;
-    const nodeSize = 62;
+    const cellW = 94;
+    const cellH = 92;
+    const nodeSize = 68;
+    const halfNode = nodeSize / 2;
     const padX = 18;
-    const padY = 14;
+    const padY = 16;
     const maxCol = nodes.reduce((m, n) => Math.max(m, n.col), 0);
     const maxRow = nodes.reduce((m, n) => Math.max(m, n.row), 0);
     const canvasW = (maxCol + 1) * cellW + padX * 2;
@@ -137,11 +138,14 @@ export class UpgradesWorldsUi {
           if (!parent) return '';
           const p1 = nodeCenter(parent.row, parent.col);
           const p2 = nodeCenter(n.row, n.col);
-          const midY = Math.round((p1.y + p2.y) / 2);
+          const startY = p2.y > p1.y ? p1.y + halfNode : p2.y < p1.y ? p1.y - halfNode : p1.y;
+          const endY = p2.y > p1.y ? p2.y - halfNode : p2.y < p1.y ? p2.y + halfNode : p2.y;
+          const midY = Math.round((startY + endY) / 2);
           const unlocked = this.state.getResearchLevel(reqId) >= 1;
-          const stroke = unlocked ? '#67e8f9' : '#334155';
-          const opacity = unlocked ? '0.95' : '0.7';
-          return `<path d="M ${p1.x} ${p1.y} V ${midY} H ${p2.x} V ${p2.y}" stroke="${stroke}" stroke-opacity="${opacity}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`;
+          const bothMaxed = unlocked && this.state.getResearchLevel(n.id) >= n.maxLevel;
+          const stroke = bothMaxed ? '#facc15' : unlocked ? tabColor : '#334155';
+          const opacity = unlocked ? '0.92' : '0.6';
+          return `<path d="M ${p1.x} ${startY} V ${midY} H ${p2.x} V ${endY}" stroke="${stroke}" stroke-opacity="${opacity}" stroke-width="4" stroke-linecap="butt" stroke-linejoin="round" fill="none" />`;
         })
       )
       .join('');
@@ -149,19 +153,24 @@ export class UpgradesWorldsUi {
     const nodesHtml = nodes
       .map((n) => {
         const c = nodeCenter(n.row, n.col);
-        const left = Math.round(c.x - nodeSize / 2);
-        const top = Math.round(c.y - nodeSize / 2);
+        const left = Math.round(c.x - halfNode);
+        const top = Math.round(c.y - halfNode);
         const lvl = this.state.getResearchLevel(n.id);
         const maxed = lvl >= n.maxLevel;
         const status = this.state.canUpgradeResearch(n.id);
         const selected = selNode?.id === n.id;
 
         const isLocked = status === 'locked-world' || status === 'locked-prereq';
+        // Keep node chip fills 100% opaque so background SVG connector edges never bleed through behind icons.
         const cardStyle = maxed
-          ? 'border-[#14532d] bg-[linear-gradient(180deg,#4ade80_0%,#16c64f_55%,#15803d_100%)] shadow-[0_4px_0_#14532d,0_6px_14px_rgba(0,0,0,0.45)]'
+          ? 'border-[#facc15] bg-[linear-gradient(180deg,#1e3a2f_0%,#143326_55%,#0c171f_100%)] shadow-[0_0_16px_rgba(250,204,21,0.3),0_4px_0_#78350f]'
           : isLocked
-            ? 'border-[#263142] bg-[#131923] shadow-[0_4px_0_#090d14]'
-            : 'border-[#15803d] bg-[linear-gradient(180deg,#334155_0%,#1e293b_100%)] shadow-[0_4px_0_#0f172a,0_6px_12px_rgba(0,0,0,0.4)]';
+            ? 'border-[#263142] bg-[#0e1522] shadow-[0_4px_0_#070a10]'
+            : 'border-[#38bdf8] bg-[linear-gradient(180deg,#24344c_0%,#121c2d_100%)] shadow-[0_4px_0_#090d14,0_6px_14px_rgba(0,0,0,0.45)]';
+        const unlockedBorderStyle =
+          !maxed && !isLocked
+            ? `border-color:${tabColor};box-shadow:0 0 12px ${tabColor}33,0 4px 0 #090d14;`
+            : '';
         const ringCls = selected ? 'ring-[3px] ring-[#7dd3fc] scale-[1.06]' : '';
         const nodeAnimCls =
           animUpgradeId === n.id
@@ -173,19 +182,21 @@ export class UpgradesWorldsUi {
               : '';
         const badgeCls = isLocked
           ? 'bg-[#0b101b] border-[#334155] text-[#94a3b8]'
-          : 'bg-[#0f172a] border-white/25 text-white';
+          : maxed
+            ? 'bg-[#451a03] border-[#facc15]/85 text-[#fde047]'
+            : 'bg-[#0f172a] border-white/30 text-white';
 
         return `
           <button
-            class="absolute z-[2] rounded-[10px] border-[2.5px] ${cardStyle} ${ringCls} ${nodeAnimCls} flex flex-col items-center justify-center p-1 cursor-pointer transition-[transform,filter,box-shadow] duration-[120ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-[1.07] hover:brightness-110 active:translate-y-0.5 active:scale-[0.92] active:brightness-95"
-            style="left:${left}px;top:${top}px;width:${nodeSize}px;height:${nodeSize}px"
+            class="absolute z-[2] rounded-xl border-2 ${cardStyle} ${ringCls} ${nodeAnimCls} flex flex-col items-center justify-center px-1.5 pt-1 pb-2.5 cursor-pointer transition-[transform,filter,box-shadow] duration-[120ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-[1.07] hover:brightness-110 active:translate-y-0.5 active:scale-[0.92] active:brightness-95"
+            style="left:${left}px;top:${top}px;width:${nodeSize}px;height:${nodeSize}px;${unlockedBorderStyle}"
             data-research-node="${n.id}"
             title="${n.name} (${lvl}/${n.maxLevel})"
           >
             ${animUpgradeId === n.id ? '<span class="mam-upgrade-ring"></span>' : ''}
-            ${status === 'ok' ? '<span class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#4ade80] border-2 border-[#0f172a] shadow-[0_0_8px_#4ade80]"></span>' : ''}
-            <div class="pointer-events-none flex items-center justify-center ${isLocked ? 'opacity-45 saturate-50' : ''}">${researchIconHtml(n.icon, 34, tabColor)}</div>
-            <span class="absolute -bottom-2 px-1.5 py-[1px] rounded border ${badgeCls} text-[10px] font-black leading-tight mam-outline-sm">${lvl}/${n.maxLevel}</span>
+            ${status === 'ok' ? '<span class="absolute -top-1.5 -right-1.5 z-[3] w-3.5 h-3.5 rounded-full bg-[#4ade80] border-2 border-[#0f172a] shadow-[0_0_8px_#4ade80]"></span>' : ''}
+            <div class="pointer-events-none flex items-center justify-center ${isLocked ? 'opacity-40 saturate-50' : ''}">${researchIconHtml(n.icon, 40, tabColor)}</div>
+            <span class="absolute -bottom-2 z-[3] px-1.5 py-[1px] rounded border ${badgeCls} text-[10px] font-black leading-tight mam-outline-sm">${lvl}/${n.maxLevel}</span>
           </button>
         `;
       })
@@ -232,7 +243,7 @@ export class UpgradesWorldsUi {
         animUpgradeId === selNode.id ? 'mam-upgrade-pop' : animNodeSelectId === selNode.id ? 'mam-pop-click' : '';
 
       inspectorHtml = `
-        <div class="flex items-center justify-center p-2 ${inspIconAnim}">${researchIconHtml(selNode.icon, 68, tabColor)}</div>
+        <div class="flex items-center justify-center p-1.5 ${inspIconAnim}">${researchIconHtml(selNode.icon, 74, tabColor)}</div>
         <div class="text-[22px] font-black text-white leading-tight [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">${selNode.name}</div>
         ${scopePill}
         <div class="relative w-full h-6 rounded-full bg-white/[0.06] border border-[#38bdf8]/45 overflow-hidden flex items-center justify-center mt-0.5">
@@ -275,7 +286,7 @@ export class UpgradesWorldsUi {
             ${nextWorldCta}
           </div>
           <div class="flex-1 min-h-0 flex items-stretch gap-3 @max-[920px]:flex-col @max-[920px]:overflow-x-hidden @max-[920px]:overflow-y-auto mam-no-scrollbar">
-            <div class="w-[216px] @max-[920px]:w-full @max-[920px]:grid @max-[920px]:grid-cols-3 @max-[560px]:grid-cols-2 shrink-0 flex flex-col gap-2 overflow-x-hidden overflow-y-auto mam-no-scrollbar px-2 py-1">
+            <div class="w-[216px] @max-[920px]:w-full @max-[920px]:grid @max-[920px]:grid-cols-3 @max-[560px]:grid-cols-2 shrink-0 flex flex-col gap-2 overflow-x-hidden overflow-y-auto mam-no-scrollbar px-2 py-1" data-upgrades-sidebar-scroll="true">
               <div class="relative rounded-xl border ${coreActiveCls} ${animTabId === 'core' ? 'mam-pop-click' : ''} bg-white/[0.05] p-2.5 flex flex-col items-center gap-1 cursor-pointer transition-[transform,filter,background-color] duration-150 hover:bg-white/[0.09] active:scale-[0.97]" data-research-tab="core">
                 <div class="flex items-center gap-1.5 text-[15px] font-black text-white">
                   <span class="w-2.5 h-2.5 rounded-full bg-[#38bdf8] shadow-[0_0_8px_#38bdf8]"></span>
@@ -287,9 +298,9 @@ export class UpgradesWorldsUi {
               ${worldSidebarCards}
             </div>
 
-            <div class="mam-inspector-well flex-1 min-w-0 min-h-0 rounded-xl flex items-center justify-center overflow-auto mam-no-scrollbar">
-              <div class="relative shrink-0" style="width:${canvasW}px;height:${canvasH}px">
-                <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 ${canvasW} ${canvasH}">
+            <div class="mam-inspector-well flex-1 min-w-0 min-h-0 rounded-xl flex overflow-auto mam-no-scrollbar p-2" data-upgrades-tree-scroll="true">
+              <div class="relative shrink-0 m-auto" style="width:${canvasW}px;height:${canvasH}px">
+                <svg class="absolute inset-0 z-[1] w-full h-full pointer-events-none" viewBox="0 0 ${canvasW} ${canvasH}">
                   ${edgesSvg}
                 </svg>
                 ${nodesHtml}
@@ -582,7 +593,20 @@ export class UpgradesWorldsUi {
 
     const shell = root.querySelector<HTMLElement>('[data-upgrades-shell="true"]');
     if (!shell) return;
+    const prevTree = shell.querySelector<HTMLElement>('[data-upgrades-tree-scroll="true"]');
+    const prevSide = shell.querySelector<HTMLElement>('[data-upgrades-sidebar-scroll="true"]');
+    const treeTop = prevTree?.scrollTop ?? 0;
+    const treeLeft = prevTree?.scrollLeft ?? 0;
+    const sideTop = prevSide?.scrollTop ?? 0;
     shell.outerHTML = this.renderUpgradesModal();
+    const nextShell = root.querySelector<HTMLElement>('[data-upgrades-shell="true"]');
+    const nextTree = nextShell?.querySelector<HTMLElement>('[data-upgrades-tree-scroll="true"]');
+    const nextSide = nextShell?.querySelector<HTMLElement>('[data-upgrades-sidebar-scroll="true"]');
+    if (nextTree) {
+      nextTree.scrollTop = treeTop;
+      nextTree.scrollLeft = treeLeft;
+    }
+    if (nextSide) nextSide.scrollTop = sideTop;
     this.bindUpgradesEvents(root, true);
   }
 

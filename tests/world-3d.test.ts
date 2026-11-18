@@ -544,12 +544,10 @@ describe('Pure 3D Mine World', () => {
     expect(PIT_NODE_COUNT).toBe(1);
     expect(BASE_ORE_RESPAWN_SEC).toBeGreaterThanOrEqual(3.5);
 
-    expect(getResearchTreeMaxPoints('underground')).toBe(38);
-    expect(getResearchTreeMaxPoints('crystal')).toBe(44);
-    expect(getResearchTreeMaxPoints('magma')).toBe(62);
-    expect(getResearchTreeMaxPoints('ruins')).toBe(55);
-    expect(getResearchTreeMaxPoints('astral')).toBe(69);
-    expect(getResearchTreeMaxPoints('starwell')).toBe(69);
+    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell'] as const) {
+      expect(getResearchNodesForTree(wid)).toHaveLength(12);
+      expect(getResearchTreeMaxPoints(wid)).toBe(58);
+    }
 
     // Tap damage must live strictly in Core; Worlds 1-6 replace tap nodes with standardized denseOreScale (HP x10, Drops x3)
     for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell'] as const) {
@@ -587,21 +585,20 @@ describe('Pure 3D Mine World', () => {
     expect(gs.canUnlockWorld('crystal')).toBe('locked-prereq');
 
     // Upgrade World 1 prerequisite path to Dense Seam and verify HP x10 + Ore Drops x3
-    expect(gs.upgradeResearch('ug-respawn-1')).toBe(true);
-    expect(gs.upgradeResearch('ug-value-1')).toBe(true);
+    expect(gs.upgradeResearch('ug-dmg')).toBe(true);
     const hpScaleBeforeDense = gs.getOreHpScale();
     const dropMultBeforeDense = gs.getTotalOreDropMult();
     expect(gs.upgradeResearch('ug-rich-seam')).toBe(true);
     expect(gs.getOreHpScale()).toBeCloseTo(hpScaleBeforeDense * 10, 6);
     expect(gs.getTotalOreDropMult()).toBeCloseTo(dropMultBeforeDense * 3, 6);
 
-    // Max every node in The Underground (38/38)
+    // Max every node in The Underground (58/58)
     for (const node of getResearchNodesForTree('underground')) {
       while (gs.getResearchLevel(node.id) < node.maxLevel) {
         expect(gs.upgradeResearch(node.id)).toBe(true);
       }
     }
-    expect(gs.getTreeSpentPoints('underground')).toBe(38);
+    expect(gs.getTreeSpentPoints('underground')).toBe(58);
     expect(gs.isTreeComplete('underground')).toBe(true);
     expect(gs.canUnlockWorld('crystal')).toBe('ok');
 

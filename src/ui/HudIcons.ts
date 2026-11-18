@@ -284,86 +284,28 @@ export function weatherIconHtml(weatherId: WeatherId, sizePx = 38, alt = 'Weathe
   }
 }
 
-export function researchIconHtml(kind: ResearchIconKind, sizePx: number, accent = '#38bdf8'): string {
-  switch (kind) {
-    case 'strike':
-      return `<svg viewBox="0 0 48 48" width="${sizePx}" height="${sizePx}" aria-hidden="true">
-        <path d="M12 36L28 20" stroke="#92400e" stroke-width="5" stroke-linecap="round"/>
-        <path d="M17 11c9-3 18 1 23 8l-5 4c-4-4-10-6-16-6V11z" fill="#e2e8f0" stroke="#0f172a" stroke-width="2.4"/>
-        <circle cx="32" cy="18" r="5" fill="#facc15" opacity="0.85"/>
-        <path d="M14 24l-4 12 10-4" fill="#3b82f6" stroke="#1e3a8a" stroke-width="2"/>
-      </svg>`;
-    case 'clover':
-    case 'luckAura':
-      return `<svg viewBox="0 0 48 48" width="${sizePx}" height="${sizePx}" aria-hidden="true">
-        <path d="M24 27v13" stroke="#15803d" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="17" cy="17" r="7" fill="#22c55e" stroke="#14532d" stroke-width="2.2"/>
-        <circle cx="31" cy="17" r="7" fill="#4ade80" stroke="#14532d" stroke-width="2.2"/>
-        <circle cx="17" cy="28" r="7" fill="#16a34a" stroke="#14532d" stroke-width="2.2"/>
-        <circle cx="31" cy="28" r="7" fill="#22c55e" stroke="#14532d" stroke-width="2.2"/>
-      </svg>`;
-    case 'goldClover':
-      return `<svg viewBox="0 0 48 48" width="${sizePx}" height="${sizePx}" aria-hidden="true">
-        <path d="M24 27v13" stroke="#b45309" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="17" cy="17" r="7" fill="#facc15" stroke="#78350f" stroke-width="2.2"/>
-        <circle cx="31" cy="17" r="7" fill="#fde047" stroke="#78350f" stroke-width="2.2"/>
-        <circle cx="17" cy="28" r="7" fill="#eab308" stroke="#78350f" stroke-width="2.2"/>
-        <circle cx="31" cy="28" r="7" fill="#facc15" stroke="#78350f" stroke-width="2.2"/>
-      </svg>`;
-    case 'oreDeposit':
-      return `<svg viewBox="0 0 48 48" width="${sizePx}" height="${sizePx}" aria-hidden="true">
-        <polygon points="10,36 14,17 24,12 35,17 38,36" fill="#64748b" stroke="#0f172a" stroke-width="2.5"/>
-        <polygon points="16,22 21,18 23,24 17,26" fill="${accent}" stroke="#0f172a" stroke-width="1.6"/>
-        <polygon points="27,19 33,22 30,27 25,24" fill="#f59e0b" stroke="#0f172a" stroke-width="1.6"/>
-        <polygon points="21,29 27,28 28,34 20,34" fill="#facc15" stroke="#0f172a" stroke-width="1.6"/>
-      </svg>`;
-    case 'oreVein':
-      return `<svg viewBox="0 0 48 48" width="${sizePx}" height="${sizePx}" aria-hidden="true">
-        <polygon points="8,36 14,15 26,11 38,18 40,36" fill="#475569" stroke="#0f172a" stroke-width="2.5"/>
-        <path d="M16 17l4 8-3 8M28 15l-3 9 5 7" stroke="#facc15" stroke-width="3.2" fill="none" stroke-linecap="round"/>
-      </svg>`;
-    case 'crystalVein':
-      return `<svg viewBox="0 0 48 48" width="${sizePx}" height="${sizePx}" aria-hidden="true">
-        <polygon points="12,38 17,12 24,20 20,38" fill="${accent}" stroke="#0f172a" stroke-width="2"/>
-        <polygon points="22,38 26,8 33,18 29,38" fill="#a855f7" stroke="#0f172a" stroke-width="2"/>
-        <polygon points="29,38 35,19 40,26 36,38" fill="#fde047" stroke="#0f172a" stroke-width="2"/>
-      </svg>`;
-    case 'geode':
-      return `<svg viewBox="0 0 48 48" width="${sizePx}" height="${sizePx}" aria-hidden="true">
-        <polygon points="24,6 39,16 39,32 24,42 9,32 9,16" fill="#1e293b" stroke="#0f172a" stroke-width="2.5"/>
-        <polygon points="24,11 34,18 34,30 24,37 14,30 14,18" fill="${accent}" stroke="#f8fafc" stroke-width="1.8"/>
-        <polygon points="24,16 30,21 28,29 20,29 18,21" fill="#facc15"/>
-      </svg>`;
-    case 'speedPlay':
-      return `<svg viewBox="0 0 48 48" width="${sizePx}" height="${sizePx}" aria-hidden="true">
-        <circle cx="24" cy="24" r="16" fill="#1e293b" stroke="#0f172a" stroke-width="2.5"/>
-        <polygon points="18,14 35,24 18,34" fill="#f59e0b" stroke="#78350f" stroke-width="2"/>
-      </svg>`;
-    case 'crack':
-      return `<svg viewBox="0 0 48 48" width="${sizePx}" height="${sizePx}" aria-hidden="true">
-        <polygon points="10,36 14,16 25,11 36,16 38,36" fill="#94a3b8" stroke="#0f172a" stroke-width="2.5"/>
-        <path d="M25 11l-4 9 6 4-5 11" stroke="#0f172a" stroke-width="3" fill="none" stroke-linecap="round"/>
-      </svg>`;
-    case 'toughness':
-      return `<svg viewBox="0 0 48 48" width="${sizePx}" height="${sizePx}" aria-hidden="true">
-        <polygon points="11,36 15,17 24,13 35,18 37,36" fill="#64748b" stroke="#0f172a" stroke-width="2.5"/>
-        <path d="M18 19l11 9M29 17l-7 13" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-      </svg>`;
-    case 'pickaxePower':
-      return pickaxeIconHtml('sunwheel', sizePx, 'Pickaxe Upgrade');
-    case 'oreValue':
-      return `<svg viewBox="0 0 48 48" width="${sizePx}" height="${sizePx}" aria-hidden="true">
-        <polygon points="9,34 17,22 25,24 22,36" fill="#facc15" stroke="#78350f" stroke-width="2"/>
-        <polygon points="21,28 28,15 37,19 34,32" fill="#38bdf8" stroke="#0c4a6e" stroke-width="2"/>
-        <polygon points="14,19 20,10 28,14 23,23" fill="#fb923c" stroke="#7c2d12" stroke-width="2"/>
-      </svg>`;
-    case 'chestCap':
-      return `<svg viewBox="0 0 48 48" width="${sizePx}" height="${sizePx}" aria-hidden="true">
-        <rect x="8" y="13" width="32" height="24" rx="5" fill="#92400e" stroke="#451a03" stroke-width="2.6"/>
-        <rect x="8" y="21" width="32" height="6" fill="#facc15" stroke="#78350f" stroke-width="1.8"/>
-        <rect x="20" y="19" width="8" height="10" rx="2" fill="#fef08a" stroke="#78350f" stroke-width="1.8"/>
-      </svg>`;
-  }
+const RESEARCH_ART_FILE_MAP: Record<ResearchIconKind, string> = {
+  strike: 'strike',
+  pickaxePower: 'chibi_power',
+  oreDeposit: 'ore_deposit',
+  crystalVein: 'ore_output',
+  oreValue: 'ore_value',
+  crack: 'crack',
+  speedPlay: 'respawn_speed',
+  toughness: 'dense_ore',
+  clover: 'ore_luck',
+  goldClover: 'char_luck',
+  luckAura: 'char_luck',
+  oreVein: 'find_chance',
+  chestCap: 'chest_cap',
+  geode: 'world_mastery',
+  worldMastery: 'world_mastery',
+};
+
+export function researchIconHtml(kind: ResearchIconKind, sizePx: number, _accent = '#38bdf8'): string {
+  const file = RESEARCH_ART_FILE_MAP[kind] ?? 'ore_deposit';
+  const artUrl = assetUrl(`/research/${file}.webp`);
+  return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.65)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="${kind}" draggable="false" />`;
 }
 
 export function meteorIconHtml(weatherId: WeatherId = 'celestial', sizePx = 20, alt = 'Meteor'): string {
