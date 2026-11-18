@@ -3,6 +3,8 @@ import { assetUrl } from '../game/AssetUrl';
 import { cgHappyTime, cgTryMidgameAd } from '../sdk/crazygames';
 import { getChibiById } from '../game3d/ChibiCatalog';
 import { OreHpScreen, PlotAnchorScreen, SceneMode } from '../game3d/MineScene3D';
+import { STAGE_PEDESTAL_COUNT } from '../game3d/MineWorldPalette';
+import type { PlotLabelInfo } from '../game3d/PlotPedestal3D';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
 import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId } from '../game3d/ShopWorld3D';
 import {
@@ -116,6 +118,7 @@ export class GameHud {
     onCancel: () => void;
   } | null = null;
   private suppressHotbarClickUntil = 0;
+  private readonly lastPlotLabelKeys = new Map<number, string>();
 
   private readonly shopUi: ShopModalsUi;
   private readonly forgeUi: ForgeModalUi;
@@ -146,6 +149,7 @@ export class GameHud {
       raycastPlotAt: (clientX: number, clientY: number) => number | null;
       highlightPlot: (slotIndex: number | null) => void;
       pulsePlot: (slotIndex: number) => void;
+      syncPlotLabel?: (slotIndex: number, info: PlotLabelInfo | null) => void;
     },
     private readonly onWeatherChange?: (weatherId: WeatherId) => void,
     private readonly onSetTutorialPitZoom?: (zoomed: boolean) => void,
@@ -309,6 +313,7 @@ export class GameHud {
     window.visualViewport?.addEventListener('resize', () => this.updateViewportScale());
 
     this.onSyncPlots(this.state.getEquippedPlotMinerIds());
+    this.syncAllPlotLabelsToScene();
     this.render();
 
     window.setInterval(() => {
@@ -520,63 +525,61 @@ export class GameHud {
     this.tutorialUi.notifyOreBroken();
   }
 
-  public updatePlotAnchors(anchors: PlotAnchorScreen[]): void {
-    if (!this.plotLayerEl) return;
-    if (this.inspectedSlot !== null || this.activeModal !== 'none') {
-      if (this.plotLayerEl.innerHTML !== '') this.plotLayerEl.innerHTML = '';
-      return;
-    }
-
-    const activeAnchors = anchors.filter((a) => a.visible);
-    if (activeAnchors.length === 0) {
-      if (this.plotLayerEl.innerHTML !== '') this.plotLayerEl.innerHTML = '';
-      return;
-    }
-
-    const key = activeAnchors
-      .map((a) => {
-        const u = this.state.getPlotUnit(a.slotIndex);
-        return `${a.slotIndex}:${u?.chibiId ?? ''}:${u?.damageLevel ?? 0}:${u?.mutationId ?? ''}:${u?.enchantId ?? ''}`;
-      })
-      .join(',');
-    if (this.plotLayerEl.dataset.keys !== key) {
-      this.plotLayerEl.dataset.keys = key;
-      this.plotLayerEl.innerHTML = activeAnchors
-        .map((a) => {
-          const unit = this.state.getPlotUnit(a.slotIndex);
-          const stats = this.state.getPlotUnitStats(a.slotIndex);
-          const chibi = unit ? getChibiById(unit.chibiId) : null;
-          if (!unit || !stats || !chibi) return '';
-          const rarity = getMinerRarity(chibi.id);
-          const mut = getMutationById(unit.mutationId);
-          const enc = getEnchantById(unit.enchantId);
-          const rColor = RARITY_BORDER[rarity];
-          const mutSpan =
-            mut.id !== 'normal'
-              ? ` <span style="color:#fff">•</span> <span class="${mut.id === 'rainbow' ? 'mam-rainbow-text' : ''}" style="${mut.id === 'rainbow' ? '' : `color:${mut.color}`}">${mut.name}</span>`
-              : '';
-          const encSpan = enc
-            ? ` <span style="color:#fff">•</span> <span class="${enc.rarity === 'rainbow' ? 'mam-rainbow-text' : ''}" style="${enc.rarity === 'rainbow' ? '' : `color:${enc.color}`}">${enc.name}</span>`
-            : '';
-          return `
-            <div class="absolute -translate-x-1/2 -translate-y-full flex flex-col items-center gap-0.5 text-center whitespace-nowrap pointer-events-none" data-label-slot="${a.slotIndex}">
-              <div class="text-[15px] font-black text-white leading-[1.05] mam-outline-sm">${chibi.name}</div>
-              <div class="text-[12px] font-extrabold text-[#e2e8f0] leading-[1.1] mam-outline-sm">Level ${unit.damageLevel}</div>
-              <div class="text-[13px] font-black leading-[1.1] mam-outline-sm" style="color:${rColor}">${rarity[0].toUpperCase() + rarity.slice(1)}${mutSpan}${encSpan}</div>
-              <div class="mt-[5px] text-[15px] font-black text-[#ef4444] leading-[1.15] mam-outline-sm">🎯 ${fmtShort(stats.dmg)}</div>
-            </div>
-          `;
-        })
-        .join('');
-    }
-
-    for (const a of activeAnchors) {
-      const lbl = this.plotLayerEl.querySelector<HTMLElement>(`[data-label-slot="${a.slotIndex}"]`);
-      if (lbl) {
-        lbl.style.left = `${a.labelX}px`;
-        lbl.style.top = `${a.labelY}px`;
+  private syncSlotLabelToScene(slotIndex: number): void {
+    const syncFn = this.plotDropOps?.syncPlotLabel;
+    if (!syncFn) return;
+    const unit = this.state.getPlotUnit(slotIndex);
+    const stats = this.state.getPlotUnitStats(slotIndex);
+    const chibi = unit ? getChibiById(unit.chibiId) : null;
+    if (!unit || !stats || !chibi) {
+      if (this.lastPlotLabelKeys.get(slotIndex) !== '') {
+        this.lastPlotLabelKeys.set(slotIndex, '');
+        syncFn(slotIndex, null);
       }
+      return;
     }
+
+    const rarity = getMinerRarity(chibi.id);
+    const rarityLabel = rarity[0].toUpperCase() + rarity.slice(1);
+    const mut = getMutationById(unit.mutationId);
+    const enc = getEnchantById(unit.enchantId);
+    const mutationLabel = mut.id !== 'normal' ? mut.name : '';
+    const enchantLabel = enc ? enc.name : '';
+    const dmgText = fmtShort(stats.dmg);
+    const key = `${chibi.id}:${unit.damageLevel}:${rarity}:${mut.id}:${enc?.id ?? ''}:${dmgText}`;
+    if (this.lastPlotLabelKeys.get(slotIndex) === key) return;
+    this.lastPlotLabelKeys.set(slotIndex, key);
+
+    syncFn(slotIndex, {
+      name: chibi.name,
+      level: unit.damageLevel,
+      rarityLabel,
+      rarityColor: RARITY_BORDER[rarity],
+      mutationId: mut.id,
+      mutationLabel,
+      mutationColor: mut.color,
+      mutationRainbow: mut.id === 'rainbow',
+      enchantId: enc?.id ?? null,
+      enchantLabel,
+      enchantColor: enc?.color ?? '#fff',
+      enchantRainbow: enc?.rarity === 'rainbow',
+      dmgText,
+    });
+  }
+
+  private syncAllPlotLabelsToScene(): void {
+    for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {
+      this.syncSlotLabelToScene(i);
+    }
+  }
+
+  public updatePlotAnchors(anchors: PlotAnchorScreen[]): void {
+    if (this.plotLayerEl && this.plotLayerEl.innerHTML !== '') {
+      this.plotLayerEl.innerHTML = '';
+      this.plotLayerEl.dataset.keys = '';
+    }
+    this.syncAllPlotLabelsToScene();
+
     const plot0 = anchors.find((a) => a.slotIndex === 0);
     if (plot0) {
       this.tutorialUi.updatePlotAnchor(plot0.labelX, plot0.labelY, plot0.visible);

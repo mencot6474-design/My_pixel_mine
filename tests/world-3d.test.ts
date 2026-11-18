@@ -69,6 +69,7 @@ import {
 } from '../src/game3d/ChestVaultStation3D';
 import { ChibiSprite3D } from '../src/game3d/ChibiSprite3D';
 import { FieldMiner3D } from '../src/game3d/FieldMiner3D';
+import { MineEnvironment3D } from '../src/game3d/MineEnvironment3D';
 import { DEFAULT_WORLD_PALETTE, rollOreVariant, STAGE_PEDESTAL_COUNT } from '../src/game3d/MineWorldPalette';
 import { applyNodeDamagePure, BASE_ORE_RESPAWN_SEC, OrePit3D, PIT_NODE_COUNT } from '../src/game3d/OrePit3D';
 import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
@@ -1987,6 +1988,53 @@ describe('Pure 3D Mine World', () => {
     expect(() => {
       wx.update(0.016, 2.0, true);
       wx.dispose();
+    }).not.toThrow();
+  });
+
+  it('builds cyber-industrial MineEnvironment3D dark basalt deck, Drop Shaft, Plasma Refinery, holographic pedestals & keeps central Void sky window unobstructed with dispose', () => {
+    const env = new MineEnvironment3D(DEFAULT_WORLD_PALETTE);
+    env.group.updateMatrixWorld(true);
+
+    let meshCount = 0;
+    let rearSkyOccluderCount = 0;
+    const box = new THREE.Box3();
+    env.group.traverse((obj) => {
+      if (obj === env.skyDome) return;
+      if (obj instanceof THREE.Mesh) {
+        let vis = true;
+        let cur: THREE.Object3D | null = obj;
+        while (cur) {
+          if (!cur.visible) {
+            vis = false;
+            break;
+          }
+          cur = cur.parent;
+        }
+        if (!vis) return;
+        meshCount += 1;
+        box.setFromObject(obj);
+        // Distant lateral city support pillars must never intrude into central upper-sky Void/Bloodmoon band
+        if (box.min.z < -7.5 && box.max.y > 4.2 && Math.abs(box.getCenter(new THREE.Vector3()).x) < 14.0) {
+          rearSkyOccluderCount += 1;
+        }
+      }
+    });
+    expect(meshCount).toBeGreaterThan(50);
+    expect(rearSkyOccluderCount).toBe(0);
+
+    expect(() => {
+      env.setWeatherSky('void', '#d8b4fe');
+      env.updateSky(1.0, new THREE.Vector3(0, 11.7, 15.6));
+      env.update(0.016, 1.5, true, 0.35);
+      env.dispose();
+    }).not.toThrow();
+
+    const ped = new PlotPedestal3D(2, 0, -4.28);
+    expect(ped.group.children.length).toBeGreaterThanOrEqual(5);
+    expect(() => {
+      ped.setHovered(true);
+      ped.update(0.016, 2.2);
+      ped.dispose();
     }).not.toThrow();
   });
 });

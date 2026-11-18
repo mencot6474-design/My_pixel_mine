@@ -15,7 +15,6 @@ import {
   getHazardStripeTexture,
   getQuarryFloorTexture,
   getSlashArcTexture,
-  getWoodPlankTexture,
 } from './ProceduralTextures3D';
 
 export const PIT_NODE_COUNT = 1;
@@ -317,6 +316,7 @@ export class OrePit3D {
   private readonly floorMat: THREE.MeshStandardMaterial;
   private readonly wallMat: THREE.MeshStandardMaterial;
   private readonly trimMat: THREE.MeshStandardMaterial;
+  private readonly pitNeonMat: THREE.MeshStandardMaterial;
   private readonly shardMat: THREE.MeshStandardMaterial;
   private readonly sharedShardGeo = new THREE.OctahedronGeometry(0.11, 0);
   private readonly shardPool: ShardParticle[] = [];
@@ -347,25 +347,34 @@ export class OrePit3D {
     floor.receiveShadow = true;
     this.group.add(floor);
 
-    // Full-Height Excavated Quarry Retaining Walls (rising from pit bed y=0 up to y=+0.86, above courtyard y=+0.68)
+    // Full-Height Excavated Dark Basalt Retaining Walls + Hazard Collar + Thin Neon Rim
     this.wallMat = new THREE.MeshStandardMaterial({
-      color: palette.cliffColor,
-      roughness: 0.8,
-      metalness: 0.12,
+      color: 0x1a2335,
+      roughness: 0.72,
+      metalness: 0.24,
+      flatShading: true,
     });
     this.trimMat = new THREE.MeshStandardMaterial({
       map: getHazardStripeTexture(palette.crystalColor),
-      roughness: 0.4,
+      roughness: 0.42,
       metalness: 0.25,
+    });
+    this.pitNeonMat = new THREE.MeshStandardMaterial({
+      color: palette.crystalColor,
+      emissive: palette.crystalColor,
+      emissiveIntensity: 1.05,
+      roughness: 0.2,
+      metalness: 0.25,
+      flatShading: true,
     });
 
     const pitW = 11.8;
     const pitD = 6.8;
     const wallH = 0.86;
     // Open portals:
-    // - North center (x in [-1.3, +1.3]) for stepped quarry stairs descending from deck
-    // - Left spur (z in [-1.15, +0.15]) for sloped minecart railway entry
-    // - Right chute (z in [+0.38, +1.72] -> world z=1.70) for inclined ore conveyor exit
+    // - North center (x in [-1.3, +1.3]) for stepped cyber stairwell descending from deck
+    // - Left spur (z in [-1.15, +0.15]) for sloped Drop Shaft shuttle entry
+    // - Right chute (z in [+0.38, +1.72] -> world z=1.70) for inclined Plasma Refinery conveyor exit
     const wallSpecs: [number, number, number, number, number][] = [
       [-3.6, -pitD / 2, 4.6, wallH, 0.36],
       [3.6, -pitD / 2, 4.6, wallH, 0.36],
@@ -383,15 +392,23 @@ export class OrePit3D {
       this.group.add(wall);
 
       const trim = new THREE.Mesh(
-        new THREE.BoxGeometry(ww > wd ? ww : 0.28, 0.1, wd > ww ? wd : 0.28),
+        new THREE.BoxGeometry(ww > wd ? ww : 0.34, 0.11, wd > ww ? wd : 0.34),
         this.trimMat
       );
       trim.position.set(wx, wh + 0.04, wz);
       trim.castShadow = true;
       this.group.add(trim);
+
+      const isHoriz = ww > wd;
+      const neonRim = new THREE.Mesh(
+        new THREE.BoxGeometry(isHoriz ? ww + 0.04 : 0.06, 0.035, isHoriz ? 0.06 : wd + 0.04),
+        this.pitNeonMat
+      );
+      neonRim.position.set(wx, wh + 0.115, wz);
+      this.group.add(neonRim);
     }
 
-    // Stepped inner quarry stone bench along bottom perimeter to emphasize true depth
+    // Stepped inner basalt retaining ledge along bottom perimeter
     const benchSpecs: [number, number, number, number][] = [
       [-3.6, -pitD / 2 + 0.26, 4.4, 0.28],
       [3.6, -pitD / 2 + 0.26, 4.4, 0.28],
@@ -405,29 +422,35 @@ export class OrePit3D {
       this.group.add(bench);
     }
 
-    // Corner Steel-Capped Stone Corner Piers framing the excavated pit rim
+    // Corner Cyber Steel Anchor Pylons + Glowing Beacon Collars framing the excavated pit rim
     const postMat = new THREE.MeshStandardMaterial({
-      map: getWoodPlankTexture(),
-      roughness: 0.78,
+      color: 0x223047,
+      roughness: 0.44,
+      metalness: 0.42,
+      flatShading: true,
     });
     const steelCapMat = new THREE.MeshStandardMaterial({
-      color: 0x334155,
-      metalness: 0.65,
-      roughness: 0.3,
+      color: 0x3b4d6b,
+      metalness: 0.48,
+      roughness: 0.34,
+      flatShading: true,
     });
-    const postGeo = new THREE.BoxGeometry(0.44, 1.02, 0.44);
-    const capGeo = new THREE.BoxGeometry(0.52, 0.14, 0.52);
+    const postGeo = new THREE.CylinderGeometry(0.24, 0.28, 1.04, 8);
+    const beaconCollarGeo = new THREE.CylinderGeometry(0.26, 0.26, 0.09, 8);
+    const capGeo = new THREE.CylinderGeometry(0.18, 0.27, 0.14, 8);
     for (const sx of [-1, 1]) {
       for (const sz of [-1, 1]) {
         const px = sx * (pitW / 2);
         const pz = sz * (pitD / 2);
         const post = new THREE.Mesh(postGeo, postMat);
-        post.position.set(px, 0.51, pz);
+        post.position.set(px, 0.52, pz);
         post.castShadow = true;
+        const collar = new THREE.Mesh(beaconCollarGeo, this.pitNeonMat);
+        collar.position.set(px, 0.98, pz);
         const cap = new THREE.Mesh(capGeo, steelCapMat);
-        cap.position.set(px, 1.06, pz);
+        cap.position.set(px, 1.1, pz);
         cap.castShadow = true;
-        this.group.add(post, cap);
+        this.group.add(post, collar, cap);
       }
     }
 
@@ -520,9 +543,11 @@ export class OrePit3D {
     const cColor = new THREE.Color(palette.crystalColor);
     this.floorMat.map = getQuarryFloorTexture(palette.pitFloorColor, palette.crystalColor);
     this.floorMat.needsUpdate = true;
-    this.wallMat.color.set(palette.cliffColor);
+    this.wallMat.color.setHex(0x161f30);
     this.trimMat.map = getHazardStripeTexture(palette.crystalColor);
     this.trimMat.needsUpdate = true;
+    this.pitNeonMat.color.copy(cColor);
+    this.pitNeonMat.emissive.copy(cColor);
     this.shardMat.color.copy(cColor);
     this.shardMat.emissive.copy(cColor);
 

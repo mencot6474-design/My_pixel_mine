@@ -2,12 +2,11 @@ import * as THREE from 'three';
 import { ChibiDef, getChibiById } from './ChibiCatalog';
 import { createProceduralTreasureChest, ProceduralChestHandle } from './ChestVaultStation3D';
 import { FieldMiner3D } from './FieldMiner3D';
-import { mountGlbProp, preloadCommonMineModels } from './GlbAssets3D';
+import { preloadCommonMineModels } from './GlbAssets3D';
 import { MineEnvironment3D } from './MineEnvironment3D';
 import { DEFAULT_WORLD_PALETTE, MineWorldPalette, OreVariantKey, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
 import { OrePit3D } from './OrePit3D';
-import { PlotPedestal3D } from './PlotPedestal3D';
-import { getHazardStripeTexture } from './ProceduralTextures3D';
+import { PlotLabelInfo, PlotPedestal3D } from './PlotPedestal3D';
 import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId, ShopWorld3D } from './ShopWorld3D';
 import { TowerArena3D, TowerFighterConfig, TowerOreBarScreen } from './TowerArena3D';
 import { TowerWaveOreState } from '../game/TowerData';
@@ -86,6 +85,8 @@ export class MineScene3D {
 
   private readonly crateGroup = new THREE.Group();
   private readonly chestVisual: ProceduralChestHandle;
+  private readonly stageNeonMat: THREE.MeshStandardMaterial;
+  private readonly stageHoloMat: THREE.MeshBasicMaterial;
   private crateBounce = 0;
   private crateHovered = false;
 
@@ -138,8 +139,8 @@ export class MineScene3D {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     mountEl.appendChild(this.renderer.domElement);
 
-    // Bright Stylized Sunlight + Sky Fill Lighting
-    this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x8a8178, 1.05);
+    // Urban Night Cyber Hemisphere + Directional Key & Cool Cyan Rim Light
+    this.hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 1.05);
     this.scene.add(this.hemiLight);
 
     this.sunLight = new THREE.DirectionalLight(0xfffbeb, 1.85);
@@ -156,52 +157,90 @@ export class MineScene3D {
     this.sunLight.shadow.normalBias = 0.035;
     this.scene.add(this.sunLight);
 
-    this.rimLight = new THREE.DirectionalLight(0xbae6fd, 0.55);
+    this.rimLight = new THREE.DirectionalLight(0x38bdf8, 0.72);
     this.rimLight.position.set(-12, 8, -10);
     this.scene.add(this.rimLight);
 
     preloadCommonMineModels();
 
-    // 360 Stylized Quarry Island Environment backed by Kenney CC0 .glb assets
+    // Dark Basalt / Cyber-Industrial Mine Island Environment
     this.env = new MineEnvironment3D(palette);
     this.scene.add(this.env.group);
     // Keep Sky Dome directly in scene so both Mine and Shop World share the weather sky
     this.scene.add(this.env.skyDome);
 
-    // Elevated Carved Stone Terrace & Kenney Stairs in front of Rear Sanctuary Gate
-    const rackDeck = new THREE.Mesh(
-      new THREE.BoxGeometry(12.8, 0.26, 2.75),
+    // Cyber-Holographic Rear Stage Platform for "My Chibi" Showcase
+    this.stageNeonMat = new THREE.MeshStandardMaterial({
+      color: palette.crystalColor,
+      emissive: palette.crystalColor,
+      emissiveIntensity: 1.15,
+      roughness: 0.2,
+      metalness: 0.28,
+      flatShading: true,
+    });
+    this.stageHoloMat = new THREE.MeshBasicMaterial({
+      color: palette.crystalColor,
+      transparent: true,
+      opacity: 0.22,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+
+    const stageBase = new THREE.Mesh(
+      new THREE.BoxGeometry(13.9, 0.16, 2.96),
       new THREE.MeshStandardMaterial({
-        color: 0x475569,
-        roughness: 0.72,
-        metalness: 0.1,
+        color: 0x161f30,
+        roughness: 0.62,
+        metalness: 0.28,
+        flatShading: true,
       })
     );
-    rackDeck.position.set(0, 0.13, -4.55);
+    stageBase.position.set(0, 0.08, -4.55);
+    stageBase.receiveShadow = true;
+    stageBase.castShadow = true;
+
+    const rackDeck = new THREE.Mesh(
+      new THREE.BoxGeometry(13.5, 0.12, 2.66),
+      new THREE.MeshStandardMaterial({
+        color: 0x223047,
+        roughness: 0.44,
+        metalness: 0.36,
+        flatShading: true,
+      })
+    );
+    rackDeck.position.set(0, 0.21, -4.55);
     rackDeck.receiveShadow = true;
     rackDeck.castShadow = true;
-    this.env.group.add(rackDeck);
+    this.env.group.add(stageBase, rackDeck);
 
-    const trimMat = new THREE.MeshStandardMaterial({
-      map: getHazardStripeTexture(palette.crystalColor),
-      roughness: 0.45,
-    });
+    // Glowing Holographic Stage Projection Panel + Front Perimeter Neon Trim
+    const holoRunwayStrip = new THREE.Mesh(new THREE.PlaneGeometry(12.6, 1.55), this.stageHoloMat);
+    holoRunwayStrip.rotation.x = -Math.PI / 2;
+    holoRunwayStrip.position.set(0, 0.275, -4.32);
+    this.env.group.add(holoRunwayStrip);
+
     for (const sx of [-1, 1]) {
-      const rackFrontTrim = new THREE.Mesh(new THREE.BoxGeometry(5.13, 0.08, 0.14), trimMat);
-      rackFrontTrim.position.set(sx * 3.865, 0.25, -3.18);
+      const rackFrontTrim = new THREE.Mesh(new THREE.BoxGeometry(5.58, 0.06, 0.1), this.stageNeonMat);
+      rackFrontTrim.position.set(sx * 4.08, 0.26, -3.22);
       this.env.group.add(rackFrontTrim);
     }
 
-    // Center Stone Stairwell Bay
+    const stageRearTrim = new THREE.Mesh(new THREE.BoxGeometry(13.56, 0.06, 0.09), this.stageNeonMat);
+    stageRearTrim.position.set(0, 0.26, -5.88);
+    this.env.group.add(stageRearTrim);
+
+    // Futuristic Steel Stairwell & Illuminated Treads Descending into Quarry Pit
     const cheekMat = new THREE.MeshStandardMaterial({
-      color: palette.cliffColor,
-      roughness: 0.8,
-      metalness: 0.12,
+      color: 0x1b263b,
+      roughness: 0.5,
+      metalness: 0.36,
+      flatShading: true,
     });
     const copingMat = new THREE.MeshStandardMaterial({
-      color: 0x334155,
-      roughness: 0.52,
-      metalness: 0.35,
+      color: 0x3b4d6b,
+      roughness: 0.36,
+      metalness: 0.44,
+      flatShading: true,
     });
     for (const sx of [-1, 1]) {
       const cheek = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.96, 1.36), cheekMat);
@@ -209,42 +248,55 @@ export class MineScene3D {
       cheek.castShadow = true;
       cheek.receiveShadow = true;
 
-      const cheekCap = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.08, 1.4), copingMat);
+      const cheekCap = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.07, 1.4), copingMat);
       cheekCap.position.set(sx * 1.32, 0.31, -2.52);
       cheekCap.castShadow = true;
-      this.env.group.add(cheek, cheekCap);
+
+      const cheekLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.035, 1.38), this.stageNeonMat);
+      cheekLed.position.set(sx * 1.32, 0.36, -2.52);
+      this.env.group.add(cheek, cheekCap, cheekLed);
     }
 
-    mountGlbProp('/models/fantasy-town/stairs-wide-stone.glb', this.env.group, {
-      position: [0, 0, -2.52],
-      rotationY: Math.PI / 2,
-      targetHeight: 0.94,
-      scaleMultiplier: [1.38, 1.0, 2.55],
-      alignBottomY: -0.68,
-    });
+    const stairStepCount = 4;
+    for (let s = 0; s < stairStepCount; s++) {
+      const t = (s + 0.5) / stairStepCount;
+      const stepY = 0.2 - t * 0.84;
+      const stepZ = -3.14 + t * 1.24;
+      const stepMesh = new THREE.Mesh(new THREE.BoxGeometry(2.38, 0.18, 0.34), cheekMat);
+      stepMesh.position.set(0, stepY, stepZ);
+      stepMesh.castShadow = true;
+      stepMesh.receiveShadow = true;
 
-    // 5 3D Stone Stage Pedestals on the rear terrace (chibi sprites ready to mount via setPlotChibi)
+      const stepLed = new THREE.Mesh(new THREE.BoxGeometry(2.34, 0.03, 0.05), this.stageNeonMat);
+      stepLed.position.set(0, stepY + 0.09, stepZ + 0.14);
+      this.env.group.add(stepMesh, stepLed);
+    }
+
+    // 5 Cyber-Holographic Plot Pedestals Centered Cleanly Away From Side HUD Bars (spacing 2.44m)
     for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {
-      const px = (i - (STAGE_PEDESTAL_COUNT - 1) / 2) * 2.15;
-      const pz = -4.25;
+      const px = (i - (STAGE_PEDESTAL_COUNT - 1) / 2) * 2.44;
+      const pz = -4.28;
       const ped = new PlotPedestal3D(i, px, pz);
-      ped.group.position.y = 0.26;
+      ped.group.position.y = 0.27;
       this.pedestals.push(ped);
       this.scene.add(ped.group);
       this.clickableMeshes.push(ped.hitMesh);
     }
 
-    // Center Quarry Pit with 3D Ore & Crystal Nodes
+    // Center Basalt Quarry Pit with 3D Ore & Crystal Nodes
     this.pit = new OrePit3D(palette);
     this.scene.add(this.pit.group);
     for (const m of this.pit.clickableMeshes) {
       this.clickableMeshes.push(m);
     }
 
-    // Right Wing Stylized Procedural Treasure Chest on Elevated Vault Dais
+    // Right Wing Cyber Vault Container on Elevated Plasma Refinery Dais
     this.crateGroup.position.set(8.45, 0.48, 1.7);
     this.chestVisual = createProceduralTreasureChest({
       scale: 1.08,
+      woodColor: 0x1e293b,
+      ironColor: 0x3b4d6b,
+      trimColor: 0x7084a3,
       gemColor: palette.crystalColor,
     });
     this.chestVisual.group.rotation.y = -Math.PI / 2;
@@ -718,7 +770,7 @@ export class MineScene3D {
       }
 
       const p = ped.group.position;
-      this.projVec.set(p.x, p.y + 2.18, p.z).project(this.camera);
+      this.projVec.set(p.x, p.y + 2.68, p.z).project(this.camera);
       const labelVisible = this.projVec.z > -1 && this.projVec.z < 1;
       const labelX = (this.projVec.x * 0.5 + 0.5) * w;
       const labelY = (-this.projVec.y * 0.5 + 0.5) * h;
@@ -811,18 +863,18 @@ export class MineScene3D {
     this.env.setWeatherSky(weather.id, weather.cloudHex);
     const isShop = this.mode === 'shop';
     this.hemiLight.color.set(weather.hemiTintHex);
-    this.hemiLight.intensity = isShop ? Math.max(weather.hemiIntensity, 1.12) : weather.hemiIntensity;
+    this.hemiLight.intensity = isShop
+      ? Math.max(weather.hemiIntensity, 1.12)
+      : Math.max(weather.hemiIntensity, 0.96);
     this.sunLight.intensity = isShop ? Math.max(weather.sunIntensity, 1.52) : weather.sunIntensity;
     this.rimLight.color.set(isShop ? 0x38bdf8 : weather.rimTintHex);
 
     if (this.mode !== 'mine' && !isShop) return;
     const fogColor = new THREE.Color(weather.fogTintHex);
-    if (isShop) {
-      fogColor.lerp(new THREE.Color(0x0b162b), 0.56);
-    }
+    fogColor.lerp(new THREE.Color(0x0b162b), isShop ? 0.56 : 0.28);
     this.scene.background = fogColor;
     // Softly blend distant terrain border into the sky shader's horizon mist band
-    this.scene.fog = isShop ? new THREE.Fog(fogColor, 50, 108) : new THREE.Fog(fogColor, 26, 72);
+    this.scene.fog = isShop ? new THREE.Fog(fogColor, 50, 108) : new THREE.Fog(fogColor, 30, 78);
   }
 
   public setWeather(weatherId: WeatherId): void {
@@ -857,6 +909,9 @@ export class MineScene3D {
     if (this.activePalette !== palette) {
       this.activePalette = palette;
       this.env.setPalette(palette);
+      this.stageNeonMat.color.set(palette.crystalColor);
+      this.stageNeonMat.emissive.set(palette.crystalColor);
+      this.stageHoloMat.color.set(palette.crystalColor);
       this.chestVisual.setAccentColor(palette.crystalColor);
       this.pit.setPalette(palette, true);
       this.applyWeatherAtmosphere();
@@ -919,6 +974,12 @@ export class MineScene3D {
 
   public focusPlot(slotIndex: number | null): void {
     this.focusedPlotIndex = slotIndex;
+    const showLabels = slotIndex === null;
+    this.pedestals.forEach((p) => p.setLabelVisible(showLabels));
+  }
+
+  public syncPlotLabel(slotIndex: number, info: PlotLabelInfo | null): void {
+    this.pedestals[slotIndex]?.setLabel(info);
   }
 
   public setTutorialPitZoom(zoomed: boolean): void {
@@ -1035,6 +1096,7 @@ export class MineScene3D {
       cancelAnimationFrame(this.rafId);
       this.rafId = 0;
     }
+    this.pedestals.forEach((p) => p.dispose());
     this.chestVisual.dispose();
     this.env.dispose();
     this.shopWorld.dispose();

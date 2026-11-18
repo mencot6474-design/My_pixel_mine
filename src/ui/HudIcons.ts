@@ -152,8 +152,9 @@ export function otherItemSvg(kind: 'scroll' | 'gems' | 'potion' | 'charm', color
   }
   if (kind === 'gems') {
     return `<svg viewBox="0 0 64 64" width="60" height="60" aria-hidden="true">
-      <polygon points="16,18 48,18 56,30 32,54 8,30" fill="${color}" stroke="#0f172a" stroke-width="3" stroke-linejoin="round"/>
-      <polygon points="24,18 40,18 44,30 32,50 20,30" fill="#fbcfe8" opacity="0.55"/>
+      <polygon points="32,8 50,18 52,42 32,56 12,42 14,18" fill="${color}" stroke="#0f172a" stroke-width="3" stroke-linejoin="round"/>
+      <polygon points="32,14 43,22 44,39 32,48 20,39 21,22" fill="#fbcfe8" opacity="0.45"/>
+      <polygon points="32,21 38,27 32,41 26,27" fill="#ffffff" opacity="0.65"/>
     </svg>`;
   }
   if (kind === 'scroll') {
@@ -183,7 +184,7 @@ export const HUD_ICONS = {
   shopBasket: `<svg viewBox="0 0 36 36" width="38" height="38"><path d="M6 15h24l-3 14H9L6 15z" fill="#ef4444" stroke="#0f172a" stroke-width="2.4"/><path d="M12 15l6-8 6 8" fill="none" stroke="#f8fafc" stroke-width="2.6" stroke-linecap="round"/><rect x="4" y="13" width="28" height="4" rx="2" fill="#f87171" stroke="#0f172a" stroke-width="2"/></svg>`,
   hourglass: `<svg viewBox="0 0 36 36" width="38" height="38"><path d="M10 6h16M10 30h16M12 6c0 7 6 9 6 12s-6 5-6 12M24 6c0 7-6 9-6 12s6 5 6 12" fill="none" stroke="#fde047" stroke-width="2.8" stroke-linecap="round"/><polygon points="14,28 22,28 18,22" fill="#38bdf8"/></svg>`,
   indexBook: `<svg viewBox="0 0 36 36" width="38" height="38"><path d="M6 9c4-2 8-1 12 2 4-3 8-4 12-2v19c-4-2-8-1-12 2-4-3-8-4-12-2V9z" fill="#fef3c7" stroke="#1e3a8a" stroke-width="2.6"/><path d="M6 9v19l12 2V11L6 9z" fill="#3b82f6" stroke="#1e3a8a" stroke-width="2"/></svg>`,
-  gem: `<svg viewBox="0 0 24 24" width="22" height="22"><polygon points="6,4 18,4 22,10 12,21 2,10" fill="#ec4899" stroke="#831843" stroke-width="1.8"/><polygon points="9,4 15,4 17,10 12,19 7,10" fill="#f9a8d4" opacity="0.6"/></svg>`,
+  gem: `<svg viewBox="0 0 24 24" width="22" height="22"><polygon points="12,2 20,7 20,17 12,22 4,17 4,7" fill="#ec4899" stroke="#831843" stroke-width="1.8"/><polygon points="12,5 17,8.5 17,15.5 12,19 7,15.5 7,8.5" fill="#f9a8d4" opacity="0.55"/><polygon points="12,7 14.5,12 12,16.5 9.5,12" fill="#ffffff" opacity="0.7"/></svg>`,
   backpack: `<svg viewBox="0 0 40 40" width="38" height="38"><rect x="9" y="12" width="22" height="22" rx="6" fill="#b45309" stroke="#451a03" stroke-width="2.4"/><rect x="12" y="20" width="16" height="10" rx="3" fill="#d97706" stroke="#451a03" stroke-width="2"/><path d="M15 12V9a5 5 0 0 1 10 0v3" fill="none" stroke="#78350f" stroke-width="2.6"/><path d="M26 7l8 8" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/></svg>`,
   sparkle: `<svg viewBox="0 0 20 20" width="16" height="16"><path d="M10 1l2.2 6.8L19 10l-6.8 2.2L10 19l-2.2-6.8L1 10l6.8-2.2z" fill="#fde047"/></svg>`,
   daily: `<svg viewBox="0 0 24 24" width="20" height="20"><rect x="4" y="5" width="16" height="15" rx="3" fill="#3b82f6" stroke="#1e3a8a" stroke-width="2"/><rect x="10" y="5" width="4" height="15" fill="#facc15"/><rect x="4" y="10" width="16" height="4" fill="#facc15"/></svg>`,

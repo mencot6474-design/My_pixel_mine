@@ -345,21 +345,22 @@ export class HellAltarEyeController {
   }
 
   public update(dt: number, elapsed: number, isSpinning: boolean, _needleAngle: number): void {
+    const safeDt = Math.min(Math.max(0, dt), 0.1);
     const speedMult = isSpinning ? 2.8 : 1.0;
 
     // Spin the relativistic accretion disk & cosmic floor ring (no pulsing/throbbing)
-    this.accretionDiskMesh.rotation.z -= dt * 0.95 * speedMult;
+    this.accretionDiskMesh.rotation.z -= safeDt * 0.95 * speedMult;
     this.cosmicFloorMesh.rotation.z = elapsed * 0.06;
 
     // Spiral matter particles inward toward the pitch-black event horizon
     for (let i = 0; i < this.orbitCount; i++) {
-      let r = this.orbitRadii[i] - dt * (0.45 + (6.0 - this.orbitRadii[i]) * 0.22) * speedMult;
+      let r = this.orbitRadii[i] - safeDt * (0.45 + (6.0 - this.orbitRadii[i]) * 0.22) * speedMult;
       if (r < 1.58) {
         r = 5.4 + Math.random() * 0.5;
       }
       this.orbitRadii[i] = r;
       const angSpeed = (2.6 / Math.max(1.2, r)) * speedMult;
-      const a = this.orbitAngles[i] + dt * angSpeed;
+      const a = this.orbitAngles[i] + safeDt * angSpeed;
       this.orbitAngles[i] = a;
 
       this.orbitPos[i * 3] = Math.cos(a) * r;

@@ -324,7 +324,7 @@ export function createProceduralTreasureChest(
   hoardBed.position.y = 0.41;
   group.add(hoardBed);
 
-  const innerCrystalGeo = new THREE.OctahedronGeometry(0.09, 0);
+  const innerCrystalGeo = new THREE.CylinderGeometry(0.025, 0.075, 0.2, 6);
   const innerShardOffsets: [number, number, number, number][] = [
     [-0.18, 0.5, 0.06, 0.35],
     [0.02, 0.52, -0.04, -0.2],
@@ -334,7 +334,6 @@ export function createProceduralTreasureChest(
     const shard = new THREE.Mesh(innerCrystalGeo, gemMat);
     shard.position.set(cx, cy, cz);
     shard.rotation.set(0.2, rz, rz);
-    shard.scale.set(0.85, 1.35, 0.85);
     group.add(shard);
   }
 
@@ -377,15 +376,15 @@ export function createProceduralTreasureChest(
     lidPivot.add(endCap);
   }
 
-  // Top Crown Crest Plate + Faceted Ridge Gem
+  // Top Crown Crest Plate + Hex Cyber Energy Core
   const crestPlate = new THREE.Mesh(
     createExtrudedSlabGeometry(0.32, 0.055, 0.24, 0.05, 0.012),
     goldMat
   );
   crestPlate.position.set(0, 0.325, lidCenterOffsetZ);
-  const crestGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.085, 0), gemMat);
-  crestGem.scale.set(1.25, 0.75, 0.95);
-  crestGem.position.set(0, 0.385, lidCenterOffsetZ);
+  const crestGem = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.095, 0.055, 6), gemMat);
+  crestGem.scale.set(1.2, 1.0, 0.92);
+  crestGem.position.set(0, 0.382, lidCenterOffsetZ);
   enableShadows(crestPlate);
   lidPivot.add(crestPlate, crestGem);
 
@@ -395,15 +394,15 @@ export function createProceduralTreasureChest(
   enableShadows(lidHasp);
   lidPivot.add(lidHasp);
 
-  // 4. Front Ornate Escutcheon Shield Lock + Glowing Centerpiece Gem
+  // 4. Front Ornate Escutcheon Shield Lock + Hexagonal Core Emissive Lock
   const lockPlate = new THREE.Mesh(createShieldLockGeometry(0.24, 0.24, 0.038), goldMat);
   lockPlate.position.set(0, 0.34, 0.345);
   const frontBezel = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.04, 6), ironMat);
   frontBezel.rotation.x = Math.PI / 2;
   frontBezel.position.set(0, 0.35, 0.382);
-  const frontGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.068, 0), gemMat);
-  frontGem.scale.set(0.95, 1.25, 0.75);
-  frontGem.position.set(0, 0.35, 0.405);
+  const frontGem = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.06, 0.042, 6), gemMat);
+  frontGem.rotation.x = Math.PI / 2;
+  frontGem.position.set(0, 0.35, 0.402);
   enableShadows(lockPlate);
   enableShadows(frontBezel);
   group.add(lockPlate, frontBezel, frontGem);
@@ -461,11 +460,11 @@ export function createProceduralTreasureChest(
 }
 
 /**
- * Creates the full Right-Wing Quarry Loot Vault Station + Direct Ore Escalator Bridge:
- * - Lower Pit Intake Hopper (anchored at pit floor y = -0.68)
- * - Continuous Inclined Ore Escalator with animated InstancedMesh cleats & crystal rails
- * - Upper Brass-Trimmed Discharge Hopper & Slide leading straight onto the Vault Dais
- * - 3-Tiered Beveled Stone/Iron/Gold Vault Sanctuary at (8.45, 0, 1.7) supporting the Chest at y = 0.48
+ * Creates the full Right-Wing Plasma Ore Refinery & Cyber Vault Escalator Bridge:
+ * - Dark Steel Pit Intake Hopper (anchored at pit floor y = -0.68)
+ * - Continuous Inclined Plasma-Lit Ore Escalator with animated InstancedMesh cleats
+ * - Overhead Intake Purification Arch & Slide into the Vault Dais
+ * - 3-Tiered Dark Basalt & Gunmetal Vault Sanctuary (x = 8.45, z = 1.7) + Multi-Part Plasma Refinery Reactors & Tubes
  */
 export function createChestVaultStation(
   options: ChestVaultStationOptions = {}
@@ -473,57 +472,65 @@ export function createChestVaultStation(
   const group = new THREE.Group();
 
   const stoneMat = new THREE.MeshStandardMaterial({
-    color: options.cliffColor ?? 0x78716c,
-    roughness: 0.88,
-    metalness: 0.06,
+    color: 0x161f30,
+    roughness: 0.76,
+    metalness: 0.22,
     flatShading: true,
   });
   const slateMat = new THREE.MeshStandardMaterial({
-    color: 0x334155,
-    roughness: 0.56,
+    color: 0x26354f,
+    roughness: 0.46,
     metalness: 0.36,
     flatShading: true,
   });
   const darkIronMat = new THREE.MeshStandardMaterial({
-    color: 0x1e293b,
-    roughness: 0.42,
-    metalness: 0.72,
+    color: 0x1b263b,
+    roughness: 0.44,
+    metalness: 0.38,
     flatShading: true,
   });
   const brassMat = new THREE.MeshStandardMaterial({
-    color: options.trimColor ?? 0xf59e0b,
-    emissive: 0xd97706,
-    emissiveIntensity: 0.16,
-    roughness: 0.26,
-    metalness: 0.84,
+    color: 0x7084a3,
+    emissive: 0x22d3ee,
+    emissiveIntensity: 0.14,
+    roughness: 0.32,
+    metalness: 0.46,
+    flatShading: true,
+  });
+  const plasmaMat = new THREE.MeshStandardMaterial({
+    color: 0xf97316,
+    emissive: 0xf97316,
+    emissiveIntensity: 1.35,
+    roughness: 0.2,
+    metalness: 0.25,
     flatShading: true,
   });
   const crystalMat = new THREE.MeshStandardMaterial({
     color: options.crystalColor ?? 0x38bdf8,
     emissive: options.crystalColor ?? 0x38bdf8,
-    emissiveIntensity: 0.78,
-    roughness: 0.16,
-    metalness: 0.35,
+    emissiveIntensity: 1.05,
+    roughness: 0.18,
+    metalness: 0.32,
     flatShading: true,
   });
   const beltMat = new THREE.MeshStandardMaterial({
-    color: 0x0f172a,
+    color: 0x0b1220,
     roughness: 0.86,
-    metalness: 0.12,
+    metalness: 0.14,
     flatShading: true,
   });
   const cleatMat = new THREE.MeshStandardMaterial({
-    color: 0x64748b,
-    roughness: 0.46,
-    metalness: 0.55,
+    color: 0x526582,
+    roughness: 0.42,
+    metalness: 0.48,
     flatShading: true,
   });
   const goldOreMat = new THREE.MeshStandardMaterial({
-    color: 0xfbbf24,
+    color: 0xf59e0b,
     emissive: 0xf59e0b,
-    emissiveIntensity: 0.35,
+    emissiveIntensity: 0.55,
     roughness: 0.24,
-    metalness: 0.82,
+    metalness: 0.65,
     flatShading: true,
   });
 
@@ -691,11 +698,18 @@ export function createChestVaultStation(
     brassMat
   );
   archLintel.position.set(-0.74, 0.99, 0);
-  const archBeacon = new THREE.Mesh(new THREE.OctahedronGeometry(0.11, 0), crystalMat);
-  archBeacon.scale.set(0.9, 1.35, 0.9);
-  archBeacon.position.set(-0.74, 1.22, 0);
+  const archBeaconPlinth = new THREE.Mesh(
+    createExtrudedSlabGeometry(0.2, 0.05, 0.62, 0.03, 0.01),
+    darkIronMat
+  );
+  archBeaconPlinth.position.set(-0.74, 1.13, 0);
+  const archBeacon = new THREE.Mesh(
+    createExtrudedSlabGeometry(0.12, 0.085, 0.5, 0.025, 0.012),
+    crystalMat
+  );
+  archBeacon.position.set(-0.74, 1.185, 0);
   enableShadows(archLintel);
-  vaultGroup.add(intakeSlide, slideGlowStrip, archLintel, archBeacon);
+  vaultGroup.add(intakeSlide, slideGlowStrip, archLintel, archBeaconPlinth, archBeacon);
 
   // Tier 3: Central Octagonal Chest Dais (y = 0.34 .. 0.48)
   const daisLower = new THREE.Mesh(new THREE.CylinderGeometry(0.86, 0.96, 0.08, 8), darkIronMat);
@@ -732,8 +746,9 @@ export function createChestVaultStation(
     new THREE.Vector2(0.0, 0.94),
   ];
   const pylonGeo = new THREE.LatheGeometry(pylonProfile, 8);
-  const lanternBulbGeo = new THREE.OctahedronGeometry(0.105, 0);
-  const lanternCapGeo = new THREE.ConeGeometry(0.16, 0.14, 8);
+  const lanternBulbGeo = new THREE.CylinderGeometry(0.085, 0.095, 0.21, 6);
+  const lanternBandGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.04, 6);
+  const lanternCapGeo = new THREE.CylinderGeometry(0.08, 0.16, 0.13, 6);
 
   for (const sz of [-0.92, 0.92]) {
     const pylonGroup = new THREE.Group();
@@ -741,48 +756,135 @@ export function createChestVaultStation(
 
     const body = new THREE.Mesh(pylonGeo, darkIronMat);
     const bulb = new THREE.Mesh(lanternBulbGeo, crystalMat);
-    bulb.position.y = 1.05;
+    bulb.position.y = 1.045;
+    const midBand = new THREE.Mesh(lanternBandGeo, brassMat);
+    midBand.position.y = 1.045;
     const cap = new THREE.Mesh(lanternCapGeo, brassMat);
-    cap.position.y = 1.19;
+    cap.position.y = 1.21;
 
     enableShadows(body);
     enableShadows(cap);
-    pylonGroup.add(body, bulb, cap);
+    pylonGroup.add(body, bulb, midBand, cap);
     vaultGroup.add(pylonGroup);
   }
 
-  // Decorative Gold Ingots + Crystal Cluster on Vault Apron
-  const ingotGeo = new THREE.BoxGeometry(0.18, 0.075, 0.095);
-  const ingotSpecs: [number, number, number, number][] = [
-    [0.72, 0.38, -0.45, 0.35],
-    [0.75, 0.38, -0.31, 0.28],
-    [0.73, 0.455, -0.38, 0.31],
-  ];
-  for (const [ix, iy, iz, ry] of ingotSpecs) {
-    const ingot = new THREE.Mesh(ingotGeo, goldOreMat);
-    ingot.position.set(ix, iy, iz);
-    ingot.rotation.y = ry;
-    enableShadows(ingot);
-    vaultGroup.add(ingot);
+  // Replace static rustic ingots/crystals with Multi-Part Plasma Ore Refinery Reactors & Tubes
+  const refineryGroup = new THREE.Group();
+  refineryGroup.position.set(1.28, 0.34, -1.48);
+  vaultGroup.add(refineryGroup);
+
+  const smelterBase = new THREE.Mesh(
+    createExtrudedSlabGeometry(1.75, 0.22, 1.35, 0.2, 0.025),
+    darkIronMat
+  );
+  enableShadows(smelterBase);
+  refineryGroup.add(smelterBase);
+
+  const smelterDrum = new THREE.Mesh(
+    new THREE.LatheGeometry(
+      [
+        new THREE.Vector2(0.001, 0.22),
+        new THREE.Vector2(0.56, 0.22),
+        new THREE.Vector2(0.5, 0.65),
+        new THREE.Vector2(0.38, 0.82),
+        new THREE.Vector2(0.38, 1.38),
+        new THREE.Vector2(0.52, 1.54),
+        new THREE.Vector2(0.44, 1.98),
+        new THREE.Vector2(0.24, 2.25),
+        new THREE.Vector2(0.001, 2.25),
+      ],
+      10
+    ),
+    slateMat
+  );
+  smelterDrum.position.set(-0.22, 0, 0);
+  enableShadows(smelterDrum);
+
+  const plasmaCoreWindow = new THREE.Mesh(new THREE.CylinderGeometry(0.41, 0.41, 0.48, 10), plasmaMat);
+  plasmaCoreWindow.position.set(-0.22, 1.08, 0);
+
+  const refineryRings: THREE.Mesh[] = [];
+  const rRingGeo = new THREE.TorusGeometry(0.54, 0.042, 6, 18);
+  rRingGeo.rotateX(Math.PI / 2);
+  for (const ry of [0.88, 1.32]) {
+    const rRing = new THREE.Mesh(rRingGeo, ry < 1.0 ? crystalMat : plasmaMat);
+    rRing.position.set(-0.22, ry, 0);
+    rRing.rotation.x = ry < 1.0 ? 0.14 : -0.14;
+    refineryGroup.add(rRing);
+    refineryRings.push(rRing);
   }
 
-  const crystalShardGeo = new THREE.ConeGeometry(0.085, 0.34, 5);
-  const shardSpecs: [number, number, number, number, number][] = [
-    [0.74, 0.48, 0.56, 0.18, 0.12],
-    [0.86, 0.44, 0.48, -0.24, -0.18],
-  ];
-  for (const [cx, cy, cz, rx, rz] of shardSpecs) {
-    const shard = new THREE.Mesh(crystalShardGeo, crystalMat);
-    shard.position.set(cx, cy, cz);
-    shard.rotation.set(rx, 0.4, rz);
-    vaultGroup.add(shard);
-  }
+  // Twin Secondary Auxiliary Plasma Scrubber Stack
+  const auxStack = new THREE.Mesh(
+    new THREE.LatheGeometry(
+      [
+        new THREE.Vector2(0.001, 0.22),
+        new THREE.Vector2(0.3, 0.22),
+        new THREE.Vector2(0.26, 1.35),
+        new THREE.Vector2(0.32, 1.48),
+        new THREE.Vector2(0.18, 1.72),
+        new THREE.Vector2(0.001, 1.72),
+      ],
+      8
+    ),
+    darkIronMat
+  );
+  auxStack.position.set(0.48, 0, 0.22);
+  enableShadows(auxStack);
+
+  const auxGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.14, 8), crystalMat);
+  auxGlow.position.set(0.48, 1.12, 0.22);
+
+  // Curved Plasma Conduit Pipes Routed Strictly Behind Chest Into Bolted Socket Couplings
+  const conduitCurve1 = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.52, 1.08, 0.08),
+    new THREE.Vector3(-1.24, 1.06, 0.24),
+    new THREE.Vector3(-1.82, 0.88, 0.68),
+    new THREE.Vector3(-2.02, 0.65, 1.02),
+  ]);
+  const plasmaPipe1 = new THREE.Mesh(new THREE.TubeGeometry(conduitCurve1, 14, 0.065, 6, false), plasmaMat);
+
+  const conduitCurve2 = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.32, 0.72, 0.34),
+    new THREE.Vector3(-0.06, 0.34, 0.66),
+    new THREE.Vector3(-0.44, 0.05, 0.92),
+  ]);
+  const plasmaPipe2 = new THREE.Mesh(new THREE.TubeGeometry(conduitCurve2, 12, 0.052, 6, false), crystalMat);
+
+  // Mechanical Socket Flanges & Top Cable Coupling Collar (zero floating pipe ends)
+  const flangeGeo = new THREE.CylinderGeometry(0.11, 0.125, 0.14, 8);
+  const archSocket = new THREE.Mesh(flangeGeo, brassMat);
+  archSocket.position.set(-2.02, 0.65, 1.02);
+
+  const deckSocket = new THREE.Mesh(flangeGeo, brassMat);
+  deckSocket.position.set(-0.44, 0.05, 0.92);
+
+  const smelterTopCollar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.14, 0.18, 0.16, 8),
+    brassMat
+  );
+  smelterTopCollar.position.set(-0.22, 2.24, 0);
+
+  enableShadows(archSocket);
+  enableShadows(deckSocket);
+  enableShadows(smelterTopCollar);
+  refineryGroup.add(
+    smelterDrum,
+    plasmaCoreWindow,
+    auxStack,
+    auxGlow,
+    plasmaPipe1,
+    plasmaPipe2,
+    archSocket,
+    deckSocket,
+    smelterTopCollar
+  );
 
   // =========================================================================
   // 4. ANIMATED ORE CHUNKS RIDING UP ESCALATOR INTO THE VAULT CHUTE
   // =========================================================================
   const packetRockGeo = new THREE.DodecahedronGeometry(0.12, 0);
-  const packetGemGeo = new THREE.OctahedronGeometry(0.095, 0);
+  const packetGemGeo = new THREE.CylinderGeometry(0.02, 0.07, 0.17, 6);
   const packets: MovingOreChunk[] = [];
   const packetCount = 3;
 
@@ -838,10 +940,10 @@ export function createChestVaultStation(
   // Initialize cleats immediately so first frame looks crisp
   updateCleats(0);
 
-  const setPalette = (crystalColor: number | string, cliffColor: number | string): void => {
+  const setPalette = (crystalColor: number | string, _cliffColor: number | string): void => {
     crystalMat.color.set(crystalColor);
     crystalMat.emissive.set(crystalColor);
-    stoneMat.color.set(cliffColor);
+    brassMat.emissive.set(crystalColor);
   };
 
   let beltTravel = 0;
@@ -855,6 +957,10 @@ export function createChestVaultStation(
     const safeDt = Math.min(Math.max(0, dtSec), 0.1);
     beltTravel = (beltTravel + safeDt * 0.95) % CLEAT_LOOP_SPAN;
     updateCleats(beltTravel);
+
+    for (let rIdx = 0; rIdx < refineryRings.length; rIdx++) {
+      refineryRings[rIdx].rotation.y = elapsed * (rIdx % 2 === 0 ? 1.5 : -1.9);
+    }
 
     for (const pkt of packets) {
       pkt.progress = (pkt.progress + safeDt * 0.38) % 1;
@@ -890,9 +996,10 @@ export function createChestVaultStation(
       pkt.group.rotation.x = Math.sin(elapsed * 2 + t * 6) * 0.15;
     }
 
-    const energyPulse = Math.sin(elapsed * 2.8) * 0.15;
-    crystalMat.emissiveIntensity = (chestHovered ? 1.15 : 0.78) + chestBounce * 0.65 + energyPulse;
-    brassMat.emissiveIntensity = chestHovered ? 0.34 : 0.16 + chestBounce * 0.25;
+    const energyPulse = Math.sin(elapsed * 2.8) * 0.18;
+    crystalMat.emissiveIntensity = (chestHovered ? 1.35 : 1.05) + chestBounce * 0.65 + energyPulse;
+    plasmaMat.emissiveIntensity = 1.25 + Math.sin(elapsed * 3.8) * 0.25 + chestBounce * 0.4;
+    brassMat.emissiveIntensity = chestHovered ? 0.34 : 0.14 + chestBounce * 0.2;
   };
 
   const dispose = (): void => {

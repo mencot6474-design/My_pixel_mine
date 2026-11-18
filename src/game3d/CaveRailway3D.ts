@@ -106,49 +106,20 @@ function createBallastBedGeometry(
   return geo;
 }
 
-function createTunnelArchBlockGeometry(
-  depthX: number,
-  widthZ: number,
-  heightY: number,
-  bevel = 0.025
-): THREE.ExtrudeGeometry {
-  const shape = createChamferRectShapeForBox(depthX, heightY, bevel * 1.8);
-  const innerZ = Math.max(0.04, widthZ - bevel * 2);
-  const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: innerZ,
-    bevelEnabled: true,
-    bevelThickness: bevel,
-    bevelSize: bevel,
-    bevelSegments: 1,
-    curveSegments: 1,
-  });
-  geo.translate(0, 0, -innerZ * 0.5);
+function createLatheProfile(
+  points: ReadonlyArray<readonly [number, number]>,
+  segments = 10
+): THREE.LatheGeometry {
+  const vecs = points.map(([r, y]) => new THREE.Vector2(Math.max(0.001, r), y));
+  const geo = new THREE.LatheGeometry(vecs, segments);
   geo.computeVertexNormals();
   return geo;
-}
-
-function createChamferRectShapeForBox(w: number, h: number, c: number): THREE.Shape {
-  const hw = w * 0.5;
-  const hh = h * 0.5;
-  const cc = Math.min(c, hw * 0.4, hh * 0.4);
-  const s = new THREE.Shape();
-  s.moveTo(-hw + cc, -hh);
-  s.lineTo(hw - cc, -hh);
-  s.lineTo(hw, -hh + cc);
-  s.lineTo(hw, hh - cc);
-  s.lineTo(hw - cc, hh);
-  s.lineTo(-hw + cc, hh);
-  s.lineTo(-hw, hh - cc);
-  s.lineTo(-hw, -hh + cc);
-  s.closePath();
-  return s;
 }
 
 /**
  * Evaluates exact railway surface height & smoothed pitch rotation at world X.
  */
 function sampleTrackPose(wx: number): { y: number; rotZ: number } {
-  // Linear base height
   let y: number;
   if (wx <= SLOPE_START_X) {
     y = UPPER_Y;
@@ -159,7 +130,6 @@ function sampleTrackPose(wx: number): { y: number; rotZ: number } {
     y = UPPER_Y + t * SLOPE_DY;
   }
 
-  // Smooth pitch transition over +-0.26m around both bend knuckles
   const blendHalf = 0.26;
   let rotZ = 0;
   if (wx > SLOPE_START_X - blendHalf && wx < SLOPE_START_X + blendHalf) {
@@ -177,22 +147,22 @@ function sampleTrackPose(wx: number): { y: number; rotZ: number } {
   return { y: y + RAIL_HEAD_HEIGHT, rotZ };
 }
 
-function createProceduralMinecart(
+function createCyberOrePod(
   isLeadLocomotive: boolean,
   materials: {
-    wood: THREE.MeshStandardMaterial;
-    iron: THREE.MeshStandardMaterial;
+    armorDark: THREE.MeshStandardMaterial;
+    gunmetal: THREE.MeshStandardMaterial;
     steel: THREE.MeshStandardMaterial;
-    brass: THREE.MeshStandardMaterial;
+    cyanNeon: THREE.MeshStandardMaterial;
     crystal: THREE.MeshStandardMaterial;
-    lanternGlow: THREE.MeshStandardMaterial;
+    amberNeon: THREE.MeshStandardMaterial;
     coal: THREE.MeshStandardMaterial;
   }
 ): MinecartHandle {
   const group = new THREE.Group();
   const wheels: THREE.Object3D[] = [];
 
-  // 1. Flanged Steel Wheels & Axles (wheel radius 0.145 -> center at y = 0.145)
+  // 1. Cyber Alloy Guide Wheels & Axles
   const wheelRadius = 0.145;
   const treadGeo = new THREE.CylinderGeometry(wheelRadius, wheelRadius, 0.065, 10);
   const flangeGeo = new THREE.CylinderGeometry(wheelRadius + 0.03, wheelRadius + 0.03, 0.022, 10);
@@ -200,7 +170,7 @@ function createProceduralMinecart(
   const axleGeo = new THREE.CylinderGeometry(0.032, 0.032, 0.72, 6);
 
   for (const ax of [-0.28, 0.28]) {
-    const axle = new THREE.Mesh(axleGeo, materials.iron);
+    const axle = new THREE.Mesh(axleGeo, materials.gunmetal);
     axle.rotation.x = Math.PI / 2;
     axle.position.set(ax, wheelRadius, 0);
     enableShadows(axle);
@@ -213,11 +183,11 @@ function createProceduralMinecart(
       const tread = new THREE.Mesh(treadGeo, materials.steel);
       tread.rotation.x = Math.PI / 2;
 
-      const flange = new THREE.Mesh(flangeGeo, materials.iron);
+      const flange = new THREE.Mesh(flangeGeo, materials.armorDark);
       flange.rotation.x = Math.PI / 2;
       flange.position.z = -sz * 0.035;
 
-      const hub = new THREE.Mesh(hubGeo, materials.brass);
+      const hub = new THREE.Mesh(hubGeo, materials.cyanNeon);
       hub.rotation.x = Math.PI / 2;
 
       enableShadows(tread);
@@ -227,101 +197,86 @@ function createProceduralMinecart(
     }
   }
 
-  // 2. Heavy Riveted Chassis Frame & Bumper Beams (y = 0.18 .. 0.28)
+  // 2. Armored Maglev Shuttle Chassis & Magnetic Bumper Rails
   const chassis = new THREE.Mesh(
-    createExtrudedChamferBox(1.02, 0.1, 0.72, 0.05, 0.015),
-    materials.iron
+    createExtrudedChamferBox(1.04, 0.1, 0.74, 0.06, 0.015),
+    materials.armorDark
   );
   chassis.position.y = 0.18;
   enableShadows(chassis);
   group.add(chassis);
 
-  // Front & Rear Coupler Buffers
-  const bumperGeo = new THREE.CylinderGeometry(0.042, 0.05, 0.1, 6);
-  for (const sx of [-0.54, 0.54]) {
-    const bumper = new THREE.Mesh(bumperGeo, materials.brass);
+  const bumperGeo = new THREE.CylinderGeometry(0.042, 0.052, 0.1, 6);
+  for (const sx of [-0.55, 0.55]) {
+    const bumper = new THREE.Mesh(bumperGeo, materials.cyanNeon);
     bumper.rotation.z = Math.PI / 2;
     bumper.position.set(sx, 0.23, 0);
-    enableShadows(bumper);
     group.add(bumper);
   }
 
-  // 3. Genuine Open-Top Hollow Flared Timber & Iron Hopper Tub (y = 0.27 .. 0.72)
-  const tubFloor = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.06, 0.62), materials.iron);
-  tubFloor.position.y = 0.295;
+  // 3. Flared Hollow Titanium Hopper Pod with Thin Cyan Rim Rails
+  const tubFloor = new THREE.Mesh(
+    createExtrudedChamferBox(0.92, 0.06, 0.62, 0.04, 0.01),
+    materials.armorDark
+  );
+  tubFloor.position.y = 0.27;
   enableShadows(tubFloor);
   group.add(tubFloor);
 
-  // Flared Long Side Walls + Outer Iron Ribs + Open Brass Top Rails (hollow inside!)
-  const sideWallGeo = new THREE.BoxGeometry(1.02, 0.45, 0.065);
-  const sideRibGeo = new THREE.BoxGeometry(0.075, 0.46, 0.085);
-  const sideRimGeo = new THREE.BoxGeometry(1.08, 0.06, 0.095);
+  const sideWallGeo = createExtrudedChamferBox(1.02, 0.44, 0.065, 0.025, 0.01);
+  const sideRibGeo = createExtrudedChamferBox(0.08, 0.46, 0.085, 0.02, 0.008);
+  const sideRimGeo = createExtrudedChamferBox(1.08, 0.05, 0.09, 0.02, 0.008);
   for (const sz of [-1, 1]) {
-    const wall = new THREE.Mesh(sideWallGeo, materials.wood);
-    wall.position.set(0, 0.49, sz * 0.345);
-    wall.rotation.x = sz * 0.22;
+    const wall = new THREE.Mesh(sideWallGeo, materials.gunmetal);
+    wall.position.set(0, 0.28, sz * 0.34);
+    wall.rotation.x = sz * 0.2;
     enableShadows(wall);
     group.add(wall);
 
     for (const sx of [-0.32, 0, 0.32]) {
-      const rib = new THREE.Mesh(sideRibGeo, materials.iron);
-      rib.position.set(sx, 0.49, sz * 0.36);
-      rib.rotation.x = sz * 0.22;
+      const rib = new THREE.Mesh(sideRibGeo, materials.steel);
+      rib.position.set(sx, 0.28, sz * 0.355);
+      rib.rotation.x = sz * 0.2;
       enableShadows(rib);
       group.add(rib);
     }
 
-    const sideRim = new THREE.Mesh(sideRimGeo, materials.brass);
-    sideRim.position.set(0, 0.71, sz * 0.395);
-    enableShadows(sideRim);
+    const sideRim = new THREE.Mesh(sideRimGeo, materials.cyanNeon);
+    sideRim.position.set(0, 0.68, sz * 0.39);
     group.add(sideRim);
   }
 
-  // Flared Front & Rear End Walls + Corner Iron Braces + Brass Lip Rails
-  const endWallGeo = new THREE.BoxGeometry(0.065, 0.45, 0.78);
-  const endRimGeo = new THREE.BoxGeometry(0.095, 0.06, 0.88);
+  const endWallGeo = createExtrudedChamferBox(0.065, 0.44, 0.78, 0.025, 0.01);
+  const endRimGeo = createExtrudedChamferBox(0.09, 0.05, 0.88, 0.02, 0.008);
   for (const sx of [-1, 1]) {
-    const endWall = new THREE.Mesh(endWallGeo, materials.wood);
-    endWall.position.set(sx * 0.47, 0.49, 0);
+    const endWall = new THREE.Mesh(endWallGeo, materials.gunmetal);
+    endWall.position.set(sx * 0.46, 0.28, 0);
     endWall.rotation.z = -sx * 0.16;
     enableShadows(endWall);
 
-    const endRim = new THREE.Mesh(endRimGeo, materials.brass);
-    endRim.position.set(sx * 0.505, 0.71, 0);
-    enableShadows(endRim);
+    const endRim = new THREE.Mesh(endRimGeo, materials.cyanNeon);
+    endRim.position.set(sx * 0.5, 0.68, 0);
     group.add(endWall, endRim);
-
-    for (const sz of [-1, 1]) {
-      const cornerPost = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.47, 0.095), materials.iron);
-      cornerPost.position.set(sx * 0.48, 0.49, sz * 0.36);
-      cornerPost.rotation.set(sz * 0.2, 0, -sx * 0.15);
-      enableShadows(cornerPost);
-      group.add(cornerPost);
-    }
   }
 
-  // 4. Lead Cart Locomotive Brass Headlamp
+  // 4. Lead Shuttle Cyber Scanner Projector
   if (isLeadLocomotive) {
-    const lampPost = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, 0.14), materials.iron);
-    lampPost.position.set(0.51, 0.67, 0);
     const lampHousing = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.095, 0.11, 0.14, 8),
-      materials.brass
+      createExtrudedChamferBox(0.14, 0.16, 0.24, 0.03, 0.01),
+      materials.steel
     );
-    lampHousing.rotation.z = Math.PI / 2;
-    lampHousing.position.set(0.57, 0.74, 0);
+    lampHousing.position.set(0.53, 0.62, 0);
     const lampLens = new THREE.Mesh(
       new THREE.CylinderGeometry(0.072, 0.072, 0.04, 8),
-      materials.lanternGlow
+      materials.amberNeon
     );
     lampLens.rotation.z = Math.PI / 2;
-    lampLens.position.set(0.63, 0.74, 0);
-    enableShadows(lampPost);
+    lampLens.position.set(0.61, 0.7, 0);
     enableShadows(lampHousing);
-    group.add(lampPost, lampHousing, lampLens);
+    group.add(lampHousing, lampLens);
   }
 
-  // 5. Recessed Ore & Crystal Payload Nestled INSIDE the Hollow Wagon Cavity (y = 0.44 .. 0.68)
+  // 5. Recessed Ore & Crystal Cargo Inside Hopper Pod
   const payloadGroup = new THREE.Group();
   payloadGroup.position.y = 0.48;
   group.add(payloadGroup);
@@ -331,8 +286,6 @@ function createProceduralMinecart(
     [-0.18, 0.04, -0.09, 1.15, 0.85, 1.0],
     [0.16, 0.05, 0.08, 1.1, 0.9, 1.05],
     [-0.02, 0.09, 0.01, 1.35, 0.95, 1.15],
-    [0.2, 0.02, -0.11, 0.9, 0.75, 0.95],
-    [-0.2, 0.02, 0.12, 0.95, 0.8, 0.9],
   ];
   for (const [rx, ry, rz, sx, sy, sz] of rockSpecs) {
     const chunk = new THREE.Mesh(rockGeo, materials.coal);
@@ -343,12 +296,11 @@ function createProceduralMinecart(
     payloadGroup.add(chunk);
   }
 
-  const shardGeo = new THREE.ConeGeometry(0.075, 0.25, 5);
+  const shardGeo = new THREE.ConeGeometry(0.08, 0.28, 5);
   const shardPlacements: [number, number, number, number, number][] = [
     [-0.16, 0.18, 0.08, 0.3, -0.35],
     [0.14, 0.19, -0.07, -0.25, 0.3],
-    [0.01, 0.22, 0.01, 0.15, 0.1],
-    [-0.06, 0.16, -0.12, -0.3, -0.2],
+    [0.01, 0.24, 0.01, 0.15, 0.1],
   ];
   for (const [sx, sy, sz, rx, rz] of shardPlacements) {
     const shard = new THREE.Mesh(shardGeo, materials.crystal);
@@ -357,319 +309,386 @@ function createProceduralMinecart(
     payloadGroup.add(shard);
   }
 
-  const nuggetGeo = new THREE.DodecahedronGeometry(0.07, 0);
-  for (const [nx, ny, nz] of [
-    [0.22, 0.13, 0.11],
-    [-0.2, 0.14, -0.08],
-    [0.05, 0.16, 0.13],
-  ] as [number, number, number][]) {
-    const nugget = new THREE.Mesh(nuggetGeo, materials.brass);
-    nugget.position.set(nx, ny, nz);
-    payloadGroup.add(nugget);
-  }
-
   return { group, wheels, payloadGroup };
 }
 
 /**
- * Creates a grand procedural Mine Cave Mountain + Timber/Stone Tunnel Portal +
- * Continuous Steel Railway + Animated 2-Car Ore Minecart Train connecting the
- * left meadow mountain directly down into the Quarry Pit unloading spur.
+ * Builds the Left-Wing Futuristic Cyber Mine Elevator / Drop Shaft Structure
+ * with a glowing Cyan Energy Portal Gate connecting the Mine Pit up to Neo-Cyber City Plaza,
+ * feeding the Maglev Ore Shuttle Track into the quarry excavation pit.
  */
 export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailwayHandle {
   const group = new THREE.Group();
 
-  const cliffMat = new THREE.MeshStandardMaterial({
-    color: options.cliffColor ?? 0x78716c,
-    roughness: 0.88,
-    metalness: 0.06,
+  const basaltMat = new THREE.MeshStandardMaterial({
+    color: 0x161f30,
+    roughness: 0.72,
+    metalness: 0.24,
     flatShading: true,
   });
-  const cliffDarkMat = new THREE.MeshStandardMaterial({
-    color: 0x3f3a36,
-    roughness: 0.92,
-    metalness: 0.05,
+  const armorDarkMat = new THREE.MeshStandardMaterial({
+    color: 0x26354e,
+    roughness: 0.48,
+    metalness: 0.32,
     flatShading: true,
   });
-  const foliageMat = new THREE.MeshStandardMaterial({
-    color: options.foliageColor ?? 0x16a34a,
-    roughness: 0.84,
-    metalness: 0.02,
-    flatShading: true,
-  });
-  const stoneTrimMat = new THREE.MeshStandardMaterial({
-    color: 0x64748b,
-    roughness: 0.78,
-    metalness: 0.14,
-    flatShading: true,
-  });
-  const woodMat = new THREE.MeshStandardMaterial({
-    color: 0x6b3b1e,
-    roughness: 0.82,
-    metalness: 0.04,
-    flatShading: true,
-  });
-  const sleeperMat = new THREE.MeshStandardMaterial({
-    color: 0x452512,
-    roughness: 0.88,
-    metalness: 0.04,
-    flatShading: true,
-  });
-  const ironMat = new THREE.MeshStandardMaterial({
-    color: 0x1e293b,
-    roughness: 0.44,
-    metalness: 0.74,
+  const gunmetalMat = new THREE.MeshStandardMaterial({
+    color: 0x3c4f70,
+    roughness: 0.4,
+    metalness: 0.36,
     flatShading: true,
   });
   const steelMat = new THREE.MeshStandardMaterial({
-    color: 0x94a3b8,
-    roughness: 0.26,
-    metalness: 0.86,
-    flatShading: true,
-  });
-  const brassMat = new THREE.MeshStandardMaterial({
-    color: 0xf59e0b,
-    emissive: 0xd97706,
-    emissiveIntensity: 0.14,
-    roughness: 0.25,
-    metalness: 0.84,
+    color: 0x6f86a8,
+    roughness: 0.34,
+    metalness: 0.42,
     flatShading: true,
   });
   const crystalMat = new THREE.MeshStandardMaterial({
     color: options.crystalColor ?? 0x38bdf8,
     emissive: options.crystalColor ?? 0x38bdf8,
-    emissiveIntensity: 0.82,
-    roughness: 0.16,
-    metalness: 0.35,
+    emissiveIntensity: 1.05,
+    roughness: 0.2,
+    metalness: 0.3,
     flatShading: true,
   });
-  const lanternGlowMat = new THREE.MeshStandardMaterial({
-    color: 0xfef08a,
-    emissive: 0xf59e0b,
+  const cyanNeonMat = new THREE.MeshStandardMaterial({
+    color: 0x22d3ee,
+    emissive: 0x22d3ee,
     emissiveIntensity: 1.45,
     roughness: 0.2,
-    metalness: 0.1,
+    metalness: 0.25,
     flatShading: true,
   });
-  const ballastMat = new THREE.MeshStandardMaterial({
-    color: 0x475569,
-    roughness: 0.94,
-    metalness: 0.04,
+  const amberNeonMat = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    emissive: 0xf59e0b,
+    emissiveIntensity: 1.25,
+    roughness: 0.22,
+    metalness: 0.25,
     flatShading: true,
+  });
+  const portalFieldMat = new THREE.MeshBasicMaterial({
+    color: 0x22d3ee,
+    transparent: true,
+    opacity: 0.26,
+    side: THREE.DoubleSide,
+    depthWrite: false,
   });
   const coalMat = new THREE.MeshStandardMaterial({
-    color: 0x1f2937,
-    roughness: 0.85,
-    metalness: 0.15,
+    color: 0x1e293b,
+    roughness: 0.8,
+    metalness: 0.2,
     flatShading: true,
   });
-  const tunnelVoidMat = new THREE.MeshBasicMaterial({
-    color: 0x050814,
-  });
 
   // =========================================================================
-  // 1. GRAND MULTI-TIERED MOUNTAIN CLIFF & RECESSED CAVE TUNNEL (x -14.2 .. -9.2)
+  // 1. CYBER MINE ELEVATOR / DROP SHAFT TOWER (x = -10.55, zero Z-fighting, hollow well)
   // =========================================================================
-  const caveGroup = new THREE.Group();
-  caveGroup.position.set(-11.4, 0, RAIL_Z);
-  group.add(caveGroup);
+  const shaftGroup = new THREE.Group();
+  shaftGroup.position.set(-10.55, 0, RAIL_Z);
+  group.add(shaftGroup);
 
-  // Dark Inner Cavern Tunnel Shell & Deep Black Backing (leaves hollow clear corridor x -1.8..+2.0)
-  const tunnelBackWall = new THREE.Mesh(new THREE.BoxGeometry(0.45, 2.35, 2.3), tunnelVoidMat);
-  tunnelBackWall.position.set(-1.35, 1.18, 0);
-
-  const tunnelRoofSlab = new THREE.Mesh(new THREE.BoxGeometry(2.85, 0.5, 2.55), cliffDarkMat);
-  tunnelRoofSlab.position.set(-0.05, 2.55, 0);
-  enableShadows(tunnelRoofSlab);
-
+  // Split Flanking Chamfered Foundations so the central track corridor (z in [-0.72..0.72]) never overlaps foundation plates
   for (const sz of [-1, 1]) {
-    const innerWall = new THREE.Mesh(new THREE.BoxGeometry(2.85, 2.35, 0.55), cliffDarkMat);
-    innerWall.position.set(-0.05, 1.18, sz * 1.15);
-    enableShadows(innerWall);
-    caveGroup.add(innerWall);
-  }
-  caveGroup.add(tunnelBackWall, tunnelRoofSlab);
+    const sideBase = new THREE.Mesh(
+      createExtrudedChamferBox(3.45, 0.28, 1.04, 0.2, 0.02),
+      basaltMat
+    );
+    sideBase.position.set(0, 0, sz * 1.28);
+    enableShadows(sideBase);
 
-  // Sculpted Mountain Rock Massif Built Around & Above the Cave Mouth (Zero blocking of tunnel!)
-  // Rear peak + high ridge crowning above roof (y = 2.6 .. 4.35) + flanking left/right buttresses
-  const rockMassGeo = new THREE.IcosahedronGeometry(1.0, 0);
-  const mountainChunks: {
-    pos: [number, number, number];
-    scale: [number, number, number];
-    rot: [number, number, number];
-    dark?: boolean;
-  }[] = [
-    // Massive Rear Mountain Dome behind the tunnel
-    { pos: [-1.85, 1.85, 0.0], scale: [1.55, 2.25, 2.45], rot: [0.1, 0.25, 0.15] },
-    { pos: [-1.45, 3.25, -0.35], scale: [1.35, 1.45, 1.65], rot: [0.3, -0.4, 0.2] },
-    { pos: [-0.45, 3.35, 0.25], scale: [1.45, 1.25, 1.85], rot: [-0.2, 0.5, -0.1] },
-    // Upper Overhanging Brow Ledge over the cave arch
-    { pos: [0.65, 2.95, 0.0], scale: [1.05, 0.82, 1.75], rot: [0.08, 0.15, -0.18] },
-    // North (-Z) Flanking Quarry Cliff Wall & Buttresses
-    { pos: [-0.35, 1.45, -1.85], scale: [1.55, 1.65, 1.1], rot: [0.2, 0.6, 0.1], dark: true },
-    { pos: [0.95, 1.1, -1.68], scale: [1.15, 1.32, 0.95], rot: [-0.15, -0.3, 0.2] },
-    { pos: [1.75, 0.62, -1.45], scale: [0.78, 0.72, 0.72], rot: [0.1, 0.4, -0.2], dark: true },
-    // South (+Z) Flanking Quarry Cliff Wall & Buttresses
-    { pos: [-0.3, 1.5, 1.85], scale: [1.58, 1.7, 1.1], rot: [-0.2, -0.5, 0.12], dark: true },
-    { pos: [0.95, 1.15, 1.65], scale: [1.12, 1.35, 0.95], rot: [0.18, 0.35, -0.18] },
-    { pos: [1.75, 0.64, 1.44], scale: [0.76, 0.74, 0.72], rot: [-0.1, -0.4, 0.2], dark: true },
-  ];
-
-  for (const c of mountainChunks) {
-    const chunk = new THREE.Mesh(rockMassGeo, c.dark ? cliffDarkMat : cliffMat);
-    chunk.position.set(c.pos[0], c.pos[1], c.pos[2]);
-    chunk.scale.set(c.scale[0], c.scale[1], c.scale[2]);
-    chunk.rotation.set(c.rot[0], c.rot[1], c.rot[2]);
-    enableShadows(chunk);
-    caveGroup.add(chunk);
+    const sideTrim = new THREE.Mesh(
+      createExtrudedChamferBox(3.52, 0.055, 0.14, 0.04, 0.008),
+      cyanNeonMat
+    );
+    sideTrim.position.set(0, 0.285, sz * 1.76);
+    shaftGroup.add(sideBase, sideTrim);
   }
 
-  // Stepped Mossy / Foliage Crown Tufts Perched on Upper Mountain Ledges
-  const crownTufts: [number, number, number, number][] = [
-    [-1.4, 4.35, -0.45, 0.68],
-    [-0.5, 4.18, 0.45, 0.62],
-    [0.62, 3.58, -0.85, 0.5],
-    [0.85, 2.25, 1.58, 0.55],
-  ];
-  const bushGeo = new THREE.IcosahedronGeometry(0.65, 0);
-  for (const [bx, by, bz, bs] of crownTufts) {
-    const bush = new THREE.Mesh(bushGeo, foliageMat);
-    bush.position.set(bx, by, bz);
-    bush.scale.set(bs * 1.25, bs * 0.75, bs * 1.1);
-    enableShadows(bush);
-    caveGroup.add(bush);
+  // 4 Vertical Cyber Drop Shaft Columns + Non-Intersecting Glow Guide Rails (up to y = 4.42)
+  for (const [cx, cz] of [
+    [-1.22, -1.22],
+    [1.22, -1.22],
+    [-1.22, 1.22],
+    [1.22, 1.22],
+  ] as [number, number][]) {
+    const foot = new THREE.Mesh(
+      createExtrudedChamferBox(0.56, 0.42, 0.56, 0.08, 0.015),
+      armorDarkMat
+    );
+    foot.position.set(cx, 0.34, cz);
+
+    const col = new THREE.Mesh(
+      createExtrudedChamferBox(0.36, 3.66, 0.36, 0.06, 0.012),
+      gunmetalMat
+    );
+    col.position.set(cx, 0.76, cz);
+
+    // Mounted strictly proud on inner corner face (never coplanar with column walls!)
+    const strip = new THREE.Mesh(
+      createExtrudedChamferBox(0.08, 3.55, 0.08, 0.02, 0.006),
+      cyanNeonMat
+    );
+    strip.position.set(cx * 0.82, 0.8, cz * 0.82);
+
+    enableShadows(foot);
+    enableShadows(col);
+    shaftGroup.add(foot, col, strip);
   }
 
-  // Glowing Crystal Veins Protruding from the Cliff Face & Inside Tunnel Mouth
-  const caveCrystalGeo = new THREE.ConeGeometry(0.14, 0.54, 5);
-  const caveCrystals: [number, number, number, number, number][] = [
-    [1.45, 1.85, -1.28, 0.35, -0.55],
-    [1.35, 1.55, -1.42, 0.55, -0.35],
-    [1.42, 1.95, 1.28, -0.38, -0.5],
-    [1.3, 1.6, 1.42, -0.55, -0.35],
-    [0.4, 3.48, 0.35, 0.25, -0.25],
-    [-0.5, 1.75, -0.78, 0.45, 0.2],
-    [-0.5, 1.75, 0.78, -0.45, 0.2],
-  ];
-  for (const [cx, cy, cz, rx, rz] of caveCrystals) {
-    const shard = new THREE.Mesh(caveCrystalGeo, crystalMat);
-    shard.position.set(cx, cy, cz);
-    shard.rotation.set(rx, 0.3, rz);
-    caveGroup.add(shard);
+  // Rear Shielded Steel Blast Wall Above Portal Height (clears ground track completely: y = 1.15 .. 4.40)
+  const rearShield = new THREE.Mesh(
+    createExtrudedChamferBox(0.32, 3.25, 2.04, 0.08, 0.02),
+    armorDarkMat
+  );
+  rearShield.position.set(-1.38, 1.15, 0);
+  enableShadows(rearShield);
+  shaftGroup.add(rearShield);
+
+  // Coaxial Cyber Turret Crown Roof (layered steel-blue bevel caps + visible cyan neon overhang rim, zero face overlap)
+  const crownLower = new THREE.Mesh(
+    createExtrudedChamferBox(3.16, 0.22, 3.16, 0.28, 0.02),
+    gunmetalMat
+  );
+  crownLower.position.y = 4.42;
+  enableShadows(crownLower);
+
+  const crownNeonRim = new THREE.Mesh(
+    createExtrudedChamferBox(3.28, 0.065, 3.28, 0.28, 0.008),
+    cyanNeonMat
+  );
+  crownNeonRim.position.y = 4.64;
+
+  const crownCap = new THREE.Mesh(
+    createExtrudedChamferBox(2.72, 0.26, 2.72, 0.24, 0.02),
+    steelMat
+  );
+  crownCap.position.y = 4.71;
+  enableShadows(crownCap);
+
+  const hoistHub = new THREE.Mesh(
+    createLatheProfile(
+      [
+        [0.72, 0.0],
+        [0.64, 0.2],
+        [0.42, 0.38],
+        [0.18, 0.52],
+      ],
+      10
+    ),
+    gunmetalMat
+  );
+  hoistHub.position.y = 4.97;
+  enableShadows(hoistHub);
+
+  // Sculpted Cyber Gyro-Antenna Spire Replacing Generic Octahedron Beacon
+  const hoistOrb = new THREE.Group();
+  hoistOrb.position.y = 5.56;
+  const hoistCore = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.34, 6), cyanNeonMat);
+  const hoistCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.06, 6), steelMat);
+  hoistCollar.position.y = 0.14;
+  const hoistAntenna = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.055, 0.24, 6), steelMat);
+  hoistAntenna.position.y = 0.28;
+  const hoistGyroRing = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.022, 6, 18), crystalMat);
+  hoistGyroRing.rotation.set(0.45, 0, 0.28);
+  hoistOrb.add(hoistCore, hoistCollar, hoistAntenna, hoistGyroRing);
+
+  // Rear Power Cable Coupling Socket matching MineEnvironment3D left cable endpoint (-11.78, 4.72, -1.02)
+  const shaftCableSocket = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.14, 0.16, 0.2, 8),
+    steelMat
+  );
+  shaftCableSocket.position.set(-1.23, 4.72, -1.17);
+
+  const beaconCoreGeo = createLatheProfile(
+    [
+      [0.2, 0.0],
+      [0.18, 0.28],
+      [0.12, 0.62],
+      [0.18, 0.78],
+      [0.09, 0.94],
+    ],
+    8
+  );
+  for (const sz of [-0.95, 0.95]) {
+    const stack = new THREE.Mesh(beaconCoreGeo, steelMat);
+    stack.position.set(-1.18, 4.97, sz);
+    enableShadows(stack);
+    shaftGroup.add(stack);
   }
+  shaftGroup.add(crownLower, crownNeonRim, crownCap, hoistHub, hoistOrb, shaftCableSocket);
 
-  // Stone Archway Voussoirs Framing the Cave Entrance (at local x = 1.42 => world x = -9.98)
-  const archStoneGeo = createTunnelArchBlockGeometry(0.46, 0.44, 0.42, 0.025);
-  const archNodes: [number, number, number][] = [
-    [1.45, 2.15, -0.78],
-    [1.45, 2.38, -0.4],
-    [1.45, 2.46, 0.0],
-    [1.45, 2.38, 0.4],
-    [1.45, 2.15, 0.78],
-  ];
-  archNodes.forEach(([ax, ay, az], idx) => {
-    const stone = new THREE.Mesh(archStoneGeo, idx === 2 ? stoneTrimMat : cliffMat);
-    stone.position.set(ax, ay, az);
-    stone.rotation.x = (idx - 2) * 0.26;
-    enableShadows(stone);
-    caveGroup.add(stone);
-  });
-
-  // Heavy Timber & Iron Mine Portal Framing Gantry (local x = 1.55 .. 2.45 => world x = -9.85 .. -8.95)
-  const postGeo = new THREE.BoxGeometry(0.24, 2.32, 0.24);
-  const braceGeo = new THREE.BoxGeometry(0.16, 0.78, 0.16);
-  for (const fx of [1.55, 2.35]) {
+  // Hollow Open-Center Perimeter Framing Girders (4 edge beams — central well stays 100% open for moving lift!)
+  for (const collarY of [2.42, 3.58]) {
     for (const sz of [-1, 1]) {
-      const post = new THREE.Mesh(postGeo, woodMat);
-      post.position.set(fx, 1.16, sz * 0.94);
+      const xGirder = new THREE.Mesh(
+        createExtrudedChamferBox(2.04, 0.12, 0.18, 0.02, 0.01),
+        steelMat
+      );
+      xGirder.position.set(0, collarY, sz * 1.22);
+      enableShadows(xGirder);
+      shaftGroup.add(xGirder);
+    }
+    for (const sx of [-1, 1]) {
+      const zGirder = new THREE.Mesh(
+        createExtrudedChamferBox(0.18, 0.12, 2.04, 0.02, 0.01),
+        steelMat
+      );
+      zGirder.position.set(sx * 1.22, collarY, 0);
+      enableShadows(zGirder);
+      shaftGroup.add(zGirder);
+    }
+  }
 
-      const ironBoot = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.34, 0.3), ironMat);
-      ironBoot.position.set(fx, 0.17, sz * 0.94);
+  // Animated Vertical Cyber Elevator Cage Moving Cleanly Through Open Hollow Well (y = 1.80 .. 3.24)
+  const elevatorPod = new THREE.Group();
+  elevatorPod.position.set(0, 2.52, 0);
+  const cageBase = new THREE.Mesh(
+    createExtrudedChamferBox(1.42, 0.12, 1.42, 0.14, 0.012),
+    armorDarkMat
+  );
+  const cageEnergyDeck = new THREE.Mesh(
+    createExtrudedChamferBox(1.24, 0.05, 1.24, 0.12, 0.008),
+    cyanNeonMat
+  );
+  cageEnergyDeck.position.y = 0.125;
+  const cageRoof = new THREE.Mesh(
+    createExtrudedChamferBox(1.36, 0.11, 1.36, 0.14, 0.012),
+    steelMat
+  );
+  cageRoof.position.y = 0.84;
+  for (const [px, pz] of [
+    [-0.52, -0.52],
+    [0.52, -0.52],
+    [-0.52, 0.52],
+    [0.52, 0.52],
+  ] as [number, number][]) {
+    const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.72, 6), steelMat);
+    strut.position.set(px, 0.48, pz);
+    elevatorPod.add(strut);
+  }
+  // Stylized Cyber Plasma Energy Cell Inside Elevator Cage
+  const cagePayload = new THREE.Group();
+  cagePayload.position.y = 0.48;
+  const cageCellCore = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 0.36, 6), crystalMat);
+  const cageCellCapTop = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.06, 6), steelMat);
+  cageCellCapTop.position.y = 0.2;
+  const cageCellCapBot = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.06, 6), steelMat);
+  cageCellCapBot.position.y = -0.2;
+  const cageCellBand = new THREE.Mesh(new THREE.TorusGeometry(0.175, 0.022, 6, 12), cyanNeonMat);
+  cageCellBand.rotation.x = Math.PI / 2;
+  cagePayload.add(cageCellCore, cageCellCapTop, cageCellCapBot, cageCellBand);
+  elevatorPod.add(cageBase, cageEnergyDeck, cageRoof, cagePayload);
+  shaftGroup.add(elevatorPod);
 
-      const kneeBrace = new THREE.Mesh(braceGeo, woodMat);
-      kneeBrace.position.set(fx, 1.98, sz * 0.68);
-      kneeBrace.rotation.x = sz * 0.68;
+  // =========================================================================
+  // 2. TRACK-CENTERED CYBER ENERGY PORTAL ARCH (frames shuttle pod dead center)
+  // =========================================================================
+  const portalX = 1.6;
+  for (const fx of [portalX, portalX + 0.56]) {
+    for (const sz of [-1, 1]) {
+      const post = new THREE.Mesh(
+        createExtrudedChamferBox(0.24, 1.18, 0.26, 0.04, 0.012),
+        gunmetalMat
+      );
+      post.position.set(fx, 0.28, sz * 0.92);
 
+      const postGlow = new THREE.Mesh(
+        createExtrudedChamferBox(0.06, 1.04, 0.06, 0.015, 0.005),
+        cyanNeonMat
+      );
+      postGlow.position.set(fx + 0.145, 0.34, sz * 0.8);
       enableShadows(post);
-      enableShadows(ironBoot);
-      enableShadows(kneeBrace);
-      caveGroup.add(post, ironBoot, kneeBrace);
+      shaftGroup.add(post, postGlow);
     }
 
-    // Horizontal Cap Beam across portal
-    const capBeam = new THREE.Mesh(
-      createExtrudedChamferBox(0.32, 0.24, 2.28, 0.04, 0.018),
-      woodMat
+    const archHeader = new THREE.Mesh(
+      createExtrudedChamferBox(0.3, 0.24, 2.18, 0.06, 0.014),
+      steelMat
     );
-    capBeam.position.set(fx, 2.24, 0);
-    enableShadows(capBeam);
-    caveGroup.add(capBeam);
+    archHeader.position.set(fx, 1.46, 0);
+    enableShadows(archHeader);
+    shaftGroup.add(archHeader);
   }
 
-  // Longitudinal Stringers Linking Inner & Outer Timber Frames + Gabled Brow Roof
-  for (const sz of [-0.94, 0.94]) {
-    const stringer = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.18, 0.2), woodMat);
-    stringer.position.set(1.95, 2.22, sz);
-    enableShadows(stringer);
-    caveGroup.add(stringer);
-  }
+  // Chamfered U-Arch Cyan Neon Aperture Frame & Matching Curtain Centered Around Cart (y = 0.0 .. 1.38)
+  const archFrameShape = new THREE.Shape();
+  archFrameShape.moveTo(-0.84, 0.0);
+  archFrameShape.lineTo(-0.84, 1.04);
+  archFrameShape.lineTo(-0.5, 1.38);
+  archFrameShape.lineTo(0.5, 1.38);
+  archFrameShape.lineTo(0.84, 1.04);
+  archFrameShape.lineTo(0.84, 0.0);
+  archFrameShape.lineTo(0.74, 0.0);
+  archFrameShape.lineTo(0.74, 1.0);
+  archFrameShape.lineTo(0.44, 1.29);
+  archFrameShape.lineTo(-0.44, 1.29);
+  archFrameShape.lineTo(-0.74, 1.0);
+  archFrameShape.lineTo(-0.74, 0.0);
+  archFrameShape.closePath();
 
-  // Brass-Trimmed Quarry Mine Signboard Mounted Above Portal (local x = 2.48)
-  const signPlaque = new THREE.Mesh(
-    createExtrudedChamferBox(0.1, 0.44, 1.38, 0.05, 0.015),
-    brassMat
+  const portalArchGeo = new THREE.ExtrudeGeometry(archFrameShape, {
+    depth: 0.1,
+    bevelEnabled: true,
+    bevelThickness: 0.016,
+    bevelSize: 0.016,
+    bevelSegments: 1,
+    curveSegments: 1,
+  });
+  portalArchGeo.translate(0, 0, -0.05);
+  portalArchGeo.computeVertexNormals();
+  const portalArchTrim = new THREE.Mesh(portalArchGeo, cyanNeonMat);
+  portalArchTrim.rotation.y = Math.PI / 2;
+  portalArchTrim.position.set(portalX + 0.28, 0, 0);
+
+  const curtainShape = new THREE.Shape();
+  curtainShape.moveTo(-0.74, 0.06);
+  curtainShape.lineTo(-0.74, 1.0);
+  curtainShape.lineTo(-0.44, 1.29);
+  curtainShape.lineTo(0.44, 1.29);
+  curtainShape.lineTo(0.74, 1.0);
+  curtainShape.lineTo(0.74, 0.06);
+  curtainShape.closePath();
+
+  const energyCurtain = new THREE.Mesh(new THREE.ShapeGeometry(curtainShape), portalFieldMat);
+  energyCurtain.rotation.y = Math.PI / 2;
+  energyCurtain.position.set(portalX + 0.28, 0, 0);
+
+  const portalSignBeam = new THREE.Mesh(
+    createExtrudedChamferBox(0.1, 0.2, 1.62, 0.04, 0.01),
+    cyanNeonMat
   );
-  signPlaque.position.set(2.48, 2.38, 0);
-  const signFace = new THREE.Mesh(new THREE.BoxGeometry(0.115, 0.3, 1.18), ironMat);
-  signFace.position.set(2.48, 2.38, 0);
-  const signGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.11, 0), crystalMat);
-  signGem.position.set(2.55, 2.38, 0);
-  enableShadows(signPlaque);
-  caveGroup.add(signPlaque, signFace, signGem);
+  portalSignBeam.position.set(portalX + 0.74, 1.49, 0);
 
-  // Hanging Wrought-Iron & Glowing Amber Lanterns Outside the Portal
-  const lanternPivots: THREE.Group[] = [];
-  for (const sz of [-1, 1]) {
-    const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.06, 0.07), ironMat);
-    bracket.position.set(2.52, 1.92, sz * 0.94);
-
-    const lanternPivot = new THREE.Group();
-    lanternPivot.position.set(2.64, 1.89, sz * 0.94);
-
-    const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.18, 5), ironMat);
-    chain.position.y = -0.09;
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.11, 6), ironMat);
-    cap.position.y = -0.2;
-    const bulb = new THREE.Mesh(new THREE.OctahedronGeometry(0.095, 0), lanternGlowMat);
-    bulb.position.y = -0.32;
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.07, 0.05, 6), ironMat);
-    base.position.y = -0.43;
-
-    enableShadows(bracket);
-    lanternPivot.add(chain, cap, bulb, base);
-    caveGroup.add(bracket, lanternPivot);
-    lanternPivots.push(lanternPivot);
-  }
+  const portalCrest = new THREE.Mesh(
+    createExtrudedChamferBox(0.32, 0.14, 1.08, 0.06, 0.014),
+    armorDarkMat
+  );
+  portalCrest.position.set(portalX + 0.28, 1.71, 0);
+  enableShadows(portalCrest);
+  shaftGroup.add(portalArchTrim, energyCurtain, portalSignBeam, portalCrest);
 
   // =========================================================================
-  // 2. CONTINUOUS PROCEDURAL STEEL RAILWAY (x -12.6 -> -4.82, z = 0.15)
+  // 3. MAGLEV CYBER DELIVERY GUIDEWAY TRACK (x -12.4 -> -4.82, z = 0.15)
   // =========================================================================
   const railGroup = new THREE.Group();
   railGroup.position.z = RAIL_Z;
   group.add(railGroup);
 
-  // Section A: Upper Level Track Bed inside Cave & Courtyard (x -12.6 -> -7.15)
-  const upperLen = SLOPE_START_X - -12.6; // 5.45m
-  const upperCenterX = (-12.6 + SLOPE_START_X) * 0.5; // -9.875
-  const upperBallast = new THREE.Mesh(
-    createBallastBedGeometry(upperLen, 1.18, 0.96, 0.05),
-    ballastMat
+  const upperLen = SLOPE_START_X - -11.7;
+  const upperCenterX = (-11.7 + SLOPE_START_X) * 0.5;
+  const upperBed = new THREE.Mesh(
+    createBallastBedGeometry(upperLen, 1.2, 0.96, 0.06),
+    armorDarkMat
   );
-  upperBallast.position.set(upperCenterX, 0, 0);
-  upperBallast.receiveShadow = true;
-  railGroup.add(upperBallast);
+  upperBed.position.set(upperCenterX, 0, 0);
+  upperBed.receiveShadow = true;
 
-  // Section B: Inclined Stone/Trestle Chute Ramp bridging Trench (x -7.15 -> -5.78)
+  const upperMagStrip = new THREE.Mesh(new THREE.BoxGeometry(upperLen - 0.1, 0.025, 0.14), cyanNeonMat);
+  upperMagStrip.position.set(upperCenterX, 0.062, 0);
+  railGroup.add(upperBed, upperMagStrip);
+
   const rampLen = Math.hypot(SLOPE_DX, SLOPE_DY);
   const rampCenterX = (SLOPE_START_X + SLOPE_END_X) * 0.5;
   const rampCenterY = (UPPER_Y + PIT_Y) * 0.5;
@@ -677,19 +696,20 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
   rampGroup.position.set(rampCenterX, rampCenterY, 0);
   rampGroup.rotation.z = SLOPE_ANGLE;
 
-  const rampDeck = new THREE.Mesh(new THREE.BoxGeometry(rampLen + 0.14, 0.16, 1.12), stoneTrimMat);
+  const rampDeck = new THREE.Mesh(new THREE.BoxGeometry(rampLen + 0.14, 0.16, 1.12), gunmetalMat);
   rampDeck.position.y = -0.055;
   enableShadows(rampDeck);
-  const rampBallast = new THREE.Mesh(
-    createBallastBedGeometry(rampLen + 0.12, 1.06, 0.92, 0.045),
-    ballastMat
+  const rampBed = new THREE.Mesh(
+    createBallastBedGeometry(rampLen + 0.12, 1.06, 0.92, 0.05),
+    armorDarkMat
   );
-  rampBallast.position.y = 0.02;
-  rampBallast.receiveShadow = true;
-  rampGroup.add(rampDeck, rampBallast);
+  rampBed.position.y = 0.02;
+  const rampMagStrip = new THREE.Mesh(new THREE.BoxGeometry(rampLen + 0.04, 0.025, 0.12), cyanNeonMat);
+  rampMagStrip.position.y = 0.075;
+  rampGroup.add(rampDeck, rampBed, rampMagStrip);
   railGroup.add(rampGroup);
 
-  // Grounded Trestle Support Piers Under the Sloped Ramp down to leftTrench (y = -0.67)
+  // Dark Steel Support Stanchions Under Sloped Guideway
   const pierHeights: [number, number][] = [
     [-6.78, -0.18],
     [-6.25, -0.45],
@@ -697,25 +717,25 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
   for (const [px, topY] of pierHeights) {
     const h = Math.max(0.1, topY - -0.68);
     for (const sz of [-0.36, 0.36]) {
-      const pier = new THREE.Mesh(new THREE.BoxGeometry(0.16, h, 0.16), woodMat);
+      const pier = new THREE.Mesh(new THREE.BoxGeometry(0.16, h, 0.16), gunmetalMat);
       pier.position.set(px, -0.68 + h * 0.5, sz);
       enableShadows(pier);
       railGroup.add(pier);
     }
   }
 
-  // Section C: Inner Pit Unloading Spur on Quarry Pit Floor (x -5.78 -> -4.82, y = -0.68)
-  const pitSpurLen = -4.82 - SLOPE_END_X; // 0.96m
-  const pitSpurCenterX = (SLOPE_END_X + -4.82) * 0.5; // -5.30
-  const pitBallast = new THREE.Mesh(
-    createBallastBedGeometry(pitSpurLen + 0.1, 1.14, 0.94, 0.05),
-    ballastMat
+  // Pit Floor Unloading Spur
+  const pitSpurLen = -4.82 - SLOPE_END_X;
+  const pitSpurCenterX = (SLOPE_END_X + -4.82) * 0.5;
+  const pitBed = new THREE.Mesh(
+    createBallastBedGeometry(pitSpurLen + 0.1, 1.14, 0.94, 0.055),
+    armorDarkMat
   );
-  pitBallast.position.set(pitSpurCenterX, PIT_Y, 0);
-  pitBallast.receiveShadow = true;
-  railGroup.add(pitBallast);
+  pitBed.position.set(pitSpurCenterX, PIT_Y, 0);
+  pitBed.receiveShadow = true;
+  railGroup.add(pitBed);
 
-  // Twin Continuous Shiny Steel Rails (Upper + Ramp + Lower Pit Spur)
+  // Continuous Steel Rails
   const railProfileGeoUpper = new THREE.BoxGeometry(upperLen + 0.06, 0.05, 0.065);
   const railProfileGeoRamp = new THREE.BoxGeometry(rampLen + 0.12, 0.05, 0.065);
   const railProfileGeoPit = new THREE.BoxGeometry(pitSpurLen + 0.06, 0.05, 0.065);
@@ -737,13 +757,13 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
     railGroup.add(rUpper, rPit);
   }
 
-  // Instanced Wooden Cross-Sleepers along the entire continuous railway (Single Draw Call)
+  // Instanced Titanium Track Cross-Ribs (Single InstancedMesh Draw Call)
   const sleeperXs: number[] = [];
-  for (let x = -12.35; x <= -4.92; x += 0.32) {
+  for (let x = -11.45; x <= -4.92; x += 0.34) {
     sleeperXs.push(x);
   }
-  const sleeperGeo = new THREE.BoxGeometry(0.13, 0.045, 0.88);
-  const sleeperInst = new THREE.InstancedMesh(sleeperGeo, sleeperMat, sleeperXs.length);
+  const sleeperGeo = new THREE.BoxGeometry(0.14, 0.045, 0.9);
+  const sleeperInst = new THREE.InstancedMesh(sleeperGeo, gunmetalMat, sleeperXs.length);
   sleeperInst.castShadow = true;
   sleeperInst.receiveShadow = true;
   const dummy = new THREE.Object3D();
@@ -757,58 +777,52 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
   sleeperInst.instanceMatrix.needsUpdate = true;
   railGroup.add(sleeperInst);
 
-  // Heavy Steel & Timber End-of-Track Buffer Stop inside Pit Spur (x = -4.92, clears ore spawn [-4.55..4.55])
+  // Cyber Maglev Pit Unloading Buffer Terminal
   const bufferGroup = new THREE.Group();
   bufferGroup.position.set(-4.92, PIT_Y, 0);
   for (const sz of [-RAIL_GAUGE_HALF, RAIL_GAUGE_HALF]) {
-    const upright = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.42, 0.1), ironMat);
-    upright.position.set(0.06, 0.21, sz);
-    const strut = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.42, 0.09), ironMat);
+    const upright = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.44, 0.1), steelMat);
+    upright.position.set(0.06, 0.22, sz);
+    const strut = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.42, 0.09), gunmetalMat);
     strut.position.set(-0.08, 0.19, sz);
     strut.rotation.z = -0.58;
-    const springHead = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.08, 8), brassMat);
-    springHead.rotation.z = Math.PI / 2;
-    springHead.position.set(-0.04, 0.25, sz);
+    const damperHead = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.08, 8), cyanNeonMat);
+    damperHead.rotation.z = Math.PI / 2;
+    damperHead.position.set(-0.04, 0.25, sz);
     enableShadows(upright);
     enableShadows(strut);
-    bufferGroup.add(upright, strut, springHead);
+    bufferGroup.add(upright, strut, damperHead);
   }
-  const crossTimber = new THREE.Mesh(
-    createExtrudedChamferBox(0.16, 0.14, 0.86, 0.025, 0.012),
-    woodMat
+  const bufferBar = new THREE.Mesh(
+    createExtrudedChamferBox(0.16, 0.14, 0.88, 0.025, 0.012),
+    armorDarkMat
   );
-  crossTimber.position.set(0.02, 0.2, 0);
-  const bufferLamp = new THREE.Mesh(new THREE.OctahedronGeometry(0.065, 0), lanternGlowMat);
-  bufferLamp.position.set(0.06, 0.48, 0);
-  enableShadows(crossTimber);
-  bufferGroup.add(crossTimber, bufferLamp);
+  bufferBar.position.set(0.02, 0.2, 0);
+  const bufferStrobe = new THREE.Mesh(
+    createExtrudedChamferBox(0.1, 0.08, 0.34, 0.02, 0.008),
+    amberNeonMat
+  );
+  bufferStrobe.position.set(0.06, 0.45, 0);
+  enableShadows(bufferBar);
+  bufferGroup.add(bufferBar, bufferStrobe);
   railGroup.add(bufferGroup);
 
   // =========================================================================
-  // 3. DETAILED 2-CAR MINECART TRAIN WITH ARTICULATED COUPLER
+  // 4. SINGLE ANIMATED CYBER MAGLEV ORE SHUTTLE CART
   // =========================================================================
   const cartMaterials = {
-    wood: woodMat,
-    iron: ironMat,
+    armorDark: armorDarkMat,
+    gunmetal: gunmetalMat,
     steel: steelMat,
-    brass: brassMat,
+    cyanNeon: cyanNeonMat,
     crystal: crystalMat,
-    lanternGlow: lanternGlowMat,
+    amberNeon: amberNeonMat,
     coal: coalMat,
   };
-  const leadCart = createProceduralMinecart(true, cartMaterials);
-  const trailerCart = createProceduralMinecart(false, cartMaterials);
-  railGroup.add(leadCart.group, trailerCart.group);
+  const leadCart = createCyberOrePod(true, cartMaterials);
+  railGroup.add(leadCart.group);
 
-  // Articulated Steel Tow Bar Linking Lead Cart & Trailer Cart
-  const couplerBar = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 1.0, 6), ironMat);
-  couplerBar.rotation.z = Math.PI / 2;
-  enableShadows(couplerBar);
-  railGroup.add(couplerBar);
-
-  // Place carts cleanly at initial shuttle phase before update() ticks
-  const CAR_SPACING = 1.24;
-  let shuttleClock = 3.2;
+  let shuttleClock = 2.05;
 
   const sampleShuttleState = (clockSec: number): { leadX: number; unloading: boolean } => {
     const cycleSec = 14.0;
@@ -826,7 +840,7 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
       shuttleT = 0;
     }
     return {
-      leadX: -10.65 + shuttleT * (-5.65 - -10.65),
+      leadX: -10.25 + shuttleT * (-5.65 - -10.25),
       unloading: shuttleT > 0.95,
     };
   };
@@ -835,50 +849,25 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
   let wheelAngle = 0;
 
   const positionTrain = (leadX: number): void => {
-    const trailerX = leadX - CAR_SPACING;
     const leadPose = sampleTrackPose(leadX);
-    const trailerPose = sampleTrackPose(trailerX);
-
     leadCart.group.position.set(leadX, leadPose.y, 0);
     leadCart.group.rotation.z = leadPose.rotZ;
 
-    trailerCart.group.position.set(trailerX, trailerPose.y, 0);
-    trailerCart.group.rotation.z = trailerPose.rotZ;
-
-    // Spin wheels proportionally to linear travel
     const deltaX = leadX - prevLeadX;
     prevLeadX = leadX;
     wheelAngle -= deltaX / 0.145;
-    for (const w of leadCart.wheels) {
-      w.rotation.z = wheelAngle;
-    }
-    for (const w of trailerCart.wheels) {
-      w.rotation.z = wheelAngle;
-    }
-
-    // Position & align articulated coupler bar between rear of lead cart and front of trailer
-    const midX = (leadX + trailerX) * 0.5;
-    const midY = (leadPose.y + trailerPose.y) * 0.5 + 0.23;
-    const linkDy = leadPose.y - trailerPose.y;
-    const linkDx = leadX - trailerX;
-    const barPitch = Math.atan2(linkDy, linkDx);
-    couplerBar.position.set(midX, midY, 0);
-    couplerBar.rotation.set(0, 0, Math.PI / 2 + barPitch);
-    couplerBar.scale.set(1, Math.max(0.4, Math.hypot(linkDx, linkDy) - 0.85), 1);
+    for (const w of leadCart.wheels) w.rotation.z = wheelAngle;
   };
 
   positionTrain(prevLeadX);
 
   const setPalette = (
     crystalColor: number | string,
-    cliffColor: number | string,
-    foliageColor: number | string
+    _cliffColor: number | string,
+    _foliageColor: number | string
   ): void => {
     crystalMat.color.set(crystalColor);
     crystalMat.emissive.set(crystalColor);
-    cliffMat.color.set(cliffColor);
-    cliffDarkMat.color.set(cliffColor).multiplyScalar(0.55);
-    foliageMat.color.set(foliageColor);
   };
 
   const update = (dtSec: number, elapsed: number): void => {
@@ -888,15 +877,16 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
     const { leadX, unloading } = sampleShuttleState(shuttleClock);
     positionTrain(leadX);
 
-    // Gentle sway on portal hanging lanterns & crystal pulse
-    lanternPivots.forEach((lp, idx) => {
-      lp.rotation.z = Math.sin(elapsed * 2.1 + idx * 1.4) * 0.08;
-      lp.rotation.x = Math.cos(elapsed * 1.7 + idx) * 0.05;
-    });
+    // Smooth vertical elevator lift motion staying cleanly inside hollow shaft well (y = 1.80 .. 3.24)
+    elevatorPod.position.y = 2.52 + Math.sin(elapsed * 1.1) * 0.72;
+    cagePayload.rotation.y = elapsed * 1.8;
+    hoistOrb.rotation.y = -elapsed * 1.4;
 
-    const pulse = Math.sin(elapsed * 2.6) * 0.14;
-    crystalMat.emissiveIntensity = 0.82 + pulse + (unloading ? 0.25 : 0);
-    lanternGlowMat.emissiveIntensity = 1.45 + Math.sin(elapsed * 4.5) * 0.18;
+    const pulse = Math.sin(elapsed * 2.6) * 0.18;
+    crystalMat.emissiveIntensity = 1.05 + pulse + (unloading ? 0.3 : 0);
+    cyanNeonMat.emissiveIntensity = 1.35 + pulse;
+    portalFieldMat.opacity = 0.22 + Math.sin(elapsed * 3.2) * 0.08;
+    amberNeonMat.emissiveIntensity = 1.15 + Math.sin(elapsed * 4.5) * 0.22;
   };
 
   const dispose = (): void => {

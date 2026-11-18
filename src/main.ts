@@ -193,6 +193,7 @@ async function bootstrap(): Promise<void> {
       raycastPlotAt: (x, y) => scene.getPedestalAtClientPos(x, y),
       highlightPlot: (slot) => scene.setDragHoveredPedestal(slot),
       pulsePlot: (slot) => scene.pulsePedestal(slot),
+      syncPlotLabel: (slotIndex, info) => scene.syncPlotLabel(slotIndex, info),
     },
     (weatherId) => {
       scene.setWeather(weatherId);

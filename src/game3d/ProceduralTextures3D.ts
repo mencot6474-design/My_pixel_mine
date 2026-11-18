@@ -23,24 +23,48 @@ function finalizeTex(canvas: HTMLCanvasElement, repeatX = 1, repeatY = 1): THREE
   return tex;
 }
 
-export function getSkyDomeTexture(topHex: string, bottomHex: string): THREE.Texture {
-  const key = `sky2|${topHex}|${bottomHex}`;
+/** Builds and caches a 2D procedural CanvasTexture, falling back to a 1x1 DataTexture in headless Node. */
+function paintCachedTexture(
+  key: string,
+  w: number,
+  h: number,
+  repeatX: number,
+  repeatY: number,
+  fallbackRgba: [number, number, number, number],
+  paint: (ctx: CanvasRenderingContext2D) => void
+): THREE.Texture {
   const hit = texCache.get(key);
   if (hit) return hit;
 
-  const [c, ctx] = makeCanvas(64, 256);
-  const grad = ctx.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0.0, topHex);
-  grad.addColorStop(0.32, topHex);
-  grad.addColorStop(0.49, bottomHex);
-  grad.addColorStop(0.65, bottomHex);
-  grad.addColorStop(1.0, topHex);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 64, 256);
+  if (typeof document === 'undefined') {
+    const tex = new THREE.DataTexture(new Uint8Array(fallbackRgba), 1, 1, THREE.RGBAFormat);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
+    texCache.set(key, tex);
+    return tex;
+  }
 
-  const tex = finalizeTex(c);
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext('2d');
+  if (ctx) paint(ctx);
+  const tex = finalizeTex(c, repeatX, repeatY);
   texCache.set(key, tex);
   return tex;
+}
+
+export function getSkyDomeTexture(topHex: string, bottomHex: string): THREE.Texture {
+  return paintCachedTexture(`sky2|${topHex}|${bottomHex}`, 64, 256, 1, 1, [15, 23, 42, 255], (ctx) => {
+    const grad = ctx.createLinearGradient(0, 0, 0, 256);
+    grad.addColorStop(0.0, topHex);
+    grad.addColorStop(0.32, topHex);
+    grad.addColorStop(0.49, bottomHex);
+    grad.addColorStop(0.65, bottomHex);
+    grad.addColorStop(1.0, topHex);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 64, 256);
+  });
 }
 
 function paintSeamlessEllipse(
@@ -271,171 +295,142 @@ export function getWeatherSkyDomeTexture(weatherId: WeatherId): THREE.Texture | 
   return tex;
 }
 
-export function getTerrainTexture(baseHex: string, accentHex: string): THREE.Texture {
-  const key = `terrain2|${baseHex}|${accentHex}`;
-  const hit = texCache.get(key);
-  if (hit) return hit;
+export function getTerrainTexture(_baseHex: string, accentHex: string): THREE.Texture {
+  return paintCachedTexture(`terrain3-cyber|${accentHex}`, 256, 256, 4, 3, [13, 20, 34, 255], (ctx) => {
+    // Dark basalt / cyber-industrial deck plates (replaces bright green grass)
+    ctx.fillStyle = '#0d1422';
+    ctx.fillRect(0, 0, 256, 256);
 
-  const [c, ctx] = makeCanvas(256, 256);
-  ctx.fillStyle = baseHex;
-  ctx.fillRect(0, 0, 256, 256);
+    const step = 64;
+    for (let gy = 0; gy < 256; gy += step) {
+      for (let gx = 0; gx < 256; gx += step) {
+        const parity = ((gx + gy) / step) % 2 === 0;
+        ctx.fillStyle = parity ? '#131d31' : '#0f172a';
+        ctx.fillRect(gx + 2, gy + 2, step - 4, step - 4);
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.1)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(gx + 2, gy + 2, step - 4, step - 4);
 
-  // Subtle diagonal meadow bands (no polka-dot circles)
-  ctx.globalAlpha = 0.08;
-  ctx.fillStyle = accentHex;
-  for (let i = -256; i < 512; i += 64) {
-    ctx.beginPath();
-    ctx.moveTo(i, 0);
-    ctx.lineTo(i + 32, 0);
-    ctx.lineTo(i - 96, 256);
-    ctx.lineTo(i - 128, 256);
-    ctx.closePath();
-    ctx.fill();
-  }
+        // Subtle industrial rivet & diagonal basalt grain ticks
+        ctx.fillStyle = 'rgba(100, 116, 139, 0.25)';
+        ctx.fillRect(gx + 6, gy + 6, 3, 3);
+        ctx.fillRect(gx + step - 9, gy + step - 9, 3, 3);
+      }
+    }
 
-  // Tiny hand-drawn grass tuft ticks & soft soil specks
-  for (let i = 0; i < 64; i++) {
-    const x = (i * 61 + 13) % 244;
-    const y = (i * 109 + 7) % 244;
-    ctx.globalAlpha = 0.16;
-    ctx.fillStyle = i % 2 === 0 ? accentHex : '#ffffff';
-    ctx.fillRect(x, y, 2, 6);
-    ctx.fillRect(x + 4, y + 2, 2, 5);
-  }
-  ctx.globalAlpha = 1;
-
-  const tex = finalizeTex(c, 4, 3);
-  texCache.set(key, tex);
-  return tex;
+    // Thin glowing cyber circuit traces accented softly by world crystal color
+    ctx.globalAlpha = 0.24;
+    ctx.fillStyle = accentHex;
+    ctx.fillRect(0, 63, 256, 2);
+    ctx.fillRect(127, 0, 2, 256);
+    ctx.globalAlpha = 0.36;
+    ctx.fillRect(28, 28, 12, 2);
+    ctx.fillRect(156, 156, 14, 2);
+    ctx.globalAlpha = 1;
+  });
 }
 
-export function getQuarryFloorTexture(stoneHex: string, crystalHex: string): THREE.Texture {
-  const key = `quarry2|${stoneHex}|${crystalHex}`;
-  const hit = texCache.get(key);
-  if (hit) return hit;
+export function getQuarryFloorTexture(_stoneHex: string, crystalHex: string): THREE.Texture {
+  return paintCachedTexture(`quarry3-cyber|${crystalHex}`, 256, 256, 3, 2, [18, 25, 40, 255], (ctx) => {
+    // Deep dark basalt blast-deck floor so vibrant ores, chibis, & slash VFX pop clearly
+    ctx.fillStyle = '#121928';
+    ctx.fillRect(0, 0, 256, 256);
 
-  const [c, ctx] = makeCanvas(256, 256);
-  ctx.fillStyle = stoneHex;
-  ctx.fillRect(0, 0, 256, 256);
-
-  // Soft low-contrast limestone quarry slabs so ores & chibis stand out cleanly
-  const step = 128;
-  for (let gx = 0; gx < 256; gx += step) {
-    for (let gy = 0; gy < 256; gy += step) {
-      const idx = (gx / step) * 2 + gy / step;
-      ctx.globalAlpha = idx % 2 === 0 ? 0.035 : 0.02;
-      ctx.fillStyle = idx % 2 === 0 ? '#ffffff' : '#0f172a';
-      ctx.fillRect(gx + 2, gy + 2, step - 4, step - 4);
-      ctx.globalAlpha = 0.08;
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(gx + 1, gy + 1, step - 2, step - 2);
+    const step = 64;
+    for (let gx = 0; gx < 256; gx += step) {
+      for (let gy = 0; gy < 256; gy += step) {
+        const parity = ((gx + gy) / step) % 2 === 0;
+        ctx.fillStyle = parity ? '#192338' : '#141d2f';
+        ctx.fillRect(gx + 2, gy + 2, step - 4, step - 4);
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.72)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(gx + 1, gy + 1, step - 2, step - 2);
+      }
     }
-  }
-  ctx.globalAlpha = 1;
 
-  const tex = finalizeTex(c, 3, 2);
-  texCache.set(key, tex);
-  return tex;
+    ctx.globalAlpha = 0.2;
+    ctx.strokeStyle = crystalHex;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(64, 64, 128, 128);
+    ctx.globalAlpha = 1;
+  });
 }
 
 export function getHazardStripeTexture(accentHex = '#38bdf8'): THREE.Texture {
-  const key = `quarry-trim2|${accentHex}`;
-  const hit = texCache.get(key);
-  if (hit) return hit;
+  return paintCachedTexture(`quarry-hazard3|${accentHex}`, 128, 64, 6, 1, [15, 23, 42, 255], (ctx) => {
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, 128, 64);
 
-  const [c, ctx] = makeCanvas(128, 64);
-  ctx.fillStyle = '#475569';
-  ctx.fillRect(0, 0, 128, 64);
+    // Industrial diagonal hazard chevrons along pit rim collar
+    ctx.fillStyle = '#f59e0b';
+    for (let x = -64; x < 192; x += 32) {
+      ctx.beginPath();
+      ctx.moveTo(x, 12);
+      ctx.lineTo(x + 16, 12);
+      ctx.lineTo(x + 34, 52);
+      ctx.lineTo(x + 18, 52);
+      ctx.closePath();
+      ctx.fill();
+    }
 
-  // Smooth carved stone coping with subtle crystal trim line
-  ctx.fillStyle = '#64748b';
-  ctx.fillRect(0, 6, 128, 18);
-  ctx.fillStyle = accentHex;
-  ctx.globalAlpha = 0.85;
-  ctx.fillRect(0, 30, 128, 5);
-  ctx.globalAlpha = 1;
-
-  const tex = finalizeTex(c, 4, 1);
-  texCache.set(key, tex);
-  return tex;
+    // Thin crisp cyber neon trim rail capping top edge of hazard stripe
+    ctx.fillStyle = accentHex;
+    ctx.fillRect(0, 2, 128, 6);
+    ctx.fillStyle = '#090e1a';
+    ctx.fillRect(0, 56, 128, 8);
+  });
 }
 
 export function getWoodPlankTexture(): THREE.Texture {
-  const key = 'wood-planks';
-  const hit = texCache.get(key);
-  if (hit) return hit;
-
-  const [c, ctx] = makeCanvas(128, 128);
-  ctx.fillStyle = '#8b5a2b';
-  ctx.fillRect(0, 0, 128, 128);
-  for (let y = 0; y < 128; y += 32) {
-    ctx.fillStyle = (y / 32) % 2 === 0 ? '#7c4d23' : '#966332';
-    ctx.fillRect(0, y + 2, 128, 28);
-    ctx.fillStyle = '#451a03';
-    ctx.fillRect(0, y, 128, 2);
-  }
-
-  const tex = finalizeTex(c, 2, 2);
-  texCache.set(key, tex);
-  return tex;
+  return paintCachedTexture('wood-planks', 128, 128, 2, 2, [139, 90, 43, 255], (ctx) => {
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(0, 0, 128, 128);
+    for (let y = 0; y < 128; y += 32) {
+      ctx.fillStyle = (y / 32) % 2 === 0 ? '#7c4d23' : '#966332';
+      ctx.fillRect(0, y + 2, 128, 28);
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(0, y, 128, 2);
+    }
+  });
 }
 
 export function getSlashArcTexture(): THREE.Texture {
-  const key = 'slash-arc';
-  const hit = texCache.get(key);
-  if (hit) return hit;
-
-  const [c, ctx] = makeCanvas(128, 128);
-  ctx.clearRect(0, 0, 128, 128);
-  ctx.save();
-  ctx.translate(64, 64);
-  const grad = ctx.createRadialGradient(0, 0, 26, 0, 0, 60);
-  grad.addColorStop(0.0, 'rgba(255,255,255,0)');
-  grad.addColorStop(0.45, 'rgba(243,230,0,0.85)');
-  grad.addColorStop(0.8, 'rgba(255,255,255,1)');
-  grad.addColorStop(1.0, 'rgba(255,255,255,0)');
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(0, 0, 58, -Math.PI * 0.65, Math.PI * 0.25);
-  ctx.arc(-10, 6, 46, Math.PI * 0.25, -Math.PI * 0.65, true);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-
-  const tex = finalizeTex(c);
-  texCache.set(key, tex);
-  return tex;
+  return paintCachedTexture('slash-arc', 128, 128, 1, 1, [255, 255, 255, 0], (ctx) => {
+    ctx.clearRect(0, 0, 128, 128);
+    ctx.save();
+    ctx.translate(64, 64);
+    const grad = ctx.createRadialGradient(0, 0, 26, 0, 0, 60);
+    grad.addColorStop(0.0, 'rgba(255,255,255,0)');
+    grad.addColorStop(0.45, 'rgba(243,230,0,0.85)');
+    grad.addColorStop(0.8, 'rgba(255,255,255,1)');
+    grad.addColorStop(1.0, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, 58, -Math.PI * 0.65, Math.PI * 0.25);
+    ctx.arc(-10, 6, 46, Math.PI * 0.25, -Math.PI * 0.65, true);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  });
 }
 
-export function getCobblePathTexture(stoneHex: string): THREE.Texture {
-  const key = `cobble2|${stoneHex}`;
-  const hit = texCache.get(key);
-  if (hit) return hit;
+export function getCobblePathTexture(_stoneHex: string): THREE.Texture {
+  return paintCachedTexture('cobble3-cyber-basalt', 256, 256, 4, 3, [21, 30, 48, 255], (ctx) => {
+    // Dark basalt / cyber-industrial deck concrete matching Neo-Cyber City Plaza
+    ctx.fillStyle = '#151e30';
+    ctx.fillRect(0, 0, 256, 256);
 
-  const [c, ctx] = makeCanvas(256, 256);
-  ctx.fillStyle = stoneHex;
-  ctx.fillRect(0, 0, 256, 256);
-
-  // Calm matte flagstone pavers (very gentle contrast so scene never looks noisy)
-  const rowH = 128;
-  for (let row = 0; row < 2; row++) {
-    const offset = row % 2 === 0 ? 0 : 64;
-    for (let col = -1; col < 3; col++) {
-      const x = col * 128 + offset;
-      const y = row * rowH;
-      ctx.fillStyle = (row + col) % 2 === 0 ? '#ffffff' : '#0f172a';
-      ctx.globalAlpha = 0.025;
-      ctx.fillRect(x + 3, y + 3, 122, rowH - 6);
-      ctx.globalAlpha = 0.08;
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x + 1, y + 1, 126, rowH - 2);
+    const step = 64;
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 4; col++) {
+        const x = col * step;
+        const y = row * step;
+        ctx.fillStyle = (row + col) % 2 === 0 ? '#1b263b' : '#131c2c';
+        ctx.fillRect(x + 2, y + 2, step - 4, step - 4);
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 3, y + 3, step - 6, step - 6);
+      }
     }
-  }
-  ctx.globalAlpha = 1;
-
-  const tex = finalizeTex(c, 4, 3);
-  texCache.set(key, tex);
-  return tex;
+  });
 }
