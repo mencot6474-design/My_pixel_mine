@@ -72,10 +72,12 @@ import { FieldMiner3D } from '../src/game3d/FieldMiner3D';
 import { DEFAULT_WORLD_PALETTE, rollOreVariant, STAGE_PEDESTAL_COUNT } from '../src/game3d/MineWorldPalette';
 import { applyNodeDamagePure, BASE_ORE_RESPAWN_SEC, OrePit3D, PIT_NODE_COUNT } from '../src/game3d/OrePit3D';
 import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
+import { createShopCyberPlaza } from '../src/game3d/ShopCyberPlaza3D';
 import { ShopWorld3D } from '../src/game3d/ShopWorld3D';
 import { createSeraphimBoss3D } from '../src/game3d/SeraphimBoss3D';
 import { TowerArena3D } from '../src/game3d/TowerArena3D';
 import { createTowerCityEnvironment } from '../src/game3d/TowerCityEnvironment3D';
+import { WeatherFx3D } from '../src/game3d/WeatherFx3D';
 import { enchantAuraIconHtml, enchantDiceIconHtml, gemPotionIconHtml, hudIconHtml, oreIconSvg, pickaxeIconHtml, towerIconHtml, weatherIconHtml } from '../src/ui/HudIcons';
 import {
   getGlobalGemGainBonus,
@@ -1923,5 +1925,68 @@ describe('Pure 3D Mine World', () => {
     expect(boss.reactorRingOuter.rotation.z).not.toBe(prevOuterRot);
     expect(boss.wingPivots[0].rotation.y).not.toBe(prevWingYaw);
     expect(() => boss.dispose()).not.toThrow();
+  });
+
+  it('builds procedural Neo-Cyber City Plaza lobby with preserved 6-station hitboxes, instanced street props, Snow Rain shop visibility, and clean dispose', () => {
+    const plaza = createShopCyberPlaza();
+    plaza.group.updateMatrixWorld(true);
+    let instancedCount = 0;
+    let lightCount = 0;
+    let roundaboutShadowCount = 0;
+    const roadLaneMinClearance = 4.65;
+    const laneBox = new THREE.Box3();
+    const laneSize = new THREE.Vector3();
+    plaza.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) instancedCount++;
+      if (obj instanceof THREE.Light) lightCount++;
+      if (obj instanceof THREE.Mesh) {
+        if (
+          obj.geometry instanceof THREE.RingGeometry &&
+          obj.material instanceof THREE.MeshBasicMaterial &&
+          obj.material.transparent &&
+          obj.material.depthWrite === false
+        ) {
+          roundaboutShadowCount++;
+        }
+        laneBox.setFromObject(obj);
+        laneBox.getSize(laneSize);
+        if (
+          laneBox.min.y >= 0.175 &&
+          laneBox.max.y <= 0.225 &&
+          laneSize.y <= 0.06 &&
+          Math.min(laneSize.x, laneSize.z) <= 0.25 &&
+          Math.max(laneSize.x, laneSize.z) >= 0.8
+        ) {
+          const cx = Math.max(laneBox.min.x, Math.min(0, laneBox.max.x));
+          const cz = Math.max(laneBox.min.z, Math.min(-0.5, laneBox.max.z));
+          expect(Math.hypot(cx, cz + 0.5)).toBeGreaterThanOrEqual(roadLaneMinClearance);
+        }
+      }
+    });
+    expect(roundaboutShadowCount).toBeGreaterThanOrEqual(1);
+    expect(instancedCount).toBeGreaterThanOrEqual(6);
+    expect(lightCount).toBeGreaterThanOrEqual(5);
+    expect(plaza.animatedCrystals.length).toBeGreaterThan(4);
+    expect(plaza.animatedRings.length).toBeGreaterThanOrEqual(4);
+    expect(() => {
+      plaza.update(0.016, 1.25);
+      plaza.dispose();
+    }).not.toThrow();
+
+    const shop = new ShopWorld3D();
+    const kinds = new Set(shop.shopClickables.map((c) => String(c.userData?.kind)));
+    expect(kinds).toEqual(
+      new Set(['shop-altar', 'shop-pickaxe', 'shop-sell', 'shop-forge', 'shop-gems', 'shop-tower'])
+    );
+    expect(() => shop.dispose()).not.toThrow();
+
+    const wx = new WeatherFx3D();
+    wx.setWeather('snow_rain');
+    wx.setShopMode(true);
+    expect(wx.group.scale.x).toBeGreaterThan(1.1);
+    expect(() => {
+      wx.update(0.016, 2.0, true);
+      wx.dispose();
+    }).not.toThrow();
   });
 });

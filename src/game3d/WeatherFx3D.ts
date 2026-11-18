@@ -75,6 +75,7 @@ export class WeatherFx3D {
   public readonly group = new THREE.Group();
 
   private weatherId: WeatherId = 'light_rain';
+  private shopMode = false;
   private readonly positions: Float32Array;
   private readonly speeds: Float32Array;
   private readonly drifts: Float32Array;
@@ -113,14 +114,45 @@ export class WeatherFx3D {
       transparent: true,
       opacity: 0.62,
       depthWrite: false,
+      fog: false,
       blending: THREE.NormalBlending,
     });
 
     this.points = new THREE.Points(this.geom, this.pointsMat);
     this.points.frustumCulled = false;
+    this.points.renderOrder = 4;
     this.group.add(this.points);
 
     this.setWeather('light_rain');
+  }
+
+  public setShopMode(isShop: boolean): void {
+    if (this.shopMode === isShop) return;
+    this.shopMode = isShop;
+    this.group.scale.setScalar(isShop ? 1.35 : 1.0);
+    this.applyParticleStyle();
+  }
+
+  private applyParticleStyle(): void {
+    const weatherId = this.weatherId;
+    const scaleBoost = this.shopMode ? 1.65 : 1.0;
+
+    if (weatherId === 'light_rain') {
+      this.pointsMat.size = 0.44 * scaleBoost;
+      this.pointsMat.opacity = this.shopMode ? 0.72 : 0.6;
+    } else if (weatherId === 'snow_rain') {
+      this.pointsMat.size = 0.3 * scaleBoost;
+      this.pointsMat.opacity = this.shopMode ? 0.95 : 0.85;
+    } else if (weatherId === 'bloodmoon') {
+      this.pointsMat.size = 0.22 * scaleBoost;
+      this.pointsMat.opacity = this.shopMode ? 0.82 : 0.68;
+    } else if (weatherId === 'void') {
+      this.pointsMat.size = 0.22 * scaleBoost;
+      this.pointsMat.opacity = this.shopMode ? 0.82 : 0.68;
+    } else {
+      this.pointsMat.size = 0.34 * scaleBoost;
+      this.pointsMat.opacity = this.shopMode ? 0.92 : 0.85;
+    }
   }
 
   public setWeather(weatherId: WeatherId): void {
@@ -148,22 +180,7 @@ export class WeatherFx3D {
       this.pointsMat.needsUpdate = true;
     }
 
-    if (weatherId === 'light_rain') {
-      this.pointsMat.size = 0.44;
-      this.pointsMat.opacity = 0.6;
-    } else if (weatherId === 'snow_rain') {
-      this.pointsMat.size = 0.28;
-      this.pointsMat.opacity = 0.82;
-    } else if (weatherId === 'bloodmoon') {
-      this.pointsMat.size = 0.2;
-      this.pointsMat.opacity = 0.68;
-    } else if (weatherId === 'void') {
-      this.pointsMat.size = 0.2;
-      this.pointsMat.opacity = 0.68;
-    } else {
-      this.pointsMat.size = 0.32;
-      this.pointsMat.opacity = 0.85;
-    }
+    this.applyParticleStyle();
   }
 
   public update(dtSec: number, elapsed: number, active: boolean): void {
@@ -209,5 +226,13 @@ export class WeatherFx3D {
 
     const posAttr = this.geom.getAttribute('position') as THREE.BufferAttribute;
     posAttr.needsUpdate = true;
+  }
+
+  public dispose(): void {
+    this.geom.dispose();
+    this.pointsMat.dispose();
+    for (const tex of Object.values(this.particleTextures)) {
+      tex?.dispose();
+    }
   }
 }

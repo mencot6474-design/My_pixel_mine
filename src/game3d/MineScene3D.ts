@@ -754,6 +754,7 @@ export class MineScene3D {
 
   public setMode(mode: SceneMode): void {
     this.mode = mode;
+    this.weatherFx.setShopMode(mode === 'shop');
     if (mode !== 'mine' && mode !== 'tower') {
       this.renderer.domElement.classList.remove('mam-mining-cursor');
     }
@@ -808,17 +809,20 @@ export class MineScene3D {
   private applyWeatherAtmosphere(): void {
     const weather = getWeatherById(this.activeWeatherId);
     this.env.setWeatherSky(weather.id, weather.cloudHex);
+    const isShop = this.mode === 'shop';
     this.hemiLight.color.set(weather.hemiTintHex);
-    this.hemiLight.intensity = weather.hemiIntensity;
-    this.sunLight.intensity = weather.sunIntensity;
-    this.rimLight.color.set(weather.rimTintHex);
+    this.hemiLight.intensity = isShop ? Math.max(weather.hemiIntensity, 1.12) : weather.hemiIntensity;
+    this.sunLight.intensity = isShop ? Math.max(weather.sunIntensity, 1.52) : weather.sunIntensity;
+    this.rimLight.color.set(isShop ? 0x38bdf8 : weather.rimTintHex);
 
-    if (this.mode !== 'mine' && this.mode !== 'shop') return;
+    if (this.mode !== 'mine' && !isShop) return;
     const fogColor = new THREE.Color(weather.fogTintHex);
+    if (isShop) {
+      fogColor.lerp(new THREE.Color(0x0b162b), 0.56);
+    }
     this.scene.background = fogColor;
     // Softly blend distant terrain border into the sky shader's horizon mist band
-    this.scene.fog =
-      this.mode === 'shop' ? new THREE.Fog(fogColor, 46, 94) : new THREE.Fog(fogColor, 26, 72);
+    this.scene.fog = isShop ? new THREE.Fog(fogColor, 50, 108) : new THREE.Fog(fogColor, 26, 72);
   }
 
   public setWeather(weatherId: WeatherId): void {
@@ -1033,7 +1037,9 @@ export class MineScene3D {
     }
     this.chestVisual.dispose();
     this.env.dispose();
+    this.shopWorld.dispose();
     this.towerArena.dispose();
+    this.weatherFx.dispose();
     this.renderer.dispose();
   }
 }
