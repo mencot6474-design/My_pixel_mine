@@ -1,4 +1,9 @@
 import * as THREE from 'three';
+import {
+  createCyberBotanicalCanopy,
+  createCyberCrystalCluster,
+  createCyberMonolithForkFinial,
+} from './CyberProps3D';
 
 export interface ShopCyberPlazaHandle {
   group: THREE.Group;
@@ -406,7 +411,7 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     const topRail = new THREE.Mesh(createChamferSlabGeometry(w + 0.28, 0.06, 0.18, 0.03, 0.008), accentMat);
     topRail.position.y = h * 0.5 + 0.09;
     const botRail = new THREE.Mesh(createChamferSlabGeometry(w + 0.28, 0.06, 0.18, 0.03, 0.008), accentMat);
-    botRail.position.y = -h * 0.5 - 0.09;
+    botRail.position.y = -h * 0.5 - 0.15;
 
     enableShadows(frame);
     sg.add(frame, screen, topRail, botRail);
@@ -515,13 +520,18 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     );
     doorPanel.position.set(-w * 0.24, 0.04, d * 0.5 + 0.06);
 
-    // Rooftop HVAC & Antenna Mast
+    // Rooftop HVAC & Sculpted Antenna Mast Finial
     const hvac = new THREE.Mesh(createChamferSlabGeometry(w * 0.34, 0.38, d * 0.44, 0.06, 0.015), towerRibMat);
     hvac.position.set(-w * 0.2, h + 0.2, -d * 0.12);
     const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.06, 1.05, 6), brushedSteelMat);
     mast.position.set(w * 0.32, h + 0.72, -d * 0.24);
-    const beacon = new THREE.Mesh(new THREE.OctahedronGeometry(0.1, 0), accentMat);
-    beacon.position.set(w * 0.32, h + 1.28, -d * 0.24);
+    const beacon = createCyberMonolithForkFinial({
+      frameMat: gunmetalMat,
+      steelMat: brushedSteelMat,
+      coreMat: accentMat,
+      scale: 0.45,
+    });
+    beacon.position.set(w * 0.32, h + 1.22, -d * 0.24);
 
     enableShadows(mainHull);
     enableShadows(roofCap);
@@ -823,21 +833,16 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     trunk.position.y = 0.48;
 
     const crownMat = isCyan ? cyanNeonMat : violetNeonMat;
-    // Central main crown + 3 cleanly separated satellite holo-nodes (zero intersection, zero z-fighting!)
-    const mainCrown = new THREE.Mesh(new THREE.OctahedronGeometry(0.68, 0), crownMat);
-    mainCrown.position.set(0, 3.02, 0);
-    mainCrown.scale.set(1.18, 0.78, 1.18);
-    planter.add(mainCrown);
-    animatedCrystals.push(mainCrown);
-
-    for (let k = 0; k < 3; k++) {
-      const ang = (k / 3) * Math.PI * 2 + 0.4;
-      const sat = new THREE.Mesh(new THREE.OctahedronGeometry(0.28, 0), crownMat);
-      sat.position.set(Math.cos(ang) * 0.96, 2.38 + (k % 2) * 0.18, Math.sin(ang) * 0.96);
-      sat.scale.set(1.0, 0.85, 1.0);
-      planter.add(sat);
-      animatedCrystals.push(sat);
-    }
+    const crownAccentMat = isCyan ? magentaNeonMat : cyanNeonMat;
+    // Stylized Cyber-Botanical Canopy with branched trunk & faceted polyhedral foliage clusters
+    const canopyCrown = createCyberBotanicalCanopy({
+      barkMat: gunmetalMat,
+      foliageMat: crownMat,
+      accentMat: crownAccentMat,
+      scale: 1.25,
+    });
+    canopyCrown.position.set(0, 2.34, 0);
+    planter.add(canopyCrown);
 
     enableShadows(curb);
     enableShadows(trunk);
@@ -868,9 +873,13 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
       ),
       containerDarkMat
     );
-    const tip = new THREE.Mesh(new THREE.OctahedronGeometry(0.26, 0), isCyan ? cyanNeonMat : violetNeonMat);
-    tip.position.y = h + 0.36;
-    animatedCrystals.push(tip);
+    const tip = createCyberMonolithForkFinial({
+      frameMat: towerRibMat,
+      steelMat: brushedSteelMat,
+      coreMat: isCyan ? cyanNeonMat : violetNeonMat,
+      scale: 1.15,
+    });
+    tip.position.y = h - 0.04;
     enableShadows(base);
     enableShadows(tower);
     pylon.add(base, tower, tip);
@@ -919,11 +928,14 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     helipadRing.rotation.x = -Math.PI / 2;
     helipadRing.position.y = 0.3;
 
-    const shard = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.92, 0),
-      side < 0 ? cyanNeonMat : magentaNeonMat
-    );
-    shard.position.y = 2.05;
+    const shard = createCyberCrystalCluster({
+      frameMat: towerRibMat,
+      crystalMat: side < 0 ? cyanNeonMat : magentaNeonMat,
+      accentMat: side < 0 ? violetNeonMat : cyanNeonMat,
+      scale: 1.65,
+      shardCount: 5,
+    });
+    shard.position.y = 1.25;
     animatedCrystals.push(shard);
 
     enableShadows(padTop);
@@ -1112,8 +1124,14 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
   innerReactorRing.position.y = 1.62;
   animatedRings.push(innerReactorRing);
 
-  const floatingReactorCrystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.42, 0), magentaNeonMat);
-  floatingReactorCrystal.position.y = 1.85;
+  const floatingReactorCrystal = createCyberCrystalCluster({
+    frameMat: towerRibMat,
+    crystalMat: magentaNeonMat,
+    accentMat: cyanNeonMat,
+    scale: 1.25,
+    shardCount: 5,
+  });
+  floatingReactorCrystal.position.y = 1.55;
   animatedCrystals.push(floatingReactorCrystal);
 
   for (const [tx, tz] of [
@@ -1266,8 +1284,14 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
 
     const creditPod = new THREE.Mesh(createChamferSlabGeometry(0.98, 0.64, 0.98, 0.1, 0.015), gunmetalMat);
     creditPod.position.set(1.48, 0.22, 1.32);
-    const creditCrystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.36, 0), emeraldNeonMat);
-    creditCrystal.position.set(1.48, 1.36, 1.32);
+    const creditCrystal = createCyberCrystalCluster({
+      frameMat: gunmetalMat,
+      crystalMat: emeraldNeonMat,
+      accentMat: cyanNeonMat,
+      scale: 0.9,
+      shardCount: 4,
+    });
+    creditCrystal.position.set(1.48, 1.16, 1.32);
     animatedCrystals.push(creditCrystal);
 
     enableShadows(crate1);
@@ -1377,18 +1401,18 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     const lowerBay = buildCyberContainerShell(4.4, 2.85, 2.1, magentaNeonMat);
     lowerBay.position.set(0, 0.22, -0.75);
 
-    const upperBay = new THREE.Mesh(createChamferSlabGeometry(2.65, 1.85, 1.95, 0.18, 0.025), containerMidMat);
-    upperBay.position.set(0.75, 3.07, -0.75);
-    const upperWindow = new THREE.Mesh(createChamferSlabGeometry(2.05, 0.82, 0.12, 0.06, 0.01), violetNeonMat);
-    upperWindow.position.set(0.75, 3.55, 0.24);
-    const upperCrown = new THREE.Mesh(createChamferSlabGeometry(2.8, 0.2, 2.1, 0.18, 0.015), gunmetalMat);
-    upperCrown.position.set(0.75, 4.92, -0.75);
+    const upperBay = new THREE.Mesh(createChamferSlabGeometry(2.95, 1.85, 1.95, 0.18, 0.025), containerMidMat);
+    upperBay.position.set(0, 3.07, -0.75);
+    const upperWindow = new THREE.Mesh(createChamferSlabGeometry(2.35, 0.82, 0.12, 0.06, 0.01), violetNeonMat);
+    upperWindow.position.set(0, 3.55, 0.24);
+    const upperCrown = new THREE.Mesh(createChamferSlabGeometry(3.1, 0.2, 2.1, 0.18, 0.015), gunmetalMat);
+    upperCrown.position.set(0, 4.92, -0.75);
 
     addHologramSign(
       emporium,
-      -0.45,
-      5.55,
-      0.28,
+      0,
+      5.76,
+      0.34,
       2.9,
       0.92,
       'CYBER GEM MART',
@@ -1518,9 +1542,13 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
       obRing.position.y = 2.65;
       animatedRings.push(obRing);
 
-      const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.34, 0), magentaNeonMat);
-      crystal.position.y = 3.05;
-      animatedCrystals.push(crystal);
+      const crystal = createCyberMonolithForkFinial({
+        frameMat: towerRibMat,
+        steelMat: brushedSteelMat,
+        coreMat: magentaNeonMat,
+        scale: 1.2,
+      });
+      crystal.position.y = 2.58;
 
       enableShadows(plinth);
       enableShadows(shaft);
@@ -1567,8 +1595,13 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     for (const ax of [-0.52, 0.52]) {
       const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.075, 0.72, 6), brushedSteelMat);
       ant.position.set(ax, 6.2, 0);
-      const tip = new THREE.Mesh(new THREE.OctahedronGeometry(0.1, 0), ax < 0 ? cyanNeonMat : magentaNeonMat);
-      tip.position.set(ax, 6.6, 0);
+      const tip = createCyberMonolithForkFinial({
+        frameMat: gunmetalMat,
+        steelMat: brushedSteelMat,
+        coreMat: ax < 0 ? cyanNeonMat : magentaNeonMat,
+        scale: 0.5,
+      });
+      tip.position.set(ax, 6.54, 0);
       centralTower.add(ant, tip);
     }
 

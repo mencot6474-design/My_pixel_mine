@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { disposeObject3D } from './ChestVaultStation3D';
+import { createCyberRadarArray } from './CyberProps3D';
 
 export interface CaveRailwayOptions {
   crystalColor?: number | string;
@@ -482,17 +483,16 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
   hoistHub.position.y = 4.97;
   enableShadows(hoistHub);
 
-  // Sculpted Cyber Gyro-Antenna Spire Replacing Generic Octahedron Beacon
-  const hoistOrb = new THREE.Group();
-  hoistOrb.position.y = 5.56;
-  const hoistCore = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.34, 6), cyanNeonMat);
-  const hoistCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.06, 6), steelMat);
-  hoistCollar.position.y = 0.14;
-  const hoistAntenna = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.055, 0.24, 6), steelMat);
-  hoistAntenna.position.y = 0.28;
-  const hoistGyroRing = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.022, 6, 18), crystalMat);
-  hoistGyroRing.rotation.set(0.45, 0, 0.28);
-  hoistOrb.add(hoistCore, hoistCollar, hoistAntenna, hoistGyroRing);
+  // Articulated Rotating Cyber Radar Array Replacing Roof Beacon Lamp
+  const roofRadar = createCyberRadarArray({
+    darkMetalMat: armorDarkMat,
+    armorMat: gunmetalMat,
+    steelMat,
+    neonMat: cyanNeonMat,
+    accentMat: crystalMat,
+    scale: 1.0,
+  });
+  roofRadar.group.position.set(0, 5.45, 0);
 
   // Rear Power Cable Coupling Socket matching MineEnvironment3D left cable endpoint (-11.78, 4.72, -1.02)
   const shaftCableSocket = new THREE.Mesh(
@@ -511,13 +511,16 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
     ],
     8
   );
+  const whipGeo = new THREE.CylinderGeometry(0.014, 0.032, 0.42, 6);
   for (const sz of [-0.95, 0.95]) {
     const stack = new THREE.Mesh(beaconCoreGeo, steelMat);
     stack.position.set(-1.18, 4.97, sz);
     enableShadows(stack);
-    shaftGroup.add(stack);
+    const whip = new THREE.Mesh(whipGeo, armorDarkMat);
+    whip.position.set(-1.18, 6.08, sz);
+    shaftGroup.add(stack, whip);
   }
-  shaftGroup.add(crownLower, crownNeonRim, crownCap, hoistHub, hoistOrb, shaftCableSocket);
+  shaftGroup.add(crownLower, crownNeonRim, crownCap, hoistHub, roofRadar.group, shaftCableSocket);
 
   // Hollow Open-Center Perimeter Framing Girders (4 edge beams — central well stays 100% open for moving lift!)
   for (const collarY of [2.42, 3.58]) {
@@ -880,7 +883,7 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
     // Smooth vertical elevator lift motion staying cleanly inside hollow shaft well (y = 1.80 .. 3.24)
     elevatorPod.position.y = 2.52 + Math.sin(elapsed * 1.1) * 0.72;
     cagePayload.rotation.y = elapsed * 1.8;
-    hoistOrb.rotation.y = -elapsed * 1.4;
+    roofRadar.rotorGroup.rotation.y = elapsed * 0.55;
 
     const pulse = Math.sin(elapsed * 2.6) * 0.18;
     crystalMat.emissiveIntensity = 1.05 + pulse + (unloading ? 0.3 : 0);

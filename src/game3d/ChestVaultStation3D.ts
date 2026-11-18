@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createCyberLanternBollardFinial } from './CyberProps3D';
 
 export interface ProceduralChestOptions {
   scale?: number;
@@ -746,31 +747,30 @@ export function createChestVaultStation(
     new THREE.Vector2(0.0, 0.94),
   ];
   const pylonGeo = new THREE.LatheGeometry(pylonProfile, 8);
-  const lanternBulbGeo = new THREE.CylinderGeometry(0.085, 0.095, 0.21, 6);
-  const lanternBandGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.04, 6);
-  const lanternCapGeo = new THREE.CylinderGeometry(0.08, 0.16, 0.13, 6);
 
   for (const sz of [-0.92, 0.92]) {
     const pylonGroup = new THREE.Group();
     pylonGroup.position.set(0.92, 0.34, sz);
 
     const body = new THREE.Mesh(pylonGeo, darkIronMat);
-    const bulb = new THREE.Mesh(lanternBulbGeo, crystalMat);
-    bulb.position.y = 1.045;
-    const midBand = new THREE.Mesh(lanternBandGeo, brassMat);
-    midBand.position.y = 1.045;
-    const cap = new THREE.Mesh(lanternCapGeo, brassMat);
-    cap.position.y = 1.21;
+    const finial = createCyberLanternBollardFinial({
+      frameMat: darkIronMat,
+      steelMat: brassMat,
+      coreMat: crystalMat,
+      scale: 0.74,
+    });
+    finial.position.y = 0.92;
 
     enableShadows(body);
-    enableShadows(cap);
-    pylonGroup.add(body, bulb, midBand, cap);
+    pylonGroup.add(body, finial);
     vaultGroup.add(pylonGroup);
   }
 
-  // Replace static rustic ingots/crystals with Multi-Part Plasma Ore Refinery Reactors & Tubes
+  // Relocated Multi-Part Plasma Ore Refinery onto right wing terrace (world ~ 10.80, 0.17, +0.35)
+  // keeping >2.7m clearance from Chest while staying 100% visible inside default camera below top-right HUD
   const refineryGroup = new THREE.Group();
-  refineryGroup.position.set(1.28, 0.34, -1.48);
+  refineryGroup.position.set(2.35, 0.17, -1.35);
+  refineryGroup.scale.setScalar(0.86);
   vaultGroup.add(refineryGroup);
 
   const smelterBase = new THREE.Mesh(
@@ -804,12 +804,11 @@ export function createChestVaultStation(
   plasmaCoreWindow.position.set(-0.22, 1.08, 0);
 
   const refineryRings: THREE.Mesh[] = [];
-  const rRingGeo = new THREE.TorusGeometry(0.54, 0.042, 6, 18);
+  const rRingGeo = new THREE.TorusGeometry(0.45, 0.036, 6, 16);
   rRingGeo.rotateX(Math.PI / 2);
-  for (const ry of [0.88, 1.32]) {
+  for (const ry of [0.84, 1.34]) {
     const rRing = new THREE.Mesh(rRingGeo, ry < 1.0 ? crystalMat : plasmaMat);
     rRing.position.set(-0.22, ry, 0);
-    rRing.rotation.x = ry < 1.0 ? 0.14 : -0.14;
     refineryGroup.add(rRing);
     refineryRings.push(rRing);
   }
@@ -835,29 +834,32 @@ export function createChestVaultStation(
   const auxGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.14, 8), crystalMat);
   auxGlow.position.set(0.48, 1.12, 0.22);
 
-  // Curved Plasma Conduit Pipes Routed Strictly Behind Chest Into Bolted Socket Couplings
-  const conduitCurve1 = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.52, 1.08, 0.08),
-    new THREE.Vector3(-1.24, 1.06, 0.24),
-    new THREE.Vector3(-1.82, 0.88, 0.68),
-    new THREE.Vector3(-2.02, 0.65, 1.02),
+  // Single Precision-Socketed Plasma Conduit Connecting Refinery Drum Cleanly to Chest Vault Deck
+  const conduitCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.56, 1.02, 0.18),
+    new THREE.Vector3(-0.88, 0.86, 0.62),
+    new THREE.Vector3(-1.12, 0.44, 1.15),
+    new THREE.Vector3(-1.34, 0.17, 1.57),
   ]);
-  const plasmaPipe1 = new THREE.Mesh(new THREE.TubeGeometry(conduitCurve1, 14, 0.065, 6, false), plasmaMat);
+  const plasmaPipe = new THREE.Mesh(new THREE.TubeGeometry(conduitCurve, 16, 0.048, 6, false), darkIronMat);
 
-  const conduitCurve2 = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0.32, 0.72, 0.34),
-    new THREE.Vector3(-0.06, 0.34, 0.66),
-    new THREE.Vector3(-0.44, 0.05, 0.92),
-  ]);
-  const plasmaPipe2 = new THREE.Mesh(new THREE.TubeGeometry(conduitCurve2, 12, 0.052, 6, false), crystalMat);
+  // Traveling Glowing Energy Pulses Flowing Along the Conduit Into Chest Vault
+  const conduitPulses: Array<{ mesh: THREE.Mesh; curve: THREE.CatmullRomCurve3; offset: number; speed: number }> = [];
+  const pulseGeo = new THREE.CylinderGeometry(0.068, 0.068, 0.22, 6);
+  for (let i = 0; i < 3; i++) {
+    const p = new THREE.Mesh(pulseGeo, plasmaMat);
+    refineryGroup.add(p);
+    conduitPulses.push({ mesh: p, curve: conduitCurve, offset: i / 3, speed: 0.45 });
+  }
 
-  // Mechanical Socket Flanges & Top Cable Coupling Collar (zero floating pipe ends)
-  const flangeGeo = new THREE.CylinderGeometry(0.11, 0.125, 0.14, 8);
-  const archSocket = new THREE.Mesh(flangeGeo, brassMat);
-  archSocket.position.set(-2.02, 0.65, 1.02);
+  // Mechanical Brass Socket Couplings on Both Ends + Top Cable Collar (zero floating/imprecise ends)
+  const flangeGeo = new THREE.CylinderGeometry(0.09, 0.105, 0.14, 8);
+  const drumOutletSocket = new THREE.Mesh(flangeGeo, brassMat);
+  drumOutletSocket.position.set(-0.56, 1.02, 0.18);
+  drumOutletSocket.rotation.z = Math.PI / 2;
 
   const deckSocket = new THREE.Mesh(flangeGeo, brassMat);
-  deckSocket.position.set(-0.44, 0.05, 0.92);
+  deckSocket.position.set(-1.34, 0.17, 1.57);
 
   const smelterTopCollar = new THREE.Mesh(
     new THREE.CylinderGeometry(0.14, 0.18, 0.16, 8),
@@ -865,7 +867,7 @@ export function createChestVaultStation(
   );
   smelterTopCollar.position.set(-0.22, 2.24, 0);
 
-  enableShadows(archSocket);
+  enableShadows(drumOutletSocket);
   enableShadows(deckSocket);
   enableShadows(smelterTopCollar);
   refineryGroup.add(
@@ -873,9 +875,8 @@ export function createChestVaultStation(
     plasmaCoreWindow,
     auxStack,
     auxGlow,
-    plasmaPipe1,
-    plasmaPipe2,
-    archSocket,
+    plasmaPipe,
+    drumOutletSocket,
     deckSocket,
     smelterTopCollar
   );
@@ -947,6 +948,9 @@ export function createChestVaultStation(
   };
 
   let beltTravel = 0;
+  const conduitPosTmp = new THREE.Vector3();
+  const conduitTanTmp = new THREE.Vector3();
+  const upAxis = new THREE.Vector3(0, 1, 0);
 
   const update = (
     dtSec: number,
@@ -960,6 +964,14 @@ export function createChestVaultStation(
 
     for (let rIdx = 0; rIdx < refineryRings.length; rIdx++) {
       refineryRings[rIdx].rotation.y = elapsed * (rIdx % 2 === 0 ? 1.5 : -1.9);
+    }
+
+    for (const cp of conduitPulses) {
+      const t = (elapsed * cp.speed + cp.offset) % 1;
+      cp.curve.getPointAt(t, conduitPosTmp);
+      cp.curve.getTangentAt(t, conduitTanTmp);
+      cp.mesh.position.copy(conduitPosTmp);
+      cp.mesh.quaternion.setFromUnitVectors(upAxis, conduitTanTmp);
     }
 
     for (const pkt of packets) {

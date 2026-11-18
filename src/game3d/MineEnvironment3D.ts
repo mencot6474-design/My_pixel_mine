@@ -3,6 +3,7 @@ import type { WeatherId } from '../game/WeatherData';
 import type { MineWorldPalette } from './MineWorldPalette';
 import { CaveRailwayHandle, createCaveRailway } from './CaveRailway3D';
 import { ChestVaultStationHandle, createChestVaultStation, disposeObject3D } from './ChestVaultStation3D';
+import { createCyberLanternBollardFinial, createCyberMonolithForkFinial } from './CyberProps3D';
 import { loadPublicSpriteTexture } from './OrePit3D';
 import { getCobblePathTexture, getTerrainTexture } from './ProceduralTextures3D';
 import { createWeatherSkyMaterial, WeatherSkyMaterialHandle } from './WeatherSkyShader';
@@ -28,6 +29,12 @@ export class MineEnvironment3D {
   private readonly bannerMat: THREE.MeshBasicMaterial;
 
   private readonly clouds: CloudCluster[] = [];
+  private readonly cableCurves: THREE.CatmullRomCurve3[] = [];
+  private cableFlowInst: THREE.InstancedMesh | null = null;
+  private readonly cableDummy = new THREE.Object3D();
+  private readonly cablePosTmp = new THREE.Vector3();
+  private readonly cableTanTmp = new THREE.Vector3();
+  private readonly cableUpAxis = new THREE.Vector3(0, 1, 0);
   private readonly caveRailway: CaveRailwayHandle;
   private readonly chestVault: ChestVaultStationHandle;
 
@@ -333,12 +340,7 @@ export class MineEnvironment3D {
       ],
       8
     );
-    // Stylized Cyber Holoprojector Core (hex plasma prism + stabilizer collar fin + chamfer cap)
-    const lensGeo = new THREE.CylinderGeometry(0.115, 0.135, 0.24, 6);
-    const stabilizerGeo = new THREE.CylinderGeometry(0.175, 0.175, 0.045, 6);
-    const ringGeo = new THREE.TorusGeometry(0.22, 0.025, 6, 16);
-    ringGeo.rotateX(Math.PI / 2);
-
+    // Architectural Armored Lantern Caps on Deck Beacons (zero plain box/diamond/ring clutter)
     const placements: [number, number, number][] = [
       [-11.8, 0.17, -5.6],
       [-11.8, 0.17, 4.6],
@@ -352,16 +354,15 @@ export class MineEnvironment3D {
       const body = new THREE.Mesh(pylonBodyGeo, darkMetalMat);
       body.castShadow = true;
       body.receiveShadow = true;
-      const collar = new THREE.Mesh(ringGeo, this.cyberDeckTrimMat);
-      collar.position.y = 1.48;
-      const emitter = new THREE.Mesh(lensGeo, this.crystalAccentMat);
-      emitter.position.y = 1.79;
-      const stabilizer = new THREE.Mesh(stabilizerGeo, steelMat);
-      stabilizer.position.y = 1.79;
-      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, 0.1, 6), steelMat);
-      cap.position.y = 1.98;
+      const finial = createCyberLanternBollardFinial({
+        frameMat: darkMetalMat,
+        steelMat,
+        coreMat: this.crystalAccentMat,
+        scale: 0.92,
+      });
+      finial.position.y = 1.62;
 
-      bg.add(body, collar, emitter, stabilizer, cap);
+      bg.add(body, finial);
       this.group.add(bg);
     }
   }
@@ -410,8 +411,15 @@ export class MineEnvironment3D {
       crown.position.y = topY - 0.1;
       const ring = new THREE.Mesh(beaconRingGeo, this.cyberDeckTrimMat);
       ring.position.y = topY + 0.16;
+      const crownRelay = createCyberMonolithForkFinial({
+        frameMat: darkMetalMat,
+        steelMat,
+        coreMat: this.cyberDeckTrimMat,
+        scale: 1.55,
+      });
+      crownRelay.position.y = topY + 0.22;
 
-      tg.add(body, crown, ring);
+      tg.add(body, crown, ring, crownRelay);
       this.group.add(tg);
     }
 
@@ -428,8 +436,8 @@ export class MineEnvironment3D {
         new THREE.Vector3(-19.6, 3.35, -15.4),
       ],
       [
-        new THREE.Vector3(9.51, 2.52, 0.22),
-        new THREE.Vector3(13.2, 2.15, -4.2),
+        new THREE.Vector3(10.61, 2.09, 0.35),
+        new THREE.Vector3(13.8, 1.95, -4.2),
         new THREE.Vector3(16.8, 2.95, -8.8),
       ],
       [
@@ -440,13 +448,17 @@ export class MineEnvironment3D {
     ];
     for (let idx = 0; idx < cableChains.length; idx++) {
       const curve = new THREE.CatmullRomCurve3(cableChains[idx]);
+      this.cableCurves.push(curve);
       const cableGeo = new THREE.TubeGeometry(curve, 14, 0.065, 6, false);
-      const cableMesh = new THREE.Mesh(
-        cableGeo,
-        idx % 2 === 0 ? this.cyberDeckTrimMat : darkMetalMat
-      );
+      const cableMesh = new THREE.Mesh(cableGeo, darkMetalMat);
       this.group.add(cableMesh);
     }
+
+    // Animated Flowing Energy Pulses Along All Overhead Power Cables
+    const pulseCount = this.cableCurves.length * 3;
+    const pulseGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.56, 6);
+    this.cableFlowInst = new THREE.InstancedMesh(pulseGeo, this.cyberDeckTrimMat, pulseCount);
+    this.group.add(this.cableFlowInst);
   }
 
   private buildSanctuaryGate(
@@ -515,7 +527,14 @@ export class MineEnvironment3D {
       const cap = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.18, 0.72), darkMetalMat);
       cap.position.set(px, bannerCenterY + bannerH * 0.5 + 0.36, 0.02);
       cap.castShadow = true;
-      g.add(pilaster, edgeStrip, cap);
+      const pilasterFinial = createCyberMonolithForkFinial({
+        frameMat: darkMetalMat,
+        steelMat,
+        coreMat: this.cyberDeckTrimMat,
+        scale: 0.92,
+      });
+      pilasterFinial.position.set(px, bannerCenterY + bannerH * 0.5 + 0.45, 0.02);
+      g.add(pilaster, edgeStrip, cap, pilasterFinial);
     }
 
     // 3:1 Game Banner Plane ("My Chibi Minerr")
@@ -542,14 +561,14 @@ export class MineEnvironment3D {
       base.position.y = 0.11;
       const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 1.55, 8), steelMat);
       body.position.y = 0.98;
-      const lensRing = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.155, 0.175, 0.14, 8),
-        this.crystalAccentMat
-      );
-      lensRing.position.y = 1.825;
-      const louverHood = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.19, 0.11, 8), darkMetalMat);
-      louverHood.position.y = 1.95;
-      proj.add(base, body, lensRing, louverHood);
+      const projFinial = createCyberLanternBollardFinial({
+        frameMat: darkMetalMat,
+        steelMat,
+        coreMat: this.crystalAccentMat,
+        scale: 0.76,
+      });
+      projFinial.position.y = 1.75;
+      proj.add(base, body, projFinial);
       g.add(proj);
     }
 
@@ -603,6 +622,23 @@ export class MineEnvironment3D {
 
     this.cyberDeckTrimMat.emissiveIntensity = 1.0 + Math.sin(elapsed * 2.2) * 0.14;
     this.dustMat.uniforms.uTime.value = elapsed;
+
+    if (this.cableFlowInst && this.cableCurves.length > 0) {
+      let idx = 0;
+      for (let c = 0; c < this.cableCurves.length; c++) {
+        const curve = this.cableCurves[c];
+        for (let p = 0; p < 3; p++) {
+          const t = (elapsed * 0.38 + p / 3 + c * 0.17) % 1;
+          curve.getPointAt(t, this.cablePosTmp);
+          curve.getTangentAt(t, this.cableTanTmp);
+          this.cableDummy.position.copy(this.cablePosTmp);
+          this.cableDummy.quaternion.setFromUnitVectors(this.cableUpAxis, this.cableTanTmp);
+          this.cableDummy.updateMatrix();
+          this.cableFlowInst.setMatrixAt(idx++, this.cableDummy.matrix);
+        }
+      }
+      this.cableFlowInst.instanceMatrix.needsUpdate = true;
+    }
   }
 
   public dispose(): void {

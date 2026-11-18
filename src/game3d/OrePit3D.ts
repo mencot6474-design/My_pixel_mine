@@ -12,6 +12,7 @@ import {
   WORLD_PALETTES,
 } from './MineWorldPalette';
 import { AttackImpactFxController } from './AttackImpactFx3D';
+import { createCyberLanternBollardFinial } from './CyberProps3D';
 import {
   getHazardStripeTexture,
   getQuarryFloorTexture,
@@ -714,10 +715,9 @@ export class OrePit3D {
       flatShading: true,
     });
     const postGeo = new THREE.CylinderGeometry(0.24, 0.28, 1.04, 8);
-    const beaconCollarGeo = new THREE.CylinderGeometry(0.26, 0.26, 0.09, 8);
-    const capGeo = new THREE.CylinderGeometry(0.18, 0.27, 0.14, 8);
-    this.ownedGeos.push(postGeo, beaconCollarGeo, capGeo);
+    this.ownedGeos.push(postGeo);
     this.ownedMats.push(postMat, steelCapMat);
+    const trackedCornerGeos = new Set<THREE.BufferGeometry>();
     for (const sx of [-1, 1]) {
       for (const sz of [-1, 1]) {
         const px = sx * (pitW / 2);
@@ -725,12 +725,20 @@ export class OrePit3D {
         const post = new THREE.Mesh(postGeo, postMat);
         post.position.set(px, 0.52, pz);
         post.castShadow = true;
-        const collar = new THREE.Mesh(beaconCollarGeo, this.pitNeonMat);
-        collar.position.set(px, 0.98, pz);
-        const cap = new THREE.Mesh(capGeo, steelCapMat);
-        cap.position.set(px, 1.1, pz);
-        cap.castShadow = true;
-        this.group.add(post, collar, cap);
+        const finial = createCyberLanternBollardFinial({
+          frameMat: postMat,
+          steelMat: steelCapMat,
+          coreMat: this.pitNeonMat,
+          scale: 0.86,
+        });
+        finial.position.set(px, 1.02, pz);
+        finial.traverse((child) => {
+          if (child instanceof THREE.Mesh && !trackedCornerGeos.has(child.geometry)) {
+            trackedCornerGeos.add(child.geometry);
+            this.ownedGeos.push(child.geometry);
+          }
+        });
+        this.group.add(post, finial);
       }
     }
 

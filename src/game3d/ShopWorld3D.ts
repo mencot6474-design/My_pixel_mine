@@ -171,11 +171,11 @@ export class ShopWorld3D {
     pos: THREE.Vector3;
   }> = [
     { id: 'pickaxe', title: 'Pickaxes!', subtitle: 'Buy Pickaxes', pos: new THREE.Vector3(-11.4, 7.05, -9.6) },
-    { id: 'sell', title: 'Sell Items!', subtitle: 'Sell Ores & Chibi', pos: new THREE.Vector3(-10.2, 6.45, 0.8) },
+    { id: 'sell', title: 'Sell Items!', subtitle: 'Sell Ores & Chibi', pos: new THREE.Vector3(-10.2, 5.9, 0.8) },
     { id: 'gems', title: 'Gem Shop!', subtitle: 'Elixirs & Potions', pos: new THREE.Vector3(11.4, 8.55, -9.6) },
     { id: 'altar', title: 'Enchant Altar', subtitle: 'Spin Enchants', pos: new THREE.Vector3(0, 4.65, -0.5) },
-    { id: 'tower', title: 'Gem Tower', subtitle: 'Grind Gems & Dice', pos: new THREE.Vector3(0, 10.2, -11.4) },
-    { id: 'forge', title: 'Relic Forge', subtitle: 'Craft & Equip Relics', pos: new THREE.Vector3(10.2, 6.45, 0.8) },
+    { id: 'tower', title: 'Gem Tower', subtitle: 'Grind Gems & Dice', pos: new THREE.Vector3(0, 9.75, -11.4) },
+    { id: 'forge', title: 'Relic Forge', subtitle: 'Craft & Equip Relics', pos: new THREE.Vector3(10.2, 5.9, 0.8) },
   ];
 
   constructor() {
@@ -200,12 +200,12 @@ export class ShopWorld3D {
     this.shopGroup.add(pickHit);
     this.shopClickables.push(pickHit);
 
-    this.addShopEmblem('/hud/trade.webp', '#4ade80', -10.2, 5.4, 0.8, 1.42, 1.0);
+    this.addShopEmblem('/hud/trade.webp', '#4ade80', -10.2, 4.95, 0.8, 1.42, 1.0);
     const sellHit = this.createHitbox(-10.2, 2.0, 0.8, 5.2, 4.2, 3.8, 'shop-sell');
     this.shopGroup.add(sellHit);
     this.shopClickables.push(sellHit);
 
-    this.addShopEmblem('/relics/ember_gauntlet.webp', '#f97316', 10.2, 5.4, 0.8, 1.38, 1.0);
+    this.addShopEmblem('/relics/ember_gauntlet.webp', '#f97316', 10.2, 4.95, 0.8, 1.38, 1.0);
     const forgeHit = this.createHitbox(10.2, 2.0, 0.8, 4.8, 4.2, 3.6, 'shop-forge');
     this.shopGroup.add(forgeHit);
     this.shopClickables.push(forgeHit);
@@ -215,7 +215,7 @@ export class ShopWorld3D {
     this.shopGroup.add(gemHit);
     this.shopClickables.push(gemHit);
 
-    this.addShopEmblem('/hud/tower.webp', '#38bdf8', 0, 9.15, -11.4, 1.78, 0.8);
+    this.addShopEmblem('/hud/tower.webp', '#38bdf8', 0, 8.85, -11.4, 1.78, 0.8);
     const towerHit = this.createHitbox(0, 4.5, -11.4, 8.2, 7.8, 7.2, 'shop-tower');
     this.shopGroup.add(towerHit);
     this.shopClickables.push(towerHit);
