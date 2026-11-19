@@ -10,6 +10,7 @@ Panduan wajib setiap kali membuat atau memperbarui mesh, properti (props), krist
 ## 1. Kualitas Bentuk & Siluet (Anti-Primitif Polos)
 
 - **Dilarang Primitif Tunggal**: Jangan pernah membuat aset hanya dari satu kubus (`BoxGeometry`), bola (`SphereGeometry`), atau silinder (`CylinderGeometry`) polos.
+- **Dilarang Gyroscopic / Armillary / Tilted Tumbling Orbit Rings**: Jangan pernah memasang cincin (`TorusGeometry` / `RingGeometry`) melayang yang miring dan berputar ke atas-bawah (*gyroscopic / armillary / tumbling hoops*) mengelilingi podium, jam, altar, kristal, atau ikon. Semua cincin segel/roda gigi pada podium & jam wajib **100% datar/horizontal** sejajar permukaan lantai/dais.
 - **Komposisi Multi-Part**: Bangun siluet yang kaya dan terbaca dari berbagai sudut dengan menggabungkan beberapa sub-mesh (basis/pedestal, bingkai/trim, ornamen, dan puncak/inti):
   - Manfaatkan `THREE.ExtrudeGeometry` dengan `bevelEnabled: true` untuk panel, bingkai, segel, atau ornamen bersudut.
   - Gunakan `THREE.LatheGeometry` untuk bentuk berprofil melingkar (pilar berundak, kendi, cawan altar, mahkota lampu).

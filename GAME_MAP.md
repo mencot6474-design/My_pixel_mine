@@ -28,10 +28,10 @@ GAME_MAP.md                     Peta struktur file & anchor (dokumen ini)
 docs/superpowers/               Design specs & implementation plans (`specs/`, `plans/`)
 
 === AGENT RULES & SKILLS (`.agent/`) ===
-.agent/rules/threejs-ts-standards.md        Aturan wajib `.ts`: strict TypeScript (no `any`), delta clamp `<= 0.1`, `THREE.Clock`/explicit `Timer`, `InstancedMesh`, `.dispose()`, `SRGBColorSpace`
+.agent/rules/threejs-ts-standards.md        Aturan wajib `.ts`: strict TypeScript (no `any`), delta clamp `<= 0.1`, `THREE.Clock`/explicit `Timer`, `InstancedMesh`, `.dispose()`, `SRGBColorSpace`, & larangan Gyroscopic/Armillary tilted tumbling orbit rings
 .agent/skills/crazygames-sdk-v3/SKILL.md    Standar lifecycle hooks SDK v3, pause/audio mute pada `adStarted`/`adFinished`/`adError`, & larangan external links
 .agent/skills/ui-hud-design/SKILL.md        Standar Dark-Glass 1px, `tabular-nums`, viewport-first HUD, `pointer-events` discipline, & responsivitas iframe/desktop
-.agent/skills/procedural-3d-assets/SKILL.md Standar seni & arsitektur 3D prosedural multi-part, PBR material + emissive, pivot `y = 0`, `InstancedMesh`, & `.dispose()`
+.agent/skills/procedural-3d-assets/SKILL.md Standar seni & arsitektur 3D prosedural multi-part, larangan gyroscopic/armillary tumbling hoops, PBR material + emissive, pivot `y = 0`, `InstancedMesh`, & `.dispose()`
 
 === ENTRY & TESTS ===
 src/main.ts                     297 baris — Bootstrap Three.js scene (`MineScene3D`), `GameState`, `GameHud` (+ plot drop, Fusion 3D ops & `setFusionRevealHold` camera lock, 3D label sync ops, `'limit'` toast,
@@ -201,9 +201,9 @@ src/game3d/ShopCyberPlaza3D.ts 1.764 baris — Procedural "Neo-Cyber City Plaza"
                                             open sky Gem Tower skyscraper + access terminals, circular roundabout curb + thin neon trim + radial contact shadow (`createRoundaboutShadowTexture`) + Neon Crystal Cluster Fountain (`createCyberCrystalCluster`),
                                             4 high-clearance container kiosks (Pickaxes, Sell, centered 2-story Gem Shop `'CYBER GEM MART'`, Plasma Relic Forge, `createShopPadMeshes`) + vending machines & hologram signs,
                                             dark concrete plaza deck + trimmed neon road lanes, cyber-botanical trees & monolith fork pylons (`CyberProps3D`), modern barriers/benches/streetlights (`InstancedMesh`), safe-zone lighting, & `dispose()`
-src/game3d/ShopWorld3D.ts       701 baris — 3D Neo-Cyber Shop Plaza controller (`ShopWorld3D` 140, `ShopCyberPlaza3D`), Plaza walkers, &
+src/game3d/ShopWorld3D.ts     1.266 baris — 3D Neo-Cyber Shop Plaza controller (`ShopWorld3D` 233, `ShopCyberPlaza3D`), Plaza walkers, &
                                             6 emblem bangunan 2.5D tinggi (`ArtBillboard2D`), preserved hitboxes & non-overlapping aligned `stationPositions` badges,
-                                            Outer Space Altar clock room (10 pedestal 2.5D `EnchantBillboard2D`), & `dispose()`
+                                            Outer Space Altar clock room (Center Cyber-Chrono Core Podium + 10 ZZZ/HSR Cyber-Showcase Enchant Podiums `"01".."10"` w/ thruster under-hull, frosted holo lens, flat horizontal sigil, Dual-Shell Anime Aura & GPU star-ember particles, 10 radial energy conduits + 30 traveling pulses, outer elliptical synchro ring, 6 floating cosmic crystal islands & 4 chrono-monolith pylons, 2.5D `EnchantBillboard2D`), & `dispose()`
 src/game3d/SeraphimBoss3D.ts  1.722 baris — Full 3D hard-surface Corrupted Seraphim AI Overlord Boss (`createSeraphimBoss3D`, zero `BoxGeometry`):
                                             beveled `ExtrudeGeometry` + `LatheGeometry` + tapered `TubeGeometry` armor, V-fin visor helmet + curved horns,
                                             curved layered pauldrons + aerodynamic arms + 5-clawed hands, dangling cables, & 6 curved feather-blade wings + `update()` + `dispose()`
@@ -214,8 +214,8 @@ src/game3d/TowerCityEnvironment3D.ts 1.575 baris — Procedural "Ruined Cyber Ci
                                             raised holed highway (`y = 0.52`), recessed crater (`y = 0.08`) with jagged charred fissures + core embers,
                                             crater fire embers + dark ash flakes (`InstancedMesh`) + street electric sparks, dented guardrails,
                                             flickering streetlights, & 22 ruined skyscrapers (`InstancedMesh` varied/shattered window grids + glass shards + rooftop ducts/stairs)
-src/game3d/AltarSpinFx3D.ts     529 baris — `createAltarClockDial` 34, `createAltarClockHand` 156,
-                                            `createAltarSubHand` 254, `AltarParticleSystem` 308
+src/game3d/AltarSpinFx3D.ts     936 baris — Ornate Astral Astrolabe Dial & Chrono-Spear Hands (`createAltarClockDial` 59 w/ beveled arrow hour markers, 12-tooth gearRing, counter-rotating flat horizontal `outerTrackRing` & skyward chrono light beam, `createAltarClockHand` 297 skeletonized split-rail spear w/ crescent counterweight tail, swept crossguard wings, horizontal sighting reticle & fleur-de-lis spearhead,
+                                            `createAltarSubHand` 567 Breguet moon-eye vernier hand, `AltarParticleSystem` 679)
 src/game3d/HellAltarEye3D.ts    373 baris — `HellAltarEyeController` 151: Outer Space starfield, cosmic astrolabe floor ring (`dt`-clamped `update`),
                                             & distant Pitch-Black Black Hole (`#000000` event horizon, photon ring, lensing arches, accretion disk)
 src/game3d/AuraModels3D.ts      586 baris — `createEnchantAura3D` 276, `createEnchantDice3D` 318, `ArtBillboard2D` 413 & `EnchantBillboard2D` 577 (2.5D sprites)

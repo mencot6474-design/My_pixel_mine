@@ -29,6 +29,35 @@ export interface AltarClockDialParts {
   group: THREE.Group;
   gearRing: THREE.Group;
   centerOrb: THREE.Mesh;
+  outerTrackRing?: THREE.Group;
+  skyBeamMat?: THREE.MeshBasicMaterial;
+  outerRuneMat?: THREE.MeshBasicMaterial;
+}
+
+/**
+ * Helper to extrude a 2D shape horizontally (lying flat on the XZ plane, centered vertically around y = 0).
+ */
+function createFlatExtrudedShape(
+  buildShape: (shape: THREE.Shape) => void,
+  thickness: number,
+  bevel = 0.012
+): THREE.ExtrudeGeometry {
+  const shape = new THREE.Shape();
+  buildShape(shape);
+  const innerDepth = Math.max(0.008, thickness - bevel * 2);
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: innerDepth,
+    bevelEnabled: true,
+    bevelThickness: bevel,
+    bevelSize: bevel,
+    bevelSegments: 2,
+    curveSegments: 12,
+  });
+  // Rotate so shape (X, Y) maps to world (X, Z) with thickness along +Y
+  geo.rotateX(-Math.PI / 2);
+  geo.translate(0, -innerDepth * 0.5, 0);
+  geo.computeVertexNormals();
+  return geo;
 }
 
 export function createAltarClockDial(
@@ -40,45 +69,85 @@ export function createAltarClockDial(
   const goldMat = new THREE.MeshStandardMaterial({
     color: 0xfacc15,
     emissive: 0x92400e,
-    emissiveIntensity: 0.45,
-    roughness: 0.24,
-    metalness: 0.82,
+    emissiveIntensity: 0.48,
+    roughness: 0.22,
+    metalness: 0.86,
+    flatShading: true,
   });
-  const faceMat = new THREE.MeshStandardMaterial({
-    color: 0x090b1a,
-    roughness: 0.35,
-    metalness: 0.28,
+  const darkArmorMat = new THREE.MeshStandardMaterial({
+    color: 0x0b1024,
+    roughness: 0.34,
+    metalness: 0.42,
+    flatShading: true,
+  });
+  const steelMat = new THREE.MeshStandardMaterial({
+    color: 0x1e2c48,
+    roughness: 0.3,
+    metalness: 0.65,
+    flatShading: true,
+  });
+  const cyanGlowMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
+  const violetGlowMat = new THREE.MeshBasicMaterial({
+    color: 0xc084fc,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
   });
 
-  // Obsidian dial plate
-  const plate = new THREE.Mesh(new THREE.CylinderGeometry(1.42, 1.5, 0.14, 36), faceMat);
-  plate.position.y = 0.02;
+  // Tiered obsidian & titanium astrolabe dial base
+  const outerPlinth = new THREE.Mesh(new THREE.CylinderGeometry(1.56, 1.66, 0.12, 20), steelMat);
+  outerPlinth.position.y = 0.0;
+  outerPlinth.receiveShadow = true;
+  group.add(outerPlinth);
+
+  const plate = new THREE.Mesh(new THREE.CylinderGeometry(1.44, 1.52, 0.14, 36), darkArmorMat);
+  plate.position.y = 0.03;
+  plate.receiveShadow = true;
   group.add(plate);
 
-  // Outer gold bezel torus
-  const outerBezel = new THREE.Mesh(new THREE.TorusGeometry(1.44, 0.075, 10, 48), goldMat);
+  // Sculpted outer gold bezel torus + cardinal compass lugs
+  const outerBezel = new THREE.Mesh(new THREE.TorusGeometry(1.46, 0.072, 10, 48), goldMat);
   outerBezel.rotation.x = Math.PI / 2;
-  outerBezel.position.y = 0.09;
+  outerBezel.position.y = 0.095;
   group.add(outerBezel);
 
-  // Concentric arcane rune rings
-  const violetRing = new THREE.Mesh(
-    new THREE.RingGeometry(1.0, 1.11, 36),
-    new THREE.MeshBasicMaterial({ color: 0xc084fc, side: THREE.DoubleSide })
-  );
+  const innerBezel = new THREE.Mesh(new THREE.TorusGeometry(1.14, 0.034, 8, 40), goldMat);
+  innerBezel.rotation.x = Math.PI / 2;
+  innerBezel.position.y = 0.102;
+  group.add(innerBezel);
+
+  // Concentric arcane astrolabe rings
+  const violetRing = new THREE.Mesh(new THREE.RingGeometry(0.98, 1.08, 40), violetGlowMat);
   violetRing.rotation.x = -Math.PI / 2;
-  violetRing.position.y = 0.1;
+  violetRing.position.y = 0.104;
   group.add(violetRing);
 
-  const cyanRing = new THREE.Mesh(
-    new THREE.RingGeometry(0.46, 0.54, 28),
-    new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide })
-  );
+  const cyanRing = new THREE.Mesh(new THREE.RingGeometry(0.46, 0.55, 32), cyanGlowMat);
   cyanRing.rotation.x = -Math.PI / 2;
-  cyanRing.position.y = 0.102;
+  cyanRing.position.y = 0.106;
   group.add(cyanRing);
 
-  // 10 color-matched hour / pedestal ticks around perimeter
+  // 10 color-matched beveled arrow hour markers pointing toward each Enchant pedestal
+  const markerFrameGeo = createFlatExtrudedShape(
+    (s) => {
+      s.moveTo(-0.16, -0.065);
+      s.lineTo(0.08, -0.085);
+      s.lineTo(0.24, 0);
+      s.lineTo(0.08, 0.085);
+      s.lineTo(-0.16, 0.065);
+      s.closePath();
+    },
+    0.055,
+    0.01
+  );
+
   for (const target of pedestalTargets) {
     const dx = target.x - ALTAR_CENTER_X;
     const dz = target.z - ALTAR_CENTER_Z;
@@ -88,62 +157,132 @@ export function createAltarClockDial(
     const tickAng = Math.atan2(-dz, dx);
 
     const tickGroup = new THREE.Group();
-    tickGroup.position.set(nx * 1.24, 0.11, nz * 1.24);
+    tickGroup.position.set(nx * 1.27, 0.115, nz * 1.27);
     tickGroup.rotation.y = tickAng;
 
-    const stud = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.07, 0.08), goldMat);
+    const stud = new THREE.Mesh(markerFrameGeo, goldMat);
     tickGroup.add(stud);
 
     const gem = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.065, 0),
+      new THREE.OctahedronGeometry(0.072, 0),
       new THREE.MeshBasicMaterial({ color: target.color })
     );
-    gem.position.set(0.11, 0.03, 0);
+    gem.position.set(0.06, 0.042, 0);
+    gem.scale.set(1.25, 0.75, 0.9);
     tickGroup.add(gem);
 
     group.add(tickGroup);
   }
 
-  // Rotating astrolabe clockwork gear ring
+  // Rotating astrolabe clockwork gear ring with 12 precision teeth & 4 inner spokes
   const gearRing = new THREE.Group();
-  gearRing.position.y = 0.12;
+  gearRing.position.y = 0.125;
   const gearTorus = new THREE.Mesh(
-    new THREE.TorusGeometry(0.75, 0.036, 8, 32),
+    new THREE.TorusGeometry(0.76, 0.038, 8, 36),
     new THREE.MeshStandardMaterial({
       color: 0x38bdf8,
       emissive: 0x0284c7,
-      emissiveIntensity: 0.7,
-      roughness: 0.25,
-      metalness: 0.6,
+      emissiveIntensity: 0.78,
+      roughness: 0.22,
+      metalness: 0.65,
+      flatShading: true,
     })
   );
   gearTorus.rotation.x = Math.PI / 2;
   gearRing.add(gearTorus);
 
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2;
-    const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.07), goldMat);
-    tooth.position.set(Math.cos(a) * 0.75, 0, Math.sin(a) * 0.75);
+  const toothGeo = new THREE.BoxGeometry(0.15, 0.05, 0.068);
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const tooth = new THREE.Mesh(toothGeo, goldMat);
+    tooth.position.set(Math.cos(a) * 0.79, 0, Math.sin(a) * 0.79);
     tooth.rotation.y = -a;
     gearRing.add(tooth);
   }
+  const spokeGeo = new THREE.BoxGeometry(1.44, 0.028, 0.045);
+  for (let i = 0; i < 2; i++) {
+    const spoke = new THREE.Mesh(spokeGeo, goldMat);
+    spoke.rotation.y = (i * Math.PI) / 2;
+    gearRing.add(spoke);
+  }
   group.add(gearRing);
 
-  // Center pivot spire
-  const pivotBase = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.34, 0.38, 12), goldMat);
-  pivotBase.position.y = 0.2;
+  // Stepped center tourbillon pivot pedestal
+  const pivotBase = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 0.32, 8), goldMat);
+  pivotBase.position.y = 0.18;
   group.add(pivotBase);
 
+  const pivotCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.27, 0.12, 8), steelMat);
+  pivotCollar.position.y = 0.34;
+  group.add(pivotCollar);
+
   // Center pivot cap (hidden finial orb kept for interface compatibility)
-  const centerOrb = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.18, 0.22, 0.05, 16),
-    goldMat
-  );
+  const centerOrb = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.05, 16), goldMat);
   centerOrb.position.y = 0.4;
   centerOrb.visible = false;
   group.add(centerOrb);
 
-  return { group, gearRing, centerOrb };
+  // Outer Floating Counter-Rotating Astrolabe Chrono Track Ring (r = 2.45m, flat horizontal plane)
+  const outerTrackRing = new THREE.Group();
+  outerTrackRing.position.y = 0.04;
+  const outerTrackTorus = new THREE.Mesh(new THREE.TorusGeometry(2.45, 0.052, 8, 56), steelMat);
+  outerTrackTorus.rotation.x = Math.PI / 2;
+  const outerGoldRim = new THREE.Mesh(new THREE.TorusGeometry(2.54, 0.028, 8, 56), goldMat);
+  outerGoldRim.rotation.x = Math.PI / 2;
+  outerGoldRim.position.y = 0.025;
+  const outerRuneMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.52,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+  const outerRuneBand = new THREE.Mesh(new THREE.RingGeometry(2.22, 2.34, 48), outerRuneMat);
+  outerRuneBand.rotation.x = -Math.PI / 2;
+  outerRuneBand.position.y = 0.02;
+  outerTrackRing.add(outerTrackTorus, outerGoldRim, outerRuneBand);
+
+  const vernierTickGeo = new THREE.BoxGeometry(0.18, 0.045, 0.055);
+  const subTickGeo = new THREE.BoxGeometry(0.09, 0.03, 0.032);
+  for (let i = 0; i < 40; i++) {
+    const a = (i / 40) * Math.PI * 2;
+    const isMajor = i % 4 === 0;
+    const tick = new THREE.Mesh(isMajor ? vernierTickGeo : subTickGeo, isMajor ? goldMat : cyanGlowMat);
+    const r = isMajor ? 2.48 : 2.38;
+    tick.position.set(Math.cos(a) * r, 0.035, Math.sin(a) * r);
+    tick.rotation.y = -a;
+    outerTrackRing.add(tick);
+  }
+  group.add(outerTrackRing);
+
+  // Soft Skyward Chrono Light Beam rising from center tourbillon spire
+  const skyBeamMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.13,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const skyBeamMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.45, 0.92, 9.5, 20, 1, true),
+    skyBeamMat
+  );
+  skyBeamMesh.position.y = 4.95;
+  group.add(skyBeamMesh);
+
+  return {
+    group,
+    gearRing,
+    centerOrb,
+    outerTrackRing,
+    skyBeamMat,
+    outerRuneMat,
+  };
 }
 
 export interface AltarClockHandParts {
@@ -153,6 +292,16 @@ export interface AltarClockHandParts {
   beamMat: THREE.MeshBasicMaterial;
 }
 
+/**
+ * Builds the primary Ornate Astral Chrono-Spear Clock Hand (inspired by Honkai: Star Rail
+ * Simulated Universe Astrolabe & Breguet/Astrologian skeletonized celestial pointers):
+ * - Multi-tiered octagonal Tourbillon center hub with 4-point compass star finial.
+ * - Swept beveled Crescent Counterweight Tail (-X) cradling a live color-synced star crystal.
+ * - Swept Astral Crossguard Wings (+X = 0.32..0.95) with floating energy nodes.
+ * - Skeletonized Split-Rail Spear Shaft with exposed glowing plasma core & 2 octagonal focus lenses.
+ * - Horizontal Astrolabe Sighting Reticle Ring (+X = 2.48) with 4 cardinal crosshairs.
+ * - Beveled Fleur-de-Lis / Halberd Diamond Spearhead (+X = 2.38..3.42) + laser targeting beam.
+ */
 export function createAltarClockHand(): AltarClockHandParts {
   const group = new THREE.Group();
   group.position.set(ALTAR_CENTER_X, 0.56, ALTAR_CENTER_Z);
@@ -160,82 +309,266 @@ export function createAltarClockHand(): AltarClockHandParts {
   const goldMat = new THREE.MeshStandardMaterial({
     color: 0xfde047,
     emissive: 0xb45309,
-    emissiveIntensity: 0.4,
-    roughness: 0.22,
-    metalness: 0.85,
+    emissiveIntensity: 0.46,
+    roughness: 0.2,
+    metalness: 0.88,
+    flatShading: true,
   });
   const darkMetalMat = new THREE.MeshStandardMaterial({
-    color: 0x1e1b4b,
-    roughness: 0.35,
-    metalness: 0.65,
+    color: 0x111833,
+    roughness: 0.32,
+    metalness: 0.72,
+    flatShading: true,
+  });
+  const brightSteelMat = new THREE.MeshStandardMaterial({
+    color: 0xe2e8f0,
+    emissive: 0x38bdf8,
+    emissiveIntensity: 0.22,
+    roughness: 0.18,
+    metalness: 0.85,
+    flatShading: true,
   });
   const tipGlowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
 
-  // Center octagonal collar boss
-  const hubBoss = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, 0.14, 8), goldMat);
+  // 1. Multi-Tiered Tourbillon Center Hub (x = 0)
+  const hubBase = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 0.1, 8), darkMetalMat);
+  hubBase.rotation.y = Math.PI / 8;
+  group.add(hubBase);
+
+  const hubBoss = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.29, 0.15, 8), goldMat);
   group.add(hubBoss);
 
-  const hubCap = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.05, 16), goldMat);
-  hubCap.position.y = 0.08;
-  group.add(hubCap);
+  const hubGlowRing = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.024, 8, 24), tipGlowMat);
+  hubGlowRing.rotation.x = Math.PI / 2;
+  hubGlowRing.position.y = 0.045;
+  group.add(hubGlowRing);
 
-  // Counterweight tail (-X side)
-  const tailShaft = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.07, 0.14), darkMetalMat);
-  tailShaft.position.set(-0.42, 0, 0);
-  group.add(tailShaft);
-
-  const tailRing = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.044, 8, 24), goldMat);
-  tailRing.rotation.x = Math.PI / 2;
-  tailRing.position.set(-0.92, 0, 0);
-  group.add(tailRing);
-
-  const tailJewel = new THREE.Mesh(
-    new THREE.OctahedronGeometry(0.13, 0),
-    new THREE.MeshBasicMaterial({ color: 0xf43f5e })
+  const hubStarGeo = createFlatExtrudedShape(
+    (s) => {
+      const pts = 4;
+      for (let i = 0; i < pts * 2; i++) {
+        const a = (i * Math.PI) / pts;
+        const r = i % 2 === 0 ? 0.22 : 0.085;
+        if (i === 0) s.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+        else s.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      s.closePath();
+    },
+    0.05,
+    0.008
   );
-  tailJewel.position.set(-0.92, 0.03, 0);
-  group.add(tailJewel);
+  const hubStarCap = new THREE.Mesh(hubStarGeo, goldMat);
+  hubStarCap.position.y = 0.095;
+  group.add(hubStarCap);
 
-  // Sleek crossguard wings near hub (+X = 0.52)
+  const hubCenterGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.085, 0), tipGlowMat);
+  hubCenterGem.position.y = 0.135;
+  hubCenterGem.scale.set(1, 0.65, 1);
+  group.add(hubCenterGem);
+
+  // 2. Sculpted Crescent & Star Counterweight Tail (-X = -0.24..-1.26)
+  const tailSpineGeo = createFlatExtrudedShape(
+    (s) => {
+      s.moveTo(-0.22, -0.09);
+      s.lineTo(-0.78, -0.055);
+      s.lineTo(-0.92, 0);
+      s.lineTo(-0.78, 0.055);
+      s.lineTo(-0.22, 0.09);
+      s.closePath();
+    },
+    0.075,
+    0.012
+  );
+  const tailSpine = new THREE.Mesh(tailSpineGeo, darkMetalMat);
+  group.add(tailSpine);
+
   for (const side of [-1, 1]) {
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.06, 0.13), goldMat);
-    wing.position.set(0.46, 0.01, side * 0.28);
-    wing.rotation.y = side * 0.48;
-    group.add(wing);
+    const crescentGeo = createFlatExtrudedShape(
+      (s) => {
+        s.moveTo(-0.56, side * 0.06);
+        s.lineTo(-0.76, side * 0.22);
+        s.lineTo(-1.04, side * 0.26);
+        s.lineTo(-1.26, side * 0.11);
+        s.lineTo(-1.12, side * 0.05);
+        s.lineTo(-0.94, side * 0.14);
+        s.lineTo(-0.72, side * 0.12);
+        s.closePath();
+      },
+      0.065,
+      0.01
+    );
+    const crescentHorn = new THREE.Mesh(crescentGeo, goldMat);
+    group.add(crescentHorn);
   }
 
-  // Main tapered clock blade along +X (0.2 -> 2.75)
-  const bladeFrame = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.24, 2.55, 4), darkMetalMat);
-  bladeFrame.rotation.z = -Math.PI / 2;
-  bladeFrame.scale.set(0.4, 1, 1.15);
-  bladeFrame.position.set(1.48, 0, 0);
-  group.add(bladeFrame);
+  const tailRing = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.032, 8, 24), goldMat);
+  tailRing.rotation.x = Math.PI / 2;
+  tailRing.position.set(-0.98, 0.01, 0);
+  group.add(tailRing);
 
-  const bladeGoldRim = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.27, 2.48, 4), goldMat);
-  bladeGoldRim.rotation.z = -Math.PI / 2;
-  bladeGoldRim.scale.set(0.24, 1, 1.28);
-  bladeGoldRim.position.set(1.44, -0.015, 0);
-  group.add(bladeGoldRim);
+  const tailJewel = new THREE.Mesh(new THREE.OctahedronGeometry(0.12, 0), tipGlowMat);
+  tailJewel.position.set(-0.98, 0.02, 0);
+  tailJewel.scale.set(1.25, 0.72, 1.0);
+  group.add(tailJewel);
 
-  // Glowing plasma energy spine along top of hand
-  const plasmaVein = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.075, 2.55, 6), tipGlowMat);
-  plasmaVein.rotation.z = -Math.PI / 2;
-  plasmaVein.position.set(1.48, 0.055, 0);
+  // 3. Swept Astral Crossguard Wings near Hub (+X = 0.26..1.05)
+  for (const side of [-1, 1]) {
+    const wingArmorGeo = createFlatExtrudedShape(
+      (s) => {
+        s.moveTo(0.24, side * 0.08);
+        s.lineTo(0.58, side * 0.36);
+        s.lineTo(0.42, side * 0.48);
+        s.lineTo(0.96, side * 0.26);
+        s.lineTo(0.84, side * 0.11);
+        s.closePath();
+      },
+      0.068,
+      0.011
+    );
+    const wingArmor = new THREE.Mesh(wingArmorGeo, goldMat);
+    wingArmor.position.y = 0.01;
+    group.add(wingArmor);
+
+    const wingAccent = new THREE.Mesh(new THREE.OctahedronGeometry(0.065, 0), tipGlowMat);
+    wingAccent.position.set(0.54, 0.035, side * 0.34);
+    wingAccent.scale.set(1.4, 0.65, 0.85);
+    group.add(wingAccent);
+  }
+
+  // 4. Skeletonized Split-Rail Spear Shaft (+X = 0.32..2.52) with Exposed Glowing Plasma Core
+  const innerArmorBodyGeo = createFlatExtrudedShape(
+    (s) => {
+      s.moveTo(0.28, -0.14);
+      s.lineTo(0.88, -0.18);
+      s.lineTo(1.38, -0.095);
+      s.lineTo(2.28, -0.13);
+      s.lineTo(2.62, -0.055);
+      s.lineTo(2.62, 0.055);
+      s.lineTo(2.28, 0.13);
+      s.lineTo(1.38, 0.095);
+      s.lineTo(0.88, 0.18);
+      s.lineTo(0.28, 0.14);
+      s.closePath();
+    },
+    0.058,
+    0.01
+  );
+  const innerArmorBody = new THREE.Mesh(innerArmorBodyGeo, darkMetalMat);
+  innerArmorBody.position.y = -0.008;
+  group.add(innerArmorBody);
+
+  // Twin outer golden skeleton rails flanking the central plasma channel
+  for (const side of [-1, 1]) {
+    const railGeo = createFlatExtrudedShape(
+      (s) => {
+        s.moveTo(0.34, side * 0.055);
+        s.lineTo(0.88, side * 0.19);
+        s.lineTo(1.38, side * 0.11);
+        s.lineTo(1.92, side * 0.155);
+        s.lineTo(2.48, side * 0.085);
+        s.lineTo(2.44, side * 0.038);
+        s.lineTo(1.92, side * 0.085);
+        s.lineTo(1.38, side * 0.048);
+        s.lineTo(0.88, side * 0.105);
+        s.lineTo(0.34, side * 0.025);
+        s.closePath();
+      },
+      0.074,
+      0.011
+    );
+    const railMesh = new THREE.Mesh(railGeo, goldMat);
+    railMesh.position.y = 0.012;
+    group.add(railMesh);
+  }
+
+  // Luminous central plasma energy spine running from hub to spearhead
+  const plasmaSpineGeo = createFlatExtrudedShape(
+    (s) => {
+      s.moveTo(0.32, -0.032);
+      s.lineTo(1.45, -0.042);
+      s.lineTo(2.68, -0.022);
+      s.lineTo(2.68, 0.022);
+      s.lineTo(1.45, 0.042);
+      s.lineTo(0.32, 0.032);
+      s.closePath();
+    },
+    0.068,
+    0.008
+  );
+  const plasmaVein = new THREE.Mesh(plasmaSpineGeo, tipGlowMat);
+  plasmaVein.position.y = 0.026;
   group.add(plasmaVein);
 
-  // Sharp glowing arrowhead crystal tip (+X = 2.7 -> 3.45)
-  const arrowHead = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.78, 4), tipGlowMat);
-  arrowHead.rotation.z = -Math.PI / 2;
-  arrowHead.scale.set(0.48, 1, 1.15);
-  arrowHead.position.set(3.04, 0.01, 0);
+  // Two octagonal focus nodes along the skeletonized shaft (+X = 0.88 & +X = 1.88)
+  for (const nodeX of [0.88, 1.88]) {
+    const bezel = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.085, 8), goldMat);
+    bezel.position.set(nodeX, 0.02, 0);
+    const jewel = new THREE.Mesh(new THREE.OctahedronGeometry(0.078, 0), tipGlowMat);
+    jewel.position.set(nodeX, 0.055, 0);
+    jewel.scale.set(1.25, 0.65, 0.95);
+    group.add(bezel, jewel);
+  }
+
+  // 5. Horizontal Astrolabe Sighting Reticle Ring near Spearhead (+X = 2.48)
+  const reticleRing = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.026, 8, 28), goldMat);
+  reticleRing.rotation.x = Math.PI / 2;
+  reticleRing.position.set(2.48, 0.018, 0);
+  group.add(reticleRing);
+
+  const reticleInnerGlow = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.014, 6, 24), tipGlowMat);
+  reticleInnerGlow.rotation.x = Math.PI / 2;
+  reticleInnerGlow.position.set(2.48, 0.022, 0);
+  group.add(reticleInnerGlow);
+
+  // 6. Sculpted Fleur-de-Lis / Halberd Diamond Spearhead (+X = 2.32..3.48)
+  const spearOuterGoldGeo = createFlatExtrudedShape(
+    (s) => {
+      s.moveTo(2.26, 0);
+      s.lineTo(2.46, -0.26);
+      s.lineTo(2.74, -0.14);
+      s.lineTo(3.32, 0);
+      s.lineTo(2.74, 0.14);
+      s.lineTo(2.46, 0.26);
+      s.closePath();
+    },
+    0.072,
+    0.012
+  );
+  const spearOuterGold = new THREE.Mesh(spearOuterGoldGeo, goldMat);
+  spearOuterGold.position.y = 0.008;
+  group.add(spearOuterGold);
+
+  const spearCoreTipGeo = createFlatExtrudedShape(
+    (s) => {
+      s.moveTo(2.42, 0);
+      s.lineTo(2.66, -0.11);
+      s.lineTo(3.48, 0);
+      s.lineTo(2.66, 0.11);
+      s.closePath();
+    },
+    0.082,
+    0.012
+  );
+  const arrowHead = new THREE.Mesh(spearCoreTipGeo, tipGlowMat);
+  arrowHead.position.y = 0.022;
   group.add(arrowHead);
 
-  const tipHalo = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 8, 20), goldMat);
-  tipHalo.rotation.y = Math.PI / 2;
-  tipHalo.position.set(2.74, 0.01, 0);
-  group.add(tipHalo);
+  const spearSilverCrestGeo = createFlatExtrudedShape(
+    (s) => {
+      s.moveTo(2.48, 0);
+      s.lineTo(2.68, -0.055);
+      s.lineTo(3.24, 0);
+      s.lineTo(2.68, 0.055);
+      s.closePath();
+    },
+    0.092,
+    0.008
+  );
+  const spearSilverCrest = new THREE.Mesh(spearSilverCrestGeo, brightSteelMat);
+  spearSilverCrest.position.y = 0.032;
+  group.add(spearSilverCrest);
 
-  // Translucent targeting beam extending ahead of tip
+  // 7. Translucent Targeting Laser Beam extending ahead of Spear Tip toward Pedestals
   const beamMat = new THREE.MeshBasicMaterial({
     color: 0x38bdf8,
     transparent: true,
@@ -245,12 +578,16 @@ export function createAltarClockHand(): AltarClockHandParts {
   });
   const beamMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.16, 1.45, 8, 1, true), beamMat);
   beamMesh.rotation.z = -Math.PI / 2;
-  beamMesh.position.set(4.12, 0.01, 0);
+  beamMesh.position.set(4.15, 0.02, 0);
   group.add(beamMesh);
 
   return { group, tipGlowMat, beamMesh, beamMat };
 }
 
+/**
+ * Builds the secondary Silver-Cyan Chrono Vernier Sub-Hand (Breguet moon-eye astrolabe pointer)
+ * that counter-rotates during spin and locks in harmony with the main Chrono-Spear hand.
+ */
 export function createAltarSubHand(): THREE.Group {
   const group = new THREE.Group();
   group.position.set(ALTAR_CENTER_X, 0.44, ALTAR_CENTER_Z);
@@ -258,26 +595,96 @@ export function createAltarSubHand(): THREE.Group {
   const silverMat = new THREE.MeshStandardMaterial({
     color: 0xe2e8f0,
     emissive: 0x38bdf8,
-    emissiveIntensity: 0.45,
-    roughness: 0.2,
-    metalness: 0.8,
+    emissiveIntensity: 0.42,
+    roughness: 0.18,
+    metalness: 0.86,
+    flatShading: true,
   });
-  const cyanMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
+  const darkSteelMat = new THREE.MeshStandardMaterial({
+    color: 0x1e293b,
+    roughness: 0.32,
+    metalness: 0.72,
+    flatShading: true,
+  });
+  const violetGlowMat = new THREE.MeshBasicMaterial({ color: 0xc084fc });
+  const cyanGlowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
 
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.04, 0.09), silverMat);
-  tail.position.set(-0.26, 0, 0);
+  // Center collar ring
+  const subCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.23, 0.06, 8), silverMat);
+  group.add(subCollar);
+
+  // Tuning-fork counterweight tail (-X = -0.18..-0.72)
+  const tailGeo = createFlatExtrudedShape(
+    (s) => {
+      s.moveTo(-0.16, -0.065);
+      s.lineTo(-0.66, -0.11);
+      s.lineTo(-0.56, -0.035);
+      s.lineTo(-0.34, 0);
+      s.lineTo(-0.56, 0.035);
+      s.lineTo(-0.66, 0.11);
+      s.lineTo(-0.16, 0.065);
+      s.closePath();
+    },
+    0.042,
+    0.007
+  );
+  const tail = new THREE.Mesh(tailGeo, silverMat);
   group.add(tail);
 
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.11, 2.05, 4), silverMat);
-  shaft.rotation.z = -Math.PI / 2;
-  shaft.scale.set(0.35, 1, 1);
-  shaft.position.set(1.02, 0, 0);
+  const tailGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.065, 0), violetGlowMat);
+  tailGem.position.set(-0.52, 0.02, 0);
+  tailGem.scale.set(1.2, 0.65, 0.9);
+  group.add(tailGem);
+
+  // Tapered beveled vernier blade (+X = 0.18..1.86)
+  const bladeGeo = createFlatExtrudedShape(
+    (s) => {
+      s.moveTo(0.18, -0.075);
+      s.lineTo(0.75, -0.095);
+      s.lineTo(1.84, -0.035);
+      s.lineTo(1.84, 0.035);
+      s.lineTo(0.75, 0.095);
+      s.lineTo(0.18, 0.075);
+      s.closePath();
+    },
+    0.044,
+    0.008
+  );
+  const shaft = new THREE.Mesh(bladeGeo, silverMat);
   group.add(shaft);
 
-  const tipRing = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.025, 6, 16), cyanMat);
+  const innerVeinGeo = createFlatExtrudedShape(
+    (s) => {
+      s.moveTo(0.26, -0.022);
+      s.lineTo(1.82, -0.014);
+      s.lineTo(1.82, 0.014);
+      s.lineTo(0.26, 0.022);
+      s.closePath();
+    },
+    0.052,
+    0.005
+  );
+  const innerVein = new THREE.Mesh(innerVeinGeo, darkSteelMat);
+  group.add(innerVein);
+
+  // Breguet Moon-Eye ring at +X = 1.98 + sharp needle pointer tip (+X = 2.12..2.42)
+  const tipRing = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.024, 8, 24), violetGlowMat);
   tipRing.rotation.x = Math.PI / 2;
-  tipRing.position.set(2.12, 0, 0);
+  tipRing.position.set(1.98, 0.008, 0);
   group.add(tipRing);
+
+  const needleTipGeo = createFlatExtrudedShape(
+    (s) => {
+      s.moveTo(2.1, -0.045);
+      s.lineTo(2.42, 0);
+      s.lineTo(2.1, 0.045);
+      s.closePath();
+    },
+    0.048,
+    0.007
+  );
+  const needleTip = new THREE.Mesh(needleTipGeo, cyanGlowMat);
+  group.add(needleTip);
 
   return group;
 }

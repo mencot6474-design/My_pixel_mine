@@ -25,3 +25,7 @@ Aturan wajib untuk seluruh file TypeScript (`.ts`) pada project game Three.js in
 
 6. **Color Space Rendering**
    - Set `renderer.outputColorSpace = THREE.SRGBColorSpace` pada `WebGLRenderer` (termasuk offscreen renderer) dan gunakan `THREE.SRGBColorSpace` pada color textures agar rendering warna akurat.
+
+7. **Dilarang Gyroscopic / Armillary / Tilted Tumbling Orbit Rings**
+   - **Dilarang keras** menambahkan cincin/hoop (`TorusGeometry` / `RingGeometry`) yang miring dan berputar jungkir-balik ke atas-bawah (*gyroscopic / armillary / tilted tumbling orbit rings*) di sekitar podium, jam, altar, karakter/ikon, maupun properti 3D lainnya.
+   - Semua cincin lantai, roda gigi jam, dan segel podium wajib terletak **100% datar/horizontal** sejajar permukaan lantai/dais (atau tegak lurus vertikal murni hanya untuk gerbang portal besar di latar belakang).

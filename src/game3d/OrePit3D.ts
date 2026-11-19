@@ -912,7 +912,7 @@ export class OrePit3D {
       node.hp = Math.max(1, Math.min(node.maxHp, Math.round(node.hp * ratio)));
     }
     if (this.meteorNode.alive) {
-      this.meteorNode.maxHp = Math.max(1000, Math.round(this.meteorNode.maxHp * ratio));
+      this.meteorNode.maxHp = Math.max(500, Math.round(this.meteorNode.maxHp * ratio));
       this.meteorNode.hp = Math.max(1, Math.min(this.meteorNode.maxHp, Math.round(this.meteorNode.hp * ratio)));
     }
   }
@@ -920,7 +920,7 @@ export class OrePit3D {
   public spawnWeatherMeteor(weatherId: WeatherId, hpScale = this.hpScale, minBossHp = 0): void {
     this.hpScale = Math.max(0.25, hpScale);
     const weather = getWeatherById(weatherId);
-    const baseMeteorHp = Math.max(1000, Math.round(BASE_ORE_HP * this.hpScale * 1000));
+    const baseMeteorHp = Math.max(500, Math.round(BASE_ORE_HP * this.hpScale * 500));
     const meteorHp = Math.max(baseMeteorHp, Math.round(minBossHp));
     const n = this.meteorNode;
     n.meteorWeatherId = weatherId;
@@ -1076,7 +1076,7 @@ export class OrePit3D {
     if (!node || !node.alive) return null;
 
     const effectiveDmg = node.isMeteor
-      ? Math.min(dmg, Math.max(1, Math.ceil(node.maxHp * 0.015)))
+      ? Math.min(dmg, Math.max(1, Math.ceil(node.maxHp * 0.03)))
       : dmg;
     const pure = applyNodeDamagePure(node, effectiveDmg);
     if (!pure) return null;

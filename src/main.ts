@@ -162,7 +162,7 @@ async function bootstrap(): Promise<void> {
 
   const spawnMeteorIfAllowed = (weatherId: WeatherId, toastText?: string): void => {
     if (!gameState.autoMeteor || hud?.isTutorialActive()) return;
-    const minBossHp = Math.round(gameState.getTotalPlotDps() * 90 + gameState.getTapDamage() * 300);
+    const minBossHp = Math.round(gameState.getTotalPlotDps() * 45 + gameState.getTapDamage() * 150);
     scene.spawnWeatherMeteor(weatherId, gameState.getOreHpScale(), minBossHp);
     if (toastText) hud?.pushToast(toastText);
   };

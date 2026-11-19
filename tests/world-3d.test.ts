@@ -1690,7 +1690,7 @@ describe('Pure 3D Mine World', () => {
     expect(state.getPlotUnit(1)?.enchantId).toBe('blazing');
   });
 
-  it('spawns 1000x HP Weather Meteor in OrePit3D and awards Weather Limited Ores on break', () => {
+  it('spawns 500x HP Weather Meteor in OrePit3D and awards Weather Limited Ores on break', () => {
     const noop = () => {};
     const fakeCtx = new Proxy(
       { createLinearGradient: () => ({ addColorStop: noop }), createRadialGradient: () => ({ addColorStop: noop }) },
@@ -1709,12 +1709,12 @@ describe('Pure 3D Mine World', () => {
 
       const meteorInfo = pit.getAliveNodesInfo().find((n) => n.isMeteor);
       expect(meteorInfo).toBeDefined();
-      expect(meteorInfo?.maxHp).toBe(180 * 2 * 1000);
+      expect(meteorInfo?.maxHp).toBe(180 * 2 * 500);
       expect(meteorInfo?.meteorWeatherId).toBe('celestial');
 
       const firstHit = pit.hitNode(meteorInfo!.id, meteorInfo!.maxHp, true);
       expect(firstHit?.broken).toBe(false);
-      expect(firstHit?.dmgDealt).toBe(Math.ceil(meteorInfo!.maxHp * 0.015));
+      expect(firstHit?.dmgDealt).toBe(Math.ceil(meteorInfo!.maxHp * 0.03));
       expect(pit.hasAliveMeteor()).toBe(true);
 
       let hitRes = firstHit;

@@ -159,7 +159,7 @@ export function buildWeatherWidgetInnerHtml(
               <div class="flex-1 min-w-0 flex flex-col">
                 <span class="text-[13px] font-black leading-tight truncate mam-outline-sm" style="color:${inspected.accentColor}">${inspOre.meteorName} Drops</span>
                 <div class="flex items-center gap-1.5 mt-1">
-                  <span class="px-1.5 py-0.5 rounded-md bg-[#16223b] border border-[#2f4369] text-[9.5px] font-black text-slate-200 uppercase tracking-wide">1000x Pit HP</span>
+                  <span class="px-1.5 py-0.5 rounded-md bg-[#16223b] border border-[#2f4369] text-[9.5px] font-black text-slate-200 uppercase tracking-wide">500x Pit HP</span>
                   <span class="text-[10px] font-extrabold text-slate-400">Meteor Loot</span>
                 </div>
               </div>
