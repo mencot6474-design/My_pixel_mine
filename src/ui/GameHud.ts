@@ -633,6 +633,7 @@ export class GameHud {
     this.root.style.transformOrigin = 'top left';
     this.root.dataset.hudCompact = logicalW < 920 ? 'true' : 'false';
     this.root.dataset.hudPotsAbove = logicalW < 1340 ? 'true' : 'false';
+    this.root.dataset.hudDpsAbove = logicalW < 1140 ? 'true' : 'false';
     this.root.dataset.hudShort = logicalH < 640 ? 'true' : 'false';
 
     const floatScale = Math.max(0.68, Math.min(1, scale));

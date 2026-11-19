@@ -63,8 +63,8 @@ function loadPoseMeta(url: string, smoothFilter = false): Promise<LoadedPoseMeta
         tex.colorSpace = THREE.SRGBColorSpace;
         if (smoothFilter) {
           tex.magFilter = THREE.LinearFilter;
-          tex.minFilter = THREE.LinearMipmapLinearFilter;
-          tex.generateMipmaps = true;
+          tex.minFilter = THREE.LinearFilter;
+          tex.generateMipmaps = false;
         } else {
           tex.magFilter = THREE.NearestFilter;
           tex.minFilter = THREE.NearestFilter;

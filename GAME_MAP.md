@@ -58,12 +58,12 @@ tests/world-3d.test.ts        2.557 baris — 60 Vitest unit & integration specs
                                             World 6 Starwell, Chibi Star-Up, World Resonance synergy, & Relic Forge crafting/slots/buffs)
 
 === GAME DATA & STATE ===
-src/game/GameData.ts            668 baris — World (`underground`..`starwell` W1-W6), `ORES` 112 (48 world + 5 `WEATHER_ORES` = 53 ores),
-                                            `WORLD_MINERS` 261 (30 world miners: 5/world incl. Exotic & Secret + 5 `getWeatherLimitedMiners`),
-                                            `PICKAXES` 307 (12 tiers W1–W6), `MUTATIONS` 322, `ENCHANTS` 336 (`ENCHANT_DICE_GEM_COST` 334),
-                                            `isHighTierMutation` 398 (`frozen`..`unreal`), `GEM_SHOP_ITEMS` 408,
-                                            `rollMutation` 524, `CHIBI_STAR_TIERS` 596, `WORLD_RESONANCE_TIERS` 624,
-                                            `computeWorldResonances` 637, `rollWorldOre` 659, `rollWorldMiner` 664
+src/game/GameData.ts            669 baris — World (`underground`..`starwell` W1-W6), `ORES` 113 (48 world + 5 `WEATHER_ORES` = 53 ores),
+                                            `WORLD_MINERS` 262 (30 world miners: 5/world incl. Exotic & Secret + 5 `getWeatherLimitedMiners`),
+                                            `PICKAXES` 308 (12 tiers W1–W6), `MUTATIONS` 323, `ENCHANTS` 337 (`ENCHANT_DICE_GEM_COST` 335),
+                                            `isHighTierMutation` 399 (`frozen`..`unreal`), `GEM_SHOP_ITEMS` 409,
+                                            `rollMutation` 525, `CHIBI_STAR_TIERS` 597, `WORLD_RESONANCE_TIERS` 625,
+                                            `computeWorldResonances` 638, `rollWorldOre` 660, `rollWorldMiner` 665
 src/game/RelicData.ts           289 baris — `MAX_EQUIPPED_RELICS` (3), `RELICS` (12 relics: 6 World, 3 Weather, 3 Tower; `5K`–`300K` Gems),
                                             `getRelicById`, `formatRelicEffects`
 src/game/FusionData.ts          141 baris — `FUSION_RECIPES` (4 Synchro Fusion recipes: `Glitch Cheshire` `+150% Tap DMG`, `Thorn Maiden` `+150% Ore Drop`, `Monochrome Saint` `+200% Ore Sell`, `Prism Seraph` `+50% Team DMG` + balanced `upgradeCostScale`), `getFusionRecipeById`, `getFusionRecipeByResultChibiId`
@@ -116,14 +116,14 @@ src/game/OverclockDomain.ts     107 baris — `OVERCLOCK_DURATION_SEC` (15s), `O
 src/game/AssetUrl.ts             11 baris — `assetUrl` (resolusi URL aset `public/` terhadap `BASE_URL` `./` agar aman di subpath)
 src/game/GameSettings.ts        143 baris — `GameSettings` (`mam_settings_v1`), `GRAPHICS_PRESETS` (`low`/`medium`/`high`), `normalizeGameSettings`, `gameSettings`
 src/game/NumberFormat.ts         45 baris — `fmtShort` 22, `fmtMoney` 33, `fmtInt` 37, `fmtPct` 41
-src/audio/AudioManager.ts       617 baris — Web Audio SFX pool + synth (`playMutationRoll`, `playEnchantSpinStart`, `playEnchantSpinLand`,
+src/audio/AudioManager.ts       623 baris — Web Audio SFX pool + synth (`playMutationRoll`, `playEnchantSpinStart`, `playEnchantSpinLand`,
                                             `playEnchantEquip`) & HTMLAudio BGM switcher (`audio`, `setSceneMode`,
                                             `playOreHit`, `playOreBreak`, `playSfx`, mute persistence, `setBgmVolumeScale` / `setSfxVolumeScale`, `setAdMuted` & `isEffectivelyMuted`)
 src/sdk/crazygames.ts           259 baris — CrazyGames SDK v3 wrapper (`isAdPlaying`, `cgInit` uninitialized-domain guard, `cgBindAdLifecycle`, `isCrazyGamesEnv`,
                                             `cgLoadingStart`, `cgGameplayStart`, `cgHappyTime`, `cgRequestRewardedAd`, `cgTryMidgameAd`)
 
 === UI HUD, MODALS & CSS (Modular Architecture) ===
-src/ui/GameHud.ts             1.065 baris — `GameHud`: Thin UI coordinator (`activeModal` incl. `altar-hub`, `sceneMode` incl. `fusion`, `inspectedSlot`, `adPaused`, viewport scaling `updateViewportScale`,
+src/ui/GameHud.ts             1.066 baris — `GameHud`: Thin UI coordinator (`activeModal` incl. `altar-hub`, `sceneMode` incl. `fusion`, `inspectedSlot`, `adPaused`, viewport scaling `updateViewportScale` + `hudDpsAbove`,
                                             top `Shops` & `Teleport` (`TW_TELEPORT_PILL` + Warp Portal icon + `1`–`6` world badge), solid currency rail + Settings gear & audio mute toggle + Bounties quick btn w/ live badge, World Resonance HUD badges, modal router `renderActiveModal`, semantic toast stack,
                                             1000ms/100ms timers + Overclock live sync, `isTutorialActive`, `handleTower*` dispatch & public pass-through API incl. `setFusionRevealHold` untuk `main.ts`)
 src/ui/HudShared.ts             389 baris — `chibiPortraitHtml`, shared types (`ModalKind` incl. `settings`/`offline`/`bounties`/`altar-hub`, `ModalThemeId`, `InvTab`, `PlotDropOps`),
@@ -131,7 +131,7 @@ src/ui/HudShared.ts             389 baris — `chibiPortraitHtml`, shared types 
                                             `formatCountdownTimer`, `refreshPotionTimersInDom`, `captureRootScrolls`, `restoreRootScrolls`),
                                             solid cyber-armor Tailwind `TW_*` constants (`TW_TELEPORT_PILL`, `mam-notif-badge`), shared shell builders (`renderModalShell` w/ `autoHeight`, `renderInspectorPanel`)
 src/ui/WeatherDpsHudUi.ts       584 baris — `WeatherDpsHudUi`: Solid top-left Weather widget + 2-column side-by-side Weather Forecast & Meteor Drops inspector + Auto Meteor toggle, Active Potions dock,
-                                            & bottom-left unified DPS Breakdown + Cyber-Anime Overclock Fever dock (hotbar clearance `108px` on narrow viewports) (`formatWeatherTimer`, `buildActivePotionsDockContent`,
+                                            & bottom-left compact `186px` DPS Breakdown + Cyber-Anime Overclock Fever dock (`hudDpsAbove` clearance on `logicalW < 1140`) (`formatWeatherTimer`, `buildActivePotionsDockContent`,
                                             `buildWeatherWidgetInnerHtml`, `buildDpsMeterInnerHtml`, `buildOverclockGaugeInnerHtml`)
 src/ui/HotbarHudUi.ts           422 baris — `HotbarHudUi`: Solid Cyber-Anime Tactical Hotbar Dock (`.mam-hotbar-dock`, slots 1–9 w/ `.mam-hotbar-keycap`, `.mam-hotbar-qty`, `.mam-hotbar-val-bar`, `.is-hotbar-selected`, `.mam-hotbar-divider`, & `.mam-hotbar-bag`),
                                             outside-click selection clear, & pointer drag-and-drop reorder / plot swap (`buildHotbarStateKey`, `canDropHotbarOnPlot`, `renderHotbarSlotsHtml`)
@@ -196,7 +196,7 @@ src/game3d/FusionWorld3D.ts   2.066 baris — 3D Outer-Space Cyber-Synchro Fusio
                                             ZZZ/HSR Cyber-Showcase Podiums (`01`..`03` & `APEX` w/ chamfered dock bay, cooling louvers, front plaque, rear projector stanchions, frosted holo lens, Dual-Shell Anime-RPG Aura & GPU star-ember wisps),
                                             Front Crescent Arc 2–3 material podiums (`[-5.35, 1.05]`, `[0, 3.45]`, `[5.35, 1.05]`) + HSR/ZZZ/Stargate "Astral Quantum Synchro Gate" (`z = -6.85`: recessed magnetic levitation dock, outer flanking Gantry Yoke Towers at `x = ±4.65m`, 3 counter-rotating sculpted chrono/astrolabe rings, & swirling quantum vortex core) + grooved floor energy conduits w/ dynamic dormant-crimson vs ready-cyan/gold pulse,
                                             4 physical recipe Ore Crystal Clusters + 8 floating cosmic islands + skyward Light Beam, 2 Alchemist/Scientist NPCs w/ holo-consoles & speech bubbles, blue hologram preview for unplaced material units, consistent `'idle'` chibi pose state, 4-Act `3.45s` cinematic fusion sequence (levitation -> portal singularity implosion + supernova -> central descent + dual 5-layer `AttackImpactFxController.spawnShatter` landing -> `revealHold` camera zoom lock via `getCameraFocusState`/`setRevealHold`) & `dispose()`)
-src/game3d/ChibiSprite3D.ts     592 baris — Animated 2D-in-3D upright billboard sprite (3-beat combo `triggerAttack`, 2 tinted ghost afterimages, wind-up glint, `setAccentColor`, `setHologramMode`, `smoothFilter` linear/mipmap vs nearest, camera-pitch tilt, normalized pose sizing, alpha-clipped directional shadow + soft AO contact shadow, & `dispose()`)
+src/game3d/ChibiSprite3D.ts     592 baris — Animated 2D-in-3D upright billboard sprite (3-beat combo `triggerAttack`, 2 tinted ghost afterimages, wind-up glint, `setAccentColor`, `setHologramMode`, `smoothFilter` sharp `LinearFilter` w/o mipmap blur vs nearest, camera-pitch tilt, normalized pose sizing, alpha-clipped directional shadow + soft AO contact shadow, & `dispose()`)
 src/game3d/ShopCyberPlaza3D.ts 1.764 baris — Procedural "Neo-Cyber City Plaza" 3D Lobby (`createShopCyberPlaza` 254):
                                             open sky Gem Tower skyscraper + access terminals, circular roundabout curb + thin neon trim + radial contact shadow (`createRoundaboutShadowTexture`) + Neon Crystal Cluster Fountain (`createCyberCrystalCluster`),
                                             4 high-clearance container kiosks (Pickaxes, Sell, centered 2-story Gem Shop `'CYBER GEM MART'`, Plasma Relic Forge, `createShopPadMeshes`) + vending machines & hologram signs,

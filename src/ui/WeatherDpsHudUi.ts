@@ -332,10 +332,10 @@ export function buildDpsMeterInnerHtml(state: GameState, dpsMeterOpen: boolean):
 
   return `
       ${panelHtml}
-      <button type="button" class="mam-dps-pill text-white text-[12px] font-black tabular-nums cursor-pointer mam-outline-sm" data-action="toggle-dps-meter" title="Toggle DPS Breakdown">
+      <button type="button" class="mam-dps-pill text-white text-[11px] font-black tabular-nums cursor-pointer mam-outline-sm" data-action="toggle-dps-meter" title="Toggle DPS Breakdown">
         <span class="mam-dps-emblem" aria-hidden="true">${DPS_SWORD_SVG}</span>
-        <span class="flex-1 min-w-0 flex items-center justify-between gap-2">
-          <span class="inline-flex items-center gap-1.5 min-w-0">
+        <span class="flex-1 min-w-0 flex items-center justify-between gap-1.5">
+          <span class="inline-flex items-center gap-1 min-w-0">
             <span class="text-sky-300 truncate">${fmtShort(total)}/s</span>
             <span class="w-1 h-1 rounded-full bg-slate-500 shrink-0"></span>
             <span class="text-amber-300 shrink-0">Tap ${fmtShort(bd.tapDamage)}</span>
@@ -378,14 +378,14 @@ export class WeatherDpsHudUi {
     this.lastDpsMeterHtml = inner;
     if (!includeOverclock) {
       return `
-        <div class="absolute bottom-[14px] left-4 [[data-hud-pots-above=true]_&]:bottom-[108px] @max-[860px]:bottom-[94px] @max-[720px]:left-2.5 z-[5] w-[236px] @max-[1100px]:w-[218px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1.5 pointer-events-auto" data-hud-dps="true">
+        <div class="absolute bottom-[12px] left-3 [[data-hud-dps-above=true]_&]:bottom-[104px] @max-[860px]:bottom-[92px] @max-[720px]:left-2.5 z-[5] w-[186px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1 pointer-events-auto" data-hud-dps="true">
           ${inner}
         </div>
       `;
     }
     return `
-      <div class="absolute bottom-[14px] left-4 [[data-hud-pots-above=true]_&]:bottom-[108px] @max-[860px]:bottom-[94px] @max-[720px]:left-2.5 z-[5] w-[236px] @max-[1100px]:w-[218px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1.5 pointer-events-none">
-        <div class="w-full flex flex-col items-stretch gap-1.5 pointer-events-auto" data-hud-dps="true">
+      <div class="absolute bottom-[12px] left-3 [[data-hud-dps-above=true]_&]:bottom-[104px] @max-[860px]:bottom-[92px] @max-[720px]:left-2.5 z-[5] w-[186px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1 pointer-events-none">
+        <div class="w-full flex flex-col items-stretch gap-1 pointer-events-auto" data-hud-dps="true">
           ${inner}
         </div>
         ${this.renderOverclockWidget(now)}
@@ -548,19 +548,19 @@ export function buildOverclockGaugeInnerHtml(snap: OverclockSnapshot): string {
     return `
       <div class="mam-fever-shell is-active" data-overclock-state="active">
         <div class="mam-fever-emblem">${OVERCLOCK_BOLT_SVG}</div>
-        <div class="flex-1 min-w-0 flex flex-col gap-1">
-          <div class="flex items-center justify-between gap-1.5 leading-none">
-            <span class="text-[11px] font-black italic uppercase tracking-[0.08em] text-[#fef08a] mam-outline-sm">OVERCLOCK ACTIVE</span>
-            <span class="px-1.5 py-0.5 rounded bg-amber-400/20 border border-amber-300/60 text-[11px] font-black tabular-nums text-white leading-none mam-outline-sm">${snap.remainingSec.toFixed(1)}s</span>
+        <div class="flex-1 min-w-0 flex flex-col gap-0.5">
+          <div class="flex items-center justify-between gap-1 leading-none">
+            <span class="text-[9.5px] font-black italic uppercase tracking-[0.05em] text-[#fef08a] mam-outline-sm truncate">OVERCLOCK ACTIVE</span>
+            <span class="px-1 py-[1px] rounded bg-amber-400/20 border border-amber-300/60 text-[10px] font-black tabular-nums text-white leading-none mam-outline-sm shrink-0">${snap.remainingSec.toFixed(1)}s</span>
           </div>
           <div class="mam-fever-track">
             <div class="mam-fever-fill" style="width:${pct}%"></div>
             ${OVERCLOCK_TICKS_HTML}
           </div>
-          <div class="flex items-center gap-1 text-[9.5px] font-black uppercase tracking-wider leading-none">
-            <span class="px-1.5 py-0.5 rounded bg-amber-500/25 border border-amber-300/50 text-amber-200">2x SPD</span>
-            <span class="px-1.5 py-0.5 rounded bg-fuchsia-500/25 border border-fuchsia-300/50 text-fuchsia-200">2x TAP</span>
-            <span class="px-1.5 py-0.5 rounded bg-sky-500/25 border border-sky-300/50 text-sky-200">+50% ORE</span>
+          <div class="flex items-center gap-1 text-[8px] font-black uppercase tracking-wide leading-none whitespace-nowrap">
+            <span class="px-1 py-[1px] rounded bg-amber-500/25 border border-amber-300/50 text-amber-200">2x SPD</span>
+            <span class="px-1 py-[1px] rounded bg-fuchsia-500/25 border border-fuchsia-300/50 text-fuchsia-200">2x TAP</span>
+            <span class="px-1 py-[1px] rounded bg-sky-500/25 border border-sky-300/50 text-sky-200">+50% ORE</span>
           </div>
         </div>
       </div>
@@ -569,10 +569,10 @@ export function buildOverclockGaugeInnerHtml(snap: OverclockSnapshot): string {
   return `
     <div class="mam-fever-shell" data-overclock-state="charging">
       <div class="mam-fever-emblem">${OVERCLOCK_BOLT_SVG}</div>
-      <div class="flex-1 min-w-0 flex flex-col gap-1">
-        <div class="flex items-center justify-between gap-1.5 leading-none">
-          <span class="text-[10.5px] font-black italic uppercase tracking-[0.1em] text-sky-200 mam-outline-sm">OVERCLOCK FEVER</span>
-          <span class="text-[11px] font-black tabular-nums text-white mam-outline-sm">${pct}%</span>
+      <div class="flex-1 min-w-0 flex flex-col gap-0.5">
+        <div class="flex items-center justify-between gap-1 leading-none">
+          <span class="text-[9.5px] font-black italic uppercase tracking-[0.06em] text-sky-200 mam-outline-sm truncate">OVERCLOCK FEVER</span>
+          <span class="text-[10px] font-black tabular-nums text-white mam-outline-sm shrink-0">${pct}%</span>
         </div>
         <div class="mam-fever-track">
           <div class="mam-fever-fill" style="width:${pct}%"></div>

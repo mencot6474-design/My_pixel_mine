@@ -1401,8 +1401,8 @@
     position: relative;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 12px 6px 8px;
+    gap: 7px;
+    padding: 5px 10px 5px 7px;
     background: linear-gradient(135deg, #0d1529 0%, #15213d 100%);
     border: 1.5px solid #38bdf8;
     border-radius: 10px 14px 10px 14px;
@@ -1422,8 +1422,8 @@
 
   .mam-fever-emblem {
     position: relative;
-    width: 34px;
-    height: 34px;
+    width: 26px;
+    height: 26px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -1457,7 +1457,7 @@
   .mam-fever-track {
     position: relative;
     width: 100%;
-    height: 10px;
+    height: 8px;
     border-radius: 4px;
     transform: skewX(-14deg);
     background: rgba(2, 6, 23, 0.92);
@@ -1467,7 +1467,7 @@
   }
 
   .mam-fever-shell.is-active .mam-fever-track {
-    height: 11px;
+    height: 9px;
     border-color: rgba(253, 224, 71, 0.6);
   }
 
@@ -1646,10 +1646,10 @@
   .mam-dps-pill {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
-    padding: 5px 10px 5px 7px;
-    border-radius: 10px 12px 10px 12px;
+    padding: 4px 8px 4px 6px;
+    border-radius: 9px 11px 9px 11px;
     background: linear-gradient(135deg, #0d1529 0%, #15213d 100%);
     border: 1.5px solid #2e4a73;
     box-shadow:
@@ -1665,8 +1665,8 @@
   }
 
   .mam-dps-emblem {
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     flex-shrink: 0;
     border-radius: 7px;
     transform: skewX(-10deg);
