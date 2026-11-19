@@ -5,6 +5,9 @@ import { getGlobalGemGainBonus } from './TowerData';
 export const OFFLINE_MIN_SEC = 120; // 2 minutes
 export const OFFLINE_MAX_SEC = 8 * 3600; // 8 hours
 export const OFFLINE_EFFICIENCY = 0.5;
+/** Physical rock-break ceiling per second (1 swing breaks at most 1 rock, bounded by walk + pit respawn intervals). */
+export const MAX_OFFLINE_ORES_PER_SEC = 3.5;
+export const MAX_OFFLINE_GEMS = 15_000;
 const BASE_AVG_ROCK_HP = 180 * 1.25;
 const MAX_OFFLINE_CHEST_ORES = 200;
 
@@ -79,7 +82,9 @@ export function computeOfflineEarningsDomain(
     Math.round(BASE_AVG_ROCK_HP * world.oreHpMult * (denseActive ? DENSE_ORE_HP_MULT : 1))
   );
 
-  const oresBroken = Math.max(1, Math.floor((totalDps * elapsedSec * OFFLINE_EFFICIENCY) / avgRockHp));
+  const rawOresPerSec = (totalDps * OFFLINE_EFFICIENCY) / avgRockHp;
+  const effectiveOresPerSec = Math.min(MAX_OFFLINE_ORES_PER_SEC, rawOresPerSec);
+  const oresBroken = Math.max(1, Math.floor(effectiveOresPerSec * elapsedSec));
 
   const worldOres = getOresByWorld(ctx.activeWorldId);
   let weightedSell = 0;
@@ -95,7 +100,7 @@ export function computeOfflineEarningsDomain(
 
   const { gemBonusPct } = ctx.getActiveStarDropAndGemBonus();
   const gemMult = 1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct + ctx.getRelicBonus('gemGainPct');
-  const gems = Math.max(0, Math.round(oresBroken * 0.18 * gemMult));
+  const gems = Math.min(MAX_OFFLINE_GEMS, Math.max(0, Math.round(oresBroken * 0.18 * gemMult)));
 
   const capLeft = Math.max(0, ctx.getMaxChestCapacity() - ctx.getChestItemCount());
   const oreTarget = Math.min(capLeft, MAX_OFFLINE_CHEST_ORES, Math.max(1, Math.floor(oresBroken * 0.25)));

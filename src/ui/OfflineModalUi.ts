@@ -1,6 +1,6 @@
 import { audio } from '../audio/AudioManager';
 import { GameState } from '../game/GameState';
-import { fmtInt, fmtMoney } from '../game/NumberFormat';
+import { fmtInt, fmtMoney, fmtShort } from '../game/NumberFormat';
 import { formatOfflineDuration } from '../game/OfflineEarningsDomain';
 import { CG_ADS_ENABLED, cgRequestRewardedAd } from '../sdk/crazygames';
 import { hudIconHtml } from './HudIcons';
@@ -30,12 +30,16 @@ export class OfflineModalUi {
       ? `<span class="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/50 text-[10px] font-black uppercase text-amber-200">Max 8h</span>`
       : '';
 
+    const oresBrokenStr =
+      summary.oresBroken >= 100_000 ? fmtShort(summary.oresBroken) : fmtInt(summary.oresBroken);
+    const gemsStr = summary.gems >= 100_000 ? fmtShort(summary.gems) : fmtInt(summary.gems);
+
     const oresRow =
       summary.totalBonusOres > 0
         ? `
-          <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#141e35] border border-[#2b3c5e]">
+          <div class="min-w-0 overflow-hidden flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#141e35] border border-[#2b3c5e]">
             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">Chest Ores</span>
-            <span class="text-[18px] font-black tabular-nums text-sky-300 mam-outline-sm">+${fmtInt(summary.totalBonusOres)}</span>
+            <span class="max-w-full truncate text-[18px] font-black tabular-nums text-sky-300 mam-outline-sm">+${fmtInt(summary.totalBonusOres)}</span>
           </div>
         `
         : '';
@@ -64,19 +68,19 @@ export class OfflineModalUi {
             ${capBadge}
           </div>
           <div class="text-[12px] font-bold text-slate-300 tabular-nums">
-            ~${fmtInt(summary.oresBroken)} ores mined while away
+            ~${oresBrokenStr} ores mined while away
           </div>
         </div>
 
         <div class="grid ${gridCols} gap-2">
-          <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#141e35] border border-[#2b3c5e]">
+          <div class="min-w-0 overflow-hidden flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#141e35] border border-[#2b3c5e]">
             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">Cash</span>
-            <span class="text-[18px] font-black tabular-nums text-[#4ade80] mam-outline-sm">+${fmtMoney(summary.cash)}</span>
+            <span class="max-w-full truncate text-[18px] font-black tabular-nums text-[#4ade80] mam-outline-sm">+${fmtMoney(summary.cash)}</span>
           </div>
-          <div class="flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#141e35] border border-[#2b3c5e]">
+          <div class="min-w-0 overflow-hidden flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#141e35] border border-[#2b3c5e]">
             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">Gems</span>
-            <span class="inline-flex items-center gap-1 text-[18px] font-black tabular-nums text-sky-200 mam-outline-sm">
-              ${hudIconHtml('gem', 18, 'Gems')} +${fmtInt(summary.gems)}
+            <span class="max-w-full truncate inline-flex items-center gap-1 text-[18px] font-black tabular-nums text-sky-200 mam-outline-sm">
+              ${hudIconHtml('gem', 18, 'Gems')} +${gemsStr}
             </span>
           </div>
           ${oresRow}

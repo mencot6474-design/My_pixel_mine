@@ -38,8 +38,8 @@ src/main.ts                     296 baris — Bootstrap Three.js scene (`MineSce
                                             weather & CC0 `AudioManager` sync, `gameSettings` live sync, offline earnings boot modal, Overclock tap/sync, tutorial-guarded `spawnMeteorIfAllowed`), CrazyGames SDK init & ad-pause lifecycle, Tower callbacks & game loop
 tests/hud-modules.test.ts         710 baris — 19 Vitest specs untuk modul UI Tahap B + `GameSettings`, `AudioManager` volume scaling, `SettingsModalUi`,
                                             `OfflineModalUi`, `BountiesModalUi`, Overclock HUD + semantic toast banners, Tactical Hotbar (`mam-hotbar-keycap`/`mam-hotbar-bag`), & `TutorialUi` 5-stage FTUE
-tests/state-modules.test.ts       618 baris — 15 Vitest specs untuk modul domain state (`GameStateSave`, `PlotUnitsDomain`,
-                                            `TowerRunDomain`, `LootChestDomain`, `ShopWeatherDomain`, `OfflineEarningsDomain`, `BountiesDomain`, `OverclockDomain`, `FusionDomain` + 4 Passives & cost scaling)
+tests/state-modules.test.ts       631 baris — 15 Vitest specs untuk modul domain state (`GameStateSave`, `PlotUnitsDomain`,
+                                            `TowerRunDomain`, `LootChestDomain`, `ShopWeatherDomain`, `OfflineEarningsDomain` + physical rock-break & gem caps, `BountiesDomain`, `OverclockDomain`, `FusionDomain` + 4 Passives & cost scaling)
 tests/world-3d.test.ts        2.552 baris — 60 Vitest unit & integration specs (3D world, Altar dial/dice & 2.5D billboard pedestals,
                                             3D Fusion World Synchro Portal triple rings + ore crystal clusters + floating cosmic islands + hologram preview + NPC bubbles + 3-phase fusion animation,
                                             Unified 3-beat `ChibiSprite3D` combo/afterimage/glint + 5-layer `AttackImpactFxController` (`spawnImpact` + `spawnShatter`) + `FieldMiner3D` & `TowerArena3D` accent/rainbow sync,
@@ -87,9 +87,9 @@ src/game/GameState.ts         1.099 baris — State coordinator + re-exports (`P
                                             Research trees & World unlock (`getActiveResearchBonus`), Global Multipliers (`denseOreScale`,
                                             potions, relics, Overclock 2x Tap / 1.5x Ore, active Fusion Passives), Relic Forge, Chibi Fusion (`canFuseRecipe`, `fuseChibiRecipe`, `getActiveFusionPassives`),
                                             Enchant Dice roll, `grantAdGems`, `grantTutorialStarterReward`, serta delegasi ke modul domain di bawah
-src/game/GameStateSave.ts       480 baris — `SAVE_KEY` 17, `ResearchLevelsMap`, `PlotUnitState`, `SavePayload` (+ `lastSavedAt`, `bounties`, `bountiesCompleted`), `SaveableGameState`,
+src/game/GameStateSave.ts       496 baris — `SAVE_KEY` 17, `ResearchLevelsMap`, `PlotUnitState`, `SavePayload` (+ `lastSavedAt`, `bounties`, `bountiesCompleted`), `SaveableGameState`,
                                             `migrateOreId`, `isValidIndexId` (World + Weather + Fusion), `createEmptyResearchLevels`, `compactHotbarSlots`,
-                                            `serializeSavePayload`, `deserializeSaveJson` (migrasi legacy, refund excess pickaxes, resync `discovered` incl. `chibiStars`/`stashedUnits`),
+                                            `serializeSavePayload`, `deserializeSaveJson` (migrasi legacy, sanitasi overflow cash/gems/levels, refund excess pickaxes, resync `discovered` incl. `chibiStars`/`stashedUnits`),
                                             `saveToLocalStorage`, `loadFromLocalStorage`
 src/game/PlotUnitsDomain.ts     716 baris — `PlotUnitsContext` 55, `getChibiUpgradeCostMult` 98 (incl. balanced Fusion scales), `createFreshPlotUnit`, `getChibiStarCount`,
                                             `starUpUnit`, `autoStarUpAllUnits`, `getActiveWorldResonancesList`, `computePlotUnitStats` (+ Fusion `teamDmgPct`),
@@ -107,7 +107,7 @@ src/game/ShopWeatherDomain.ts   390 baris — `ShopWeatherContext` 22, `sellOreD
                                             pickaxe stock (`refreshPickaxeStockIfDueDomain` 160, `buyPickaxeDomain` 183), `sellBatchDomain` 230,
                                             gem shop & potions (`buyGemShopItemDomain` 262, `useGemPotionDomain` 276, `isBoostActiveDomain` 304),
                                             weather & relic scaling (`scaleWeatherMultDomain` 326, `syncWeatherDomain` 370, `forceWeatherDomain` 382)
-src/game/OfflineEarningsDomain.ts 164 baris — `OFFLINE_MIN_SEC` (2m), `OFFLINE_MAX_SEC` (8h), `OFFLINE_EFFICIENCY` (0.5), `formatOfflineDuration`,
+src/game/OfflineEarningsDomain.ts 169 baris — `OFFLINE_MIN_SEC` (2m), `OFFLINE_MAX_SEC` (8h), `OFFLINE_EFFICIENCY` (0.5), `MAX_OFFLINE_ORES_PER_SEC` (3.5), `MAX_OFFLINE_GEMS` (15K), `formatOfflineDuration`,
                                             `computeOfflineEarningsDomain`, `claimOfflineEarningsDomain` (1x/2x + chest cap)
 src/game/BountiesDomain.ts      250 baris — `BOUNTY_SLOT_COUNT` (3), `BountyKind` (7 aktivitas), `generateBountyEntry`, `ensureBountiesPopulatedDomain`,
                                             `recordBountyProgressDomain`, `getReadyBountyCountDomain`, `claimBountyDomain`
@@ -146,7 +146,7 @@ src/ui/CollectionModalsUi.ts  1.251 baris — `CollectionModalsUi` 43: Index mod
 src/ui/ForgeModalUi.ts          452 baris — `ForgeModalUi` 45: Relic Forge Dark-Glass modal (`renderForgeModal`: 3 equipped slots, All/World/Weather/Tower tabs,
                                             12-relic grid, `renderForgeInspector`, `?` Ore Source Pop-up `renderOreSourcePopup`, `handleAction`, & `bindEvents`)
 src/ui/SettingsModalUi.ts       194 baris — `SettingsModalUi`: Dark-Glass Settings modal (`autoHeight`, Graphics Quality `Low`/`Medium`/`High`, BGM/SFX volume sliders, Mute All, Damage Popups toggle)
-src/ui/OfflineModalUi.ts        143 baris — `OfflineModalUi`: Dark-Glass Welcome Back modal (offline duration, Cash/Gems/Ores summary, Claim & `CG_ADS_ENABLED`-gated 2x Ad Claim)
+src/ui/OfflineModalUi.ts        147 baris — `OfflineModalUi`: Dark-Glass Welcome Back modal (offline duration, compact/truncated Cash/Gems/Ores summary, Claim & `CG_ADS_ENABLED`-gated 2x Ad Claim)
 src/ui/BountiesModalUi.ts       115 baris — `BountiesModalUi`: Dark-Glass Mining Bounties modal (3 rotating contracts, progress bars, Claim & auto-refill)
 src/ui/ShopModalsUi.ts          653 baris — `ShopModalsUi` 43: Pickaxe Shop, Gem Shop, Sell Shop + Inspectors & updaters
 src/ui/TowerUi.ts               628 baris — `TowerUi` 55: Gem Tower Hub Dark-Glass modal (`renderTowerHubModal` 80:

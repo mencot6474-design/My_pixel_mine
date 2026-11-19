@@ -259,8 +259,12 @@ export function deserializeSaveJson(
 ): void {
   try {
     const data = JSON.parse(raw) as Partial<SavePayload>;
-    if (typeof data.cash === 'number') state.cash = data.cash;
-    if (typeof data.gems === 'number') state.gems = data.gems;
+    if (typeof data.cash === 'number' && Number.isFinite(data.cash)) {
+      state.cash = data.cash > 1e16 ? 1e12 : Math.max(0, data.cash);
+    }
+    if (typeof data.gems === 'number' && Number.isFinite(data.gems)) {
+      state.gems = data.gems > 10_000_000 ? 250_000 : Math.max(0, Math.round(data.gems));
+    }
     if (Array.isArray(data.unlockedWorlds) && data.unlockedWorlds.length > 0) {
       const valid = data.unlockedWorlds.filter((w): w is WorldId =>
         WORLDS.some((def) => def.id === w)
@@ -320,10 +324,16 @@ export function deserializeSaveJson(
           state.ownedPickaxes[trimmed.pickaxeId] = (state.ownedPickaxes[trimmed.pickaxeId] || 0) + 1;
         }
       }
-      state.plotUnits = Array.from(
-        { length: STAGE_PEDESTAL_COUNT },
-        (_, i) => data.plotUnits?.[i] ?? null
-      );
+      state.plotUnits = Array.from({ length: STAGE_PEDESTAL_COUNT }, (_, i) => {
+        const u = data.plotUnits?.[i] ?? null;
+        if (!u) return null;
+        return {
+          ...u,
+          damageLevel: Math.max(1, Math.min(65, Math.floor(u.damageLevel || 1))),
+          speedLevel: Math.max(1, Math.min(35, Math.floor(u.speedLevel || 1))),
+          miningSpeedLevel: Math.max(1, Math.min(35, Math.floor(u.miningSpeedLevel || 1))),
+        };
+      });
     }
     // Sanitize excess plot placements beyond owned chibi count
     const placedCounts: Record<string, number> = {};
@@ -348,7 +358,13 @@ export function deserializeSaveJson(
       const nextStash: Record<string, PlotUnitState[]> = {};
       for (const [cid, arr] of Object.entries(data.stashedUnits)) {
         if (Array.isArray(arr) && arr.length > 0 && (state.miners[cid] || 0) > 0) {
-          nextStash[cid] = arr.map((u) => ({ ...u, pickaxeId: '' }));
+          nextStash[cid] = arr.map((u) => ({
+            ...u,
+            pickaxeId: '',
+            damageLevel: Math.max(1, Math.min(65, Math.floor(u.damageLevel || 1))),
+            speedLevel: Math.max(1, Math.min(35, Math.floor(u.speedLevel || 1))),
+            miningSpeedLevel: Math.max(1, Math.min(35, Math.floor(u.miningSpeedLevel || 1))),
+          }));
         }
       }
       state.stashedUnits = nextStash;

@@ -26,6 +26,8 @@ import {
   claimOfflineEarningsDomain,
   computeOfflineEarningsDomain,
   formatOfflineDuration,
+  MAX_OFFLINE_GEMS,
+  MAX_OFFLINE_ORES_PER_SEC,
   OFFLINE_MAX_SEC,
   OFFLINE_MIN_SEC,
 } from '../src/game/OfflineEarningsDomain';
@@ -463,6 +465,17 @@ describe('Tahap C GameState Domain Modules', () => {
       const restored = new GameState();
       deserializeSaveJson(restored, raw);
       expect(restored.lastSavedAt).toBe(baseNow);
+
+      // High-DPS unit in World 1 must respect physical rock-break rate & gem cap (never 10^21 ores)
+      state.miners['prism-seraph'] = 1;
+      state.plotMiners[0] = 'prism-seraph';
+      state.plotUnits[0] = { ...createFreshPlotUnit('prism-seraph'), damageLevel: 60 };
+      state.activeWorldId = 'underground';
+      state.lastSavedAt = baseNow - 406 * 1000; // 6m 46s away
+      const cappedSummary = computeOfflineEarningsDomain(state, baseNow, () => 0.5);
+      expect(cappedSummary).not.toBeNull();
+      expect(cappedSummary!.oresBroken).toBe(Math.floor(MAX_OFFLINE_ORES_PER_SEC * 406));
+      expect(cappedSummary!.gems).toBeLessThanOrEqual(MAX_OFFLINE_GEMS);
     });
   });
 
