@@ -236,6 +236,10 @@ async function bootstrap(): Promise<void> {
     (overclockActive) => {
       scene.setOverclockActive(overclockActive);
       syncWorldToScene();
+    },
+    {
+      syncFusionRecipe: (recipe, readyFlags) => scene.syncFusionRecipe(recipe, readyFlags),
+      triggerFusionAnimation: (recipe, onComplete) => scene.triggerFusionAnimation(recipe, onComplete),
     }
   );
 

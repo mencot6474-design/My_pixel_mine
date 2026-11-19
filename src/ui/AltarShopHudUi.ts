@@ -171,8 +171,11 @@ export class AltarShopHudUi {
 
     return `
       ${opts.weatherHtml}
-      <div class="${TW_TOP_CENTER}">
-        <button class="px-[46px] py-2 rounded-2xl border-2 border-orange-300 bg-[linear-gradient(135deg,#ea580c_0%,#9a3412_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_0_#431407,0_8px_22px_-4px_rgba(234,88,12,0.45)] text-white text-[20px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline" data-action="altar-back">Back</button>
+      <div class="${TW_TOP_CENTER} flex items-center gap-2.5">
+        <button class="px-[42px] py-2 rounded-2xl border-2 border-orange-300 bg-[linear-gradient(135deg,#ea580c_0%,#9a3412_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_0_#431407,0_8px_22px_-4px_rgba(234,88,12,0.45)] text-white text-[19px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline" data-action="altar-back">Back</button>
+        <button class="px-4 py-2 rounded-2xl border-2 border-cyan-300 bg-[linear-gradient(135deg,#0284c7_0%,#7c3aed_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_0_#1e1b4b,0_8px_22px_-4px_rgba(56,189,248,0.45)] text-white text-[16px] font-black cursor-pointer inline-flex items-center gap-1.5 transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-action="switch-to-fusion">
+          <span>✦ Chibi Fusion</span>
+        </button>
       </div>
 
       ${opts.audioBtnHtml}
@@ -222,6 +225,13 @@ export class AltarShopHudUi {
         onClick: () => {
           audio.playSfx('ui-close');
           this.onSetSceneMode('shop');
+        },
+      },
+      {
+        selector: '[data-action="switch-to-fusion"]',
+        onClick: () => {
+          audio.playSfx('teleport', { volume: 0.45 });
+          this.onSetSceneMode('fusion');
         },
       },
       {

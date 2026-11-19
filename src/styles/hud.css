@@ -188,6 +188,60 @@
     animation: mamSecretPulse 1.8s ease-in-out infinite;
   }
 
+  .mam-card.rarity-fusion,
+  .mam-strip-card.rarity-fusion,
+  .mam-altar-card.rarity-fusion {
+    border: 2.5px solid transparent;
+    background:
+      radial-gradient(circle at 50% 38%, rgba(34, 211, 238, 0.4), rgba(168, 85, 247, 0.28) 46%, #090b18 86%) padding-box,
+      linear-gradient(135deg, #22d3ee, #818cf8, #e879f9, #facc15, #22d3ee) border-box;
+    animation: mamFusionPulse 2s ease-in-out infinite;
+  }
+
+  .mam-fusion-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 9px;
+    border-radius: 9999px;
+    border: 1.5px solid #e0f2fe;
+    background: linear-gradient(135deg, #06b6d4 0%, #8b5cf6 52%, #ec4899 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      0 0 12px rgba(232, 121, 249, 0.65),
+      0 2px 6px rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.15;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  }
+
+  .mam-fusion-text {
+    background: linear-gradient(90deg, #22d3ee, #a5b4fc, #f0abfc, #fde047);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
+    text-shadow: none !important;
+    filter: drop-shadow(0 1.2px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000);
+  }
+
+  @keyframes mamFusionPulse {
+    0%,
+    100% {
+      box-shadow:
+        inset 0 0 16px rgba(34, 211, 238, 0.5),
+        0 0 10px rgba(56, 189, 248, 0.45);
+    }
+    50% {
+      box-shadow:
+        inset 0 0 24px rgba(232, 121, 249, 0.65),
+        0 0 18px rgba(232, 121, 249, 0.7);
+    }
+  }
+
   @keyframes mamExoticPulse {
     0%,
     100% {

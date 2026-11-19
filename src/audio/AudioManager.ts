@@ -176,7 +176,13 @@ export class AudioManager {
 
   public setSceneMode(mode: SceneMode, isBossWave = false): void {
     const nextBgm: BgmKind =
-      mode === 'tower' ? (isBossWave ? 'boss' : 'tower') : mode === 'shop' || mode === 'altar' ? 'shop' : 'mine';
+      mode === 'tower'
+        ? isBossWave
+          ? 'boss'
+          : 'tower'
+        : mode === 'shop' || mode === 'altar' || mode === 'fusion'
+          ? 'shop'
+          : 'mine';
     this.playBgm(nextBgm);
   }
 

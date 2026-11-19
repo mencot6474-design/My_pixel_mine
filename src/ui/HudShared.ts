@@ -36,7 +36,8 @@ export type ModalKind =
   | 'forge'
   | 'settings'
   | 'offline'
-  | 'bounties';
+  | 'bounties'
+  | 'altar-hub';
 
 export type ModalThemeId = Exclude<ModalKind, 'none'>;
 
@@ -49,8 +50,18 @@ export function rarityCardClasses(rarity: ItemRarity, extra = ''): string {
   if (rarity === 'mythic') cls.push('rarity-mythic');
   if (rarity === 'exotic') cls.push('rarity-exotic');
   if (rarity === 'secret') cls.push('rarity-secret');
+  if (rarity === 'fusion') cls.push('rarity-fusion');
   if (extra) cls.push(extra);
   return cls.join(' ');
+}
+
+export function renderRarityBadgeHtml(rarity: ItemRarity, extraCls = ''): string {
+  if (rarity === 'fusion') {
+    return `<span class="mam-fusion-badge ${extraCls}"><span>✦</span><span>FUSION</span></span>`;
+  }
+  const borderColor = RARITY_BORDER[rarity];
+  const rarityLabel = rarity.charAt(0).toUpperCase() + rarity.slice(1);
+  return `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${extraCls}" style="color:${borderColor};border-color:${borderColor}88;background:${borderColor}20">${rarityLabel}</span>`;
 }
 
 export function rarityVars(rarity: ItemRarity): string {
@@ -217,12 +228,13 @@ export function renderInspectorPanel(opts: {
         ? 'border-[2.5px] border-transparent [background:radial-gradient(circle_at_50%_45%,rgba(20,184,166,0.42),#0d1820_84%)_padding-box,linear-gradient(135deg,#2dd4bf,#06b6d4,#34d399,#22d3ee)_border-box]'
         : opts.rarity === 'secret'
           ? 'border-[2.5px] border-transparent [background:radial-gradient(circle_at_50%_45%,rgba(244,63,94,0.45),#090a12_84%)_padding-box,linear-gradient(135deg,#f43f5e,#fbbf24,#9f1239,#f59e0b)_border-box]'
-          : 'border-[2.5px]';
+          : opts.rarity === 'fusion'
+            ? 'border-[2.5px] border-transparent [background:radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.42),rgba(168,85,247,0.3)_50%,#090b18_86%)_padding-box,linear-gradient(135deg,#22d3ee,#818cf8,#e879f9,#facc15,#22d3ee)_border-box]'
+            : 'border-[2.5px]';
   const showcaseStyle =
-    opts.rarity === 'rainbow' || opts.rarity === 'exotic' || opts.rarity === 'secret'
+    opts.rarity === 'rainbow' || opts.rarity === 'exotic' || opts.rarity === 'secret' || opts.rarity === 'fusion'
       ? ''
       : `border-color:${borderColor};background:radial-gradient(circle at 50% 42%,${borderColor}40,rgba(15,19,27,0.96) 78%);`;
-  const rarityLabel = opts.rarity.charAt(0).toUpperCase() + opts.rarity.slice(1);
   const statsHtml = opts.stats
     .map(
       ([label, val, valClass]) => `
@@ -242,7 +254,7 @@ export function renderInspectorPanel(opts: {
       <div class="text-[19px] font-black text-white leading-tight break-words w-full [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">${opts.title}</div>
       <div class="text-[11px] font-bold text-[#94a3b8] leading-tight">${opts.subtitle}</div>
       <div class="flex items-center justify-center gap-1.5 flex-wrap mt-1">
-        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border" style="color:${borderColor};border-color:${borderColor}88;background:${borderColor}20">${rarityLabel}</span>
+        ${renderRarityBadgeHtml(opts.rarity)}
         ${opts.badgesHtml ?? ''}
       </div>
     </div>

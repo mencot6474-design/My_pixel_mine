@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ORES } from '../src/game/GameData';
+import { getOreById, ORES } from '../src/game/GameData';
+import { FUSION_RECIPES } from '../src/game/FusionData';
+import { getChibiById } from '../src/game3d/ChibiCatalog';
 import { GameState, getChibiUpgradeCostMult } from '../src/game/GameState';
 import {
   createEmptyResearchLevels,
@@ -540,6 +542,75 @@ describe('Tahap C GameState Domain Modules', () => {
       state.stepOverclock(now + OVERCLOCK_DURATION_SEC * 1000 + 100);
       expect(state.isOverclockActive(now + OVERCLOCK_DURATION_SEC * 1000 + 100)).toBe(false);
       expect(state.getTapDamage(now + OVERCLOCK_DURATION_SEC * 1000 + 100)).toBe(baseTap);
+    });
+  });
+
+  describe('FusionDomain', () => {
+    it('validates all 4 Fusion recipes, protects placed plot chibis, consumes bag+chest ores & gems, and grants Fusion Chibi', () => {
+      expect(FUSION_RECIPES.length).toBe(4);
+      for (const r of FUSION_RECIPES) {
+        expect(getChibiById(r.resultChibiId)).toBeDefined();
+        expect(r.requiredMiners.length).toBeGreaterThanOrEqual(2);
+        for (const m of r.requiredMiners) expect(getChibiById(m.chibiId)).toBeDefined();
+        for (const o of r.requiredOres) expect(getOreById(o.oreId)).toBeDefined();
+      }
+
+      const state = new GameState();
+      const recipe = FUSION_RECIPES[0]; // Glitch Cheshire
+      expect(state.canFuseRecipe(recipe.id)).toBe(false);
+
+      // Give exact ingredients, but put 1 required miner on a plot -> must stay protected!
+      state.gems = recipe.gemCost;
+      for (const m of recipe.requiredMiners) {
+        state.miners[m.chibiId] = m.count;
+      }
+      for (const o of recipe.requiredOres) {
+        state.ores[o.oreId] = Math.floor(o.count / 2);
+        state.chestOres[o.oreId] = o.count - state.ores[o.oreId];
+      }
+      state.plotMiners[0] = recipe.requiredMiners[0].chibiId;
+      expect(state.getAvailableFusionMinerCount(recipe.requiredMiners[0].chibiId)).toBe(0);
+      expect(state.canFuseRecipe(recipe.id)).toBe(false);
+
+      // Add an extra unplaced copy -> now fuseable!
+      state.miners[recipe.requiredMiners[0].chibiId] += 1;
+      expect(state.canFuseRecipe(recipe.id)).toBe(true);
+      expect(state.getReadyFusionCount()).toBe(1);
+
+      const fused = state.fuseChibiRecipe(recipe.id);
+      expect(fused?.resultChibiId).toBe(recipe.resultChibiId);
+      expect(state.gems).toBe(0);
+      expect(state.miners[recipe.resultChibiId]).toBe(1);
+      expect(state.discovered.has(recipe.resultChibiId)).toBe(true);
+      // Placed plot unit copy was preserved!
+      expect(state.miners[recipe.requiredMiners[0].chibiId]).toBe(1);
+      expect(state.plotMiners[0]).toBe(recipe.requiredMiners[0].chibiId);
+
+      // Verify balanced Fusion upgrade cost scaling & all 4 unique Fusion Passives
+      expect(getChibiUpgradeCostMult('glitch-cheshire')).toBe(85_000);
+      expect(getChibiUpgradeCostMult('thorn-maiden')).toBe(1_800_000);
+      expect(getChibiUpgradeCostMult('monochrome-saint')).toBe(28_000_000);
+      expect(getChibiUpgradeCostMult('prism-seraph')).toBe(65_000_000);
+
+      const baseTap = state.getTapDamage();
+      const baseSell = state.getOreValueMult();
+      const baseDrop = state.getOreOutputMult();
+
+      // Deploy all 4 Fusion Chibis on plots 0..3 -> activate all 4 passives
+      state.plotMiners[0] = 'glitch-cheshire';
+      state.plotMiners[1] = 'thorn-maiden';
+      state.plotMiners[2] = 'monochrome-saint';
+      state.plotMiners[3] = 'prism-seraph';
+
+      const passives = state.getActiveFusionPassives();
+      expect(passives.tapDmgPct).toBeCloseTo(1.5, 5);
+      expect(passives.oreDropPct).toBeCloseTo(1.5, 5);
+      expect(passives.oreSellPct).toBeCloseTo(2.0, 5);
+      expect(passives.teamDmgPct).toBeCloseTo(0.5, 5);
+
+      expect(state.getTapDamage()).toBe(Math.round(baseTap * 2.5));
+      expect(state.getOreValueMult()).toBeCloseTo(baseSell + 2.0, 5);
+      expect(state.getOreOutputMult()).toBeCloseTo(baseDrop + 1.5, 5);
     });
   });
 });

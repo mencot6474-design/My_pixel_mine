@@ -9,7 +9,8 @@ export type ChibiRarity =
   | 'rainbow'
   | 'mythic'
   | 'exotic'
-  | 'secret';
+  | 'secret'
+  | 'fusion';
 
 export interface ChibiPoseUrls {
   idle: string;
@@ -449,6 +450,52 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     rarity: 'secret',
     accentColor: '#fde047',
     baseDps: 180_000,
+    smoothFilter: true,
+  },
+
+  // === Altar Synchro Fusion Exclusive Chibis ===
+  {
+    id: 'glitch-cheshire',
+    name: 'Glitch Cheshire',
+    spriteUrl: '/chibi/glitch-cheshire/idle.webp',
+    poses: makePoses('glitch-cheshire'),
+    frames: 4,
+    rarity: 'fusion',
+    accentColor: '#22d3ee',
+    baseDps: 26_000,
+    smoothFilter: true,
+  },
+  {
+    id: 'thorn-maiden',
+    name: 'Thorn Maiden',
+    spriteUrl: '/chibi/thorn-maiden/idle.webp',
+    poses: makePoses('thorn-maiden'),
+    frames: 4,
+    rarity: 'fusion',
+    accentColor: '#f43f5e',
+    baseDps: 72_000,
+    smoothFilter: true,
+  },
+  {
+    id: 'monochrome-saint',
+    name: 'Monochrome Saint',
+    spriteUrl: '/chibi/monochrome-saint/idle.webp',
+    poses: makePoses('monochrome-saint'),
+    frames: 4,
+    rarity: 'fusion',
+    accentColor: '#e2e8f0',
+    baseDps: 165_000,
+    smoothFilter: true,
+  },
+  {
+    id: 'prism-seraph',
+    name: 'Prism Seraph',
+    spriteUrl: '/chibi/prism-seraph/idle.webp',
+    poses: makePoses('prism-seraph'),
+    frames: 4,
+    rarity: 'fusion',
+    accentColor: '#facc15',
+    baseDps: 295_000,
     smoothFilter: true,
   },
 ] as const;

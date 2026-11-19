@@ -11,7 +11,9 @@ import { getTowerFloorDef, TowerWaveOreState } from '../game/TowerData';
 import { AltarShopHudUi } from './AltarShopHudUi';
 import { BountiesModalUi } from './BountiesModalUi';
 import { CollectionModalsUi } from './CollectionModalsUi';
+import { FusionRecipeDef } from '../game/FusionData';
 import { ForgeModalUi } from './ForgeModalUi';
+import { FusionHudUi } from './FusionHudUi';
 import { HotbarHudUi, canDropHotbarOnPlot } from './HotbarHudUi';
 import { hudIconHtml } from './HudIcons';
 import {
@@ -67,6 +69,7 @@ export class GameHud {
   private readonly weatherDpsUi: WeatherDpsHudUi;
   private readonly hotbarUi: HotbarHudUi;
   private readonly altarShopUi: AltarShopHudUi;
+  private readonly fusionUi: FusionHudUi;
   private readonly worldOverlayUi: WorldOverlayHudUi;
   private readonly settingsUi: SettingsModalUi;
   private readonly offlineUi: OfflineModalUi;
@@ -96,7 +99,11 @@ export class GameHud {
     private readonly onSetTutorialSellShopZoom?: (zoomed: boolean) => void,
     private readonly onToggleAutoMeteor?: (enabled: boolean) => void,
     private readonly onTutorialComplete?: () => void,
-    private readonly onOverclockChange?: (active: boolean) => void
+    private readonly onOverclockChange?: (active: boolean) => void,
+    private readonly fusionOps?: {
+      syncFusionRecipe: (recipe: FusionRecipeDef, readyFlags: readonly boolean[]) => void;
+      triggerFusionAnimation: (recipe: FusionRecipeDef, onComplete: () => void) => void;
+    }
   ) {
     this.shopUi = new ShopModalsUi(this.state, (msg) => this.pushToast(msg));
     this.settingsUi = new SettingsModalUi(
@@ -182,6 +189,15 @@ export class GameHud {
       (station) => this.openShopStation(station),
       () => this.sceneMode,
       this.onTriggerEnchantSpin
+    );
+    this.fusionUi = new FusionHudUi(
+      this.state,
+      (msg) => this.pushToast(msg),
+      () => this.render(),
+      (mode) => this.setSceneMode(mode),
+      () => this.openModal('none'),
+      this.fusionOps?.syncFusionRecipe,
+      this.fusionOps?.triggerFusionAnimation
     );
     this.worldOverlayUi = new WorldOverlayHudUi(
       this.state,
@@ -431,6 +447,11 @@ export class GameHud {
     if (mode !== 'altar') {
       this.altarShopUi.cancelSpinOnSceneExit();
     }
+    if (mode !== 'fusion') {
+      this.fusionUi.resetAnimating();
+    } else {
+      this.fusionUi.syncCurrentRecipeTo3D();
+    }
     this.sceneMode = mode;
     this.activeModal = 'none';
     this.collectionUi.closeReviewDialog();
@@ -534,7 +555,8 @@ export class GameHud {
 
   public openShopStation(station: ShopStationId): void {
     if (station === 'altar') {
-      this.setSceneMode('altar');
+      this.activeModal = 'altar-hub';
+      this.render();
     } else if (station === 'tower') {
       this.towerUi.syncDefaultCheckpoint();
       this.activeModal = 'tower';
@@ -731,6 +753,11 @@ export class GameHud {
         return;
       }
 
+      if (this.sceneMode === 'fusion') {
+        this.renderFusionHud();
+        return;
+      }
+
       if (this.sceneMode === 'tower') {
         this.renderTowerHud();
         return;
@@ -866,6 +893,7 @@ export class GameHud {
     if (this.activeModal === 'settings') return this.settingsUi.renderModal();
     if (this.activeModal === 'offline') return this.offlineUi.renderModal();
     if (this.activeModal === 'bounties') return this.bountiesUi.renderModal();
+    if (this.activeModal === 'altar-hub') return this.fusionUi.renderAltarChoiceModal();
     return '';
   }
 
@@ -896,6 +924,19 @@ export class GameHud {
   private renderAltarHud(): void {
     this.root.innerHTML =
       this.altarShopUi.renderAltarHud({
+        weatherHtml: this.weatherDpsUi.renderWeatherWidget(),
+        audioBtnHtml: this.renderAudioToggleBtn(),
+        currencyRailHtml: this.renderCurrencyRail({}),
+        toastStackHtml: this.renderToastStack(),
+      }) + (this.activeModal === 'settings' ? this.renderActiveModal() : '');
+    this.bindEvents();
+    this.renderToasts();
+  }
+
+  private renderFusionHud(): void {
+    this.fusionUi.syncCurrentRecipeTo3D();
+    this.root.innerHTML =
+      this.fusionUi.renderFusionWorldHud({
         weatherHtml: this.weatherDpsUi.renderWeatherWidget(),
         audioBtnHtml: this.renderAudioToggleBtn(),
         currencyRailHtml: this.renderCurrencyRail({}),
@@ -996,6 +1037,8 @@ export class GameHud {
     this.settingsUi.bindEvents(this.root);
     this.offlineUi.bindEvents(this.root);
     this.bountiesUi.bindEvents(this.root);
+    this.fusionUi.bindAltarChoiceEvents(this.root);
+    this.fusionUi.bindFusionWorldEvents(this.root);
   }
 
   private updateCurrencyLiveValues(): void {

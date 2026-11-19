@@ -20,6 +20,8 @@ import {
 } from './GameData';
 import { compactHotbarSlots, PlotUnitState } from './GameStateSave';
 import { RelicEffectStat } from './RelicData';
+import { getFusionRecipeByResultChibiId } from './FusionData';
+import { getActiveFusionPassiveBonuses } from './FusionDomain';
 import { ResearchEffectType } from './ResearchData';
 import { WeatherId } from './WeatherData';
 
@@ -98,6 +100,10 @@ export function getChibiUpgradeCostMult(chibiId: string): number {
   if (!chibi) return 1;
   const worldId = getMinerWorldId(chibiId);
   if (!worldId) {
+    const fusionRecipe = getFusionRecipeByResultChibiId(chibiId);
+    if (fusionRecipe) {
+      return fusionRecipe.upgradeCostScale;
+    }
     for (const [weatherId, entries] of Object.entries(WEATHER_METEOR_CHIBIS) as Array<
       [WeatherId, readonly { chibiId: string; chancePct: number; rarity: string }[]]
     >) {
@@ -258,6 +264,7 @@ export function computePlotUnitStats(
   const weatherDmgMult = ctx.getWeatherDamageMult();
   const starTier = getChibiStarTier(getChibiStarCount(ctx, chibi.id));
   const resonanceDmgMult = 1 + getWorldResonanceDmgPct(ctx, getMinerWorldId(chibi.id));
+  const fusionTeamDmgMult = 1 + getActiveFusionPassiveBonuses(ctx.plotMiners).teamDmgPct;
   const baseDmg =
     chibi.baseDps *
     lvlScale(unit.damageLevel) *
@@ -266,7 +273,8 @@ export function computePlotUnitStats(
     encMult *
     dmgResearchMult *
     starTier.dmgMult *
-    resonanceDmgMult;
+    resonanceDmgMult *
+    fusionTeamDmgMult;
   const dmg = Math.round(baseDmg * weatherDmgMult);
   const nextDmg = Math.round(
     chibi.baseDps *
@@ -277,6 +285,7 @@ export function computePlotUnitStats(
       dmgResearchMult *
       starTier.dmgMult *
       resonanceDmgMult *
+      fusionTeamDmgMult *
       weatherDmgMult
   );
   const speed = 10 + (unit.speedLevel - 1) * 2;

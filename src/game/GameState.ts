@@ -33,6 +33,17 @@ import {
   MAX_EQUIPPED_RELICS,
   RelicEffectStat,
 } from './RelicData';
+import { FusionRecipeDef } from './FusionData';
+import {
+  canFuseRecipeDomain,
+  fuseChibiRecipeDomain,
+  FusionDomainContext,
+  FusionPassiveBonuses,
+  getActiveFusionPassiveBonuses,
+  getAvailableFusionMinerCount,
+  getFusionOreCount,
+  getReadyFusionCountDomain,
+} from './FusionDomain';
 import {
   TOWER_MAX_KEYS,
   TowerRunState,
@@ -109,6 +120,7 @@ import {
   rollUnitMutation,
   starUpUnit,
   toggleUnitEnchant,
+  trimStashedUnits,
   upgradeUnitDamage,
   upgradeUnitMiningSpeed,
   upgradeUnitSpeed,
@@ -674,8 +686,12 @@ export class GameState {
     });
   }
 
+  public getActiveFusionPassives(): FusionPassiveBonuses {
+    return getActiveFusionPassiveBonuses(this.plotMiners);
+  }
+
   public getTapDamage(nowMs = Date.now()): number {
-    const tapMult = 1 + this.getRelicBonus('tapDmgPct');
+    const tapMult = 1 + this.getRelicBonus('tapDmgPct') + this.getActiveFusionPassives().tapDmgPct;
     const overclockMult = this.isOverclockActive(nowMs) ? OVERCLOCK_TAP_MULT : 1;
     return Math.max(
       1,
@@ -703,7 +719,7 @@ export class GameState {
   }
 
   public getOreValueMult(): number {
-    return 1 + this.getActiveResearchBonus('oreValuePct') + this.getRelicBonus('oreValuePct');
+    return 1 + this.getActiveResearchBonus('oreValuePct') + this.getRelicBonus('oreValuePct') + this.getActiveFusionPassives().oreSellPct;
   }
 
   public getEffectiveOreSellValue(oreId: string): number {
@@ -714,7 +730,12 @@ export class GameState {
 
   public getOreOutputMult(): number {
     const { oreDropBonusPct } = this.getActiveStarDropAndGemBonus();
-    let mult = 1 + this.getActiveResearchBonus('oreOutputPct') + oreDropBonusPct + this.getRelicBonus('oreDropPct');
+    let mult =
+      1 +
+      this.getActiveResearchBonus('oreOutputPct') +
+      oreDropBonusPct +
+      this.getRelicBonus('oreDropPct') +
+      this.getActiveFusionPassives().oreDropPct;
     if (isBoostActiveDomain(this, 'ore-elixir-1')) mult += 0.1;
     if (isBoostActiveDomain(this, 'ore-elixir-2')) mult += 0.25;
     if (isBoostActiveDomain(this, 'ore-elixir-3')) mult += 0.5;
@@ -1019,6 +1040,48 @@ export class GameState {
 
   public getOverclockSnapshot(nowMs = Date.now()): OverclockSnapshot {
     return getOverclockSnapshotDomain(this.overclock, nowMs);
+  }
+
+  public getAvailableFusionMinerCount(chibiId: string): number {
+    return getAvailableFusionMinerCount(this.fusionCtx(), chibiId);
+  }
+
+  public getFusionOreCount(oreId: string): number {
+    return getFusionOreCount(this.fusionCtx(), oreId);
+  }
+
+  public canFuseRecipe(recipeId: string): boolean {
+    return canFuseRecipeDomain(this.fusionCtx(), recipeId);
+  }
+
+  public getReadyFusionCount(): number {
+    return getReadyFusionCountDomain(this.fusionCtx());
+  }
+
+  public fuseChibiRecipe(recipeId: string): FusionRecipeDef | null {
+    return fuseChibiRecipeDomain(this.fusionCtx(), recipeId);
+  }
+
+  private fusionCtx(): FusionDomainContext {
+    const self = this;
+    return {
+      get gems() {
+        return self.gems;
+      },
+      set gems(v: number) {
+        self.gems = v;
+      },
+      miners: self.miners,
+      chestMiners: self.chestMiners,
+      ores: self.ores,
+      chestOres: self.chestOres,
+      plotMiners: self.plotMiners,
+      hotbar: self.hotbar,
+      discovered: self.discovered,
+      trimStashedUnitsFor: (id: string) => trimStashedUnits(self, id),
+      save: () => self.save(),
+      emit: () => self.emit(),
+    };
   }
 
   public touchSaveTimestamp(): void {

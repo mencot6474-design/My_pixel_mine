@@ -90,6 +90,7 @@ export const RARITY_BORDER: Record<ItemRarity, string> = {
   mythic: '#ec4899',
   exotic: '#14b8a6',
   secret: '#f43f5e',
+  fusion: '#e879f9',
 };
 
 export const WORLDS: readonly WorldDef[] = [

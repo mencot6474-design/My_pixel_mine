@@ -7,6 +7,8 @@ import { MineEnvironment3D } from './MineEnvironment3D';
 import { DEFAULT_WORLD_PALETTE, MineWorldPalette, OreVariantKey, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
 import { OrePit3D } from './OrePit3D';
 import { PlotLabelInfo, PlotPedestal3D } from './PlotPedestal3D';
+import { FusionRecipeDef } from '../game/FusionData';
+import { FusionWorld3D } from './FusionWorld3D';
 import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId, ShopWorld3D } from './ShopWorld3D';
 import { TowerArena3D, TowerFighterConfig, TowerOreBarScreen } from './TowerArena3D';
 import { TowerWaveOreState } from '../game/TowerData';
@@ -15,7 +17,7 @@ import { OVERCLOCK_SPEED_MULT } from '../game/OverclockDomain';
 import { getWeatherById, WeatherId } from '../game/WeatherData';
 import { WeatherFx3D } from './WeatherFx3D';
 
-export type SceneMode = 'mine' | 'shop' | 'altar' | 'tower';
+export type SceneMode = 'mine' | 'shop' | 'altar' | 'fusion' | 'tower';
 
 export interface PlotAnchorScreen {
   slotIndex: number;
@@ -76,6 +78,7 @@ export class MineScene3D {
   private readonly rimLight: THREE.DirectionalLight;
   private readonly pit: OrePit3D;
   private readonly shopWorld = new ShopWorld3D();
+  private readonly fusionWorld = new FusionWorld3D();
   private readonly towerArena = new TowerArena3D();
   private readonly weatherFx = new WeatherFx3D();
   private readonly clickableMeshes: THREE.Object3D[] = [];
@@ -343,6 +346,7 @@ export class MineScene3D {
 
     this.scene.add(this.shopWorld.shopGroup);
     this.scene.add(this.shopWorld.altarGroup);
+    this.scene.add(this.fusionWorld.group);
     this.scene.add(this.towerArena.group);
     this.scene.add(this.weatherFx.group);
 
@@ -619,7 +623,8 @@ export class MineScene3D {
     this.env.update(dtSec, this.elapsed, this.crateHovered, this.crateBounce);
     this.pedestals.forEach((p) => p.update(dtSec, this.elapsed, this.camera));
     this.pit.update(dtSec, this.elapsed, this.camera);
-    this.shopWorld.update(dtSec, this.elapsed, this.mode, this.camera);
+    this.shopWorld.update(dtSec, this.elapsed, this.mode === 'fusion' ? 'mine' : this.mode, this.camera);
+    this.fusionWorld.update(dtSec, this.elapsed, this.camera);
     this.towerArena.update(dtSec, this.elapsed, this.camera, (strike) => {
       const res = this.callbacks.onTowerFighterStrike?.(
         strike.slotIndex,
@@ -844,7 +849,11 @@ export class MineScene3D {
     if (mode !== 'altar') {
       this.shopWorld.cancelSpin();
     }
+    if (mode !== 'fusion') {
+      this.fusionWorld.cancelAnimation();
+    }
     const isMine = mode === 'mine';
+    this.fusionWorld.group.visible = mode === 'fusion';
     this.towerArena.group.visible = mode === 'tower';
     this.env.group.visible = isMine;
     this.env.skyDome.visible = mode === 'mine' || mode === 'shop';
@@ -864,6 +873,13 @@ export class MineScene3D {
       this.targetOrbitPitch = -0.18;
       this.targetCamRadius = 12.2;
       this.lookAtPos.set(0, 1.05, -2.4);
+    } else if (mode === 'fusion') {
+      this.scene.background = new THREE.Color(0x040614);
+      this.scene.fog = new THREE.Fog(0x060a1f, 26, 78);
+      this.targetOrbitYaw = 0;
+      this.targetOrbitPitch = -0.22;
+      this.targetCamRadius = 11.4;
+      this.lookAtPos.set(0, 1.3, -0.35);
     } else if (mode === 'tower') {
       this.scene.background = new THREE.Color(0x030714);
       this.scene.fog = new THREE.Fog(0x050b1c, 26, 76);
@@ -1001,6 +1017,18 @@ export class MineScene3D {
 
   public isEnchantSpinning(): boolean {
     return this.shopWorld.isSpinning();
+  }
+
+  public syncFusionRecipe(recipe: FusionRecipeDef, readyFlags: readonly boolean[]): void {
+    this.fusionWorld.syncRecipe(recipe, readyFlags);
+  }
+
+  public triggerFusionAnimation(recipe: FusionRecipeDef, onComplete: () => void): void {
+    this.fusionWorld.triggerFusionAnimation(recipe, onComplete);
+  }
+
+  public isFusionAnimating(): boolean {
+    return this.fusionWorld.isAnimating();
   }
 
   public focusPlot(slotIndex: number | null): void {
@@ -1162,6 +1190,7 @@ export class MineScene3D {
     this.env.dispose();
     this.pit.dispose();
     this.shopWorld.dispose();
+    this.fusionWorld.dispose();
     this.towerArena.dispose();
     this.weatherFx.dispose();
     this.renderer.dispose();
