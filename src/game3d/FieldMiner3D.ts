@@ -118,7 +118,7 @@ export class ChibiFieldFxController {
 
     // Particles only around active field chibis (keeps face & target ore unobstructed)
     const particles = createAnimeParticlePoints(enc.color, secHex, {
-      count: 24,
+      count: 12,
       minRadius: 0.42,
       maxRadius: 0.68,
       baseY: 0.08,

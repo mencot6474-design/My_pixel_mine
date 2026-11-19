@@ -215,6 +215,18 @@ export function buildAltarAnchorsHtml(anchors: AltarPedestalAnchor[]): string {
 export class WorldOverlayHudUi {
   private plotLayerEl: HTMLElement | null = null;
   private oreBarLayerEl: HTMLElement | null = null;
+  private readonly oreBarCache = new Map<
+    string,
+    {
+      wrap: HTMLElement;
+      fill: HTMLElement | null;
+      txt: HTMLElement | null;
+      x: number;
+      y: number;
+      pct: string;
+      text: string;
+    }
+  >();
   private dmgLayerEl: HTMLElement | null = null;
   private shopLayerEl: HTMLElement | null = null;
   private shopBubbleLayerEl: HTMLElement | null = null;
@@ -274,6 +286,7 @@ export class WorldOverlayHudUi {
     if (this.oreBarLayerEl) {
       this.oreBarLayerEl.innerHTML = '';
       this.oreBarLayerEl.dataset.keys = '';
+      this.oreBarCache.clear();
     }
     if (this.dmgLayerEl) {
       this.dmgLayerEl.innerHTML = '';
@@ -316,15 +329,44 @@ export class WorldOverlayHudUi {
     hp: number,
     maxHp: number
   ): void {
-    const wrap = layer.querySelector<HTMLElement>(selector);
-    if (!wrap) return;
-    wrap.style.left = `${x}px`;
-    wrap.style.top = `${y}px`;
-    const pct = Math.max(0, Math.min(100, (hp / Math.max(1, maxHp)) * 100));
-    const fill = wrap.querySelector<HTMLElement>('[data-ore-fill="true"]');
-    const txt = wrap.querySelector<HTMLElement>('[data-ore-text="true"]');
-    if (fill) fill.style.width = `${pct}%`;
-    if (txt) txt.textContent = `${fmtShort(Math.ceil(hp))} / ${fmtShort(Math.ceil(maxHp))}`;
+    let entry = this.oreBarCache.get(selector);
+    if (!entry) {
+      const wrap = layer.querySelector<HTMLElement>(selector);
+      if (!wrap) return;
+      wrap.style.left = '0px';
+      wrap.style.top = '0px';
+      entry = {
+        wrap,
+        fill: wrap.querySelector<HTMLElement>('[data-ore-fill="true"]'),
+        txt: wrap.querySelector<HTMLElement>('[data-ore-text="true"]'),
+        x: NaN,
+        y: NaN,
+        pct: '',
+        text: '',
+      };
+      this.oreBarCache.set(selector, entry);
+    }
+
+    const rx = Math.round(x * 2) * 0.5;
+    const ry = Math.round(y * 2) * 0.5;
+    if (rx !== entry.x || ry !== entry.y) {
+      entry.x = rx;
+      entry.y = ry;
+      entry.wrap.style.transform = `translate3d(${rx}px, ${ry}px, 0) translate(-50%, -100%)`;
+    }
+
+    const pctNum = Math.max(0, Math.min(100, (hp / Math.max(1, maxHp)) * 100));
+    const pctStr = `${pctNum.toFixed(1)}%`;
+    if (entry.fill && pctStr !== entry.pct) {
+      entry.pct = pctStr;
+      entry.fill.style.width = pctStr;
+    }
+
+    const textStr = `${fmtShort(Math.ceil(hp))} / ${fmtShort(Math.ceil(maxHp))}`;
+    if (entry.txt && textStr !== entry.text) {
+      entry.text = textStr;
+      entry.txt.textContent = textStr;
+    }
   }
 
   public updateOreBars(bars: OreHpScreen[]): void {
@@ -334,6 +376,7 @@ export class WorldOverlayHudUi {
       if (this.oreBarLayerEl.dataset.keys?.startsWith('mine:')) {
         this.oreBarLayerEl.innerHTML = '';
         this.oreBarLayerEl.dataset.keys = '';
+        this.oreBarCache.clear();
       }
       return;
     }
@@ -341,6 +384,7 @@ export class WorldOverlayHudUi {
       if (this.oreBarLayerEl.innerHTML !== '') {
         this.oreBarLayerEl.innerHTML = '';
         this.oreBarLayerEl.dataset.keys = '';
+        this.oreBarCache.clear();
       }
       return;
     }
@@ -349,6 +393,7 @@ export class WorldOverlayHudUi {
     if (this.oreBarLayerEl.dataset.keys !== key) {
       this.oreBarLayerEl.dataset.keys = key;
       this.oreBarLayerEl.innerHTML = buildMineOreBarsHtml(bars);
+      this.oreBarCache.clear();
     }
 
     for (const b of bars) {
@@ -372,6 +417,7 @@ export class WorldOverlayHudUi {
         if (this.oreBarLayerEl.innerHTML !== '') {
           this.oreBarLayerEl.innerHTML = '';
           this.oreBarLayerEl.dataset.keys = '';
+          this.oreBarCache.clear();
         }
       }
       return;
@@ -381,6 +427,7 @@ export class WorldOverlayHudUi {
     if (this.oreBarLayerEl.dataset.keys !== key) {
       this.oreBarLayerEl.dataset.keys = key;
       this.oreBarLayerEl.innerHTML = buildTowerOreBarsHtml(bars);
+      this.oreBarCache.clear();
     }
 
     const runOres = this.state.towerRun?.waveOres ?? [];

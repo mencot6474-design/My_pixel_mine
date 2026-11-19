@@ -268,7 +268,7 @@ export class MineEnvironment3D {
     this.buildDistantCityInfrastructure(darkMetalMat, steelMat);
 
     // 9. Ambient Soft Bokeh Cyber Mana Motes (GPU radial glow replacing raw square Points)
-    const dustCount = 42;
+    const dustCount = 20;
     const positions = new Float32Array(dustCount * 3);
     const phases = new Float32Array(dustCount);
     for (let i = 0; i < dustCount; i++) {

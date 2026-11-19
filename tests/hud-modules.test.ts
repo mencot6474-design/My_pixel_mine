@@ -14,6 +14,7 @@ import {
   renderAltarStripCardsHtml,
   renderShopWorldHudHtml,
 } from '../src/ui/AltarShopHudUi';
+import { DailyLoginModalUi } from '../src/ui/DailyLoginModalUi';
 import { ForgeModalUi } from '../src/ui/ForgeModalUi';
 import {
   buildHotbarStateKey,
@@ -705,6 +706,28 @@ describe('Tahap B HUD Modules', () => {
       expect(reward).toEqual({ gems: TUTORIAL_REWARD_GEMS, dice: TUTORIAL_REWARD_DICE });
       expect(state.gems).toBe(startGems + TUTORIAL_REWARD_GEMS);
       expect(state.enchantDice).toBe(startDice + TUTORIAL_REWARD_DICE);
+    });
+  });
+
+  describe('DailyLoginModalUi Layout', () => {
+    it('isolates the 7-day grid inside a scrollable flex container so Day 7 never covers the pinned Claim CTA', () => {
+      const state = new GameState();
+      const ui = new DailyLoginModalUi(state);
+      const html = ui.renderModal();
+
+      expect(html).toContain('DAY 7 • APEX FINALE');
+      expect(html).toContain('!flex-row');
+      expect(html).toContain('overflow-y-auto overscroll-contain');
+
+      const scrollIdx = html.indexOf('overflow-y-auto overscroll-contain');
+      const day7Idx = html.indexOf('DAY 7 • APEX FINALE');
+      const claimWrapperIdx = html.indexOf('shrink-0 pt-0.5 relative z-10');
+      const claimBtnIdx = html.indexOf('data-action="claim-daily-login"');
+
+      expect(scrollIdx).toBeGreaterThan(-1);
+      expect(day7Idx).toBeGreaterThan(scrollIdx);
+      expect(claimWrapperIdx).toBeGreaterThan(day7Idx);
+      expect(claimBtnIdx).toBeGreaterThan(claimWrapperIdx);
     });
   });
 });

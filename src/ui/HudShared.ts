@@ -186,7 +186,7 @@ export function renderModalShell(opts: {
 }): string {
   const themeAttr = opts.theme ? `data-modal-theme="${opts.theme}"` : 'data-modal-theme="inventory"';
   const extraRow = opts.headerExtraHtml
-    ? `<div class="flex items-center justify-end gap-2.5 flex-wrap w-full">${opts.headerExtraHtml}</div>`
+    ? `<div class="shrink-0 flex items-center justify-end gap-2.5 flex-wrap w-full">${opts.headerExtraHtml}</div>`
     : '';
   const modalBoxClass = opts.autoHeight
     ? 'mam-modal max-w-full h-auto max-h-[calc(100%-18px)] min-h-0 flex flex-col pt-3 px-4 pb-4 gap-2.5'

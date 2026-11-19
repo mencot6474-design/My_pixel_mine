@@ -797,10 +797,9 @@ export class GameHud {
           <span class="text-amber-300 text-[15px] leading-none" aria-hidden="true">✦</span>
           <span>Daily</span>
         </button>
-        <button class="${TW_QUICK_BTN_QUEST} mam-outline-sm" title="Mining Bounties" data-action="open-bounties">
+        <button class="${TW_QUICK_BTN_QUEST} !px-2 mam-outline-sm" title="Mining Bounties" data-action="open-bounties">
           <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] mam-outline-sm ${readyBounties > 0 ? '' : 'hidden'}" data-bounties-badge="true">${readyBounties}</span>
-          ${hudIconHtml('quest', 20, 'Bounties')}
-          <span>Bounties</span>
+          ${hudIconHtml('quest', 22, 'Bounties')}
         </button>
         <button class="${TW_QUICK_BTN_CHEST} mam-outline-sm" title="Chest (${fmtInt(chestCount)})" data-action="open-chest">
           ${hudIconHtml('chest', 22, 'Chest')}

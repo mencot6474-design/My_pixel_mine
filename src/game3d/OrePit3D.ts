@@ -603,6 +603,8 @@ export class OrePit3D {
   private readonly sharedShardGeo = new THREE.OctahedronGeometry(0.14, 0);
   private readonly sharedRockGeo = new THREE.DodecahedronGeometry(0.125, 0);
   private readonly shardPool: ShardParticle[] = [];
+  private readonly shardFreeCrystal: THREE.Mesh[] = [];
+  private readonly shardFreeRock: THREE.Mesh[] = [];
   private readonly impactFx = new AttackImpactFxController({ floorY: 0.045 });
   private readonly ownedGeos: THREE.BufferGeometry[] = [];
   private readonly ownedMats: THREE.Material[] = [];
@@ -1068,7 +1070,7 @@ export class OrePit3D {
     nodeId: number,
     dmg: number,
     heavy: boolean,
-    shardCount = heavy ? 9 : 4,
+    shardCount = heavy ? 4 : 2,
     attackFx?: OreAttackFxOptions
   ): OreHitResult | null {
     const node =
@@ -1095,7 +1097,7 @@ export class OrePit3D {
       this.spawnShardsAt(
         node.x,
         node.z,
-        pure.broken ? (node.isMeteor ? 32 : 18) : shardCount,
+        pure.broken ? (node.isMeteor ? 16 : 9) : shardCount,
         pure.broken,
         node.isMeteor
       );
@@ -1150,17 +1152,24 @@ export class OrePit3D {
   }
 
   private spawnShardsAt(lx: number, lz: number, count: number, isShatter = false, isMeteor = false): void {
-    const maxCap = 72;
+    const maxCap = 36;
     for (let i = 0; i < count; i++) {
       if (this.shardPool.length >= maxCap) {
         const oldest = this.shardPool.shift();
-        if (oldest) this.group.remove(oldest.mesh);
+        if (oldest) {
+          this.group.remove(oldest.mesh);
+          const freeArr = oldest.mesh.material === this.shardMat ? this.shardFreeCrystal : this.shardFreeRock;
+          if (freeArr.length < maxCap) freeArr.push(oldest.mesh);
+        }
       }
       const isCrystal = isShatter ? i % 3 !== 2 : i % 2 === 0;
-      const mesh = new THREE.Mesh(
-        isCrystal ? this.sharedShardGeo : this.sharedRockGeo,
-        isCrystal ? this.shardMat : this.rockChipMat
-      );
+      const freeArr = isCrystal ? this.shardFreeCrystal : this.shardFreeRock;
+      const mesh =
+        freeArr.pop() ??
+        new THREE.Mesh(
+          isCrystal ? this.sharedShardGeo : this.sharedRockGeo,
+          isCrystal ? this.shardMat : this.rockChipMat
+        );
       mesh.position.set(
         lx + (Math.random() - 0.5) * (isShatter ? 0.8 : 0.5),
         0.55 + Math.random() * (isShatter ? 0.85 : 0.5),
@@ -1266,7 +1275,7 @@ export class OrePit3D {
         node.geodeRing.visible = landed;
         if (node.dropY === 0 && this.group.visible) {
           node.squashAmt = 0.48;
-          this.spawnShardsAt(node.x, node.z, 22);
+          this.spawnShardsAt(node.x, node.z, 11);
         }
       }
 
@@ -1308,6 +1317,8 @@ export class OrePit3D {
       p.age += dtSec;
       if (p.age >= p.dur) {
         this.group.remove(p.mesh);
+        const freeArr = p.mesh.material === this.shardMat ? this.shardFreeCrystal : this.shardFreeRock;
+        if (freeArr.length < 72) freeArr.push(p.mesh);
         this.shardPool.splice(i, 1);
         continue;
       }
@@ -1348,6 +1359,8 @@ export class OrePit3D {
       this.group.remove(p.mesh);
     }
     this.shardPool.length = 0;
+    this.shardFreeCrystal.length = 0;
+    this.shardFreeRock.length = 0;
 
     for (const node of [...this.nodes, this.meteorNode]) {
       node.oreSprite.dispose();

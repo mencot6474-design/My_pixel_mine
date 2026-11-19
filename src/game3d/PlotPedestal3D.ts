@@ -973,7 +973,7 @@ export class PlotPedestal3D {
 
     // 3. GPU Lifetime-Shaded Anime Aura Wisps & Vertical Energy Streaks (smooth birth/death fade)
     const particles = createAnimeParticlePoints(enc.color, secondaryHex, {
-      count: 34,
+      count: 17,
       minRadius: 0.44,
       maxRadius: 0.77,
       baseY: 0.28,

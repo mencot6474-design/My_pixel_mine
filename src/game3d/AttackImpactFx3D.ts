@@ -101,6 +101,12 @@ export class AttackImpactFxController {
   private readonly shockwaves: ShockwaveItem[] = [];
   private readonly motes: MoteItem[] = [];
 
+  private readonly slashFree: Array<{ mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial }> = [];
+  private readonly hitsparkFree: Array<{ mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial }> = [];
+  private readonly streakFree: Array<{ mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial }> = [];
+  private readonly shockwaveFree: Array<{ mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial }> = [];
+  private readonly moteFree: Array<{ mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial }> = [];
+
   private readonly tmpDir = new THREE.Vector2();
   private readonly tmpCamRight = new THREE.Vector3();
   private readonly tmpCamUp = new THREE.Vector3();
@@ -111,16 +117,49 @@ export class AttackImpactFxController {
     this.floorY = opts?.floorY ?? 0.045;
   }
 
-  private pushPooled<T extends PooledMeshBase>(pool: T[], maxCap: number, item: T): void {
+  private pushPooled<T extends PooledMeshBase>(
+    pool: T[],
+    freeList: Array<{ mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial }>,
+    maxCap: number,
+    item: T
+  ): void {
     if (pool.length >= maxCap) {
       const oldest = pool.shift();
       if (oldest) {
         this.group.remove(oldest.mesh);
-        oldest.mat.dispose();
+        if (freeList.length < maxCap) {
+          freeList.push({ mesh: oldest.mesh, mat: oldest.mat });
+        } else {
+          oldest.mat.dispose();
+        }
       }
     }
     this.group.add(item.mesh);
     pool.push(item);
+  }
+
+  private acquireMesh(
+    freeList: Array<{ mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial }>,
+    geo: THREE.BufferGeometry,
+    map: THREE.Texture,
+    color: string,
+    opacity: number
+  ): { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial } {
+    const reused = freeList.pop();
+    if (reused) {
+      if (reused.mat.map !== map) {
+        reused.mat.map = map;
+        reused.mat.needsUpdate = true;
+      }
+      reused.mat.color.set(color);
+      reused.mat.opacity = opacity;
+      reused.mesh.rotation.set(0, 0, 0);
+      reused.mesh.quaternion.identity();
+      return reused;
+    }
+    const mat = this.createAdditiveMat(map, color, opacity);
+    const mesh = new THREE.Mesh(geo, mat);
+    return { mesh, mat };
   }
 
   private createAdditiveMat(map: THREE.Texture, color: string, opacity: number): THREE.MeshBasicMaterial {
@@ -195,8 +234,7 @@ export class AttackImpactFxController {
     // 1. Directional Dual-Pass Slash Arc(s)
     const slashTex = getDualSlashArcTexture();
     const spawnSingleSlash = (roll: number, rollVel: number, flipX: number, scaleMul: number, color: string): void => {
-      const mat = this.createAdditiveMat(slashTex, color, 0.96);
-      const mesh = new THREE.Mesh(this.sharedSlashGeo, mat);
+      const { mesh, mat } = this.acquireMesh(this.slashFree, this.sharedSlashGeo, slashTex, color, 0.96);
       mesh.position.set(
         contactX + (Math.random() - 0.5) * 0.12,
         contactY + (Math.random() - 0.5) * 0.12,
@@ -206,7 +244,7 @@ export class AttackImpactFxController {
       const tiltX = (Math.random() - 0.5) * 0.35;
       mesh.scale.set(startScale * flipX, startScale, startScale);
       this.orientBillboard(mesh, roll, tiltX, activeCam);
-      this.pushPooled(this.slashes, MAX_SLASHES, {
+      this.pushPooled(this.slashes, this.slashFree, MAX_SLASHES, {
         mesh,
         mat,
         age: 0,
@@ -230,14 +268,19 @@ export class AttackImpactFxController {
     }
 
     // 2. 4-Point Anime Hitspark Star
-    const sparkMat = this.createAdditiveMat(getHitSparkStarTexture(), isSmash ? '#ffffff' : opts.accentColor, 0.98);
-    const sparkMesh = new THREE.Mesh(this.sharedHitsparkGeo, sparkMat);
+    const { mesh: sparkMesh, mat: sparkMat } = this.acquireMesh(
+      this.hitsparkFree,
+      this.sharedHitsparkGeo,
+      getHitSparkStarTexture(),
+      isSmash ? '#ffffff' : opts.accentColor,
+      0.98
+    );
     sparkMesh.position.set(contactX, contactY, contactZ + 0.06);
     const sparkRoll = (Math.random() - 0.5) * 0.45;
     this.orientBillboard(sparkMesh, sparkRoll, 0, activeCam);
     const peakSparkScale = isSmash ? 1.48 : 1.08;
     sparkMesh.scale.setScalar(0.42);
-    this.pushPooled(this.hitsparks, MAX_HITSPARKS, {
+    this.pushPooled(this.hitsparks, this.hitsparkFree, MAX_HITSPARKS, {
       mesh: sparkMesh,
       mat: sparkMat,
       age: 0,
@@ -249,15 +292,20 @@ export class AttackImpactFxController {
 
     // 3. Directional Spark Streaks
     const streakTex = getSparkStreakTexture();
-    const streakCount = isSmash ? 11 : 6;
+    const streakCount = isSmash ? 8 : 3;
     const baseAngle = Math.atan2(toAttackerZ, toAttackerX);
     for (let i = 0; i < streakCount; i++) {
       const spread = (Math.random() - 0.5) * Math.PI * 1.55;
       const ang = baseAngle + spread;
       const speed = (isSmash ? 4.8 : 3.5) + Math.random() * 3.1;
       const streakColor = i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? opts.accentColor : '#fde047';
-      const sMat = this.createAdditiveMat(streakTex, streakColor, 0.96);
-      const sMesh = new THREE.Mesh(this.sharedStreakGeo, sMat);
+      const { mesh: sMesh, mat: sMat } = this.acquireMesh(
+        this.streakFree,
+        this.sharedStreakGeo,
+        streakTex,
+        streakColor,
+        0.96
+      );
       sMesh.position.set(
         contactX + (Math.random() - 0.5) * 0.24,
         contactY + (Math.random() - 0.5) * 0.24,
@@ -276,18 +324,23 @@ export class AttackImpactFxController {
         baseScale,
       };
       this.orientStreak(streakItem, activeCam);
-      this.pushPooled(this.streaks, MAX_STREAKS, streakItem);
+      this.pushPooled(this.streaks, this.streakFree, MAX_STREAKS, streakItem);
     }
 
     // 4. Ground Shockwave Ring
-    const ringMat = this.createAdditiveMat(getShockwaveRingTexture(), opts.accentColor, isSmash ? 0.9 : 0.68);
-    const ringMesh = new THREE.Mesh(this.sharedShockwaveGeo, ringMat);
+    const { mesh: ringMesh, mat: ringMat } = this.acquireMesh(
+      this.shockwaveFree,
+      this.sharedShockwaveGeo,
+      getShockwaveRingTexture(),
+      opts.accentColor,
+      isSmash ? 0.9 : 0.68
+    );
     ringMesh.rotation.x = -Math.PI / 2;
     ringMesh.position.set(opts.targetX, this.floorY, opts.targetZ);
     const swScale = opts.shockwaveScale ?? 1.0;
     const startSw = (isSmash ? 0.72 : 0.56) * swScale;
     ringMesh.scale.setScalar(startSw);
-    this.pushPooled(this.shockwaves, MAX_SHOCKWAVES, {
+    this.pushPooled(this.shockwaves, this.shockwaveFree, MAX_SHOCKWAVES, {
       mesh: ringMesh,
       mat: ringMat,
       age: 0,
@@ -299,11 +352,10 @@ export class AttackImpactFxController {
 
     // 5. Rising Luminescent Hit Motes
     const moteTex = getHitSparkStarTexture();
-    const moteCount = isSmash ? 5 : 3;
+    const moteCount = isSmash ? 2 : 1;
     for (let i = 0; i < moteCount; i++) {
       const mColor = i % 2 === 0 ? opts.accentColor : '#ffffff';
-      const mMat = this.createAdditiveMat(moteTex, mColor, 0.9);
-      const mMesh = new THREE.Mesh(this.sharedMoteGeo, mMat);
+      const { mesh: mMesh, mat: mMat } = this.acquireMesh(this.moteFree, this.sharedMoteGeo, moteTex, mColor, 0.9);
       mMesh.position.set(
         contactX + (Math.random() - 0.5) * 0.45,
         contactY + (Math.random() - 0.3) * 0.35,
@@ -313,7 +365,7 @@ export class AttackImpactFxController {
       const roll = Math.random() * Math.PI * 2;
       mMesh.scale.setScalar(baseScale);
       this.orientBillboard(mMesh, roll, 0, activeCam);
-      this.pushPooled(this.motes, MAX_MOTES, {
+      this.pushPooled(this.motes, this.moteFree, MAX_MOTES, {
         mesh: mMesh,
         mat: mMat,
         age: 0,
@@ -342,12 +394,11 @@ export class AttackImpactFxController {
     // 1. Dual Counter-Rotated 8-Point Shatter Nova Flash
     const starTex = getHitSparkStarTexture();
     const spawnNova = (color: string, roll: number, peakScale: number, dur: number, zOff: number): void => {
-      const mat = this.createAdditiveMat(starTex, color, 1.0);
-      const mesh = new THREE.Mesh(this.sharedHitsparkGeo, mat);
+      const { mesh, mat } = this.acquireMesh(this.hitsparkFree, this.sharedHitsparkGeo, starTex, color, 1.0);
       mesh.position.set(opts.targetX, opts.targetY, opts.targetZ + zOff);
       mesh.scale.setScalar(0.5);
       this.orientBillboard(mesh, roll, 0, activeCam);
-      this.pushPooled(this.hitsparks, MAX_HITSPARKS, {
+      this.pushPooled(this.hitsparks, this.hitsparkFree, MAX_HITSPARKS, {
         mesh,
         mat,
         age: 0,
@@ -363,12 +414,11 @@ export class AttackImpactFxController {
     // 2. Twin Counter-Spinning Ground Shockwaves (inner hot flash + outer colored blast)
     const ringTex = getShockwaveRingTexture();
     const spawnWave = (color: string, startS: number, endS: number, dur: number, spin: number, yOff: number): void => {
-      const mat = this.createAdditiveMat(ringTex, color, 0.94);
-      const mesh = new THREE.Mesh(this.sharedShockwaveGeo, mat);
+      const { mesh, mat } = this.acquireMesh(this.shockwaveFree, this.sharedShockwaveGeo, ringTex, color, 0.94);
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(opts.targetX, this.floorY + yOff, opts.targetZ);
       mesh.scale.setScalar(startS);
-      this.pushPooled(this.shockwaves, MAX_SHOCKWAVES, {
+      this.pushPooled(this.shockwaves, this.shockwaveFree, MAX_SHOCKWAVES, {
         mesh,
         mat,
         age: 0,
@@ -389,8 +439,13 @@ export class AttackImpactFxController {
       const ang = (i / streakCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.28;
       const speed = (isMeteor ? 5.8 : 4.2) + Math.random() * 3.6;
       const sColor = i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? opts.oreColor : secColor;
-      const sMat = this.createAdditiveMat(streakTex, sColor, 0.98);
-      const sMesh = new THREE.Mesh(this.sharedStreakGeo, sMat);
+      const { mesh: sMesh, mat: sMat } = this.acquireMesh(
+        this.streakFree,
+        this.sharedStreakGeo,
+        streakTex,
+        sColor,
+        0.98
+      );
       sMesh.position.set(
         opts.targetX + Math.cos(ang) * 0.22,
         opts.targetY + (Math.random() - 0.3) * 0.35,
@@ -409,17 +464,16 @@ export class AttackImpactFxController {
         baseScale,
       };
       this.orientStreak(item, activeCam);
-      this.pushPooled(this.streaks, MAX_STREAKS, item);
+      this.pushPooled(this.streaks, this.streakFree, MAX_STREAKS, item);
     }
 
     // 4. Rising Luminescent Crystal Loot Motes
-    const moteCount = isMeteor ? 20 : 12;
+    const moteCount = isMeteor ? 10 : 6;
     for (let i = 0; i < moteCount; i++) {
       const ang = Math.random() * Math.PI * 2;
       const rad = 0.15 + Math.random() * (isMeteor ? 0.9 : 0.55);
       const mColor = i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? opts.oreColor : secColor;
-      const mMat = this.createAdditiveMat(starTex, mColor, 0.96);
-      const mMesh = new THREE.Mesh(this.sharedMoteGeo, mMat);
+      const { mesh: mMesh, mat: mMat } = this.acquireMesh(this.moteFree, this.sharedMoteGeo, starTex, mColor, 0.96);
       mMesh.position.set(
         opts.targetX + Math.cos(ang) * rad,
         opts.targetY * 0.65 + Math.random() * 0.55,
@@ -429,7 +483,7 @@ export class AttackImpactFxController {
       const roll = Math.random() * Math.PI * 2;
       mMesh.scale.setScalar(baseScale);
       this.orientBillboard(mMesh, roll, 0, activeCam);
-      this.pushPooled(this.motes, MAX_MOTES, {
+      this.pushPooled(this.motes, this.moteFree, MAX_MOTES, {
         mesh: mMesh,
         mat: mMat,
         age: 0,
@@ -464,7 +518,8 @@ export class AttackImpactFxController {
       s.age += dtSec;
       if (s.age >= s.dur) {
         this.group.remove(s.mesh);
-        s.mat.dispose();
+        if (this.slashFree.length < MAX_SLASHES) this.slashFree.push({ mesh: s.mesh, mat: s.mat });
+        else s.mat.dispose();
         this.slashes.splice(i, 1);
         continue;
       }
@@ -482,7 +537,8 @@ export class AttackImpactFxController {
       h.age += dtSec;
       if (h.age >= h.dur) {
         this.group.remove(h.mesh);
-        h.mat.dispose();
+        if (this.hitsparkFree.length < MAX_HITSPARKS) this.hitsparkFree.push({ mesh: h.mesh, mat: h.mat });
+        else h.mat.dispose();
         this.hitsparks.splice(i, 1);
         continue;
       }
@@ -499,7 +555,8 @@ export class AttackImpactFxController {
       st.age += dtSec;
       if (st.age >= st.dur) {
         this.group.remove(st.mesh);
-        st.mat.dispose();
+        if (this.streakFree.length < MAX_STREAKS) this.streakFree.push({ mesh: st.mesh, mat: st.mat });
+        else st.mat.dispose();
         this.streaks.splice(i, 1);
         continue;
       }
@@ -521,7 +578,8 @@ export class AttackImpactFxController {
       sw.age += dtSec;
       if (sw.age >= sw.dur) {
         this.group.remove(sw.mesh);
-        sw.mat.dispose();
+        if (this.shockwaveFree.length < MAX_SHOCKWAVES) this.shockwaveFree.push({ mesh: sw.mesh, mat: sw.mat });
+        else sw.mat.dispose();
         this.shockwaves.splice(i, 1);
         continue;
       }
@@ -538,7 +596,8 @@ export class AttackImpactFxController {
       m.age += dtSec;
       if (m.age >= m.dur) {
         this.group.remove(m.mesh);
-        m.mat.dispose();
+        if (this.moteFree.length < MAX_MOTES) this.moteFree.push({ mesh: m.mesh, mat: m.mat });
+        else m.mat.dispose();
         this.motes.splice(i, 1);
         continue;
       }
@@ -577,6 +636,13 @@ export class AttackImpactFxController {
     pool.length = 0;
   }
 
+  private clearFreeList(freeList: Array<{ mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial }>): void {
+    for (const item of freeList) {
+      item.mat.dispose();
+    }
+    freeList.length = 0;
+  }
+
   public dispose(): void {
     this.lastCamera = undefined;
     this.clearPool(this.slashes);
@@ -584,6 +650,11 @@ export class AttackImpactFxController {
     this.clearPool(this.streaks);
     this.clearPool(this.shockwaves);
     this.clearPool(this.motes);
+    this.clearFreeList(this.slashFree);
+    this.clearFreeList(this.hitsparkFree);
+    this.clearFreeList(this.streakFree);
+    this.clearFreeList(this.shockwaveFree);
+    this.clearFreeList(this.moteFree);
     this.sharedSlashGeo.dispose();
     this.sharedHitsparkGeo.dispose();
     this.sharedStreakGeo.dispose();
