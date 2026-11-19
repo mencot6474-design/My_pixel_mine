@@ -159,7 +159,7 @@ src/ui/TowerUi.ts               628 baris — `TowerUi` 55: Gem Tower Hub Dark-G
 src/ui/TutorialUi.ts            659 baris — `TutorialUi`: Cyber-Anime 5-stage responsive click-through FTUE (`pose.webp` pop-out, opposite-side placement, `--mam-float-scale`, progress bar, `Skip`, `.mam-tut-target-ring`, `?tutorial=1`, Starter Bonus +150 Gems & +1 Dice)
 src/ui/UpgradesWorldsUi.ts      636 baris — `UpgradesWorldsUi` 17: Research/Upgrades tree (opaque Dark-Glass nodes w/ world glow, edge-trimmed SVG lines & `.webp` icons) & World Teleport full-banner
                                             modal (`buildWorldsListHtml` 319 pakai `public/worlds/*.webp`, synced Warp Portal title icon) & live updaters
-src/ui/PlotInspectUi.ts         451 baris — `PlotInspectUi` 29: Plot Inspector overlay (incl. ★Star, `✦ FUSION` / `✦ LIMITED` badge + Fusion Passive, World Resonance, Enchant Buff Hover Inspector & per-unit Enchant `In Use`/`Equipped` status), live updater & modal
+src/ui/PlotInspectUi.ts         451 baris — `PlotInspectUi` 31: Plot Inspector overlay (incl. ★Star, `✦ FUSION` / `✦ LIMITED` badge + Fusion Passive, World Resonance, Enchant Buff Hover Inspector & per-unit Enchant `In Use`/`Equipped` status), live updater & modal
                                             konfirmasi peringatan roll mutasi Frozen+ (`renderMutationConfirmOverlay`: `Stop (Keep)` / `Continue`, proteksi obtain & overwrite)
 src/ui/HudIcons.ts              314 baris — SVG, 2D fantasy art (`public/{enchants,hud,meteors,ores,pickaxes,potions,research,weathers}/*.webp`), & 3D-thumbnail icon helpers (`HUD_ICONS`, `hudIconHtml`,
                                             `weatherIconHtml`, `towerIconHtml`, `pickaxeIconHtml`, `gemPotionIconHtml`,
