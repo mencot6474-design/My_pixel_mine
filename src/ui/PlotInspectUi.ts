@@ -3,6 +3,7 @@ import { cgHappyTime } from '../sdk/crazygames';
 import { getChibiById } from '../game3d/ChibiCatalog';
 import {
   ENCHANTS,
+  getEnchantById,
   getMinerRarity,
   getMinerWorldId,
   getMutationById,
@@ -17,6 +18,7 @@ import { GameState } from '../game/GameState';
 import { fmtInt, fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
 import { enchantAuraIconHtml, hudIconHtml, pickaxeIconHtml } from './HudIcons';
 import {
+  bindEnchantHoverInspector,
   InspectTab,
   rarityVars,
   TW_INSPECT_ARROW,
@@ -68,6 +70,7 @@ export class PlotInspectUi {
     const resBonusPct = this.state.getWorldResonanceDmgBonusPct(worldId);
     const worldName = worldId ? getWorldById(worldId).name : null;
     const fusionDef = getFusionRecipeByResultChibiId(chibi.id);
+    const eqEnchant = getEnchantById(unit.enchantId);
 
     root.innerHTML = `
       <button class="absolute top-4 @max-[720px]:top-2.5 left-1/2 -translate-x-1/2 px-[34px] py-[7px] rounded-2xl border-2 border-orange-300 bg-[linear-gradient(135deg,#ea580c,#c2410c)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_0_#431407,0_8px_22px_-4px_rgba(234,88,12,0.45)] text-white text-[19px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-inspect-action="exit">Exit</button>
@@ -90,6 +93,7 @@ export class PlotInspectUi {
         </div>
         ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black tabular-nums text-violet-300 mam-outline-sm">✦ ${worldName} Resonance (+${Math.round(resBonusPct * 100)}% DMG)</div>` : ''}
         ${fusionDef ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#0d263d] border border-cyan-400 text-[11px] font-black text-cyan-200 self-start mam-outline-sm">★ Passive: ${fusionDef.passive.label}</div>` : ''}
+        ${eqEnchant ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#141132] border text-[10.5px] font-black self-start mam-outline-sm" style="border-color:${eqEnchant.color};color:${eqEnchant.color}">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}
         <div class="text-[13px] font-bold tabular-nums text-[#e2e8f0] mt-0.5 mam-outline-sm">
           Lv. ${unit.damageLevel} • Speed ${stats.speed} • Mining x${stats.miningMult}
         </div>
@@ -217,8 +221,18 @@ export class PlotInspectUi {
       const spare = this.state.getAvailableEnchantCount(e.id);
       const eq = unit.enchantId === e.id;
       const available = eq || spare > 0;
+      const orePct = Math.round(e.oreDropPct * 100);
+      const sellPct = Math.round(e.sellValuePct * 100);
+      const spdPct = Math.round(e.miningSpeedPct * 100);
+      const statusHint = eq
+        ? 'Click to Unequip'
+        : spare > 0
+          ? 'Click to Equip (1 per Chibi)'
+          : totalOwned > 0
+            ? 'In Use on another Chibi'
+            : 'Locked — Roll in Enhance Altar';
       return `
-        <div class="${TW_STRIP_CARD} ${eq ? 'equipped' : ''} ${available ? '' : 'locked'}" style="${rarityVars(e.rarity)}" data-enchant-id="${e.id}" title="${eq ? 'Click to Unequip' : spare > 0 ? 'Click to Equip (1 per Chibi)' : totalOwned > 0 ? 'In Use on another Chibi' : 'Locked — Roll in Enhance Altar'}">
+        <div class="${TW_STRIP_CARD} ${eq ? 'equipped' : ''} ${available ? '' : 'locked'}" style="${rarityVars(e.rarity)}" data-enchant-id="${e.id}" tabindex="0" title="${e.name} • ${e.dmgMult}x DMG • +${orePct}% Ore Drop • +${sellPct}% Sell • +${spdPct}% Spd • ${statusHint}">
           ${eq ? '<span class="absolute top-0.5 right-1 text-[13px] font-black text-[#4ade80] [text-shadow:0_1px_2px_#000]">✓</span>' : ''}
           <div class="mam-card-name mam-outline-sm">${e.name}</div>
           <div class="flex-1 min-h-0 flex items-center justify-center pointer-events-none">${enchantAuraIconHtml(e.id, e.color, 36, e.name)}</div>
@@ -411,6 +425,20 @@ export class PlotInspectUi {
           this.onRequestRender();
         }
       });
+    });
+
+    bindEnchantHoverInspector({
+      root,
+      cardSelector: '[data-enchant-id]',
+      getEnchantId: (el) => el.dataset.enchantId,
+      getCardProps: (enchantId) => {
+        const unit = this.state.getPlotUnit(slot);
+        return {
+          owned: this.state.ownedEnchants[enchantId] || 0,
+          spare: this.state.getAvailableEnchantCount(enchantId),
+          equipped: unit?.enchantId === enchantId,
+        };
+      },
     });
   }
 

@@ -669,4 +669,21 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(getChibiUpgradeCostMult('ink-seraph')).toBe(42_000_000);
     });
   });
+
+  describe('Enchant Multi-Stat Buffs', () => {
+    it('applies Ore Drop, Sell Value, and Mining Speed bonuses from equipped plot Enchants', () => {
+      const state = new GameState();
+      const baseDrop = state.getOreOutputMult();
+      const baseSell = state.getOreValueMult();
+      const baseUnitMining = state.getPlotUnitStats(0)!.miningMult;
+
+      state.ownedEnchants['spellbound'] = 1;
+      expect(state.togglePlotEnchant(0, 'spellbound')).toBe(true);
+
+      expect(state.getActiveEnchantBonuses()).toEqual({ oreDropPct: 1.2, sellValuePct: 1.5 });
+      expect(state.getOreOutputMult()).toBeCloseTo(baseDrop + 1.2, 5);
+      expect(state.getOreValueMult()).toBeCloseTo(baseSell + 1.5, 5);
+      expect(state.getPlotUnitStats(0)!.miningMult).toBeCloseTo(baseUnitMining + 0.85, 2);
+    });
+  });
 });

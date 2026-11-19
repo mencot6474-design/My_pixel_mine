@@ -2599,4 +2599,18 @@ describe('Pure 3D Mine World', () => {
     expect(meteor?.maxHp).toBe(180 * 2 * 375);
     pit.dispose();
   });
+
+  it('buffs top Enchant Altar drop rates to sum to 100% with Spellbound at 0.01%', () => {
+    const totalPct = ENCHANTS.reduce((sum, e) => sum + e.chancePct, 0);
+    expect(totalPct).toBeCloseTo(100, 6);
+    for (let i = 1; i < ENCHANTS.length; i++) {
+      expect(ENCHANTS[i].chancePct).toBeLessThan(ENCHANTS[i - 1].chancePct);
+    }
+    const byId = Object.fromEntries(ENCHANTS.map((e) => [e.id, e.chancePct]));
+    expect(byId.thundering).toBe(2.0);
+    expect(byId.cataclysmic).toBe(0.6);
+    expect(byId.sundering).toBe(0.2);
+    expect(byId.timeless).toBe(0.05);
+    expect(byId.spellbound).toBe(0.01);
+  });
 });

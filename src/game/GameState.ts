@@ -107,6 +107,7 @@ import {
   computeTotalPlotDps,
   createFreshPlotUnit,
   equipBestUnitsToPlots,
+  getActiveEnchantBonuses,
   getActiveStarAndResonanceBonuses,
   getActiveWorldResonancesList,
   getAvailableEnchantUnitsCount,
@@ -357,6 +358,10 @@ export class GameState {
 
   public getActiveStarDropAndGemBonus(): { oreDropBonusPct: number; gemBonusPct: number } {
     return getActiveStarAndResonanceBonuses(this);
+  }
+
+  public getActiveEnchantBonuses(): { oreDropPct: number; sellValuePct: number } {
+    return getActiveEnchantBonuses(this);
   }
 
   public placeHotbarItemOnPlot(hotbarSlot: number, plotSlotIndex: number) {
@@ -728,7 +733,13 @@ export class GameState {
   }
 
   public getOreValueMult(): number {
-    return 1 + this.getActiveResearchBonus('oreValuePct') + this.getRelicBonus('oreValuePct') + this.getActiveFusionPassives().oreSellPct;
+    return (
+      1 +
+      this.getActiveResearchBonus('oreValuePct') +
+      this.getRelicBonus('oreValuePct') +
+      this.getActiveFusionPassives().oreSellPct +
+      this.getActiveEnchantBonuses().sellValuePct
+    );
   }
 
   public getEffectiveOreSellValue(oreId: string): number {
@@ -744,7 +755,8 @@ export class GameState {
       this.getActiveResearchBonus('oreOutputPct') +
       oreDropBonusPct +
       this.getRelicBonus('oreDropPct') +
-      this.getActiveFusionPassives().oreDropPct;
+      this.getActiveFusionPassives().oreDropPct +
+      this.getActiveEnchantBonuses().oreDropPct;
     if (isBoostActiveDomain(this, 'ore-elixir-1')) mult += 0.1;
     if (isBoostActiveDomain(this, 'ore-elixir-2')) mult += 0.25;
     if (isBoostActiveDomain(this, 'ore-elixir-3')) mult += 0.5;

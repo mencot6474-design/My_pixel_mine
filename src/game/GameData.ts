@@ -61,6 +61,9 @@ export interface EnchantDef {
   id: string;
   name: string;
   dmgMult: number;
+  oreDropPct: number;
+  sellValuePct: number;
+  miningSpeedPct: number;
   chancePct: number;
   rarity: ItemRarity;
   color: string;
@@ -336,16 +339,16 @@ export const MUTATIONS: readonly MutationDef[] = [
 export const ENCHANT_DICE_GEM_COST = 250;
 
 export const ENCHANTS: readonly EnchantDef[] = [
-  { id: 'blazing', name: 'Blazing', dmgMult: 1.25, chancePct: 45.9889, rarity: 'common', color: '#f97316' },
-  { id: 'glacial', name: 'Glacial', dmgMult: 1.45, chancePct: 27.0, rarity: 'uncommon', color: '#38bdf8' },
-  { id: 'quaking', name: 'Quaking', dmgMult: 1.7, chancePct: 15.0, rarity: 'rare', color: '#b45309' },
-  { id: 'surging', name: 'Surging', dmgMult: 2.0, chancePct: 8.0, rarity: 'rare', color: '#22d3ee' },
-  { id: 'radiant', name: 'Radiant', dmgMult: 2.5, chancePct: 3.0, rarity: 'legendary', color: '#facc15' },
-  { id: 'thundering', name: 'Thundering', dmgMult: 3.2, chancePct: 0.9, rarity: 'epic', color: '#a855f7' },
-  { id: 'cataclysmic', name: 'Cataclysmic', dmgMult: 4.2, chancePct: 0.1, rarity: 'legendary', color: '#f59e0b' },
-  { id: 'sundering', name: 'Sundering', dmgMult: 5.8, chancePct: 0.01, rarity: 'mythic', color: '#ef4444' },
-  { id: 'timeless', name: 'Timeless', dmgMult: 8.5, chancePct: 0.001, rarity: 'mythic', color: '#f8fafc' },
-  { id: 'spellbound', name: 'Spellbound', dmgMult: 14.0, chancePct: 0.0001, rarity: 'rainbow', color: '#e879f9' },
+  { id: 'blazing', name: 'Blazing', dmgMult: 1.25, oreDropPct: 0.05, sellValuePct: 0.05, miningSpeedPct: 0.05, chancePct: 44.14, rarity: 'common', color: '#f97316' },
+  { id: 'glacial', name: 'Glacial', dmgMult: 1.45, oreDropPct: 0.1, sellValuePct: 0.1, miningSpeedPct: 0.08, chancePct: 27.0, rarity: 'uncommon', color: '#38bdf8' },
+  { id: 'quaking', name: 'Quaking', dmgMult: 1.7, oreDropPct: 0.15, sellValuePct: 0.18, miningSpeedPct: 0.12, chancePct: 15.0, rarity: 'rare', color: '#b45309' },
+  { id: 'surging', name: 'Surging', dmgMult: 2.0, oreDropPct: 0.22, sellValuePct: 0.25, miningSpeedPct: 0.18, chancePct: 8.0, rarity: 'rare', color: '#22d3ee' },
+  { id: 'radiant', name: 'Radiant', dmgMult: 2.5, oreDropPct: 0.3, sellValuePct: 0.35, miningSpeedPct: 0.25, chancePct: 3.0, rarity: 'legendary', color: '#facc15' },
+  { id: 'thundering', name: 'Thundering', dmgMult: 3.2, oreDropPct: 0.4, sellValuePct: 0.45, miningSpeedPct: 0.32, chancePct: 2.0, rarity: 'epic', color: '#a855f7' },
+  { id: 'cataclysmic', name: 'Cataclysmic', dmgMult: 4.2, oreDropPct: 0.55, sellValuePct: 0.65, miningSpeedPct: 0.42, chancePct: 0.6, rarity: 'legendary', color: '#f59e0b' },
+  { id: 'sundering', name: 'Sundering', dmgMult: 5.8, oreDropPct: 0.75, sellValuePct: 0.9, miningSpeedPct: 0.55, chancePct: 0.2, rarity: 'mythic', color: '#ef4444' },
+  { id: 'timeless', name: 'Timeless', dmgMult: 8.5, oreDropPct: 0.95, sellValuePct: 1.2, miningSpeedPct: 0.68, chancePct: 0.05, rarity: 'mythic', color: '#f8fafc' },
+  { id: 'spellbound', name: 'Spellbound', dmgMult: 14.0, oreDropPct: 1.2, sellValuePct: 1.5, miningSpeedPct: 0.85, chancePct: 0.01, rarity: 'rainbow', color: '#e879f9' },
 ] as const;
 
 export function rollEnchantDef(rng: () => number = Math.random): EnchantDef {

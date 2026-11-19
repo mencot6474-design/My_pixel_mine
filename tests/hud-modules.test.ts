@@ -23,6 +23,7 @@ import {
   renderHotbarSlotsHtml,
 } from '../src/ui/HotbarHudUi';
 import {
+  buildEnchantHoverCardHtml,
   captureRootScrolls,
   formatCountdownTimer,
   getElementPath,
@@ -786,6 +787,36 @@ describe('Tahap B HUD Modules', () => {
       expect(html).toContain('data-ore-text="true"');
       expect(html).not.toContain('-translate-y-full');
       expect(html).not.toContain('-translate-x-1/2');
+    });
+  });
+
+  describe('Enchant Buff Hover Inspector', () => {
+    it('renders solid DMG buff multiplier, mining speed, ore drop, sell value, roll rate, and owned/status state', () => {
+      const spellbound = ENCHANTS.find((e) => e.id === 'spellbound')!;
+      const altarCardHtml = buildEnchantHoverCardHtml(spellbound, { owned: 2 });
+      expect(altarCardHtml).toContain('data-enchant-hover-card="spellbound"');
+      expect(altarCardHtml).toContain('Spellbound');
+      expect(altarCardHtml).toContain('14x (+1,300%)');
+      expect(altarCardHtml).toContain('+85%');
+      expect(altarCardHtml).toContain('+120%');
+      expect(altarCardHtml).toContain('+150%');
+      expect(altarCardHtml).toContain('0.01%');
+      expect(altarCardHtml).toContain('Owned');
+      expect(altarCardHtml).toContain('x2');
+
+      const thundering = ENCHANTS.find((e) => e.id === 'thundering')!;
+      const plotCardHtml = buildEnchantHoverCardHtml(thundering, {
+        owned: 1,
+        spare: 0,
+        equipped: true,
+      });
+      expect(plotCardHtml).toContain('3.2x (+220%)');
+      expect(plotCardHtml).toContain('+32%');
+      expect(plotCardHtml).toContain('+40%');
+      expect(plotCardHtml).toContain('+45%');
+      expect(plotCardHtml).toContain('2%');
+      expect(plotCardHtml).toContain('Status');
+      expect(plotCardHtml).toContain('Equipped');
     });
   });
 });

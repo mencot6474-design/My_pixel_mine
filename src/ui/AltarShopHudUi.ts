@@ -7,6 +7,7 @@ import { SceneMode } from '../game3d/MineScene3D';
 import { ShopStationId } from '../game3d/ShopWorld3D';
 import { enchantAuraIconHtml, enchantDiceIconHtml, hudIconHtml, towerIconHtml } from './HudIcons';
 import {
+  bindEnchantHoverInspector,
   TW_ALTAR_AUTO_BTN,
   TW_ALTAR_ROLL_BTN,
   TW_SHOP_DOCK_BTN_BASE,
@@ -41,12 +42,15 @@ export function getAltarRollButtonState(
 export function renderAltarStripCardsHtml(state: GameState): string {
   return ENCHANTS.map((e) => {
     const qty = state.ownedEnchants[e.id] || 0;
+    const orePct = Math.round(e.oreDropPct * 100);
+    const sellPct = Math.round(e.sellValuePct * 100);
+    const spdPct = Math.round(e.miningSpeedPct * 100);
     const borderBg =
       e.rarity === 'rainbow'
         ? 'rarity-rainbow'
         : 'border-[2.5px] border-[var(--rarity-border,#64748b)] bg-[radial-gradient(circle_at_50%_45%,var(--rarity-bg,rgba(100,116,139,0.3)),#0f172a_85%)]';
     return `
-        <div class="mam-altar-card relative h-[102px] @max-[920px]:h-[86px] rounded-[7px] flex flex-col items-center justify-between py-[5px] px-1 transition-[transform,filter] duration-[140ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-[3px] hover:scale-[1.04] hover:brightness-[1.08] ${borderBg}" style="--rarity-border:${e.color};--rarity-bg:${e.color}33" data-altar-card="${e.id}">
+        <div class="mam-altar-card relative h-[102px] @max-[920px]:h-[86px] rounded-[7px] flex flex-col items-center justify-between py-[5px] px-1 cursor-pointer transition-[transform,filter] duration-[140ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-[3px] hover:scale-[1.04] hover:brightness-[1.08] ${borderBg}" style="--rarity-border:${e.color};--rarity-bg:${e.color}33" data-altar-card="${e.id}" tabindex="0" title="${e.name} • ${e.dmgMult}x DMG • +${orePct}% Ore Drop • +${sellPct}% Sell • +${spdPct}% Spd (${e.chancePct}%)">
           <div class="w-full flex items-center justify-center gap-1">
             <span class="text-[12px] font-black mam-outline-sm" style="color:${e.color}">${e.name}</span>
             <span class="text-[11px] font-black tabular-nums text-[#facc15] mam-outline-sm" data-altar-qty="${e.id}">${qty > 0 ? `x${fmtInt(qty)}` : ''}</span>
@@ -308,6 +312,16 @@ export class AltarShopHudUi {
         el.addEventListener('click', item.onClick);
       });
     }
+
+    bindEnchantHoverInspector({
+      root,
+      cardSelector: '[data-altar-card]',
+      getEnchantId: (el) => el.dataset.altarCard,
+      getCardProps: (enchantId) => ({
+        owned: this.state.ownedEnchants[enchantId] || 0,
+      }),
+      allowTapToggle: true,
+    });
   }
 
   public updateAltarLiveValues(root: HTMLElement): void {

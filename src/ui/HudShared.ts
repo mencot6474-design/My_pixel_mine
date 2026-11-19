@@ -1,9 +1,10 @@
 import { assetUrl } from '../game/AssetUrl';
-import { RARITY_BORDER, ItemRarity } from '../game/GameData';
+import { EnchantDef, getEnchantById, ItemRarity, RARITY_BORDER } from '../game/GameData';
 import { GameState } from '../game/GameState';
+import { fmtInt } from '../game/NumberFormat';
 import { ChibiDef } from '../game3d/ChibiCatalog';
 import type { PlotLabelInfo } from '../game3d/PlotPedestal3D';
-import { hudIconHtml } from './HudIcons';
+import { enchantAuraIconHtml, hudIconHtml } from './HudIcons';
 
 export interface PlotDropOps {
   raycastPlotAt: (clientX: number, clientY: number) => number | null;
@@ -408,4 +409,180 @@ export function renderToastBannerHtml(rawText: string): string {
       <span class="text-[13.5px] font-extrabold text-white leading-snug mam-outline-sm">${cleanText}</span>
     </div>
   `;
+}
+
+/** Builds solid cyber-armor hover inspector card HTML for an Enchant buff. */
+export function buildEnchantHoverCardHtml(
+  enchant: EnchantDef,
+  opts: { owned: number; spare?: number; equipped?: boolean }
+): string {
+  const dmgBonusPct = Math.round((enchant.dmgMult - 1) * 100);
+  const oreDropPct = Math.round(enchant.oreDropPct * 100);
+  const sellValuePct = Math.round(enchant.sellValuePct * 100);
+  const miningSpdPct = Math.round(enchant.miningSpeedPct * 100);
+  const titleCls = enchant.rarity === 'rainbow' ? 'mam-rainbow-text' : '';
+  const statusLabel =
+    opts.spare !== undefined
+      ? opts.equipped
+        ? 'Equipped'
+        : opts.spare > 0
+          ? `x${fmtInt(opts.spare)} Ready`
+          : opts.owned > 0
+            ? 'In Use'
+            : 'Locked'
+      : `x${fmtInt(opts.owned)}`;
+  const statusValueCls =
+    opts.spare !== undefined
+      ? opts.equipped || opts.spare > 0
+        ? 'text-[#4ade80]'
+        : opts.owned > 0
+          ? 'text-amber-300'
+          : 'text-[#94a3b8]'
+      : opts.owned > 0
+        ? 'text-[#facc15]'
+        : 'text-[#94a3b8]';
+  const secondStatLabel = opts.spare !== undefined ? 'Status' : 'Owned';
+
+  return `
+    <div
+      class="w-[248px] rounded-2xl border-2 bg-[#0a1020] p-2.5 flex flex-col gap-2 text-left shadow-[0_14px_34px_rgba(0,0,0,0.9),0_0_18px_${enchant.color}44,inset_0_1px_0_rgba(255,255,255,0.2)]"
+      style="border-color:${enchant.color}"
+      data-enchant-hover-card="${enchant.id}"
+    >
+      <div class="flex items-center gap-2">
+        <div
+          class="w-11 h-11 rounded-xl border bg-[#11192e] flex items-center justify-center shrink-0 [&>.mam-3d-icon]:w-9 [&>.mam-3d-icon]:h-9"
+          style="border-color:${enchant.color}88;background:radial-gradient(circle at 50% 45%,${enchant.color}33,#0a1020 82%)"
+        >
+          ${enchantAuraIconHtml(enchant.id, enchant.color, 36, enchant.name)}
+        </div>
+        <div class="min-w-0 flex-1 flex flex-col items-start gap-0.5">
+          <div class="text-[15px] font-black leading-tight truncate max-w-full mam-outline-sm ${titleCls}" style="${titleCls ? '' : `color:${enchant.color}`}">${enchant.name}</div>
+          ${renderRarityBadgeHtml(enchant.rarity)}
+        </div>
+      </div>
+
+      <div class="w-full grid grid-cols-2 gap-1.5">
+        <div class="px-2 py-1 rounded-lg bg-[#111a30] border border-[#2a3b5c]">
+          <div class="text-[9px] font-extrabold uppercase tracking-wider text-[#94a3b8]">DMG Buff</div>
+          <div class="text-[12.5px] font-black tabular-nums text-[#f87171] leading-tight mam-outline-sm">${enchant.dmgMult}x (+${fmtInt(dmgBonusPct)}%)</div>
+        </div>
+        <div class="px-2 py-1 rounded-lg bg-[#111a30] border border-[#2a3b5c]">
+          <div class="text-[9px] font-extrabold uppercase tracking-wider text-[#94a3b8]">Mining Spd</div>
+          <div class="text-[12.5px] font-black tabular-nums text-[#38bdf8] leading-tight mam-outline-sm">+${fmtInt(miningSpdPct)}%</div>
+        </div>
+        <div class="px-2 py-1 rounded-lg bg-[#111a30] border border-[#2a3b5c]">
+          <div class="text-[9px] font-extrabold uppercase tracking-wider text-[#94a3b8]">Ore Drop</div>
+          <div class="text-[12.5px] font-black tabular-nums text-[#fde047] leading-tight mam-outline-sm">+${fmtInt(oreDropPct)}%</div>
+        </div>
+        <div class="px-2 py-1 rounded-lg bg-[#111a30] border border-[#2a3b5c]">
+          <div class="text-[9px] font-extrabold uppercase tracking-wider text-[#94a3b8]">Sell Value</div>
+          <div class="text-[12.5px] font-black tabular-nums text-[#4ade80] leading-tight mam-outline-sm">+${fmtInt(sellValuePct)}%</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-1.5">
+        <div class="px-2 py-1 rounded-lg bg-[#0e1526] border border-[#243452]">
+          <div class="text-[9px] font-bold uppercase tracking-wider text-[#94a3b8]">Roll Rate</div>
+          <div class="text-[11.5px] font-black tabular-nums text-[#7dd3fc]">${enchant.chancePct}%</div>
+        </div>
+        <div class="px-2 py-1 rounded-lg bg-[#0e1526] border border-[#243452]">
+          <div class="text-[9px] font-bold uppercase tracking-wider text-[#94a3b8]">${secondStatLabel}</div>
+          <div class="text-[11.5px] font-black tabular-nums ${statusValueCls}">${statusLabel}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/** Binds hover (and optional tap) Enchant buff inspector above cards inside #hudRoot. */
+export function bindEnchantHoverInspector(opts: {
+  root: HTMLElement;
+  cardSelector: string;
+  getEnchantId: (el: HTMLElement) => string | undefined;
+  getCardProps: (enchantId: string) => { owned: number; spare?: number; equipped?: boolean };
+  allowTapToggle?: boolean;
+}): void {
+  const cards = opts.root.querySelectorAll<HTMLElement>(opts.cardSelector);
+  if (cards.length === 0) return;
+
+  let tipEl = opts.root.querySelector<HTMLElement>('[data-enchant-hover-tip="true"]');
+  if (!tipEl) {
+    tipEl = document.createElement('div');
+    tipEl.dataset.enchantHoverTip = 'true';
+    tipEl.className = 'hidden absolute left-0 top-0 z-[60] pointer-events-none';
+    opts.root.appendChild(tipEl);
+  }
+
+  let activeCard: HTMLElement | null = null;
+
+  const hideTip = (): void => {
+    activeCard = null;
+    if (tipEl) {
+      tipEl.classList.add('hidden');
+      tipEl.innerHTML = '';
+    }
+  };
+
+  const showTipForCard = (card: HTMLElement): void => {
+    if (!tipEl) return;
+    const enchantId = opts.getEnchantId(card);
+    const enchant = enchantId ? getEnchantById(enchantId) : null;
+    if (!enchant) {
+      hideTip();
+      return;
+    }
+
+    activeCard = card;
+    tipEl.innerHTML = buildEnchantHoverCardHtml(enchant, opts.getCardProps(enchant.id));
+    tipEl.classList.remove('hidden');
+
+    const rootRect = opts.root.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    const rootW = opts.root.clientWidth || rootRect.width || 1280;
+    const uiScale = rootW > 0 && rootRect.width > 0 ? rootRect.width / rootW : 1;
+    const tipW = tipEl.offsetWidth || 232;
+    const tipH = tipEl.offsetHeight || 164;
+
+    const cardCenterX = (cardRect.left + cardRect.width * 0.5 - rootRect.left) / uiScale;
+    const cardTopY = (cardRect.top - rootRect.top) / uiScale;
+    const left = Math.max(8, Math.min(rootW - tipW - 8, cardCenterX - tipW * 0.5));
+    const top = Math.max(8, cardTopY - tipH - 10);
+
+    tipEl.style.transform = `translate3d(${Math.round(left)}px, ${Math.round(top)}px, 0)`;
+  };
+
+  cards.forEach((card) => {
+    card.addEventListener('pointerenter', (e) => {
+      if (e.pointerType === 'touch') return;
+      showTipForCard(card);
+    });
+    card.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'touch') return;
+      if (activeCard === card) hideTip();
+    });
+    card.addEventListener('focusin', () => showTipForCard(card));
+    card.addEventListener('focusout', () => {
+      if (activeCard === card) hideTip();
+    });
+    if (opts.allowTapToggle) {
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (activeCard === card && tipEl && !tipEl.classList.contains('hidden')) {
+          hideTip();
+        } else {
+          showTipForCard(card);
+        }
+      });
+    }
+  });
+
+  if (opts.allowTapToggle) {
+    opts.root.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement | null;
+      if (!target?.closest(opts.cardSelector)) {
+        hideTip();
+      }
+    });
+  }
 }

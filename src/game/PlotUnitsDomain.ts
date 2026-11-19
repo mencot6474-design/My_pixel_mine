@@ -248,6 +248,22 @@ export function getActiveStarAndResonanceBonuses(
   return { oreDropBonusPct, gemBonusPct };
 }
 
+/** Sums global Ore Drop and Sell Value bonuses from Enchants equipped on active plot Chibis. */
+export function getActiveEnchantBonuses(
+  ctx: Pick<PlotUnitsContext, 'plotUnits'>
+): { oreDropPct: number; sellValuePct: number } {
+  let oreDropPct = 0;
+  let sellValuePct = 0;
+  for (const unit of ctx.plotUnits) {
+    if (!unit?.enchantId) continue;
+    const enc = getEnchantById(unit.enchantId);
+    if (!enc) continue;
+    oreDropPct += enc.oreDropPct;
+    sellValuePct += enc.sellValuePct;
+  }
+  return { oreDropPct, sellValuePct };
+}
+
 /** Computes effective DPS, next level DPS, speed, mining multiplier, worth, and upgrade costs for a plot slot. */
 export function computePlotUnitStats(
   ctx: PlotUnitsContext,
@@ -299,6 +315,7 @@ export function computePlotUnitStats(
       1 +
       (unit.miningSpeedLevel - 1) * 0.1 +
       starTier.miningSpeedBonus +
+      (enc ? enc.miningSpeedPct : 0) +
       ctx.getRelicBonus('miningSpeedPct')
     ).toFixed(2)
   );
