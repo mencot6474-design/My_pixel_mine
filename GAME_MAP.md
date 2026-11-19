@@ -280,3 +280,12 @@ public/worlds/                  6 full-bleed teleport banner WebPs (`underground
 | 3D Chest Vault, Escalator, Cave Radar & Architectural Pillar Props | `src/game3d/CyberProps3D.ts` (`createCyberRadarArray`, `createCyberLanternBollardFinial`, `createCyberMonolithForkFinial`, `createCyberCrystalCluster`, `createCyberBotanicalCanopy`), `ChestVaultStation3D.ts`, `CaveRailway3D.ts`, `MineEnvironment3D.ts` |
 | 3D Shop Plaza, Outer Space Enchant Altar + Black Hole & Tower Arena | `src/game3d/ShopCyberPlaza3D.ts` (`createShopCyberPlaza`), `src/game3d/ShopWorld3D.ts` (`ShopWorld3D`), `src/game3d/HellAltarEye3D.ts`, `src/game3d/AltarSpinFx3D.ts`, `src/game3d/SeraphimBoss3D.ts` (`createSeraphimBoss3D`), `src/game3d/TowerArena3D.ts`, `src/game3d/TowerCityEnvironment3D.ts` (`createTowerCityEnvironment`) |
 | Rules, CrazyGames SDK v3, UI/HUD & Procedural 3D Skills | `.agent/rules/threejs-ts-standards.md`, `.agent/skills/{crazygames-sdk-v3,ui-hud-design,procedural-3d-assets}/SKILL.md` |
+
+---
+
+## 4. RILIS & DEPLOY
+
+- **GitHub Pages**: auto-deploy via `.github/workflows/deploy.yml` setiap push ke `main` (test + Vite build + deploy). Hash assets Pages = build commit pushed terakhir.
+- **CrazyGames**: upload **MANUAL** lewat developer dashboard (tidak auto-deploy). Folder build lokal: `Downloads/my_pixel_mine_cg_build` — mirror persis `dist/` (`index.html` di root). Tiap update: copy `dist/.` ke folder itu, lalu prune file `assets/*` hash lama yang tidak ada di `dist/assets`; verifikasi file set identik + hash di `index.html` ada semua. Status 2026-11-20: folder berisi build Weather Sky & Tower Brightness Pass (`03f7d79`); upload dashboard menunggu user.
+- **Save pemain**: `localStorage` (`GameStateSave.ts`) + **APS (Automatic Progress Save)** CrazyGames otomatis backup/sync antar-device untuk user login CG — tanpa kode tambahan. Guest tetap lokal. **Kalau IAP ditambah nanti: APS dilarang** → migrasi ke SDK data module (API identik `localStorage`, ganti wrapper save + toggle Progress Save di submission flow).
+- **Build lokal vs CG**: rasa smooth/visual yang berbeda antara lokal/Pages dan CG biasanya = umur build CG (upload manual tertinggal commit perf). Cek hash assets sebelum nuduh kode.
