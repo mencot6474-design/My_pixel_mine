@@ -19,6 +19,27 @@ import { WeatherFx3D } from './WeatherFx3D';
 
 export type SceneMode = 'mine' | 'shop' | 'altar' | 'fusion' | 'tower';
 
+export function applyCameraOrbitDrag(opts: {
+  cameraLocked: boolean;
+  yaw: number;
+  pitch: number;
+  dx: number;
+  dy: number;
+}): { yaw: number; pitch: number } {
+  if (opts.cameraLocked) {
+    return { yaw: 0, pitch: 0 };
+  }
+  return {
+    yaw: Math.max(-1.35, Math.min(1.35, opts.yaw - opts.dx * 0.005)),
+    pitch: Math.max(-0.45, Math.min(0.42, opts.pitch + opts.dy * 0.004)),
+  };
+}
+
+export function clampCameraZoomRadius(radius: number, mode: SceneMode): number {
+  const maxRad = mode === 'shop' ? 38 : mode === 'fusion' ? 34 : 28;
+  return Math.max(9, Math.min(maxRad, radius));
+}
+
 export interface PlotAnchorScreen {
   slotIndex: number;
   labelX: number;
@@ -108,7 +129,11 @@ export class MineScene3D {
   private targetCamRadius = 16.5;
   private isDragging = false;
   private dragMoved = false;
+  private dragPointerType = 'mouse';
   private activePointerId: number | null = null;
+  private readonly activeTouchPoints = new Map<number, { x: number; y: number }>();
+  private lastPinchDist: number | null = null;
+  private cameraLocked = false;
   private dragStartX = 0;
   private dragStartY = 0;
   private lastDragX = 0;
@@ -334,7 +359,7 @@ export class MineScene3D {
     this.crateGroup.add(this.chestVisual.group);
 
     const crateHit = new THREE.Mesh(
-      new THREE.BoxGeometry(2.2, 2.0, 2.2),
+      new THREE.BoxGeometry(2.6, 2.3, 2.6),
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
     );
     crateHit.position.y = 0.72;
@@ -360,11 +385,28 @@ export class MineScene3D {
 
     dom.addEventListener('contextmenu', (e) => e.preventDefault());
 
+    const getTouchPinchDist = (): number | null => {
+      if (this.activeTouchPoints.size < 2) return null;
+      const pts = [...this.activeTouchPoints.values()];
+      return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    };
+
     dom.addEventListener('pointerdown', (e) => {
       if (this.adPaused) return;
-      if (e.button !== 0 && e.button !== 2) return;
+      if (e.pointerType !== 'touch' && e.button !== 0 && e.button !== 2) return;
+      if (e.pointerType === 'touch') {
+        this.activeTouchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (this.activeTouchPoints.size >= 2) {
+          this.lastPinchDist = getTouchPinchDist();
+          this.dragMoved = true;
+          this.isDragging = false;
+          this.activePointerId = null;
+          return;
+        }
+      }
       this.isDragging = true;
       this.dragMoved = false;
+      this.dragPointerType = e.pointerType || 'mouse';
       this.activePointerId = e.pointerId;
       this.dragStartX = e.clientX;
       this.dragStartY = e.clientY;
@@ -382,17 +424,40 @@ export class MineScene3D {
         dom.classList.remove('mam-mining-cursor');
         return;
       }
+      if (e.pointerType === 'touch' && this.activeTouchPoints.has(e.pointerId)) {
+        this.activeTouchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        const pinchDist = getTouchPinchDist();
+        if (pinchDist !== null) {
+          if (this.lastPinchDist !== null) {
+            const pinchDelta = pinchDist - this.lastPinchDist;
+            this.targetCamRadius = clampCameraZoomRadius(
+              this.targetCamRadius - pinchDelta * 0.045,
+              this.mode
+            );
+          }
+          this.lastPinchDist = pinchDist;
+          return;
+        }
+      }
       if (this.isDragging) {
         if (this.activePointerId !== null && e.pointerId !== this.activePointerId) return;
         const dx = e.clientX - this.lastDragX;
         const dy = e.clientY - this.lastDragY;
-        if (!this.dragMoved && Math.hypot(e.clientX - this.dragStartX, e.clientY - this.dragStartY) > 6) {
+        const dragThreshold = this.dragPointerType === 'touch' ? 14 : 6;
+        if (!this.dragMoved && Math.hypot(e.clientX - this.dragStartX, e.clientY - this.dragStartY) > dragThreshold) {
           this.dragMoved = true;
         }
         this.lastDragX = e.clientX;
         this.lastDragY = e.clientY;
-        this.targetOrbitYaw = Math.max(-1.35, Math.min(1.35, this.targetOrbitYaw - dx * 0.005));
-        this.targetOrbitPitch = Math.max(-0.45, Math.min(0.42, this.targetOrbitPitch + dy * 0.004));
+        const nextOrbit = applyCameraOrbitDrag({
+          cameraLocked: this.cameraLocked,
+          yaw: this.targetOrbitYaw,
+          pitch: this.targetOrbitPitch,
+          dx,
+          dy,
+        });
+        this.targetOrbitYaw = nextOrbit.yaw;
+        this.targetOrbitPitch = nextOrbit.pitch;
         return;
       }
 
@@ -418,17 +483,28 @@ export class MineScene3D {
 
     const endDrag = (pointerId?: number): void => {
       if (pointerId !== undefined) {
+        this.activeTouchPoints.delete(pointerId);
+        if (this.activeTouchPoints.size < 2) {
+          this.lastPinchDist = null;
+        }
         try {
           if (dom.hasPointerCapture(pointerId)) dom.releasePointerCapture(pointerId);
         } catch {
           // Ignore
         }
+      } else {
+        this.activeTouchPoints.clear();
+        this.lastPinchDist = null;
       }
       this.isDragging = false;
       this.activePointerId = null;
     };
 
     window.addEventListener('pointercancel', (e) => {
+      if (e.pointerType === 'touch') {
+        this.activeTouchPoints.delete(e.pointerId);
+        if (this.activeTouchPoints.size < 2) this.lastPinchDist = null;
+      }
       if (this.activePointerId === null || e.pointerId === this.activePointerId) {
         endDrag(e.pointerId);
       }
@@ -437,8 +513,12 @@ export class MineScene3D {
     window.addEventListener('blur', () => endDrag());
 
     window.addEventListener('pointerup', (e) => {
+      if (e.pointerType === 'touch') {
+        this.activeTouchPoints.delete(e.pointerId);
+        if (this.activeTouchPoints.size < 2) this.lastPinchDist = null;
+      }
       if (this.activePointerId !== null && e.pointerId !== this.activePointerId) return;
-      const wasClick = this.isDragging && !this.dragMoved && e.button === 0;
+      const wasClick = this.isDragging && !this.dragMoved && (e.button === 0 || e.pointerType === 'touch');
       endDrag(e.pointerId);
       if (!wasClick || this.adPaused) return;
 
@@ -520,17 +600,12 @@ export class MineScene3D {
       }
     });
 
-    window.addEventListener('pointercancel', () => {
-      this.isDragging = false;
-    });
-
     dom.addEventListener(
       'wheel',
       (e) => {
         if (this.adPaused) return;
         e.preventDefault();
-        const maxRad = this.mode === 'shop' ? 38 : this.mode === 'fusion' ? 34 : 28;
-        this.targetCamRadius = Math.max(9, Math.min(maxRad, this.targetCamRadius + e.deltaY * 0.01));
+        this.targetCamRadius = clampCameraZoomRadius(this.targetCamRadius + e.deltaY * 0.01, this.mode);
       },
       { passive: false }
     );
@@ -700,6 +775,10 @@ export class MineScene3D {
       this.currentLookAt.lerp(targetLook, damp);
       this.camera.lookAt(this.currentLookAt);
     } else {
+      if (this.cameraLocked) {
+        this.targetOrbitYaw = 0;
+        this.targetOrbitPitch = 0;
+      }
       this.orbitYaw += (this.targetOrbitYaw - this.orbitYaw) * damp;
       this.orbitPitch += (this.targetOrbitPitch - this.orbitPitch) * damp;
       this.camRadius += (this.targetCamRadius - this.camRadius) * damp;
@@ -786,7 +865,7 @@ export class MineScene3D {
     const bars: OreHpScreen[] = [];
     for (const node of this.pit.getAliveNodesInfo()) {
       if (!node.isMeteor && node.hp >= node.maxHp) continue;
-      const yOffset = node.isMeteor ? 2.65 : 1.42;
+      const yOffset = node.isMeteor ? 2.22 : 1.32;
       this.projVec.set(node.worldX, node.worldY + yOffset, node.worldZ).project(this.camera);
       if (this.projVec.z <= -1 || this.projVec.z >= 1) continue;
       bars.push({
@@ -985,6 +1064,18 @@ export class MineScene3D {
       this.applyWeatherAtmosphere();
       this.callbacks.onOreBars?.([]);
     }
+  }
+
+  public setCameraLocked(locked: boolean): void {
+    this.cameraLocked = locked;
+    if (locked) {
+      this.targetOrbitYaw = 0;
+      this.targetOrbitPitch = 0;
+    }
+  }
+
+  public isCameraLocked(): boolean {
+    return this.cameraLocked;
   }
 
   public setRespawnSpeedMult(mult: number): void {

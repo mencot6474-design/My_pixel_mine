@@ -717,7 +717,7 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
   const skyDome = new THREE.Mesh(
     new THREE.SphereGeometry(96, 32, 20),
     new THREE.MeshBasicMaterial({
-      map: skyTex ?? undefined,
+      ...(skyTex ? { map: skyTex } : {}),
       color: skyTex ? 0xffffff : 0x040918,
       side: THREE.BackSide,
       fog: false,
@@ -765,7 +765,7 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
   if (craterTex) ownedTextures.push(craterTex);
 
   const craterBedMat = new THREE.MeshStandardMaterial({
-    map: craterTex ?? undefined,
+    ...(craterTex ? { map: craterTex } : {}),
     color: craterTex ? 0xffffff : 0x0b101b,
     roughness: 0.92,
     metalness: 0.08,
@@ -1261,7 +1261,7 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
   if (crackedTex) ownedTextures.push(crackedTex);
 
   const darkGlassMat = new THREE.MeshStandardMaterial({
-    map: crackedTex ?? undefined,
+    ...(crackedTex ? { map: crackedTex } : {}),
     color: 0xffffff,
     roughness: 0.16,
     metalness: 0.82,

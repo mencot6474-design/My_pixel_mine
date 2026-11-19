@@ -5,6 +5,7 @@ export interface DailyLoginRewardDef {
   chibiId: string | null;
   stars: number;
   nonSellable: boolean;
+  upgradeCostScale?: number;
   label: string;
   subtitle: string;
 }
@@ -15,6 +16,7 @@ export const DAILY_LOGIN_REWARDS: readonly DailyLoginRewardDef[] = [
     chibiId: 'cosmic-monarch',
     stars: 5,
     nonSellable: true,
+    upgradeCostScale: 12,
     label: 'Cosmic Monarch',
     subtitle: 'Day 1 Exclusive • 5★ Full Star',
   },
@@ -23,6 +25,7 @@ export const DAILY_LOGIN_REWARDS: readonly DailyLoginRewardDef[] = [
     chibiId: 'crimson-eye-sovereign',
     stars: 5,
     nonSellable: true,
+    upgradeCostScale: 450,
     label: 'Crimson Eye Sovereign',
     subtitle: 'Day 2 Exclusive • 5★ Full Star',
   },
@@ -31,6 +34,7 @@ export const DAILY_LOGIN_REWARDS: readonly DailyLoginRewardDef[] = [
     chibiId: 'crimson-gaze-maiden',
     stars: 5,
     nonSellable: true,
+    upgradeCostScale: 12_000,
     label: 'Crimson Gaze Maiden',
     subtitle: 'Day 3 Exclusive • 5★ Full Star',
   },
@@ -39,6 +43,7 @@ export const DAILY_LOGIN_REWARDS: readonly DailyLoginRewardDef[] = [
     chibiId: 'kasa-watcher',
     stars: 5,
     nonSellable: true,
+    upgradeCostScale: 250_000,
     label: 'Kasa Watcher',
     subtitle: 'Day 4 Exclusive • 5★ Full Star',
   },
@@ -47,6 +52,7 @@ export const DAILY_LOGIN_REWARDS: readonly DailyLoginRewardDef[] = [
     chibiId: 'prism-fracture-eye',
     stars: 5,
     nonSellable: true,
+    upgradeCostScale: 3_500_000,
     label: 'Prism Fracture Eye',
     subtitle: 'Day 5 Exclusive • 5★ Full Star',
   },
@@ -55,6 +61,7 @@ export const DAILY_LOGIN_REWARDS: readonly DailyLoginRewardDef[] = [
     chibiId: 'chrono-maiden',
     stars: 5,
     nonSellable: true,
+    upgradeCostScale: 14_000_000,
     label: 'Chrono Maiden',
     subtitle: 'Day 6 Exclusive • 5★ Full Star',
   },
@@ -63,6 +70,7 @@ export const DAILY_LOGIN_REWARDS: readonly DailyLoginRewardDef[] = [
     chibiId: 'ink-seraph',
     stars: 5,
     nonSellable: true,
+    upgradeCostScale: 42_000_000,
     label: 'Ink Seraph',
     subtitle: 'Day 7 Apex Finale • 5★ Full Star',
   },
@@ -85,4 +93,9 @@ export function getDailyLoginLimitedChibiIds(): string[] {
 /** Looks up a Daily Login day definition (1..7). */
 export function getDailyLoginRewardByDay(day: number): DailyLoginRewardDef | undefined {
   return DAILY_LOGIN_REWARDS.find((r) => r.day === day);
+}
+
+/** Looks up a Daily Login reward definition by its Limited Chibi ID. */
+export function getDailyLoginRewardByChibiId(chibiId: string): DailyLoginRewardDef | undefined {
+  return DAILY_LOGIN_REWARDS.find((r) => r.chibiId === chibiId);
 }

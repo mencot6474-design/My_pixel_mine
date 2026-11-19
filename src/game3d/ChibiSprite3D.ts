@@ -190,7 +190,7 @@ export class ChibiSprite3D {
     const shadowTex = getSoftContactShadowTexture();
     this.baseShadowOpacity = shadowTex ? 0.85 : 0.3;
     this.shadowMat = new THREE.MeshBasicMaterial({
-      map: shadowTex,
+      ...(shadowTex ? { map: shadowTex } : {}),
       color: shadowTex ? 0xffffff : 0x020617,
       transparent: true,
       opacity: this.baseShadowOpacity,

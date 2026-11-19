@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
+import { applyCameraOrbitDrag, clampCameraZoomRadius } from '../src/game3d/MineScene3D';
 import { AudioManager } from '../src/audio/AudioManager';
 import {
   cgBindAdLifecycle,
@@ -74,7 +75,14 @@ import { ChibiFieldFxController, FieldMiner3D } from '../src/game3d/FieldMiner3D
 import { FusionWorld3D } from '../src/game3d/FusionWorld3D';
 import { MineEnvironment3D } from '../src/game3d/MineEnvironment3D';
 import { DEFAULT_WORLD_PALETTE, rollOreVariant, STAGE_PEDESTAL_COUNT } from '../src/game3d/MineWorldPalette';
-import { applyNodeDamagePure, BASE_ORE_RESPAWN_SEC, OrePit3D, PIT_NODE_COUNT } from '../src/game3d/OrePit3D';
+import {
+  applyNodeDamagePure,
+  BASE_ORE_RESPAWN_SEC,
+  computeMeteorDynamicHp,
+  METEOR_HP_MULT,
+  OrePit3D,
+  PIT_NODE_COUNT,
+} from '../src/game3d/OrePit3D';
 import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
 import {
   getDualSlashArcTexture,
@@ -1690,7 +1698,7 @@ describe('Pure 3D Mine World', () => {
     expect(state.getPlotUnit(1)?.enchantId).toBe('blazing');
   });
 
-  it('spawns 500x HP Weather Meteor in OrePit3D and awards Weather Limited Ores on break', () => {
+  it('spawns 375x HP Weather Meteor in OrePit3D (25% nerf) and awards Weather Limited Ores on break', () => {
     const noop = () => {};
     const fakeCtx = new Proxy(
       { createLinearGradient: () => ({ addColorStop: noop }), createRadialGradient: () => ({ addColorStop: noop }) },
@@ -1709,7 +1717,7 @@ describe('Pure 3D Mine World', () => {
 
       const meteorInfo = pit.getAliveNodesInfo().find((n) => n.isMeteor);
       expect(meteorInfo).toBeDefined();
-      expect(meteorInfo?.maxHp).toBe(180 * 2 * 500);
+      expect(meteorInfo?.maxHp).toBe(180 * 2 * METEOR_HP_MULT);
       expect(meteorInfo?.meteorWeatherId).toBe('celestial');
 
       const firstHit = pit.hitNode(meteorInfo!.id, meteorInfo!.maxHp, true);
@@ -2553,5 +2561,42 @@ describe('Pure 3D Mine World', () => {
     expect(fusionWorld.getCameraFocusState().active).toBe(false);
 
     expect(() => fusionWorld.dispose()).not.toThrow();
+  });
+
+  it('locks camera orbit to front-facing (yaw=0, pitch=0) when cameraLocked is true while keeping zoom clamping active', () => {
+    const unlocked = applyCameraOrbitDrag({
+      cameraLocked: false,
+      yaw: 0,
+      pitch: 0,
+      dx: 120,
+      dy: 50,
+    });
+    expect(unlocked.yaw).toBeLessThan(0);
+    expect(unlocked.pitch).toBeGreaterThan(0);
+
+    const locked = applyCameraOrbitDrag({
+      cameraLocked: true,
+      yaw: unlocked.yaw,
+      pitch: unlocked.pitch,
+      dx: 240,
+      dy: -120,
+    });
+    expect(locked).toEqual({ yaw: 0, pitch: 0 });
+
+    expect(clampCameraZoomRadius(5, 'mine')).toBe(9);
+    expect(clampCameraZoomRadius(22, 'mine')).toBe(22);
+    expect(clampCameraZoomRadius(40, 'mine')).toBe(28);
+    expect(clampCameraZoomRadius(36, 'shop')).toBe(36);
+  });
+
+  it('applies the 25% Meteor HP nerf across both base scaling and dynamic team DPS scaling', () => {
+    expect(METEOR_HP_MULT).toBe(375);
+    expect(computeMeteorDynamicHp(1000, 100)).toBe(Math.round((1000 * 45 + 100 * 150) * 0.75));
+
+    const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    pit.spawnWeatherMeteor('void', 2, 0);
+    const meteor = pit.getAliveNodesInfo().find((n) => n.isMeteor);
+    expect(meteor?.maxHp).toBe(180 * 2 * 375);
+    pit.dispose();
   });
 });

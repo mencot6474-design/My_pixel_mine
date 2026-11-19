@@ -69,7 +69,6 @@
   }
 
   #plotOverlayLayer > [data-label-slot],
-  #oreBarLayer > [data-ore-bar],
   #shopOverlayLayer > [data-altar-lbl],
   #shopOverlayLayer > [data-shop-station] {
     transform: scale(var(--mam-float-scale, 1));

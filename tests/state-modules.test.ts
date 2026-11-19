@@ -658,6 +658,15 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(reloaded.dailyLoginClaimedDays).toEqual([1]);
       expect(reloaded.dailyLoginLastClaimDate).toBe('2026-11-19');
       expect(reloaded.chibiStars['cosmic-monarch']).toBe(5);
+
+      // Verify balanced Daily Login Limited Chibi upgrade cost scaling (Days 1..7)
+      expect(getChibiUpgradeCostMult('cosmic-monarch')).toBe(12);
+      expect(getChibiUpgradeCostMult('crimson-eye-sovereign')).toBe(450);
+      expect(getChibiUpgradeCostMult('crimson-gaze-maiden')).toBe(12_000);
+      expect(getChibiUpgradeCostMult('kasa-watcher')).toBe(250_000);
+      expect(getChibiUpgradeCostMult('prism-fracture-eye')).toBe(3_500_000);
+      expect(getChibiUpgradeCostMult('chrono-maiden')).toBe(14_000_000);
+      expect(getChibiUpgradeCostMult('ink-seraph')).toBe(42_000_000);
     });
   });
 });

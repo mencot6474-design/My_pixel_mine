@@ -272,7 +272,7 @@ export class TowerArena3D {
     const coronaGlowTex = createEclipseCoronaGlowTexture();
     if (coronaGlowTex) this.ownedTextures.push(coronaGlowTex);
     this.eclipseHaloMat = new THREE.MeshBasicMaterial({
-      map: coronaGlowTex ?? undefined,
+      ...(coronaGlowTex ? { map: coronaGlowTex } : {}),
       color: 0x06b6d4,
       transparent: true,
       opacity: coronaGlowTex ? 0.85 : 0.32,

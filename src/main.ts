@@ -9,6 +9,7 @@ import { getWeatherById, type WeatherId } from './game/WeatherData';
 import { getChibiById } from './game3d/ChibiCatalog';
 import { init3dHudIcons } from './game3d/HudIcon3DRenderer';
 import { MineScene3D } from './game3d/MineScene3D';
+import { computeMeteorDynamicHp } from './game3d/OrePit3D';
 import { STAGE_PEDESTAL_COUNT, WORLD_PALETTES } from './game3d/MineWorldPalette';
 import {
   cgBindAdLifecycle,
@@ -162,7 +163,7 @@ async function bootstrap(): Promise<void> {
 
   const spawnMeteorIfAllowed = (weatherId: WeatherId, toastText?: string): void => {
     if (!gameState.autoMeteor || hud?.isTutorialActive()) return;
-    const minBossHp = Math.round(gameState.getTotalPlotDps() * 45 + gameState.getTapDamage() * 150);
+    const minBossHp = computeMeteorDynamicHp(gameState.getTotalPlotDps(), gameState.getTapDamage());
     scene.spawnWeatherMeteor(weatherId, gameState.getOreHpScale(), minBossHp);
     if (toastText) hud?.pushToast(toastText);
   };
@@ -249,6 +250,7 @@ async function bootstrap(): Promise<void> {
     audio.setBgmVolumeScale(s.bgmVolume);
     audio.setSfxVolumeScale(s.sfxVolume);
     scene.setGraphicsQuality(s.graphicsQuality);
+    scene.setCameraLocked(s.cameraLocked);
   };
   applySettings(gameSettings.get());
   gameSettings.subscribe(applySettings);

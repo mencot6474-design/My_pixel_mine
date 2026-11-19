@@ -274,7 +274,7 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
   if (plazaFloorTex) ownedTextures.push(plazaFloorTex);
   const plazaDeckMat = new THREE.MeshStandardMaterial({
     color: plazaFloorTex ? 0xffffff : 0x1e293b,
-    map: plazaFloorTex ?? undefined,
+    ...(plazaFloorTex ? { map: plazaFloorTex } : {}),
     roughness: 0.74,
     metalness: 0.18,
   });
@@ -401,7 +401,7 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     if (holoTex) ownedTextures.push(holoTex);
     const screenMat = new THREE.MeshBasicMaterial({
       color: holoTex ? 0xffffff : accentHexStr,
-      map: holoTex ?? undefined,
+      ...(holoTex ? { map: holoTex } : {}),
       transparent: true,
       opacity: 0.96,
     });

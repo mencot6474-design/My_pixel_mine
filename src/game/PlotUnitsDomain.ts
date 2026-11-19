@@ -19,6 +19,7 @@ import {
   WorldResonanceStatus,
 } from './GameData';
 import { compactHotbarSlots, PlotUnitState } from './GameStateSave';
+import { getDailyLoginRewardByChibiId } from './DailyLoginData';
 import { RelicEffectStat } from './RelicData';
 import { getFusionRecipeByResultChibiId } from './FusionData';
 import { getActiveFusionPassiveBonuses } from './FusionDomain';
@@ -103,6 +104,10 @@ export function getChibiUpgradeCostMult(chibiId: string): number {
     const fusionRecipe = getFusionRecipeByResultChibiId(chibiId);
     if (fusionRecipe) {
       return fusionRecipe.upgradeCostScale;
+    }
+    const dailyReward = getDailyLoginRewardByChibiId(chibiId);
+    if (dailyReward?.upgradeCostScale !== undefined) {
+      return dailyReward.upgradeCostScale;
     }
     for (const [weatherId, entries] of Object.entries(WEATHER_METEOR_CHIBIS) as Array<
       [WeatherId, readonly { chibiId: string; chancePct: number; rarity: string }[]]

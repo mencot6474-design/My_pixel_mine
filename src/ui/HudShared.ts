@@ -125,13 +125,13 @@ export const TW_CURRENCY_BAR =
 export const TW_PLUS_BTN =
   'w-[26px] h-[26px] rounded-lg border border-[#4ade80] bg-[linear-gradient(135deg,#22c55e_0%,#15803d_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_4px_12px_rgba(34,197,94,0.4)] text-white text-[18px] font-black leading-none flex items-center justify-center cursor-pointer transition-[transform,filter] duration-150 ease-out hover:brightness-110 active:scale-95';
 export const TW_QUICK_BTN =
-  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-2 border-[#38bdf8] bg-[linear-gradient(160deg,#0e7490_0%,#0f1c36_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_3px_0_#071022,0_6px_16px_rgba(0,0,0,0.58)] text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-[5px] cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95';
+  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-2 border-[#38bdf8] bg-[linear-gradient(160deg,#0e7490_0%,#0f1c36_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_3px_0_#071022,0_6px_16px_rgba(0,0,0,0.58)] text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95';
 export const TW_QUICK_BTN_DAILY =
-  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-2 border-[#facc15] bg-[linear-gradient(160deg,#ca8a04_0%,#291c08_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_3px_0_#1c1304,0_6px_16px_rgba(0,0,0,0.58)] text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-[5px] cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95';
+  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-2 border-[#facc15] bg-[linear-gradient(160deg,#ca8a04_0%,#291c08_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_3px_0_#1c1304,0_6px_16px_rgba(0,0,0,0.58)] text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95';
 export const TW_QUICK_BTN_CHEST =
-  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-2 border-[#fb923c] bg-[linear-gradient(160deg,#c2410c_0%,#29150b_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_3px_0_#1a0d06,0_6px_16px_rgba(0,0,0,0.58)] text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-[5px] cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95';
+  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-2 border-[#fb923c] bg-[linear-gradient(160deg,#c2410c_0%,#29150b_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_3px_0_#1a0d06,0_6px_16px_rgba(0,0,0,0.58)] text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95';
 export const TW_QUICK_BTN_QUEST =
-  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-2 border-[#34d399] bg-[linear-gradient(160deg,#059669_0%,#0b2920_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_3px_0_#051a14,0_6px_16px_rgba(0,0,0,0.58)] text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-[5px] cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95';
+  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-2 border-[#34d399] bg-[linear-gradient(160deg,#059669_0%,#0b2920_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_3px_0_#051a14,0_6px_16px_rgba(0,0,0,0.58)] text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95';
 export const TW_QUICK_BTN_TRADE = TW_QUICK_BTN;
 export const TW_HOTBAR_SLOT =
   'mam-hotbar-slot relative w-[66px] h-[66px] @max-[860px]:w-[56px] @max-[860px]:h-[56px] overflow-hidden cursor-pointer flex flex-col items-center justify-between p-0.5';
@@ -174,6 +174,17 @@ export const TW_ALTAR_ROLL_BTN =
   'mam-altar-roll-btn relative overflow-hidden w-[280px] max-w-full h-[46px] rounded-2xl border-2 border-[#4ade80] bg-[linear-gradient(135deg,#22c55e_0%,#059669_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_4px_0_#064e3b,0_10px_28px_-4px_rgba(34,197,94,0.5)] text-white text-[20px] font-black cursor-pointer transition-[transform,filter,box-shadow,opacity] duration-150 ease-out [&:not(.is-empty):not(.is-spinning)]:hover:-translate-y-0.5 [&:not(.is-empty):not(.is-spinning)]:hover:brightness-110 [&:not(.is-empty):not(.is-spinning)]:active:scale-[0.96] [&.is-empty]:border-rose-400 [&.is-empty]:bg-[linear-gradient(135deg,#ef4444_0%,#b91c1c_100%)] [&.is-empty]:shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_4px_0_#450a0a,0_10px_24px_-4px_rgba(239,68,68,0.45)] [&.is-spinning]:border-purple-300 [&.is-spinning]:bg-[linear-gradient(135deg,#a855f7_0%,#6d28d9_100%)] [&.is-spinning]:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_10px_24px_-4px_rgba(168,85,247,0.5)] [&.is-spinning]:cursor-not-allowed [&.is-spinning]:pointer-events-none [&.is-spinning]:opacity-95';
 export const TW_ALTAR_AUTO_BTN =
   'mam-sheen-hover relative overflow-hidden w-full px-[18px] py-2 rounded-xl border-2 border-sky-300 bg-[linear-gradient(135deg,#0ea5e9_0%,#0284c7_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_3px_0_#0c4a6e,0_8px_20px_-4px_rgba(14,165,233,0.45)] text-white text-[14px] font-black cursor-pointer transition-[transform,filter,box-shadow,background] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] [&.is-active]:border-rose-300 [&.is-active]:bg-[linear-gradient(135deg,#f43f5e_0%,#be123c_100%)] [&.is-active]:shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_3px_0_#4c0519,0_8px_20px_-4px_rgba(244,63,94,0.45)]';
+
+export function shouldDismissModalBackdrop(opts: {
+  pointerDownOnSelf: boolean;
+  openedAtMs: number;
+  nowMs: number;
+  graceMs?: number;
+}): boolean {
+  if (!opts.pointerDownOnSelf) return false;
+  const graceMs = opts.graceMs ?? 180;
+  return opts.nowMs - opts.openedAtMs >= graceMs;
+}
 
 export function renderModalShell(opts: {
   title: string;

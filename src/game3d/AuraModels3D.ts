@@ -447,7 +447,7 @@ export class ArtBillboard2D {
 
     const haloTex = getEnchantHaloTexture();
     this.haloMat = new THREE.MeshBasicMaterial({
-      map: haloTex,
+      ...(haloTex ? { map: haloTex } : {}),
       color,
       transparent: true,
       opacity: haloTex ? 0.45 : 0.16,
@@ -478,7 +478,7 @@ export class ArtBillboard2D {
     if (showPedestalBase) {
       const shadowTex = getSoftContactShadowTexture();
       const shadowMat = new THREE.MeshBasicMaterial({
-        map: shadowTex,
+        ...(shadowTex ? { map: shadowTex } : {}),
         color: shadowTex ? 0xffffff : 0x020617,
         transparent: true,
         opacity: shadowTex ? 0.72 : 0.25,

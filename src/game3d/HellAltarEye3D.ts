@@ -207,7 +207,7 @@ export class HellAltarEyeController {
       starGeo,
       new THREE.PointsMaterial({
         size: 0.48,
-        map: dotTex,
+        ...(dotTex ? { map: dotTex } : {}),
         vertexColors: true,
         transparent: true,
         opacity: 0.92,
@@ -221,7 +221,7 @@ export class HellAltarEyeController {
     const floorTex = createCosmicFloorGridTexture();
     const floorMat = new THREE.MeshBasicMaterial({
       color: floorTex ? 0xffffff : 0x312e81,
-      map: floorTex,
+      ...(floorTex ? { map: floorTex } : {}),
       transparent: true,
       opacity: 0.78,
       side: THREE.DoubleSide,
@@ -242,7 +242,7 @@ export class HellAltarEyeController {
     const lensingTex = createLensingHaloTexture();
     const lensingMat = new THREE.MeshBasicMaterial({
       color: lensingTex ? 0xffffff : 0xa855f7,
-      map: lensingTex,
+      ...(lensingTex ? { map: lensingTex } : {}),
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
@@ -291,7 +291,7 @@ export class HellAltarEyeController {
     const diskTex = createAccretionDiskTexture();
     const diskMat = new THREE.MeshBasicMaterial({
       color: diskTex ? 0xffffff : 0xfacc15,
-      map: diskTex,
+      ...(diskTex ? { map: diskTex } : {}),
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
@@ -327,7 +327,7 @@ export class HellAltarEyeController {
       orbitGeo,
       new THREE.PointsMaterial({
         size: 0.18,
-        map: dotTex,
+        ...(dotTex ? { map: dotTex } : {}),
         vertexColors: true,
         transparent: true,
         opacity: 0.9,

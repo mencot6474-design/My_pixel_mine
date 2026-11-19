@@ -2,7 +2,7 @@
 
 3D voxel/chibi mining idle game built with **TypeScript + Vite + Three.js + Tailwind CSS v4** (`my_pixel_mine`).
 Read this map first to locate modules and line anchors quickly instead of reading large files end-to-end.
-Line numbers measured on **2026-11-20** after **Mining Performance Optimization (`AttackImpactFx3D`/`OrePit3D` mesh+material pooling, `WorldOverlayHudUi` `oreBarCache` + `translate3d`, `1024×1024` sun shadow map, & ~50% particle/shard reduction), Daily Login Responsive Scrollable Grid + Horizontal Day 7 Apex Card & Icon-Only Bounties Button**, **7-Day Limited Chibi Daily Login (`DailyLoginData.ts`, `DailyLoginDomain.ts`, `DailyLoginModalUi.ts`, exclusive `limited` tier + full-bleed `.rarity-limited`/`.rarity-fusion` & `.mam-limited-badge`, 7 Limited 5★ Chibis `Cosmic Monarch`/`Crimson Eye Sovereign`/`Crimson Gaze Maiden`/`Kasa Watcher`/`Prism Fracture Eye`/`Chrono Maiden`/`Ink Seraph`, non-sellable Limited & Fusion protection, & Index `★ Limited` tab)**, **3D Chibi Fusion World & Exclusive `fusion` Tier Overhaul**, **Cyber-Anime Battle Tower Raid HUD & Custom SVGs**, **Solid Cyber-Armor UI Overhaul, Tactical Hotbar 1–9 Dock, 2-Column Weather Forecast, Teleport Pill & 5-Layer Ore Hit/Shatter VFX Pass**, **CrazyGames Retention & Polish Pass**, **Research World Tree Symmetric Overhaul**, **Chibi Sprite & Name Overhaul & Relic Forge 12-Icon Cleanup**, **Mine/Plaza 3D Props, Cave Radar & Animated Conduits Overhaul**, **Tahap C `GameState.ts` Modularization**, **Tahap B `GameHud.ts` Modularization**, **Unified Chibi 3-Beat Attack Combo & Impact VFX Overhaul**, **Cyber-Industrial MineScene3D**, **Neo-Cyber City Plaza**, **Sculpted Non-Box `SeraphimBoss3D.ts`**, & **Ruined Cyber City Battle Tower**; re-measure with `Select-String` if files change.
+Line numbers measured on **2026-11-20** after **Code Health Refactor (`IndexModalUi.ts`/`InventoryModalUi.ts`/`ChestModalUi.ts` split, Vite `manualChunks`, clean conditional Three.js material `map`s), Mobile Chest Backdrop Ghost-Click Guard (`shouldDismissModalBackdrop`) & Touch Threshold, Front-Facing Camera Lock + 2-Finger Pinch Zoom (`cameraLocked`, `applyCameraOrbitDrag`, `clampCameraZoomRadius`), Meteor HP Bar Plaque & Position Fix (`WorldOverlayHudUi.ts`), & Meteor HP -25% (`METEOR_HP_MULT = 375`) + Daily Login Limited Upgrade Cost Balance**, **Mining Performance Optimization (`AttackImpactFx3D`/`OrePit3D` mesh+material pooling, `WorldOverlayHudUi` `oreBarCache` + `translate3d`, `1024×1024` sun shadow map, & ~50% particle/shard reduction), Daily Login Responsive Scrollable Grid + Horizontal Day 7 Apex Card & Icon-Only Bounties Button**, **7-Day Limited Chibi Daily Login (`DailyLoginData.ts`, `DailyLoginDomain.ts`, `DailyLoginModalUi.ts`, exclusive `limited` tier + full-bleed `.rarity-limited`/`.rarity-fusion` & `.mam-limited-badge`, 7 Limited 5★ Chibis `Cosmic Monarch`/`Crimson Eye Sovereign`/`Crimson Gaze Maiden`/`Kasa Watcher`/`Prism Fracture Eye`/`Chrono Maiden`/`Ink Seraph`, non-sellable Limited & Fusion protection, & Index `★ Limited` tab)**, **3D Chibi Fusion World & Exclusive `fusion` Tier Overhaul**, **Cyber-Anime Battle Tower Raid HUD & Custom SVGs**, **Solid Cyber-Armor UI Overhaul, Tactical Hotbar 1–9 Dock, 2-Column Weather Forecast, Teleport Pill & 5-Layer Ore Hit/Shatter VFX Pass**, **CrazyGames Retention & Polish Pass**, **Research World Tree Symmetric Overhaul**, **Chibi Sprite & Name Overhaul & Relic Forge 12-Icon Cleanup**, **Mine/Plaza 3D Props, Cave Radar & Animated Conduits Overhaul**, **Tahap C `GameState.ts` Modularization**, **Tahap B `GameHud.ts` Modularization**, **Unified Chibi 3-Beat Attack Combo & Impact VFX Overhaul**, **Cyber-Industrial MineScene3D**, **Neo-Cyber City Plaza**, **Sculpted Non-Box `SeraphimBoss3D.ts`**, & **Ruined Cyber City Battle Tower**; re-measure with `Select-String` if files change.
 
 ## 1. ATURAN KERJA SINGKAT
 
@@ -22,7 +22,7 @@ index.html                      Entry HTML (Vite root)
 .github/workflows/deploy.yml    GitHub Actions auto test, Vite build & deploy ke GitHub Pages (`main`)
 package.json                    Dependencies: three, @types/three, @tailwindcss/vite, tailwindcss, typescript, vitest, @types/node
 package-lock.json               NPM dependency lockfile
-vite.config.ts                  Standalone Vite + Tailwind CSS v4 config (`base: './'`)
+vite.config.ts                  Standalone Vite + Tailwind CSS v4 config (`base: './'`, `manualChunks` `three-vendor`/`game-3d`/`game-ui`)
 tsconfig.json                   TypeScript strict config
 GAME_MAP.md                     Peta struktur file & anchor (dokumen ini)
 docs/superpowers/               Design specs & implementation plans (`specs/`, `plans/`)
@@ -34,13 +34,13 @@ docs/superpowers/               Design specs & implementation plans (`specs/`, `
 .agent/skills/procedural-3d-assets/SKILL.md Standar seni & arsitektur 3D prosedural multi-part, larangan gyroscopic/armillary tumbling hoops, PBR material + emissive, pivot `y = 0`, `InstancedMesh`, & `.dispose()`
 
 === ENTRY & TESTS ===
-src/main.ts                     297 baris — Bootstrap Three.js scene (`MineScene3D`), `GameState`, `GameHud` (+ plot drop, Fusion 3D ops & `setFusionRevealHold` camera lock, 3D label sync ops, `'limit'` toast,
+src/main.ts                     299 baris — Bootstrap Three.js scene (`MineScene3D`), `GameState`, `GameHud` (+ plot drop, Fusion 3D ops & `setFusionRevealHold` camera lock, 3D label sync ops, `'limit'` toast,
                                             weather & CC0 `AudioManager` sync, `gameSettings` live sync, offline earnings boot modal, Overclock tap/sync, tutorial-guarded `spawnMeteorIfAllowed`), CrazyGames SDK init & ad-pause lifecycle, Tower callbacks & game loop
-tests/hud-modules.test.ts         733 baris — 20 Vitest specs untuk modul UI Tahap B + `GameSettings`, `AudioManager` volume scaling, `SettingsModalUi`,
+tests/hud-modules.test.ts         791 baris — 22 Vitest specs untuk modul UI Tahap B + `GameSettings`, `AudioManager` volume scaling, `SettingsModalUi`,
                                             `OfflineModalUi`, `BountiesModalUi`, `DailyLoginModalUi` layout, Overclock HUD + semantic toast banners, Tactical Hotbar (`mam-hotbar-keycap`/`mam-hotbar-bag`), & `TutorialUi` 5-stage FTUE
-tests/state-modules.test.ts       663 baris — 16 Vitest specs untuk modul domain state (`GameStateSave`, `PlotUnitsDomain`,
+tests/state-modules.test.ts       672 baris — 16 Vitest specs untuk modul domain state (`GameStateSave`, `PlotUnitsDomain`,
                                             `TowerRunDomain`, `LootChestDomain`, `ShopWeatherDomain`, `OfflineEarningsDomain` + physical rock-break & gem caps, `BountiesDomain`, `OverclockDomain`, `FusionDomain` + 4 Passives & cost scaling, `DailyLoginDomain` + Limited/Fusion non-sellable protection)
-tests/world-3d.test.ts        2.557 baris — 60 Vitest unit & integration specs (3D world, Altar dial/dice & 2.5D billboard pedestals,
+tests/world-3d.test.ts        2.602 baris — 62 Vitest unit & integration specs (3D world, Altar dial/dice & 2.5D billboard pedestals,
                                             3D Fusion World Synchro Portal triple rings + ore crystal clusters + floating cosmic islands + hologram preview + NPC bubbles + 4-act `3.45s` cinematic fusion sequence & `getCameraFocusState`/`isRevealHolding`,
                                             Unified 3-beat `ChibiSprite3D` combo/afterimage/glint + 5-layer `AttackImpactFxController` (`spawnImpact` + `spawnShatter`) + `FieldMiner3D` & `TowerArena3D` accent/rainbow sync,
                                             Cyber-Industrial Mine (`MineEnvironment3D` + Drop Shaft + Plasma Refinery + Void sky clearance + `PlotPedestal3D.dispose`),
@@ -58,17 +58,17 @@ tests/world-3d.test.ts        2.557 baris — 60 Vitest unit & integration specs
                                             World 6 Starwell, Chibi Star-Up, World Resonance synergy, & Relic Forge crafting/slots/buffs)
 
 === GAME DATA & STATE ===
-src/game/GameData.ts            670 baris — World (`underground`..`starwell` W1-W6), `ORES` 113 (48 world + 5 `WEATHER_ORES` = 53 ores),
-                                            `WORLD_MINERS` 262 (30 world miners: 5/world incl. Exotic & Secret + 5 `getWeatherLimitedMiners`),
-                                            `PICKAXES` 308 (12 tiers W1–W6), `MUTATIONS` 323, `ENCHANTS` 337 (`ENCHANT_DICE_GEM_COST` 335),
-                                            `isHighTierMutation` 399 (`frozen`..`unreal`), `GEM_SHOP_ITEMS` 409,
-                                            `rollMutation` 525, `CHIBI_STAR_TIERS` 597, `WORLD_RESONANCE_TIERS` 625,
-                                            `computeWorldResonances` 638, `rollWorldOre` 660, `rollWorldMiner` 665
+src/game/GameData.ts            670 baris — World (`underground`..`starwell` W1-W6), `ORES` 114 (48 world + 5 `WEATHER_ORES` = 53 ores),
+                                            `WORLD_MINERS` 263 (30 world miners: 5/world incl. Exotic & Secret + 5 `getWeatherLimitedMiners`),
+                                            `PICKAXES` 309 (12 tiers W1–W6), `MUTATIONS` 324, `ENCHANTS` 338 (`ENCHANT_DICE_GEM_COST` 336),
+                                            `isHighTierMutation` 400 (`frozen`..`unreal`), `GEM_SHOP_ITEMS` 410,
+                                            `rollMutation` 526, `CHIBI_STAR_TIERS` 598, `WORLD_RESONANCE_TIERS` 626,
+                                            `computeWorldResonances` 639, `rollWorldOre` 661, `rollWorldMiner` 666
 src/game/RelicData.ts           289 baris — `MAX_EQUIPPED_RELICS` (3), `RELICS` (12 relics: 6 World, 3 Weather, 3 Tower; `5K`–`300K` Gems),
                                             `getRelicById`, `formatRelicEffects`
 src/game/FusionData.ts          141 baris — `FUSION_RECIPES` (4 Synchro Fusion recipes: `Glitch Cheshire` `+150% Tap DMG`, `Thorn Maiden` `+150% Ore Drop`, `Monochrome Saint` `+200% Ore Sell`, `Prism Seraph` `+50% Team DMG` + balanced `upgradeCostScale`), `getFusionRecipeById`, `getFusionRecipeByResultChibiId`
 src/game/FusionDomain.ts        154 baris — `getAvailableFusionMinerCount` (protects placed plot units), `getFusionOreCount` (bag+chest), `canFuseRecipeDomain`, `getReadyFusionCountDomain`, `fuseChibiRecipeDomain`, `getActiveFusionPassiveBonuses`
-src/game/DailyLoginData.ts       88 baris — `DAILY_LOGIN_REWARDS` (7-Day Limited 5★ Chibis: `Cosmic Monarch`..`Ink Seraph`), `isNonSellableChibi` (Limited + Fusion), `getDailyLoginLimitedChibiIds`
+src/game/DailyLoginData.ts      101 baris — `DAILY_LOGIN_REWARDS` (7-Day Limited 5★ Chibis: `Cosmic Monarch`..`Ink Seraph` + balanced `upgradeCostScale`), `isNonSellableChibi` (Limited + Fusion), `getDailyLoginLimitedChibiIds`, `getDailyLoginRewardByChibiId`
 src/game/DailyLoginDomain.ts    101 baris — `getLocalDateKey`, `getNextDailyLoginDayDomain`, `canClaimDailyLoginDomain`, `getDailyLoginSnapshotDomain`, `claimDailyLoginDomain` (grants 5★ full-star + hotbar auto-place)
 src/game/ResearchData.ts        920 baris — `ResearchTreeId` (`core` | WorldId) 3, `DENSE_ORE_HP_MULT` (10) /
                                             `DENSE_ORE_DROP_MULT` (3) 19–20, `RESEARCH_TREE_META` 64,
@@ -89,11 +89,11 @@ src/game/GameState.ts         1.120 baris — State coordinator + re-exports (`P
                                             Research trees & World unlock (`getActiveResearchBonus`), Global Multipliers (`denseOreScale`,
                                             potions, relics, Overclock 2x Tap / 1.5x Ore, active Fusion Passives), Relic Forge, Chibi Fusion (`canFuseRecipe`, `fuseChibiRecipe`, `getActiveFusionPassives`), Daily Login (`canClaimDailyLogin`, `claimDailyLogin`, `getDailyLoginSnapshot`),
                                             Enchant Dice roll, `grantAdGems`, `grantTutorialStarterReward`, serta delegasi ke modul domain di bawah
-src/game/GameStateSave.ts       514 baris — `SAVE_KEY` 17, `ResearchLevelsMap`, `PlotUnitState`, `SavePayload` (+ `lastSavedAt`, `bounties`, `bountiesCompleted`, `dailyLoginLastClaimDate`, `dailyLoginClaimedDays`), `SaveableGameState`,
+src/game/GameStateSave.ts       514 baris — `SAVE_KEY` 16, `ResearchLevelsMap`, `PlotUnitState`, `SavePayload` (+ `lastSavedAt`, `bounties`, `bountiesCompleted`, `dailyLoginLastClaimDate`, `dailyLoginClaimedDays`), `SaveableGameState`,
                                             `migrateOreId`, `isValidIndexId` (World + Weather + Fusion), `createEmptyResearchLevels`, `compactHotbarSlots`,
                                             `serializeSavePayload`, `deserializeSaveJson` (migrasi legacy, sanitasi overflow cash/gems/levels, refund excess pickaxes, resync `discovered` incl. `chibiStars`/`stashedUnits`),
                                             `saveToLocalStorage`, `loadFromLocalStorage`
-src/game/PlotUnitsDomain.ts     716 baris — `PlotUnitsContext` 55, `getChibiUpgradeCostMult` 98 (incl. balanced Fusion scales), `createFreshPlotUnit`, `getChibiStarCount`,
+src/game/PlotUnitsDomain.ts     721 baris — `PlotUnitsContext` 58, `getChibiUpgradeCostMult` 99 (incl. balanced Fusion & Daily Login Limited scales), `createFreshPlotUnit`, `getChibiStarCount`,
                                             `starUpUnit`, `autoStarUpAllUnits`, `getActiveWorldResonancesList`, `computePlotUnitStats` (+ Fusion `teamDmgPct`),
                                             `computeTotalPlotDps`, `computeDpsBreakdown`, `trimStashedUnits`, `equipChibiOnPlotSlot` (`'limit'`),
                                             slot upgrade/pickaxe/mutation (`rollUnitMutation`), 1-per-unit Enchant (`toggleUnitEnchant`), `equipBestUnitsToPlots`
@@ -105,10 +105,10 @@ src/game/LootChestDomain.ts     461 baris — `LootChestContext` 20, `getChestIt
                                             `removeFromHotbarDomain` 124, `toggleHotbarItemDomain` 138), ore lock/auto-sell (`shouldAutoSellOreDomain` 182),
                                             `onOreBrokenDomain` 223, `onMeteorBrokenDomain` 277, `takeAllFromChestDomain` 378,
                                             `isChestFullBonusReadyDomain` 406, `sellAllChestOresDomain` 434 (+35% Full-Chest), `toggleAutoSellDomain` 448
-src/game/ShopWeatherDomain.ts   392 baris — `ShopWeatherContext` 22, `sellOreDomain` 72, `sellAllOresDomain` 87, `sellMinerDomain` 145 (protects `isNonSellableChibi` Limited + Fusion),
-                                            pickaxe stock (`refreshPickaxeStockIfDueDomain` 160, `buyPickaxeDomain` 183), `sellBatchDomain` 230,
-                                            gem shop & potions (`buyGemShopItemDomain` 262, `useGemPotionDomain` 276, `isBoostActiveDomain` 304),
-                                            weather & relic scaling (`scaleWeatherMultDomain` 326, `syncWeatherDomain` 370, `forceWeatherDomain` 382)
+src/game/ShopWeatherDomain.ts   392 baris — `ShopWeatherContext` 23, `sellOreDomain` 73, `sellAllOresDomain` 88, `sellMinerDomain` 147 (protects `isNonSellableChibi` Limited + Fusion),
+                                            pickaxe stock (`refreshPickaxeStockIfDueDomain` 162, `buyPickaxeDomain` 185), `sellBatchDomain` 232,
+                                            gem shop & potions (`buyGemShopItemDomain` 264, `useGemPotionDomain` 278, `isBoostActiveDomain` 306),
+                                            weather & relic scaling (`scaleWeatherMultDomain` 328, `syncWeatherDomain` 372, `forceWeatherDomain` 384)
 src/game/OfflineEarningsDomain.ts 169 baris — `OFFLINE_MIN_SEC` (2m), `OFFLINE_MAX_SEC` (8h), `OFFLINE_EFFICIENCY` (0.5), `MAX_OFFLINE_ORES_PER_SEC` (3.5), `MAX_OFFLINE_GEMS` (15K), `formatOfflineDuration`,
                                             `computeOfflineEarningsDomain`, `claimOfflineEarningsDomain` (1x/2x + chest cap)
 src/game/BountiesDomain.ts      250 baris — `BOUNTY_SLOT_COUNT` (3), `BountyKind` (7 aktivitas), `generateBountyEntry`, `ensureBountiesPopulatedDomain`,
@@ -116,7 +116,7 @@ src/game/BountiesDomain.ts      250 baris — `BOUNTY_SLOT_COUNT` (3), `BountyKi
 src/game/OverclockDomain.ts     107 baris — `OVERCLOCK_DURATION_SEC` (15s), `OVERCLOCK_SPEED_MULT` (2x), `OVERCLOCK_DROP_MULT` (1.5x),
                                             `chargeOverclockDomain` (auto-activate at 100%), `stepOverclockDomain`, `getOverclockSnapshotDomain`
 src/game/AssetUrl.ts             11 baris — `assetUrl` (resolusi URL aset `public/` terhadap `BASE_URL` `./` agar aman di subpath)
-src/game/GameSettings.ts        143 baris — `GameSettings` (`mam_settings_v1`), `GRAPHICS_PRESETS` (`low`/`medium`/`high`), `normalizeGameSettings`, `gameSettings`
+src/game/GameSettings.ts        150 baris — `GameSettings` (`mam_settings_v1`, incl. `cameraLocked`), `GRAPHICS_PRESETS` (`low`/`medium`/`high`), `normalizeGameSettings`, `gameSettings`
 src/game/NumberFormat.ts         45 baris — `fmtShort` 22, `fmtMoney` 33, `fmtInt` 37, `fmtPct` 41
 src/audio/AudioManager.ts       623 baris — Web Audio SFX pool + synth (`playMutationRoll`, `playEnchantSpinStart`, `playEnchantSpinLand`,
                                             `playEnchantEquip`) & HTMLAudio BGM switcher (`audio`, `setSceneMode`,
@@ -125,13 +125,13 @@ src/sdk/crazygames.ts           259 baris — CrazyGames SDK v3 wrapper (`isAdPl
                                             `cgLoadingStart`, `cgGameplayStart`, `cgHappyTime`, `cgRequestRewardedAd`, `cgTryMidgameAd`)
 
 === UI HUD, MODALS & CSS (Modular Architecture) ===
-src/ui/GameHud.ts             1.086 baris — `GameHud`: Thin UI coordinator (`activeModal` incl. `altar-hub`/`daily-login`, `sceneMode` incl. `fusion`, `inspectedSlot`, `adPaused`, viewport scaling `updateViewportScale` + `hudPotsAbove` `< 1080`,
-                                            top `Shops` + `Overclock Fever (224px)` + `Teleport` (`TW_TELEPORT_PILL` + Warp Portal icon + `1`–`6` world badge), solid currency rail w/ inline DPS above Gems + Settings gear & audio mute toggle + Daily Login & icon-only Bounties quick btns w/ live badges, World Resonance HUD badges, modal router `renderActiveModal`, semantic toast stack,
+src/ui/GameHud.ts             1.157 baris — `GameHud`: Thin UI coordinator (`activeModal` incl. `altar-hub`/`daily-login`, `sceneMode` incl. `fusion`, `inspectedSlot`, `adPaused`, viewport scaling `updateViewportScale` + `hudPotsAbove` `< 1080`,
+                                            top `Shops` + `Overclock Fever (224px)` + `Teleport` (`TW_TELEPORT_PILL` + Warp Portal icon + `1`–`6` world badge), solid currency rail w/ inline DPS above Gems + Camera Lock (`toggle-camera-lock`), Settings gear & audio mute toggle + Daily Login & icon-only Bounties quick btns w/ live badges, World Resonance HUD badges, modal router `renderActiveModal`, semantic toast stack,
                                             1000ms/100ms timers + Overclock live sync, `isTutorialActive`, `handleTower*` dispatch & public pass-through API incl. `setFusionRevealHold` untuk `main.ts`)
-src/ui/HudShared.ts             400 baris — `chibiPortraitHtml`, shared types (`ModalKind` incl. `settings`/`offline`/`bounties`/`daily-login`/`altar-hub`, `ModalThemeId`, `InvTab`, `PlotDropOps`),
+src/ui/HudShared.ts             411 baris — `chibiPortraitHtml`, shared types (`ModalKind` incl. `settings`/`offline`/`bounties`/`daily-login`/`altar-hub`, `ModalThemeId`, `InvTab`, `PlotDropOps`),
                                             rarity/ring/timer/scroll helpers (`rarityCardClasses` incl. `rarity-fusion`/`rarity-limited`, `renderRarityBadgeHtml`, `rarityVars`, `applyInspectRing`, `classifyToast`, `renderToastBannerHtml`,
                                             `formatCountdownTimer`, `refreshPotionTimersInDom`, `captureRootScrolls`, `restoreRootScrolls`),
-                                            solid cyber-armor Tailwind `TW_*` constants (`TW_TELEPORT_PILL`, `mam-notif-badge`), shared shell builders (`renderModalShell` w/ `autoHeight`, `renderInspectorPanel`)
+                                            solid cyber-armor Tailwind `TW_*` constants (`TW_TELEPORT_PILL`, `mam-notif-badge`), shared shell builders (`renderModalShell` w/ `autoHeight`, `shouldDismissModalBackdrop`, `renderInspectorPanel`)
 src/ui/WeatherDpsHudUi.ts       616 baris — `WeatherDpsHudUi`: Solid top-left Weather widget + 2-column side-by-side Weather Forecast & Meteor Drops inspector + Auto Meteor toggle, bottom-right compact `62px` icon+timer Active Potions dock,
                                             inline DPS pill above Gems w/ left-opening `214px` Damage Breakdown popover, & top-center `224px` uniform-height Overclock Fever dock w/ smooth in-place transition (`formatWeatherTimer`, `buildActivePotionsDockContent`,
                                             `buildWeatherWidgetInnerHtml`, `buildDpsMeterInnerHtml`, `buildOverclockGaugeInnerHtml`)
@@ -140,11 +140,12 @@ src/ui/HotbarHudUi.ts           422 baris — `HotbarHudUi`: Solid Cyber-Anime T
 src/ui/AltarShopHudUi.ts        438 baris — `AltarShopHudUi`: Shop Plaza dock HUD (`renderShopWorldHudHtml`), Enchant Altar HUD (`renderAltarStripCardsHtml` + quick `Chibi Fusion` switch),
                                             roll/auto-roll timer controller (`triggerSingleEnchantRoll`), & live counters
 src/ui/FusionHudUi.ts           455 baris — `FusionHudUi`: Plaza `Altar Gateway` choice popup (`renderAltarChoiceModal`: Enchant Altar vs Chibi Fusion) & 3D Fusion World HUD (`renderFusionWorldHud`: 4 recipe cards, passive pills, unplaced miner/ore/gem ingredient chips, live 3D readiness sync, 4-act `3.45s` `FUSE CHIBI` trigger + multi-beat SFX choreography + cinematic progress banner, `"✦ SYNCHRO FUSION COMPLETE! ✦"` Prismatic Gacha Reveal Overlay Card (`renderRevealOverlayHtml`) + `dismiss-fusion-reveal` camera release, & quick `Enchant Altar` switch)
-src/ui/WorldOverlayHudUi.ts     546 baris — `WorldOverlayHudUi`: 5 floating `document.body` overlay layers (`plotOverlayLayer`, `oreBarLayer`, `dmgPopupLayer`,
+src/ui/WorldOverlayHudUi.ts     557 baris — `WorldOverlayHudUi`: 5 floating `document.body` overlay layers (`plotOverlayLayer`, `oreBarLayer`, `dmgPopupLayer`,
                                             `shopOverlayLayer`, `shopBubbleLayer`), `oreBarCache` + `translate3d` Mine/Tower segmented solid ore HP bars, `showDamagePopups`-gated damage popups, Shop station badges & Plaza/Fusion NPC speech bubbles,
                                             Altar anchor pills, & 3D plot nametag sync (`buildPlotLabelPayload`, `buildMineOreBarsHtml`, `buildTowerOreBarsHtml`)
-src/ui/CollectionModalsUi.ts  1.319 baris — `CollectionModalsUi` 45: Index modal (6 worlds + Weather + `✦ Fusion` + `★ Limited` tabs + Inspector + Chibi 4-pose `Review` `<dialog>`),
-                                            Backpack/Inventory (Equip Best / Auto Star-Up / Star-Up Miner / Search / Inspect), Chest modal & live updaters
+src/ui/IndexModalUi.ts          616 baris — `IndexModalUi` 40: Index modal (6 worlds + Weather + `✦ Fusion` + `★ Limited` tabs + Inspector + Chibi 4-pose `Review` `<dialog>`) & live updaters
+src/ui/InventoryModalUi.ts      518 baris — `InventoryModalUi` 31: Backpack/Inventory modal (Equip Best / Auto Star-Up / Star-Up Miner / Search / Inspect) & live updaters
+src/ui/ChestModalUi.ts          234 baris — `ChestModalUi` 16: Loot Chest modal (Auto-Sell rarity pills, Ore lock, capacity bar, Take All / Sell Ores +35%) & live updaters
 src/ui/ForgeModalUi.ts          452 baris — `ForgeModalUi` 45: Relic Forge Dark-Glass modal (`renderForgeModal`: 3 equipped slots, All/World/Weather/Tower tabs,
                                             12-relic grid, `renderForgeInspector`, `?` Ore Source Pop-up `renderOreSourcePopup`, `handleAction`, & `bindEvents`)
 src/ui/SettingsModalUi.ts       194 baris — `SettingsModalUi`: Dark-Glass Settings modal (`autoHeight`, Graphics Quality `Low`/`Medium`/`High`, BGM/SFX volume sliders, Mute All, Damage Popups toggle)
@@ -157,20 +158,20 @@ src/ui/TowerUi.ts               628 baris — `TowerUi` 55: Gem Tower Hub Dark-G
                                             Solid Cyber-Anime Raid Battle HUD (`renderTowerArenaHud`, `.mam-battle-hp-card` 10-tick animated HP bar, `.mam-battle-dock`, custom Pickaxe/Shield/Bolt/Timer SVGs, 5s Boss Invul shield, 5s Blessing auto-pick)
 src/ui/TutorialUi.ts            659 baris — `TutorialUi`: Cyber-Anime 5-stage responsive click-through FTUE (`pose.webp` pop-out, opposite-side placement, `--mam-float-scale`, progress bar, `Skip`, `.mam-tut-target-ring`, `?tutorial=1`, Starter Bonus +150 Gems & +1 Dice)
 src/ui/UpgradesWorldsUi.ts      636 baris — `UpgradesWorldsUi` 17: Research/Upgrades tree (opaque Dark-Glass nodes w/ world glow, edge-trimmed SVG lines & `.webp` icons) & World Teleport full-banner
-                                            modal (`buildWorldsListHtml` 315 pakai `public/worlds/*.webp`, synced Warp Portal title icon) & live updaters
-src/ui/PlotInspectUi.ts         423 baris — `PlotInspectUi` 28: Plot Inspector overlay (incl. ★Star, `✦ FUSION` / `✦ LIMITED` badge + Fusion Passive, World Resonance & per-unit Enchant `In Use`/`Equipped` status), live updater & modal
+                                            modal (`buildWorldsListHtml` 319 pakai `public/worlds/*.webp`, synced Warp Portal title icon) & live updaters
+src/ui/PlotInspectUi.ts         423 baris — `PlotInspectUi` 29: Plot Inspector overlay (incl. ★Star, `✦ FUSION` / `✦ LIMITED` badge + Fusion Passive, World Resonance & per-unit Enchant `In Use`/`Equipped` status), live updater & modal
                                             konfirmasi peringatan roll mutasi Frozen+ (`renderMutationConfirmOverlay`: `Stop (Keep)` / `Continue`, proteksi obtain & overwrite)
 src/ui/HudIcons.ts              314 baris — SVG, 2D fantasy art (`public/{enchants,hud,meteors,ores,pickaxes,potions,research,weathers}/*.webp`), & 3D-thumbnail icon helpers (`HUD_ICONS`, `hudIconHtml`,
                                             `weatherIconHtml`, `towerIconHtml`, `pickaxeIconHtml`, `gemPotionIconHtml`,
                                             `enchantAuraIconHtml`, `enchantDiceIconHtml`, `researchIconHtml` 305)
 src/styles/global.css            73 baris — Tailwind v4 entry (`@import "tailwindcss";`) + base font/reset + pickaxe cursor styles
-src/styles/hud.css            2.103 baris — Solid Cyber-Armor + Luminous Gradient Rail system (`[data-modal-theme]` 14 opaque themes incl. `forge`/`settings`/`offline`/`bounties`/`daily-login`,
+src/styles/hud.css            2.102 baris — Solid Cyber-Armor + Luminous Gradient Rail system (`[data-modal-theme]` 14 opaque themes incl. `forge`/`settings`/`offline`/`bounties`/`daily-login`,
                                             `.mam-modal`, `.mam-modal-rails`, sculpted `.mam-title-plaque`, full-bleed `.rarity-fusion` / `.rarity-limited` + `.mam-fusion-badge` + `.mam-limited-badge` + `.mam-fusion-text`, `dialog.mam-review-dialog`, `.mam-grid`, `.mam-no-scrollbar`, `.mam-chibi-smooth`,
                                             `.mam-hotbar-dock`/`-slot`/`-keycap`/`-qty`/`-val-bar`/`-bag`, `.mam-battle-hp-*`/`.mam-battle-dock` Raid HUD, `.mam-fever-*` Overclock Gauge, `.mam-dps-*` Breakdown dock, `.mam-toast-banner`, `.mam-notif-badge`, `.mam-tut-*` FTUE card & target ring, keyframes, a11y)
 
 === 3D WORLD & RENDERERS ===
-src/game3d/MineScene3D.ts     1.228 baris — Main Three.js scene controller: switches `mine` / `shop` / `altar` / `fusion` / `tower`, `SRGBColorSpace` renderer (`1024×1024` sun shadow map),
-                                            cyber-holographic rear `"My Chibi"` stage (`2.44m` pedestal pitch, steel bay dividers, rear busbar & illuminated cyber stairwell), procedural Cyber Loot Chest on Refinery Dais,
+src/game3d/MineScene3D.ts     1.319 baris — Main Three.js scene controller: switches `mine` / `shop` / `altar` / `fusion` / `tower`, `SRGBColorSpace` renderer (`1024×1024` sun shadow map),
+                                            `setCameraLocked` / `applyCameraOrbitDrag` / `clampCameraZoomRadius` + 2-finger touch pinch zoom, cyber-holographic rear `"My Chibi"` stage (`2.44m` pedestal pitch, steel bay dividers, rear busbar & illuminated cyber stairwell), procedural Cyber Loot Chest on Refinery Dais,
                                             `setGraphicsQuality` (`low`/`medium`/`high`), `setOverclockActive` (2x miner speed + amber-gold overdrive lights), `syncFusionRecipe`/`triggerFusionAnimation`/`setFusionRevealHold` + dynamic Fusion cinematic camera zoom & NPC bubble gating, `setAdPaused` pause/resume, background pit/miner ticks, pit-floor click auto-target, Tower strike FX pass-through,
                                             weather sky/fog/safe-zone shop lighting (`setWeather`, `applyWeatherAtmosphere`), syncs 3D pedestal labels (`syncPlotLabel`) & plot/station/tower-ore anchors, & `destroy()` (`pedestals`, `pit`, `shopWorld`, `fusionWorld`, `towerArena`, `weatherFx.dispose`)
 src/game3d/MineEnvironment3D.ts 654 baris — Dark basalt / cyber-industrial deck terrain + thin perimeter neon trims (`skyHandle`, `setWeatherSky`),
@@ -187,13 +188,13 @@ src/game3d/WeatherSkyShader.ts  237 baris — Animated GLSL Atmospheric Sky Shad
 src/game3d/WeatherFx3D.ts       254 baris — `WeatherFx3D` 74: 3D weather particles (rain/snow/embers/void/starfall)
                                             with `setShopMode()` safe-zone boost (`fog: false`), `setQualityScale()` (`low`/`medium`/`high`), radial/streak canvas textures & `dispose()`
 src/game3d/MineWorldPalette.ts  113 baris — `WORLD_PALETTES` 25 (6 worlds incl. `starwell`), `ORE_VARIANTS` 99, `rollOreVariant` 105
-src/game3d/OrePit3D.ts         1.388 baris — Dark basalt pit floor, basalt retaining walls + diagonal yellow/black hazard stripe collar + thin neon rim + armored lantern corner bollards,
+src/game3d/OrePit3D.ts         1.395 baris — Dark basalt pit floor, basalt retaining walls + diagonal yellow/black hazard stripe collar + thin neon rim + armored lantern corner bollards (`METEOR_HP_MULT` 375, `computeMeteorDynamicHp`),
                                             2.5D-grounded `OreBillboard2D` (3D basalt rubble + crystal collar skirt, horizontal hit recoil, cracked crater AO socket decal, feathered Geode glow seams, Weather Meteor crater impact),
-                                            pooled bouncing 3D crystal prism + basalt rock shards (`spawnShardsAt` / `shardFreeCrystal` / `shardFreeRock`, `maxCap 36`), 5-layer `AttackImpactFxController` (`hitNode` + `spawnShatter` on break, `getImpactFxCounts`), `getAliveNodesInfo`, `applyNodeDamagePure` 40, & `dispose()`
-src/game3d/AttackImpactFx3D.ts  664 baris — Shared 5-layer cyber-anime impact & shatter VFX pool (`AttackImpactFxController` 77: per-layer free-list mesh/material pooling `acquireMesh`/`clearFreeList`, directional dual-pass slash arc, 4-point anime hitspark star / 8-point shatter nova, directional & 360° radial spark streaks, single/twin ground shockwave rings, rising luminescent crystal motes, `spawnImpact` + `spawnShatter`, oldest-recycling caps & `dispose()`)
+                                            pooled bouncing 3D crystal prism + basalt rock shards (`spawnShardsAt` / `shardFreeCrystal` / `shardFreeRock`, `maxCap 36`), 5-layer `AttackImpactFxController` (`hitNode` + `spawnShatter` on break, `getImpactFxCounts`), `getAliveNodesInfo`, `applyNodeDamagePure` 47, & `dispose()`
+src/game3d/AttackImpactFx3D.ts  664 baris — Shared 5-layer cyber-anime impact & shatter VFX pool (`AttackImpactFxController` 88: per-layer free-list mesh/material pooling `acquireMesh`/`clearFreeList`, directional dual-pass slash arc, 4-point anime hitspark star / 8-point shatter nova, directional & 360° radial spark streaks, single/twin ground shockwave rings, rising luminescent crystal motes, `spawnImpact` + `spawnShatter`, oldest-recycling caps & `dispose()`)
 src/game3d/PlotPedestal3D.ts  1.252 baris — ZZZ/HSR Cyber-Showcase Plot Podiums (chamfered dock bay w/ cooling fins, edge-lit seam strip, titanium dais, front `01..05` numeric apron plaque, waist-high rear projector stanchions, dual-shell outward-flaring thick Anime-RPG Aura + `17` GPU star embers/streak wisps via shared `createAnimeParticlePoints`, world-space nametag sejajar di `y = 2.68m`) & `dispose()`
 src/game3d/FieldMiner3D.ts      344 baris — Active chibi miner placement & shared `ChibiFieldFxController` (calm RPG feathered ground halo + Enchant ground sigil, live `def.accentColor`/Enchant/Rainbow sync, `12` rising GPU particles via `createAnimeParticlePoints`, tanpa aura shell vertikal), 3-beat swing/background mining tick & `dispose()`
-src/game3d/ChibiCatalog.ts      589 baris — `LEFT_FACING_WALK_IDS` 35, `LEFT_FACING_ATTACK_IDS` 44, `CHIBI_CATALOG` 62 (46 chibi poses WebP: 30 world + 5 weather-limited + 4 `fusion` + 7 `limited` Daily Login exclusives, `ChibiRarity` `common`..`limited`,
+src/game3d/ChibiCatalog.ts      589 baris — `LEFT_FACING_WALK_IDS` 37, `LEFT_FACING_ATTACK_IDS` 46, `CHIBI_CATALOG` 64 (46 chibi poses WebP: 30 world + 5 weather-limited + 4 `fusion` + 7 `limited` Daily Login exclusives, `ChibiRarity` `common`..`limited`,
                                             baseDps, `smoothFilter` W1–W6, world roster, `getChibiFrameUvOffset`)
 src/game3d/FusionWorld3D.ts   2.066 baris — 3D Outer-Space Cyber-Synchro Fusion World (`FusionWorld3D`: expanded 23m octagonal cyber arena deck w/ Cyan & Magenta neon floor trims + 17.2m magic circuit sigil (`polygonOffset` anti-Z-fight) + elevated rear Cyber-Holographic Showcase Stage (`z = -2.45`) & 4-step illuminated stairs + 4 corner tech/crystal pylons + 2 entrance lantern bollards,
                                             ZZZ/HSR Cyber-Showcase Podiums (`01`..`03` & `APEX` w/ chamfered dock bay, cooling louvers, front plaque, rear projector stanchions, frosted holo lens, Dual-Shell Anime-RPG Aura & GPU star-ember wisps),
@@ -204,7 +205,7 @@ src/game3d/ShopCyberPlaza3D.ts 1.764 baris — Procedural "Neo-Cyber City Plaza"
                                             open sky Gem Tower skyscraper + access terminals, circular roundabout curb + thin neon trim + radial contact shadow (`createRoundaboutShadowTexture`) + Neon Crystal Cluster Fountain (`createCyberCrystalCluster`),
                                             4 high-clearance container kiosks (Pickaxes, Sell, centered 2-story Gem Shop `'CYBER GEM MART'`, Plasma Relic Forge, `createShopPadMeshes`) + vending machines & hologram signs,
                                             dark concrete plaza deck + trimmed neon road lanes, cyber-botanical trees & monolith fork pylons (`CyberProps3D`), modern barriers/benches/streetlights (`InstancedMesh`), safe-zone lighting, & `dispose()`
-src/game3d/ShopWorld3D.ts     1.266 baris — 3D Neo-Cyber Shop Plaza controller (`ShopWorld3D` 233, `ShopCyberPlaza3D`), Plaza walkers, &
+src/game3d/ShopWorld3D.ts     1.266 baris — 3D Neo-Cyber Shop Plaza controller (`ShopWorld3D` 231, `ShopCyberPlaza3D`), Plaza walkers, &
                                             6 emblem bangunan 2.5D tinggi (`ArtBillboard2D`), preserved hitboxes & non-overlapping aligned `stationPositions` badges,
                                             Outer Space Altar clock room (Center Cyber-Chrono Core Podium + 10 ZZZ/HSR Cyber-Showcase Enchant Podiums `"01".."10"` w/ thruster under-hull, frosted holo lens, flat horizontal sigil, Dual-Shell Anime Aura & GPU star-ember particles, 10 radial energy conduits + 30 traveling pulses, outer elliptical synchro ring, 6 floating cosmic crystal islands & 4 chrono-monolith pylons, 2.5D `EnchantBillboard2D`), & `dispose()`
 src/game3d/SeraphimBoss3D.ts  1.722 baris — Full 3D hard-surface Corrupted Seraphim AI Overlord Boss (`createSeraphimBoss3D`, zero `BoxGeometry`):
@@ -217,8 +218,8 @@ src/game3d/TowerCityEnvironment3D.ts 1.575 baris — Procedural "Ruined Cyber Ci
                                             raised holed highway (`y = 0.52`), recessed crater (`y = 0.08`) with jagged charred fissures + core embers,
                                             crater fire embers + dark ash flakes (`InstancedMesh`) + street electric sparks, dented guardrails,
                                             flickering streetlights, & 22 ruined skyscrapers (`InstancedMesh` varied/shattered window grids + glass shards + rooftop ducts/stairs)
-src/game3d/AltarSpinFx3D.ts     936 baris — Ornate Astral Astrolabe Dial & Chrono-Spear Hands (`createAltarClockDial` 59 w/ beveled arrow hour markers, 12-tooth gearRing, counter-rotating flat horizontal `outerTrackRing` & skyward chrono light beam, `createAltarClockHand` 297 skeletonized split-rail spear w/ crescent counterweight tail, swept crossguard wings, horizontal sighting reticle & fleur-de-lis spearhead,
-                                            `createAltarSubHand` 567 Breguet moon-eye vernier hand, `AltarParticleSystem` 679)
+src/game3d/AltarSpinFx3D.ts     936 baris — Ornate Astral Astrolabe Dial & Chrono-Spear Hands (`createAltarClockDial` 63 w/ beveled arrow hour markers, 12-tooth gearRing, counter-rotating flat horizontal `outerTrackRing` & skyward chrono light beam, `createAltarClockHand` 305 skeletonized split-rail spear w/ crescent counterweight tail, swept crossguard wings, horizontal sighting reticle & fleur-de-lis spearhead,
+                                            `createAltarSubHand` 591 Breguet moon-eye vernier hand, `AltarParticleSystem` 715)
 src/game3d/HellAltarEye3D.ts    373 baris — `HellAltarEyeController` 151: Outer Space starfield, cosmic astrolabe floor ring (`dt`-clamped `update`),
                                             & distant Pitch-Black Black Hole (`#000000` event horizon, photon ring, lensing arches, accretion disk)
 src/game3d/AuraModels3D.ts      586 baris — `createEnchantAura3D` 276, `createEnchantDice3D` 318, `ArtBillboard2D` 413 & `EnchantBillboard2D` 577 (2.5D sprites)
@@ -264,18 +265,18 @@ public/worlds/                  6 full-bleed teleport banner WebPs (`underground
 | 3D World Overlays (Ore HP, Damage Popups, Shop Signs, Plot Labels) | `src/ui/WorldOverlayHudUi.ts` (`WorldOverlayHudUi`, `buildPlotLabelPayload`, `buildMineOreBarsHtml`, `buildTowerOreBarsHtml`) |
 | Performance & Audio Settings, Offline Earnings & Mining Bounties | `src/game/GameSettings.ts`, `src/ui/SettingsModalUi.ts`, `src/game/OfflineEarningsDomain.ts`, `src/ui/OfflineModalUi.ts`, `src/game/BountiesDomain.ts`, `src/ui/BountiesModalUi.ts` |
 | Responsive 5-Stage Cyber-Anime FTUE Tutorial & Starter Bonus | `src/ui/TutorialUi.ts` (`TutorialUi`, `buildTutorialCardHtml`, `getTutorialStageMeta`, `?tutorial=1`), `src/game/GameState.ts` (`grantTutorialStarterReward`) |
-| Shared Modal Shell, Inspector Shell, Semantic Toasts, Scroll/Timer Helpers | `src/ui/HudShared.ts` (`renderModalShell`, `renderInspectorPanel`, `classifyToast`, `renderToastBannerHtml`, `formatCountdownTimer`, `TW_*`) |
+| Shared Modal Shell, Inspector Shell, Semantic Toasts, Backdrop Guard | `src/ui/HudShared.ts` (`renderModalShell`, `renderInspectorPanel`, `shouldDismissModalBackdrop`, `classifyToast`, `renderToastBannerHtml`, `formatCountdownTimer`, `TW_*`) |
 | Pickaxe Shop, Gem Shop, Sell Shop + Inspectors | `src/ui/ShopModalsUi.ts` (`ShopModalsUi`) |
 | Gem Tower Hub Modal, 3D Arena HUD, Blessings picker | `src/ui/TowerUi.ts` (`TowerUi`) |
 | Relic Forge (12 Relics, resep, 3 slot, Ore Source pop-up) | `src/game/RelicData.ts` (`RELICS`, `MAX_EQUIPPED_RELICS`), `src/ui/ForgeModalUi.ts` (`ForgeModalUi`), `public/relics/*.webp` |
-| Index (6 Worlds + Weather + Fusion + Limited), Backpack/Inventory, Chest + Inspectors | `src/ui/CollectionModalsUi.ts` (`CollectionModalsUi`) |
-| 7-Day Daily Login, Exclusive `limited` 5★ Chibis & Non-Sellable Protection | `src/game/DailyLoginData.ts` (`DAILY_LOGIN_REWARDS`, `isNonSellableChibi`), `src/game/DailyLoginDomain.ts`, `src/ui/DailyLoginModalUi.ts` |
+| Index (6 Worlds + Weather + Fusion + Limited), Backpack/Inventory, Chest + Inspectors | `src/ui/IndexModalUi.ts` (`IndexModalUi`), `src/ui/InventoryModalUi.ts` (`InventoryModalUi`), `src/ui/ChestModalUi.ts` (`ChestModalUi`) |
+| 7-Day Daily Login, Exclusive `limited` 5★ Chibis, Upgrade Scales & Protection | `src/game/DailyLoginData.ts` (`DAILY_LOGIN_REWARDS`, `getDailyLoginRewardByChibiId`, `isNonSellableChibi`), `src/game/DailyLoginDomain.ts`, `src/ui/DailyLoginModalUi.ts` |
 | 3D Chibi Fusion World, Recipes, Exclusive `fusion` Tier & 4 Plot Passives | `src/game/FusionData.ts`, `src/game/FusionDomain.ts`, `src/ui/FusionHudUi.ts`, `src/game3d/FusionWorld3D.ts` |
 | Research/Upgrades Tree & World Teleport Banner Modal | `src/ui/UpgradesWorldsUi.ts` (`UpgradesWorldsUi`, `buildWorldsListHtml`) |
 | Plot Inspector Overlay & Frozen+ Mutation Confirm Modal | `src/ui/PlotInspectUi.ts` (`PlotInspectUi`, `renderMutationConfirmOverlay`) |
 | Modal/HUD CSS & Responsive Breakpoints | `src/styles/hud.css` + `src/ui/HudShared.ts` (`TW_*`) |
 | Audio (BGM switcher, Web Audio Synth Roll/Spin SFX, Mute toggle) | `src/audio/AudioManager.ts` (`audio`, `playMutationRoll`, `playEnchantSpinStart`, `playEnchantSpinLand`) + `public/audio/` |
-| 3D Sky Shader, Weather FX, Ore Pit, Attack VFX & 3D HUD Icons | `src/game3d/WeatherSkyShader.ts`, `WeatherFx3D.ts`, `OrePit3D.ts`, `AttackImpactFx3D.ts` (`AttackImpactFxController`), `ChibiSprite3D.ts`, `ProceduralTextures3D.ts`, `HudIcon3DRenderer.ts` |
+| 3D Sky Shader, Weather FX, Ore Pit, Camera Lock, Attack VFX & 3D HUD Icons | `src/game3d/MineScene3D.ts` (`setCameraLocked`, `applyCameraOrbitDrag`, `clampCameraZoomRadius`), `WeatherSkyShader.ts`, `WeatherFx3D.ts`, `OrePit3D.ts` (`METEOR_HP_MULT`, `computeMeteorDynamicHp`), `AttackImpactFx3D.ts`, `ChibiSprite3D.ts`, `ProceduralTextures3D.ts`, `HudIcon3DRenderer.ts` |
 | 3D Chest Vault, Escalator, Cave Radar & Architectural Pillar Props | `src/game3d/CyberProps3D.ts` (`createCyberRadarArray`, `createCyberLanternBollardFinial`, `createCyberMonolithForkFinial`, `createCyberCrystalCluster`, `createCyberBotanicalCanopy`), `ChestVaultStation3D.ts`, `CaveRailway3D.ts`, `MineEnvironment3D.ts` |
 | 3D Shop Plaza, Outer Space Enchant Altar + Black Hole & Tower Arena | `src/game3d/ShopCyberPlaza3D.ts` (`createShopCyberPlaza`), `src/game3d/ShopWorld3D.ts` (`ShopWorld3D`), `src/game3d/HellAltarEye3D.ts`, `src/game3d/AltarSpinFx3D.ts`, `src/game3d/SeraphimBoss3D.ts` (`createSeraphimBoss3D`), `src/game3d/TowerArena3D.ts`, `src/game3d/TowerCityEnvironment3D.ts` (`createTowerCityEnvironment`) |
 | Rules, CrazyGames SDK v3, UI/HUD & Procedural 3D Skills | `.agent/rules/threejs-ts-standards.md`, `.agent/skills/{crazygames-sdk-v3,ui-hud-design,procedural-3d-assets}/SKILL.md` |

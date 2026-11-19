@@ -769,7 +769,7 @@ export class AltarParticleSystem {
         opacity: 0.88,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        map: tex ?? undefined,
+        ...(tex ? { map: tex } : {}),
       })
     );
     this.group.add(vortexPoints);
@@ -800,7 +800,7 @@ export class AltarParticleSystem {
         opacity: 0.96,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        map: tex ?? undefined,
+        ...(tex ? { map: tex } : {}),
       })
     );
     this.group.add(sparkPoints);

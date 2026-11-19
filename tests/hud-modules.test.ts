@@ -29,6 +29,7 @@ import {
   rarityCardClasses,
   renderToastBannerHtml,
   restoreRootScrolls,
+  shouldDismissModalBackdrop,
 } from '../src/ui/HudShared';
 import {
   buildActivePotionsDockContent,
@@ -448,12 +449,14 @@ describe('Tahap B HUD Modules', () => {
           bgmVolume: -0.5,
           sfxVolume: 2.5,
           showDamagePopups: 'no',
+          cameraLocked: 'yes',
         })
       ).toEqual({
         graphicsQuality: 'high',
         bgmVolume: 0,
         sfxVolume: 1,
         showDamagePopups: true,
+        cameraLocked: false,
       });
       expect(normalizeGameSettings({ bgmVolume: Number.NaN, sfxVolume: Number.POSITIVE_INFINITY })).toEqual(
         DEFAULT_GAME_SETTINGS
@@ -480,9 +483,11 @@ describe('Tahap B HUD Modules', () => {
       expect(store.get()).toEqual(DEFAULT_GAME_SETTINGS);
 
       const seen: string[] = [];
-      const unsub = store.subscribe((next) => seen.push(`${next.graphicsQuality}:${next.bgmVolume}:${next.showDamagePopups}`));
-      store.update({ graphicsQuality: 'low', bgmVolume: 0.4, showDamagePopups: false });
-      expect(seen).toEqual(['low:0.4:false']);
+      const unsub = store.subscribe((next) =>
+        seen.push(`${next.graphicsQuality}:${next.bgmVolume}:${next.showDamagePopups}:${next.cameraLocked}`)
+      );
+      store.update({ graphicsQuality: 'low', bgmVolume: 0.4, showDamagePopups: false, cameraLocked: true });
+      expect(seen).toEqual(['low:0.4:false:true']);
 
       const reloaded = new GameSettings(fakeStorage);
       expect(reloaded.get()).toEqual({
@@ -490,6 +495,7 @@ describe('Tahap B HUD Modules', () => {
         bgmVolume: 0.4,
         sfxVolume: 1,
         showDamagePopups: false,
+        cameraLocked: true,
       });
       unsub();
     });
@@ -728,6 +734,58 @@ describe('Tahap B HUD Modules', () => {
       expect(day7Idx).toBeGreaterThan(scrollIdx);
       expect(claimWrapperIdx).toBeGreaterThan(day7Idx);
       expect(claimBtnIdx).toBeGreaterThan(claimWrapperIdx);
+    });
+  });
+
+  describe('Mobile Backdrop Ghost-Click Guard', () => {
+    it('blocks synthesized canvas-to-backdrop ghost clicks and rapid reopen clicks, while allowing genuine backdrop dismiss', () => {
+      expect(
+        shouldDismissModalBackdrop({
+          pointerDownOnSelf: false,
+          openedAtMs: 1000,
+          nowMs: 1400,
+        })
+      ).toBe(false);
+
+      expect(
+        shouldDismissModalBackdrop({
+          pointerDownOnSelf: true,
+          openedAtMs: 1000,
+          nowMs: 1050,
+        })
+      ).toBe(false);
+
+      expect(
+        shouldDismissModalBackdrop({
+          pointerDownOnSelf: true,
+          openedAtMs: 1000,
+          nowMs: 1200,
+        })
+      ).toBe(true);
+    });
+  });
+
+  describe('Meteor HP Bar & Label Overlay', () => {
+    it('renders solid cyber meteor plaque without Tailwind double-translate classes', () => {
+      const html = buildMineOreBarsHtml([
+        {
+          id: 999,
+          x: 400,
+          y: 300,
+          hp: 25000,
+          maxHp: 50000,
+          variantKey: 'geode',
+          isMeteor: true,
+          meteorWeatherId: 'celestial',
+        },
+      ]);
+      expect(html).toContain('data-ore-bar="999"');
+      expect(html).toContain('Celestial');
+      expect(html).toContain('Meteor');
+      expect(html).toContain('data-ore-fill="true"');
+      expect(html).toContain('data-ore-text="true"');
+      expect(html).not.toContain('-translate-y-full');
+      expect(html).not.toContain('-translate-x-1/2');
     });
   });
 });

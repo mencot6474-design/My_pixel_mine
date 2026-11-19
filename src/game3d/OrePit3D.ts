@@ -25,7 +25,14 @@ export const PIT_HALF_W = 4.55;
 export const PIT_HALF_D = 2.25;
 
 const BASE_ORE_HP = 180;
+/** Balanced 25% nerf from 500 -> 375 so Weather Meteors feel rewarding without dragging. */
+export const METEOR_HP_MULT = 375;
 export const BASE_ORE_RESPAWN_SEC = 4.0;
+
+/** Computes dynamic minimum Meteor HP from current team DPS & tap damage (25% nerfed). */
+export function computeMeteorDynamicHp(totalPlotDps: number, tapDamage: number): number {
+  return Math.round((totalPlotDps * 45 + tapDamage * 150) * 0.75);
+}
 
 export interface DamageableOreState {
   hp: number;
@@ -922,7 +929,7 @@ export class OrePit3D {
   public spawnWeatherMeteor(weatherId: WeatherId, hpScale = this.hpScale, minBossHp = 0): void {
     this.hpScale = Math.max(0.25, hpScale);
     const weather = getWeatherById(weatherId);
-    const baseMeteorHp = Math.max(500, Math.round(BASE_ORE_HP * this.hpScale * 500));
+    const baseMeteorHp = Math.max(500, Math.round(BASE_ORE_HP * this.hpScale * METEOR_HP_MULT));
     const meteorHp = Math.max(baseMeteorHp, Math.round(minBossHp));
     const n = this.meteorNode;
     n.meteorWeatherId = weatherId;
@@ -1237,7 +1244,7 @@ export class OrePit3D {
       list.push({
         id: this.meteorNode.id,
         worldX: this.meteorNode.x,
-        worldY: PIT_FLOOR_Y,
+        worldY: PIT_FLOOR_Y + (this.meteorNode.dropY ?? 0),
         worldZ: PIT_CENTER_Z + this.meteorNode.z,
         hp: this.meteorNode.hp,
         maxHp: this.meteorNode.maxHp,

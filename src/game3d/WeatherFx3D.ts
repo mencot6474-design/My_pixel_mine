@@ -110,7 +110,7 @@ export class WeatherFx3D {
 
     this.pointsMat = new THREE.PointsMaterial({
       color: 0xbae6fd,
-      map: this.particleTextures.rain ?? undefined,
+      ...(this.particleTextures.rain ? { map: this.particleTextures.rain } : {}),
       size: 0.42,
       transparent: true,
       opacity: 0.62,

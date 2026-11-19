@@ -11,6 +11,7 @@ export interface GameSettingsData {
   bgmVolume: number;
   sfxVolume: number;
   showDamagePopups: boolean;
+  cameraLocked: boolean;
 }
 
 export const SETTINGS_STORAGE_KEY = 'mam_settings_v1';
@@ -38,6 +39,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettingsData = {
   bgmVolume: 1,
   sfxVolume: 1,
   showDamagePopups: true,
+  cameraLocked: false,
 };
 
 function isGraphicsQuality(value: unknown): value is GraphicsQuality {
@@ -64,6 +66,10 @@ export function normalizeGameSettings(raw: unknown): GameSettingsData {
       typeof obj.showDamagePopups === 'boolean'
         ? obj.showDamagePopups
         : DEFAULT_GAME_SETTINGS.showDamagePopups,
+    cameraLocked:
+      typeof obj.cameraLocked === 'boolean'
+        ? obj.cameraLocked
+        : DEFAULT_GAME_SETTINGS.cameraLocked,
   };
 }
 
@@ -96,7 +102,8 @@ export class GameSettings {
       next.graphicsQuality !== this.data.graphicsQuality ||
       next.bgmVolume !== this.data.bgmVolume ||
       next.sfxVolume !== this.data.sfxVolume ||
-      next.showDamagePopups !== this.data.showDamagePopups;
+      next.showDamagePopups !== this.data.showDamagePopups ||
+      next.cameraLocked !== this.data.cameraLocked;
     this.data = next;
     this.save();
     if (changed) {

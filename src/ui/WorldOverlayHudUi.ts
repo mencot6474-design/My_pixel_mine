@@ -94,19 +94,29 @@ export function buildMineOreBarsHtml(bars: OreHpScreen[]): string {
       if (b.isMeteor) {
         const wDef = getWeatherById(b.meteorWeatherId ?? 'light_rain');
         return `
-              <div class="absolute -translate-x-1/2 -translate-y-full flex flex-col items-center gap-0.5 pointer-events-none" data-ore-bar="${b.id}">
-                <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[rgba(10,14,26,0.92)] border text-[10px] font-black uppercase tracking-wider text-white mam-outline-sm" style="border-color:${wDef.accentColor};color:${wDef.accentColor}">${meteorIconHtml(wDef.id, 16, wDef.name)} ${wDef.name} Meteor</div>
-                <div class="relative w-44 h-5 rounded-md border-2 bg-[rgba(12,16,28,0.94)] overflow-hidden flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.65)]" style="border-color:${wDef.accentColor}">
+              <div class="absolute flex flex-col items-center gap-1 pointer-events-none select-none" data-ore-bar="${b.id}">
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-[3px] rounded-lg bg-[#090e1c] border-[1.5px] whitespace-nowrap shadow-[0_3px_10px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.16)]" style="border-color:${wDef.accentColor}">
+                  ${meteorIconHtml(wDef.id, 15, wDef.name)}
+                  <span class="text-[10.5px] font-black uppercase tracking-[0.06em] leading-none mam-outline-sm" style="color:${wDef.accentColor}">${wDef.name}</span>
+                  <span class="px-1 py-[1px] rounded text-[8.5px] font-black uppercase tracking-wider leading-none bg-white/10 text-white/95 border border-white/15">Meteor</span>
+                </div>
+                <div class="relative w-[184px] @max-[720px]:w-[156px] h-[22px] rounded-lg border-2 bg-[#060a14] overflow-hidden flex items-center justify-center" style="border-color:${wDef.accentColor};box-shadow:0 4px 14px rgba(0,0,0,0.85),0 0 12px ${wDef.accentColor}44">
                   <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${wDef.glowColor},${wDef.accentColor})" data-ore-fill="true"></div>
-                  <div class="relative z-[2] text-[11px] font-black tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
+                  <div class="absolute inset-x-0 top-0 h-[44%] bg-gradient-to-b from-white/30 to-transparent pointer-events-none z-[1]"></div>
+                  <div class="absolute inset-0 flex justify-evenly pointer-events-none z-[1]">
+                    <span class="w-px h-full bg-black/35"></span>
+                    <span class="w-px h-full bg-black/35"></span>
+                    <span class="w-px h-full bg-black/35"></span>
+                  </div>
+                  <div class="relative z-[2] text-[11px] font-black tabular-nums tracking-wide text-white leading-none mam-outline-sm" data-ore-text="true"></div>
                 </div>
               </div>
             `;
       }
       return `
-          <div class="absolute -translate-x-1/2 -translate-y-full w-24 h-4 rounded border-2 border-[#0f172a] bg-[rgba(15,23,42,0.9)] overflow-hidden flex items-center justify-center" data-ore-bar="${b.id}">
+          <div class="absolute w-24 h-4 rounded-md border-2 border-[#0f172a] bg-[#070b15] overflow-hidden flex items-center justify-center shadow-[0_3px_8px_rgba(0,0,0,0.75)]" data-ore-bar="${b.id}">
             <div class="absolute left-0 top-0 bottom-0 bg-[linear-gradient(180deg,#38bdf8,#0284c7)] transition-[width] duration-[80ms] ease-linear" data-ore-fill="true"></div>
-            <div class="relative z-[2] text-[11px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
+            <div class="relative z-[2] text-[10.5px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
           </div>
         `;
     })
@@ -118,7 +128,7 @@ export function buildTowerOreBarsHtml(bars: TowerOreBarScreen[]): string {
   return bars
     .map(
       (b) => `
-          <div class="absolute -translate-x-1/2 -translate-y-full flex flex-col items-center gap-1 pointer-events-none" data-tower-ore-bar="${b.index}">
+          <div class="absolute flex flex-col items-center gap-1 pointer-events-none" data-tower-ore-bar="${b.index}">
             <div class="px-2 py-0.5 rounded-md bg-[#0a1020] border text-[10.5px] font-black leading-none whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.7)] mam-outline-sm" style="color:${b.color};border-color:${b.color}">${b.name}</div>
             <div class="w-[104px] h-[18px] rounded-md border-2 border-[#2b4266] bg-[#060a14] overflow-hidden relative flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.75)]">
               <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[60ms] ease-linear" style="background:linear-gradient(180deg,${b.color},${b.color}cc)" data-ore-fill="true"></div>
@@ -335,6 +345,7 @@ export class WorldOverlayHudUi {
       if (!wrap) return;
       wrap.style.left = '0px';
       wrap.style.top = '0px';
+      wrap.style.transformOrigin = '0 0';
       entry = {
         wrap,
         fill: wrap.querySelector<HTMLElement>('[data-ore-fill="true"]'),
@@ -352,7 +363,7 @@ export class WorldOverlayHudUi {
     if (rx !== entry.x || ry !== entry.y) {
       entry.x = rx;
       entry.y = ry;
-      entry.wrap.style.transform = `translate3d(${rx}px, ${ry}px, 0) translate(-50%, -100%)`;
+      entry.wrap.style.transform = `translate3d(${rx}px, ${ry}px, 0) scale(var(--mam-float-scale, 1)) translate(-50%, -100%)`;
     }
 
     const pctNum = Math.max(0, Math.min(100, (hp / Math.max(1, maxHp)) * 100));

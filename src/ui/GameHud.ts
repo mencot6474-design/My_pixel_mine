@@ -4,14 +4,17 @@ import { OreHpScreen, PlotAnchorScreen, SceneMode } from '../game3d/MineScene3D'
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
 import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId } from '../game3d/ShopWorld3D';
 import { getWorldById, getWorldIndex } from '../game/GameData';
+import { gameSettings } from '../game/GameSettings';
 import { GameState } from '../game/GameState';
 import { WeatherId } from '../game/WeatherData';
 import { fmtInt, fmtMoney } from '../game/NumberFormat';
 import { getTowerFloorDef, TowerWaveOreState } from '../game/TowerData';
 import { AltarShopHudUi } from './AltarShopHudUi';
 import { BountiesModalUi } from './BountiesModalUi';
+import { ChestModalUi } from './ChestModalUi';
 import { DailyLoginModalUi } from './DailyLoginModalUi';
-import { CollectionModalsUi } from './CollectionModalsUi';
+import { IndexModalUi } from './IndexModalUi';
+import { InventoryModalUi } from './InventoryModalUi';
 import { FusionRecipeDef } from '../game/FusionData';
 import { ForgeModalUi } from './ForgeModalUi';
 import { FusionHudUi } from './FusionHudUi';
@@ -25,6 +28,7 @@ import {
   refreshPotionTimersInDom,
   renderToastBannerHtml,
   restoreRootScrolls,
+  shouldDismissModalBackdrop,
   TW_BADGE_BASE,
   TW_CURRENCY_BAR,
   TW_PLUS_BTN,
@@ -57,12 +61,15 @@ export class GameHud {
   private lastRenderedModal: ModalKind = 'none';
   private toasts: Array<{ id: number; text: string }> = [];
   private nextToastId = 1;
+  private modalOpenedAtMs = 0;
   private lastRegrowthActive = false;
   private lastOverclockActive = false;
 
   private readonly shopUi: ShopModalsUi;
   private readonly forgeUi: ForgeModalUi;
-  private readonly collectionUi: CollectionModalsUi;
+  private readonly indexUi: IndexModalUi;
+  private readonly inventoryUi: InventoryModalUi;
+  private readonly chestUi: ChestModalUi;
   private readonly upgradesUi: UpgradesWorldsUi;
   private readonly plotInspectUi: PlotInspectUi;
   private readonly towerUi: TowerUi;
@@ -139,7 +146,9 @@ export class GameHud {
       (msg) => this.pushToast(msg),
       () => this.render()
     );
-    this.collectionUi = new CollectionModalsUi(
+    this.indexUi = new IndexModalUi(this.state, () => this.render());
+    this.inventoryUi = new InventoryModalUi(this.state, (msg) => this.pushToast(msg));
+    this.chestUi = new ChestModalUi(
       this.state,
       (msg) => this.pushToast(msg),
       () => this.render()
@@ -271,7 +280,7 @@ export class GameHud {
       } else if (this.sceneMode === 'tower') {
         this.towerUi.updateLiveValues(this.root);
       } else if (this.activeModal === 'chest') {
-        this.collectionUi.updateChestModalLive(this.root);
+        this.chestUi.updateLive(this.root);
       } else if (this.activeModal === 'pickaxe-shop') {
         this.shopUi.updatePickaxeShopLive(this.root);
       } else if (this.activeModal === 'sell-shop') {
@@ -279,9 +288,9 @@ export class GameHud {
       } else if (this.activeModal === 'gem-shop') {
         this.shopUi.updateGemShopLive(this.root);
       } else if (this.activeModal === 'index') {
-        this.collectionUi.updateIndexModalLive(this.root);
+        this.indexUi.updateLive(this.root);
       } else if (this.activeModal === 'inventory') {
-        this.collectionUi.updateInventoryModalLive(this.root);
+        this.inventoryUi.updateLive(this.root);
       } else if (this.activeModal === 'upgrades') {
         this.upgradesUi.updateUpgradesLive(this.root);
       } else if (this.activeModal === 'worlds') {
@@ -436,8 +445,11 @@ export class GameHud {
       this.state.claimOfflineEarnings(1);
     }
     this.activeModal = kind;
+    if (kind !== 'none' && kind !== prev) {
+      this.modalOpenedAtMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    }
     if (kind !== 'index') {
-      this.collectionUi.closeReviewDialog();
+      this.indexUi.closeReviewDialog();
     }
     if (kind !== prev) {
       audio.playSfx(kind === 'none' ? 'ui-close' : 'ui-open');
@@ -448,8 +460,11 @@ export class GameHud {
   public toggleModal(kind: ModalKind): void {
     const next = this.activeModal === kind ? 'none' : kind;
     this.activeModal = next;
+    if (next !== 'none') {
+      this.modalOpenedAtMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    }
     if (next !== 'index') {
-      this.collectionUi.closeReviewDialog();
+      this.indexUi.closeReviewDialog();
     }
     audio.playSfx(next === 'none' ? 'ui-close' : 'ui-open');
     this.render();
@@ -470,7 +485,7 @@ export class GameHud {
     }
     this.sceneMode = mode;
     this.activeModal = 'none';
-    this.collectionUi.closeReviewDialog();
+    this.indexUi.closeReviewDialog();
     this.inspectedSlot = null;
     this.worldOverlayUi.clearTransientOverlays();
     this.onSetSceneMode?.(mode);
@@ -683,11 +698,38 @@ export class GameHud {
     </svg>`;
     const gearFrameCls =
       'border-[#4b6085] bg-[linear-gradient(160deg,#2b3a55,#10182b)] shadow-[0_4px_0_#060a14,0_8px_22px_rgba(15,23,42,0.58),inset_0_1px_0_rgba(255,255,255,0.24)]';
+    const camLocked = gameSettings.get().cameraLocked;
+    const camFrameCls = camLocked
+      ? 'border-amber-400 bg-[linear-gradient(160deg,#b45309,#2e1065)] shadow-[0_4px_0_#1e1b4b,0_8px_22px_rgba(245,158,11,0.38),inset_0_1px_0_rgba(255,255,255,0.3)]'
+      : gearFrameCls;
+    const camIcon = camLocked
+      ? `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+          <path d="M3.5 9.5a2 2 0 0 1 2-2h2l1.2-1.8a1.5 1.5 0 0 1 1.25-.7h4.1a1.5 1.5 0 0 1 1.25.7L16.5 7.5h2a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V9.5Z" stroke="#fde68a" stroke-width="1.8" stroke-linejoin="round"/>
+          <rect x="9" y="12.2" width="6" height="4.6" rx="1.2" fill="#facc15" stroke="#451a03" stroke-width="1.2"/>
+          <path d="M10.4 12.2v-1.1a1.6 1.6 0 0 1 3.2 0v1.1" stroke="#fef08a" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>`
+      : `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+          <path d="M3.5 9.5a2 2 0 0 1 2-2h2l1.2-1.8a1.5 1.5 0 0 1 1.25-.7h4.1a1.5 1.5 0 0 1 1.25.7L16.5 7.5h2a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V9.5Z" stroke="#cbd5e1" stroke-width="1.8" stroke-linejoin="round"/>
+          <circle cx="12" cy="13.2" r="2.7" stroke="#38bdf8" stroke-width="1.8"/>
+          <path d="M7.5 21l-2-1.8m11 1.8 2-1.8" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>`;
+    const utilBtnCls =
+      'w-12 h-12 @max-[720px]:w-10 @max-[720px]:h-10 rounded-2xl border-2 flex items-center justify-center cursor-pointer touch-manipulation transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95 pointer-events-auto';
 
     return `
-      <div class="${placementCls} flex items-center gap-2 pointer-events-none">
+      <div class="${placementCls} flex items-center gap-2 @max-[720px]:gap-1.5 pointer-events-none">
         <button
-          class="w-12 h-12 rounded-2xl border-2 ${gearFrameCls} flex items-center justify-center cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95 pointer-events-auto"
+          class="${utilBtnCls} ${camFrameCls}"
+          data-action="toggle-camera-lock"
+          data-camera-locked="${camLocked ? 'true' : 'false'}"
+          title="${camLocked ? 'Camera Locked (Front + Zoom Only) — Click to Unlock' : 'Lock Camera Front (Zoom Only)'}"
+          aria-label="${camLocked ? 'Unlock Camera' : 'Lock Camera Front'}"
+          aria-pressed="${camLocked ? 'true' : 'false'}"
+        >
+          ${camIcon}
+        </button>
+        <button
+          class="${utilBtnCls} ${gearFrameCls}"
           data-action="open-settings"
           title="Settings"
           aria-label="Open Settings"
@@ -695,7 +737,7 @@ export class GameHud {
           ${gearIcon}
         </button>
         <button
-          class="w-12 h-12 rounded-2xl border-2 ${frameCls} flex items-center justify-center cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95 pointer-events-auto"
+          class="${utilBtnCls} ${frameCls}"
           data-action="toggle-audio"
           title="${muted ? 'Unmute Audio' : 'Mute Audio'}"
           aria-label="${muted ? 'Unmute Audio' : 'Mute Audio'}"
@@ -907,9 +949,9 @@ export class GameHud {
   }
 
   private renderActiveModal(): string {
-    if (this.activeModal === 'index') return this.collectionUi.renderIndexModal();
-    if (this.activeModal === 'inventory') return this.collectionUi.renderInventoryModal();
-    if (this.activeModal === 'chest') return this.collectionUi.renderChestModal();
+    if (this.activeModal === 'index') return this.indexUi.renderModal();
+    if (this.activeModal === 'inventory') return this.inventoryUi.renderModal();
+    if (this.activeModal === 'chest') return this.chestUi.renderModal();
     if (this.activeModal === 'pickaxe-shop') return this.shopUi.renderPickaxeShopModal();
     if (this.activeModal === 'sell-shop') return this.shopUi.renderSellShopModal();
     if (this.activeModal === 'gem-shop') return this.shopUi.renderGemShopModal();
@@ -975,13 +1017,40 @@ export class GameHud {
   }
 
   private bindEvents(): void {
-    this.root.querySelector('[data-backdrop="true"]')?.addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) this.openModal('none');
-    });
+    const backdrop = this.root.querySelector<HTMLElement>('[data-backdrop="true"]');
+    if (backdrop) {
+      let pointerDownOnBackdrop = false;
+      backdrop.addEventListener('pointerdown', (e) => {
+        pointerDownOnBackdrop = e.target === e.currentTarget;
+      });
+      backdrop.addEventListener('pointercancel', () => {
+        pointerDownOnBackdrop = false;
+      });
+      backdrop.addEventListener('click', (e) => {
+        if (e.target !== e.currentTarget) return;
+        const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        if (
+          !shouldDismissModalBackdrop({
+            pointerDownOnSelf: pointerDownOnBackdrop,
+            openedAtMs: this.modalOpenedAtMs,
+            nowMs,
+          })
+        ) {
+          return;
+        }
+        this.openModal('none');
+      });
+    }
 
     const coordinatorActions: Record<string, () => void> = {
       'open-index': () => this.toggleModal('index'),
       'open-settings': () => this.toggleModal('settings'),
+      'toggle-camera-lock': () => {
+        const next = gameSettings.update({ cameraLocked: !gameSettings.get().cameraLocked });
+        audio.playSfx('ui-tab');
+        this.pushToast(next.cameraLocked ? 'Camera Locked (Zoom Only)' : 'Camera Unlocked');
+        this.render();
+      },
       'open-bounties': () => this.toggleModal('bounties'),
       'open-daily-login': () => this.toggleModal('daily-login'),
       'toggle-audio': () => {
@@ -1001,7 +1070,7 @@ export class GameHud {
         if (upgrades > 0) {
           audio.playSfx('upgrade');
           this.pushToast(`Starred up ${upgrades}x!`);
-          this.collectionUi.updateInventoryModalLive(this.root);
+          this.inventoryUi.updateLive(this.root);
         } else {
           audio.playSfx('ui-error');
           this.pushToast('No Chibi has enough spare duplicates!');
@@ -1058,7 +1127,9 @@ export class GameHud {
     this.upgradesUi.bindWorldsEvents(this.root);
     this.weatherDpsUi.bindEvents(this.root);
     this.altarShopUi.bindEvents(this.root);
-    this.collectionUi.bindEvents(this.root);
+    this.indexUi.bindEvents(this.root);
+    this.inventoryUi.bindEvents(this.root);
+    this.chestUi.bindEvents(this.root);
     this.forgeUi.bindEvents(this.root);
     this.shopUi.bindEvents(this.root);
     this.towerUi.bindHubEvents(this.root);
