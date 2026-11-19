@@ -2534,18 +2534,23 @@ describe('Pure 3D Mine World', () => {
     fusionWorld.syncRecipe(recipe, [true, true], [true, true], true);
     fusionWorld.update(0.05, 1.0, cam);
 
-    // Trigger 3-phase Fusion animation -> levitation -> portal flash -> central descent & shatter -> complete callback
+    // Trigger 4-act Fusion animation -> levitation -> portal supernova -> central descent & dual shatter -> complete callback + reveal hold
     let completed = false;
     fusionWorld.triggerFusionAnimation(recipe, () => {
       completed = true;
     });
     expect(fusionWorld.isAnimating()).toBe(true);
+    expect(fusionWorld.getCameraFocusState().active).toBe(true);
 
-    for (let i = 0; i < 32; i++) {
+    for (let i = 0; i < 80; i++) {
       fusionWorld.update(0.05, 1.1 + i * 0.05, cam);
     }
     expect(completed).toBe(true);
     expect(fusionWorld.isAnimating()).toBe(false);
+    expect(fusionWorld.isRevealHolding()).toBe(true);
+    expect(fusionWorld.getCameraFocusState().active).toBe(true);
+    fusionWorld.setRevealHold(false);
+    expect(fusionWorld.getCameraFocusState().active).toBe(false);
 
     expect(() => fusionWorld.dispose()).not.toThrow();
   });

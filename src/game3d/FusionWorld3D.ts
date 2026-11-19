@@ -231,9 +231,13 @@ export class FusionWorld3D {
   private readonly orbGeo = new THREE.SphereGeometry(0.18, 10, 10);
   private readonly energyOrbs: EnergyOrb[] = [];
   private fusionAnimTimer = 0;
-  private readonly fusionAnimDur = 1.35;
+  private readonly fusionAnimDur = 3.45;
   private portalBurstFired = false;
   private fusionBurstFired = false;
+  private landingEchoFired = false;
+  private revealHold = false;
+  private readonly camFocusPos = new THREE.Vector3();
+  private readonly camFocusLook = new THREE.Vector3();
   private fusionAccentHex = '#22d3ee';
   private fusionGlowHex = '#d946ef';
   private allRequirementsReady = false;
@@ -1382,12 +1386,55 @@ export class FusionWorld3D {
   public isAnimating(): boolean {
     return this.fusionAnimTimer > 0;
   }
+  public setRevealHold(active: boolean): void {
+    this.revealHold = active;
+    if (!active && this.fusionAnimTimer <= 0) {
+      for (const slot of this.materialSlots) {
+        if (slot.sprite) {
+          slot.sprite.group.position.set(0, 0.285, 0);
+          slot.sprite.group.scale.setScalar(1);
+        }
+      }
+    }
+  }
+  public isRevealHolding(): boolean {
+    return this.revealHold;
+  }
+  public getCameraFocusState(): {
+    active: boolean;
+    camPos: THREE.Vector3;
+    lookAt: THREE.Vector3;
+  } {
+    if (this.fusionAnimTimer > 0) {
+      const elapsedAnim = this.fusionAnimDur - this.fusionAnimTimer;
+      if (elapsedAnim < 1.72) {
+        // Act 1 & 2: Glide closer to frame the levitating Material Chibis converging into the Synchro Gate
+        const p = Math.min(1, elapsedAnim / 1.45);
+        this.camFocusPos.set(0, 7.2 - p * 1.1, 13.2 - p * 2.4);
+        this.camFocusLook.set(0, 1.85 + p * 1.1, -1.6 - p * 2.1);
+      } else {
+        // Act 3: Heroic low-angle close-up on the Grand APEX Podium & spinning Synchro Gate Halo
+        this.camFocusPos.set(0, 3.35, 3.85);
+        this.camFocusLook.set(0, 2.55, STAGE_CENTER_Z - 0.35);
+      }
+      return { active: true, camPos: this.camFocusPos, lookAt: this.camFocusLook };
+    }
+    if (this.revealHold) {
+      this.camFocusPos.set(0, 3.35, 3.85);
+      this.camFocusLook.set(0, 2.55, STAGE_CENTER_Z - 0.35);
+      return { active: true, camPos: this.camFocusPos, lookAt: this.camFocusLook };
+    }
+    return { active: false, camPos: this.camFocusPos, lookAt: this.camFocusLook };
+  }
   public cancelAnimation(): void {
     this.fusionAnimTimer = 0;
     this.portalBurstFired = false;
     this.fusionBurstFired = false;
+    this.landingEchoFired = false;
+    this.revealHold = false;
     this.portalFlashTimer = 0;
     this.portalFlashMesh.visible = false;
+    this.portalVortexMesh.scale.setScalar(1);
     this.onFusionAnimComplete = null;
     this.resultMount.visible = true;
     for (const slot of this.materialSlots) {
@@ -1606,7 +1653,6 @@ export class FusionWorld3D {
       const resDef = getChibiById(recipe.resultChibiId);
       if (resDef) {
         const sp = new ChibiSprite3D(resDef, 2.95);
-        sp.setAnimState('aura');
         sp.setAccentColor(recipe.accentColor);
         this.resultMount.add(sp.group);
         this.resultSprite = sp;
@@ -1620,12 +1666,13 @@ export class FusionWorld3D {
     this.fusionAnimTimer = this.fusionAnimDur;
     this.portalBurstFired = false;
     this.fusionBurstFired = false;
+    this.landingEchoFired = false;
     this.onFusionAnimComplete = onComplete;
     this.resultMount.visible = false;
     const count = recipe.requiredMiners.length;
     for (let s = 0; s < count; s++) {
       const slot = this.materialSlots[s];
-      for (let k = 0; k < 6; k++) {
+      for (let k = 0; k < 8; k++) {
         const mat = new THREE.MeshBasicMaterial({
           color: k % 2 === 0 ? recipe.accentColor : '#fef08a',
           transparent: true,
@@ -1638,9 +1685,9 @@ export class FusionWorld3D {
           .clone()
           .add(
             new THREE.Vector3(
-              (Math.random() - 0.5) * 0.45,
-              1.35 + Math.random() * 0.35,
-              (Math.random() - 0.5) * 0.45
+              (Math.random() - 0.5) * 0.55,
+              1.65 + Math.random() * 0.45,
+              (Math.random() - 0.5) * 0.55
             )
           );
         mesh.position.copy(startPos);
@@ -1651,9 +1698,9 @@ export class FusionWorld3D {
           mat,
           from: startPos,
           to: PORTAL_CENTER.clone(),
-          age: -(0.28 + k * 0.06),
-          dur: 0.46,
-          arcH: 1.1 + Math.random() * 0.8,
+          age: -(0.78 + k * 0.08),
+          dur: 0.68,
+          arcH: 1.35 + Math.random() * 0.95,
         });
       }
     }
@@ -1789,19 +1836,26 @@ export class FusionWorld3D {
     }
     if (this.portalFlashTimer > 0) {
       this.portalFlashTimer = Math.max(0, this.portalFlashTimer - dt);
-      const fp = this.portalFlashTimer / 0.35;
+      const fp = this.portalFlashTimer / 0.55;
       this.portalFlashMesh.visible = fp > 0;
-      this.portalFlashMesh.scale.setScalar(1.0 + (1 - fp) * 1.45);
-      this.portalFlashMat.opacity = fp * 0.92;
+      this.portalFlashMesh.scale.setScalar(1.0 + (1 - fp) * 2.1);
+      this.portalFlashMat.opacity = fp * 0.96;
     }
     // 3. Animate Travelling Floor Conduit Pulses & ZZZ/HSR Material Podiums
     const elapsedAnim = isFusing ? this.fusionAnimDur - this.fusionAnimTimer : 0;
+    if (isFusing && elapsedAnim >= 1.35 && elapsedAnim < 1.72) {
+      // Anime Singularity Implosion hold right before portal supernova
+      const imp = (elapsedAnim - 1.35) / 0.37;
+      this.portalVortexMesh.scale.setScalar(1 - Math.sin(imp * Math.PI * 0.5) * 0.46);
+    } else {
+      this.portalVortexMesh.scale.setScalar(1);
+    }
     for (let i = 0; i < this.materialSlots.length; i++) {
       const slot = this.materialSlots[i];
       if (!slot.podium.group.visible) continue;
       this.stepPodiumAura(slot.podium, elapsed + i * 0.65);
       slot.holoGridRing.rotation.z = elapsed * 1.4;
-      const flowSpeed = isFusing ? 3.6 : this.allRequirementsReady ? 1.7 : slot.ready ? 1.0 : 0.35;
+      const flowSpeed = isFusing ? 4.2 : this.allRequirementsReady ? 1.7 : slot.ready ? 1.0 : 0.35;
       for (let p = 0; p < slot.conduitPulseMeshes.length; p++) {
         const pulseMesh = slot.conduitPulseMeshes[p];
         const phase = ((elapsed * flowSpeed + p * 0.5 + i * 0.25) % 1 + 1) % 1;
@@ -1810,18 +1864,22 @@ export class FusionWorld3D {
       }
       if (slot.sprite) {
         if (isFusing) {
-          if (elapsedAnim < 0.38) {
-            const lp = elapsedAnim / 0.38;
+          if (elapsedAnim < 0.85) {
+            // Act 1: Dramatic levitation & overdrive charge
+            const lp = elapsedAnim / 0.85;
             const ease = lp * (2 - lp);
-            slot.sprite.group.position.set(0, 0.285 + ease * 1.38, 0);
-            slot.sprite.group.scale.setScalar(1 + ease * 0.12);
-          } else if (elapsedAnim < 0.76) {
-            const sp = (elapsedAnim - 0.38) / 0.38;
-            slot.sprite.group.position.set(0, 1.66 + sp * 0.45, -sp * 0.85);
-            slot.sprite.group.scale.setScalar(Math.max(0.01, 1.12 * (1 - sp)));
+            slot.sprite.group.position.set(0, 0.285 + ease * 1.65, 0);
+            slot.sprite.group.scale.setScalar(1 + ease * 0.16);
+          } else if (elapsedAnim < 1.45) {
+            // Act 2: Morph into light streams & suction into the Synchro Gate
+            const sp = (elapsedAnim - 0.85) / 0.6;
+            slot.sprite.group.position.set(0, 1.93 + sp * 0.75, -sp * 1.45);
+            slot.sprite.group.scale.setScalar(Math.max(0.01, 1.16 * (1 - sp)));
           } else {
             slot.sprite.group.scale.setScalar(0.001);
           }
+        } else if (this.revealHold) {
+          slot.sprite.group.scale.setScalar(0.001);
         } else {
           slot.sprite.group.position.set(0, 0.285, 0);
           slot.sprite.group.scale.setScalar(1);
@@ -1857,12 +1915,12 @@ export class FusionWorld3D {
     this.updateFusionNpcs(dt, elapsed, camera);
     // 6. Levitate or Descend Result Fusion Chibi on Grand Apex Podium
     const popScale =
-      this.revealPopTimer > 0 ? 1 + Math.sin((this.revealPopTimer / 0.48) * Math.PI) * 0.26 : 1;
+      this.revealPopTimer > 0 ? 1 + Math.sin((this.revealPopTimer / 0.58) * Math.PI) * 0.28 : 1;
     if (this.revealPopTimer > 0) this.revealPopTimer = Math.max(0, this.revealPopTimer - dt);
-    if (isFusing && elapsedAnim >= 0.82) {
-      const descendP = Math.min(1, (elapsedAnim - 0.82) / 0.36);
+    if (isFusing && elapsedAnim >= 1.98) {
+      const descendP = Math.min(1, (elapsedAnim - 1.98) / 0.42);
       const easeOut = 1 - Math.pow(1 - descendP, 3);
-      this.resultMount.position.y = THREE.MathUtils.lerp(3.55, DAIS_TOP_Y + 0.04, easeOut);
+      this.resultMount.position.y = THREE.MathUtils.lerp(4.25, DAIS_TOP_Y + 0.04, easeOut);
     } else {
       this.resultMount.position.y = DAIS_TOP_Y + 0.04 + Math.sin(elapsed * 2.4) * 0.08;
     }
@@ -1892,19 +1950,28 @@ export class FusionWorld3D {
         THREE.MathUtils.lerp(orb.from.y, orb.to.y, ease) + Math.sin(p * Math.PI) * orb.arcH,
         THREE.MathUtils.lerp(orb.from.z, orb.to.z, ease)
       );
-      orb.mesh.scale.setScalar(1.3 - p * 0.55);
-      orb.mat.opacity = 1 - p * 0.3;
+      orb.mesh.scale.setScalar(1.35 - p * 0.55);
+      orb.mat.opacity = 1 - p * 0.28;
     }
-    // 8. Step 3-Phase Fusion Climax Sequence
+    // 8. Step 4-Act Fusion Climax Sequence
     if (this.fusionAnimTimer > 0) {
       this.fusionAnimTimer = Math.max(0, this.fusionAnimTimer - dt);
       const curAnim = this.fusionAnimDur - this.fusionAnimTimer;
-      // Phase 2 Climax (0.68s): Synchro Portal flash + discharge stream from Portal to Grand Apex Podium
-      if (!this.portalBurstFired && curAnim >= 0.68) {
+      // Act 2 Climax (1.72s): Portal Supernova Eruption + discharge stream from Portal to Grand Apex Podium
+      if (!this.portalBurstFired && curAnim >= 1.72) {
         this.portalBurstFired = true;
-        this.portalFlashTimer = 0.35;
+        this.portalFlashTimer = 0.55;
         this.portalFlashMesh.visible = true;
-        for (let k = 0; k < 5; k++) {
+        this.impactFx.spawnShatter({
+          targetX: PORTAL_CENTER.x,
+          targetY: PORTAL_CENTER.y,
+          targetZ: PORTAL_CENTER.z + 0.35,
+          oreColor: '#fef08a',
+          secondaryColor: this.fusionAccentHex,
+          isMeteor: true,
+          camera,
+        });
+        for (let k = 0; k < 8; k++) {
           const mat = new THREE.MeshBasicMaterial({
             color: k % 2 === 0 ? '#ffffff' : this.fusionAccentHex,
             transparent: true,
@@ -1920,21 +1987,20 @@ export class FusionWorld3D {
             mat,
             from: PORTAL_CENTER.clone(),
             to: new THREE.Vector3(0, DAIS_TOP_Y + 1.05, STAGE_CENTER_Z),
-            age: -k * 0.03,
-            dur: 0.22,
-            arcH: 0.55,
+            age: -k * 0.035,
+            dur: 0.32,
+            arcH: 0.75,
           });
         }
       }
-      // Phase 3 Climax (0.85s): Result unit descends onto Grand Apex Podium + 5-layer Shatter Nova
-      if (!this.fusionBurstFired && curAnim >= 0.85) {
+      // Act 3 Climax (2.02s): Result unit descends into the skyward beam + initial Shatter Nova
+      if (!this.fusionBurstFired && curAnim >= 2.02) {
         this.fusionBurstFired = true;
         this.resultMount.visible = true;
-        this.revealPopTimer = 0.48;
-        this.resultSprite?.triggerShowcase(1.25);
+        this.revealPopTimer = 0.58;
         this.impactFx.spawnShatter({
           targetX: 0,
-          targetY: DAIS_TOP_Y + 1.05,
+          targetY: DAIS_TOP_Y + 1.15,
           targetZ: STAGE_CENTER_Z,
           oreColor: this.fusionAccentHex,
           secondaryColor: this.fusionGlowHex,
@@ -1942,14 +2008,22 @@ export class FusionWorld3D {
           camera,
         });
       }
+      // Act 3 Hero Landing Impact (2.38s): Second 5-layer Shatter Nova as feet touch down on APEX podium
+      if (!this.landingEchoFired && curAnim >= 2.38) {
+        this.landingEchoFired = true;
+        this.impactFx.spawnShatter({
+          targetX: 0,
+          targetY: DAIS_TOP_Y + 0.65,
+          targetZ: STAGE_CENTER_Z,
+          oreColor: '#fef08a',
+          secondaryColor: this.fusionAccentHex,
+          isMeteor: true,
+          camera,
+        });
+      }
       if (this.fusionAnimTimer <= 0) {
         this.resultMount.visible = true;
-        for (const slot of this.materialSlots) {
-          if (slot.sprite) {
-            slot.sprite.group.position.set(0, 0.285, 0);
-            slot.sprite.group.scale.setScalar(1);
-          }
-        }
+        this.revealHold = true;
         const cb = this.onFusionAnimComplete;
         this.onFusionAnimComplete = null;
         cb?.();

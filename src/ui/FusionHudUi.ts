@@ -18,6 +18,8 @@ const FUSION_GATE_ICON_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fi
 export class FusionHudUi {
   private selectedRecipeId: string = FUSION_RECIPES[0]?.id ?? 'fusion-glitch-cheshire';
   private fusing = false;
+  private revealedRecipe: FusionRecipeDef | null = null;
+  private sfxTimers: number[] = [];
 
   constructor(
     private readonly state: GameState,
@@ -31,7 +33,8 @@ export class FusionHudUi {
       oreReadyFlags?: readonly boolean[],
       canFuse?: boolean
     ) => void,
-    private readonly onTriggerFusion3D?: (recipe: FusionRecipeDef, onComplete: () => void) => void
+    private readonly onTriggerFusion3D?: (recipe: FusionRecipeDef, onComplete: () => void) => void,
+    private readonly onSetFusionRevealHold?: (active: boolean) => void
   ) {}
 
   public getSelectedRecipe(): FusionRecipeDef {
@@ -50,8 +53,18 @@ export class FusionHudUi {
     this.onSyncFusion3D?.(recipe, minerFlags, oreFlags, canFuse);
   }
 
+  private clearSfxTimers(): void {
+    for (const id of this.sfxTimers) {
+      window.clearTimeout(id);
+    }
+    this.sfxTimers.length = 0;
+  }
+
   public resetAnimating(): void {
+    this.clearSfxTimers();
     this.fusing = false;
+    this.revealedRecipe = null;
+    this.onSetFusionRevealHold?.(false);
   }
 
   /** Choice popup shown when clicking the Plaza Altar station or Enhance dock button. */
@@ -235,6 +248,105 @@ export class FusionHudUi {
         ? 'mam-sheen-hover border-emerald-300 bg-[linear-gradient(135deg,#22c55e_0%,#059669_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.42),0_4px_0_#064e3b,0_10px_24px_-4px_rgba(34,197,94,0.55)] hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.97] cursor-pointer'
         : 'border-[#33466b] bg-[#1a243b] text-slate-400 cursor-not-allowed';
 
+    const rev = this.revealedRecipe;
+    const revChibi = rev ? getChibiById(rev.resultChibiId) : null;
+
+    let bottomSectionHtml: string;
+    if (this.fusing) {
+      bottomSectionHtml = `
+        <div class="absolute bottom-5 left-1/2 -translate-x-1/2 w-[min(560px,calc(100%-24px))] pointer-events-none">
+          <div class="rounded-2xl border-2 px-5 py-3 bg-[linear-gradient(180deg,#16203d_0%,#090e1c_100%)] shadow-[0_0_28px_rgba(34,211,238,0.45),0_16px_36px_rgba(0,0,0,0.85)] flex items-center justify-center gap-3" style="border-color:${recipe.accentColor}">
+            <span class="w-3.5 h-3.5 rounded-full animate-ping shrink-0" style="background:${recipe.accentColor}"></span>
+            <span class="text-[14.5px] font-black tracking-wider uppercase text-white mam-outline-sm">
+              ✦ Synchro Fusion in Progress — Converging Quantum Cores... ✦
+            </span>
+          </div>
+        </div>
+      `;
+    } else if (rev) {
+      bottomSectionHtml = `
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-[min(560px,calc(100%-24px))] pointer-events-auto" data-fusion-reveal="true">
+          <div class="rarity-fusion rounded-2xl border-2 p-4 bg-[linear-gradient(165deg,#182447_0%,#090d1c_100%)] shadow-[0_0_36px_rgba(250,204,21,0.45),0_20px_48px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.28)] flex flex-col items-center text-center gap-2.5" style="border-color:${rev.accentColor}">
+            <div class="px-3.5 py-1 rounded-full bg-[#1f163d] border border-amber-300 text-[11.5px] font-black tracking-widest uppercase text-amber-200 shadow-[0_0_16px_rgba(250,204,21,0.4)] mam-outline-sm">
+              ✦ Synchro Fusion Complete! ✦
+            </div>
+            <div class="flex items-center gap-3.5 w-full bg-[#0b1224] border-2 rounded-2xl p-3 text-left" style="border-color:${rev.accentColor}">
+              <div class="w-[76px] h-[76px] rounded-xl border-2 border-amber-300 bg-[radial-gradient(circle_at_50%_45%,${rev.accentColor}66,#090d1a_82%)] shrink-0 flex items-center justify-center overflow-hidden shadow-[0_0_20px_${rev.accentColor}66] [&_.mam-chibi-portrait_img]:max-w-[94%] [&_.mam-chibi-portrait_img]:max-h-[94%]">
+                ${revChibi ? chibiPortraitHtml(revChibi, { usePose: true, draggable: false }) : ''}
+              </div>
+              <div class="flex-1 min-w-0 flex flex-col gap-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-[20px] font-black text-white leading-tight mam-outline-sm">${rev.title}</span>
+                  ${renderRarityBadgeHtml('fusion')}
+                </div>
+                <div class="text-[11.5px] font-bold text-slate-300">${rev.subtitle}</div>
+                <div class="flex items-center gap-2 flex-wrap mt-0.5">
+                  ${revChibi ? `<span class="px-2.5 py-0.5 rounded-lg bg-[#291d09] border border-amber-400 text-[12px] font-black tabular-nums text-amber-300 mam-outline-sm">⚡ ${fmtShort(revChibi.baseDps)}/s Base DPS</span>` : ''}
+                  <span class="px-2.5 py-0.5 rounded-lg bg-[#0d263d] border border-cyan-400 text-[12px] font-black text-cyan-200 mam-outline-sm">★ Passive: ${rev.passive.label}</span>
+                </div>
+              </div>
+            </div>
+            <div class="text-[11.5px] font-bold text-emerald-300">
+              Added to your Hotbar / Inventory — place on a Mine Plot to activate its Fusion Passive!
+            </div>
+            <button
+              type="button"
+              class="mam-sheen-hover relative overflow-hidden w-full py-2.5 px-6 rounded-xl border-2 border-amber-200 bg-[linear-gradient(135deg,#f59e0b_0%,#0284c7_55%,#9333ea_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_4px_0_#1e1b4b,0_10px_24px_-4px_rgba(250,204,21,0.55)] text-white text-[15px] font-black uppercase tracking-wider cursor-pointer transition-[transform,filter] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.97] mam-outline-sm"
+              data-action="dismiss-fusion-reveal"
+            >
+              Awesome! (Collect)
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      bottomSectionHtml = `
+        <div class="absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(1060px,calc(100%-24px))] flex flex-col gap-2 pointer-events-auto">
+          <div class="rounded-2xl border-2 bg-[linear-gradient(180deg,#141e36_0%,#090e1c_100%)] p-3 flex flex-col gap-2.5 shadow-[0_0_0_1px_#04070f,0_18px_40px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.18)]" style="border-color:${recipe.accentColor}">
+            <div class="flex items-center justify-between gap-2 flex-wrap border-b border-[#253657] pb-2">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-3 h-3 rounded-full shrink-0" style="background:${recipe.accentColor};box-shadow:0 0 10px ${recipe.accentColor}"></span>
+                <div class="flex flex-col min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[16px] font-black text-white leading-tight mam-outline-sm">${recipe.title}</span>
+                    ${renderRarityBadgeHtml('fusion')}
+                    <span class="px-2 py-0.5 rounded-lg bg-[#0d263d] border border-cyan-400 text-[11px] font-black text-cyan-200 mam-outline-sm">★ Passive: ${recipe.passive.label}</span>
+                    ${resChibi ? `<span class="text-[13px] font-black tabular-nums text-amber-300 mam-outline-sm">${fmtShort(resChibi.baseDps)}/s Base DPS</span>` : ''}
+                  </div>
+                  <span class="text-[11px] font-bold text-slate-300">${recipe.subtitle} • Owned: ${fmtInt(ownedRes)}</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 ${
+                  gemsOk ? 'border-sky-400 bg-[#0d223d] text-sky-200' : 'border-rose-400 bg-[#36101d] text-rose-200'
+                } text-[13px] font-black tabular-nums mam-outline-sm">
+                  ${hudIconHtml('gem', 18, 'Gems')}
+                  <span>${fmtInt(recipe.gemCost)}</span>
+                </div>
+                <button
+                  type="button"
+                  class="relative overflow-hidden px-6 py-2 rounded-xl border-2 text-white text-[15px] font-black uppercase tracking-wide transition-[transform,filter] duration-150 mam-outline-sm ${fuseBtnCls}"
+                  data-action="execute-fusion"
+                  ${!canFuse || this.fusing ? 'disabled' : ''}
+                >
+                  ${this.fusing ? 'SYNCHRONIZING...' : 'FUSE CHIBI'}
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+              ${minerChipsHtml}
+              ${oreChipsHtml}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-4 @max-[860px]:grid-cols-2 gap-2">
+            ${recipeCardsHtml}
+          </div>
+        </div>
+      `;
+    }
+
     return `
       ${opts.weatherHtml}
       <div class="${TW_TOP_CENTER} flex items-center gap-2.5">
@@ -248,49 +360,7 @@ export class FusionHudUi {
       ${opts.audioBtnHtml}
       ${opts.currencyRailHtml}
 
-      <div class="absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(1060px,calc(100%-24px))] flex flex-col gap-2 pointer-events-auto">
-        <div class="rounded-2xl border-2 bg-[linear-gradient(180deg,#141e36_0%,#090e1c_100%)] p-3 flex flex-col gap-2.5 shadow-[0_0_0_1px_#04070f,0_18px_40px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.18)]" style="border-color:${recipe.accentColor}">
-          <div class="flex items-center justify-between gap-2 flex-wrap border-b border-[#253657] pb-2">
-            <div class="flex items-center gap-2.5 min-w-0">
-              <span class="w-3 h-3 rounded-full shrink-0" style="background:${recipe.accentColor};box-shadow:0 0 10px ${recipe.accentColor}"></span>
-              <div class="flex flex-col min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="text-[16px] font-black text-white leading-tight mam-outline-sm">${recipe.title}</span>
-                  ${renderRarityBadgeHtml('fusion')}
-                  <span class="px-2 py-0.5 rounded-lg bg-[#0d263d] border border-cyan-400 text-[11px] font-black text-cyan-200 mam-outline-sm">★ Passive: ${recipe.passive.label}</span>
-                  ${resChibi ? `<span class="text-[13px] font-black tabular-nums text-amber-300 mam-outline-sm">${fmtShort(resChibi.baseDps)}/s Base DPS</span>` : ''}
-                </div>
-                <span class="text-[11px] font-bold text-slate-300">${recipe.subtitle} • Owned: ${fmtInt(ownedRes)}</span>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 ${
-                gemsOk ? 'border-sky-400 bg-[#0d223d] text-sky-200' : 'border-rose-400 bg-[#36101d] text-rose-200'
-              } text-[13px] font-black tabular-nums mam-outline-sm">
-                ${hudIconHtml('gem', 18, 'Gems')}
-                <span>${fmtInt(recipe.gemCost)}</span>
-              </div>
-              <button
-                type="button"
-                class="relative overflow-hidden px-6 py-2 rounded-xl border-2 text-white text-[15px] font-black uppercase tracking-wide transition-[transform,filter] duration-150 mam-outline-sm ${fuseBtnCls}"
-                data-action="execute-fusion"
-                ${!canFuse || this.fusing ? 'disabled' : ''}
-              >
-                ${this.fusing ? 'SYNCHRONIZING...' : 'FUSE CHIBI'}
-              </button>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2 flex-wrap">
-            ${minerChipsHtml}
-            ${oreChipsHtml}
-          </div>
-        </div>
-
-        <div class="grid grid-cols-4 @max-[860px]:grid-cols-2 gap-2">
-          ${recipeCardsHtml}
-        </div>
-      </div>
+      ${bottomSectionHtml}
 
       ${opts.toastStackHtml}
     `;
@@ -321,6 +391,14 @@ export class FusionHudUi {
       });
     });
 
+    root.querySelector('[data-action="dismiss-fusion-reveal"]')?.addEventListener('click', () => {
+      audio.playSfx('coin-alt', { volume: 0.75 });
+      this.revealedRecipe = null;
+      this.onSetFusionRevealHold?.(false);
+      this.syncCurrentRecipeTo3D();
+      this.onRequestRender();
+    });
+
     root.querySelector('[data-action="execute-fusion"]')?.addEventListener('click', () => {
       if (this.fusing) return;
       const recipe = this.getSelectedRecipe();
@@ -330,21 +408,40 @@ export class FusionHudUi {
         return;
       }
 
+      this.clearSfxTimers();
       this.fusing = true;
+      this.revealedRecipe = null;
+      audio.playEnchantSpinStart();
       audio.playSfx('teleport', { volume: 0.65 });
       this.onRequestRender();
 
+      // Multi-beat audio choreography matching Act 2 Portal Supernova (1.72s) & Act 3 Apex Landing (2.05s)
+      this.sfxTimers.push(
+        window.setTimeout(() => {
+          if (!this.fusing) return;
+          audio.playOreBreak('geode');
+        }, 1720),
+        window.setTimeout(() => {
+          if (!this.fusing) return;
+          audio.playEnchantSpinLand(true);
+          audio.playSfx('rare-fanfare', { volume: 0.85 });
+        }, 2050)
+      );
+
       const finish = (): void => {
+        this.clearSfxTimers();
         this.fusing = false;
         const result = this.state.fuseChibiRecipe(recipe.id);
         if (result) {
-          audio.playSfx('coin-alt', { volume: 0.8 });
-          this.pushToast(`Fused ${result.title}! Check your Hotbar / Inventory!`);
+          this.revealedRecipe = result;
+          this.onSetFusionRevealHold?.(true);
+          this.pushToast(`✦ Fused ${result.title}! (${result.passive.label})`);
         } else {
           audio.playSfx('ui-error');
+          this.onSetFusionRevealHold?.(false);
           this.pushToast('Fusion failed — requirements changed.');
+          this.syncCurrentRecipeTo3D();
         }
-        this.syncCurrentRecipeTo3D();
         this.onRequestRender();
       };
 

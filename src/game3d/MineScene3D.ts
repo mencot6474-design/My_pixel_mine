@@ -673,7 +673,13 @@ export class MineScene3D {
     this.chestVisual.setInteraction(this.crateHovered, this.crateBounce, this.elapsed);
 
     const damp = 1 - Math.exp(-dtSec * 16);
-    if (this.focusedPlotIndex !== null && this.pedestals[this.focusedPlotIndex]) {
+    const fusionCam = this.mode === 'fusion' ? this.fusionWorld.getCameraFocusState() : null;
+    if (fusionCam?.active) {
+      const cineDamp = 1 - Math.exp(-dtSec * 6.5);
+      this.camera.position.lerp(fusionCam.camPos, cineDamp);
+      this.currentLookAt.lerp(fusionCam.lookAt, cineDamp);
+      this.camera.lookAt(this.currentLookAt);
+    } else if (this.focusedPlotIndex !== null && this.pedestals[this.focusedPlotIndex]) {
       const pPos = this.pedestals[this.focusedPlotIndex].group.position;
       const targetCam = new THREE.Vector3(pPos.x, pPos.y + 1.45, pPos.z + 3.85);
       const targetLook = new THREE.Vector3(pPos.x, pPos.y + 1.05, pPos.z);
@@ -751,9 +757,13 @@ export class MineScene3D {
       this.callbacks.onShopAnchors?.([]);
       this.callbacks.onAltarAnchors?.([]);
       this.callbacks.onTowerOreBars?.([]);
-      const w = this.mountEl.clientWidth || 1;
-      const h = this.mountEl.clientHeight || 1;
-      this.callbacks.onShopChibiBubbles?.(this.fusionWorld.getNpcBubbleAnchors(this.camera, w, h));
+      if (this.fusionWorld.isAnimating() || this.fusionWorld.isRevealHolding()) {
+        this.callbacks.onShopChibiBubbles?.([]);
+      } else {
+        const w = this.mountEl.clientWidth || 1;
+        const h = this.mountEl.clientHeight || 1;
+        this.callbacks.onShopChibiBubbles?.(this.fusionWorld.getNpcBubbleAnchors(this.camera, w, h));
+      }
     } else {
       this.callbacks.onPlotAnchors?.([]);
       this.callbacks.onOreBars?.([]);
@@ -1041,6 +1051,10 @@ export class MineScene3D {
 
   public triggerFusionAnimation(recipe: FusionRecipeDef, onComplete: () => void): void {
     this.fusionWorld.triggerFusionAnimation(recipe, onComplete);
+  }
+
+  public setFusionRevealHold(active: boolean): void {
+    this.fusionWorld.setRevealHold(active);
   }
 
   public isFusionAnimating(): boolean {

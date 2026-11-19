@@ -108,6 +108,7 @@ export class GameHud {
         canFuse?: boolean
       ) => void;
       triggerFusionAnimation: (recipe: FusionRecipeDef, onComplete: () => void) => void;
+      setFusionRevealHold?: (active: boolean) => void;
     }
   ) {
     this.shopUi = new ShopModalsUi(this.state, (msg) => this.pushToast(msg));
@@ -202,7 +203,8 @@ export class GameHud {
       (mode) => this.setSceneMode(mode),
       () => this.openModal('none'),
       this.fusionOps?.syncFusionRecipe,
-      this.fusionOps?.triggerFusionAnimation
+      this.fusionOps?.triggerFusionAnimation,
+      this.fusionOps?.setFusionRevealHold
     );
     this.worldOverlayUi = new WorldOverlayHudUi(
       this.state,

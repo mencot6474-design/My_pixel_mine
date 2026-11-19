@@ -241,6 +241,7 @@ async function bootstrap(): Promise<void> {
       syncFusionRecipe: (recipe, readyFlags, oreReadyFlags, canFuse) =>
         scene.syncFusionRecipe(recipe, readyFlags, oreReadyFlags, canFuse),
       triggerFusionAnimation: (recipe, onComplete) => scene.triggerFusionAnimation(recipe, onComplete),
+      setFusionRevealHold: (active) => scene.setFusionRevealHold(active),
     }
   );
 
