@@ -529,7 +529,7 @@ export class MineScene3D {
       (e) => {
         if (this.adPaused) return;
         e.preventDefault();
-        const maxRad = this.mode === 'shop' ? 38 : 28;
+        const maxRad = this.mode === 'shop' ? 38 : this.mode === 'fusion' ? 34 : 28;
         this.targetCamRadius = Math.max(9, Math.min(maxRad, this.targetCamRadius + e.deltaY * 0.01));
       },
       { passive: false }
@@ -740,14 +740,25 @@ export class MineScene3D {
       this.callbacks.onPlotAnchors?.([]);
       this.callbacks.onOreBars?.([]);
       this.callbacks.onShopAnchors?.([]);
+      this.callbacks.onShopChibiBubbles?.([]);
       this.callbacks.onAltarAnchors?.([]);
       const w = this.mountEl.clientWidth || 1;
       const h = this.mountEl.clientHeight || 1;
       this.callbacks.onTowerOreBars?.(this.towerArena.getAliveOreScreenBars(this.camera, w, h, this.projVec));
+    } else if (this.mode === 'fusion') {
+      this.callbacks.onPlotAnchors?.([]);
+      this.callbacks.onOreBars?.([]);
+      this.callbacks.onShopAnchors?.([]);
+      this.callbacks.onAltarAnchors?.([]);
+      this.callbacks.onTowerOreBars?.([]);
+      const w = this.mountEl.clientWidth || 1;
+      const h = this.mountEl.clientHeight || 1;
+      this.callbacks.onShopChibiBubbles?.(this.fusionWorld.getNpcBubbleAnchors(this.camera, w, h));
     } else {
       this.callbacks.onPlotAnchors?.([]);
       this.callbacks.onOreBars?.([]);
       this.callbacks.onShopAnchors?.([]);
+      this.callbacks.onShopChibiBubbles?.([]);
       this.callbacks.onAltarAnchors?.([]);
       this.callbacks.onTowerOreBars?.([]);
     }
@@ -875,11 +886,11 @@ export class MineScene3D {
       this.lookAtPos.set(0, 1.05, -2.4);
     } else if (mode === 'fusion') {
       this.scene.background = new THREE.Color(0x040614);
-      this.scene.fog = new THREE.Fog(0x060a1f, 26, 78);
+      this.scene.fog = new THREE.Fog(0x060a1f, 34, 96);
       this.targetOrbitYaw = 0;
-      this.targetOrbitPitch = -0.22;
-      this.targetCamRadius = 11.4;
-      this.lookAtPos.set(0, 1.3, -0.35);
+      this.targetOrbitPitch = -0.14;
+      this.targetCamRadius = 15.8;
+      this.lookAtPos.set(0, 1.45, -0.75);
     } else if (mode === 'tower') {
       this.scene.background = new THREE.Color(0x030714);
       this.scene.fog = new THREE.Fog(0x050b1c, 26, 76);
@@ -1019,8 +1030,13 @@ export class MineScene3D {
     return this.shopWorld.isSpinning();
   }
 
-  public syncFusionRecipe(recipe: FusionRecipeDef, readyFlags: readonly boolean[]): void {
-    this.fusionWorld.syncRecipe(recipe, readyFlags);
+  public syncFusionRecipe(
+    recipe: FusionRecipeDef,
+    readyFlags: readonly boolean[],
+    oreReadyFlags?: readonly boolean[],
+    canFuse?: boolean
+  ): void {
+    this.fusionWorld.syncRecipe(recipe, readyFlags, oreReadyFlags, canFuse);
   }
 
   public triggerFusionAnimation(recipe: FusionRecipeDef, onComplete: () => void): void {

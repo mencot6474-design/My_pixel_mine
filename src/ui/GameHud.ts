@@ -101,7 +101,12 @@ export class GameHud {
     private readonly onTutorialComplete?: () => void,
     private readonly onOverclockChange?: (active: boolean) => void,
     private readonly fusionOps?: {
-      syncFusionRecipe: (recipe: FusionRecipeDef, readyFlags: readonly boolean[]) => void;
+      syncFusionRecipe: (
+        recipe: FusionRecipeDef,
+        readyFlags: readonly boolean[],
+        oreReadyFlags?: readonly boolean[],
+        canFuse?: boolean
+      ) => void;
       triggerFusionAnimation: (recipe: FusionRecipeDef, onComplete: () => void) => void;
     }
   ) {
@@ -252,6 +257,8 @@ export class GameHud {
 
       if (this.sceneMode === 'altar') {
         this.altarShopUi.updateAltarLiveValues(this.root);
+      } else if (this.sceneMode === 'fusion') {
+        this.fusionUi.syncCurrentRecipeTo3D();
       } else if (this.sceneMode === 'tower') {
         this.towerUi.updateLiveValues(this.root);
       } else if (this.activeModal === 'chest') {

@@ -43,6 +43,7 @@ import {
   RESEARCH_NODES,
 } from '../src/game/ResearchData';
 import { GameState, getChibiUpgradeCostMult } from '../src/game/GameState';
+import { FUSION_RECIPES } from '../src/game/FusionData';
 import { MAX_EQUIPPED_RELICS, RELICS } from '../src/game/RelicData';
 import { rollWeatherDef, WEATHER_DURATION_MS, WEATHERS } from '../src/game/WeatherData';
 import { fmtMoney, fmtShort } from '../src/game/NumberFormat';
@@ -70,12 +71,14 @@ import {
 } from '../src/game3d/ChestVaultStation3D';
 import { ChibiSprite3D } from '../src/game3d/ChibiSprite3D';
 import { ChibiFieldFxController, FieldMiner3D } from '../src/game3d/FieldMiner3D';
+import { FusionWorld3D } from '../src/game3d/FusionWorld3D';
 import { MineEnvironment3D } from '../src/game3d/MineEnvironment3D';
 import { DEFAULT_WORLD_PALETTE, rollOreVariant, STAGE_PEDESTAL_COUNT } from '../src/game3d/MineWorldPalette';
 import { applyNodeDamagePure, BASE_ORE_RESPAWN_SEC, OrePit3D, PIT_NODE_COUNT } from '../src/game3d/OrePit3D';
 import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
 import {
   getDualSlashArcTexture,
+  getFusionMagicCircuitTexture,
   getHitSparkStarTexture,
   getShockwaveRingTexture,
   getSparkStreakTexture,
@@ -2506,5 +2509,44 @@ describe('Pure 3D Mine World', () => {
     expect(fx.getActiveParticleCount()).toBe(120);
 
     fx.dispose();
+  });
+
+  it('builds FusionWorld3D with Synchro Portal triple rings, ore crystal clusters, floating islands, hologram preview, NPC bubbles, and 3-phase fusion animation', () => {
+    expect(getFusionMagicCircuitTexture()).toBeInstanceOf(THREE.Texture);
+
+    const fusionWorld = new FusionWorld3D();
+    fusionWorld.group.visible = true;
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(0, 6.2, 11.4);
+    cam.lookAt(0, 1.3, -0.35);
+    cam.updateMatrixWorld();
+
+    // Unready recipe -> hologram mode on missing slot, dormant crimson status, NPC speech bubbles active
+    const recipe = FUSION_RECIPES[0];
+    fusionWorld.syncRecipe(recipe, [false, true], [false, true], false);
+    fusionWorld.update(0.05, 0.5, cam);
+
+    const bubbles = fusionWorld.getNpcBubbleAnchors(cam, 1280, 720);
+    expect(bubbles.length).toBeGreaterThan(0);
+    expect(bubbles[0].text.length).toBeGreaterThan(3);
+
+    // Ready recipe -> switches to ready cyan/gold state
+    fusionWorld.syncRecipe(recipe, [true, true], [true, true], true);
+    fusionWorld.update(0.05, 1.0, cam);
+
+    // Trigger 3-phase Fusion animation -> levitation -> portal flash -> central descent & shatter -> complete callback
+    let completed = false;
+    fusionWorld.triggerFusionAnimation(recipe, () => {
+      completed = true;
+    });
+    expect(fusionWorld.isAnimating()).toBe(true);
+
+    for (let i = 0; i < 32; i++) {
+      fusionWorld.update(0.05, 1.1 + i * 0.05, cam);
+    }
+    expect(completed).toBe(true);
+    expect(fusionWorld.isAnimating()).toBe(false);
+
+    expect(() => fusionWorld.dispose()).not.toThrow();
   });
 });

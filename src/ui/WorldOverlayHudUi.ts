@@ -451,7 +451,7 @@ export class WorldOverlayHudUi {
   public updateShopChibiBubbles(bubbles: ShopChibiBubbleAnchor[]): void {
     if (!this.shopBubbleLayerEl) return;
     const { sceneMode, activeModal } = this.getUiContext();
-    if (sceneMode !== 'shop' || activeModal !== 'none' || bubbles.length === 0) {
+    if ((sceneMode !== 'shop' && sceneMode !== 'fusion') || activeModal !== 'none' || bubbles.length === 0) {
       if (this.shopBubbleLayerEl.innerHTML !== '') {
         this.shopBubbleLayerEl.innerHTML = '';
         this.shopBubbleLayerEl.dataset.keys = '';

@@ -122,6 +122,8 @@ export class ChibiSprite3D {
   private attackComboStep = 0;
   private nextComboStep = 0;
   private idlePixelHeight: number | null = null;
+  private hologramMode = false;
+  private hologramTintHex = '#38bdf8';
   private disposed = false;
 
   constructor(def: ChibiDef, spriteHeight = 1.24, phaseOffset = 0) {
@@ -261,12 +263,14 @@ export class ChibiSprite3D {
       }
 
       this.material.map = meta.texture;
-      this.material.opacity = 1;
+      this.material.color.set(this.hologramMode ? this.hologramTintHex : '#ffffff');
+      this.material.opacity = this.hologramMode ? 0.52 : 1;
+      this.material.depthWrite = !this.hologramMode;
       this.material.needsUpdate = true;
 
       this.depthMaterial.map = meta.texture;
       this.depthMaterial.needsUpdate = true;
-      this.mesh.castShadow = true;
+      this.mesh.castShadow = !this.hologramMode;
     } catch {
       // Keep previous texture if asset fails to load
     }
@@ -304,6 +308,24 @@ export class ChibiSprite3D {
     for (const gm of this.ghostMats) {
       gm.color.set(hex);
     }
+  }
+
+  public setHologramMode(enabled: boolean, tintHex = '#38bdf8'): void {
+    this.hologramMode = enabled;
+    this.hologramTintHex = tintHex;
+    this.material.color.set(enabled ? tintHex : '#ffffff');
+    this.material.depthWrite = !enabled;
+    if (this.material.map) {
+      this.material.opacity = enabled ? 0.52 : 1;
+    } else if (enabled) {
+      this.material.opacity = 0.52;
+    }
+    this.mesh.castShadow = !enabled && Boolean(this.material.map);
+    this.material.needsUpdate = true;
+  }
+
+  public isHologramMode(): boolean {
+    return this.hologramMode;
   }
 
   public getComboStep(): number {
@@ -547,7 +569,10 @@ export class ChibiSprite3D {
     this.shadowDisc.position.x = Math.cos(yaw) * posX * 0.65;
     this.shadowDisc.position.z = -Math.sin(yaw) * posX * 0.65;
     this.shadowDisc.scale.setScalar(shadowScale * (0.86 + 0.14 * heightFactor));
-    this.shadowMat.opacity = this.baseShadowOpacity * heightFactor;
+    this.shadowMat.opacity = this.baseShadowOpacity * heightFactor * (this.hologramMode ? 0.32 : 1);
+    if (this.hologramMode && this.material.map) {
+      this.material.opacity = 0.45 + Math.sin(elapsed * 4.5 + this.phaseOffset) * 0.1;
+    }
   }
 
   public dispose(): void {

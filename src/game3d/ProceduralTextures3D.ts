@@ -578,3 +578,128 @@ export function getSparkStreakTexture(): THREE.Texture {
     ctx.fill();
   });
 }
+
+/** Cyber-arcane magic circle & circuit grid floor texture for the 3D Fusion World altar deck. */
+export function getFusionMagicCircuitTexture(): THREE.Texture {
+  return paintCachedTexture('fusion-magic-circuit-v1', 512, 512, 1, 1, [255, 255, 255, 0], (ctx) => {
+    ctx.clearRect(0, 0, 512, 512);
+    const mid = 256;
+
+    // Soft radial circuit glow base
+    const glow = ctx.createRadialGradient(mid, mid, 24, mid, mid, 244);
+    glow.addColorStop(0.0, 'rgba(255, 255, 255, 0.24)');
+    glow.addColorStop(0.55, 'rgba(255, 255, 255, 0.12)');
+    glow.addColorStop(0.88, 'rgba(255, 255, 255, 0.22)');
+    glow.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(mid, mid, 244, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Concentric circuit rings
+    const radii = [74, 118, 168, 214, 236];
+    for (let i = 0; i < radii.length; i++) {
+      ctx.strokeStyle = i % 2 === 0 ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.48)';
+      ctx.lineWidth = i === 3 ? 3.2 : 1.8;
+      ctx.beginPath();
+      ctx.arc(mid, mid, radii[i], 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Dual rotated octagonal cyber-magic sigil frames
+    for (let rot = 0; rot < 2; rot++) {
+      const offset = rot * (Math.PI / 8);
+      const r = rot === 0 ? 192 : 146;
+      ctx.strokeStyle = rot === 0 ? 'rgba(255, 255, 255, 0.72)' : 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      for (let s = 0; s <= 8; s++) {
+        const a = (s / 8) * Math.PI * 2 + offset;
+        const x = mid + Math.cos(a) * r;
+        const y = mid + Math.sin(a) * r;
+        if (s === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // 16 radial circuit traces & terminal nodes
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      const r0 = i % 2 === 0 ? 74 : 118;
+      const r1 = i % 2 === 0 ? 236 : 214;
+      ctx.strokeStyle = i % 2 === 0 ? 'rgba(255, 255, 255, 0.78)' : 'rgba(255, 255, 255, 0.42)';
+      ctx.lineWidth = i % 2 === 0 ? 2.2 : 1.4;
+      ctx.beginPath();
+      ctx.moveTo(mid + Math.cos(a) * r0, mid + Math.sin(a) * r0);
+      ctx.lineTo(mid + Math.cos(a) * r1, mid + Math.sin(a) * r1);
+      ctx.stroke();
+
+      // Circuit node dot
+      const nx = mid + Math.cos(a) * 168;
+      const ny = mid + Math.sin(a) * 168;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+      ctx.beginPath();
+      ctx.arc(nx, ny, i % 2 === 0 ? 4.2 : 2.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 32 outer rune tick marks
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.lineWidth = 2.0;
+    for (let i = 0; i < 32; i++) {
+      const a = (i / 32) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(mid + Math.cos(a) * 218, mid + Math.sin(a) * 218);
+      ctx.lineTo(mid + Math.cos(a) * 232, mid + Math.sin(a) * 232);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Swirling quantum event-horizon vortex texture for the center of the 3D Synchro Portal. */
+export function getFusionPortalVortexTexture(): THREE.Texture {
+  return paintCachedTexture('fusion-portal-vortex-v1', 256, 256, 1, 1, [255, 255, 255, 0], (ctx) => {
+    ctx.clearRect(0, 0, 256, 256);
+    const mid = 128;
+
+    const coreGrad = ctx.createRadialGradient(mid, mid, 6, mid, mid, 122);
+    coreGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0.95)');
+    coreGrad.addColorStop(0.22, 'rgba(255, 255, 255, 0.45)');
+    coreGrad.addColorStop(0.68, 'rgba(255, 255, 255, 0.18)');
+    coreGrad.addColorStop(0.92, 'rgba(255, 255, 255, 0.55)');
+    coreGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = coreGrad;
+    ctx.beginPath();
+    ctx.arc(mid, mid, 122, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 10 logarithmic spiral energy arms
+    ctx.lineCap = 'round';
+    for (let arm = 0; arm < 10; arm++) {
+      const baseAngle = (arm / 10) * Math.PI * 2;
+      ctx.strokeStyle = arm % 2 === 0 ? 'rgba(255, 255, 255, 0.72)' : 'rgba(255, 255, 255, 0.38)';
+      ctx.lineWidth = arm % 2 === 0 ? 2.6 : 1.6;
+      ctx.beginPath();
+      for (let step = 0; step <= 28; step++) {
+        const t = step / 28;
+        const r = 14 + t * 102;
+        const a = baseAngle + t * 2.25;
+        const x = mid + Math.cos(a) * r;
+        const y = mid + Math.sin(a) * r;
+        if (step === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Inner astrolabe target rings
+    for (const r of [36, 76, 108]) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.48)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(mid, mid, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  });
+}

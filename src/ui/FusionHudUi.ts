@@ -25,7 +25,12 @@ export class FusionHudUi {
     private readonly onRequestRender: () => void,
     private readonly onSetSceneMode: (mode: SceneMode) => void,
     private readonly onCloseModal: () => void,
-    private readonly onSyncFusion3D?: (recipe: FusionRecipeDef, readyFlags: readonly boolean[]) => void,
+    private readonly onSyncFusion3D?: (
+      recipe: FusionRecipeDef,
+      readyFlags: readonly boolean[],
+      oreReadyFlags?: readonly boolean[],
+      canFuse?: boolean
+    ) => void,
     private readonly onTriggerFusion3D?: (recipe: FusionRecipeDef, onComplete: () => void) => void
   ) {}
 
@@ -35,10 +40,14 @@ export class FusionHudUi {
 
   public syncCurrentRecipeTo3D(): void {
     const recipe = this.getSelectedRecipe();
-    const flags = recipe.requiredMiners.map(
+    const minerFlags = recipe.requiredMiners.map(
       (ing) => this.state.getAvailableFusionMinerCount(ing.chibiId) >= ing.count
     );
-    this.onSyncFusion3D?.(recipe, flags);
+    const oreFlags = recipe.requiredOres.map(
+      (ing) => this.state.getFusionOreCount(ing.oreId) >= ing.count
+    );
+    const canFuse = this.state.canFuseRecipe(recipe.id);
+    this.onSyncFusion3D?.(recipe, minerFlags, oreFlags, canFuse);
   }
 
   public resetAnimating(): void {

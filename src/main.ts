@@ -238,7 +238,8 @@ async function bootstrap(): Promise<void> {
       syncWorldToScene();
     },
     {
-      syncFusionRecipe: (recipe, readyFlags) => scene.syncFusionRecipe(recipe, readyFlags),
+      syncFusionRecipe: (recipe, readyFlags, oreReadyFlags, canFuse) =>
+        scene.syncFusionRecipe(recipe, readyFlags, oreReadyFlags, canFuse),
       triggerFusionAnimation: (recipe, onComplete) => scene.triggerFusionAnimation(recipe, onComplete),
     }
   );
