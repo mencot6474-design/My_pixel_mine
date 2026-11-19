@@ -38,7 +38,7 @@ src/main.ts                     295 baris — Bootstrap Three.js scene (`MineSce
                                             weather & CC0 `AudioManager` sync, `gameSettings` live sync, offline earnings boot modal, Overclock tap/sync, tutorial-guarded `spawnMeteorIfAllowed`), CrazyGames SDK init & ad-pause lifecycle, Tower callbacks & game loop
 tests/hud-modules.test.ts         710 baris — 19 Vitest specs untuk modul UI Tahap B + `GameSettings`, `AudioManager` volume scaling, `SettingsModalUi`,
                                             `OfflineModalUi`, `BountiesModalUi`, Overclock HUD + semantic toast banners, Tactical Hotbar (`mam-hotbar-keycap`/`mam-hotbar-bag`), & `TutorialUi` 5-stage FTUE
-tests/state-modules.test.ts       616 baris — 15 Vitest specs untuk modul domain state (`GameStateSave`, `PlotUnitsDomain`,
+tests/state-modules.test.ts       618 baris — 15 Vitest specs untuk modul domain state (`GameStateSave`, `PlotUnitsDomain`,
                                             `TowerRunDomain`, `LootChestDomain`, `ShopWeatherDomain`, `OfflineEarningsDomain`, `BountiesDomain`, `OverclockDomain`, `FusionDomain` + 4 Passives & cost scaling)
 tests/world-3d.test.ts        2.510 baris — 59 Vitest unit & integration specs (3D world, Altar dial/dice & 2.5D billboard pedestals,
                                             Unified 3-beat `ChibiSprite3D` combo/afterimage/glint + 5-layer `AttackImpactFxController` (`spawnImpact` + `spawnShatter`) + `FieldMiner3D` & `TowerArena3D` accent/rainbow sync,
@@ -86,9 +86,9 @@ src/game/GameState.ts         1.099 baris — State coordinator + re-exports (`P
                                             Research trees & World unlock (`getActiveResearchBonus`), Global Multipliers (`denseOreScale`,
                                             potions, relics, Overclock 2x Tap / 1.5x Ore, active Fusion Passives), Relic Forge, Chibi Fusion (`canFuseRecipe`, `fuseChibiRecipe`, `getActiveFusionPassives`),
                                             Enchant Dice roll, `grantAdGems`, `grantTutorialStarterReward`, serta delegasi ke modul domain di bawah
-src/game/GameStateSave.ts       476 baris — `SAVE_KEY` 17, `ResearchLevelsMap`, `PlotUnitState`, `SavePayload` (+ `lastSavedAt`, `bounties`, `bountiesCompleted`), `SaveableGameState`,
-                                            `migrateOreId`, `isValidIndexId`, `createEmptyResearchLevels`, `compactHotbarSlots`,
-                                            `serializeSavePayload`, `deserializeSaveJson` (migrasi legacy, refund excess pickaxes, resync `discovered`),
+src/game/GameStateSave.ts       480 baris — `SAVE_KEY` 17, `ResearchLevelsMap`, `PlotUnitState`, `SavePayload` (+ `lastSavedAt`, `bounties`, `bountiesCompleted`), `SaveableGameState`,
+                                            `migrateOreId`, `isValidIndexId` (World + Weather + Fusion), `createEmptyResearchLevels`, `compactHotbarSlots`,
+                                            `serializeSavePayload`, `deserializeSaveJson` (migrasi legacy, refund excess pickaxes, resync `discovered` incl. `chibiStars`/`stashedUnits`),
                                             `saveToLocalStorage`, `loadFromLocalStorage`
 src/game/PlotUnitsDomain.ts     716 baris — `PlotUnitsContext` 55, `getChibiUpgradeCostMult` 98 (incl. balanced Fusion scales), `createFreshPlotUnit`, `getChibiStarCount`,
                                             `starUpUnit`, `autoStarUpAllUnits`, `getActiveWorldResonancesList`, `computePlotUnitStats` (+ Fusion `teamDmgPct`),
@@ -261,7 +261,8 @@ public/worlds/                  6 full-bleed teleport banner WebPs (`underground
 | Pickaxe Shop, Gem Shop, Sell Shop + Inspectors | `src/ui/ShopModalsUi.ts` (`ShopModalsUi`) |
 | Gem Tower Hub Modal, 3D Arena HUD, Blessings picker | `src/ui/TowerUi.ts` (`TowerUi`) |
 | Relic Forge (12 Relics, resep, 3 slot, Ore Source pop-up) | `src/game/RelicData.ts` (`RELICS`, `MAX_EQUIPPED_RELICS`), `src/ui/ForgeModalUi.ts` (`ForgeModalUi`), `public/relics/*.webp` |
-| Index (6 Worlds), Backpack/Inventory, Chest + Inspectors | `src/ui/CollectionModalsUi.ts` (`CollectionModalsUi`) |
+| Index (6 Worlds + Weather + Fusion), Backpack/Inventory, Chest + Inspectors | `src/ui/CollectionModalsUi.ts` (`CollectionModalsUi`) |
+| 3D Chibi Fusion World, Recipes, Exclusive `fusion` Tier & 4 Plot Passives | `src/game/FusionData.ts`, `src/game/FusionDomain.ts`, `src/ui/FusionHudUi.ts`, `src/game3d/FusionWorld3D.ts` |
 | Research/Upgrades Tree & World Teleport Banner Modal | `src/ui/UpgradesWorldsUi.ts` (`UpgradesWorldsUi`, `buildWorldsListHtml`) |
 | Plot Inspector Overlay & Frozen+ Mutation Confirm Modal | `src/ui/PlotInspectUi.ts` (`PlotInspectUi`, `renderMutationConfirmOverlay`) |
 | Modal/HUD CSS & Responsive Breakpoints | `src/styles/hud.css` + `src/ui/HudShared.ts` (`TW_*`) |

@@ -75,6 +75,8 @@ describe('Tahap C GameState Domain Modules', () => {
 
       expect(isValidIndexId(ORES[0].id)).toBe(true);
       expect(isValidIndexId('astral-recruit')).toBe(true);
+      expect(isValidIndexId('stormwraith')).toBe(true);
+      expect(isValidIndexId('prism-seraph')).toBe(true);
       expect(isValidIndexId('non-existent-item')).toBe(false);
 
       const empty = createEmptyResearchLevels();

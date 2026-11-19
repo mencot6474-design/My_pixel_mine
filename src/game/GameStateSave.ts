@@ -4,8 +4,6 @@ import {
   CHIBI_MAX_STARS,
   getOreById,
   ItemRarity,
-  ORES,
-  WORLD_MINERS,
   WorldId,
   WORLDS,
 } from './GameData';
@@ -157,9 +155,9 @@ export function migrateOreId(id: string): string {
   return LEGACY_ORE_ID_MAP[id] ?? id;
 }
 
-/** Returns true when an ID represents a catalog ore or world chibi registered in the Index. */
+/** Returns true when an ID represents any catalog ore (world or weather) or chibi (world, weather, or fusion) registered in the Index. */
 export function isValidIndexId(id: string): boolean {
-  return ORES.some((o) => o.id === id) || WORLD_MINERS.some((m) => m.chibiId === id);
+  return Boolean(getOreById(id) || getChibiById(id));
 }
 
 /** Creates an empty per-tree research level record for all 7 research trees. */
@@ -414,6 +412,12 @@ export function deserializeSaveJson(
     }
     for (const slotId of [...state.hotbar, ...state.plotMiners]) {
       if (slotId && isValidIndexId(slotId)) state.discovered.add(slotId);
+    }
+    for (const id of Object.keys(state.chibiStars)) {
+      if ((state.chibiStars[id] || 0) > 0 && isValidIndexId(id)) state.discovered.add(id);
+    }
+    for (const id of Object.keys(state.stashedUnits)) {
+      if ((state.stashedUnits[id]?.length ?? 0) > 0 && isValidIndexId(id)) state.discovered.add(id);
     }
     if (data.activeBoosts) state.activeBoosts = data.activeBoosts;
     if (data.tower && typeof data.tower === 'object') {
