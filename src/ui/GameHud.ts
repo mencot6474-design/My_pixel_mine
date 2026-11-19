@@ -639,7 +639,7 @@ export class GameHud {
     }
     this.root.style.transformOrigin = 'top left';
     this.root.dataset.hudCompact = logicalW < 920 ? 'true' : 'false';
-    this.root.dataset.hudPotsAbove = logicalW < 1340 ? 'true' : 'false';
+    this.root.dataset.hudPotsAbove = logicalW < 1080 ? 'true' : 'false';
     this.root.dataset.hudDpsAbove = logicalW < 1140 ? 'true' : 'false';
     this.root.dataset.hudShort = logicalH < 640 ? 'true' : 'false';
 
@@ -711,6 +711,7 @@ export class GameHud {
     showGemsPlus?: boolean;
     showCash?: boolean;
     showAudioBelow?: boolean;
+    showDpsAbove?: boolean;
     quickButtonsHtml?: string;
   }): string {
     const posCls = opts.topAlign
@@ -724,11 +725,13 @@ export class GameHud {
           <span class="text-[28px] font-black tabular-nums text-[#4ade80] tracking-[0.3px] mam-outline" data-hud-cash="true">${fmtMoney(this.state.cash)}</span>
         </div>`
       : '';
+    const dpsAbove = opts.showDpsAbove ? this.weatherDpsUi.renderInlineDpsMeter() : '';
     const quickRow = opts.quickButtonsHtml ? `<div class="flex items-center gap-2 mt-0.5">${opts.quickButtonsHtml}</div>` : '';
     const audioBelow = opts.showAudioBelow ? this.renderAudioToggleBtn(false) : '';
 
     return `
       <div class="absolute ${posCls} flex flex-col items-end gap-1.5">
+        ${dpsAbove}
         <div class="flex items-center gap-2">
           <div class="${TW_CURRENCY_BAR}">
             ${hudIconHtml('gem', 28, 'Gems')}
@@ -828,6 +831,9 @@ export class GameHud {
           ${hudIconHtml('shops', 28, 'Shops')}
           <span>Shops</span>
         </button>
+        <div class="w-[224px] @max-[720px]:w-[202px] shrink-0">
+          ${this.weatherDpsUi.renderOverclockWidget()}
+        </div>
         <button class="${TW_TELEPORT_PILL} whitespace-nowrap mam-outline" data-action="open-worlds" title="Teleport • World ${activeWorldNum}: ${activeWorld.name}">
           <svg viewBox="0 0 32 32" width="28" height="28" class="shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.55)]" aria-hidden="true">
             <defs>
@@ -877,12 +883,11 @@ export class GameHud {
       </div>
 
       ${this.renderAudioToggleBtn()}
-      ${this.renderCurrencyRail({ showGemsPlus: true, showCash: true, quickButtonsHtml })}
+      ${this.renderCurrencyRail({ showGemsPlus: true, showCash: true, showDpsAbove: true, quickButtonsHtml })}
 
       ${this.hotbarUi.renderHotbarSection()}
 
       ${this.weatherDpsUi.renderActivePotionsDock()}
-      ${this.weatherDpsUi.renderDpsMeterWidget(true)}
       ${this.renderActiveModal()}
       ${this.renderToastStack()}
     `;

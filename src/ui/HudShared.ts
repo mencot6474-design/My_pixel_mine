@@ -141,7 +141,7 @@ export const TW_TOAST_STACK =
 export const TW_TOAST_ITEM =
   'px-4 py-1.5 rounded-xl bg-[#0e1528] border-2 border-[#4ade80] shadow-[0_8px_24px_rgba(0,0,0,0.68)] text-[14px] font-extrabold text-white';
 export const TW_ACTIVE_POT_PILL =
-  'pointer-events-auto flex items-center gap-[7px] min-w-0 px-2.5 py-[5px] rounded-xl border-2 border-[var(--pot-color,#4ade80)] bg-[linear-gradient(160deg,#16203a_0%,#0b1020_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_8px_20px_rgba(0,0,0,0.62)] cursor-default transition-[transform,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 @max-[720px]:px-[7px] @max-[720px]:py-1 @max-[720px]:gap-1.5';
+  'pointer-events-auto flex flex-col items-center justify-center gap-0.5 min-w-0 px-1.5 py-1.5 rounded-xl border-2 border-[var(--pot-color,#4ade80)] bg-[linear-gradient(160deg,#16203a_0%,#0b1020_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_8px_20px_rgba(0,0,0,0.62)] cursor-default transition-[transform,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 @max-[720px]:px-1 @max-[720px]:py-1';
 
 export const TW_MODAL_BACKDROP =
   'fixed inset-0 bg-[rgba(4,7,15,0.66)] backdrop-blur-[5px] flex items-center justify-center p-3 pt-7 @max-[720px]:p-2 @max-[720px]:pt-6 pointer-events-auto z-40';

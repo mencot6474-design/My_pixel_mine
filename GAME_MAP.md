@@ -125,15 +125,15 @@ src/sdk/crazygames.ts           259 baris — CrazyGames SDK v3 wrapper (`isAdPl
                                             `cgLoadingStart`, `cgGameplayStart`, `cgHappyTime`, `cgRequestRewardedAd`, `cgTryMidgameAd`)
 
 === UI HUD, MODALS & CSS (Modular Architecture) ===
-src/ui/GameHud.ts             1.082 baris — `GameHud`: Thin UI coordinator (`activeModal` incl. `altar-hub`/`daily-login`, `sceneMode` incl. `fusion`, `inspectedSlot`, `adPaused`, viewport scaling `updateViewportScale` + `hudDpsAbove`,
-                                            top `Shops` & `Teleport` (`TW_TELEPORT_PILL` + Warp Portal icon + `1`–`6` world badge), solid currency rail + Settings gear & audio mute toggle + Daily Login & Bounties quick btns w/ live badges, World Resonance HUD badges, modal router `renderActiveModal`, semantic toast stack,
+src/ui/GameHud.ts             1.087 baris — `GameHud`: Thin UI coordinator (`activeModal` incl. `altar-hub`/`daily-login`, `sceneMode` incl. `fusion`, `inspectedSlot`, `adPaused`, viewport scaling `updateViewportScale` + `hudPotsAbove` `< 1080`,
+                                            top `Shops` + `Overclock Fever (224px)` + `Teleport` (`TW_TELEPORT_PILL` + Warp Portal icon + `1`–`6` world badge), solid currency rail w/ inline DPS above Gems + Settings gear & audio mute toggle + Daily Login & Bounties quick btns w/ live badges, World Resonance HUD badges, modal router `renderActiveModal`, semantic toast stack,
                                             1000ms/100ms timers + Overclock live sync, `isTutorialActive`, `handleTower*` dispatch & public pass-through API incl. `setFusionRevealHold` untuk `main.ts`)
 src/ui/HudShared.ts             400 baris — `chibiPortraitHtml`, shared types (`ModalKind` incl. `settings`/`offline`/`bounties`/`daily-login`/`altar-hub`, `ModalThemeId`, `InvTab`, `PlotDropOps`),
                                             rarity/ring/timer/scroll helpers (`rarityCardClasses` incl. `rarity-fusion`/`rarity-limited`, `renderRarityBadgeHtml`, `rarityVars`, `applyInspectRing`, `classifyToast`, `renderToastBannerHtml`,
                                             `formatCountdownTimer`, `refreshPotionTimersInDom`, `captureRootScrolls`, `restoreRootScrolls`),
                                             solid cyber-armor Tailwind `TW_*` constants (`TW_TELEPORT_PILL`, `mam-notif-badge`), shared shell builders (`renderModalShell` w/ `autoHeight`, `renderInspectorPanel`)
-src/ui/WeatherDpsHudUi.ts       584 baris — `WeatherDpsHudUi`: Solid top-left Weather widget + 2-column side-by-side Weather Forecast & Meteor Drops inspector + Auto Meteor toggle, Active Potions dock,
-                                            & bottom-left compact `186px` DPS Breakdown + Cyber-Anime Overclock Fever dock (`hudDpsAbove` clearance on `logicalW < 1140`) (`formatWeatherTimer`, `buildActivePotionsDockContent`,
+src/ui/WeatherDpsHudUi.ts       616 baris — `WeatherDpsHudUi`: Solid top-left Weather widget + 2-column side-by-side Weather Forecast & Meteor Drops inspector + Auto Meteor toggle, bottom-right compact `62px` icon+timer Active Potions dock,
+                                            inline DPS pill above Gems w/ left-opening `214px` Damage Breakdown popover, & top-center `224px` uniform-height Overclock Fever dock w/ smooth in-place transition (`formatWeatherTimer`, `buildActivePotionsDockContent`,
                                             `buildWeatherWidgetInnerHtml`, `buildDpsMeterInnerHtml`, `buildOverclockGaugeInnerHtml`)
 src/ui/HotbarHudUi.ts           422 baris — `HotbarHudUi`: Solid Cyber-Anime Tactical Hotbar Dock (`.mam-hotbar-dock`, slots 1–9 w/ `.mam-hotbar-keycap`, `.mam-hotbar-qty`, `.mam-hotbar-val-bar`, `.is-hotbar-selected`, `.mam-hotbar-divider`, & `.mam-hotbar-bag`),
                                             outside-click selection clear, & pointer drag-and-drop reorder / plot swap (`buildHotbarStateKey`, `canDropHotbarOnPlot`, `renderHotbarSlotsHtml`)
@@ -164,7 +164,7 @@ src/ui/HudIcons.ts              314 baris — SVG, 2D fantasy art (`public/{ench
                                             `weatherIconHtml`, `towerIconHtml`, `pickaxeIconHtml`, `gemPotionIconHtml`,
                                             `enchantAuraIconHtml`, `enchantDiceIconHtml`, `researchIconHtml` 305)
 src/styles/global.css            73 baris — Tailwind v4 entry (`@import "tailwindcss";`) + base font/reset + pickaxe cursor styles
-src/styles/hud.css            2.098 baris — Solid Cyber-Armor + Luminous Gradient Rail system (`[data-modal-theme]` 14 opaque themes incl. `forge`/`settings`/`offline`/`bounties`/`daily-login`,
+src/styles/hud.css            2.103 baris — Solid Cyber-Armor + Luminous Gradient Rail system (`[data-modal-theme]` 14 opaque themes incl. `forge`/`settings`/`offline`/`bounties`/`daily-login`,
                                             `.mam-modal`, `.mam-modal-rails`, sculpted `.mam-title-plaque`, full-bleed `.rarity-fusion` / `.rarity-limited` + `.mam-fusion-badge` + `.mam-limited-badge` + `.mam-fusion-text`, `dialog.mam-review-dialog`, `.mam-grid`, `.mam-no-scrollbar`, `.mam-chibi-smooth`,
                                             `.mam-hotbar-dock`/`-slot`/`-keycap`/`-qty`/`-val-bar`/`-bag`, `.mam-battle-hp-*`/`.mam-battle-dock` Raid HUD, `.mam-fever-*` Overclock Gauge, `.mam-dps-*` Breakdown dock, `.mam-toast-banner`, `.mam-notif-badge`, `.mam-tut-*` FTUE card & target ring, keyframes, a11y)
 

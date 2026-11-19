@@ -46,13 +46,10 @@ export function buildActivePotionsDockContent(
     .map(({ def, rem }) => {
       return `
           <div class="${TW_ACTIVE_POT_PILL}" style="--pot-color:${def.color}" data-hud-pot="${def.id}" title="${def.name} • ${def.effectText}">
-            <div class="w-[30px] h-[30px] shrink-0 flex items-center justify-center @max-[720px]:w-[26px] @max-[720px]:h-[26px]">${gemPotionIconHtml(def.id, 30, def.name, def.color)}</div>
-            <div class="flex-1 min-w-0 flex flex-col gap-px">
-              <div class="text-[11px] font-extrabold text-[#f8fafc] leading-[1.15] whitespace-nowrap overflow-hidden text-ellipsis mam-outline-sm">${def.name}</div>
-              <div class="flex items-center gap-[5px]">
-                <span class="w-1.5 h-1.5 rounded-full bg-[#4ade80] shrink-0 animate-[mamPotDotPulse_1.4s_ease-in-out_infinite]"></span>
-                <span class="text-[12px] font-black text-[#4ade80] tabular-nums leading-[1.1] mam-outline-sm" data-hud-pot-timer="${def.id}">${formatWeatherTimer(rem)}</span>
-              </div>
+            <div class="w-[28px] h-[28px] shrink-0 flex items-center justify-center @max-[720px]:w-[24px] @max-[720px]:h-[24px]">${gemPotionIconHtml(def.id, 28, def.name, def.color)}</div>
+            <div class="flex items-center justify-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#4ade80] shrink-0 animate-[mamPotDotPulse_1.4s_ease-in-out_infinite]"></span>
+              <span class="text-[11px] font-black text-[#4ade80] tabular-nums leading-none mam-outline-sm" data-hud-pot-timer="${def.id}">${formatWeatherTimer(rem)}</span>
             </div>
           </div>
         `;
@@ -305,18 +302,18 @@ export function buildDpsMeterInnerHtml(state: GameState, dpsMeterOpen: boolean):
           </div>
           ${
             bd.units.length > 0
-              ? `<div class="flex flex-col gap-1.5 max-h-[172px] overflow-y-auto mam-no-scrollbar pr-0.5" data-dps-scroll="true">
+              ? `<div class="flex flex-col gap-1 max-h-[124px] overflow-y-auto mam-no-scrollbar pr-0.5" data-dps-scroll="true">
                   ${bd.units
                     .map((u) => {
                       const pctStr = `${u.pct >= 10 ? Math.round(u.pct) : u.pct.toFixed(1)}%`;
                       const starTag = u.stars > 0 ? ` <span class="text-amber-300">★${u.stars}</span>` : '';
                       return `
-                        <button type="button" class="w-full text-left flex flex-col gap-1 px-2 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-sky-400/10 hover:border-sky-300/35 cursor-pointer transition-colors" data-dps-inspect-slot="${u.slotIndex}" title="Inspect ${u.name} (Plot ${u.slotIndex + 1})">
-                          <div class="flex items-center justify-between text-[11px] font-extrabold text-slate-100 gap-2">
-                            <span class="truncate"><span class="text-[9.5px] text-slate-400 font-black mr-1">#${u.slotIndex + 1}</span>${u.name}${starTag}</span>
-                            <span class="shrink-0 text-sky-300 font-black tabular-nums">${fmtShort(u.dps)} <span class="text-slate-400 font-bold text-[10px]">(${pctStr})</span></span>
+                        <button type="button" class="w-full text-left flex flex-col gap-0.5 px-1.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-sky-400/10 hover:border-sky-300/35 cursor-pointer transition-colors" data-dps-inspect-slot="${u.slotIndex}" title="Inspect ${u.name} (Plot ${u.slotIndex + 1})">
+                          <div class="flex items-center justify-between text-[10.5px] font-extrabold text-slate-100 gap-1.5">
+                            <span class="truncate"><span class="text-[9px] text-slate-400 font-black mr-1">#${u.slotIndex + 1}</span>${u.name}${starTag}</span>
+                            <span class="shrink-0 text-sky-300 font-black tabular-nums">${fmtShort(u.dps)} <span class="text-slate-400 font-bold text-[9.5px]">(${pctStr})</span></span>
                           </div>
-                          <div class="h-1.5 w-full rounded-full bg-slate-950/90 border border-white/10 overflow-hidden">
+                          <div class="h-1 w-full rounded-full bg-slate-950/90 border border-white/10 overflow-hidden">
                             <div class="h-full rounded-full bg-[linear-gradient(90deg,#0284c7,#38bdf8,#a855f7)]" style="width:${Math.min(100, Math.max(2, u.pct))}%"></div>
                           </div>
                         </button>
@@ -368,6 +365,16 @@ export class WeatherDpsHudUi {
     );
     return `
       <div class="absolute top-[14px] left-4 @max-[720px]:top-2.5 @max-[720px]:left-2.5 z-[5] flex flex-col items-start gap-1.5 pointer-events-auto" data-hud-weather="true" data-weather-key="${w.id}:${this.weatherPopoverOpen ? 1 : 0}:${this.state.autoMeteor ? 1 : 0}">
+        ${inner}
+      </div>
+    `;
+  }
+
+  public renderInlineDpsMeter(): string {
+    const inner = buildDpsMeterInnerHtml(this.state, this.dpsMeterOpen);
+    this.lastDpsMeterHtml = inner;
+    return `
+      <div class="relative w-[196px] @max-[720px]:w-[178px] flex flex-col items-stretch gap-1 pointer-events-auto [&_.mam-dps-panel]:absolute [&_.mam-dps-panel]:top-0 [&_.mam-dps-panel]:right-full [&_.mam-dps-panel]:mr-2 [&_.mam-dps-panel]:w-[214px] [&_.mam-dps-panel]:p-2 [&_.mam-dps-panel]:z-20" data-hud-dps="true">
         ${inner}
       </div>
     `;
@@ -525,7 +532,35 @@ export class WeatherDpsHudUi {
       : `charge:${Math.round(snap.chargePct)}`;
     if (host.dataset.ocKey === key) return;
     host.dataset.ocKey = key;
-    host.innerHTML = buildOverclockGaugeInnerHtml(snap);
+
+    const shell = host.querySelector<HTMLElement>('.mam-fever-shell');
+    const titleEl = host.querySelector<HTMLElement>('[data-oc-title]');
+    const valEl = host.querySelector<HTMLElement>('[data-oc-value]');
+    const fillEl = host.querySelector<HTMLElement>('.mam-fever-fill');
+    const badgesEl = host.querySelector<HTMLElement>('[data-oc-badges]');
+    if (!shell || !titleEl || !valEl || !fillEl || !badgesEl) {
+      host.innerHTML = buildOverclockGaugeInnerHtml(snap);
+      return;
+    }
+
+    const pct = Math.max(0, Math.min(100, Math.round(snap.chargePct)));
+    shell.classList.toggle('is-active', snap.active);
+    shell.dataset.overclockState = snap.active ? 'active' : 'charging';
+    fillEl.style.width = `${pct}%`;
+
+    titleEl.textContent = snap.active ? 'OVERCLOCK ACTIVE' : 'OVERCLOCK FEVER';
+    titleEl.className = snap.active
+      ? 'text-[10px] font-black italic uppercase tracking-[0.06em] text-[#fef08a] mam-outline-sm truncate transition-colors duration-300'
+      : 'text-[10px] font-black italic uppercase tracking-[0.06em] text-sky-200 mam-outline-sm truncate transition-colors duration-300';
+
+    valEl.textContent = snap.active ? `${snap.remainingSec.toFixed(1)}s` : `${pct}%`;
+    valEl.className = snap.active
+      ? 'px-1.5 py-[1px] rounded bg-amber-400/20 border border-amber-300/60 text-[10px] font-black tabular-nums text-white leading-none mam-outline-sm shrink-0 transition-all duration-300'
+      : 'px-1.5 py-[1px] rounded bg-sky-400/15 border border-sky-300/40 text-[10px] font-black tabular-nums text-sky-100 leading-none mam-outline-sm shrink-0 transition-all duration-300';
+
+    badgesEl.className = snap.active
+      ? 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-100'
+      : 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-55';
   }
 }
 
@@ -544,39 +579,36 @@ const OVERCLOCK_TICKS_HTML = '<div class="mam-fever-ticks" aria-hidden="true">' 
 
 export function buildOverclockGaugeInnerHtml(snap: OverclockSnapshot): string {
   const pct = Math.max(0, Math.min(100, Math.round(snap.chargePct)));
-  if (snap.active) {
-    return `
-      <div class="mam-fever-shell is-active" data-overclock-state="active">
-        <div class="mam-fever-emblem">${OVERCLOCK_BOLT_SVG}</div>
-        <div class="flex-1 min-w-0 flex flex-col gap-0.5">
-          <div class="flex items-center justify-between gap-1 leading-none">
-            <span class="text-[9.5px] font-black italic uppercase tracking-[0.05em] text-[#fef08a] mam-outline-sm truncate">OVERCLOCK ACTIVE</span>
-            <span class="px-1 py-[1px] rounded bg-amber-400/20 border border-amber-300/60 text-[10px] font-black tabular-nums text-white leading-none mam-outline-sm shrink-0">${snap.remainingSec.toFixed(1)}s</span>
-          </div>
-          <div class="mam-fever-track">
-            <div class="mam-fever-fill" style="width:${pct}%"></div>
-            ${OVERCLOCK_TICKS_HTML}
-          </div>
-          <div class="flex items-center gap-1 text-[8px] font-black uppercase tracking-wide leading-none whitespace-nowrap">
-            <span class="px-1 py-[1px] rounded bg-amber-500/25 border border-amber-300/50 text-amber-200">2x SPD</span>
-            <span class="px-1 py-[1px] rounded bg-fuchsia-500/25 border border-fuchsia-300/50 text-fuchsia-200">2x TAP</span>
-            <span class="px-1 py-[1px] rounded bg-sky-500/25 border border-sky-300/50 text-sky-200">+50% ORE</span>
-          </div>
-        </div>
-      </div>
-    `;
-  }
+  const shellCls = snap.active ? 'mam-fever-shell is-active' : 'mam-fever-shell';
+  const stateAttr = snap.active ? 'active' : 'charging';
+  const titleText = snap.active ? 'OVERCLOCK ACTIVE' : 'OVERCLOCK FEVER';
+  const titleCls = snap.active
+    ? 'text-[10px] font-black italic uppercase tracking-[0.06em] text-[#fef08a] mam-outline-sm truncate transition-colors duration-300'
+    : 'text-[10px] font-black italic uppercase tracking-[0.06em] text-sky-200 mam-outline-sm truncate transition-colors duration-300';
+  const valText = snap.active ? `${snap.remainingSec.toFixed(1)}s` : `${pct}%`;
+  const valCls = snap.active
+    ? 'px-1.5 py-[1px] rounded bg-amber-400/20 border border-amber-300/60 text-[10px] font-black tabular-nums text-white leading-none mam-outline-sm shrink-0 transition-all duration-300'
+    : 'px-1.5 py-[1px] rounded bg-sky-400/15 border border-sky-300/40 text-[10px] font-black tabular-nums text-sky-100 leading-none mam-outline-sm shrink-0 transition-all duration-300';
+  const badgesCls = snap.active
+    ? 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-100'
+    : 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-55';
+
   return `
-    <div class="mam-fever-shell" data-overclock-state="charging">
+    <div class="${shellCls}" data-overclock-state="${stateAttr}">
       <div class="mam-fever-emblem">${OVERCLOCK_BOLT_SVG}</div>
       <div class="flex-1 min-w-0 flex flex-col gap-0.5">
         <div class="flex items-center justify-between gap-1 leading-none">
-          <span class="text-[9.5px] font-black italic uppercase tracking-[0.06em] text-sky-200 mam-outline-sm truncate">OVERCLOCK FEVER</span>
-          <span class="text-[10px] font-black tabular-nums text-white mam-outline-sm shrink-0">${pct}%</span>
+          <span class="${titleCls}" data-oc-title="true">${titleText}</span>
+          <span class="${valCls}" data-oc-value="true">${valText}</span>
         </div>
         <div class="mam-fever-track">
           <div class="mam-fever-fill" style="width:${pct}%"></div>
           ${OVERCLOCK_TICKS_HTML}
+        </div>
+        <div class="${badgesCls}" data-oc-badges="true">
+          <span class="px-1 py-[1px] rounded bg-amber-500/25 border border-amber-300/50 text-amber-200">2x SPD</span>
+          <span class="px-1 py-[1px] rounded bg-fuchsia-500/25 border border-fuchsia-300/50 text-fuchsia-200">2x TAP</span>
+          <span class="px-1 py-[1px] rounded bg-sky-500/25 border border-sky-300/50 text-sky-200">+50% ORE</span>
         </div>
       </div>
     </div>

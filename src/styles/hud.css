@@ -1161,7 +1161,7 @@
     right: 14px;
     bottom: 14px;
     display: grid;
-    grid-template-columns: repeat(2, 148px);
+    grid-template-columns: repeat(2, 62px);
     gap: 6px;
     align-items: end;
     justify-items: stretch;
@@ -1170,7 +1170,7 @@
   }
 
   .mam-active-pots.is-single {
-    grid-template-columns: 148px;
+    grid-template-columns: 62px;
   }
 
   .mam-active-pots.is-empty {
@@ -1375,33 +1375,33 @@
   #hudRoot[data-hud-pots-above="true"] .mam-active-pots {
     bottom: 108px;
     right: 12px;
-    grid-template-columns: repeat(2, 138px);
+    grid-template-columns: repeat(2, 60px);
   }
 
   #hudRoot[data-hud-pots-above="true"] .mam-active-pots.is-single {
-    grid-template-columns: 138px;
+    grid-template-columns: 60px;
   }
 
   #hudRoot[data-hud-compact="true"] .mam-active-pots {
     bottom: 94px;
     right: 8px;
-    grid-template-columns: repeat(2, 126px);
+    grid-template-columns: repeat(2, 56px);
     gap: 5px;
   }
 
   #hudRoot[data-hud-compact="true"] .mam-active-pots.is-single {
-    grid-template-columns: 126px;
+    grid-template-columns: 56px;
   }
 
   #hudRoot[data-hud-short="true"] .mam-active-pots {
-    bottom: 106px;
+    bottom: 12px;
     right: 10px;
-    grid-template-columns: repeat(2, 132px);
+    grid-template-columns: repeat(2, 58px);
     gap: 5px;
   }
 
   #hudRoot[data-hud-short="true"] .mam-active-pots.is-single {
-    grid-template-columns: 132px;
+    grid-template-columns: 58px;
   }
 
   /* Native top-layer Chibi 4-pose Review Dialog */
@@ -1471,7 +1471,11 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.22),
       0 0 16px -4px rgba(56, 189, 248, 0.34);
     clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition:
+      background 0.35s ease,
+      border-color 0.35s ease,
+      box-shadow 0.35s ease,
+      transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   .mam-fever-shell.is-active {
@@ -1495,6 +1499,7 @@
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.35),
       0 0 14px rgba(56, 189, 248, 0.4);
+    transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
   }
 
   .mam-fever-emblem > svg {
