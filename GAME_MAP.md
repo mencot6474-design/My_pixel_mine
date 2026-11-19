@@ -58,9 +58,9 @@ tests/world-3d.test.ts        2.616 baris — 63 Vitest unit & integration specs
                                             World 6 Starwell, Chibi Star-Up, World Resonance synergy, & Relic Forge crafting/slots/buffs)
 
 === GAME DATA & STATE ===
-src/game/GameData.ts            673 baris — World (`underground`..`starwell` W1-W6), `ORES` 114 (48 world + 5 `WEATHER_ORES` = 53 ores),
-                                            `WORLD_MINERS` 263 (30 world miners: 5/world incl. Exotic & Secret + 5 `getWeatherLimitedMiners`),
-                                            `PICKAXES` 309 (12 tiers W1–W6), `MUTATIONS` 324, `ENCHANTS` 341 (`ENCHANT_DICE_GEM_COST` 339, multi-stat `dmgMult`/`oreDropPct`/`sellValuePct`/`miningSpeedPct`),
+src/game/GameData.ts            673 baris — World (`underground`..`starwell` W1-W6), `ORES` 117 (48 world + 5 `WEATHER_ORES` = 53 ores),
+                                            `WORLD_MINERS` 266 (30 world miners: 5/world incl. Exotic & Secret + 5 `getWeatherLimitedMiners`),
+                                            `PICKAXES` 312 (12 tiers W1–W6), `MUTATIONS` 327, `ENCHANTS` 341 (`ENCHANT_DICE_GEM_COST` 339, multi-stat `dmgMult`/`oreDropPct`/`sellValuePct`/`miningSpeedPct`),
                                             `isHighTierMutation` 403 (`frozen`..`unreal`), `GEM_SHOP_ITEMS` 413,
                                             `rollMutation` 529, `CHIBI_STAR_TIERS` 601, `WORLD_RESONANCE_TIERS` 629,
                                             `computeWorldResonances` 642, `rollWorldOre` 664, `rollWorldMiner` 669
