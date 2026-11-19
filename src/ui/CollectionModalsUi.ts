@@ -21,6 +21,7 @@ import {
   WORLDS,
 } from '../game/GameData';
 import { FUSION_RECIPES } from '../game/FusionData';
+import { DAILY_LOGIN_REWARDS, getDailyLoginLimitedChibiIds } from '../game/DailyLoginData';
 import { GameState } from '../game/GameState';
 import { getWeatherById } from '../game/WeatherData';
 import { fmtInt, fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
@@ -42,7 +43,7 @@ import {
 } from './HudShared';
 
 export class CollectionModalsUi {
-  private indexWorldId: WorldId | 'weather' | 'fusion' = 'underground';
+  private indexWorldId: WorldId | 'weather' | 'fusion' | 'limited' = 'underground';
   private invTab: InvTab = 'all';
   private invSearch = '';
   private indexInspectId: string | null = null;
@@ -60,6 +61,13 @@ export class CollectionModalsUi {
   ) {}
 
   private getResolvedIndexInspectId(): string | null {
+    if (this.indexWorldId === 'limited') {
+      const allIds = getDailyLoginLimitedChibiIds();
+      if (this.indexInspectId && allIds.includes(this.indexInspectId)) return this.indexInspectId;
+      this.indexInspectId = allIds[0] ?? null;
+      return this.indexInspectId;
+    }
+
     if (this.indexWorldId === 'fusion') {
       const allIds = FUSION_RECIPES.map((r) => r.resultChibiId);
       if (this.indexInspectId && allIds.includes(this.indexInspectId)) return this.indexInspectId;
@@ -87,6 +95,35 @@ export class CollectionModalsUi {
 
     const unlocked = this.state.discovered.has(targetId);
     const statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-black border ${unlocked ? 'bg-[#14532d]/60 border-[#4ade80]/70 text-[#86efac]' : 'bg-[#1e293b] border-[#475569] text-[#94a3b8]'}">${unlocked ? 'Discovered' : 'Locked'}</span>`;
+
+    if (this.indexWorldId === 'limited') {
+      const reward = DAILY_LOGIN_REWARDS.find((r) => r.chibiId === targetId);
+      const chibi = reward?.chibiId ? getChibiById(reward.chibiId) : undefined;
+      if (reward && chibi) {
+        const owned = this.state.miners[chibi.id] || 0;
+        const onPlot = this.state.plotMiners.filter((id) => id === chibi.id).length;
+        return renderInspectorPanel({
+          rarity: chibi.rarity,
+          title: chibi.name,
+          subtitle: `Day ${reward.day} Daily Login • Limited 5★`,
+          badgesHtml: statusBadge,
+          artHtml: chibiPortraitHtml(chibi, { usePose: true }),
+          stats: [
+            ['Base DPS', `${fmtShort(chibi.baseDps)}/s`, 'text-[#facc15]'],
+            ['Stars', '★★★★★ (Max 5★)', 'text-amber-300'],
+            ['Trade', 'Non-Sellable', 'text-rose-300'],
+            ['Owned', `${fmtInt(owned)} (${onPlot}/5)`, 'text-white'],
+          ],
+          actionHtml: `
+            <button type="button" class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border border-[#c084fc]/65 bg-[linear-gradient(135deg,#9333ea_0%,#4f46e5_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_16px_-2px_rgba(147,51,234,0.45)] text-white text-[13px] font-black cursor-pointer inline-flex items-center justify-center gap-1.5 transition-[transform,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.97] mam-outline-sm" data-review-chibi="${chibi.id}">
+              <span>Review 4 Poses</span>
+            </button>
+          `,
+          dimmed: !unlocked,
+        });
+      }
+      return renderEmptyInspectorPanel('Select any Limited Chibi to inspect details.');
+    }
 
     if (this.indexWorldId === 'fusion') {
       const recipe = FUSION_RECIPES.find((r) => r.resultChibiId === targetId);
@@ -225,6 +262,28 @@ export class CollectionModalsUi {
 
   private buildIndexCardsHtml(): string {
     const selectedId = this.getResolvedIndexInspectId();
+    if (this.indexWorldId === 'limited') {
+      return DAILY_LOGIN_REWARDS.filter((r) => Boolean(r.chibiId))
+        .map((reward) => {
+          const chibi = getChibiById(reward.chibiId as string);
+          if (!chibi) return '';
+          const unlocked = this.state.discovered.has(chibi.id);
+          const isSel = selectedId === chibi.id;
+          return `
+            <div class="${rarityCardClasses(chibi.rarity, `${unlocked ? '' : 'locked'} ${isSel ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.45)]' : ''}`.trim())}" style="${rarityVars(chibi.rarity)}" data-index-id="${chibi.id}" title="${chibi.name} (Day ${reward.day} Limited)">
+              <div class="mam-card-art">
+                ${chibiPortraitHtml(chibi, { usePose: true })}
+              </div>
+              <div class="mam-card-name mam-outline-sm">${chibi.name}</div>
+              <div class="mam-card-bottom">
+                <span class="mam-limited-badge !px-1.5 !py-[1px] !text-[8px] mb-0.5">✦ LIMITED</span>
+                <span class="mam-card-pct mam-outline-sm">${fmtShort(chibi.baseDps)}/s</span>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    }
     if (this.indexWorldId === 'fusion') {
       return FUSION_RECIPES.map((recipe) => {
         const chibi = getChibiById(recipe.resultChibiId);
@@ -361,6 +420,10 @@ export class CollectionModalsUi {
           <button class="${TW_TAB_BTN} mam-outline-sm ${this.indexWorldId === 'fusion' ? 'active' : ''}" data-index-world="fusion">
             <span class="inline-flex items-center gap-1">✦ Fusion</span>
             <span class="text-[11px] font-bold opacity-85">(${FUSION_RECIPES.filter((r) => this.state.discovered.has(r.resultChibiId)).length}/${FUSION_RECIPES.length})</span>
+          </button>
+          <button class="${TW_TAB_BTN} mam-outline-sm ${this.indexWorldId === 'limited' ? 'active' : ''}" data-index-world="limited">
+            <span class="inline-flex items-center gap-1 text-amber-200">★ Limited</span>
+            <span class="text-[11px] font-bold opacity-85">(${getDailyLoginLimitedChibiIds().filter((id) => this.state.discovered.has(id)).length}/${getDailyLoginLimitedChibiIds().length})</span>
           </button>
         </div>
 
@@ -811,7 +874,7 @@ export class CollectionModalsUi {
   public bindEvents(root: HTMLElement): void {
     root.querySelectorAll('[data-index-world]').forEach((el) => {
       el.addEventListener('click', () => {
-        const wid = (el as HTMLElement).dataset.indexWorld as WorldId | 'weather' | 'fusion';
+        const wid = (el as HTMLElement).dataset.indexWorld as WorldId | 'weather' | 'fusion' | 'limited';
         this.indexWorldId = wid;
         this.onRequestRender();
       });
@@ -1067,7 +1130,10 @@ export class CollectionModalsUi {
     const rarityLabel = rarity.charAt(0).toUpperCase() + rarity.slice(1);
     const unlocked = this.state.discovered.has(chibi.id);
     const worldDef = getWorldById(
-      getMinerWorldId(chibi.id) ?? (this.indexWorldId === 'weather' || this.indexWorldId === 'fusion' ? 'underground' : this.indexWorldId)
+      getMinerWorldId(chibi.id) ??
+        (this.indexWorldId === 'weather' || this.indexWorldId === 'fusion' || this.indexWorldId === 'limited'
+          ? 'underground'
+          : this.indexWorldId)
     );
     const smoothCls = chibi.smoothFilter ? ' class="mam-chibi-smooth"' : '';
     const poses: Array<[string, string]> = [
@@ -1107,7 +1173,9 @@ export class CollectionModalsUi {
           ${
             rarity === 'fusion'
               ? `<span class="mam-fusion-badge">✦ FUSION</span>`
-              : `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase border" style="color:${borderColor};border-color:${borderColor}88;background:${borderColor}20">${rarityLabel}</span>`
+              : rarity === 'limited'
+                ? `<span class="mam-limited-badge">✦ LIMITED</span>`
+                : `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase border" style="color:${borderColor};border-color:${borderColor}88;background:${borderColor}20">${rarityLabel}</span>`
           }
           <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black border ${unlocked ? 'bg-[#14532d]/60 border-[#4ade80]/70 text-[#86efac]' : 'bg-[#1e293b] border-[#475569] text-[#94a3b8]'}">${unlocked ? 'Discovered' : 'Locked • Full Preview'}</span>
           <span class="text-[12px] font-bold text-[#94a3b8]">${worldDef.name} • Base DPS <span class="text-[#facc15] font-black">${fmtShort(chibi.baseDps)}/s</span></span>

@@ -10,7 +10,8 @@ export type ChibiRarity =
   | 'mythic'
   | 'exotic'
   | 'secret'
-  | 'fusion';
+  | 'fusion'
+  | 'limited';
 
 export interface ChibiPoseUrls {
   idle: string;
@@ -496,6 +497,83 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     rarity: 'fusion',
     accentColor: '#facc15',
     baseDps: 295_000,
+    smoothFilter: true,
+  },
+  {
+    id: 'cosmic-monarch',
+    name: 'Cosmic Monarch',
+    spriteUrl: '/chibi/cosmic-monarch/idle.webp',
+    poses: makePoses('cosmic-monarch'),
+    frames: 4,
+    rarity: 'limited',
+    accentColor: '#fbbf24',
+    baseDps: 85,
+    smoothFilter: true,
+  },
+  {
+    id: 'crimson-eye-sovereign',
+    name: 'Crimson Eye Sovereign',
+    spriteUrl: '/chibi/crimson-eye-sovereign/idle.webp',
+    poses: makePoses('crimson-eye-sovereign'),
+    frames: 4,
+    rarity: 'limited',
+    accentColor: '#f43f5e',
+    baseDps: 450,
+    smoothFilter: true,
+  },
+  {
+    id: 'crimson-gaze-maiden',
+    name: 'Crimson Gaze Maiden',
+    spriteUrl: '/chibi/crimson-gaze-maiden/idle.webp',
+    poses: makePoses('crimson-gaze-maiden'),
+    frames: 4,
+    rarity: 'limited',
+    accentColor: '#e11d48',
+    baseDps: 2_400,
+    smoothFilter: true,
+  },
+  {
+    id: 'kasa-watcher',
+    name: 'Kasa Watcher',
+    spriteUrl: '/chibi/kasa-watcher/idle.webp',
+    poses: makePoses('kasa-watcher'),
+    frames: 4,
+    rarity: 'limited',
+    accentColor: '#f43f5e',
+    baseDps: 14_000,
+    smoothFilter: true,
+  },
+  {
+    id: 'prism-fracture-eye',
+    name: 'Prism Fracture Eye',
+    spriteUrl: '/chibi/prism-fracture-eye/idle.webp',
+    poses: makePoses('prism-fracture-eye'),
+    frames: 4,
+    rarity: 'limited',
+    accentColor: '#e879f9',
+    baseDps: 48_000,
+    smoothFilter: true,
+  },
+  {
+    id: 'chrono-maiden',
+    name: 'Chrono Maiden',
+    spriteUrl: '/chibi/chrono-maiden/idle.webp',
+    poses: makePoses('chrono-maiden'),
+    frames: 4,
+    rarity: 'limited',
+    accentColor: '#f43f5e',
+    baseDps: 120_000,
+    smoothFilter: true,
+  },
+  {
+    id: 'ink-seraph',
+    name: 'Ink Seraph',
+    spriteUrl: '/chibi/ink-seraph/idle.webp',
+    poses: makePoses('ink-seraph'),
+    frames: 4,
+    rarity: 'limited',
+    accentColor: '#e2e8f0',
+    baseDps: 260_000,
     smoothFilter: true,
   },
 ] as const;

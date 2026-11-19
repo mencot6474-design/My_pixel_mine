@@ -7,6 +7,7 @@ import {
   getPickaxeSellValue,
   PICKAXE_RESTOCK_MS,
 } from './GameData';
+import { isNonSellableChibi } from './DailyLoginData';
 import type { PlotUnitState } from './GameStateSave';
 import { removeFromHotbarDomain } from './LootChestDomain';
 import { trimStashedUnits } from './PlotUnitsDomain';
@@ -112,6 +113,7 @@ export function getSellableMinerCountDomain(
   ctx: Pick<ShopWeatherContext, 'miners' | 'plotMiners'>,
   chibiId: string
 ): number {
+  if (isNonSellableChibi(chibiId)) return 0;
   const owned = ctx.miners[chibiId] || 0;
   const onPlot = ctx.plotMiners.filter((id) => id === chibiId).length;
   return Math.max(0, owned - onPlot);

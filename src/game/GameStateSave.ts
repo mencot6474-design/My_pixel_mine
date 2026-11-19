@@ -108,6 +108,8 @@ export interface SavePayload {
   lastSavedAt?: number;
   bounties?: BountyEntry[];
   bountiesCompleted?: number;
+  dailyLoginLastClaimDate?: string;
+  dailyLoginClaimedDays?: number[];
 }
 
 export interface SaveableGameState {
@@ -148,6 +150,8 @@ export interface SaveableGameState {
   lastSavedAt: number;
   bounties: BountyEntry[];
   bountiesCompleted: number;
+  dailyLoginLastClaimDate: string;
+  dailyLoginClaimedDays: number[];
 }
 
 /** Maps retired World 2–5 ore IDs onto current catalog ore IDs. */
@@ -236,6 +240,8 @@ export function serializeSavePayload(state: SaveableGameState): SavePayload {
     lastSavedAt: state.lastSavedAt,
     bounties: state.bounties,
     bountiesCompleted: state.bountiesCompleted,
+    dailyLoginLastClaimDate: state.dailyLoginLastClaimDate,
+    dailyLoginClaimedDays: state.dailyLoginClaimedDays,
   };
 }
 
@@ -468,6 +474,18 @@ export function deserializeSaveJson(
     }
     if (Array.isArray(data.bounties)) {
       state.bounties = data.bounties.filter((b): b is BountyEntry => isValidBountyEntry(b));
+    }
+    if (typeof data.dailyLoginLastClaimDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.dailyLoginLastClaimDate)) {
+      state.dailyLoginLastClaimDate = data.dailyLoginLastClaimDate;
+    }
+    if (Array.isArray(data.dailyLoginClaimedDays)) {
+      const validDays = new Set<number>();
+      for (const d of data.dailyLoginClaimedDays) {
+        if (typeof d === 'number' && Number.isInteger(d) && d >= 1 && d <= 7) {
+          validDays.add(d);
+        }
+      }
+      state.dailyLoginClaimedDays = [...validDays].sort((a, b) => a - b);
     }
   } catch {
     // Ignore corrupt saves

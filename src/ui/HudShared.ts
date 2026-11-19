@@ -37,6 +37,7 @@ export type ModalKind =
   | 'settings'
   | 'offline'
   | 'bounties'
+  | 'daily-login'
   | 'altar-hub';
 
 export type ModalThemeId = Exclude<ModalKind, 'none'>;
@@ -51,6 +52,7 @@ export function rarityCardClasses(rarity: ItemRarity, extra = ''): string {
   if (rarity === 'exotic') cls.push('rarity-exotic');
   if (rarity === 'secret') cls.push('rarity-secret');
   if (rarity === 'fusion') cls.push('rarity-fusion');
+  if (rarity === 'limited') cls.push('rarity-limited');
   if (extra) cls.push(extra);
   return cls.join(' ');
 }
@@ -58,6 +60,9 @@ export function rarityCardClasses(rarity: ItemRarity, extra = ''): string {
 export function renderRarityBadgeHtml(rarity: ItemRarity, extraCls = ''): string {
   if (rarity === 'fusion') {
     return `<span class="mam-fusion-badge ${extraCls}"><span>✦</span><span>FUSION</span></span>`;
+  }
+  if (rarity === 'limited') {
+    return `<span class="mam-limited-badge ${extraCls}"><span>✦</span><span>LIMITED</span></span>`;
   }
   const borderColor = RARITY_BORDER[rarity];
   const rarityLabel = rarity.charAt(0).toUpperCase() + rarity.slice(1);
@@ -229,10 +234,16 @@ export function renderInspectorPanel(opts: {
         : opts.rarity === 'secret'
           ? 'border-[2.5px] border-transparent [background:radial-gradient(circle_at_50%_45%,rgba(244,63,94,0.45),#090a12_84%)_padding-box,linear-gradient(135deg,#f43f5e,#fbbf24,#9f1239,#f59e0b)_border-box]'
           : opts.rarity === 'fusion'
-            ? 'border-[2.5px] border-transparent [background:radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.42),rgba(168,85,247,0.3)_50%,#090b18_86%)_padding-box,linear-gradient(135deg,#22d3ee,#818cf8,#e879f9,#facc15,#22d3ee)_border-box]'
-            : 'border-[2.5px]';
+            ? 'border-[2.5px] border-transparent [background:linear-gradient(155deg,rgba(34,211,238,0.42)_0%,rgba(129,140,248,0.36)_48%,rgba(232,121,249,0.42)_100%)_padding-box,linear-gradient(180deg,#13254a_0%,#1c123d_100%)_padding-box,linear-gradient(135deg,#22d3ee,#818cf8,#e879f9,#facc15,#22d3ee)_border-box]'
+            : opts.rarity === 'limited'
+              ? 'border-[2.5px] border-transparent [background:linear-gradient(155deg,rgba(251,191,36,0.44)_0%,rgba(236,72,153,0.32)_52%,rgba(245,158,11,0.42)_100%)_padding-box,linear-gradient(180deg,#2b1847_0%,#1d1033_100%)_padding-box,linear-gradient(135deg,#fef08a,#fbbf24,#f472b6,#f59e0b,#fef08a)_border-box]'
+              : 'border-[2.5px]';
   const showcaseStyle =
-    opts.rarity === 'rainbow' || opts.rarity === 'exotic' || opts.rarity === 'secret' || opts.rarity === 'fusion'
+    opts.rarity === 'rainbow' ||
+    opts.rarity === 'exotic' ||
+    opts.rarity === 'secret' ||
+    opts.rarity === 'fusion' ||
+    opts.rarity === 'limited'
       ? ''
       : `border-color:${borderColor};background:radial-gradient(circle at 50% 42%,${borderColor}40,rgba(15,19,27,0.96) 78%);`;
   const statsHtml = opts.stats

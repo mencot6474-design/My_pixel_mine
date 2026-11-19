@@ -174,6 +174,13 @@ import {
   type OverclockState,
   stepOverclockDomain,
 } from './OverclockDomain';
+import {
+  canClaimDailyLoginDomain,
+  claimDailyLoginDomain,
+  type DailyLoginSnapshot,
+  getDailyLoginSnapshotDomain,
+} from './DailyLoginDomain';
+import type { DailyLoginRewardDef } from './DailyLoginData';
 
 export type {
   PlotUnitState,
@@ -241,6 +248,8 @@ export class GameState {
   public pendingOfflineEarnings: OfflineEarningsSummary | null = null;
   public bounties: BountyEntry[] = [];
   public bountiesCompleted = 0;
+  public dailyLoginLastClaimDate = '';
+  public dailyLoginClaimedDays: number[] = [];
   public readonly overclock: OverclockState = createInitialOverclockState();
   private loadedLastSavedAt = 0;
 
@@ -1024,6 +1033,18 @@ export class GameState {
 
   public claimBounty(bountyId: string, rng: () => number = Math.random): BountyClaimResult | null {
     return claimBountyDomain(this, bountyId, rng, () => this.emit());
+  }
+
+  public canClaimDailyLogin(now = Date.now()): boolean {
+    return canClaimDailyLoginDomain(this, now);
+  }
+
+  public getDailyLoginSnapshot(now = Date.now()): DailyLoginSnapshot {
+    return getDailyLoginSnapshotDomain(this, now);
+  }
+
+  public claimDailyLogin(now = Date.now()): DailyLoginRewardDef | null {
+    return claimDailyLoginDomain(this, now, () => this.emit());
   }
 
   public chargeOverclock(amount: number, nowMs = Date.now()): boolean {

@@ -10,6 +10,7 @@ import { fmtInt, fmtMoney } from '../game/NumberFormat';
 import { getTowerFloorDef, TowerWaveOreState } from '../game/TowerData';
 import { AltarShopHudUi } from './AltarShopHudUi';
 import { BountiesModalUi } from './BountiesModalUi';
+import { DailyLoginModalUi } from './DailyLoginModalUi';
 import { CollectionModalsUi } from './CollectionModalsUi';
 import { FusionRecipeDef } from '../game/FusionData';
 import { ForgeModalUi } from './ForgeModalUi';
@@ -74,6 +75,7 @@ export class GameHud {
   private readonly settingsUi: SettingsModalUi;
   private readonly offlineUi: OfflineModalUi;
   private readonly bountiesUi: BountiesModalUi;
+  private readonly dailyLoginUi: DailyLoginModalUi;
 
   constructor(
     private readonly root: HTMLElement,
@@ -123,6 +125,11 @@ export class GameHud {
       () => this.openModal('none')
     );
     this.bountiesUi = new BountiesModalUi(
+      this.state,
+      (msg) => this.pushToast(msg),
+      () => this.render()
+    );
+    this.dailyLoginUi = new DailyLoginModalUi(
       this.state,
       (msg) => this.pushToast(msg),
       () => this.render()
@@ -780,7 +787,13 @@ export class GameHud {
 
       const chestCount = this.state.getChestItemCount();
       const readyBounties = this.state.getReadyBountyCount();
+      const dailyReady = this.state.canClaimDailyLogin();
       const quickButtonsHtml = `
+        <button class="${TW_QUICK_BTN_QUEST} mam-outline-sm" title="Daily Login" data-action="open-daily-login">
+          <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] mam-outline-sm ${dailyReady ? '' : 'hidden'}" data-daily-badge="true">1</span>
+          <span class="text-amber-300 text-[15px] leading-none" aria-hidden="true">✦</span>
+          <span>Daily</span>
+        </button>
         <button class="${TW_QUICK_BTN_QUEST} mam-outline-sm" title="Mining Bounties" data-action="open-bounties">
           <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] mam-outline-sm ${readyBounties > 0 ? '' : 'hidden'}" data-bounties-badge="true">${readyBounties}</span>
           ${hudIconHtml('quest', 20, 'Bounties')}
@@ -903,6 +916,7 @@ export class GameHud {
     if (this.activeModal === 'settings') return this.settingsUi.renderModal();
     if (this.activeModal === 'offline') return this.offlineUi.renderModal();
     if (this.activeModal === 'bounties') return this.bountiesUi.renderModal();
+    if (this.activeModal === 'daily-login') return this.dailyLoginUi.renderModal();
     if (this.activeModal === 'altar-hub') return this.fusionUi.renderAltarChoiceModal();
     return '';
   }
@@ -965,6 +979,7 @@ export class GameHud {
       'open-index': () => this.toggleModal('index'),
       'open-settings': () => this.toggleModal('settings'),
       'open-bounties': () => this.toggleModal('bounties'),
+      'open-daily-login': () => this.toggleModal('daily-login'),
       'toggle-audio': () => {
         const nextMuted = audio.toggleMuted();
         this.pushToast(nextMuted ? 'Audio Muted' : 'Audio On');
@@ -1047,6 +1062,7 @@ export class GameHud {
     this.settingsUi.bindEvents(this.root);
     this.offlineUi.bindEvents(this.root);
     this.bountiesUi.bindEvents(this.root);
+    this.dailyLoginUi.bindEvents(this.root);
     this.fusionUi.bindAltarChoiceEvents(this.root);
     this.fusionUi.bindFusionWorldEvents(this.root);
   }

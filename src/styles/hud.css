@@ -193,7 +193,8 @@
   .mam-altar-card.rarity-fusion {
     border: 2.5px solid transparent;
     background:
-      radial-gradient(circle at 50% 38%, rgba(34, 211, 238, 0.4), rgba(168, 85, 247, 0.28) 46%, #090b18 86%) padding-box,
+      linear-gradient(155deg, rgba(34, 211, 238, 0.42) 0%, rgba(129, 140, 248, 0.36) 48%, rgba(232, 121, 249, 0.42) 100%) padding-box,
+      linear-gradient(180deg, #13254a 0%, #1c123d 100%) padding-box,
       linear-gradient(135deg, #22d3ee, #818cf8, #e879f9, #facc15, #22d3ee) border-box;
     animation: mamFusionPulse 2s ease-in-out infinite;
   }
@@ -217,6 +218,52 @@
     text-transform: uppercase;
     line-height: 1.15;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  }
+
+  .mam-card.rarity-limited,
+  .mam-strip-card.rarity-limited,
+  .mam-altar-card.rarity-limited {
+    border: 2.5px solid transparent;
+    background:
+      linear-gradient(155deg, rgba(251, 191, 36, 0.44) 0%, rgba(236, 72, 153, 0.32) 52%, rgba(245, 158, 11, 0.42) 100%) padding-box,
+      linear-gradient(180deg, #2b1847 0%, #1d1033 100%) padding-box,
+      linear-gradient(135deg, #fef08a, #fbbf24, #f472b6, #f59e0b, #fef08a) border-box;
+    animation: mamLimitedPulse 2.2s ease-in-out infinite;
+  }
+
+  @keyframes mamLimitedPulse {
+    0%,
+    100% {
+      box-shadow:
+        0 0 14px -2px rgba(251, 191, 36, 0.45),
+        inset 0 1px 0 rgba(254, 240, 138, 0.25);
+    }
+    50% {
+      box-shadow:
+        0 0 22px 0 rgba(244, 114, 182, 0.55),
+        inset 0 1px 0 rgba(254, 240, 138, 0.42);
+    }
+  }
+
+  .mam-limited-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 9px;
+    border-radius: 9999px;
+    border: 1.5px solid #fef08a;
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 40%, #ec4899 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      0 0 12px rgba(251, 191, 36, 0.65),
+      0 2px 6px rgba(0, 0, 0, 0.65);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.15;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   }
 
   .mam-fusion-text {
@@ -567,6 +614,19 @@
     --mam-m-ambient: rgba(16, 185, 129, 0.22);
     --mam-m-glow: rgba(52, 211, 153, 0.42);
     --mam-m-well-border: #174a3c;
+  }
+
+  .mam-modal[data-modal-theme='daily-login'] {
+    --mam-m-accent: #a855f7;
+    --mam-m-accent-hi: #facc15;
+    --mam-m-accent-deep: #7e22ce;
+    --mam-m-surface-top: #1a1033;
+    --mam-m-surface-bot: #0c081c;
+    --mam-m-plaque-bg: #26164a;
+    --mam-m-border: #5b319c;
+    --mam-m-ambient: rgba(168, 85, 247, 0.24);
+    --mam-m-glow: rgba(250, 204, 21, 0.36);
+    --mam-m-well-border: #3d216e;
   }
 
   .mam-modal {

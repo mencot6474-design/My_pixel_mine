@@ -141,8 +141,8 @@ describe('Pure 3D Mine World', () => {
     expect(applyNodeDamagePure(node, 20)).toBeNull();
   });
 
-  it('registers all 39 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
-    expect(CHIBI_CATALOG.length).toBe(39);
+  it('registers all 46 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
+    expect(CHIBI_CATALOG.length).toBe(46);
     expect(getChibiById('solar-striker')?.spriteUrl).toBe('/chibi/solar-striker/idle.webp');
     expect(getChibiById('solar-striker')?.poses.attack).toBe('/chibi/solar-striker/attack.webp');
     expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.idle, 4)).toBe(0);

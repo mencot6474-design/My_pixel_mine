@@ -81,7 +81,9 @@ export class PlotInspectUi {
           ${
             rarity === 'fusion'
               ? `<span class="mam-fusion-badge">✦ FUSION</span>`
-              : `<span style="color:${rColor}">${rarity[0].toUpperCase() + rarity.slice(1)}</span>`
+              : rarity === 'limited'
+                ? `<span class="mam-limited-badge">✦ LIMITED</span>`
+                : `<span style="color:${rColor}">${rarity[0].toUpperCase() + rarity.slice(1)}</span>`
           }
           <span style="color:#fff">•</span>
           <span class="${mut.id === 'rainbow' ? 'mam-rainbow-text' : ''}" style="${mut.id === 'rainbow' ? '' : `color:${mut.color}`}">${mut.name}</span>

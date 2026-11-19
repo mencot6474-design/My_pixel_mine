@@ -628,4 +628,36 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(state.getOreOutputMult()).toBeCloseTo(baseDrop + 1.5, 5);
     });
   });
+
+  describe('DailyLoginDomain', () => {
+    it('claims Day 1 Cosmic Monarch at 5 stars, blocks selling it, and persists across save/load', () => {
+      const state = new GameState();
+      const day1Now = new Date(2026, 10, 19, 10, 0, 0).getTime();
+
+      expect(state.canClaimDailyLogin(day1Now)).toBe(true);
+      const reward = state.claimDailyLogin(day1Now);
+      expect(reward?.day).toBe(1);
+      expect(reward?.chibiId).toBe('cosmic-monarch');
+
+      expect(state.miners['cosmic-monarch']).toBe(1);
+      expect(state.chibiStars['cosmic-monarch']).toBe(5);
+      expect(state.discovered.has('cosmic-monarch')).toBe(true);
+      expect(state.hotbar).toContain('cosmic-monarch');
+      expect(state.getSellableMinerCount('cosmic-monarch')).toBe(0);
+      expect(state.sellMiner('cosmic-monarch', true)).toBe(0);
+      expect(state.canClaimDailyLogin(day1Now)).toBe(false);
+
+      // Fusion Chibis are also non-sellable
+      state.miners['glitch-cheshire'] = 1;
+      expect(state.getSellableMinerCount('glitch-cheshire')).toBe(0);
+      expect(state.sellMiner('glitch-cheshire', true)).toBe(0);
+
+      const raw = JSON.stringify(serializeSavePayload(state));
+      const reloaded = new GameState();
+      deserializeSaveJson(reloaded, raw);
+      expect(reloaded.dailyLoginClaimedDays).toEqual([1]);
+      expect(reloaded.dailyLoginLastClaimDate).toBe('2026-11-19');
+      expect(reloaded.chibiStars['cosmic-monarch']).toBe(5);
+    });
+  });
 });
