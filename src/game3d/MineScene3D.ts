@@ -969,6 +969,7 @@ export class MineScene3D {
     if (mode === 'altar') {
       this.scene.background = new THREE.Color(0x020208);
       this.scene.fog = new THREE.Fog(0x040312, 34, 86);
+      this.applyWeatherAtmosphere();
       this.targetOrbitYaw = 0;
       this.targetOrbitPitch = -0.18;
       this.targetCamRadius = 12.2;
@@ -976,13 +977,15 @@ export class MineScene3D {
     } else if (mode === 'fusion') {
       this.scene.background = new THREE.Color(0x040614);
       this.scene.fog = new THREE.Fog(0x060a1f, 34, 96);
+      this.applyWeatherAtmosphere();
       this.targetOrbitYaw = 0;
       this.targetOrbitPitch = -0.14;
       this.targetCamRadius = 15.8;
       this.lookAtPos.set(0, 1.45, -0.75);
     } else if (mode === 'tower') {
-      this.scene.background = new THREE.Color(0x030714);
-      this.scene.fog = new THREE.Fog(0x050b1c, 26, 76);
+      this.scene.background = new THREE.Color(0x101a30);
+      this.scene.fog = new THREE.Fog(0x182338, 26, 76);
+      this.applyWeatherAtmosphere();
       this.targetOrbitYaw = 0;
       this.targetOrbitPitch = -0.34;
       this.targetCamRadius = 16.4;
@@ -1009,11 +1012,16 @@ export class MineScene3D {
     const weather = getWeatherById(this.activeWeatherId);
     this.env.setWeatherSky(weather.id, weather.cloudHex);
     const isShop = this.mode === 'shop';
+    const isTower = this.mode === 'tower';
     this.hemiLight.color.set(weather.hemiTintHex);
-    this.hemiLight.intensity = isShop
-      ? Math.max(weather.hemiIntensity, 1.12)
-      : Math.max(weather.hemiIntensity, 0.96);
-    this.sunLight.intensity = isShop ? Math.max(weather.sunIntensity, 1.52) : weather.sunIntensity;
+    this.hemiLight.intensity = isTower
+      ? Math.max(weather.hemiIntensity, 1.32)
+      : isShop
+        ? Math.max(weather.hemiIntensity, 1.12)
+        : Math.max(weather.hemiIntensity, 0.96);
+    this.sunLight.intensity = isTower
+      ? Math.max(weather.sunIntensity, 1.75)
+      : isShop ? Math.max(weather.sunIntensity, 1.52) : weather.sunIntensity;
     this.rimLight.color.set(isShop ? 0x38bdf8 : weather.rimTintHex);
 
     if (this.mode !== 'mine' && !isShop) return;
