@@ -134,8 +134,8 @@ src/ui/HotbarHudUi.ts           422 baris — `HotbarHudUi`: Solid Cyber-Anime T
                                             outside-click selection clear, & pointer drag-and-drop reorder / plot swap (`buildHotbarStateKey`, `canDropHotbarOnPlot`, `renderHotbarSlotsHtml`)
 src/ui/AltarShopHudUi.ts        428 baris — `AltarShopHudUi`: Shop Plaza dock HUD (`renderShopWorldHudHtml`), Enchant Altar HUD (`renderAltarStripCardsHtml`),
                                             roll/auto-roll timer controller (`triggerSingleEnchantRoll`), & live counters
-src/ui/WorldOverlayHudUi.ts     493 baris — `WorldOverlayHudUi`: 5 floating `document.body` overlay layers (`plotOverlayLayer`, `oreBarLayer`, `dmgPopupLayer`,
-                                            `shopOverlayLayer`, `shopBubbleLayer`), Mine/Tower ore HP bars, `showDamagePopups`-gated damage popups, Shop station badges & NPC bubbles,
+src/ui/WorldOverlayHudUi.ts     499 baris — `WorldOverlayHudUi`: 5 floating `document.body` overlay layers (`plotOverlayLayer`, `oreBarLayer`, `dmgPopupLayer`,
+                                            `shopOverlayLayer`, `shopBubbleLayer`), Mine/Tower segmented solid ore HP bars, `showDamagePopups`-gated damage popups, Shop station badges & NPC bubbles,
                                             Altar anchor pills, & 3D plot nametag sync (`buildPlotLabelPayload`, `buildMineOreBarsHtml`, `buildTowerOreBarsHtml`)
 src/ui/CollectionModalsUi.ts  1.185 baris — `CollectionModalsUi` 43: Index modal (6 worlds + Weather Index tab + Inspector + Chibi 4-pose `Review` `<dialog>`),
                                             Backpack/Inventory (Equip Best / Auto Star-Up / Star-Up Miner / Search / Inspect), Chest modal & live updaters
@@ -145,12 +145,12 @@ src/ui/SettingsModalUi.ts       194 baris — `SettingsModalUi`: Dark-Glass Sett
 src/ui/OfflineModalUi.ts        143 baris — `OfflineModalUi`: Dark-Glass Welcome Back modal (offline duration, Cash/Gems/Ores summary, Claim & `CG_ADS_ENABLED`-gated 2x Ad Claim)
 src/ui/BountiesModalUi.ts       115 baris — `BountiesModalUi`: Dark-Glass Mining Bounties modal (3 rotating contracts, progress bars, Claim & auto-refill)
 src/ui/ShopModalsUi.ts          653 baris — `ShopModalsUi` 43: Pickaxe Shop, Gem Shop, Sell Shop + Inspectors & updaters
-src/ui/TowerUi.ts               561 baris — `TowerUi` 20: Gem Tower Hub Dark-Glass modal (`renderTowerHubModal` 45:
+src/ui/TowerUi.ts               628 baris — `TowerUi` 55: Gem Tower Hub Dark-Glass modal (`renderTowerHubModal` 80:
                                             Keys, 5-Floor Checkpoints & Milestones, Anomalies, Quick Sweep, Run Summary) &
-                                            3D Arena HUD (`renderTowerArenaHud`, unified Boss & Wave HP bar styling, 5s Boss Invul shield, 5s Blessing auto-pick)
+                                            Solid Cyber-Anime Raid Battle HUD (`renderTowerArenaHud`, `.mam-battle-hp-card` 10-tick animated HP bar, `.mam-battle-dock`, custom Pickaxe/Shield/Bolt/Timer SVGs, 5s Boss Invul shield, 5s Blessing auto-pick)
 src/ui/TutorialUi.ts            659 baris — `TutorialUi`: Cyber-Anime 5-stage responsive click-through FTUE (`pose.webp` pop-out, opposite-side placement, `--mam-float-scale`, progress bar, `Skip`, `.mam-tut-target-ring`, `?tutorial=1`, Starter Bonus +150 Gems & +1 Dice)
-src/ui/UpgradesWorldsUi.ts      620 baris — `UpgradesWorldsUi` 17: Research/Upgrades tree (opaque Dark-Glass nodes w/ world glow, edge-trimmed SVG lines & `.webp` icons) & World Teleport full-banner
-                                            modal (`buildWorldsListHtml` 315 pakai `public/worlds/*.webp`) & live updaters
+src/ui/UpgradesWorldsUi.ts      636 baris — `UpgradesWorldsUi` 17: Research/Upgrades tree (opaque Dark-Glass nodes w/ world glow, edge-trimmed SVG lines & `.webp` icons) & World Teleport full-banner
+                                            modal (`buildWorldsListHtml` 315 pakai `public/worlds/*.webp`, synced Warp Portal title icon) & live updaters
 src/ui/PlotInspectUi.ts         412 baris — `PlotInspectUi` 28: Plot Inspector overlay (incl. ★Star, World Resonance & per-unit Enchant `In Use`/`Equipped` status), live updater & modal
                                             konfirmasi peringatan roll mutasi Frozen+ (`renderMutationConfirmOverlay`
                                             222: `Stop (Keep)` / `Continue`, proteksi obtain & overwrite)
@@ -158,9 +158,9 @@ src/ui/HudIcons.ts              314 baris — SVG, 2D fantasy art (`public/{ench
                                             `weatherIconHtml`, `towerIconHtml`, `pickaxeIconHtml`, `gemPotionIconHtml`,
                                             `enchantAuraIconHtml`, `enchantDiceIconHtml`, `researchIconHtml` 305)
 src/styles/global.css            73 baris — Tailwind v4 entry (`@import "tailwindcss";`) + base font/reset + pickaxe cursor styles
-src/styles/hud.css            1.832 baris — Solid Cyber-Armor + Luminous Gradient Rail system (`[data-modal-theme]` 13 opaque themes incl. `forge`/`settings`/`offline`/`bounties`,
+src/styles/hud.css            1.984 baris — Solid Cyber-Armor + Luminous Gradient Rail system (`[data-modal-theme]` 13 opaque themes incl. `forge`/`settings`/`offline`/`bounties`,
                                             `.mam-modal` + anti-flicker entrance, `.mam-modal-rails`, sculpted `.mam-title-plaque`, `dialog.mam-review-dialog`, `.mam-grid`, `.mam-no-scrollbar`, `.mam-chibi-smooth`,
-                                            `.mam-hotbar-dock`/`-slot`/`-keycap`/`-qty`/`-val-bar`/`-bag`, `.mam-fever-*` Overclock Gauge, `.mam-dps-*` Breakdown dock, `.mam-toast-banner`, `.mam-notif-badge`, `.mam-tut-*` FTUE card & target ring, keyframes, a11y)
+                                            `.mam-hotbar-dock`/`-slot`/`-keycap`/`-qty`/`-val-bar`/`-bag`, `.mam-battle-hp-*`/`.mam-battle-dock` Raid HUD, `.mam-fever-*` Overclock Gauge, `.mam-dps-*` Breakdown dock, `.mam-toast-banner`, `.mam-notif-badge`, `.mam-tut-*` FTUE card & target ring, keyframes, a11y)
 
 === 3D WORLD & RENDERERS ===
 src/game3d/MineScene3D.ts     1.169 baris — Main Three.js scene controller: switches `mine` / `shop` / `altar` / `tower`, `SRGBColorSpace` renderer,

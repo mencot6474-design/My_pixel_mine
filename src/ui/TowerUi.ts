@@ -15,7 +15,42 @@ import {
   TOWER_WAVES_PER_FLOOR,
 } from '../game/TowerData';
 import { hudIconHtml, towerIconHtml } from './HudIcons';
-import { ModalKind, renderModalShell, TW_SHOPS_PILL, TW_TOP_CENTER } from './HudShared';
+import { ModalKind, renderModalShell, TW_TOP_CENTER } from './HudShared';
+
+const BATTLE_SHIELD_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" class="shrink-0 drop-shadow-[0_0_5px_rgba(34,211,238,0.85)]" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="mam-b-shield" x1="4" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="45%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+  </defs>
+  <path d="M12 2.5L19.5 5.5V11.6C19.5 16.4 16.3 20.1 12 21.8C7.7 20.1 4.5 16.4 4.5 11.6V5.5L12 2.5Z" fill="url(#mam-b-shield)" stroke="#e0f2fe" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M12 5.2L16.8 7.2V11.5C16.8 14.8 14.7 17.5 12 18.8C9.3 17.5 7.2 14.8 7.2 11.5V7.2L12 5.2Z" fill="#0c4a6e" fill-opacity="0.55"/>
+  <path d="M12 7.4L13.4 11L12 14.6L10.6 11L12 7.4Z" fill="#ffffff"/>
+</svg>`;
+
+const BATTLE_BOLT_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" class="shrink-0 drop-shadow-[0_0_5px_rgba(251,113,133,0.85)]" fill="none" aria-hidden="true">
+  <path d="M13.5 2L5 13H11.5L10.2 22L19 10.6H12.6L13.5 2Z" fill="#fde047" stroke="#ffffff" stroke-width="1.4" stroke-linejoin="round"/>
+</svg>`;
+
+const BATTLE_PICKAXE_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" class="shrink-0 drop-shadow-[0_0_5px_rgba(56,189,248,0.8)]" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="mam-b-pick" x1="3" y1="3" x2="21" y2="14" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="50%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <path d="M14.2 9.8L4.4 19.6" stroke="#f59e0b" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M14.2 9.8L4.4 19.6" stroke="#fde68a" stroke-width="1" stroke-linecap="round"/>
+  <path d="M8.2 4.2C12.2 3.4 16.5 5 19.6 8.2C20.5 9.1 21 10.2 21.2 11.4L17.8 11.9C17.2 10.6 16.3 9.5 15.2 8.7L12.1 11.8L10.3 10L13.4 6.9C11.9 6.2 10.2 5.9 8.6 6.2L8.2 4.2Z" fill="url(#mam-b-pick)" stroke="#e0f2fe" stroke-width="1.2" stroke-linejoin="round"/>
+</svg>`;
+
+const BATTLE_TIMER_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" class="shrink-0" fill="none" aria-hidden="true">
+  <circle cx="12" cy="13" r="8" stroke="currentColor" stroke-width="2"/>
+  <path d="M9.5 2.8H14.5M12 13L15.2 9.8M12 5V2.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg>`;
 
 export class TowerUi {
   private selectedCheckpoint = 1;
@@ -266,10 +301,10 @@ export class TowerUi {
         ? run.blessings
             .map(
               (b) =>
-                `<span class="px-2 py-0.5 rounded-full border border-white/20 bg-white/[0.08] text-[10px] font-black" style="color:${b.color}">${b.name}</span>`
+                `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border bg-[#0c1428] text-[10.5px] font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]" style="color:${b.color};border-color:${b.color}">✦ ${b.name}</span>`
             )
             .join('')
-        : `<span class="text-[11px] font-semibold text-slate-400">Defeat Wave 10 Boss to pick a Spire Blessing</span>`;
+        : `<span class="px-2.5 py-1 rounded-lg border border-[#243454] bg-[#0b1120] text-[11px] font-bold text-slate-400">Defeat Wave 10 Boss to pick a Spire Blessing</span>`;
 
     const blessingOverlay = run.pendingBlessings
       ? `
@@ -307,8 +342,8 @@ export class TowerUi {
       : '';
 
     const waveBadge = run.isBossWave
-      ? `<span class="px-3 py-1 rounded-full border-2 border-amber-400 bg-[#361b08] text-[12px] font-black text-amber-200">BOSS WAVE</span>`
-      : `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border-2 border-cyan-400 bg-[#0d182d] text-[12px] font-black text-cyan-200" data-tower-ores-badge="true">
+      ? `<span class="px-3 py-1 rounded-xl border-2 border-amber-400 bg-[linear-gradient(135deg,#78220c,#3b0d06)] text-[12px] font-black tracking-wide text-amber-200 shadow-[0_3px_10px_rgba(0,0,0,0.6)] mam-outline-sm">★ BOSS WAVE</span>`
+      : `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border-2 border-cyan-400 bg-[#0d182d] text-[12px] font-black text-cyan-200 shadow-[0_3px_10px_rgba(0,0,0,0.6)] mam-outline-sm" data-tower-ores-badge="true">
           <span>${aliveOres}/${TOWER_ORE_ROCKS_PER_WAVE} ORES</span>
           <span class="inline-flex items-center gap-1" data-tower-ore-pips="true">${this.renderOrePipsHtml()}</span>
         </span>`;
@@ -318,38 +353,23 @@ export class TowerUi {
     const hpLabel = `${fmtShort(Math.ceil(run.hp))} / ${fmtShort(run.maxHp)} HP (${hpPctLabel}%)`;
     const bossShieldBadge = run.isBossWave
       ? invulLeft > 0
-        ? `<span class="px-2 py-0.5 rounded-full border border-cyan-300/70 bg-cyan-950/90 text-cyan-200 text-[10px] font-black tracking-wider animate-pulse" data-tower-boss-shield="true">🛡️ SHIELD ${invulLeft.toFixed(1)}s</span>`
-        : `<span class="px-2 py-0.5 rounded-full border border-rose-400/70 bg-rose-950/90 text-rose-200 text-[10px] font-black tracking-wider" data-tower-boss-shield="true">⚡ VULNERABLE</span>`
-      : `<span class="px-2 py-0.5 rounded-full border border-cyan-300/60 bg-cyan-950/90 text-cyan-200 text-[10px] font-black tracking-wider" data-tower-wave-rocks="true">⛏️ ${aliveOres}/${TOWER_ORE_ROCKS_PER_WAVE} ROCKS LEFT</span>`;
-    const barHeaderHtml = `
-      <div class="w-full flex items-center justify-between gap-2 px-1">
-        <div class="inline-flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full ${
-            run.isBossWave
-              ? 'bg-rose-400 shadow-[0_0_8px_#fb7185] animate-ping'
-              : 'bg-cyan-400 shadow-[0_0_8px_#22d3ee] animate-pulse'
-          }"></span>
-          <span class="text-[12px] font-black uppercase tracking-wider ${
-            run.isBossWave ? 'text-amber-200' : 'text-cyan-200'
-          } [text-shadow:0_2px_6px_rgba(0,0,0,0.9)]">${
-            run.isBossWave ? 'SERAPHIM AI OVERLORD' : `WAVE ${run.wave}/9 • DATA NODES`
-          }</span>
-        </div>
-        ${bossShieldBadge}
-      </div>
-    `;
+        ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border-2 border-cyan-300 bg-[#0c324a] text-cyan-100 text-[10.5px] font-black tracking-wider animate-pulse mam-outline-sm" data-tower-boss-shield="true">${BATTLE_SHIELD_SVG}<span data-tower-shield-label="true">SHIELD ${invulLeft.toFixed(1)}s</span></span>`
+        : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border-2 border-rose-400 bg-[#470b1d] text-rose-100 text-[10.5px] font-black tracking-wider mam-outline-sm" data-tower-boss-shield="true">${BATTLE_BOLT_SVG}<span data-tower-shield-label="true">VULNERABLE</span></span>`
+      : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border-2 border-cyan-400 bg-[#0c2740] text-cyan-100 text-[10.5px] font-black tracking-wider mam-outline-sm" data-tower-wave-rocks="true">${BATTLE_PICKAXE_SVG}<span data-tower-rocks-label="true">${aliveOres}/${TOWER_ORE_ROCKS_PER_WAVE} ROCKS LEFT</span></span>`;
+    const emblemSvg = run.isBossWave
+      ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M4 17L6 7L12 11L18 7L20 17H4Z" fill="#fde047" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/><circle cx="12" cy="14" r="1.6" fill="#be123c"/></svg>`
+      : `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><polygon points="12,3 20,7.5 20,16.5 12,21 4,16.5 4,7.5" fill="#38bdf8" fill-opacity="0.3" stroke="#bae6fd" stroke-width="1.8"/><circle cx="12" cy="12" r="2.6" fill="#ffffff"/></svg>`;
+    const stripeOverlay =
+      'repeating-linear-gradient(-45deg,rgba(255,255,255,0.2) 0px,rgba(255,255,255,0.2) 7px,transparent 7px,transparent 14px)';
     const barFillBg = run.isBossWave
       ? invulLeft > 0
-        ? 'linear-gradient(90deg,#0891b2,#22d3ee,#38bdf8)'
-        : 'linear-gradient(90deg,#be123c,#ef4444,#f59e0b)'
-      : 'linear-gradient(90deg,#0284c7,#38bdf8,#8b5cf6)';
-    const barFrameCls = run.isBossWave
-      ? 'h-8 rounded-xl border-2 border-amber-300/70 shadow-[0_8px_24px_rgba(244,63,94,0.35),inset_0_2px_6px_rgba(0,0,0,0.75)]'
-      : 'h-8 rounded-xl border-2 border-cyan-300/60 shadow-[0_8px_22px_rgba(56,189,248,0.28),inset_0_2px_6px_rgba(0,0,0,0.75)]';
+        ? `${stripeOverlay},linear-gradient(90deg,#0284c7,#22d3ee,#7dd3fc)`
+        : `${stripeOverlay},linear-gradient(90deg,#be123c,#ef4444,#f59e0b)`
+      : `${stripeOverlay},linear-gradient(90deg,#0284c7,#38bdf8,#8b5cf6)`;
 
     return `
       <div class="${TW_TOP_CENTER}">
-        <button class="${TW_SHOPS_PILL} mam-outline" data-action="tower-exit">
+        <button class="inline-flex items-center justify-center gap-2 @max-[720px]:gap-1.5 px-5 @max-[720px]:px-4 py-2 @max-[720px]:py-1.5 rounded-2xl border-2 border-rose-400 bg-[linear-gradient(135deg,#dc2626_0%,#991b1b_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_4px_0_#450a0a,0_10px_24px_-4px_rgba(239,68,68,0.45)] text-white text-[18px] @max-[720px]:text-[15px] font-extrabold cursor-pointer transition-[transform,box-shadow,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline" data-action="tower-exit">
           ${towerIconHtml(24)}
           <span>Exit Tower</span>
         </button>
@@ -357,44 +377,62 @@ export class TowerUi {
 
       ${currencyRailHtml}
 
-      <div class="fixed top-[66px] left-1/2 -translate-x-1/2 w-[min(600px,calc(100%-24px))] flex flex-col items-center gap-1.5 pointer-events-none z-20">
+      <div class="fixed top-[68px] left-1/2 -translate-x-1/2 w-[min(640px,calc(100%-24px))] flex flex-col items-center gap-2 pointer-events-none z-20">
         <div class="flex items-center gap-2 flex-wrap justify-center">
-          <span class="px-3 py-1 rounded-full border-2 border-cyan-400 bg-[#0e192e] text-[13px] font-black text-white">
+          <span class="px-3 py-1 rounded-xl border-2 border-cyan-400 bg-[linear-gradient(135deg,#132242,#0b1326)] text-[13px] font-black text-white shadow-[0_3px_10px_rgba(0,0,0,0.65)] mam-outline-sm">
             FLOOR ${run.floor} • WAVE ${run.wave}/${run.maxWaves}
           </span>
           ${waveBadge}
-          <span class="px-3 py-1 rounded-full border-2 border-[#33466b] bg-[#0e192e] text-[12px] font-extrabold" style="color:${floorDef.anomaly.color}">
-            ${floorDef.anomaly.name}
+          <span class="px-3 py-1 rounded-xl border-2 border-[#354c73] bg-[#0e182e] text-[12px] font-black shadow-[0_3px_10px_rgba(0,0,0,0.6)] mam-outline-sm" style="color:${floorDef.anomaly.color}">
+            ✦ ${floorDef.anomaly.name}
           </span>
-          <span class="px-3 py-1 rounded-full border-2 ${
-            timerDanger ? 'border-rose-400 bg-[#3b0b18] text-rose-200' : 'border-[#33466b] bg-[#0e192e] text-cyan-200'
-          } text-[13px] font-black tabular-nums" data-tower-timer="true">
-            ⏱ ${run.timeLeft.toFixed(1)}s
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border-2 ${
+            timerDanger
+              ? 'border-rose-400 bg-[#4a0b1d] text-rose-100 animate-pulse'
+              : 'border-[#354c73] bg-[#0e182e] text-cyan-200'
+          } text-[13px] font-black tabular-nums shadow-[0_3px_10px_rgba(0,0,0,0.6)] mam-outline-sm" data-tower-timer="true">
+            ${BATTLE_TIMER_SVG}<span data-tower-timer-label="true">${run.timeLeft.toFixed(1)}s</span>
           </span>
         </div>
 
-        ${barHeaderHtml}
-
-        <div class="relative w-full ${barFrameCls} bg-[#090e1c] overflow-hidden flex items-center justify-center">
-          <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-75" data-tower-hp-fill="true" style="width:${hpPct}%;background:${barFillBg}"></div>
-          <div class="absolute inset-x-0 top-0 h-[38%] bg-gradient-to-b from-white/25 to-transparent pointer-events-none"></div>
-          <div class="absolute inset-0 flex justify-evenly pointer-events-none">
-            <span class="w-px h-full bg-black/35"></span>
-            <span class="w-px h-full bg-black/35"></span>
-            <span class="w-px h-full bg-black/35"></span>
+        <div class="mam-battle-hp-card ${run.isBossWave ? 'is-boss' : ''} flex flex-col gap-1.5">
+          <div class="w-full flex items-center justify-between gap-2">
+            <div class="inline-flex items-center gap-2 min-w-0">
+              <span class="mam-battle-emblem">${emblemSvg}</span>
+              <span class="w-2 h-2 rounded-full shrink-0 ${
+                run.isBossWave
+                  ? 'bg-rose-400 shadow-[0_0_8px_#fb7185] animate-ping'
+                  : 'bg-cyan-400 shadow-[0_0_8px_#22d3ee] animate-pulse'
+              }"></span>
+              <span class="text-[13px] font-black uppercase tracking-wider truncate ${
+                run.isBossWave ? 'text-amber-200' : 'text-cyan-100'
+              } mam-outline-sm">${
+                run.isBossWave ? 'SERAPHIM AI OVERLORD' : `WAVE ${run.wave}/9 • DATA NODES`
+              }</span>
+            </div>
+            ${bossShieldBadge}
           </div>
-          <div class="relative z-[2] text-[13px] font-black tabular-nums text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.95)]" data-tower-hp-text="true">
-            ${hpLabel}
+
+          <div class="mam-battle-hp-track">
+            <div class="mam-battle-hp-fill" data-tower-hp-fill="true" style="width:${hpPct}%;background-image:${barFillBg}"></div>
+            <div class="absolute inset-x-0 top-0 h-[40%] bg-gradient-to-b from-white/25 to-transparent pointer-events-none z-[1]"></div>
+            <div class="mam-battle-hp-ticks" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="relative z-[2] text-[14px] font-black tabular-nums text-white mam-outline-sm" data-tower-hp-text="true">
+              ${hpLabel}
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="fixed bottom-3.5 left-1/2 -translate-x-1/2 w-[min(760px,calc(100%-24px))] rounded-2xl border-2 border-[#2b3c5e] bg-[linear-gradient(180deg,#141e36_0%,#0a1020_100%)] px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap shadow-[0_14px_34px_rgba(0,0,0,0.75)] pointer-events-auto z-20">
-        <div class="flex items-center gap-3 flex-wrap text-[13px] font-black tabular-nums">
-          <span class="text-pink-300" data-tower-run-gems="true">+${fmtInt(run.gemsEarned)} Gems</span>
-          <span class="text-purple-300" data-tower-run-dice="true">+${run.diceEarned} Dice</span>
-          <span class="text-cyan-300">${fmtShort(effDps)}/s DPS</span>
-          <span class="text-emerald-300">${fmtShort(effTap)} Tap</span>
+      <div class="mam-battle-dock fixed bottom-3.5 left-1/2 -translate-x-1/2 w-[min(780px,calc(100%-24px))] px-3.5 py-2.5 flex items-center justify-between gap-2.5 flex-wrap pointer-events-auto z-20">
+        <div class="flex items-center gap-2 flex-wrap text-[12.5px] font-black tabular-nums">
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border border-pink-400/70 bg-[#2b102c] text-pink-200 mam-outline-sm" data-tower-run-gems="true">+${fmtInt(run.gemsEarned)} Gems</span>
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border border-purple-400/70 bg-[#20133d] text-purple-200 mam-outline-sm" data-tower-run-dice="true">+${run.diceEarned} Dice</span>
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border border-cyan-400/70 bg-[#0d243b] text-cyan-200 mam-outline-sm">${fmtShort(effDps)}/s DPS</span>
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border border-emerald-400/70 bg-[#0c2e22] text-emerald-200 mam-outline-sm">${fmtShort(effTap)} Tap</span>
         </div>
         <div class="flex items-center gap-1.5 flex-wrap">${blessingsStrip}</div>
       </div>
@@ -414,10 +452,12 @@ export class TowerUi {
     if (fill) {
       fill.style.width = `${hpPct}%`;
       if (run.isBossWave) {
-        fill.style.background =
+        const stripe =
+          'repeating-linear-gradient(-45deg,rgba(255,255,255,0.2) 0px,rgba(255,255,255,0.2) 7px,transparent 7px,transparent 14px)';
+        fill.style.backgroundImage =
           invulLeft > 0
-            ? 'linear-gradient(90deg,#0891b2,#22d3ee,#38bdf8)'
-            : 'linear-gradient(90deg,#be123c,#ef4444,#f59e0b)';
+            ? `${stripe},linear-gradient(90deg,#0284c7,#22d3ee,#7dd3fc)`
+            : `${stripe},linear-gradient(90deg,#be123c,#ef4444,#f59e0b)`;
       }
     }
     const hpText = root.querySelector<HTMLElement>('[data-tower-hp-text="true"]');
@@ -427,18 +467,34 @@ export class TowerUi {
     }
     const waveRocksBadge = root.querySelector<HTMLElement>('[data-tower-wave-rocks="true"]');
     if (waveRocksBadge && !run.isBossWave) {
-      waveRocksBadge.textContent = `⛏️ ${aliveOres}/${TOWER_ORE_ROCKS_PER_WAVE} ROCKS LEFT`;
+      const rocksLabel = waveRocksBadge.querySelector<HTMLElement>('[data-tower-rocks-label="true"]');
+      const nextText = `${aliveOres}/${TOWER_ORE_ROCKS_PER_WAVE} ROCKS LEFT`;
+      if (rocksLabel) {
+        rocksLabel.textContent = nextText;
+      } else {
+        waveRocksBadge.innerHTML = `${BATTLE_PICKAXE_SVG}<span data-tower-rocks-label="true">${nextText}</span>`;
+      }
     }
     const shieldBadge = root.querySelector<HTMLElement>('[data-tower-boss-shield="true"]');
     if (shieldBadge && run.isBossWave) {
+      const nextMode = invulLeft > 0 ? 'shield' : 'vuln';
       if (invulLeft > 0) {
         shieldBadge.className =
-          'px-2 py-0.5 rounded-full border border-cyan-300/70 bg-cyan-950/90 text-cyan-200 text-[10px] font-black tracking-wider animate-pulse';
-        shieldBadge.textContent = `🛡️ SHIELD ${invulLeft.toFixed(1)}s`;
+          'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border-2 border-cyan-300 bg-[#0c324a] text-cyan-100 text-[10.5px] font-black tracking-wider animate-pulse mam-outline-sm';
+        if (shieldBadge.dataset.shieldMode !== nextMode) {
+          shieldBadge.dataset.shieldMode = nextMode;
+          shieldBadge.innerHTML = `${BATTLE_SHIELD_SVG}<span data-tower-shield-label="true">SHIELD ${invulLeft.toFixed(1)}s</span>`;
+        } else {
+          const lbl = shieldBadge.querySelector<HTMLElement>('[data-tower-shield-label="true"]');
+          if (lbl) lbl.textContent = `SHIELD ${invulLeft.toFixed(1)}s`;
+        }
       } else {
         shieldBadge.className =
-          'px-2 py-0.5 rounded-full border border-rose-400/70 bg-rose-950/90 text-rose-200 text-[10px] font-black tracking-wider';
-        shieldBadge.textContent = '⚡ VULNERABLE';
+          'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border-2 border-rose-400 bg-[#470b1d] text-rose-100 text-[10.5px] font-black tracking-wider mam-outline-sm';
+        if (shieldBadge.dataset.shieldMode !== nextMode) {
+          shieldBadge.dataset.shieldMode = nextMode;
+          shieldBadge.innerHTML = `${BATTLE_BOLT_SVG}<span data-tower-shield-label="true">VULNERABLE</span>`;
+        }
       }
     }
     const oresBadge = root.querySelector<HTMLElement>('[data-tower-ores-badge="true"]');
@@ -450,9 +506,20 @@ export class TowerUi {
     }
     const timer = root.querySelector<HTMLElement>('[data-tower-timer="true"]');
     if (timer) {
-      timer.textContent = `⏱ ${run.timeLeft.toFixed(1)}s`;
-      timer.classList.toggle('border-rose-400/75', run.timeLeft <= 5);
-      timer.classList.toggle('text-rose-200', run.timeLeft <= 5);
+      const danger = run.timeLeft <= 5;
+      const timerLabel = timer.querySelector<HTMLElement>('[data-tower-timer-label="true"]');
+      if (timerLabel) {
+        timerLabel.textContent = `${run.timeLeft.toFixed(1)}s`;
+      } else {
+        timer.innerHTML = `${BATTLE_TIMER_SVG}<span data-tower-timer-label="true">${run.timeLeft.toFixed(1)}s</span>`;
+      }
+      timer.classList.toggle('border-rose-400', danger);
+      timer.classList.toggle('bg-[#4a0b1d]', danger);
+      timer.classList.toggle('text-rose-100', danger);
+      timer.classList.toggle('animate-pulse', danger);
+      timer.classList.toggle('border-[#354c73]', !danger);
+      timer.classList.toggle('bg-[#0e182e]', !danger);
+      timer.classList.toggle('text-cyan-200', !danger);
     }
     const gemsEl = root.querySelector<HTMLElement>('[data-tower-run-gems="true"]');
     if (gemsEl) gemsEl.textContent = `+${fmtInt(run.gemsEarned)} Gems`;

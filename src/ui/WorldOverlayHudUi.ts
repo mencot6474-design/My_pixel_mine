@@ -118,11 +118,17 @@ export function buildTowerOreBarsHtml(bars: TowerOreBarScreen[]): string {
   return bars
     .map(
       (b) => `
-          <div class="absolute -translate-x-1/2 -translate-y-full flex flex-col items-center gap-0.5 pointer-events-none" data-tower-ore-bar="${b.index}">
-            <div class="text-[11px] font-black leading-none whitespace-nowrap mam-outline-sm" style="color:${b.color}">${b.name}</div>
-            <div class="w-24 h-4 rounded border-2 border-[#0f172a] bg-[rgba(15,23,42,0.92)] overflow-hidden relative flex items-center justify-center shadow-[0_3px_10px_rgba(0,0,0,0.55)]">
-              <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[60ms] ease-linear" style="background:${b.color}" data-ore-fill="true"></div>
-              <div class="relative z-[2] text-[10px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
+          <div class="absolute -translate-x-1/2 -translate-y-full flex flex-col items-center gap-1 pointer-events-none" data-tower-ore-bar="${b.index}">
+            <div class="px-2 py-0.5 rounded-md bg-[#0a1020] border text-[10.5px] font-black leading-none whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.7)] mam-outline-sm" style="color:${b.color};border-color:${b.color}">${b.name}</div>
+            <div class="w-[104px] h-[18px] rounded-md border-2 border-[#2b4266] bg-[#060a14] overflow-hidden relative flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.75)]">
+              <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[60ms] ease-linear" style="background:linear-gradient(180deg,${b.color},${b.color}cc)" data-ore-fill="true"></div>
+              <div class="absolute inset-x-0 top-0 h-[42%] bg-gradient-to-b from-white/30 to-transparent pointer-events-none z-[1]"></div>
+              <div class="absolute inset-0 flex justify-evenly pointer-events-none z-[1]">
+                <span class="w-px h-full bg-black/45"></span>
+                <span class="w-px h-full bg-black/45"></span>
+                <span class="w-px h-full bg-black/45"></span>
+              </div>
+              <div class="relative z-[2] text-[10px] font-black tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
             </div>
           </div>
         `

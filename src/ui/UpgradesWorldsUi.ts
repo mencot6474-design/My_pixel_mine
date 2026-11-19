@@ -381,10 +381,26 @@ export class UpgradesWorldsUi {
     this.lastWorldsListHtml = rowsHtml;
 
     const worldIconSvg = `
-      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" fill="#1e1b4b" stroke="#fde047" stroke-width="2"/>
-        <ellipse cx="12" cy="12" rx="4.5" ry="7.5" fill="none" stroke="#67e8f9" stroke-width="2"/>
-        <circle cx="12" cy="12" r="2.2" fill="#facc15"/>
+      <svg viewBox="0 0 32 32" width="22" height="22" class="shrink-0" aria-hidden="true">
+        <defs>
+          <radialGradient id="mam-wtp-core" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="32%" stop-color="#67e8f9"/>
+            <stop offset="68%" stop-color="#6366f1"/>
+            <stop offset="100%" stop-color="#1e1b4b"/>
+          </radialGradient>
+          <linearGradient id="mam-wtp-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#e0f2fe"/>
+            <stop offset="50%" stop-color="#38bdf8"/>
+            <stop offset="100%" stop-color="#c084fc"/>
+          </linearGradient>
+        </defs>
+        <circle cx="16" cy="16" r="13" fill="url(#mam-wtp-core)" stroke="url(#mam-wtp-ring)" stroke-width="2.4"/>
+        <ellipse cx="16" cy="16" rx="12" ry="5.4" transform="rotate(-26 16 16)" fill="none" stroke="#bae6fd" stroke-width="1.8"/>
+        <ellipse cx="16" cy="16" rx="11" ry="4.4" transform="rotate(34 16 16)" fill="none" stroke="#e879f9" stroke-width="1.4" opacity="0.9"/>
+        <path d="M16 7.5L17.9 14.1L24.5 16L17.9 17.9L16 24.5L14.1 17.9L7.5 16L14.1 14.1Z" fill="#ffffff"/>
+        <circle cx="25.5" cy="7.5" r="1.7" fill="#fde047"/>
+        <circle cx="6.5" cy="24.5" r="1.3" fill="#67e8f9"/>
       </svg>
     `;
 
