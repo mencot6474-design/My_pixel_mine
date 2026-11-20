@@ -825,7 +825,7 @@ export class GameHud {
           </svg>
           <span>Teleport</span>
           <span
-            class="absolute -top-2 -right-2 min-w-[23px] h-[23px] px-1 rounded-full border-2 border-[#14111d] text-[12px] font-black tabular-nums leading-none text-white flex items-center justify-center mam-outline-sm"
+            class="absolute -top-2 -right-2 min-w-[23px] h-[23px] px-1 rounded-full border-2 border-[#14111d] text-[12px] font-black tabular-nums leading-none text-[#14111d] flex items-center justify-center"
             style="background:${activeWorld.iconColor}"
             data-teleport-world-badge="true"
           >${activeWorldNum}</span>

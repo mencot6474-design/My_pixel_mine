@@ -83,7 +83,7 @@ export class IndexModalUi {
     return `
       <div class="${rarityCardClasses(opts.rarity, extraCls)}" style="${rarityVars(opts.rarity)}" data-index-id="${opts.id}" title="${opts.title}">
         <div class="mam-card-art">${opts.artHtml}</div>
-        <div class="mam-card-name mam-outline-sm">${opts.name}</div>
+        <div class="mam-card-name truncate px-1">${opts.name}</div>
         <div class="mam-card-bottom">${opts.bottomHtml}</div>
       </div>
     `;
@@ -92,7 +92,7 @@ export class IndexModalUi {
   private renderReviewActionButton(chibiId: string, label: string, variant: 'special' | 'standard'): string {
     if (variant === 'special') {
       return `
-        <button type="button" class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border border-[#c084fc]/65 bg-[linear-gradient(135deg,#9333ea_0%,#4f46e5_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_16px_-2px_rgba(147,51,234,0.45)] text-white text-[13px] font-black cursor-pointer inline-flex items-center justify-center gap-1.5 transition-[transform,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.97] mam-outline-sm" data-review-chibi="${chibiId}">
+        <button type="button" class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border-[2.5px] border-[#14111d] bg-[#c084fc] hover:bg-[#d8b4fe] text-[#14111d] text-[13px] font-black cursor-pointer inline-flex items-center justify-center gap-1.5 transition-[transform,filter] duration-150 ease-out hover:scale-[0.97] active:scale-[0.94]" data-review-chibi="${chibiId}">
           <span>${label}</span>
         </button>
       `;
@@ -100,7 +100,7 @@ export class IndexModalUi {
     return `
       <button
         type="button"
-        class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border border-sky-300/60 bg-[linear-gradient(135deg,#38bdf8_0%,#6366f1_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_4px_12px_-2px_rgba(56,189,248,0.4)] text-white text-[13px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95 [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]"
+        class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border-[2.5px] border-[#14111d] bg-[#38bdf8] hover:bg-[#7dd3fc] text-[#14111d] text-[13px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.97] active:scale-[0.94]"
         data-review-chibi="${chibiId}"
       >${label}</button>
     `;
@@ -271,7 +271,7 @@ export class IndexModalUi {
             rarity: chibi.rarity,
             title: `${chibi.name} (Day ${reward.day} Limited)`,
             artHtml: chibiPortraitHtml(chibi, { usePose: true }),
-            bottomHtml: `<span class="mam-limited-badge !px-1.5 !py-[1px] !text-[8px] mb-0.5">✦ LIMITED</span><span class="mam-card-pct mam-outline-sm">${fmtShort(chibi.baseDps)}/s</span>`,
+            bottomHtml: `<span class="px-1.5 py-[1px] rounded-md bg-[#fde047] border border-[#14111d] text-[#14111d] text-[8.5px] font-black mb-0.5">✦ LIMITED</span><span class="mam-card-pct">${fmtShort(chibi.baseDps)}/s</span>`,
             unlocked: this.state.discovered.has(chibi.id),
             selected: selectedId === chibi.id,
           });
@@ -289,7 +289,7 @@ export class IndexModalUi {
           rarity: chibi.rarity,
           title: `${chibi.name} (${recipe.subtitle})`,
           artHtml: chibiPortraitHtml(chibi, { usePose: true }),
-          bottomHtml: `<span class="mam-fusion-badge !px-1.5 !py-[1px] !text-[8px] mb-0.5">✦ FUSION</span><span class="mam-card-pct mam-outline-sm">${fmtShort(chibi.baseDps)}/s</span>`,
+          bottomHtml: `<span class="px-1.5 py-[1px] rounded-md bg-[linear-gradient(90deg,#38bdf8,#a855f7,#ec4899)] border border-[#14111d] text-white text-[8.5px] font-black mb-0.5">✦ FUSION</span><span class="mam-card-pct">${fmtShort(chibi.baseDps)}/s</span>`,
           unlocked: this.state.discovered.has(chibi.id),
           selected: selectedId === chibi.id,
         });
@@ -305,7 +305,7 @@ export class IndexModalUi {
           rarity: wOre.rarity,
           title: `${wOre.name} (${fmtMoney(wOre.sellValue)})`,
           artHtml: `<img class="w-12 h-12 object-contain" src="${assetUrl(`/ores/${wOre.id}.webp`)}" alt="${wOre.name}" />`,
-          bottomHtml: `<span class="mam-card-pct mam-outline-sm">${wDef.shortName}</span>`,
+          bottomHtml: `<span class="mam-card-pct">${wDef.shortName}</span>`,
           unlocked: this.state.discovered.has(wOre.id),
           selected: selectedId === wOre.id,
         });
@@ -320,7 +320,7 @@ export class IndexModalUi {
             rarity,
             title: `${chibi.name} (${wDef.name} • ${fmtPct(chancePct)})`,
             artHtml: chibiPortraitHtml(chibi, { usePose: true }),
-            bottomHtml: `<span class="mam-card-pct mam-outline-sm">${wDef.shortName}</span>`,
+            bottomHtml: `<span class="mam-card-pct">${wDef.shortName}</span>`,
             unlocked: this.state.discovered.has(chibi.id),
             selected: selectedId === chibi.id,
           });
@@ -337,7 +337,7 @@ export class IndexModalUi {
           rarity: ore.rarity,
           title: `${ore.name} (${fmtMoney(ore.sellValue)})`,
           artHtml: oreIconSvg(ore.color, ore.secondaryColor, ore.rarity, `ix_${ore.id}`),
-          bottomHtml: `<span class="mam-card-pct mam-outline-sm">${fmtPct(ore.chancePct)}</span>`,
+          bottomHtml: `<span class="mam-card-pct">${fmtPct(ore.chancePct)}</span>`,
           unlocked: this.state.discovered.has(ore.id),
           selected: selectedId === ore.id,
         })
@@ -352,7 +352,7 @@ export class IndexModalUi {
           rarity: entry.rarity,
           title: `${chibi.name} (${fmtShort(chibi.baseDps)} DPS)`,
           artHtml: chibiPortraitHtml(chibi, { usePose: true }),
-          bottomHtml: `<span class="mam-card-pct mam-outline-sm">${fmtPct(entry.chancePct)}</span>`,
+          bottomHtml: `<span class="mam-card-pct">${fmtPct(entry.chancePct)}</span>`,
           unlocked: this.state.discovered.has(chibi.id),
           selected: selectedId === chibi.id,
         })
@@ -365,7 +365,7 @@ export class IndexModalUi {
   private buildTabReadyDotHtml(tabId: IndexTabId): string {
     const ready = this.state.getTabReadyIndexRewardCount(tabId);
     if (ready <= 0) return '';
-    return `<span class="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-[#ef4444] text-white text-[10px] font-black leading-none shadow-[0_0_8px_rgba(239,68,68,0.65)]" data-index-tab-ready="${tabId}">${ready}</span>`;
+    return `<span class="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-[#ff3b5c] border-[1.5px] border-[#14111d] text-white text-[10px] font-black leading-none" data-index-tab-ready="${tabId}">${ready}</span>`;
   }
 
   private buildPassiveBadgeIconSvg(kind: 'oreSellPct' | 'oreDropPct' | 'allDmgPct'): string {
@@ -446,7 +446,7 @@ export class IndexModalUi {
             <div class="absolute top-0 left-0 right-0 h-[3px] ${topRail}" aria-hidden="true"></div>
             <div class="min-w-0 flex-1 flex flex-col gap-1 text-left">
               <div class="flex items-center gap-1 flex-wrap">
-                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#14111d] text-[10px] font-black ${m.thresholdPct === 100 ? 'text-[#fde047]' : 'text-[#7dd3fc]'} tabular-nums">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border-[1.5px] border-[#14111d] text-[11px] font-black text-[#14111d] ${m.thresholdPct === 100 ? 'bg-[#fde047]' : 'bg-[#7dd3fc]'} tabular-nums">
                   <svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.5l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.3l-3.8 2 .7-4.3-3.1-3 4.3-.6L8 1.5z"/></svg>
                   ${m.thresholdPct}%
                 </span>
@@ -528,11 +528,11 @@ export class IndexModalUi {
 
         ${this.buildMilestoneRewardsStripHtml()}
 
-        <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto">
+        <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto mam-no-scrollbar">
           <div class="${TW_MODAL_GRID_BASE} grid-cols-5 @max-[720px]:grid-cols-3 gap-2 flex-1 min-h-0 @max-[920px]:min-h-[200px] @max-[920px]:flex-none @max-[920px]:max-h-[340px]" data-index-grid="true">
             ${this.buildIndexCardsHtml()}
           </div>
-          <div class="mam-inspector-well w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-index-inspector="true">
+          <div class="mam-inspector-well mam-no-scrollbar w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-index-inspector="true">
             ${inspHtml}
           </div>
         </div>

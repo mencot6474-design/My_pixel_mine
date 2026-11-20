@@ -617,6 +617,8 @@ function drawOutlinedCanvasText(
   ctx.restore();
 }
 
+const PLOT_PODIUM_SCALE = 1.5;
+
 export class PlotPedestal3D {
   public readonly group = new THREE.Group();
   public readonly hitMesh: THREE.Mesh;
@@ -652,6 +654,7 @@ export class PlotPedestal3D {
   constructor(index: number, x: number, z: number) {
     this.index = index;
     this.group.position.set(x, 0, z);
+    this.group.scale.set(PLOT_PODIUM_SCALE, PLOT_PODIUM_SCALE, PLOT_PODIUM_SCALE);
 
     const armorDarkMat = new THREE.MeshStandardMaterial({
       color: 0x131b2b,
@@ -1011,8 +1014,8 @@ export class PlotPedestal3D {
 
   public update(dtSec: number, elapsed = 0, camera?: THREE.Camera): void {
     const safeDt = Math.min(Math.max(0, dtSec), 0.1);
-    const targetScale = this.hovered ? 1.06 : 1;
-    this.tmpScale.set(targetScale, 1, targetScale);
+    const targetScale = (this.hovered ? 1.06 : 1) * PLOT_PODIUM_SCALE;
+    this.tmpScale.set(targetScale, PLOT_PODIUM_SCALE, targetScale);
     this.group.scale.lerp(this.tmpScale, Math.min(1, safeDt * 12));
     this.labelSprite.scale.x = 2.72 / Math.max(0.01, this.group.scale.x);
     this.labelSprite.scale.y = 1.12 / Math.max(0.01, this.group.scale.y);
@@ -1055,15 +1058,15 @@ export class PlotPedestal3D {
 
   public setLabelVisible(visible: boolean): void {
     this.labelEnabled = visible;
-    this.labelSprite.visible = visible && this.hasLabel;
+    this.labelSprite.visible = false;
   }
 
   public setLabel(info: PlotLabelInfo | null): void {
     this.currentLabelInfo = info;
+    this.labelSprite.visible = false;
     if (!info) {
       this.hasLabel = false;
       this.lastLabelSignature = '';
-      this.labelSprite.visible = false;
       return;
     }
 
@@ -1071,14 +1074,14 @@ export class PlotPedestal3D {
     const sig = `${info.name}|${info.level}|${info.rarityLabel}|${info.mutationId}|${info.enchantId ?? ''}|${enchantImg ? '1' : '0'}|${info.dmgText}`;
     if (sig === this.lastLabelSignature) {
       this.hasLabel = true;
-      this.labelSprite.visible = this.labelEnabled;
       return;
     }
     this.lastLabelSignature = sig;
     this.hasLabel = true;
+    this.labelSprite.visible = false;
 
-    if (typeof document === 'undefined') {
-      this.labelSprite.visible = this.labelEnabled;
+    if (typeof document === 'undefined' || !this.labelEnabled || !this.hasLabel) {
+      this.labelSprite.visible = false;
       return;
     }
 
@@ -1237,7 +1240,7 @@ export class PlotPedestal3D {
     this.labelTex = nextTex;
     this.labelMat.map = nextTex;
     this.labelMat.needsUpdate = true;
-    this.labelSprite.visible = this.labelEnabled;
+    this.labelSprite.visible = false;
   }
 
   public dispose(): void {

@@ -162,14 +162,13 @@ export class ShopModalsUi {
       const soldOut = stock <= 0;
       const canBuy = !soldOut && this.state.cash >= p.cost;
       const isInspected = this.shopInspectPickaxeId === p.id;
-      const isSecret = p.rarity === 'secret';
       return `
         <div class="${rarityCardClasses(p.rarity, isInspected ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '')} !aspect-auto min-h-[192px] pt-2.5 px-2 pb-[9px] gap-1.5 !justify-start" style="${rarityVars(p.rarity)}" data-shop-item-card="true" data-inspect-pickaxe="${p.id}">
           <div class="mam-card-art !relative !inset-auto w-full h-[70px] shrink-0 flex items-center justify-center">${pickaxeIconHtml(p.id, 66, p.name)}</div>
           <div class="w-full flex flex-col items-center gap-0.5 min-h-0">
-            <div class="w-full px-0.5 text-center text-[14px] font-black leading-[1.18] ${isSecret ? 'text-[#fff8e7]' : 'text-[#14111d]'} whitespace-nowrap overflow-hidden text-ellipsis" title="${p.name}">${p.name}</div>
-            <div class="text-[11px] font-black leading-[1.15] ${isSecret ? 'text-[#7dd3fc]' : 'text-[#0284c7]'} text-center">${p.dmgMult}x DMG</div>
-            <div class="text-[12px] font-extrabold leading-[1.15] ${isSecret ? 'text-[#e2e8f0]' : 'text-[#5b526e]'} text-center [&.is-sold-out]:text-[#dc2626] ${soldOut ? 'is-sold-out' : ''}" data-shop-meta="true">
+            <div class="w-full px-0.5 text-center text-[14px] font-black leading-[1.18] text-[#14111d] whitespace-nowrap overflow-hidden text-ellipsis" title="${p.name}">${p.name}</div>
+            <div class="text-[11px] font-black leading-[1.15] text-[#0284c7] text-center">${p.dmgMult}x DMG</div>
+            <div class="text-[12px] font-extrabold leading-[1.15] text-[#5b526e] text-center [&.is-sold-out]:text-[#dc2626] ${soldOut ? 'is-sold-out' : ''}" data-shop-meta="true">
               ${soldOut ? 'Sold out' : `${fmtInt(stock)} in stock`}
             </div>
           </div>
@@ -190,11 +189,11 @@ export class ShopModalsUi {
       boxClass: `w-[980px] ${TW_SHOP_MODAL_RESP}`,
       headerExtraHtml: `<div class="ml-auto mr-1 px-3 py-1 rounded-full bg-[#fde047] border-2 border-[#14111d] text-[14px] font-black tabular-nums text-[#14111d] whitespace-nowrap @max-[720px]:text-[12px]" data-restock-timer="true">Restock in ${mm}:${ss}</div>`,
       bodyHtml: `
-        <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto">
+        <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto mam-no-scrollbar">
           <div class="${TW_MODAL_GRID_BASE} grid-cols-4 gap-2.5 flex-1 min-h-[220px] @max-[920px]:flex-none @max-[920px]:max-h-[340px] p-0.5 @max-[720px]:grid-cols-2" data-shop-grid="true">
             ${cards}
           </div>
-          <div class="mam-inspector-well w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-shop-inspector="pickaxe">
+          <div class="mam-inspector-well mam-no-scrollbar w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-shop-inspector="pickaxe">
             ${inspHtml}
           </div>
         </div>
@@ -214,13 +213,12 @@ export class ShopModalsUi {
       const isInspected = this.shopInspectGemId === item.id;
       const mm = Math.floor(rem / 60);
       const ss = String(rem % 60).padStart(2, '0');
-      const isSecret = item.rarity === 'secret';
       return `
         <div class="${rarityCardClasses(item.rarity, isInspected ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '')} !aspect-auto min-h-[214px] pt-2.5 px-2 pb-[9px] gap-1.5 !justify-start" style="${rarityVars(item.rarity)}" data-inspect-gem="${item.id}">
           <div class="mam-card-art !relative !inset-auto w-full h-[70px] shrink-0 flex items-center justify-center">${gemPotionIconHtml(item.id, 68, item.name, item.color)}</div>
           <div class="w-full flex flex-col items-center gap-0.5 min-h-0">
-            <div class="w-full px-0.5 text-center text-[14px] font-black leading-[1.18] ${isSecret ? 'text-[#fff8e7]' : 'text-[#14111d]'} whitespace-nowrap overflow-hidden text-ellipsis" title="${item.name}">${item.name}</div>
-            <div class="text-[11px] font-extrabold leading-[1.2] ${isSecret ? 'text-[#e2e8f0]' : 'text-[#5b526e]'} text-center">
+            <div class="w-full px-0.5 text-center text-[14px] font-black leading-[1.18] text-[#14111d] whitespace-nowrap overflow-hidden text-ellipsis" title="${item.name}">${item.name}</div>
+            <div class="text-[11px] font-extrabold leading-[1.2] text-[#5b526e] text-center">
               ${item.effectText}<br/>${item.durationLabel}
             </div>
             <div class="min-h-[14px] text-[11px] font-black text-[#0284c7] text-center" data-gem-bag="${item.id}">
@@ -250,11 +248,11 @@ export class ShopModalsUi {
         ? `<button class="ml-auto mr-1 px-3 py-1.5 rounded-xl border-2 border-[#14111d] bg-[#2ee59d] text-[#14111d] text-[12.5px] font-black cursor-pointer hover:brightness-105 active:scale-95 whitespace-nowrap" data-action="gem-shop-ad-gems">🎬 +150 Gems (Ad)</button>`
         : undefined,
       bodyHtml: `
-        <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto">
+        <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto mam-no-scrollbar">
           <div class="${TW_MODAL_GRID_BASE} grid-cols-4 gap-2.5 flex-1 min-h-[220px] @max-[920px]:flex-none @max-[920px]:max-h-[340px] p-0.5 @max-[720px]:grid-cols-2">
             ${cards}
           </div>
-          <div class="mam-inspector-well w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-shop-inspector="gem">
+          <div class="mam-inspector-well mam-no-scrollbar w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-shop-inspector="gem">
             ${inspHtml}
           </div>
         </div>
@@ -346,10 +344,9 @@ export class ShopModalsUi {
           .map((e) => {
             const sel = this.sellSelected.has(e.key) ? 'is-selected' : '';
             const inspCls = this.sellInspectKey === e.key ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '';
-            const isSecret = e.rarity === 'secret';
             return `
               <div class="${rarityCardClasses(e.rarity, `${sel} ${inspCls}`.trim())} !aspect-auto h-[142px] pt-1.5 px-[5px] pb-[5px] !justify-between gap-[3px]" style="${rarityVars(e.rarity)}" data-sell-key="${e.key}" title="${e.name} • ${fmtMoney(e.totalValue)} (x${fmtInt(e.qty)})">
-                <div class="w-full h-[26px] shrink-0 line-clamp-2 overflow-hidden text-center text-[11.5px] font-black leading-[1.1] ${isSecret ? 'text-[#fff8e7]' : 'text-[#14111d]'} break-words">${e.name}</div>
+                <div class="w-full h-[26px] shrink-0 line-clamp-2 overflow-hidden text-center text-[11.5px] font-black leading-[1.1] text-[#14111d] break-words">${e.name}</div>
                 <div class="mam-card-art !relative !inset-auto flex-1 min-h-0 w-full flex items-center justify-center p-0.5 [&>.mam-3d-icon]:max-w-[56px] [&>.mam-3d-icon]:max-h-[56px] [&>.mam-3d-icon]:w-auto [&>.mam-3d-icon]:h-auto [&_svg]:max-w-[56px] [&_svg]:max-h-[56px] [&_svg]:w-auto [&_svg]:h-auto [&_.mam-chibi-portrait_img]:max-w-[60px] [&_.mam-chibi-portrait_img]:max-h-[60px]">${e.artHtml}</div>
                 <div class="w-full shrink-0 flex flex-col items-center gap-px pt-[3px] px-0.5 pb-0.5 rounded-lg bg-[#fcecc8] border-t-2 border-[#14111d]">
                   <span class="mam-card-val !text-[12px] !leading-[1.08] whitespace-nowrap">${fmtMoney(e.totalValue)}</span>
@@ -376,11 +373,11 @@ export class ShopModalsUi {
       iconHtml: hudIconHtml('trade', 26, 'Sell'),
       boxClass: `w-[980px] ${TW_SHOP_MODAL_RESP}`,
       bodyHtml: `
-        <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto">
+        <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto mam-no-scrollbar">
           <div class="${TW_MODAL_GRID_BASE} grid-cols-5 gap-2 flex-1 min-h-[220px] @max-[920px]:flex-none @max-[920px]:max-h-[340px] p-0.5 @max-[720px]:grid-cols-3" data-sell-grid="true">
             ${cardsHtml}
           </div>
-          <div class="mam-inspector-well w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-shop-inspector="sell">
+          <div class="mam-inspector-well mam-no-scrollbar w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-shop-inspector="sell">
             ${inspHtml}
           </div>
         </div>

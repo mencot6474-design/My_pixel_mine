@@ -16,7 +16,7 @@ import { fmtShort } from '../game/NumberFormat';
 import { getWeatherById } from '../game/WeatherData';
 import { PIT_EVENT_DEFS } from '../game/PitEventsDomain';
 import { enchantAuraIconHtml, meteorIconHtml } from './HudIcons';
-import { ModalKind, TW_SHOP_SIGN_BASE } from './HudShared';
+import { ModalKind, renderRarityBadgeHtml, TW_SHOP_SIGN_BASE } from './HudShared';
 
 export interface PlotLabelPayload {
   key: string;
@@ -220,19 +220,20 @@ export function buildShopChibiBubblesHtml(bubbles: ShopChibiBubbleAnchor[]): str
 /** Builds floating aura label pills for visible Enchant Altar pedestals. */
 export function buildAltarAnchorsHtml(anchors: AltarPedestalAnchor[]): string {
   return anchors
-    .map(
-      (a) => `
+    .map((a) => {
+      const tint = a.id === 'timeless' ? '#a5b4fc' : a.color;
+      return `
           <div class="absolute -translate-x-1/2 -translate-y-full text-left transition-transform duration-150 ease-out pointer-events-none [&.is-hi]:-translate-y-[115%] [&.is-hi]:scale-[1.16] ${a.highlighted ? 'is-hi' : ''}" data-altar-lbl="${a.id}">
-            <div class="inline-flex items-center gap-[5px] py-[3px] pr-2.5 pl-[5px] rounded-full border-2 border-[#14111d] bg-[#fff8e7] whitespace-nowrap [&>.mam-3d-icon]:w-[22px] [&>.mam-3d-icon]:h-[22px] [&>.mam-3d-icon]:shrink-0">
-              ${enchantAuraIconHtml(a.id, a.color, 22, a.name)}
+            <div class="inline-flex items-center gap-[6px] py-[3px] pr-2.5 pl-[4px] rounded-full border-2 border-[#14111d] whitespace-nowrap [&>.mam-3d-icon]:w-[22px] [&>.mam-3d-icon]:h-[22px] [&>.mam-3d-icon]:shrink-0" style="background:linear-gradient(135deg,#fff8e7 20%,${tint}52 100%),#fff8e7">
+              <span class="w-[24px] h-[24px] rounded-full border-[1.5px] border-[#14111d] flex items-center justify-center shrink-0 [&>.mam-3d-icon]:w-[20px] [&>.mam-3d-icon]:h-[20px]" style="background:radial-gradient(circle,${tint}88,#fff8e7 85%),#fff8e7">${enchantAuraIconHtml(a.id, a.color, 20, a.name)}</span>
               <div class="flex flex-col items-start leading-none">
                 <div class="text-[12px] font-black leading-[1.05] text-[#14111d]">${a.name}</div>
-                <div class="text-[10px] font-bold text-[#475569]">${a.chancePct}%</div>
+                <div class="text-[10px] font-bold text-[#334155]">${a.chancePct}%</div>
               </div>
             </div>
           </div>
-        `
-    )
+        `;
+    })
     .join('');
 }
 
@@ -334,11 +335,46 @@ export class WorldOverlayHudUi {
   }
 
   public updatePlotAnchors(anchors: PlotAnchorScreen[]): void {
-    if (this.plotLayerEl && this.plotLayerEl.innerHTML !== '') {
-      this.plotLayerEl.innerHTML = '';
-      this.plotLayerEl.dataset.keys = '';
-    }
     this.syncAllPlotLabelsToScene();
+
+    if (this.plotLayerEl) {
+      const { sceneMode, activeModal, inspectedSlot } = this.getUiContext();
+      if (sceneMode !== 'mine' || activeModal !== 'none' || inspectedSlot !== null) {
+        if (this.plotLayerEl.innerHTML !== '') {
+          this.plotLayerEl.innerHTML = '';
+          this.plotLayerEl.dataset.keys = '';
+        }
+      } else {
+        const items: Array<{ slotIndex: number; rarity: ReturnType<typeof getMinerRarity>; x: number; y: number }> = [];
+        for (const a of anchors) {
+          if (!a.visible) continue;
+          const unit = this.state.getPlotUnit(a.slotIndex);
+          const chibi = unit ? getChibiById(unit.chibiId) : null;
+          if (!unit || !chibi) continue;
+          items.push({
+            slotIndex: a.slotIndex,
+            rarity: getMinerRarity(chibi.id),
+            x: Math.round(a.labelX),
+            y: Math.round(a.labelY),
+          });
+        }
+        const key = items.map((item) => `${item.slotIndex}:${item.rarity}`).join(',');
+        if (this.plotLayerEl.dataset.keys !== key) {
+          this.plotLayerEl.dataset.keys = key;
+          this.plotLayerEl.innerHTML = items
+            .map(
+              (item) =>
+                `<div class="absolute top-0 left-0 pointer-events-none select-none will-change-transform origin-bottom" data-label-slot="${item.slotIndex}">${renderRarityBadgeHtml(item.rarity, '!ml-0')}</div>`
+            )
+            .join('');
+        }
+        for (const item of items) {
+          const el = this.plotLayerEl.querySelector<HTMLElement>(`[data-label-slot="${item.slotIndex}"]`);
+          if (!el) continue;
+          el.style.transform = `translate3d(${item.x}px, ${item.y}px, 0) translate(-50%, -100%) scale(var(--mam-float-scale, 1))`;
+        }
+      }
+    }
 
     const plot0 = anchors.find((a) => a.slotIndex === 0);
     if (plot0) {

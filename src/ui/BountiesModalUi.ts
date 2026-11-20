@@ -5,8 +5,8 @@ import { enchantDiceIconHtml, hudIconHtml } from './HudIcons';
 import { renderModalShell } from './HudShared';
 
 const SCROLL_ICON_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-  <path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a3 3 0 0 1-3-3V6a2 2 0 0 1 2-2Z" stroke="#6ee7b7" stroke-width="1.9" stroke-linejoin="round"/>
-  <path d="M8.5 9h7M8.5 13h7M8.5 17h4.5" stroke="#a7f3d0" stroke-width="1.9" stroke-linecap="round"/>
+  <path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a3 3 0 0 1-3-3V6a2 2 0 0 1 2-2Z" fill="#ffffff" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M8.5 9h7M8.5 13h7M8.5 17h4.5" stroke="#059669" stroke-width="2" stroke-linecap="round"/>
 </svg>`;
 
 export class BountiesModalUi {

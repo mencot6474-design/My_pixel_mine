@@ -280,7 +280,7 @@ export class MineScene3D {
     });
 
     const stageBase = new THREE.Mesh(
-      new THREE.BoxGeometry(13.9, 0.16, 2.96),
+      new THREE.BoxGeometry(17.2, 0.16, 3.64),
       new THREE.MeshStandardMaterial({
         color: 0x161f30,
         roughness: 0.62,
@@ -288,12 +288,12 @@ export class MineScene3D {
         flatShading: true,
       })
     );
-    stageBase.position.set(0, 0.08, -4.55);
+    stageBase.position.set(0, 0.08, -4.85);
     stageBase.receiveShadow = true;
     stageBase.castShadow = true;
 
     const rackDeck = new THREE.Mesh(
-      new THREE.BoxGeometry(13.5, 0.12, 2.66),
+      new THREE.BoxGeometry(16.8, 0.12, 3.34),
       new THREE.MeshStandardMaterial({
         color: 0x223047,
         roughness: 0.44,
@@ -301,15 +301,15 @@ export class MineScene3D {
         flatShading: true,
       })
     );
-    rackDeck.position.set(0, 0.21, -4.55);
+    rackDeck.position.set(0, 0.21, -4.85);
     rackDeck.receiveShadow = true;
     rackDeck.castShadow = true;
     this.env.group.add(stageBase, rackDeck);
 
     // Clean Rear Stage Holo Underglow Strip + Sculpted Steel Bay Dividers Between Plots (zero pedestal overlap)
-    const holoRunwayStrip = new THREE.Mesh(new THREE.PlaneGeometry(12.2, 0.48), this.stageHoloMat);
+    const holoRunwayStrip = new THREE.Mesh(new THREE.PlaneGeometry(15.6, 0.48), this.stageHoloMat);
     holoRunwayStrip.rotation.x = -Math.PI / 2;
-    holoRunwayStrip.position.set(0, 0.273, -5.56);
+    holoRunwayStrip.position.set(0, 0.273, -5.96);
     this.env.group.add(holoRunwayStrip);
 
     const bayDivMat = new THREE.MeshStandardMaterial({
@@ -318,32 +318,32 @@ export class MineScene3D {
       metalness: 0.5,
       flatShading: true,
     });
-    const bayDivGeo = new THREE.BoxGeometry(0.11, 0.06, 1.88);
-    const bayDivLedGeo = new THREE.BoxGeometry(0.035, 0.025, 1.72);
+    const bayDivGeo = new THREE.BoxGeometry(0.09, 0.06, 2.58);
+    const bayDivLedGeo = new THREE.BoxGeometry(0.03, 0.025, 2.4);
     for (let i = 0; i < STAGE_PEDESTAL_COUNT - 1; i++) {
-      const divX = (i - (STAGE_PEDESTAL_COUNT - 2) / 2) * 2.44;
+      const divX = (i - (STAGE_PEDESTAL_COUNT - 2) / 2) * 3.22;
       const divBar = new THREE.Mesh(bayDivGeo, bayDivMat);
-      divBar.position.set(divX, 0.298, -4.32);
+      divBar.position.set(divX, 0.298, -4.58);
       divBar.castShadow = true;
       divBar.receiveShadow = true;
       const divLed = new THREE.Mesh(bayDivLedGeo, this.stageNeonMat);
-      divLed.position.set(divX, 0.33, -4.32);
+      divLed.position.set(divX, 0.33, -4.58);
       this.env.group.add(divBar, divLed);
     }
 
-    const rearBusConduit = new THREE.Mesh(new THREE.BoxGeometry(11.4, 0.08, 0.18), bayDivMat);
-    rearBusConduit.position.set(0, 0.305, -5.24);
+    const rearBusConduit = new THREE.Mesh(new THREE.BoxGeometry(14.8, 0.08, 0.18), bayDivMat);
+    rearBusConduit.position.set(0, 0.305, -5.92);
     rearBusConduit.castShadow = true;
     this.env.group.add(rearBusConduit);
 
     for (const sx of [-1, 1]) {
-      const rackFrontTrim = new THREE.Mesh(new THREE.BoxGeometry(5.58, 0.06, 0.1), this.stageNeonMat);
-      rackFrontTrim.position.set(sx * 4.08, 0.26, -3.22);
+      const rackFrontTrim = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.06, 0.1), this.stageNeonMat);
+      rackFrontTrim.position.set(sx * 4.88, 0.26, -3.22);
       this.env.group.add(rackFrontTrim);
     }
 
-    const stageRearTrim = new THREE.Mesh(new THREE.BoxGeometry(13.56, 0.06, 0.09), this.stageNeonMat);
-    stageRearTrim.position.set(0, 0.26, -5.88);
+    const stageRearTrim = new THREE.Mesh(new THREE.BoxGeometry(16.86, 0.06, 0.09), this.stageNeonMat);
+    stageRearTrim.position.set(0, 0.26, -6.54);
     this.env.group.add(stageRearTrim);
 
     // Futuristic Steel Stairwell & Illuminated Treads Descending into Quarry Pit
@@ -389,10 +389,10 @@ export class MineScene3D {
       this.env.group.add(stepMesh, stepLed);
     }
 
-    // 5 Cyber-Holographic Plot Pedestals Centered Cleanly Away From Side HUD Bars (spacing 2.44m)
+    // 5 Cyber-Holographic Plot Pedestals Centered Cleanly Away From Side HUD Bars (spacing 3.22m for +50% podiums)
     for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {
-      const px = (i - (STAGE_PEDESTAL_COUNT - 1) / 2) * 2.44;
-      const pz = -4.28;
+      const px = (i - (STAGE_PEDESTAL_COUNT - 1) / 2) * 3.22;
+      const pz = -4.58;
       const ped = new PlotPedestal3D(i, px, pz);
       ped.group.position.y = 0.27;
       this.pedestals.push(ped);
@@ -895,8 +895,8 @@ export class MineScene3D {
       this.camera.lookAt(this.currentLookAt);
     } else if (this.focusedPlotIndex !== null && this.pedestals[this.focusedPlotIndex]) {
       const pPos = this.pedestals[this.focusedPlotIndex].group.position;
-      const targetCam = new THREE.Vector3(pPos.x, pPos.y + 1.45, pPos.z + 3.85);
-      const targetLook = new THREE.Vector3(pPos.x, pPos.y + 1.05, pPos.z);
+      const targetCam = new THREE.Vector3(pPos.x, pPos.y + 2.15, pPos.z + 5.35);
+      const targetLook = new THREE.Vector3(pPos.x, pPos.y + 1.55, pPos.z);
       this.camera.position.lerp(targetCam, damp);
       this.currentLookAt.lerp(targetLook, damp);
       this.camera.lookAt(this.currentLookAt);
@@ -1061,7 +1061,7 @@ export class MineScene3D {
       }
 
       const p = ped.group.position;
-      this.projVec.set(p.x, p.y + 2.68, p.z).project(this.camera);
+      this.projVec.set(p.x, p.y + 3.72, p.z).project(this.camera);
       const labelVisible = this.projVec.z > -1 && this.projVec.z < 1;
       const labelX = (this.projVec.x * 0.5 + 0.5) * w;
       const labelY = (-this.projVec.y * 0.5 + 0.5) * h;

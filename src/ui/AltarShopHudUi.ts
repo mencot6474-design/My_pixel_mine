@@ -45,18 +45,20 @@ export function renderAltarStripCardsHtml(state: GameState): string {
     const orePct = Math.round(e.oreDropPct * 100);
     const sellPct = Math.round(e.sellValuePct * 100);
     const spdPct = Math.round(e.miningSpeedPct * 100);
-    const borderBg =
-      e.rarity === 'rainbow'
-        ? 'rarity-rainbow'
-        : 'border-[2.5px] border-[#14111d] bg-[#fff8e7]';
+    const tint = e.id === 'timeless' ? '#a5b4fc' : e.color;
+    const isRainbow = e.rarity === 'rainbow';
+    const cardStyle = isRainbow
+      ? ''
+      : `background:repeating-conic-gradient(from 0deg at 50% 48%,rgba(255,255,255,0.42) 0deg 15deg,transparent 15deg 30deg),radial-gradient(circle at 50% 45%,${tint}7a 0%,${tint}38 88%),#fff8e7;`;
+    const borderBg = isRainbow ? 'rarity-rainbow' : 'border-[2.5px] border-[#14111d]';
     return `
-        <div class="mam-altar-card relative h-[102px] @max-[920px]:h-[86px] rounded-xl flex flex-col items-center justify-between py-[5px] px-1 cursor-pointer transition-transform duration-[140ms] ease-out hover:scale-[0.96] even:hover:rotate-[1.2deg] odd:hover:-rotate-[1.2deg] ${borderBg}" style="--rarity-border:${e.color};--rarity-bg:${e.color}33" data-altar-card="${e.id}" tabindex="0" title="${e.name} • ${e.dmgMult}x DMG • +${orePct}% Ore Drop • +${sellPct}% Sell • +${spdPct}% Spd (${e.chancePct}%)">
+        <div class="mam-altar-card relative h-[102px] @max-[920px]:h-[86px] rounded-xl flex flex-col items-center justify-between py-[5px] px-1 cursor-pointer transition-transform duration-[140ms] ease-out hover:scale-[0.96] even:hover:rotate-[1.2deg] odd:hover:-rotate-[1.2deg] ${borderBg}" style="${cardStyle}" data-altar-card="${e.id}" tabindex="0" title="${e.name} • ${e.dmgMult}x DMG • +${orePct}% Ore Drop • +${sellPct}% Sell • +${spdPct}% Spd (${e.chancePct}%)">
           <div class="w-full flex items-center justify-center gap-1 px-1">
             <span class="text-[11.5px] font-black text-[#14111d] truncate">${e.name}</span>
-            <span class="text-[10.5px] font-black tabular-nums px-1 rounded bg-[#fde047] border border-[#14111d] text-[#14111d]" data-altar-qty="${e.id}">${qty > 0 ? `x${fmtInt(qty)}` : ''}</span>
+            <span class="empty:hidden text-[10.5px] font-black tabular-nums px-1 rounded bg-[#fde047] border border-[#14111d] text-[#14111d]" data-altar-qty="${e.id}">${qty > 0 ? `x${fmtInt(qty)}` : ''}</span>
           </div>
           <div class="flex-1 min-h-0 flex items-center justify-center pointer-events-none [&>.mam-3d-icon]:w-[44px] [&>.mam-3d-icon]:h-[44px]">${enchantAuraIconHtml(e.id, e.color, 46, e.name)}</div>
-          <div class="text-[10.5px] font-black tabular-nums text-[#334155]">${e.chancePct}%</div>
+          <div class="text-[10.5px] font-black tabular-nums text-[#14111d]">${e.chancePct}%</div>
         </div>
       `;
   }).join('');
@@ -333,7 +335,7 @@ export class AltarShopHudUi {
     const diceCount = root.querySelector<HTMLElement>('[data-altar-dice-count="true"]');
     if (diceCount) {
       diceCount.textContent = `${fmtInt(this.state.enchantDice)}/1`;
-      diceCount.style.color = outOfRolls ? '#f87171' : '#4ade80';
+      diceCount.style.color = outOfRolls ? '#dc2626' : '#15803d';
     }
 
     const rollBtn = root.querySelector<HTMLButtonElement>('[data-action="roll-enchant"]');

@@ -90,7 +90,7 @@ export class AchievementsModalUi {
   private renderAchievementsGrid(): string {
     const snap = this.state.getAchievementSnapshot();
     return `
-      <div class="grid grid-cols-2 @max-[720px]:grid-cols-1 gap-2.5 overflow-y-auto pr-1 flex-1 min-h-0">
+      <div class="grid grid-cols-2 @max-[720px]:grid-cols-1 gap-2.5 overflow-y-auto mam-no-scrollbar pr-1 flex-1 min-h-0">
         ${ACHIEVEMENT_CATEGORIES.map((cat) => {
           const activeTier = getActiveAchievementTierForCategory(cat, this.state.claimedAchievements);
           const allDone = this.state.claimedAchievements.has(activeTier.id);
@@ -167,7 +167,7 @@ export class AchievementsModalUi {
     ];
 
     return `
-      <div class="grid grid-cols-2 @max-[640px]:grid-cols-1 gap-2.5 overflow-y-auto pr-1 flex-1 min-h-0">
+      <div class="grid grid-cols-2 @max-[640px]:grid-cols-1 gap-2.5 overflow-y-auto mam-no-scrollbar pr-1 flex-1 min-h-0">
         ${entries
           .map(
             (e) => `

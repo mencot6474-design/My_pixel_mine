@@ -68,7 +68,7 @@ export function renderRarityBadgeHtml(rarity: ItemRarity, extraCls = ''): string
     return `<span class="mam-rarity-badge mam-rarity-limited mam-limited-badge${extra}"><span class="mam-rarity-glint"></span><span class="mam-rarity-emblem" style="background:#fde047;color:#14111d"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v2H3v-2zm0-2l2-10 5 4 2-6 2 6 5-4 2 10H3z"/></svg></span><span>LIMITED</span><span class="mam-rarity-spark s1">★</span><span class="mam-rarity-spark s2">✦</span></span>`;
   }
   if (rarity === 'secret') {
-    return `<span class="mam-rarity-badge mam-rarity-secret${extra}"><span class="mam-rarity-glint"></span><span class="mam-rarity-emblem" style="background:#14111d;color:#fde047;border-color:#fde047"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2L12 16.6 5.7 21l2.3-7.2-6-4.6h7.6z"/></svg></span><span>SECRET</span><span class="mam-rarity-spark s1">✦</span><span class="mam-rarity-spark s2">✦</span></span>`;
+    return `<span class="mam-rarity-badge mam-rarity-secret${extra}"><span class="mam-rarity-glint"></span><span class="mam-rarity-emblem" style="background:#fde047;color:#14111d;border-color:#14111d"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2L12 16.6 5.7 21l2.3-7.2-6-4.6h7.6z"/></svg></span><span>SECRET</span><span class="mam-rarity-spark s1">✦</span><span class="mam-rarity-spark s2">✦</span></span>`;
   }
   const hasGlint = rarity === 'legendary' || rarity === 'rainbow' || rarity === 'mythic' || rarity === 'exotic';
   const glintHtml = hasGlint ? '<span class="mam-rarity-glint"></span>' : '';
@@ -76,9 +76,25 @@ export function renderRarityBadgeHtml(rarity: ItemRarity, extraCls = ''): string
   return `<span class="mam-rarity-badge mam-rarity-${rarity}${extra}">${glintHtml}<span>${rarityLabel}</span></span>`;
 }
 
+export function renderMutationBadgeHtml(mutationId: string, mutationName?: string, extraCls = ''): string {
+  const id = mutationId.toLowerCase();
+  const label = mutationName ?? (id.charAt(0).toUpperCase() + id.slice(1));
+  const extra = extraCls ? ` ${extraCls}` : '';
+  const hasRing = id === 'frozen' || id === 'inferno' || id === 'nightmare' || id === 'unreal';
+  const hasGlint = hasRing || id === 'rainbow' || id === 'diamond' || id === 'platinum';
+  const ringCls = hasRing ? ' has-ring' : '';
+  const glintHtml = hasGlint ? '<span class="mam-rarity-glint"></span>' : '';
+  const sparksHtml =
+    id === 'nightmare' || id === 'unreal'
+      ? '<span class="mam-rarity-spark s1">✦</span><span class="mam-rarity-spark s2">✧</span>'
+      : '';
+
+  return `<span class="mam-mut-badge mam-mut-${id}${ringCls}${extra}">${glintHtml}<span>${label}</span>${sparksHtml}</span>`;
+}
+
 export function rarityVars(rarity: ItemRarity): string {
   const border = RARITY_BORDER[rarity];
-  return `--rarity-border:${border};--rarity-bg:${border}44;`;
+  return `--rarity-border:${border};--rarity-bg:${border}7a;--rarity-bg-edge:${border}38;`;
 }
 
 export function applyInspectRing(el: Element, selected: boolean): void {
@@ -129,7 +145,7 @@ export const TW_SIDE_BTN_RAINBOW = `${TW_SIDE_BTN_BASE} border-[3px] border-[#14
 export const TW_BADGE_BASE =
   'mam-notif-badge absolute -top-[7px] -left-[7px] z-[4] bg-[#ff3b5c] border-2 border-[#14111d] text-white font-black flex items-center justify-center leading-none';
 export const TW_CURRENCY_BAR =
-  'flex items-center justify-end gap-2 min-w-[215px] @max-[720px]:min-w-[170px] py-[5px] pr-3 pl-5 @max-[720px]:pl-3.5 rounded-full border-[3px] border-[#14111d] bg-[#fff8e7] text-[#14111d] shadow-none';
+  'relative flex items-center justify-center gap-2 w-[224px] h-[44px] @max-[720px]:w-[186px] @max-[720px]:h-[38px] px-3 rounded-full border-[3px] border-[#14111d] bg-[#fff8e7] text-[#14111d] shadow-none';
 export const TW_PLUS_BTN =
   'w-[26px] h-[26px] rounded-full border-2 border-[#14111d] bg-[#2ee59d] shadow-none text-[#14111d] text-[18px] font-black leading-none flex items-center justify-center cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-105 active:scale-95';
 export const TW_QUICK_BTN =
@@ -142,7 +158,7 @@ export const TW_QUICK_BTN_QUEST =
   'relative h-[36px] min-w-[36px] px-3 rounded-xl border-[2.5px] border-[#14111d] bg-[#6ee7b7] shadow-none text-[#14111d] text-[13px] font-black inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-1 even:hover:rotate-1 hover:brightness-105 active:scale-95';
 export const TW_QUICK_BTN_TRADE = TW_QUICK_BTN;
 export const TW_HOTBAR_SLOT =
-  'mam-hotbar-slot relative w-[66px] h-[66px] @max-[860px]:w-[56px] @max-[860px]:h-[56px] overflow-hidden cursor-pointer flex flex-col items-center justify-between p-0.5';
+  'mam-hotbar-slot relative w-[70px] h-[72px] @max-[860px]:w-[58px] @max-[860px]:h-[60px] overflow-hidden cursor-pointer flex flex-col items-center justify-between p-0.5';
 export const TW_HOTBAR_NUM = 'mam-hotbar-keycap';
 export const TW_TOAST_STACK =
   'fixed bottom-[102px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none z-50';
@@ -163,7 +179,7 @@ export const TW_TAB_BTN =
   'mam-tab-btn inline-flex items-center gap-[7px] px-3.5 py-[7px] @max-[720px]:px-2.5 @max-[720px]:py-1 @max-[720px]:text-[13px] rounded-xl text-[14px] font-black cursor-pointer';
 export const TW_MODAL_GRID_BASE = 'mam-grid flex-1 min-h-0 content-start overflow-y-auto pr-0 grid';
 export const TW_SHOP_DOCK_BTN_BASE =
-  'relative overflow-hidden shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 @max-[760px]:px-2.5 @max-[760px]:py-1.5 @max-[760px]:gap-1 @max-[760px]:text-[11.5px] [&>img]:shrink-0 [&>svg]:shrink-0 @max-[760px]:[&>img]:w-[22px] @max-[760px]:[&>img]:h-[22px] @max-[760px]:[&>svg]:w-[20px] @max-[760px]:[&>svg]:h-[20px] rounded-xl border-[2.5px] border-[#14111d] shadow-none text-white text-[13px] font-black whitespace-nowrap cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-1 even:hover:rotate-1 hover:brightness-105 active:scale-95';
+  'relative overflow-hidden shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 @max-[760px]:px-2.5 @max-[760px]:py-1.5 @max-[760px]:gap-1 @max-[760px]:text-[11.5px] [&>img]:shrink-0 [&>svg]:shrink-0 @max-[760px]:[&>img]:w-[22px] @max-[760px]:[&>img]:h-[22px] @max-[760px]:[&>svg]:w-[20px] @max-[760px]:[&>svg]:h-[20px] rounded-xl border-[2.5px] border-[#14111d] shadow-none text-[#14111d] text-[13px] font-black whitespace-nowrap cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-1 even:hover:rotate-1 hover:brightness-105 active:scale-95';
 export const TW_SHOP_BUY_BTN =
   'mam-sheen-hover relative overflow-hidden mt-auto w-full h-[34px] shrink-0 rounded-xl border-2 border-[#14111d] bg-[#2ee59d] shadow-none text-[#14111d] text-[13px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out [&:not(.disabled):not(.sold-out)]:hover:brightness-105 [&:not(.disabled):not(.sold-out)]:active:scale-95 [&.disabled]:bg-[#e2e8f0] [&.disabled]:bg-none [&.disabled]:border-[#94a3b8] [&.disabled]:shadow-none [&.disabled]:text-[#64748b] [&.disabled]:active:scale-[0.97] [&.sold-out]:bg-[#ff3b5c] [&.sold-out]:text-white [&.sold-out]:border-[#14111d] [&.sold-out]:shadow-none [&.sold-out]:active:scale-[0.97]';
 export const TW_SHOP_SIGN_BASE =
@@ -177,7 +193,7 @@ export const TW_STAT_CARD =
 export const TW_STAT_BTN =
   'w-full h-[34px] rounded-xl border-2 border-[#14111d] bg-[#2ee59d] shadow-none text-[#14111d] text-[14px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out [&:not(.maxed)]:hover:brightness-105 [&:not(.maxed)]:active:scale-[0.97] [&.maxed]:border-[#14111d] [&.maxed]:bg-[#fde047] [&.maxed]:text-[#14111d] [&.maxed]:cursor-default';
 export const TW_STRIP_CARD =
-  'mam-strip-card relative min-w-[86px] w-[86px] h-[86px] rounded-xl flex flex-col items-center justify-between p-1 cursor-pointer [&.equipped]:ring-2 [&.equipped]:ring-inset [&.equipped]:ring-[#16a34a]';
+  'mam-strip-card relative min-w-[86px] w-[86px] h-[86px] rounded-xl flex flex-col items-center justify-between p-1 cursor-pointer [&.equipped]:ring-[3px] [&.equipped]:ring-inset [&.equipped]:ring-[#16a34a]';
 export const TW_ALTAR_ROLL_BTN =
   'mam-altar-roll-btn relative overflow-hidden w-[280px] max-w-full h-[46px] rounded-2xl border-[3px] border-[#14111d] bg-[#2ee59d] shadow-none text-[#14111d] text-[20px] font-black cursor-pointer transition-[transform,filter,opacity] duration-150 ease-out [&:not(.is-empty):not(.is-spinning)]:hover:brightness-105 [&:not(.is-empty):not(.is-spinning)]:active:scale-[0.96] [&.is-empty]:bg-[#ff3b5c] [&.is-empty]:text-white [&.is-spinning]:bg-[#a855f7] [&.is-spinning]:text-white [&.is-spinning]:cursor-not-allowed [&.is-spinning]:pointer-events-none [&.is-spinning]:opacity-95';
 export const TW_ALTAR_AUTO_BTN =
@@ -249,24 +265,27 @@ export function renderInspectorPanel(opts: {
   const borderColor = RARITY_BORDER[opts.rarity];
   const showcaseBorder =
     opts.rarity === 'rainbow'
-      ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#fecdd3,#fef08a,#bbf7d0,#bae6fd,#e9d5ff)]'
-      : opts.rarity === 'exotic'
-        ? 'border-[3px] border-[#14111d] bg-[#ccfbf1]'
-        : opts.rarity === 'secret'
-          ? 'border-[3px] border-[#fde047] bg-[#1b1429]'
-          : opts.rarity === 'fusion'
-            ? 'border-[3px] border-[#14111d] bg-[linear-gradient(155deg,#dbeafe,#f3e8ff,#fce7f3)]'
-            : opts.rarity === 'limited'
-              ? 'border-[3px] border-[#14111d] bg-[linear-gradient(155deg,#fef9c3,#fde047,#fed7aa)]'
-              : 'border-[3px] border-[#14111d]';
+      ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#fda4af,#fde047,#86efac,#7dd3fc,#d8b4fe)]'
+      : opts.rarity === 'mythic'
+        ? 'border-[3px] border-[#14111d] bg-[radial-gradient(circle_at_50%_42%,#fb7185_0%,#fecdd3_88%)]'
+        : opts.rarity === 'exotic'
+          ? 'border-[3px] border-[#14111d] bg-[radial-gradient(circle_at_50%_42%,#2dd4bf_0%,#99f6e4_88%)]'
+          : opts.rarity === 'secret'
+            ? 'border-[3px] border-[#14111d] bg-[linear-gradient(150deg,#fde047_0%,#e9d5ff_50%,#a78bfa_100%)]'
+            : opts.rarity === 'fusion'
+              ? 'border-[3px] border-[#14111d] bg-[linear-gradient(145deg,#7dd3fc_0%,#c084fc_50%,#f472b6_100%)]'
+              : opts.rarity === 'limited'
+                ? 'border-[3px] border-[#14111d] bg-[linear-gradient(155deg,#fef08a_0%,#fbbf24_55%,#fb923c_100%)]'
+                : 'border-[3px] border-[#14111d]';
   const showcaseStyle =
     opts.rarity === 'rainbow' ||
+    opts.rarity === 'mythic' ||
     opts.rarity === 'exotic' ||
     opts.rarity === 'secret' ||
     opts.rarity === 'fusion' ||
     opts.rarity === 'limited'
       ? ''
-      : `background:radial-gradient(circle at 50% 42%,${borderColor}44,#fff8e7 85%);`;
+      : `background:radial-gradient(circle at 50% 42%,${borderColor}7a 0%,${borderColor}38 90%);`;
   const statsHtml = opts.stats
     .map(
       ([label, val, valClass]) => `
@@ -359,10 +378,10 @@ export function restoreRootScrolls(root: HTMLElement, entries: SavedScrollEntry[
 
 export type ToastTone = 'overclock' | 'bounty' | 'meteor' | 'reward' | 'audio' | 'error' | 'info';
 
-const TOAST_SVG_BOLT = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13.5 2L4.5 13.2H11.4L10.3 22L19.5 10.6H12.7L13.5 2Z" fill="#fde047" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
-const TOAST_SVG_METEOR = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 5L11.5 12.5M14 5L9.5 9.5M19 10L14.5 14.5" stroke="#e9d5ff" stroke-width="1.8" stroke-linecap="round"/><circle cx="9" cy="15" r="5" fill="#c084fc" stroke="#f5d0fe" stroke-width="1.5"/></svg>`;
-const TOAST_SVG_ERROR = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5L21 19.5H3L12 3.5Z" fill="#fb7185" fill-opacity="0.25" stroke="#fb7185" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 9.5V13.8M12 16.8H12.01" stroke="#ffe4e6" stroke-width="2" stroke-linecap="round"/></svg>`;
-const TOAST_SVG_AUDIO = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 9.5H8L13.5 5V19L8 14.5H4.5A1.5 1.5 0 0 1 3 13V11A1.5 1.5 0 0 1 4.5 9.5Z" fill="#7dd3fc" stroke="#e0f2fe" stroke-width="1.4" stroke-linejoin="round"/><path d="M16.5 8.8C18.2 10.5 18.2 13.5 16.5 15.2M19.2 6.5C22 9.5 22 14.5 19.2 17.5" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+const TOAST_SVG_BOLT = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13.8 2L4.2 13.4H11.2L10 22L19.8 10.4H12.8L13.8 2Z" fill="#fde047" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/></svg>`;
+const TOAST_SVG_METEOR = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 5L12.5 11.5M14.5 4.5L10.5 8.5M19.5 9.5L15.5 13.5" stroke="#14111d" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="15" r="5.2" fill="#a855f7" stroke="#14111d" stroke-width="2"/><circle cx="7.6" cy="13.6" r="1.4" fill="#fef08a"/></svg>`;
+const TOAST_SVG_ERROR = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.2L21.2 19.6H2.8L12 3.2Z" fill="#ff3b5c" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.4V14" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="16.9" r="1.3" fill="#ffffff"/></svg>`;
+const TOAST_SVG_AUDIO = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 9.5H8.2L14 4.8V19.2L8.2 14.5H4.5A1.5 1.5 0 0 1 3 13V11A1.5 1.5 0 0 1 4.5 9.5Z" fill="#38bdf8" stroke="#14111d" stroke-width="1.9" stroke-linejoin="round"/><path d="M16.8 8.8C18.4 10.5 18.4 13.5 16.8 15.2M19.4 6.5C22 9.5 22 14.5 19.4 17.5" stroke="#14111d" stroke-width="2" stroke-linecap="round"/></svg>`;
 
 export function classifyToast(rawText: string): { tone: ToastTone; cleanText: string; iconHtml: string } {
   const cleanText = rawText.replace(/^[\s⚡☄️★✦🔥💎🪙🎉]+/u, '').trim();
@@ -459,14 +478,14 @@ export function buildEnchantHoverCardHtml(
     >
       <div class="flex items-center gap-2">
         <div
-          class="w-11 h-11 rounded-xl border-2 border-[#14111d] bg-[#ffffff] flex items-center justify-center shrink-0 [&>.mam-3d-icon]:w-9 [&>.mam-3d-icon]:h-9"
-          style="background:radial-gradient(circle at 50% 45%,${enchant.color}33,#ffffff 85%)"
+          class="w-11 h-11 rounded-xl border-2 border-[#14111d] flex items-center justify-center shrink-0 [&>.mam-3d-icon]:w-9 [&>.mam-3d-icon]:h-9"
+          style="background:radial-gradient(circle at 50% 45%,${enchant.id === 'timeless' ? '#a5b4fc' : enchant.color}7a,${enchant.id === 'timeless' ? '#a5b4fc' : enchant.color}30 88%)"
         >
           ${enchantAuraIconHtml(enchant.id, enchant.color, 36, enchant.name)}
         </div>
         <div class="min-w-0 flex-1 flex flex-col items-start gap-0.5">
-          <div class="text-[15px] font-black leading-tight truncate max-w-full ${titleCls}" style="${titleCls ? '' : `color:${enchant.color}`}">${enchant.name}</div>
-          ${renderRarityBadgeHtml(enchant.rarity)}
+          <div class="text-[15px] font-black leading-tight truncate max-w-full ${titleCls || 'text-[#14111d]'}">${enchant.name}</div>
+          ${renderRarityBadgeHtml(enchant.rarity, '!ml-0')}
         </div>
       </div>
 

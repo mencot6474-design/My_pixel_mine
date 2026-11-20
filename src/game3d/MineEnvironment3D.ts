@@ -466,12 +466,12 @@ export class MineEnvironment3D {
     steelMat: THREE.Material
   ): void {
     const g = new THREE.Group();
-    g.position.set(0, 0.21, -6.05);
+    g.position.set(0, 0.21, -6.45);
 
-    // Grounded Dark Gunmetal Holo-Display Gantry (3:1 banner lifted cleanly above staggered Chibi nameplates)
+    // Grounded Dark Gunmetal Holo-Display Gantry (3:1 banner lifted cleanly above enlarged Chibi podiums)
     const bannerW = 8.4;
     const bannerH = 2.68;
-    const bannerCenterY = 4.32;
+    const bannerCenterY = 4.95;
 
     const plinthBase = new THREE.Mesh(new THREE.BoxGeometry(11.4, 0.44, 0.96), darkMetalMat);
     plinthBase.position.set(0, 0.22, 0);
@@ -481,13 +481,13 @@ export class MineEnvironment3D {
     const plinthNeon = new THREE.Mesh(new THREE.BoxGeometry(11.44, 0.055, 0.98), this.cyberDeckTrimMat);
     plinthNeon.position.set(0, 0.46, 0);
 
-    const lowerBackdrop = new THREE.Mesh(new THREE.BoxGeometry(10.4, 2.42, 0.54), this.cliffMat);
-    lowerBackdrop.position.set(0, 1.68, -0.02);
+    const lowerBackdrop = new THREE.Mesh(new THREE.BoxGeometry(10.4, 3.05, 0.54), this.cliffMat);
+    lowerBackdrop.position.set(0, 1.98, -0.02);
     lowerBackdrop.castShadow = true;
     lowerBackdrop.receiveShadow = true;
 
     const plinthTop = new THREE.Mesh(new THREE.BoxGeometry(10.55, 0.14, 0.72), steelMat);
-    plinthTop.position.set(0, 2.92, 0);
+    plinthTop.position.set(0, 3.55, 0);
     plinthTop.receiveShadow = true;
 
     const wallBacking = new THREE.Mesh(
@@ -513,16 +513,16 @@ export class MineEnvironment3D {
     // Sleek Gunmetal & Glowing Cyan Side Pilasters Framing the Hologram Wall
     for (const sx of [-1, 1]) {
       const px = sx * (bannerW * 0.5 + 0.36);
-      const pilaster = new THREE.Mesh(new THREE.BoxGeometry(0.48, bannerH + 3.05, 0.62), steelMat);
-      pilaster.position.set(px, 2.94, 0.02);
+      const pilaster = new THREE.Mesh(new THREE.BoxGeometry(0.48, bannerH + 3.68, 0.62), steelMat);
+      pilaster.position.set(px, 3.26, 0.02);
       pilaster.castShadow = true;
       pilaster.receiveShadow = true;
 
       const edgeStrip = new THREE.Mesh(
-        new THREE.BoxGeometry(0.08, bannerH + 2.8, 0.09),
+        new THREE.BoxGeometry(0.08, bannerH + 3.42, 0.09),
         this.cyberDeckTrimMat
       );
-      edgeStrip.position.set(px - sx * 0.25, 2.96, 0.3);
+      edgeStrip.position.set(px - sx * 0.25, 3.28, 0.3);
 
       const cap = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.18, 0.72), darkMetalMat);
       cap.position.set(px, bannerCenterY + bannerH * 0.5 + 0.36, 0.02);
@@ -555,7 +555,7 @@ export class MineEnvironment3D {
     // Twin Cyber Stage Holo-Speaker / Projector Columns Flanking the Widened Rear Stage
     for (const sx of [-1, 1]) {
       const proj = new THREE.Group();
-      proj.position.set(sx * 6.35, 0, 0.55);
+      proj.position.set(sx * 8.25, 0, 0.55);
 
       const base = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.36, 0.22, 8), darkMetalMat);
       base.position.y = 0.11;

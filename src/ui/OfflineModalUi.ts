@@ -7,8 +7,8 @@ import { hudIconHtml } from './HudIcons';
 import { renderModalShell } from './HudShared';
 
 const CLOCK_ICON_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-  <circle cx="12" cy="12" r="9" stroke="#fde047" stroke-width="2"/>
-  <path d="M12 7v5l3.2 2" stroke="#fef08a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="12" cy="12" r="9" fill="#ffffff" stroke="#14111d" stroke-width="2"/>
+  <path d="M12 7v5l3.2 2" stroke="#ea580c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 
 export class OfflineModalUi {

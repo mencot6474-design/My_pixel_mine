@@ -151,6 +151,7 @@
   .mam-toast-banner {
     --toast-bg: #fff8e7;
     --toast-accent: #38bdf8;
+    --toast-icon-bg: #bae6fd;
     display: inline-flex;
     align-items: center;
     gap: 10px;
@@ -167,43 +168,49 @@
   .mam-toast-banner[data-toast-tone='overclock'] {
     --toast-bg: #fef08a;
     --toast-accent: #f59e0b;
+    --toast-icon-bg: #fb923c;
   }
 
   .mam-toast-banner[data-toast-tone='bounty'] {
     --toast-bg: #6ee7b7;
     --toast-accent: #10b981;
+    --toast-icon-bg: #ffffff;
   }
 
   .mam-toast-banner[data-toast-tone='reward'] {
     --toast-bg: #bbf7d0;
     --toast-accent: #22c55e;
+    --toast-icon-bg: #ffffff;
   }
 
   .mam-toast-banner[data-toast-tone='meteor'] {
     --toast-bg: #e9d5ff;
     --toast-accent: #a855f7;
+    --toast-icon-bg: #d8b4fe;
   }
 
   .mam-toast-banner[data-toast-tone='error'] {
     --toast-bg: #fda4af;
     --toast-accent: #f43f5e;
+    --toast-icon-bg: #ffe4e6;
   }
 
   .mam-toast-banner[data-toast-tone='audio'] {
     --toast-bg: #bae6fd;
     --toast-accent: #0ea5e9;
+    --toast-icon-bg: #ffffff;
   }
 
   .mam-toast-icon {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     flex-shrink: 0;
-    border-radius: 8px;
+    border-radius: 9px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #14111d;
-    border: 1.5px solid #14111d;
+    background: var(--toast-icon-bg);
+    border: 2px solid #14111d;
     box-shadow: none;
   }
 
@@ -237,13 +244,14 @@
   .mam-dps-pill {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     width: 100%;
-    padding: 4px 8px 4px 6px;
-    border-radius: 12px;
+    padding: 0 12px;
+    border-radius: 9999px;
     background: #fff8e7;
     color: #14111d;
-    border: 2.5px solid #14111d;
+    border: 3px solid #14111d;
     box-shadow: none;
     transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.14s ease;
   }

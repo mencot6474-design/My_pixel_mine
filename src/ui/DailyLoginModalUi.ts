@@ -4,9 +4,9 @@ import { GameState } from '../game/GameState';
 import { chibiPortraitHtml, rarityCardClasses, rarityVars, renderModalShell, renderRarityBadgeHtml } from './HudShared';
 
 const DAILY_CALENDAR_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-  <rect x="3" y="5" width="18" height="16" rx="3" stroke="#e9d5ff" stroke-width="1.9"/>
-  <path d="M3 10h18M8 3v4M16 3v4" stroke="#facc15" stroke-width="1.9" stroke-linecap="round"/>
-  <path d="M12 13.2l1.1 2.2 2.4.35-1.75 1.7.42 2.4-2.17-1.15-2.17 1.15.42-2.4-1.75-1.7 2.4-.35L12 13.2Z" fill="#facc15"/>
+  <rect x="3" y="5" width="18" height="16" rx="3" fill="#ffffff" stroke="#14111d" stroke-width="2"/>
+  <path d="M3 10h18M8 3v4M16 3v4" stroke="#14111d" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 12.6l1.1 2.2 2.4.35-1.75 1.7.42 2.4-2.17-1.15-2.17 1.15.42-2.4-1.75-1.7 2.4-.35L12 12.6Z" fill="#a855f7" stroke="#14111d" stroke-width="1.2" stroke-linejoin="round"/>
 </svg>`;
 
 export class DailyLoginModalUi {

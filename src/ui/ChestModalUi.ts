@@ -48,10 +48,10 @@ export class ChestModalUi {
           <div class="mam-card-art">
             ${chibiPortraitHtml(def)}
           </div>
-          <div class="mam-card-name mam-outline-sm">${def.name}</div>
+          <div class="mam-card-name truncate px-1">${def.name}</div>
           <div class="mam-card-bottom">
-            <span class="mam-card-dps mam-outline-sm">${fmtShort(def.baseDps)}</span>
-            <span class="mam-card-qty mam-outline-sm" data-chest-qty="miner:${def.id}">x${fmtInt(qty)}</span>
+            <span class="mam-card-dps">${fmtShort(def.baseDps)}</span>
+            <span class="mam-card-qty" data-chest-qty="miner:${def.id}">x${fmtInt(qty)}</span>
           </div>
         </div>
       `);
@@ -64,12 +64,12 @@ export class ChestModalUi {
       const locked = this.state.isOreLocked(def.id);
       cards.push(`
         <div class="${rarityCardClasses(def.rarity)} relative" style="${rarityVars(def.rarity)}">
-          <button type="button" class="absolute top-1 right-1 z-[4] w-5 h-5 rounded-md flex items-center justify-center text-[11px] leading-none border cursor-pointer transition-transform hover:scale-110 ${locked ? 'bg-amber-500/90 border-amber-200 text-slate-950 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-slate-900/75 border-white/20 text-slate-300 opacity-75 hover:opacity-100'}" data-chest-lock-ore="${def.id}" title="${locked ? 'Unlock Ore (allow selling)' : 'Lock Ore (protect from Auto-Sell & Sell Ores)'}">${locked ? '🔒' : '🔓'}</button>
+          <button type="button" class="absolute top-1 right-1 z-[4] w-5 h-5 rounded-md flex items-center justify-center text-[11px] leading-none border-[1.5px] border-[#14111d] cursor-pointer transition-transform hover:scale-110 ${locked ? 'bg-[#fde047] text-[#14111d]' : 'bg-[#fff8e7] text-[#14111d] opacity-85 hover:opacity-100'}" data-chest-lock-ore="${def.id}" title="${locked ? 'Unlock Ore (allow selling)' : 'Lock Ore (protect from Auto-Sell & Sell Ores)'}">${locked ? '🔒' : '🔓'}</button>
           <div class="mam-card-art">${oreIconSvg(def.color, def.secondaryColor, def.rarity, `ch_${def.id}`)}</div>
-          <div class="mam-card-name mam-outline-sm">${def.name}</div>
+          <div class="mam-card-name truncate px-1">${def.name}</div>
           <div class="mam-card-bottom">
-            <span class="mam-card-val mam-outline-sm">${fmtMoney(def.sellValue)}</span>
-            <span class="mam-card-qty mam-outline-sm" data-chest-qty="ore:${def.id}">x${fmtInt(qty)}</span>
+            <span class="mam-card-val">${fmtMoney(def.sellValue)}</span>
+            <span class="mam-card-qty" data-chest-qty="ore:${def.id}">x${fmtInt(qty)}</span>
           </div>
         </div>
       `);
@@ -77,7 +77,7 @@ export class ChestModalUi {
 
     return cards.length
       ? cards.join('')
-      : '<div class="mam-placeholder-well col-span-full text-center p-7 text-[#fde68a] font-extrabold mam-outline-sm">Mine ores in the pit to fill your Chest!</div>';
+      : '<div class="mam-placeholder-well col-span-full text-center p-7 text-[#5b526e] font-black">Mine ores in the pit to fill your Chest!</div>';
   }
 
   private renderChestAutoSellBar(): string {

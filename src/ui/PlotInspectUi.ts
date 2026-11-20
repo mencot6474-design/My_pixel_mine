@@ -25,6 +25,8 @@ import {
   bindEnchantHoverInspector,
   InspectTab,
   rarityVars,
+  renderMutationBadgeHtml,
+  renderRarityBadgeHtml,
   TW_INSPECT_ARROW,
   TW_INSPECT_TAB,
   TW_STAT_BTN,
@@ -148,20 +150,14 @@ export class PlotInspectUi {
           <div class="text-[20px] font-black leading-[1.1] text-[#14111d] truncate">${chibi.name}</div>
           ${star > 0 ? `<span class="px-1.5 py-0.5 rounded-md bg-[#fde047] border-2 border-[#14111d] text-[#14111d] text-[11px] font-black tabular-nums shrink-0">★${star}</span>` : ''}
         </div>
-        <div class="text-[14px] font-black flex items-center gap-1.5 flex-wrap">
-          ${
-            rarity === 'fusion'
-              ? `<span class="mam-fusion-badge">✦ FUSION</span>`
-              : rarity === 'limited'
-                ? `<span class="mam-limited-badge">✦ LIMITED</span>`
-                : `<span class="px-2 py-0.5 rounded-md bg-white border-[1.5px] border-[#14111d] text-[11px] font-black uppercase text-[#14111d]">${rarity}</span>`
-          }
+        <div class="text-[14px] font-black flex items-center gap-1.5 flex-wrap mt-0.5">
+          ${renderRarityBadgeHtml(rarity, '!ml-0')}
           <span class="text-[#14111d]">•</span>
-          <span class="px-2 py-0.5 rounded-md bg-white border-[1.5px] border-[#14111d] text-[11px] font-black ${mut.id === 'rainbow' ? 'mam-rainbow-text' : 'text-[#14111d]'}">${mut.name}</span>
+          ${renderMutationBadgeHtml(mut.id, mut.name)}
         </div>
         ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black tabular-nums text-[#7c3aed]">✦ ${worldName} Resonance (+${Math.round(resBonusPct * 100)}% DMG)</div>` : ''}
-        ${fusionDef ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#cffafe] border-2 border-[#14111d] text-[11px] font-black text-[#14111d] self-start">★ Passive: ${fusionDef.passive.label}</div>` : ''}
-        ${eqEnchant ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border-2 border-[#14111d] text-[10.5px] font-black text-[#14111d] self-start">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}
+        ${fusionDef ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#cffafe] border-2 border-[#14111d] text-[11px] font-black text-[#14111d] self-start leading-snug">★ Passive: ${fusionDef.passive.label}</div>` : ''}
+        ${eqEnchant ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border-2 border-[#14111d] text-[10.5px] font-black text-[#14111d] self-start leading-snug">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}
         <div class="text-[12.5px] font-bold tabular-nums text-[#475569] mt-0.5">
           Lv. ${unit.damageLevel} • Speed ${stats.speed} • Mining x${stats.miningMult}
         </div>
@@ -295,6 +291,9 @@ export class PlotInspectUi {
       `;
     }
 
+    const equippedCheckHtml =
+      '<span class="absolute -top-1.5 -right-1.5 z-[5] w-[18px] h-[18px] rounded-full bg-[#2ee59d] border-2 border-[#14111d] flex items-center justify-center pointer-events-none" aria-label="Equipped"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.2 6.3L4.8 8.9L9.8 3.3" stroke="#14111d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+
     if (this.inspectTab === 'pickaxe') {
       return PICKAXES.map((p) => {
         const owned = this.state.ownedPickaxes[p.id] || 0;
@@ -302,7 +301,7 @@ export class PlotInspectUi {
         const available = eq || owned > 0;
         return `
           <div class="${TW_STRIP_CARD} ${eq ? 'equipped' : ''} ${available ? '' : 'locked'}" style="${rarityVars(p.rarity)}" data-pickaxe-id="${p.id}" title="${eq ? 'Click to Unequip (returns to bag)' : owned > 0 ? 'Click to Equip (1 per Chibi)' : 'Locked — Buy in Pickaxe Shop'}">
-            ${eq ? '<span class="absolute top-0.5 right-1 px-1 rounded bg-[#22c55e] border border-[#14111d] text-[10px] font-black text-[#14111d]">✓</span>' : ''}
+            ${eq ? equippedCheckHtml : ''}
             <div class="mam-card-name">${p.name}</div>
             <div>${available ? pickaxeIconHtml(p.id, 36, p.name) : hudIconHtml('lock', 30, 'Locked')}</div>
             <div class="mam-card-bottom">
@@ -318,8 +317,9 @@ export class PlotInspectUi {
       const mutCards = MUTATIONS.filter((m) => m.chancePct > 0)
         .map(
           (m) => `
-          <div class="${TW_STRIP_CARD} ${m.rarity === 'rainbow' ? 'rarity-rainbow' : ''} ${unit.mutationId === m.id ? 'equipped' : ''}" style="${rarityVars(m.rarity)}">
-            <div class="mam-card-name ${m.id === 'rainbow' ? 'mam-rainbow-text' : ''}">${m.name}</div>
+          <div class="${TW_STRIP_CARD} ${m.rarity === 'rainbow' ? 'rarity-rainbow' : `mam-mut-card-${m.id}`} ${unit.mutationId === m.id ? 'equipped' : ''}" style="${rarityVars(m.rarity)}">
+            ${unit.mutationId === m.id ? equippedCheckHtml : ''}
+            ${renderMutationBadgeHtml(m.id, m.name, '!normal-case !tracking-tight !px-1.5 !py-[1.5px] !text-[10px] max-w-full')}
             <div class="tabular-nums text-[#dc2626]" style="font-size:14px;font-weight:900">${m.mult}X</div>
             <div class="mam-card-qty">${fmtPct(m.chancePct)}</div>
           </div>
@@ -332,7 +332,7 @@ export class PlotInspectUi {
         ${mutCards}
         <div class="flex-[0_0_184px] @max-[760px]:flex-[1_1_100%] h-[84px] px-2.5 py-2 rounded-xl bg-white border-[2.5px] border-[#14111d] flex flex-col justify-between">
           <div class="flex items-center justify-between gap-1.5">
-            <div class="truncate text-[13px] font-black ${curMut.id === 'rainbow' ? 'mam-rainbow-text' : 'text-[#14111d]'}">${curMut.name}</div>
+            ${renderMutationBadgeHtml(curMut.id, curMut.name, '!px-2 !py-[2px] !text-[10px] min-w-0')}
             <div class="tabular-nums inline-flex items-center gap-1 text-[13px] font-black text-[#db2777] shrink-0">${hudIconHtml('gem', 15, 'Gems')} ${fmtInt(stats.mutationCost)}</div>
           </div>
           <div class="grid grid-cols-2 gap-1.5">
@@ -363,8 +363,8 @@ export class PlotInspectUi {
             ? 'In Use on another Chibi'
             : 'Locked — Roll in Enhance Altar';
       return `
-        <div class="${TW_STRIP_CARD} ${eq ? 'equipped' : ''} ${available ? '' : 'locked'}" style="${rarityVars(e.rarity)}" data-enchant-id="${e.id}" tabindex="0" title="${e.name} • ${e.dmgMult}x DMG • +${orePct}% Ore Drop • +${sellPct}% Sell • +${spdPct}% Spd • ${statusHint}">
-          ${eq ? '<span class="absolute top-0.5 right-1 px-1 rounded bg-[#22c55e] border border-[#14111d] text-[10px] font-black text-[#14111d]">✓</span>' : ''}
+        <div class="${TW_STRIP_CARD} ${e.rarity === 'rainbow' ? 'rarity-rainbow' : ''} ${eq ? 'equipped' : ''} ${available ? '' : 'locked'}" style="${rarityVars(e.rarity)}" data-enchant-id="${e.id}" tabindex="0" title="${e.name} • ${e.dmgMult}x DMG • +${orePct}% Ore Drop • +${sellPct}% Sell • +${spdPct}% Spd • ${statusHint}">
+          ${eq ? equippedCheckHtml : ''}
           <div class="mam-card-name">${e.name}</div>
           <div class="flex-1 min-h-0 flex items-center justify-center pointer-events-none">${enchantAuraIconHtml(e.id, e.color, 36, e.name)}</div>
           <div class="mam-card-bottom">
@@ -390,8 +390,8 @@ export class PlotInspectUi {
           <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fde047] border-2 border-[#14111d] text-[#14111d] text-[12px] font-black tracking-wide uppercase">
             <span>&#9888;&#65039;</span> ${title}
           </div>
-          <div class="w-full py-3 px-4 rounded-xl bg-white border-[2.5px] border-[#14111d] flex flex-col items-center gap-0.5">
-            <div class="text-[24px] font-black leading-tight text-[#14111d] ${mut.id === 'rainbow' ? 'mam-rainbow-text' : ''}">${mut.name}</div>
+          <div class="w-full py-3 px-4 rounded-xl bg-white border-[2.5px] border-[#14111d] flex flex-col items-center gap-1.5">
+            ${renderMutationBadgeHtml(mut.id, mut.name, '!px-3.5 !py-1 !text-[14px]')}
             <div class="text-[15px] font-black text-[#dc2626]">${mut.mult}X Damage &bull; ${fmtPct(mut.chancePct)}</div>
           </div>
           <p class="text-[14px] leading-snug font-bold text-[#334155] m-0">${desc}</p>

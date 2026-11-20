@@ -44,15 +44,18 @@ export function renderAudioControlsHtml(opts: {
     ? 'border-[#14111d] bg-[#fde047]'
     : gearFrameCls;
   const camIcon = cameraLocked
-    ? `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
-        <path d="M3.5 9.5a2 2 0 0 1 2-2h2l1.2-1.8a1.5 1.5 0 0 1 1.25-.7h4.1a1.5 1.5 0 0 1 1.25.7L16.5 7.5h2a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V9.5Z" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
-        <rect x="9" y="12.2" width="6" height="4.6" rx="1.2" fill="#ff4d2e" stroke="#14111d" stroke-width="1.3"/>
-        <path d="M10.4 12.2v-1.1a1.6 1.6 0 0 1 3.2 0v1.1" stroke="#14111d" stroke-width="1.8" stroke-linecap="round"/>
+    ? `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true">
+        <path d="M3 9.5a2 2 0 0 1 2-2h2l1.1-1.7A1.5 1.5 0 0 1 9.35 5h4.3a1.5 1.5 0 0 1 1.25.8L16 7.5h2a2 2 0 0 1 2 2v7.2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9.5Z" fill="#ffffff" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="10.2" cy="13" r="3" fill="#bae6fd" stroke="#14111d" stroke-width="1.8"/>
+        <rect x="14.2" y="12.5" width="7.5" height="6.5" rx="1.6" fill="#ff3b5c" stroke="#14111d" stroke-width="1.8"/>
+        <path d="M16 12.5v-1.4a2 2 0 0 1 4 0v1.4" stroke="#14111d" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="18" cy="15.8" r="1" fill="#fde047"/>
       </svg>`
-    : `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
-        <path d="M3.5 9.5a2 2 0 0 1 2-2h2l1.2-1.8a1.5 1.5 0 0 1 1.25-.7h4.1a1.5 1.5 0 0 1 1.25.7L16.5 7.5h2a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V9.5Z" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
-        <circle cx="12" cy="13.2" r="2.7" stroke="#0284c7" stroke-width="2"/>
-        <path d="M7.5 21l-2-1.8m11 1.8 2-1.8" stroke="#14111d" stroke-width="1.8" stroke-linecap="round"/>
+    : `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true">
+        <path d="M3 9.5a2 2 0 0 1 2-2h2l1.1-1.7A1.5 1.5 0 0 1 9.35 5h5.3a1.5 1.5 0 0 1 1.25.8L17 7.5h2a2 2 0 0 1 2 2v7.2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9.5Z" fill="#ffffff" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="12" cy="13.2" r="3.4" fill="#38bdf8" stroke="#14111d" stroke-width="1.9"/>
+        <circle cx="10.9" cy="12.1" r="1" fill="#ffffff"/>
+        <path d="M7.5 21.4l-2-1.8m11 1.8 2-1.8" stroke="#14111d" stroke-width="2" stroke-linecap="round"/>
       </svg>`;
   const utilBtnCls =
     'w-12 h-12 @max-[720px]:w-10 @max-[720px]:h-10 rounded-2xl border-[2.5px] flex items-center justify-center cursor-pointer touch-manipulation transition-[transform,filter] duration-150 ease-out hover:scale-[0.95] hover:-rotate-2 even:hover:rotate-2 hover:brightness-105 active:scale-90 pointer-events-auto';
@@ -103,11 +106,11 @@ export function renderCurrencyRailHtml(opts: {
     ? 'top-[14px] right-4'
     : 'top-[42%] right-4 -translate-y-1/2 [[data-hud-compact=true]_&]:top-[72px] [[data-hud-compact=true]_&]:translate-y-0 [[data-hud-short=true]_&]:top-[36%]';
   const plusBtn = opts.showGemsPlus
-    ? `<button class="${TW_PLUS_BTN}" data-action="gems-plus">+</button>`
+    ? `<button class="${TW_PLUS_BTN} absolute right-2 top-1/2 -translate-y-1/2" data-action="gems-plus" aria-label="Buy Gems"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true"><path d="M8 2.8v10.4M2.8 8h10.4" stroke="#14111d" stroke-width="2.8" stroke-linecap="round"/></svg></button>`
     : '';
   const cashBar = opts.showCash
     ? `<div class="${TW_CURRENCY_BAR}">
-        <span class="text-[26px] font-black tabular-nums text-[#059669] tracking-[0.2px]" data-hud-cash="true">${fmtMoney(opts.cash)}</span>
+        <span class="text-[21px] @max-[720px]:text-[18px] leading-none font-black tabular-nums text-[#059669] tracking-[0.2px] text-center" data-hud-cash="true">${fmtMoney(opts.cash)}</span>
       </div>`
     : '';
   const quickRow = opts.quickButtonsHtml
@@ -118,9 +121,9 @@ export function renderCurrencyRailHtml(opts: {
     <div class="absolute ${posCls} flex flex-col items-end gap-1.5">
       ${opts.dpsAboveHtml ?? ''}
       <div class="flex items-center gap-2">
-        <div class="${TW_CURRENCY_BAR}">
-          ${hudIconHtml('gem', 28, 'Gems')}
-          <span class="text-[20px] font-black tabular-nums text-[#14111d]" data-hud-gems="true">${fmtInt(opts.gems)}</span>
+        <div class="${TW_CURRENCY_BAR} px-9">
+          ${hudIconHtml('gem', 24, 'Gems')}
+          <span class="text-[20px] @max-[720px]:text-[17px] leading-none font-black tabular-nums text-[#14111d] text-center" data-hud-gems="true">${fmtInt(opts.gems)}</span>
           ${plusBtn}
         </div>
       </div>

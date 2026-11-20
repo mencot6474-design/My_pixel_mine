@@ -4,6 +4,7 @@ import {
   GEM_SHOP_ITEMS,
   GemShopItemDef,
   getWeatherOreByWeatherId,
+  RARITY_BORDER,
   WEATHER_METEOR_CHIBIS,
   WEATHER_METEOR_DICE_CHANCE,
 } from '../game/GameData';
@@ -13,7 +14,7 @@ import { type OverclockSnapshot } from '../game/OverclockDomain';
 import { WeatherId, WEATHERS } from '../game/WeatherData';
 import { getChibiById } from '../game3d/ChibiCatalog';
 import { enchantDiceIconHtml, gemPotionIconHtml, hudIconHtml, meteorIconHtml, weatherIconHtml } from './HudIcons';
-import { formatCountdownTimer, TW_ACTIVE_POT_PILL } from './HudShared';
+import { formatCountdownTimer, chibiPortraitHtml, TW_ACTIVE_POT_PILL } from './HudShared';
 
 export interface ActivePotionsDockContent {
   single: boolean;
@@ -268,19 +269,14 @@ export function buildWeatherWidgetInnerHtml(
 }
 
 const DPS_SWORD_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
-  <path d="M19.5 4.5L11.2 12.8M19.5 4.5L15.2 4.9L9.8 10.3L13.7 14.2L19.1 8.8L19.5 4.5Z" fill="url(#mam-dps-blade)" stroke="#e0f2fe" stroke-width="1.3" stroke-linejoin="round"/>
-  <path d="M8.5 11.5L12.5 15.5M6.2 17.8L10.2 13.8M5 19L7.4 16.6" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
-  <defs>
-    <linearGradient id="mam-dps-blade" x1="10" y1="5" x2="19" y2="14" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#e0f2fe"/>
-      <stop offset="55%" stop-color="#38bdf8"/>
-      <stop offset="100%" stop-color="#818cf8"/>
-    </linearGradient>
-  </defs>
+  <path d="M20 4L14.5 4.8L8.4 10.9L13.1 15.6L19.2 9.5L20 4Z" fill="#fef08a" stroke="#14111d" stroke-width="1.9" stroke-linejoin="round"/>
+  <path d="M7.2 10.2L13.8 16.8" stroke="#ff4d2e" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M9.6 14.4L5.2 18.8" stroke="#14111d" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="4.8" cy="19.2" r="1.4" fill="#fde047" stroke="#14111d" stroke-width="1.2"/>
 </svg>`;
 
-const DPS_CHEVRON_UP = `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true"><path d="M4 10L8 6L12 10" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const DPS_CHEVRON_DOWN = `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true"><path d="M4 6L8 10L12 6" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const DPS_CHEVRON_UP = `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true"><path d="M4 10L8 6L12 10" stroke="#14111d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const DPS_CHEVRON_DOWN = `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true"><path d="M4 6L8 10L12 6" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 /** Builds inner HTML for the bottom-left DPS Meter pill and breakdown panel. */
 export function buildDpsMeterInnerHtml(state: GameState, dpsMeterOpen: boolean): string {
@@ -288,36 +284,56 @@ export function buildDpsMeterInnerHtml(state: GameState, dpsMeterOpen: boolean):
   const total = bd.totalPlotDps;
   const panelHtml = dpsMeterOpen
     ? `
-        <div class="mam-dps-panel flex flex-col gap-2">
-          <div class="flex items-center justify-between gap-2 border-b-2 border-[#14111d]/15 pb-1.5">
-            <span class="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.06em] text-[#14111d]">
+        <div class="mam-dps-panel flex flex-col gap-2.5">
+          <div class="flex items-center justify-between gap-2 border-b-2 border-[#14111d]/15 pb-2">
+            <span class="inline-flex items-center gap-1.5 text-[12px] font-black uppercase tracking-[0.06em] text-[#14111d]">
               ${DPS_SWORD_SVG}
               <span>Damage Breakdown</span>
             </span>
-            <span class="px-1.5 py-0.5 rounded-md bg-[#fde047] border border-[#14111d] text-[10.5px] font-black text-[#14111d] tabular-nums">Tap ${fmtShort(bd.tapDamage)}</span>
+            <div class="flex items-center gap-1 shrink-0">
+              <span class="px-1.5 py-0.5 rounded-md bg-[#bae6fd] border border-[#14111d] text-[10.5px] font-black text-[#0369a1] tabular-nums">${fmtShort(total)}/s</span>
+              <span class="px-1.5 py-0.5 rounded-md bg-[#fde047] border border-[#14111d] text-[10.5px] font-black text-[#14111d] tabular-nums">Tap ${fmtShort(bd.tapDamage)}</span>
+            </div>
           </div>
           ${
             bd.units.length > 0
-              ? `<div class="flex flex-col gap-1 max-h-[124px] overflow-y-auto mam-no-scrollbar pr-0.5" data-dps-scroll="true">
+              ? `<div class="flex flex-col gap-1.5 max-h-[214px] overflow-y-auto mam-no-scrollbar" data-dps-scroll="true">
                   ${bd.units
                     .map((u) => {
+                      const chibi = getChibiById(u.chibiId);
                       const pctStr = `${u.pct >= 10 ? Math.round(u.pct) : u.pct.toFixed(1)}%`;
-                      const starTag = u.stars > 0 ? ` <span class="text-[#d97706]">★${u.stars}</span>` : '';
+                      const starTag =
+                        u.stars > 0
+                          ? `<span class="px-1 py-[1px] rounded bg-[#fef08a] border border-[#d97706] text-[#92400e] text-[9.5px] font-black leading-none shrink-0">★${u.stars}</span>`
+                          : '';
+                      const borderHex = RARITY_BORDER[u.rarity] ?? '#94a3b8';
                       return `
-                        <button type="button" class="w-full text-left flex flex-col gap-0.5 px-1.5 py-1 rounded-lg bg-[#ffffff] border-2 border-[#14111d] hover:bg-[#fef08a] cursor-pointer transition-colors" data-dps-inspect-slot="${u.slotIndex}" title="Inspect ${u.name} (Plot ${u.slotIndex + 1})">
-                          <div class="flex items-center justify-between text-[10.5px] font-black text-[#14111d] gap-1.5">
-                            <span class="truncate"><span class="text-[9px] text-[#5b526e] font-black mr-1">#${u.slotIndex + 1}</span>${u.name}${starTag}</span>
-                            <span class="shrink-0 text-[#0284c7] font-black tabular-nums">${fmtShort(u.dps)} <span class="text-[#5b526e] font-bold text-[9.5px]">(${pctStr})</span></span>
+                        <button type="button" class="w-full text-left flex items-center gap-2.5 p-2 rounded-xl bg-[#ffffff] border-2 border-[#14111d] hover:bg-[#fef9c3] cursor-pointer transition-colors" data-dps-inspect-slot="${u.slotIndex}" title="Inspect ${u.name} (Plot ${u.slotIndex + 1})">
+                          <div class="w-10 h-10 shrink-0 rounded-lg border-2 border-[#14111d] overflow-hidden flex items-center justify-center p-0.5" style="background:radial-gradient(circle at 50% 45%, ${borderHex}33, #fffbeb)">
+                            ${chibi ? chibiPortraitHtml(chibi, { draggable: false }) : ''}
                           </div>
-                          <div class="h-1.5 w-full rounded-full bg-[#fcecc8] border border-[#14111d] overflow-hidden">
-                            <div class="h-full rounded-full bg-[#38bdf8]" style="width:${Math.min(100, Math.max(2, u.pct))}%"></div>
+                          <div class="flex-1 min-w-0 flex flex-col gap-1">
+                            <div class="flex items-center justify-between gap-2">
+                              <span class="inline-flex items-center gap-1 min-w-0">
+                                <span class="px-1.5 py-[1px] rounded bg-[#14111d] text-white text-[9.5px] font-black leading-tight shrink-0">#${u.slotIndex + 1}</span>
+                                <span class="text-[12px] font-black text-[#14111d] truncate">${u.name}</span>
+                                ${starTag}
+                              </span>
+                              <span class="shrink-0 inline-flex items-center gap-1 tabular-nums">
+                                <span class="text-[12px] font-black text-[#0284c7]">${fmtShort(u.dps)}/s</span>
+                                <span class="px-1.5 py-[1px] rounded-md bg-[#e0f2fe] border border-[#0284c7]/40 text-[#0369a1] font-black text-[9.5px]">${pctStr}</span>
+                              </span>
+                            </div>
+                            <div class="h-2 w-full rounded-full bg-[#fcecc8] border border-[#14111d] overflow-hidden">
+                              <div class="h-full rounded-full bg-[linear-gradient(90deg,#38bdf8,#0284c7)]" style="width:${Math.min(100, Math.max(2, u.pct))}%"></div>
+                            </div>
                           </div>
                         </button>
                       `;
                     })
                     .join('')}
                 </div>`
-              : '<div class="text-[11px] font-bold text-[#5b526e] py-1">Place Chibis on plots to track DPS.</div>'
+              : '<div class="text-[11.5px] font-bold text-[#5b526e] py-1.5 text-center">Place Chibis on plots to track DPS.</div>'
           }
         </div>
       `
@@ -325,16 +341,14 @@ export function buildDpsMeterInnerHtml(state: GameState, dpsMeterOpen: boolean):
 
   return `
       ${panelHtml}
-      <button type="button" class="mam-dps-pill text-[#14111d] text-[11px] font-black tabular-nums cursor-pointer" data-action="toggle-dps-meter" title="Toggle DPS Breakdown">
+      <button type="button" class="mam-dps-pill h-[44px] @max-[720px]:h-[38px] text-[#14111d] text-[12px] @max-[720px]:text-[11px] font-black tabular-nums cursor-pointer" data-action="toggle-dps-meter" title="Toggle DPS Breakdown">
         <span class="mam-dps-emblem" aria-hidden="true">${DPS_SWORD_SVG}</span>
-        <span class="flex-1 min-w-0 flex items-center justify-between gap-1.5">
-          <span class="inline-flex items-center gap-1 min-w-0">
-            <span class="text-[#0284c7] truncate">${fmtShort(total)}/s</span>
-            <span class="w-1 h-1 rounded-full bg-[#94a3b8] shrink-0"></span>
-            <span class="text-[#d97706] shrink-0">Tap ${fmtShort(bd.tapDamage)}</span>
-          </span>
-          <span class="shrink-0 opacity-90" data-dps-chevron="${dpsMeterOpen ? 'down' : 'up'}">${dpsMeterOpen ? DPS_CHEVRON_DOWN : DPS_CHEVRON_UP}</span>
+        <span class="flex-1 min-w-0 flex items-center justify-center gap-1 text-center">
+          <span class="text-[#0284c7] truncate">${fmtShort(total)}/s</span>
+          <span class="w-1 h-1 rounded-full bg-[#94a3b8] shrink-0"></span>
+          <span class="text-[#d97706] shrink-0">Tap ${fmtShort(bd.tapDamage)}</span>
         </span>
+        <span class="shrink-0 opacity-90" data-dps-chevron="${dpsMeterOpen ? 'down' : 'up'}">${dpsMeterOpen ? DPS_CHEVRON_DOWN : DPS_CHEVRON_UP}</span>
       </button>
     `;
 }
@@ -370,7 +384,7 @@ export class WeatherDpsHudUi {
     const inner = buildDpsMeterInnerHtml(this.state, this.dpsMeterOpen);
     this.lastDpsMeterHtml = inner;
     return `
-      <div class="relative w-[196px] @max-[720px]:w-[178px] flex flex-col items-stretch gap-1 pointer-events-auto [&_.mam-dps-panel]:absolute [&_.mam-dps-panel]:top-0 [&_.mam-dps-panel]:right-full [&_.mam-dps-panel]:mr-2 [&_.mam-dps-panel]:w-[214px] [&_.mam-dps-panel]:p-2 [&_.mam-dps-panel]:z-20" data-hud-dps="true">
+      <div class="relative w-[224px] @max-[720px]:w-[186px] flex flex-col items-stretch gap-1 pointer-events-auto [&_.mam-dps-panel]:absolute [&_.mam-dps-panel]:top-0 [&_.mam-dps-panel]:right-full [&_.mam-dps-panel]:mr-2 [&_.mam-dps-panel]:w-[320px] @max-[720px]:[&_.mam-dps-panel]:w-[258px] [&_.mam-dps-panel]:p-3 [&_.mam-dps-panel]:z-20" data-hud-dps="true">
         ${inner}
       </div>
     `;
@@ -381,14 +395,14 @@ export class WeatherDpsHudUi {
     this.lastDpsMeterHtml = inner;
     if (!includeOverclock) {
       return `
-        <div class="absolute bottom-[12px] left-3 [[data-hud-dps-above=true]_&]:bottom-[104px] @max-[860px]:bottom-[92px] @max-[720px]:left-2.5 z-[5] w-[186px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1 pointer-events-auto" data-hud-dps="true">
+        <div class="absolute bottom-[12px] left-3 [[data-hud-dps-above=true]_&]:bottom-[104px] @max-[860px]:bottom-[92px] @max-[720px]:left-2.5 z-[5] w-[224px] @max-[720px]:w-[186px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1 pointer-events-auto [&_.mam-dps-panel]:w-[320px] @max-[720px]:[&_.mam-dps-panel]:w-[258px] [&_.mam-dps-panel]:p-3" data-hud-dps="true">
           ${inner}
         </div>
       `;
     }
     return `
-      <div class="absolute bottom-[12px] left-3 [[data-hud-dps-above=true]_&]:bottom-[104px] @max-[860px]:bottom-[92px] @max-[720px]:left-2.5 z-[5] w-[186px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1 pointer-events-none">
-        <div class="w-full flex flex-col items-stretch gap-1 pointer-events-auto" data-hud-dps="true">
+      <div class="absolute bottom-[12px] left-3 [[data-hud-dps-above=true]_&]:bottom-[104px] @max-[860px]:bottom-[92px] @max-[720px]:left-2.5 z-[5] w-[224px] @max-[720px]:w-[186px] max-w-[calc(100vw-24px)] flex flex-col items-stretch gap-1 pointer-events-none">
+        <div class="w-full flex flex-col items-stretch gap-1 pointer-events-auto [&_.mam-dps-panel]:w-[320px] @max-[720px]:[&_.mam-dps-panel]:w-[258px] [&_.mam-dps-panel]:p-3" data-hud-dps="true">
           ${inner}
         </div>
         ${this.renderOverclockWidget(now)}
@@ -561,14 +575,8 @@ export class WeatherDpsHudUi {
 }
 
 const OVERCLOCK_BOLT_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
-  <path d="M13.5 2L4.5 13.2H11.4L10.3 22L19.5 10.6H12.7L13.5 2Z" fill="url(#mam-oc-bolt)" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>
-  <defs>
-    <linearGradient id="mam-oc-bolt" x1="4" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#fef08a"/>
-      <stop offset="55%" stop-color="#38bdf8"/>
-      <stop offset="100%" stop-color="#e879f9"/>
-    </linearGradient>
-  </defs>
+  <path d="M13.8 2L4.2 13.4H11.2L10 22L19.8 10.4H12.8L13.8 2Z" fill="#fde047" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M12.6 5.2L7.4 11.8H11.6" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 
 const OVERCLOCK_TICKS_HTML = '<div class="mam-fever-ticks" aria-hidden="true">' + '<span></span>'.repeat(10) + '</div>';

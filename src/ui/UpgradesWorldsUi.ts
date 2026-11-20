@@ -293,7 +293,7 @@ export class UpgradesWorldsUi {
     const nextWorld = activeIdx >= 0 && activeIdx < WORLDS.length - 1 ? WORLDS[activeIdx + 1] : null;
     const nextWorldCta =
       nextWorld && !this.state.isWorldUnlocked(nextWorld.id) && this.state.isTreeComplete(this.state.activeWorldId)
-        ? `<button class="mam-sheen-hover relative overflow-hidden h-9 px-4 rounded-xl border border-[#38bdf8]/60 bg-[linear-gradient(135deg,#38bdf8_0%,#0284c7_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_14px_-2px_rgba(56,189,248,0.45)] text-white text-[13px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:scale-95" data-open-teleport="true">Open Teleport (${nextWorld.name})</button>`
+        ? `<button class="mam-sheen-hover relative overflow-hidden h-9 px-4 rounded-xl border-[2.5px] border-[#14111d] bg-[#38bdf8] hover:bg-[#7dd3fc] text-[#14111d] text-[13px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.97] active:scale-95" data-open-teleport="true">Open Teleport (${nextWorld.name})</button>`
         : '';
 
     return `

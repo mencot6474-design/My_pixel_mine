@@ -40,10 +40,10 @@
 
   .mam-hotbar-divider {
     width: 3px;
-    height: 44px;
+    height: 46px;
     border-radius: 9999px;
     margin: 0 2px;
-    background: rgba(255, 255, 255, 0.22);
+    background: rgba(20, 17, 29, 0.22);
     flex-shrink: 0;
   }
 
@@ -89,8 +89,8 @@
   }
 
   .mam-empty-slot {
-    background: rgba(20, 17, 29, 0.08);
-    border: 2.5px dashed rgba(20, 17, 29, 0.35);
+    background: #f5e3be;
+    border: 2.5px dashed rgba(20, 17, 29, 0.36);
     box-shadow: none;
   }
 
@@ -99,21 +99,20 @@
   }
 
   .mam-hotbar-keycap {
-    position: absolute;
-    top: 3px;
-    left: 3px;
+    position: relative;
     z-index: 4;
-    min-width: 18px;
-    height: 17px;
-    padding: 0 4px;
-    border-radius: 6px;
+    flex-shrink: 0;
+    min-width: 17px;
+    height: 16px;
+    padding: 0 3.5px;
+    border-radius: 5px;
     background: #14111d;
     border: 1.5px solid #ffffff;
     box-shadow: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 900;
     font-variant-numeric: tabular-nums;
     line-height: 1;
@@ -128,19 +127,31 @@
   }
 
   .mam-hotbar-qty {
-    position: absolute;
-    top: 3px;
-    right: 3px;
+    position: relative;
     z-index: 4;
+    min-width: 0;
+    max-width: 100%;
     padding: 1px 4px;
-    border-radius: 6px;
-    background: #ffffff;
+    border-radius: 5px;
+    background: #fff8e7;
     border: 1.5px solid #14111d;
-    font-size: 9.5px;
+    font-size: 9px;
     font-weight: 900;
     font-variant-numeric: tabular-nums;
-    line-height: 1.1;
+    line-height: 1.05;
     color: #14111d;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mam-hotbar-slot .mam-card-art {
+    inset: 22px 5px 19px;
+  }
+
+  .mam-hotbar-slot .mam-chibi-portrait img {
+    max-width: 96%;
+    max-height: 96%;
   }
 
   .mam-hotbar-val-bar {
@@ -148,13 +159,18 @@
     z-index: 3;
     width: calc(100% + 4px);
     margin: auto -2px -2px;
-    padding: 2px 2px;
-    background: #fcecc8;
+    padding: 2.5px 2px;
+    background: #fff8e7;
     border-top: 2px solid #14111d;
     display: flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
+  }
+
+  .mam-hotbar-val-bar .mam-card-val {
+    font-size: 11px;
+    color: #047857;
   }
 
   .mam-hotbar-bag {

@@ -128,8 +128,8 @@ export class ForgeModalUi {
               <img src="${assetUrl(relic.iconPath)}" alt="${relic.name}" class="w-[54px] h-[54px] object-contain" />
             </div>
             <div class="w-full flex flex-col items-center gap-0.5 min-w-0">
-              <div class="w-full px-0.5 text-center text-[12px] font-black leading-[1.18] ${relic.rarity === 'secret' ? 'text-[#fff8e7]' : 'text-[#14111d]'} whitespace-nowrap overflow-hidden text-ellipsis">${relic.name}</div>
-              <div class="w-full px-0.5 text-center text-[10.5px] font-extrabold leading-[1.15] ${relic.rarity === 'secret' ? 'text-[#fde047]' : 'text-[#b45309]'} whitespace-nowrap overflow-hidden text-ellipsis">${primaryEffect}</div>
+              <div class="w-full px-0.5 text-center text-[12px] font-black leading-[1.18] text-[#14111d] whitespace-nowrap overflow-hidden text-ellipsis">${relic.name}</div>
+              <div class="w-full px-0.5 text-center text-[10.5px] font-extrabold leading-[1.15] text-[#b45309] whitespace-nowrap overflow-hidden text-ellipsis">${primaryEffect}</div>
             </div>
             ${statusPill}
           </div>

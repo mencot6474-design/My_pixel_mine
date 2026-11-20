@@ -63,8 +63,10 @@ export function renderHotbarBagButtonHtml(activeModal: ModalKind): string {
   const bagState = activeModal === 'inventory' ? 'is-open' : '';
   return `
       <button class="${TW_HOTBAR_SLOT} mam-hotbar-bag ${bagState}" data-action="toggle-inventory" title="Inventory (\`)">
-        <span class="${TW_HOTBAR_NUM}">\`</span>
-        <div class="mam-card-art">${hudIconHtml('backpack', 44, 'Backpack')}</div>
+        <div class="relative z-[4] w-full flex items-center justify-start px-0.5 pt-0.5">
+          <span class="${TW_HOTBAR_NUM}">\`</span>
+        </div>
+        <div class="mam-card-art !inset-[17px_5px_5px]">${hudIconHtml('backpack', 44, 'Backpack')}</div>
       </button>
     `;
 }
@@ -77,7 +79,10 @@ export function renderHotbarSlotsHtml(state: GameState): string {
       const selectedCls = isSelected ? 'is-hotbar-selected' : '';
       const emptySlot = `
           <button class="${TW_HOTBAR_SLOT} mam-empty-slot select-none touch-none [&>*]:pointer-events-none ${selectedCls}" data-hotbar="${idx}">
-            <span class="${TW_HOTBAR_NUM}">${idx + 1}</span>
+            <div class="relative z-[4] w-full flex items-center justify-start px-0.5 pt-0.5">
+              <span class="${TW_HOTBAR_NUM}">${idx + 1}</span>
+            </div>
+            <span class="w-2.5 h-2.5 rounded-full bg-[#14111d]/18 my-auto" aria-hidden="true"></span>
           </button>
         `;
       if (!itemId) return emptySlot;
@@ -109,11 +114,13 @@ export function renderHotbarSlotsHtml(state: GameState): string {
 
       return `
           <button class="${TW_HOTBAR_SLOT} cursor-grab active:cursor-grabbing select-none touch-none [&>*]:pointer-events-none ${rarityCardClasses(rarity, selectedCls)}" style="${rarityVars(rarity)}" data-hotbar="${idx}" title="${title} (Worth ${fmtMoney(worth)}) • Drag to move">
-            <span class="${TW_HOTBAR_NUM}">${idx + 1}</span>
-            ${qty > 1 ? `<span class="mam-hotbar-qty">x${fmtShort(qty)}</span>` : ''}
+            <div class="relative z-[4] w-full flex items-center justify-between gap-0.5 px-0.5 pt-0.5">
+              <span class="${TW_HOTBAR_NUM}">${idx + 1}</span>
+              ${qty > 1 ? `<span class="mam-hotbar-qty">x${fmtShort(qty)}</span>` : ''}
+            </div>
             <div class="mam-card-art">${artHtml}</div>
             <div class="mam-hotbar-val-bar">
-              <span class="mam-card-val mam-outline-sm">${fmtMoney(worth)}</span>
+              <span class="mam-card-val">${fmtMoney(worth)}</span>
             </div>
           </button>
         `;

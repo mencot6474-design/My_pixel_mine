@@ -9,6 +9,7 @@ import {
   getNextChibiStarTier,
   getOreById,
   getWorldById,
+  RARITY_BORDER,
 } from '../game/GameData';
 import { GameState } from '../game/GameState';
 import { fmtInt, fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
@@ -306,8 +307,9 @@ export class InventoryModalUi {
   }
 
   private buildTeamPresetsBarHtml(): string {
-    const squadIconSvg = `<svg class="w-4 h-4 text-[#38bdf8] shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5L16.5 5.2V10.1C16.5 14 13.7 16.9 10 18C6.3 16.9 3.5 14 3.5 10.1V5.2L10 2.5Z" fill="currentColor" fill-opacity="0.18" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 6.5L11.2 9L13.9 9.4L11.9 11.3L12.4 14L10 12.7L7.6 14L8.1 11.3L6.1 9.4L8.8 9L10 6.5Z" fill="currentColor"/></svg>`;
-    const saveIconSvg = `<svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 2.5H11L13.5 5V13.5H3V2.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5.5 2.5V6H10.5V2.5M5.5 13.5V9.5H10.5V13.5" stroke="currentColor" stroke-width="1.3"/></svg>`;
+    const squadIconSvg = `<svg class="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5L16.5 5.2V10.1C16.5 14 13.7 16.9 10 18C6.3 16.9 3.5 14 3.5 10.1V5.2L10 2.5Z" fill="#38bdf8" stroke="#14111d" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 6.2L11.2 8.7L13.9 9.1L11.9 11L12.4 13.7L10 12.4L7.6 13.7L8.1 11L6.1 9.1L8.8 8.7L10 6.2Z" fill="#fde047" stroke="#14111d" stroke-width="1"/></svg>`;
+    const saveIconSvg = `<svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 2.5H11L13.5 5V13.5H3V2.5Z" fill="#ffffff" stroke="#14111d" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.5 2.5V6H10.5V2.5M5.5 13.5V9.5H10.5V13.5" stroke="#14111d" stroke-width="1.3"/></svg>`;
+    const slotPillColors = ['bg-[#7dd3fc]', 'bg-[#d8b4fe]', 'bg-[#6ee7b7]'];
 
     const itemsHtml = Array.from({ length: TEAM_PRESET_COUNT }, (_, idx) => {
       const preset = this.state.teamPresets[idx];
@@ -323,31 +325,39 @@ export class InventoryModalUi {
             .map((id) => {
               const chibi = getChibiById(id);
               if (!chibi) return '';
-              return `<span class="w-5 h-5 rounded-md overflow-hidden border border-white/25 bg-[#090e1a] inline-flex items-center justify-center shrink-0 [&_.mam-chibi-portrait]:w-full [&_.mam-chibi-portrait]:h-full">${chibiPortraitHtml(chibi)}</span>`;
+              const r = getMinerRarity(chibi.id);
+              const accent = RARITY_BORDER[r];
+              return `<span class="w-6 h-6 rounded-md overflow-hidden border-[1.5px] border-[#14111d] inline-flex items-center justify-center shrink-0 [&_.mam-chibi-portrait]:w-full [&_.mam-chibi-portrait]:h-full" style="background:radial-gradient(circle at 50% 45%,${accent}70,#fff8e7 88%)">${chibiPortraitHtml(chibi)}</span>`;
             })
             .join('')
-        : `<span class="text-[10px] font-bold text-[#64748b] italic">Empty Slot</span>`;
+        : `<span class="text-[11px] font-black text-[#5b526e] px-1">Empty</span>`;
 
       const wrapCls = isCurrentActive
-        ? 'border-2 border-[#14111d] bg-[#bae6fd]'
+        ? 'border-2 border-[#14111d] bg-[#dcfce7] ring-2 ring-inset ring-[#22c55e]'
         : populated
-          ? 'border-2 border-[#14111d] bg-[#ffffff]'
-          : 'border-2 border-dashed border-[#14111d]/35 bg-[#fcecc8]';
+          ? 'border-2 border-[#14111d] bg-[#fff8e7]'
+          : 'border-2 border-dashed border-[#14111d]/40 bg-[#fcecc8]';
+
+      const tBadgeCls = isCurrentActive
+        ? 'bg-[#2ee59d] text-[#14111d]'
+        : populated
+          ? `${slotPillColors[idx % slotPillColors.length]} text-[#14111d]`
+          : 'bg-[#ffffff] text-[#5b526e]';
 
       return `
-        <div class="inline-flex items-stretch rounded-xl overflow-hidden ${wrapCls} transition-colors">
+        <div class="min-w-0 flex items-stretch justify-between rounded-xl overflow-hidden ${wrapCls} transition-colors">
           <button
             type="button"
-            class="px-2.5 py-1.5 inline-flex items-center gap-2 text-left cursor-pointer hover:bg-[#fde047]/40 active:scale-[0.98] transition-[background-color,transform] border-0 bg-transparent"
+            class="flex-1 min-w-0 px-2 py-1 inline-flex items-center gap-1.5 text-left cursor-pointer hover:bg-[#fde047]/40 active:scale-[0.98] transition-[background-color,transform] border-0 bg-transparent"
             data-team-preset-load="${idx}"
             title="${populated ? `Equip Team ${idx + 1}` : `Save current plot team to Team ${idx + 1}`}"
           >
-            <span class="px-1.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border border-[#14111d] ${isCurrentActive ? 'bg-[#38bdf8] text-[#14111d]' : 'bg-[#14111d] text-[#fff8e7]'}">T${idx + 1}</span>
-            <span class="inline-flex items-center gap-1">${thumbsHtml}</span>
+            <span class="px-1.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border-[1.5px] border-[#14111d] shrink-0 ${tBadgeCls}">T${idx + 1}</span>
+            <span class="inline-flex items-center gap-1 min-w-0 overflow-hidden">${thumbsHtml}</span>
           </button>
           <button
             type="button"
-            class="px-2 inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase bg-[#fde047] text-[#14111d] border-l-2 border-[#14111d] cursor-pointer hover:bg-[#facc15] active:scale-95 transition-colors"
+            class="px-2.5 shrink-0 inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase bg-[#fde047] text-[#14111d] border-l-2 border-[#14111d] cursor-pointer hover:bg-[#facc15] active:scale-95 transition-colors"
             data-team-preset-save="${idx}"
             title="Save current plot team to Team ${idx + 1}"
           >${saveIconSvg}<span>Save</span></button>
@@ -356,9 +366,14 @@ export class InventoryModalUi {
     }).join('');
 
     return `
-      <div class="flex items-center gap-2 flex-wrap px-2.5 py-1.5 rounded-xl bg-[#ffffff] border-2 border-[#14111d]" data-team-presets-bar="true">
-        <span class="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-[#14111d] mr-0.5">${squadIconSvg}<span>Loadouts</span></span>
-        ${itemsHtml}
+      <div class="flex flex-col gap-1.5 px-2.5 py-2 rounded-xl bg-[#ffffff] border-2 border-[#14111d]" data-team-presets-bar="true">
+        <div class="flex items-center justify-between gap-2">
+          <span class="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-[#14111d]">${squadIconSvg}<span>Team Loadouts</span></span>
+          <span class="text-[10.5px] font-bold text-[#5b526e] @max-[640px]:hidden">Click slot to equip • Save overwrites</span>
+        </div>
+        <div class="grid grid-cols-3 @max-[760px]:grid-cols-1 gap-2 w-full">
+          ${itemsHtml}
+        </div>
       </div>
     `;
   }
@@ -397,11 +412,11 @@ export class InventoryModalUi {
 
         ${this.buildTeamPresetsBarHtml()}
 
-        <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto">
+        <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto mam-no-scrollbar">
           <div class="${TW_MODAL_GRID_BASE} grid-cols-5 @max-[720px]:grid-cols-3 gap-2 flex-1 min-h-[220px] @max-[920px]:flex-none @max-[920px]:max-h-[340px]" data-inv-grid="true">
             ${cardsHtml}
           </div>
-          <div class="mam-inspector-well w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-inv-inspector="true">
+          <div class="mam-inspector-well mam-no-scrollbar w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-inv-inspector="true">
             ${inspHtml}
           </div>
         </div>

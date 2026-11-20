@@ -10,9 +10,9 @@ import { enchantDiceIconHtml, hudIconHtml } from './HudIcons';
 import { chibiPortraitHtml, renderModalShell, renderRarityBadgeHtml, TW_TOP_CENTER } from './HudShared';
 
 const FUSION_GATE_ICON_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-  <circle cx="9" cy="12" r="5.5" stroke="#38bdf8" stroke-width="2"/>
-  <circle cx="15" cy="12" r="5.5" stroke="#e879f9" stroke-width="2"/>
-  <path d="M12 7.2L13.3 12L12 16.8L10.7 12L12 7.2Z" fill="#fde047"/>
+  <circle cx="9" cy="12" r="5.5" stroke="#0284c7" stroke-width="2.2"/>
+  <circle cx="15" cy="12" r="5.5" stroke="#9333ea" stroke-width="2.2"/>
+  <path d="M12 7.2L13.3 12L12 16.8L10.7 12L12 7.2Z" fill="#ff4d2e" stroke="#14111d" stroke-width="1.1"/>
 </svg>`;
 
 export class FusionHudUi {
