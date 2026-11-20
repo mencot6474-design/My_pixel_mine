@@ -24,39 +24,37 @@ export class BountiesModalUi {
 
         const rewardHtml =
           b.rewardKind === 'gems'
-            ? `<span class="inline-flex items-center gap-1 text-sky-200">${hudIconHtml('gem', 16, 'Gems')} +${fmtInt(b.rewardAmount)}</span>`
+            ? `<span class="inline-flex items-center gap-1 text-[#0284c7]">${hudIconHtml('gem', 16, 'Gems')} +${fmtInt(b.rewardAmount)}</span>`
             : b.rewardKind === 'dice'
-              ? `<span class="inline-flex items-center gap-1 text-purple-200">${enchantDiceIconHtml(16)} +${fmtInt(b.rewardAmount)} Dice</span>`
-              : `<span class="text-[#4ade80]">+${fmtMoney(b.rewardAmount)}</span>`;
+              ? `<span class="inline-flex items-center gap-1 text-[#7e22ce]">${enchantDiceIconHtml(16)} +${fmtInt(b.rewardAmount)} Dice</span>`
+              : `<span class="text-[#059669]">+${fmtMoney(b.rewardAmount)}</span>`;
 
         const actionBtn = ready
           ? `<button
               type="button"
-              class="min-w-[92px] px-3.5 py-2 rounded-xl border border-[#4ade80]/75 bg-[linear-gradient(135deg,#22c55e_0%,#059669_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_6px_16px_-2px_rgba(34,197,94,0.5)] text-white text-[13px] font-black uppercase tracking-wide cursor-pointer transition-[transform,filter] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.96] mam-outline-sm"
+              class="min-w-[92px] px-3.5 py-2 rounded-xl border-2 border-[#14111d] bg-[#2ee59d] text-[#14111d] text-[13px] font-black uppercase tracking-wide cursor-pointer transition-[transform,filter] duration-150 hover:scale-[0.96] active:scale-[0.94]"
               data-bounty-claim="${b.id}"
             >
               Claim
             </button>`
-          : `<span class="min-w-[92px] text-center px-3 py-2 rounded-xl border border-[#2a3b5c] bg-[#162038] text-slate-400 text-[12px] font-extrabold uppercase tracking-wide">
+          : `<span class="min-w-[92px] text-center px-3 py-2 rounded-xl border-2 border-[#14111d] bg-[#fcecc8] text-[#5b526e] text-[12px] font-black uppercase tracking-wide">
               In Progress
             </span>`;
 
-        const cardBorder = ready ? 'border-emerald-400 bg-[#0f2920]' : 'border-[#253654] bg-[#111a2e]';
-        const barFill = ready
-          ? 'bg-[linear-gradient(90deg,#22c55e,#4ade80)]'
-          : 'bg-[linear-gradient(90deg,#0284c7,#38bdf8)]';
+        const cardBorder = ready ? 'border-[#14111d] bg-[#d1fae5]' : 'border-[#14111d] bg-[#ffffff]';
+        const barFill = ready ? 'bg-[#2ee59d]' : 'bg-[#38bdf8]';
 
         return `
-          <div class="p-3.5 rounded-2xl border-2 ${cardBorder} flex items-center justify-between gap-3">
+          <div class="p-3.5 rounded-2xl border-[2.5px] ${cardBorder} flex items-center justify-between gap-3">
             <div class="flex-1 min-w-0 flex flex-col gap-1.5 text-left">
               <div class="flex items-center justify-between gap-2 flex-wrap">
-                <span class="text-[14px] font-black text-white leading-tight">${b.title}</span>
-                <span class="text-[12px] font-black tabular-nums px-2 py-0.5 rounded-lg bg-[#090f1d] border border-[#2a3b5c]">${rewardHtml}</span>
+                <span class="text-[14px] font-black text-[#14111d] leading-tight">${b.title}</span>
+                <span class="text-[12px] font-black tabular-nums px-2 py-0.5 rounded-lg bg-[#fcecc8] border-2 border-[#14111d]">${rewardHtml}</span>
               </div>
-              <div class="relative w-full h-3 rounded-full bg-[#090e1a] border border-[#253654] overflow-hidden">
+              <div class="relative w-full h-3 rounded-full bg-[#fcecc8] border-2 border-[#14111d] overflow-hidden">
                 <div class="h-full ${barFill} transition-[width] duration-200 ease-out" style="width:${pct}%"></div>
               </div>
-              <div class="flex items-center justify-between text-[11px] font-extrabold text-slate-300 tabular-nums">
+              <div class="flex items-center justify-between text-[11px] font-black text-[#5b526e] tabular-nums">
                 <span>${fmtInt(b.progress)} / ${fmtInt(b.target)}</span>
                 <span>${pct}%</span>
               </div>
@@ -68,14 +66,14 @@ export class BountiesModalUi {
       .join('');
 
     const headerExtraHtml = `
-      <span class="px-3 py-1 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-[12px] font-black text-emerald-200 tabular-nums">
+      <span class="px-3 py-1 rounded-xl bg-[#6ee7b7] border-2 border-[#14111d] text-[12px] font-black text-[#14111d] tabular-nums">
         Completed: ${fmtInt(this.state.bountiesCompleted)}
       </span>
     `;
 
     const bodyHtml = `
       <div class="w-full flex flex-col gap-2.5">
-        <div class="text-[12px] font-bold text-slate-300 text-left">
+        <div class="text-[12px] font-bold text-[#5b526e] text-left">
           Complete active contracts to earn Gems, Enchant Dice & Cash. Claimed slots refresh automatically!
         </div>
         ${cardsHtml}

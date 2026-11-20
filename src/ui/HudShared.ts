@@ -60,15 +60,20 @@ export function rarityCardClasses(rarity: ItemRarity, extra = ''): string {
 }
 
 export function renderRarityBadgeHtml(rarity: ItemRarity, extraCls = ''): string {
+  const extra = extraCls ? ` ${extraCls}` : '';
   if (rarity === 'fusion') {
-    return `<span class="mam-fusion-badge ${extraCls}"><span>✦</span><span>FUSION</span></span>`;
+    return `<span class="mam-rarity-badge mam-rarity-fusion mam-fusion-badge${extra}"><span class="mam-rarity-glint"></span><span class="mam-rarity-emblem" style="background:linear-gradient(135deg,#38bdf8,#e879f9);color:#fff"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L14.8 9.2L23 12L14.8 14.8L12 23L9.2 14.8L1 12L9.2 9.2L12 1Z"/></svg></span><span>FUSION</span><span class="mam-rarity-spark s1">✦</span><span class="mam-rarity-spark s2">✧</span></span>`;
   }
   if (rarity === 'limited') {
-    return `<span class="mam-limited-badge ${extraCls}"><span>✦</span><span>LIMITED</span></span>`;
+    return `<span class="mam-rarity-badge mam-rarity-limited mam-limited-badge${extra}"><span class="mam-rarity-glint"></span><span class="mam-rarity-emblem" style="background:#fde047;color:#14111d"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v2H3v-2zm0-2l2-10 5 4 2-6 2 6 5-4 2 10H3z"/></svg></span><span>LIMITED</span><span class="mam-rarity-spark s1">★</span><span class="mam-rarity-spark s2">✦</span></span>`;
   }
-  const borderColor = RARITY_BORDER[rarity];
+  if (rarity === 'secret') {
+    return `<span class="mam-rarity-badge mam-rarity-secret${extra}"><span class="mam-rarity-glint"></span><span class="mam-rarity-emblem" style="background:#14111d;color:#fde047;border-color:#fde047"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2L12 16.6 5.7 21l2.3-7.2-6-4.6h7.6z"/></svg></span><span>SECRET</span><span class="mam-rarity-spark s1">✦</span><span class="mam-rarity-spark s2">✦</span></span>`;
+  }
+  const hasGlint = rarity === 'legendary' || rarity === 'rainbow' || rarity === 'mythic' || rarity === 'exotic';
+  const glintHtml = hasGlint ? '<span class="mam-rarity-glint"></span>' : '';
   const rarityLabel = rarity.charAt(0).toUpperCase() + rarity.slice(1);
-  return `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${extraCls}" style="color:${borderColor};border-color:${borderColor}88;background:${borderColor}20">${rarityLabel}</span>`;
+  return `<span class="mam-rarity-badge mam-rarity-${rarity}${extra}">${glintHtml}<span>${rarityLabel}</span></span>`;
 }
 
 export function rarityVars(rarity: ItemRarity): string {
@@ -78,11 +83,12 @@ export function rarityVars(rarity: ItemRarity): string {
 
 export function applyInspectRing(el: Element, selected: boolean): void {
   el.classList.toggle('ring-[2.5px]', selected);
+  el.classList.toggle('ring-inset', selected);
   el.classList.toggle('ring-[#38bdf8]', selected);
-  el.classList.toggle('shadow-[0_0_12px_rgba(56,189,248,0.45)]', selected);
   if (!selected) {
     el.classList.remove(
       'shadow-[0_0_12px_rgba(56,189,248,0.4)]',
+      'shadow-[0_0_12px_rgba(56,189,248,0.45)]',
       'shadow-[0_0_14px_rgba(56,189,248,0.45)]'
     );
   }
@@ -111,29 +117,29 @@ export function refreshPotionTimersInDom(root: ParentNode, state: GameState): vo
 export const TW_TOP_CENTER =
   'absolute top-4 @max-[720px]:top-2.5 left-1/2 -translate-x-1/2 max-w-[calc(100%-16px)] pointer-events-auto';
 export const TW_SHOPS_PILL =
-  'inline-flex items-center justify-center gap-2 @max-[720px]:gap-1.5 min-w-[152px] @max-[720px]:min-w-[122px] px-6 @max-[720px]:px-4 py-2 @max-[720px]:py-1.5 rounded-2xl border-2 border-[#4ade80] bg-[linear-gradient(135deg,#16a34a_0%,#0f766e_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_4px_0_#064e3b,0_10px_24px_-4px_rgba(34,197,94,0.45)] text-white text-[19px] @max-[720px]:text-[15px] font-extrabold cursor-pointer transition-[transform,box-shadow,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97]';
+  'inline-flex items-center justify-center gap-2 @max-[720px]:gap-1.5 min-w-[152px] @max-[720px]:min-w-[122px] px-6 @max-[720px]:px-4 py-2 @max-[720px]:py-1.5 rounded-2xl border-[3px] border-[#14111d] bg-[#2ee59d] shadow-none text-[#14111d] text-[19px] @max-[720px]:text-[15px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.97] hover:-rotate-1 hover:brightness-105 active:scale-[0.94]';
 export const TW_TELEPORT_PILL =
-  'relative inline-flex items-center justify-center gap-2 @max-[720px]:gap-1.5 min-w-[152px] @max-[720px]:min-w-[122px] px-6 @max-[720px]:px-4 py-2 @max-[720px]:py-1.5 rounded-2xl border-2 border-[#38bdf8] bg-[linear-gradient(135deg,#0284c7_0%,#2563eb_55%,#4338ca_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.42),0_4px_0_#1e1b4b,0_10px_24px_-4px_rgba(56,189,248,0.48)] text-white text-[19px] @max-[720px]:text-[15px] font-extrabold cursor-pointer transition-[transform,box-shadow,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97]';
+  'relative inline-flex items-center justify-center gap-2 @max-[720px]:gap-1.5 min-w-[152px] @max-[720px]:min-w-[122px] px-6 @max-[720px]:px-4 py-2 @max-[720px]:py-1.5 rounded-2xl border-[3px] border-[#14111d] bg-[#38bdf8] shadow-none text-[#14111d] text-[19px] @max-[720px]:text-[15px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.97] hover:rotate-1 hover:brightness-105 active:scale-[0.94]';
 export const TW_SIDE_BTN_BASE =
-  'relative w-[88px] h-[82px] @max-[720px]:w-[74px] @max-[720px]:h-[70px] rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_4px_0_#050812,0_10px_24px_-6px_rgba(0,0,0,0.72)] flex flex-col items-center justify-center gap-0.5 text-white cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-[1.03] hover:brightness-110 active:translate-y-0.5 active:scale-[0.96]';
-export const TW_SIDE_BTN_STD = `${TW_SIDE_BTN_BASE} border-2 border-[#60a5fa] bg-[linear-gradient(160deg,#1e3a8a_0%,#0f1a38_100%)]`;
-export const TW_SIDE_BTN_UPGRADES = `${TW_SIDE_BTN_BASE} border-2 border-[#38bdf8] bg-[linear-gradient(160deg,#0e7490_0%,#0c1a36_100%)]`;
-export const TW_SIDE_BTN_INDEX = `${TW_SIDE_BTN_BASE} border-2 border-[#c084fc] bg-[linear-gradient(160deg,#6b21a8_0%,#181033_100%)]`;
-export const TW_SIDE_BTN_RAINBOW = `${TW_SIDE_BTN_BASE} border-[2.5px] border-transparent [background:linear-gradient(160deg,#312e81_0%,#11162e_100%)_padding-box,linear-gradient(135deg,#f43f5e,#f59e0b,#22c55e,#38bdf8,#c084fc)_border-box]`;
+  'relative w-[88px] h-[82px] @max-[720px]:w-[74px] @max-[720px]:h-[70px] rounded-2xl shadow-none flex flex-col items-center justify-center gap-0.5 text-[#14111d] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-[1.5deg] even:hover:rotate-[1.5deg] hover:brightness-105 active:scale-[0.93]';
+export const TW_SIDE_BTN_STD = `${TW_SIDE_BTN_BASE} border-[3px] border-[#14111d] bg-[#fff8e7]`;
+export const TW_SIDE_BTN_UPGRADES = `${TW_SIDE_BTN_BASE} border-[3px] border-[#14111d] bg-[#bae6fd]`;
+export const TW_SIDE_BTN_INDEX = `${TW_SIDE_BTN_BASE} border-[3px] border-[#14111d] bg-[#e9d5ff]`;
+export const TW_SIDE_BTN_RAINBOW = `${TW_SIDE_BTN_BASE} border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#fecdd3,#fef08a,#bbf7d0,#bae6fd,#e9d5ff)]`;
 export const TW_BADGE_BASE =
-  'mam-notif-badge absolute -top-[7px] -left-[7px] z-[4] bg-[linear-gradient(135deg,#fb7185_0%,#e11d48_100%)] border border-rose-200 text-white font-black flex items-center justify-center leading-none';
+  'mam-notif-badge absolute -top-[7px] -left-[7px] z-[4] bg-[#ff3b5c] border-2 border-[#14111d] text-white font-black flex items-center justify-center leading-none';
 export const TW_CURRENCY_BAR =
-  'flex items-center justify-end gap-2 min-w-[215px] @max-[720px]:min-w-[170px] py-[5px] pr-3 pl-5 @max-[720px]:pl-3.5 rounded-xl border-2 border-[#2a3b5c] bg-[linear-gradient(135deg,#131d36_0%,#0b1121_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_20px_rgba(0,0,0,0.62)]';
+  'flex items-center justify-end gap-2 min-w-[215px] @max-[720px]:min-w-[170px] py-[5px] pr-3 pl-5 @max-[720px]:pl-3.5 rounded-full border-[3px] border-[#14111d] bg-[#fff8e7] text-[#14111d] shadow-none';
 export const TW_PLUS_BTN =
-  'w-[26px] h-[26px] rounded-lg border border-[#4ade80] bg-[linear-gradient(135deg,#22c55e_0%,#15803d_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_4px_12px_rgba(34,197,94,0.4)] text-white text-[18px] font-black leading-none flex items-center justify-center cursor-pointer transition-[transform,filter] duration-150 ease-out hover:brightness-110 active:scale-95';
+  'w-[26px] h-[26px] rounded-full border-2 border-[#14111d] bg-[#2ee59d] shadow-none text-[#14111d] text-[18px] font-black leading-none flex items-center justify-center cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-105 active:scale-95';
 export const TW_QUICK_BTN =
-  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-2 border-[#38bdf8] bg-[linear-gradient(160deg,#0e7490_0%,#0f1c36_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_3px_0_#071022,0_6px_16px_rgba(0,0,0,0.58)] text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95';
+  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-[2.5px] border-[#14111d] bg-[#bae6fd] shadow-none text-[#14111d] text-[13px] font-black inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-1 even:hover:rotate-1 hover:brightness-105 active:scale-95';
 export const TW_QUICK_BTN_DAILY =
-  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-2 border-[#facc15] bg-[linear-gradient(160deg,#ca8a04_0%,#291c08_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_3px_0_#1c1304,0_6px_16px_rgba(0,0,0,0.58)] text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95';
+  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-[2.5px] border-[#14111d] bg-[#fde047] shadow-none text-[#14111d] text-[13px] font-black inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-1 even:hover:rotate-1 hover:brightness-105 active:scale-95';
 export const TW_QUICK_BTN_CHEST =
-  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-2 border-[#fb923c] bg-[linear-gradient(160deg,#c2410c_0%,#29150b_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_3px_0_#1a0d06,0_6px_16px_rgba(0,0,0,0.58)] text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95';
+  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-[2.5px] border-[#14111d] bg-[#fed7aa] shadow-none text-[#14111d] text-[13px] font-black inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-1 even:hover:rotate-1 hover:brightness-105 active:scale-95';
 export const TW_QUICK_BTN_QUEST =
-  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-2 border-[#34d399] bg-[linear-gradient(160deg,#059669_0%,#0b2920_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_3px_0_#051a14,0_6px_16px_rgba(0,0,0,0.58)] text-white text-[13px] font-extrabold inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-95';
+  'relative h-[36px] min-w-[36px] px-3 rounded-xl border-[2.5px] border-[#14111d] bg-[#6ee7b7] shadow-none text-[#14111d] text-[13px] font-black inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-1 even:hover:rotate-1 hover:brightness-105 active:scale-95';
 export const TW_QUICK_BTN_TRADE = TW_QUICK_BTN;
 export const TW_HOTBAR_SLOT =
   'mam-hotbar-slot relative w-[66px] h-[66px] @max-[860px]:w-[56px] @max-[860px]:h-[56px] overflow-hidden cursor-pointer flex flex-col items-center justify-between p-0.5';
@@ -141,41 +147,41 @@ export const TW_HOTBAR_NUM = 'mam-hotbar-keycap';
 export const TW_TOAST_STACK =
   'fixed bottom-[102px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none z-50';
 export const TW_TOAST_ITEM =
-  'px-4 py-1.5 rounded-xl bg-[#0e1528] border-2 border-[#4ade80] shadow-[0_8px_24px_rgba(0,0,0,0.68)] text-[14px] font-extrabold text-white';
+  'px-4 py-1.5 rounded-xl bg-[#fff8e7] border-[2.5px] border-[#14111d] shadow-none text-[14px] font-black text-[#14111d]';
 export const TW_ACTIVE_POT_PILL =
-  'pointer-events-auto flex flex-col items-center justify-center gap-0.5 min-w-0 px-1.5 py-1.5 rounded-xl border-2 border-[var(--pot-color,#4ade80)] bg-[linear-gradient(160deg,#16203a_0%,#0b1020_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_8px_20px_rgba(0,0,0,0.62)] cursor-default transition-[transform,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 @max-[720px]:px-1 @max-[720px]:py-1';
+  'pointer-events-auto flex flex-col items-center justify-center gap-0.5 min-w-0 px-1.5 py-1.5 rounded-xl border-[2.5px] border-[#14111d] bg-[#fff8e7] text-[#14111d] shadow-none cursor-default transition-[transform,filter] duration-150 ease-out hover:brightness-105 @max-[720px]:px-1 @max-[720px]:py-1';
 
 export const TW_MODAL_BACKDROP =
-  'fixed inset-0 bg-[rgba(4,7,15,0.66)] backdrop-blur-[5px] flex items-center justify-center p-3 pt-7 @max-[720px]:p-2 @max-[720px]:pt-6 pointer-events-auto z-40';
+  'fixed inset-0 bg-[rgba(12,10,18,0.58)] backdrop-blur-[4px] flex items-center justify-center p-3 pt-9 @max-[720px]:p-2 @max-[720px]:pt-8 pointer-events-auto z-40';
 export const TW_MODAL_BOX =
   'mam-modal max-w-full h-[min(640px,calc(100%-18px))] min-h-0 flex flex-col pt-3 px-4 pb-4 gap-2.5';
 export const TW_SHOP_MODAL_RESP =
   '@max-[720px]:px-3 @max-[720px]:pt-2.5 @max-[720px]:pb-3 [[data-hud-short=true]_&]:px-3.5 [[data-hud-short=true]_&]:py-2.5 [[data-hud-short=true]_&]:gap-2';
 export const TW_CLOSE_BTN =
-  'w-9 h-9 @max-[720px]:w-8 @max-[720px]:h-8 shrink-0 rounded-xl border-2 border-rose-400 bg-[linear-gradient(135deg,#e11d48_0%,#9f1239_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_3px_0_#4c0519,0_6px_16px_-2px_rgba(244,63,94,0.5)] text-white text-[17px] font-black cursor-pointer flex items-center justify-center transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-px hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95';
+  'w-9 h-9 @max-[720px]:w-8 @max-[720px]:h-8 shrink-0 rounded-xl border-[2.5px] border-[#14111d] bg-[#ff3b5c] shadow-none text-white text-[17px] font-black cursor-pointer flex items-center justify-center transition-[transform,filter] duration-150 ease-out hover:scale-105 hover:rotate-3 hover:brightness-105 active:scale-95';
 export const TW_TAB_BTN =
-  'mam-tab-btn inline-flex items-center gap-[7px] px-3.5 py-[7px] @max-[720px]:px-2.5 @max-[720px]:py-1 @max-[720px]:text-[13px] rounded-xl text-[14px] font-extrabold cursor-pointer';
+  'mam-tab-btn inline-flex items-center gap-[7px] px-3.5 py-[7px] @max-[720px]:px-2.5 @max-[720px]:py-1 @max-[720px]:text-[13px] rounded-xl text-[14px] font-black cursor-pointer';
 export const TW_MODAL_GRID_BASE = 'mam-grid flex-1 min-h-0 content-start overflow-y-auto pr-0 grid';
 export const TW_SHOP_DOCK_BTN_BASE =
-  'relative overflow-hidden shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 @max-[760px]:px-2.5 @max-[760px]:py-1.5 @max-[760px]:gap-1 @max-[760px]:text-[11.5px] [&>img]:shrink-0 [&>svg]:shrink-0 @max-[760px]:[&>img]:w-[22px] @max-[760px]:[&>img]:h-[22px] @max-[760px]:[&>svg]:w-[20px] @max-[760px]:[&>svg]:h-[20px] rounded-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_3px_0_#050812,0_6px_16px_rgba(0,0,0,0.55)] text-white text-[13px] font-extrabold whitespace-nowrap cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-[1.03] hover:brightness-110 active:translate-y-0.5 active:scale-95';
+  'relative overflow-hidden shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 @max-[760px]:px-2.5 @max-[760px]:py-1.5 @max-[760px]:gap-1 @max-[760px]:text-[11.5px] [&>img]:shrink-0 [&>svg]:shrink-0 @max-[760px]:[&>img]:w-[22px] @max-[760px]:[&>img]:h-[22px] @max-[760px]:[&>svg]:w-[20px] @max-[760px]:[&>svg]:h-[20px] rounded-xl border-[2.5px] border-[#14111d] shadow-none text-white text-[13px] font-black whitespace-nowrap cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-1 even:hover:rotate-1 hover:brightness-105 active:scale-95';
 export const TW_SHOP_BUY_BTN =
-  'mam-sheen-hover relative overflow-hidden mt-auto w-full h-[34px] shrink-0 rounded-xl border-2 border-[#4ade80] bg-[linear-gradient(135deg,#22c55e_0%,#059669_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_4px_12px_-2px_rgba(34,197,94,0.45)] text-white text-[13px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out [&:not(.disabled):not(.sold-out)]:hover:-translate-y-0.5 [&:not(.disabled):not(.sold-out)]:hover:brightness-110 [&:not(.disabled):not(.sold-out)]:active:translate-y-0.5 [&:not(.disabled):not(.sold-out)]:active:scale-95 [&.disabled]:bg-[#1a2236] [&.disabled]:bg-none [&.disabled]:border-[#2f3d5c] [&.disabled]:shadow-none [&.disabled]:text-[#94a3b8] [&.disabled]:active:scale-[0.97] [&.sold-out]:bg-[linear-gradient(135deg,#ef4444_0%,#b91c1c_100%)] [&.sold-out]:border-rose-400 [&.sold-out]:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_4px_12px_-2px_rgba(239,68,68,0.45)] [&.sold-out]:active:scale-[0.97]';
+  'mam-sheen-hover relative overflow-hidden mt-auto w-full h-[34px] shrink-0 rounded-xl border-2 border-[#14111d] bg-[#2ee59d] shadow-none text-[#14111d] text-[13px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out [&:not(.disabled):not(.sold-out)]:hover:brightness-105 [&:not(.disabled):not(.sold-out)]:active:scale-95 [&.disabled]:bg-[#e2e8f0] [&.disabled]:bg-none [&.disabled]:border-[#94a3b8] [&.disabled]:shadow-none [&.disabled]:text-[#64748b] [&.disabled]:active:scale-[0.97] [&.sold-out]:bg-[#ff3b5c] [&.sold-out]:text-white [&.sold-out]:border-[#14111d] [&.sold-out]:shadow-none [&.sold-out]:active:scale-[0.97]';
 export const TW_SHOP_SIGN_BASE =
-  'absolute -translate-x-1/2 translate-y-[calc(-100%-10px)] pointer-events-auto px-3 py-[5px] rounded-xl border-2 border-[#3b4f78] bg-[#10182b] text-white text-center whitespace-nowrap cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:translate-y-[calc(-100%-14px)] hover:scale-[1.05] hover:brightness-110 active:translate-y-[calc(-100%-6px)] active:scale-95';
+  'absolute -translate-x-1/2 translate-y-[calc(-100%-10px)] pointer-events-auto px-3 py-[5px] rounded-xl border-[2.5px] border-[#14111d] bg-[#fff8e7] text-[#14111d] text-center whitespace-nowrap cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[1.04] hover:brightness-105 active:scale-95';
 export const TW_INSPECT_ARROW =
-  'absolute top-[48%] -translate-y-1/2 w-10 h-10 rounded-xl border-2 border-[#3b4f78] bg-[#121c33] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_4px_0_#060a14,0_8px_20px_rgba(0,0,0,0.6)] text-white text-[22px] font-black cursor-pointer flex items-center justify-center transition-[transform,filter,box-shadow] duration-150 ease-out hover:scale-[1.08] hover:border-[#38bdf8] active:scale-[0.93]';
+  'absolute top-[48%] -translate-y-1/2 w-10 h-10 rounded-xl border-[2.5px] border-[#14111d] bg-[#fff8e7] shadow-none text-[#14111d] text-[22px] font-black cursor-pointer flex items-center justify-center transition-[transform,filter] duration-150 ease-out hover:scale-[1.06] hover:bg-[#fde047] active:scale-[0.93]';
 export const TW_INSPECT_TAB =
-  'h-10 @max-[920px]:h-9 rounded-xl border-2 border-[#2d3e61] bg-[#131c33] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_3px_0_#060a14,0_6px_16px_rgba(0,0,0,0.55)] text-[#cbd5e1] text-[15px] @max-[920px]:text-[13px] font-extrabold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:bg-[#1c2947] hover:text-white active:scale-95 [&.active]:bg-[linear-gradient(135deg,#22c55e_0%,#059669_100%)] [&.active]:border-[#4ade80] [&.active]:text-white [&.active]:shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_6px_18px_-2px_rgba(34,197,94,0.45)]';
+  'h-10 @max-[920px]:h-9 rounded-xl border-[2.5px] border-[#14111d] bg-[#fcecc8] shadow-none text-[#14111d] text-[15px] @max-[920px]:text-[13px] font-black inline-flex items-center justify-center gap-1.5 cursor-pointer transition-[transform,filter] duration-150 ease-out hover:bg-[#fde047] active:scale-95 [&.active]:bg-[#2ee59d] [&.active]:border-[#14111d] [&.active]:text-[#14111d]';
 export const TW_STAT_CARD =
-  'flex-1 min-w-[190px] @max-[920px]:min-w-[155px] px-3 py-2.5 rounded-xl bg-[#131c31] border border-[#2a3b5c] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] flex flex-col items-center gap-1.5';
+  'flex-1 min-w-[190px] @max-[920px]:min-w-[155px] px-3 py-2.5 rounded-xl bg-[#ffffff] border-2 border-[#14111d] shadow-none flex flex-col items-center gap-1.5 text-[#14111d]';
 export const TW_STAT_BTN =
-  'w-full h-[34px] rounded-xl border-2 border-[#4ade80] bg-[linear-gradient(135deg,#22c55e,#059669)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_12px_-2px_rgba(34,197,94,0.4)] text-white text-[14px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out [&:not(.maxed)]:hover:-translate-y-0.5 [&:not(.maxed)]:hover:brightness-110 [&:not(.maxed)]:active:scale-[0.97] [&.maxed]:border-[#eab308] [&.maxed]:bg-[#29200a] [&.maxed]:shadow-none [&.maxed]:text-[#fde047] [&.maxed]:cursor-default';
+  'w-full h-[34px] rounded-xl border-2 border-[#14111d] bg-[#2ee59d] shadow-none text-[#14111d] text-[14px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out [&:not(.maxed)]:hover:brightness-105 [&:not(.maxed)]:active:scale-[0.97] [&.maxed]:border-[#14111d] [&.maxed]:bg-[#fde047] [&.maxed]:text-[#14111d] [&.maxed]:cursor-default';
 export const TW_STRIP_CARD =
-  'mam-strip-card relative min-w-[86px] w-[86px] h-[86px] rounded-xl flex flex-col items-center justify-between p-1 cursor-pointer [&.equipped]:shadow-[0_0_0_2px_#4ade80,0_0_14px_rgba(74,222,128,0.35)]';
+  'mam-strip-card relative min-w-[86px] w-[86px] h-[86px] rounded-xl flex flex-col items-center justify-between p-1 cursor-pointer [&.equipped]:ring-2 [&.equipped]:ring-inset [&.equipped]:ring-[#16a34a]';
 export const TW_ALTAR_ROLL_BTN =
-  'mam-altar-roll-btn relative overflow-hidden w-[280px] max-w-full h-[46px] rounded-2xl border-2 border-[#4ade80] bg-[linear-gradient(135deg,#22c55e_0%,#059669_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_4px_0_#064e3b,0_10px_28px_-4px_rgba(34,197,94,0.5)] text-white text-[20px] font-black cursor-pointer transition-[transform,filter,box-shadow,opacity] duration-150 ease-out [&:not(.is-empty):not(.is-spinning)]:hover:-translate-y-0.5 [&:not(.is-empty):not(.is-spinning)]:hover:brightness-110 [&:not(.is-empty):not(.is-spinning)]:active:scale-[0.96] [&.is-empty]:border-rose-400 [&.is-empty]:bg-[linear-gradient(135deg,#ef4444_0%,#b91c1c_100%)] [&.is-empty]:shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_4px_0_#450a0a,0_10px_24px_-4px_rgba(239,68,68,0.45)] [&.is-spinning]:border-purple-300 [&.is-spinning]:bg-[linear-gradient(135deg,#a855f7_0%,#6d28d9_100%)] [&.is-spinning]:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_10px_24px_-4px_rgba(168,85,247,0.5)] [&.is-spinning]:cursor-not-allowed [&.is-spinning]:pointer-events-none [&.is-spinning]:opacity-95';
+  'mam-altar-roll-btn relative overflow-hidden w-[280px] max-w-full h-[46px] rounded-2xl border-[3px] border-[#14111d] bg-[#2ee59d] shadow-none text-[#14111d] text-[20px] font-black cursor-pointer transition-[transform,filter,opacity] duration-150 ease-out [&:not(.is-empty):not(.is-spinning)]:hover:brightness-105 [&:not(.is-empty):not(.is-spinning)]:active:scale-[0.96] [&.is-empty]:bg-[#ff3b5c] [&.is-empty]:text-white [&.is-spinning]:bg-[#a855f7] [&.is-spinning]:text-white [&.is-spinning]:cursor-not-allowed [&.is-spinning]:pointer-events-none [&.is-spinning]:opacity-95';
 export const TW_ALTAR_AUTO_BTN =
-  'mam-sheen-hover relative overflow-hidden w-full px-[18px] py-2 rounded-xl border-2 border-sky-300 bg-[linear-gradient(135deg,#0ea5e9_0%,#0284c7_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_3px_0_#0c4a6e,0_8px_20px_-4px_rgba(14,165,233,0.45)] text-white text-[14px] font-black cursor-pointer transition-[transform,filter,box-shadow,background] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] [&.is-active]:border-rose-300 [&.is-active]:bg-[linear-gradient(135deg,#f43f5e_0%,#be123c_100%)] [&.is-active]:shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_3px_0_#4c0519,0_8px_20px_-4px_rgba(244,63,94,0.45)]';
+  'mam-sheen-hover relative overflow-hidden w-full px-[18px] py-2 rounded-xl border-[2.5px] border-[#14111d] bg-[#38bdf8] shadow-none text-[#14111d] text-[14px] font-black cursor-pointer transition-[transform,filter,background] duration-150 ease-out hover:brightness-105 active:scale-[0.97] [&.is-active]:bg-[#ff3b5c] [&.is-active]:text-white';
 
 export function shouldDismissModalBackdrop(opts: {
   pointerDownOnSelf: boolean;
@@ -215,10 +221,12 @@ export function renderModalShell(opts: {
           <span class="mam-rail-stud is-br"></span>
         </div>
         <div class="mam-modal-rail-head">
+          <span class="mam-wing-rail is-left" aria-hidden="true"></span>
           <div class="mam-title-plaque">
             ${opts.iconHtml ? `<span class="mam-title-plaque-icon shrink-0 [&>img]:w-5 [&>img]:h-5 [&>svg]:w-5 [&>svg]:h-5">${opts.iconHtml}</span>` : ''}
             <span>${opts.title}</span>
           </div>
+          <span class="mam-wing-rail is-right" aria-hidden="true"></span>
           <button class="${TW_CLOSE_BTN} mam-close-rail-btn" data-action="close-modal" aria-label="Close ${opts.title}">✕</button>
         </div>
         ${extraRow}
@@ -241,16 +249,16 @@ export function renderInspectorPanel(opts: {
   const borderColor = RARITY_BORDER[opts.rarity];
   const showcaseBorder =
     opts.rarity === 'rainbow'
-      ? 'border-[2.5px] border-transparent [background:radial-gradient(circle_at_50%_45%,rgba(250,204,21,0.35),#141821_82%)_padding-box,linear-gradient(135deg,#ef4444,#facc15,#22c55e,#38bdf8,#a855f7)_border-box]'
+      ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#fecdd3,#fef08a,#bbf7d0,#bae6fd,#e9d5ff)]'
       : opts.rarity === 'exotic'
-        ? 'border-[2.5px] border-transparent [background:radial-gradient(circle_at_50%_45%,rgba(20,184,166,0.42),#0d1820_84%)_padding-box,linear-gradient(135deg,#2dd4bf,#06b6d4,#34d399,#22d3ee)_border-box]'
+        ? 'border-[3px] border-[#14111d] bg-[#ccfbf1]'
         : opts.rarity === 'secret'
-          ? 'border-[2.5px] border-transparent [background:radial-gradient(circle_at_50%_45%,rgba(244,63,94,0.45),#090a12_84%)_padding-box,linear-gradient(135deg,#f43f5e,#fbbf24,#9f1239,#f59e0b)_border-box]'
+          ? 'border-[3px] border-[#fde047] bg-[#1b1429]'
           : opts.rarity === 'fusion'
-            ? 'border-[2.5px] border-transparent [background:linear-gradient(155deg,rgba(34,211,238,0.42)_0%,rgba(129,140,248,0.36)_48%,rgba(232,121,249,0.42)_100%)_padding-box,linear-gradient(180deg,#13254a_0%,#1c123d_100%)_padding-box,linear-gradient(135deg,#22d3ee,#818cf8,#e879f9,#facc15,#22d3ee)_border-box]'
+            ? 'border-[3px] border-[#14111d] bg-[linear-gradient(155deg,#dbeafe,#f3e8ff,#fce7f3)]'
             : opts.rarity === 'limited'
-              ? 'border-[2.5px] border-transparent [background:linear-gradient(155deg,rgba(251,191,36,0.44)_0%,rgba(236,72,153,0.32)_52%,rgba(245,158,11,0.42)_100%)_padding-box,linear-gradient(180deg,#2b1847_0%,#1d1033_100%)_padding-box,linear-gradient(135deg,#fef08a,#fbbf24,#f472b6,#f59e0b,#fef08a)_border-box]'
-              : 'border-[2.5px]';
+              ? 'border-[3px] border-[#14111d] bg-[linear-gradient(155deg,#fef9c3,#fde047,#fed7aa)]'
+              : 'border-[3px] border-[#14111d]';
   const showcaseStyle =
     opts.rarity === 'rainbow' ||
     opts.rarity === 'exotic' ||
@@ -258,25 +266,25 @@ export function renderInspectorPanel(opts: {
     opts.rarity === 'fusion' ||
     opts.rarity === 'limited'
       ? ''
-      : `border-color:${borderColor};background:radial-gradient(circle at 50% 42%,${borderColor}40,rgba(15,19,27,0.96) 78%);`;
+      : `background:radial-gradient(circle at 50% 42%,${borderColor}44,#fff8e7 85%);`;
   const statsHtml = opts.stats
     .map(
       ([label, val, valClass]) => `
-      <div class="px-2.5 py-1.5 rounded-xl bg-[#131c31] border border-[#2a3b5c] shadow-[inset_0_1px_0_rgba(255,255,255,0.09)] flex flex-col items-start text-left min-w-0">
-        <span class="text-[10px] font-bold uppercase tracking-wider text-[#94a3b8] leading-none">${label}</span>
-        <span class="text-[13px] font-black tabular-nums leading-tight mt-0.5 truncate max-w-full ${valClass ?? 'text-white'}">${val}</span>
+      <div class="px-2.5 py-1.5 rounded-xl bg-[#fcecc8] border-2 border-[#14111d] flex flex-col items-start text-left min-w-0">
+        <span class="text-[10px] font-black uppercase tracking-wider text-[#5b526e] leading-none">${label}</span>
+        <span class="text-[13px] font-black tabular-nums leading-tight mt-0.5 truncate max-w-full ${valClass === 'text-white' ? 'text-[#14111d]' : (valClass ?? 'text-[#14111d]')}">${val}</span>
       </div>
     `
     )
     .join('');
 
   return `
-    <div class="w-[106px] h-[106px] rounded-2xl ${showcaseBorder} flex items-center justify-center p-1.5 shrink-0 shadow-[inset_0_2px_10px_rgba(0,0,0,0.45)] [&>.mam-3d-icon]:w-[84px] [&>.mam-3d-icon]:h-[84px] [&>svg]:w-[82px] [&>svg]:h-[82px] [&_.mam-chibi-portrait_img]:max-w-[88px] [&_.mam-chibi-portrait_img]:max-h-[88px] ${opts.dimmed ? 'grayscale brightness-[0.55]' : ''}" style="${showcaseStyle}">
+    <div class="w-[106px] h-[106px] rounded-2xl ${showcaseBorder} flex items-center justify-center p-1.5 shrink-0 [&>.mam-3d-icon]:w-[84px] [&>.mam-3d-icon]:h-[84px] [&>svg]:w-[82px] [&>svg]:h-[82px] [&_.mam-chibi-portrait_img]:max-w-[88px] [&_.mam-chibi-portrait_img]:max-h-[88px] ${opts.dimmed ? 'grayscale brightness-[0.65]' : ''}" style="${showcaseStyle}">
       ${opts.artHtml}
     </div>
     <div class="w-full flex flex-col items-center gap-0.5 min-w-0">
-      <div class="text-[19px] font-black text-white leading-tight break-words w-full [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">${opts.title}</div>
-      <div class="text-[11px] font-bold text-[#94a3b8] leading-tight">${opts.subtitle}</div>
+      <div class="text-[19px] font-black text-[#14111d] leading-tight break-words w-full">${opts.title}</div>
+      <div class="text-[11px] font-extrabold text-[#5b526e] leading-tight">${opts.subtitle}</div>
       <div class="flex items-center justify-center gap-1.5 flex-wrap mt-1">
         ${renderRarityBadgeHtml(opts.rarity)}
         ${opts.badgesHtml ?? ''}
@@ -290,7 +298,7 @@ export function renderInspectorPanel(opts: {
 }
 
 export function renderEmptyInspectorPanel(msg: string): string {
-  return `<div class="mam-placeholder-well flex-1 w-full flex flex-col items-center justify-center gap-2 text-center text-[13px] font-bold text-[#94a3b8] px-4 py-8">${msg}</div>`;
+  return `<div class="mam-placeholder-well flex-1 w-full flex flex-col items-center justify-center gap-2 text-center text-[13px] font-extrabold text-[#5b526e] px-4 py-8">${msg}</div>`;
 }
 
 export function formatCountdownTimer(sec: number): string {
@@ -407,12 +415,12 @@ export function renderToastBannerHtml(rawText: string): string {
   return `
     <div class="mam-toast-banner" data-toast-tone="${tone}">
       <span class="mam-toast-icon" aria-hidden="true">${iconHtml}</span>
-      <span class="text-[13.5px] font-extrabold text-white leading-snug mam-outline-sm">${cleanText}</span>
+      <span class="text-[13.5px] font-black text-[#14111d] leading-snug">${cleanText}</span>
     </div>
   `;
 }
 
-/** Builds solid cyber-armor hover inspector card HTML for an Enchant buff. */
+/** Builds Sticker-Pop hover inspector card HTML for an Enchant buff. */
 export function buildEnchantHoverCardHtml(
   enchant: EnchantDef,
   opts: { owned: number; spare?: number; equipped?: boolean }
@@ -435,60 +443,59 @@ export function buildEnchantHoverCardHtml(
   const statusValueCls =
     opts.spare !== undefined
       ? opts.equipped || opts.spare > 0
-        ? 'text-[#4ade80]'
+        ? 'text-[#059669]'
         : opts.owned > 0
-          ? 'text-amber-300'
-          : 'text-[#94a3b8]'
+          ? 'text-[#d97706]'
+          : 'text-[#64748b]'
       : opts.owned > 0
-        ? 'text-[#facc15]'
-        : 'text-[#94a3b8]';
+        ? 'text-[#d97706]'
+        : 'text-[#64748b]';
   const secondStatLabel = opts.spare !== undefined ? 'Status' : 'Owned';
 
   return `
     <div
-      class="w-[248px] rounded-2xl border-2 bg-[#0a1020] p-2.5 flex flex-col gap-2 text-left shadow-[0_14px_34px_rgba(0,0,0,0.9),0_0_18px_${enchant.color}44,inset_0_1px_0_rgba(255,255,255,0.2)]"
-      style="border-color:${enchant.color}"
+      class="w-[248px] rounded-2xl border-[3px] border-[#14111d] bg-[#fff8e7] text-[#14111d] p-2.5 flex flex-col gap-2 text-left"
       data-enchant-hover-card="${enchant.id}"
     >
       <div class="flex items-center gap-2">
         <div
-          class="w-11 h-11 rounded-xl border bg-[#11192e] flex items-center justify-center shrink-0 [&>.mam-3d-icon]:w-9 [&>.mam-3d-icon]:h-9"
-          style="border-color:${enchant.color}88;background:radial-gradient(circle at 50% 45%,${enchant.color}33,#0a1020 82%)"
+          class="w-11 h-11 rounded-xl border-2 border-[#14111d] bg-[#ffffff] flex items-center justify-center shrink-0 [&>.mam-3d-icon]:w-9 [&>.mam-3d-icon]:h-9"
+          style="background:radial-gradient(circle at 50% 45%,${enchant.color}33,#ffffff 85%)"
         >
           ${enchantAuraIconHtml(enchant.id, enchant.color, 36, enchant.name)}
         </div>
         <div class="min-w-0 flex-1 flex flex-col items-start gap-0.5">
-          <div class="text-[15px] font-black leading-tight truncate max-w-full mam-outline-sm ${titleCls}" style="${titleCls ? '' : `color:${enchant.color}`}">${enchant.name}</div>
+          <div class="text-[15px] font-black leading-tight truncate max-w-full ${titleCls}" style="${titleCls ? '' : `color:${enchant.color}`}">${enchant.name}</div>
           ${renderRarityBadgeHtml(enchant.rarity)}
         </div>
       </div>
 
       <div class="w-full grid grid-cols-2 gap-1.5">
-        <div class="px-2 py-1 rounded-lg bg-[#111a30] border border-[#2a3b5c]">
-          <div class="text-[9px] font-extrabold uppercase tracking-wider text-[#94a3b8]">DMG Buff</div>
-          <div class="text-[12.5px] font-black tabular-nums text-[#f87171] leading-tight mam-outline-sm">${enchant.dmgMult}x (+${fmtInt(dmgBonusPct)}%)</div>
+        <div class="px-2 py-1 rounded-lg bg-[#ffffff] border-2 border-[#14111d]">
+          <div class="text-[9px] font-black uppercase tracking-wider text-[#5b526e]">DMG Buff</div>
+          <div class="text-[12.5px] font-black tabular-nums text-[#dc2626] leading-tight">${enchant.dmgMult}x (+${fmtInt(dmgBonusPct)}%)</div>
         </div>
-        <div class="px-2 py-1 rounded-lg bg-[#111a30] border border-[#2a3b5c]">
-          <div class="text-[9px] font-extrabold uppercase tracking-wider text-[#94a3b8]">Mining Spd</div>
-          <div class="text-[12.5px] font-black tabular-nums text-[#38bdf8] leading-tight mam-outline-sm">+${fmtInt(miningSpdPct)}%</div>
+        <div class="px-2 py-1 rounded-lg bg-[#ffffff] border-2 border-[#14111d]">
+          <div class="text-[9px] font-black uppercase tracking-wider text-[#5b526e]">Mining Spd</div>
+          <div class="text-[12.5px] font-black tabular-nums text-[#0284c7] leading-tight">+${fmtInt(miningSpdPct)}%</div>
         </div>
-        <div class="px-2 py-1 rounded-lg bg-[#111a30] border border-[#2a3b5c]">
-          <div class="text-[9px] font-extrabold uppercase tracking-wider text-[#94a3b8]">Ore Drop</div>
-          <div class="text-[12.5px] font-black tabular-nums text-[#fde047] leading-tight mam-outline-sm">+${fmtInt(oreDropPct)}%</div>
+        <div class="px-2 py-1 rounded-lg bg-[#ffffff] border-2 border-[#14111d]">
+          <div class="text-[9px] font-black uppercase tracking-wider text-[#5b526e]">Ore Drop</div>
+          <div class="text-[12.5px] font-black tabular-nums text-[#d97706] leading-tight">+${fmtInt(oreDropPct)}%</div>
         </div>
-        <div class="px-2 py-1 rounded-lg bg-[#111a30] border border-[#2a3b5c]">
-          <div class="text-[9px] font-extrabold uppercase tracking-wider text-[#94a3b8]">Sell Value</div>
-          <div class="text-[12.5px] font-black tabular-nums text-[#4ade80] leading-tight mam-outline-sm">+${fmtInt(sellValuePct)}%</div>
+        <div class="px-2 py-1 rounded-lg bg-[#ffffff] border-2 border-[#14111d]">
+          <div class="text-[9px] font-black uppercase tracking-wider text-[#5b526e]">Sell Value</div>
+          <div class="text-[12.5px] font-black tabular-nums text-[#059669] leading-tight">+${fmtInt(sellValuePct)}%</div>
         </div>
       </div>
 
       <div class="grid grid-cols-2 gap-1.5">
-        <div class="px-2 py-1 rounded-lg bg-[#0e1526] border border-[#243452]">
-          <div class="text-[9px] font-bold uppercase tracking-wider text-[#94a3b8]">Roll Rate</div>
-          <div class="text-[11.5px] font-black tabular-nums text-[#7dd3fc]">${enchant.chancePct}%</div>
+        <div class="px-2 py-1 rounded-lg bg-[#fcecc8] border-2 border-[#14111d]">
+          <div class="text-[9px] font-black uppercase tracking-wider text-[#5b526e]">Roll Rate</div>
+          <div class="text-[11.5px] font-black tabular-nums text-[#0284c7]">${enchant.chancePct}%</div>
         </div>
-        <div class="px-2 py-1 rounded-lg bg-[#0e1526] border border-[#243452]">
-          <div class="text-[9px] font-bold uppercase tracking-wider text-[#94a3b8]">${secondStatLabel}</div>
+        <div class="px-2 py-1 rounded-lg bg-[#fcecc8] border-2 border-[#14111d]">
+          <div class="text-[9px] font-black uppercase tracking-wider text-[#5b526e]">${secondStatLabel}</div>
           <div class="text-[11.5px] font-black tabular-nums ${statusValueCls}">${statusLabel}</div>
         </div>
       </div>

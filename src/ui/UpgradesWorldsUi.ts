@@ -75,7 +75,7 @@ export class UpgradesWorldsUi {
 
     const coreSpent = this.state.getTreeSpentPoints('core');
     const coreMax = this.state.getTreeMaxPoints('core');
-    const coreActiveCls = this.researchTab === 'core' ? 'ring-2 ring-[#38bdf8] border-[#38bdf8]' : 'border-[#334155]';
+    const coreActiveCls = this.researchTab === 'core' ? 'ring-[2.5px] ring-[#38bdf8] bg-[#bae6fd]' : 'bg-[#ffffff]';
 
     const worldSidebarCards = WORLDS.map((w, idx) => {
       const unlocked = this.state.isWorldUnlocked(w.id);
@@ -89,29 +89,29 @@ export class UpgradesWorldsUi {
       const prevMax = prevWorld ? this.state.getTreeMaxPoints(prevWorld.id) : 0;
 
       const borderCls = isSelectedTab
-        ? 'ring-2 ring-[#38bdf8] border-[#38bdf8]'
+        ? 'ring-[2.5px] ring-[#38bdf8] bg-[#fef08a]'
         : unlocked
-          ? 'border-[#334155]'
-          : 'border-[#1e293b] opacity-85';
+          ? 'bg-[#ffffff]'
+          : 'bg-[#fcecc8] opacity-85';
 
       let footerHtml = '';
       if (isActiveWorld) {
-        footerHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[rgba(34,197,94,0.22)] border border-[#4ade80]/60 text-[10px] font-black text-[#4ade80]">ACTIVE WORLD${complete ? ' • FULL' : ''}</span>`;
+        footerHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#2ee59d] border border-[#14111d] text-[10px] font-black text-[#14111d]">ACTIVE WORLD${complete ? ' • FULL' : ''}</span>`;
       } else if (unlocked) {
-        footerHtml = `<span class="inline-flex items-center px-2 py-0.5 rounded bg-[rgba(148,163,184,0.16)] border border-[#94a3b8]/45 text-[10px] font-black text-[#cbd5e1]">UNLOCKED${complete ? ' • FULL' : ''}</span>`;
+        footerHtml = `<span class="inline-flex items-center px-2 py-0.5 rounded bg-[#e2e8f0] border border-[#14111d] text-[10px] font-black text-[#14111d]">UNLOCKED${complete ? ' • FULL' : ''}</span>`;
       } else if (unlockStatus === 'ok' || unlockStatus === 'no-cash') {
-        footerHtml = `<span class="inline-flex items-center px-2 py-0.5 rounded bg-[rgba(250,204,21,0.16)] border border-[#facc15]/50 text-[10px] font-black text-[#fde047]">Ready in Teleport</span>`;
+        footerHtml = `<span class="inline-flex items-center px-2 py-0.5 rounded bg-[#fde047] border border-[#14111d] text-[10px] font-black text-[#14111d]">Ready in Teleport</span>`;
       } else {
-        footerHtml = `<span class="text-[10px] font-bold text-[#94a3b8]">Need ${prevWorld?.name ?? ''} (${prevMax}/${prevMax})</span>`;
+        footerHtml = `<span class="text-[10px] font-bold text-[#5b526e]">Need ${prevWorld?.name ?? ''} (${prevMax}/${prevMax})</span>`;
       }
 
       return `
-        <div class="relative rounded-xl border-2 ${borderCls} ${animTabId === w.id ? 'mam-pop-click' : ''} bg-[linear-gradient(180deg,rgba(30,41,59,0.94)_0%,rgba(15,23,42,0.97)_100%)] p-2.5 flex flex-col items-center gap-1 cursor-pointer transition-[transform,filter,box-shadow] duration-[120ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] active:brightness-95" data-research-tab="${w.id}">
-          <div class="flex items-center gap-1.5 text-[14px] font-black text-white mam-outline-sm">
-            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${w.iconColor};box-shadow:0 0 8px ${w.iconColor}"></span>
+        <div class="relative rounded-xl border-2 border-[#14111d] ${borderCls} ${animTabId === w.id ? 'mam-pop-click' : ''} p-2.5 flex flex-col items-center gap-1 cursor-pointer transition-[transform,filter] duration-[120ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-[0.97] active:scale-[0.94]" data-research-tab="${w.id}">
+          <div class="flex items-center gap-1.5 text-[14px] font-black text-[#14111d]">
+            <span class="w-2.5 h-2.5 rounded-full shrink-0 border border-[#14111d]" style="background:${w.iconColor}"></span>
             <span>${w.name}</span>
           </div>
-          <div class="text-[12px] font-extrabold text-[#cbd5e1] mam-outline-sm">Research ${spent}/${maxPts}</div>
+          <div class="text-[12px] font-extrabold text-[#5b526e]">Research ${spent}/${maxPts}</div>
           <div class="mt-0.5">${footerHtml}</div>
         </div>
       `;
@@ -163,17 +163,13 @@ export class UpgradesWorldsUi {
         const selected = selNode?.id === n.id;
 
         const isLocked = status === 'locked-world' || status === 'locked-prereq';
-        // Keep node chip fills 100% opaque so background SVG connector edges never bleed through behind icons.
         const cardStyle = maxed
-          ? 'border-[#facc15] bg-[linear-gradient(180deg,#1e3a2f_0%,#143326_55%,#0c171f_100%)] shadow-[0_0_16px_rgba(250,204,21,0.3),0_4px_0_#78350f]'
+          ? 'border-[#14111d] bg-[#d1fae5]'
           : isLocked
-            ? 'border-[#263142] bg-[#0e1522] shadow-[0_4px_0_#070a10]'
-            : 'border-[#38bdf8] bg-[linear-gradient(180deg,#24344c_0%,#121c2d_100%)] shadow-[0_4px_0_#090d14,0_6px_14px_rgba(0,0,0,0.45)]';
-        const unlockedBorderStyle =
-          !maxed && !isLocked
-            ? `border-color:${tabColor};box-shadow:0 0 12px ${tabColor}33,0 4px 0 #090d14;`
-            : '';
-        const ringCls = selected ? 'ring-[3px] ring-[#7dd3fc] scale-[1.06]' : '';
+            ? 'border-[#94a3b8] bg-[#e2e8f0]'
+            : 'border-[#14111d] bg-[#fff8e7]';
+        const unlockedBorderStyle = '';
+        const ringCls = selected ? 'ring-[3px] ring-[#38bdf8] scale-[1.04]' : '';
         const nodeAnimCls =
           animUpgradeId === n.id
             ? 'mam-upgrade-pop'
@@ -183,22 +179,22 @@ export class UpgradesWorldsUi {
                 : 'mam-pop-click'
               : '';
         const badgeCls = isLocked
-          ? 'bg-[#0b101b] border-[#334155] text-[#94a3b8]'
+          ? 'bg-[#e2e8f0] border-[#14111d] text-[#5b526e]'
           : maxed
-            ? 'bg-[#451a03] border-[#facc15]/85 text-[#fde047]'
-            : 'bg-[#0f172a] border-white/30 text-white';
+            ? 'bg-[#fde047] border-[#14111d] text-[#14111d]'
+            : 'bg-[#14111d] border-[#14111d] text-[#fff8e7]';
 
         return `
           <button
-            class="absolute z-[2] rounded-xl border-2 ${cardStyle} ${ringCls} ${nodeAnimCls} flex flex-col items-center justify-center px-1.5 pt-1 pb-2.5 cursor-pointer transition-[transform,filter,box-shadow] duration-[120ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-[1.07] hover:brightness-110 active:translate-y-0.5 active:scale-[0.92] active:brightness-95"
+            class="absolute z-[2] rounded-xl border-2 ${cardStyle} ${ringCls} ${nodeAnimCls} flex flex-col items-center justify-center px-1.5 pt-1 pb-2.5 cursor-pointer transition-[transform,filter] duration-[120ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-[1.06] active:scale-[0.92]"
             style="left:${left}px;top:${top}px;width:${nodeSize}px;height:${nodeSize}px;${unlockedBorderStyle}"
             data-research-node="${n.id}"
             title="${n.name} (${lvl}/${n.maxLevel})"
           >
             ${animUpgradeId === n.id ? '<span class="mam-upgrade-ring"></span>' : ''}
-            ${status === 'ok' ? '<span class="absolute -top-1.5 -right-1.5 z-[3] w-3.5 h-3.5 rounded-full bg-[#4ade80] border-2 border-[#0f172a] shadow-[0_0_8px_#4ade80]"></span>' : ''}
+            ${status === 'ok' ? '<span class="absolute -top-1.5 -right-1.5 z-[3] w-3.5 h-3.5 rounded-full bg-[#2ee59d] border-2 border-[#14111d]"></span>' : ''}
             <div class="pointer-events-none flex items-center justify-center ${isLocked ? 'opacity-40 saturate-50' : ''}">${researchIconHtml(n.icon, 40, tabColor)}</div>
-            <span class="absolute -bottom-2 z-[3] px-1.5 py-[1px] rounded border ${badgeCls} text-[10px] font-black leading-tight mam-outline-sm">${lvl}/${n.maxLevel}</span>
+            <span class="absolute -bottom-2 z-[3] px-1.5 py-[1px] rounded border ${badgeCls} text-[10px] font-black leading-tight">${lvl}/${n.maxLevel}</span>
           </button>
         `;
       })
@@ -223,25 +219,25 @@ export class UpgradesWorldsUi {
       const isWorldInactive = Boolean(worldIdIfWorld && worldIdIfWorld !== this.state.activeWorldId);
 
       const scopePill = isCore
-        ? `<span class="px-2.5 py-0.5 rounded-full bg-[rgba(56,189,248,0.18)] border border-[#38bdf8]/50 text-[11px] font-black text-[#7dd3fc]">Global • Active in All Worlds</span>`
+        ? `<span class="px-2.5 py-0.5 rounded-full bg-[#bae6fd] border-2 border-[#14111d] text-[11px] font-black text-[#14111d]">Global • Active in All Worlds</span>`
         : isWorldInactive
-          ? `<span class="px-2.5 py-0.5 rounded-full bg-[rgba(244,63,94,0.16)] border border-[#fb7185]/45 text-[11px] font-black text-[#fda4af]">Isolated • Only Active in ${tabMeta.title}</span>`
-          : `<span class="px-2.5 py-0.5 rounded-full bg-[rgba(74,222,128,0.18)] border border-[#4ade80]/50 text-[11px] font-black text-[#4ade80]">Isolated • Active in ${tabMeta.title}</span>`;
+          ? `<span class="px-2.5 py-0.5 rounded-full bg-[#fda4af] border-2 border-[#14111d] text-[11px] font-black text-[#14111d]">Isolated • Only Active in ${tabMeta.title}</span>`
+          : `<span class="px-2.5 py-0.5 rounded-full bg-[#6ee7b7] border-2 border-[#14111d] text-[11px] font-black text-[#14111d]">Isolated • Active in ${tabMeta.title}</span>`;
 
       let actionBtnHtml = '';
       if (status === 'maxed') {
-        actionBtnHtml = `<button class="w-full h-11 rounded-xl border border-[#facc15]/50 bg-[rgba(250,204,21,0.14)] text-[#fde047] text-[16px] font-black cursor-default" data-research-locked-btn="true">Maxed Out</button>`;
+        actionBtnHtml = `<button class="w-full h-11 rounded-xl border-2 border-[#14111d] bg-[#fde047] text-[#14111d] text-[16px] font-black cursor-default" data-research-locked-btn="true">Maxed Out</button>`;
       } else if (status === 'locked-world') {
         const wDef = getWorldById(selNode.treeId as WorldId);
         const wUnlock = this.state.canUnlockWorld(wDef.id);
         if (wUnlock === 'ok' || wUnlock === 'no-cash') {
-          actionBtnHtml = `<button class="mam-sheen-hover relative overflow-hidden w-full h-11 rounded-xl border border-[#38bdf8]/60 bg-[linear-gradient(135deg,#38bdf8_0%,#0284c7_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_16px_-2px_rgba(56,189,248,0.4)] text-white text-[14px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:scale-95" data-open-teleport="true">Unlock in Teleport (${fmtMoney(wDef.unlockCost)})</button>`;
+          actionBtnHtml = `<button class="mam-sheen-hover relative overflow-hidden w-full h-11 rounded-xl border-2 border-[#14111d] bg-[#38bdf8] text-[#14111d] text-[14px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:brightness-105 active:scale-95" data-open-teleport="true">Unlock in Teleport (${fmtMoney(wDef.unlockCost)})</button>`;
         } else {
           const prevW = WORLDS[Math.max(0, getWorldIndex(wDef.id) - 1)];
-          actionBtnHtml = `<button class="w-full h-11 rounded-xl border border-white/15 bg-white/[0.05] text-[#94a3b8] text-[13px] font-bold cursor-pointer transition-transform duration-100 active:scale-[0.96]" data-research-locked-btn="true">Complete ${prevW.name} First</button>`;
+          actionBtnHtml = `<button class="w-full h-11 rounded-xl border-2 border-[#94a3b8] bg-[#e2e8f0] text-[#5b526e] text-[13px] font-black cursor-pointer transition-transform duration-100 active:scale-[0.96]" data-research-locked-btn="true">Complete ${prevW.name} First</button>`;
         }
       } else if (status === 'locked-prereq') {
-        actionBtnHtml = `<button class="w-full h-11 rounded-xl border border-white/15 bg-white/[0.05] text-[#94a3b8] text-[13px] font-bold cursor-pointer transition-transform duration-100 active:scale-[0.96]" data-research-locked-btn="true">Need ${reqNames}</button>`;
+        actionBtnHtml = `<button class="w-full h-11 rounded-xl border-2 border-[#94a3b8] bg-[#e2e8f0] text-[#5b526e] text-[13px] font-black cursor-pointer transition-transform duration-100 active:scale-[0.96]" data-research-locked-btn="true">Need ${reqNames}</button>`;
       } else if (status === 'no-cash') {
         actionBtnHtml = `<button class="${TW_SHOP_BUY_BTN} disabled !h-11 !text-[16px]" data-upgrade-node="${selNode.id}">${fmtMoney(cost)}</button>`;
       } else {
@@ -263,10 +259,10 @@ export class UpgradesWorldsUi {
             ${buyModes
               .map(
                 (m) => `
-              <button class="h-7 rounded-lg text-[11px] font-black cursor-pointer transition-colors ${
+              <button class="h-7 rounded-lg border-2 border-[#14111d] text-[11px] font-black cursor-pointer transition-colors ${
                 this.buyMode === m.id
-                  ? 'bg-sky-500 text-slate-950 shadow-[0_0_8px_rgba(56,189,248,0.45)]'
-                  : 'bg-slate-800/90 text-slate-300 border border-slate-700 hover:bg-slate-700'
+                  ? 'bg-[#fde047] text-[#14111d]'
+                  : 'bg-[#fcecc8] text-[#5b526e] hover:bg-[#fef08a] hover:text-[#14111d]'
               }" data-research-buy-mode="${m.id}">${m.label}</button>
             `
               )
@@ -279,15 +275,15 @@ export class UpgradesWorldsUi {
 
       inspectorHtml = `
         <div class="flex items-center justify-center p-1.5 ${inspIconAnim}">${researchIconHtml(selNode.icon, 74, tabColor)}</div>
-        <div class="text-[22px] font-black text-white leading-tight [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">${selNode.name}</div>
+        <div class="text-[22px] font-black text-[#14111d] leading-tight">${selNode.name}</div>
         ${scopePill}
-        <div class="relative w-full h-6 rounded-full bg-white/[0.06] border border-[#38bdf8]/45 overflow-hidden flex items-center justify-center mt-0.5">
-          <div class="absolute left-0 top-0 bottom-0 bg-[linear-gradient(90deg,#38bdf8,#22d3ee)] transition-[width] duration-200" style="width:${pct}%"></div>
-          <span class="relative z-[2] text-[12px] font-black text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">${lvl}/${maxLvl}</span>
+        <div class="relative w-full h-6 rounded-full bg-[#fcecc8] border-2 border-[#14111d] overflow-hidden flex items-center justify-center mt-0.5">
+          <div class="absolute left-0 top-0 bottom-0 bg-[#38bdf8] transition-[width] duration-200" style="width:${pct}%"></div>
+          <span class="relative z-[2] text-[12px] font-black text-[#14111d]">${lvl}/${maxLvl}</span>
         </div>
-        <div class="text-[15px] font-black text-[#4ade80]">${lvl > 0 ? formatNodeEffectLine(selNode, lvl) : `Next: ${formatNodeEffectLine(selNode, 1)}`}</div>
-        ${lvl > 0 && lvl < maxLvl ? `<div class="text-[12px] font-extrabold text-[#7dd3fc]">Next Lv: ${formatNodeEffectLine(selNode, lvl + 1)}</div>` : ''}
-        <div class="text-[12px] font-medium text-[#cbd5e1] leading-snug">${selNode.descTemplate}</div>
+        <div class="text-[15px] font-black text-[#059669]">${lvl > 0 ? formatNodeEffectLine(selNode, lvl) : `Next: ${formatNodeEffectLine(selNode, 1)}`}</div>
+        ${lvl > 0 && lvl < maxLvl ? `<div class="text-[12px] font-extrabold text-[#0284c7]">Next Lv: ${formatNodeEffectLine(selNode, lvl + 1)}</div>` : ''}
+        <div class="text-[12px] font-bold text-[#5b526e] leading-snug">${selNode.descTemplate}</div>
         ${buyToggleHtml}
         <div class="w-full mt-1">${actionBtnHtml}</div>
       `;
@@ -311,25 +307,27 @@ export class UpgradesWorldsUi {
             <span class="mam-rail-stud is-br"></span>
           </div>
           <div class="mam-modal-rail-head">
+            <span class="mam-wing-rail is-left" aria-hidden="true"></span>
             <div class="mam-title-plaque">
               <span class="mam-title-plaque-icon shrink-0 [&>img]:w-5 [&>img]:h-5">${hudIconHtml('hourglass', 22, 'Upgrades')}</span>
               <span>Upgrades</span>
             </div>
+            <span class="mam-wing-rail is-right" aria-hidden="true"></span>
             <button class="${TW_CLOSE_BTN} mam-close-rail-btn" data-action="close-modal" aria-label="Close Upgrades">✕</button>
           </div>
           <div class="flex items-center justify-end gap-3 flex-wrap w-full">
-            <div class="text-[20px] font-black tabular-nums text-[#facc15] [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]" data-upgrades-cash="true">${fmtMoney(this.state.cash)}</div>
+            <div class="px-3 py-0.5 rounded-full bg-[#14111d] text-[18px] font-black tabular-nums text-[#fde047]" data-upgrades-cash="true">${fmtMoney(this.state.cash)}</div>
             ${nextWorldCta}
           </div>
           <div class="flex-1 min-h-0 flex items-stretch gap-3 @max-[920px]:flex-col @max-[920px]:overflow-x-hidden @max-[920px]:overflow-y-auto mam-no-scrollbar">
             <div class="w-[216px] @max-[920px]:w-full @max-[920px]:grid @max-[920px]:grid-cols-3 @max-[560px]:grid-cols-2 shrink-0 flex flex-col gap-2 overflow-x-hidden overflow-y-auto mam-no-scrollbar px-2 py-1" data-upgrades-sidebar-scroll="true">
-              <div class="relative rounded-xl border-2 ${coreActiveCls} ${animTabId === 'core' ? 'mam-pop-click' : ''} bg-[#141f38] p-2.5 flex flex-col items-center gap-1 cursor-pointer transition-[transform,filter,background-color] duration-150 hover:bg-[#1c2b4d] active:scale-[0.97]" data-research-tab="core">
-                <div class="flex items-center gap-1.5 text-[15px] font-black text-white">
-                  <span class="w-2.5 h-2.5 rounded-full bg-[#38bdf8] shadow-[0_0_8px_#38bdf8]"></span>
+              <div class="relative rounded-xl border-2 border-[#14111d] ${coreActiveCls} ${animTabId === 'core' ? 'mam-pop-click' : ''} p-2.5 flex flex-col items-center gap-1 cursor-pointer transition-[transform,filter,background-color] duration-150 hover:scale-[0.97] active:scale-[0.94]" data-research-tab="core">
+                <div class="flex items-center gap-1.5 text-[15px] font-black text-[#14111d]">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#38bdf8] border border-[#14111d]"></span>
                   <span>Core</span>
                 </div>
-                <div class="text-[12px] font-bold text-[#cbd5e1]">Research ${coreSpent}/${coreMax}</div>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-[rgba(56,189,248,0.16)] border border-[#38bdf8]/45 text-[10px] font-black text-[#7dd3fc]">Global • All Worlds</span>
+                <div class="text-[12px] font-bold text-[#5b526e]">Research ${coreSpent}/${coreMax}</div>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-[#bae6fd] border border-[#14111d] text-[10px] font-black text-[#14111d]">Global • All Worlds</span>
               </div>
               ${worldSidebarCards}
             </div>
@@ -365,24 +363,24 @@ export class UpgradesWorldsUi {
       const prevMax = prevWorld ? this.state.getTreeMaxPoints(prevWorld.id) : 0;
 
       const cardBorder = isActive
-        ? 'border-[#4ade80] shadow-[0_0_18px_rgba(74,222,128,0.25)]'
+        ? 'border-[#14111d] ring-[3px] ring-inset ring-[#4ade80]'
         : unlocked
-          ? 'border-white/25 hover:border-sky-400/75'
+          ? 'border-[#14111d] hover:border-[#0284c7]'
           : unlockStatus === 'ok'
-            ? 'border-[#facc15] shadow-[0_0_16px_rgba(250,204,21,0.25)]'
-            : 'border-white/15';
+            ? 'border-[#14111d] ring-[3px] ring-inset ring-[#facc15]'
+            : 'border-[#14111d]';
 
       let ctaHtml = '';
       if (isActive) {
-        ctaHtml = `<span class="relative z-[2] px-4 h-10 rounded-lg border-2 border-[#14532d] bg-[rgba(15,40,26,0.88)] text-[#4ade80] text-[14px] font-black inline-flex items-center justify-center shrink-0 mam-outline-sm shadow-lg">Current World</span>`;
+        ctaHtml = `<span class="relative z-[2] px-4 h-10 rounded-xl border-[2.5px] border-[#14111d] bg-[#bbf7d0] text-[#14532d] text-[14px] font-black inline-flex items-center justify-center shrink-0">Current World</span>`;
       } else if (unlocked) {
-        ctaHtml = `<button class="relative z-[2] px-5 h-10 rounded-lg border-2 border-[#0369a1] bg-[linear-gradient(180deg,#38bdf8_0%,#0284c7_100%)] shadow-[inset_0_2px_0_rgba(255,255,255,0.4),0_4px_0_#075985] text-white text-[15px] font-black cursor-pointer hover:brightness-110 active:translate-y-0.5 active:shadow-[0_1px_0_#075985] shrink-0 mam-outline-sm" data-teleport-world="${w.id}">Teleport</button>`;
+        ctaHtml = `<button class="relative z-[2] px-5 h-10 rounded-xl border-[2.5px] border-[#14111d] bg-[#38bdf8] text-[#14111d] text-[15px] font-black cursor-pointer hover:bg-[#7dd3fc] hover:scale-[0.97] hover:rotate-[1.2deg] active:scale-[0.94] transition-transform duration-150 shrink-0" data-teleport-world="${w.id}">Teleport</button>`;
       } else if (unlockStatus === 'ok') {
-        ctaHtml = `<button class="relative z-[2] px-4 h-10 rounded-lg border-2 border-[#14532d] bg-[linear-gradient(180deg,#4ade80_0%,#16a34a_100%)] shadow-[inset_0_2px_0_rgba(255,255,255,0.4),0_4px_0_#14532d] text-white text-[14px] font-black cursor-pointer hover:brightness-110 active:translate-y-0.5 active:shadow-[0_1px_0_#14532d] shrink-0 mam-outline-sm" data-teleport-unlock="${w.id}">Unlock &amp; Teleport (${fmtMoney(w.unlockCost)})</button>`;
+        ctaHtml = `<button class="relative z-[2] px-4 h-10 rounded-xl border-[2.5px] border-[#14111d] bg-[#4ade80] text-[#14111d] text-[14px] font-black cursor-pointer hover:bg-[#86efac] hover:scale-[0.97] hover:-rotate-[1.2deg] active:scale-[0.94] transition-transform duration-150 shrink-0" data-teleport-unlock="${w.id}">Unlock &amp; Teleport (${fmtMoney(w.unlockCost)})</button>`;
       } else if (unlockStatus === 'no-cash') {
-        ctaHtml = `<button class="relative z-[2] px-4 h-10 rounded-xl border border-purple-300/45 bg-[rgba(15,10,30,0.78)] text-[#e9d5ff] text-[14px] font-black cursor-pointer hover:bg-[rgba(30,20,55,0.9)] shrink-0 mam-outline-sm" data-teleport-unlock="${w.id}">Unlock (${fmtMoney(w.unlockCost)})</button>`;
+        ctaHtml = `<button class="relative z-[2] px-4 h-10 rounded-xl border-[2.5px] border-[#14111d] bg-[#fef08a] text-[#14111d] text-[14px] font-black cursor-pointer hover:bg-[#fde047] shrink-0" data-teleport-unlock="${w.id}">Unlock (${fmtMoney(w.unlockCost)})</button>`;
       } else {
-        ctaHtml = `<span class="relative z-[2] px-3.5 h-10 rounded-xl border border-white/20 bg-[rgba(8,6,18,0.78)] text-[#cbd5e1] text-[12px] font-bold inline-flex items-center justify-center shrink-0 text-center mam-outline-sm">Locked • Max ${prevWorld?.name ?? ''} (${prevSpent}/${prevMax})</span>`;
+        ctaHtml = `<span class="relative z-[2] px-3.5 h-10 rounded-xl border-[2.5px] border-[#14111d] bg-[#fff8e7] text-[#334155] text-[12px] font-black inline-flex items-center justify-center shrink-0 text-center">Locked • Max ${prevWorld?.name ?? ''} (${prevSpent}/${prevMax})</span>`;
       }
 
       const imgClass = unlocked
@@ -390,20 +388,20 @@ export class UpgradesWorldsUi {
         : 'absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none brightness-[0.72] saturate-[0.78]';
 
       return `
-        <div class="group relative overflow-hidden rounded-xl border-2 ${cardBorder} min-h-[104px] px-4 py-3.5 flex items-center justify-between gap-3 @max-[680px]:flex-col @max-[680px]:items-stretch">
+        <div class="group relative overflow-hidden rounded-xl border-[3px] ${cardBorder} min-h-[104px] px-4 py-3.5 flex items-center justify-between gap-3 @max-[680px]:flex-col @max-[680px]:items-stretch">
           <img src="${assetUrl(`/worlds/${w.id}.webp`)}" alt="${w.name}" class="${imgClass}" />
-          <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,8,18,0.88)_0%,rgba(6,8,18,0.58)_52%,rgba(6,8,18,0.28)_100%)] pointer-events-none"></div>
+          <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,17,29,0.88)_0%,rgba(20,17,29,0.58)_52%,rgba(20,17,29,0.28)_100%)] pointer-events-none"></div>
           <div class="relative z-[2] min-w-0 flex-1">
             <div class="flex items-baseline gap-2 flex-wrap">
-              <span class="text-[11px] font-black uppercase tracking-wider text-[#d8b4fe] mam-outline-sm">World ${idx + 1}</span>
+              <span class="px-2 py-0.5 rounded-md bg-[#fde047] border-[1.5px] border-[#14111d] text-[10px] font-black uppercase tracking-wider text-[#14111d]">World ${idx + 1}</span>
               <span class="text-[20px] font-black text-white leading-tight mam-outline">${w.name}</span>
             </div>
             <div class="mt-2 flex items-center gap-2.5 flex-wrap">
-              <div class="relative flex-1 min-w-[160px] max-w-[220px] h-4 rounded-full bg-[rgba(14,8,30,0.88)] border border-[#7e22ce] overflow-hidden flex items-center justify-center">
-                <div class="absolute left-0 top-0 bottom-0 bg-[linear-gradient(90deg,#38bdf8,#22d3ee)] transition-[width] duration-200" style="width:${pct}%"></div>
-                <span class="relative z-[2] text-[10px] font-black text-white mam-outline-sm">Research ${spent}/${maxPts}</span>
+              <div class="relative flex-1 min-w-[160px] max-w-[220px] h-5 rounded-full bg-[#fff8e7] border-2 border-[#14111d] overflow-hidden flex items-center justify-center">
+                <div class="absolute left-0 top-0 bottom-0 bg-[#38bdf8] transition-[width] duration-200" style="width:${pct}%"></div>
+                <span class="relative z-[2] text-[10px] font-black text-[#14111d]">Research ${spent}/${maxPts}</span>
               </div>
-              ${!unlocked && w.unlockCost > 0 ? `<span class="text-[12px] font-black text-[#facc15] mam-outline-sm">Cost: ${fmtMoney(w.unlockCost)}</span>` : ''}
+              ${!unlocked && w.unlockCost > 0 ? `<span class="px-2 py-0.5 rounded-md bg-[#fff8e7] border-[1.5px] border-[#14111d] text-[11px] font-black text-[#14111d]">Cost: ${fmtMoney(w.unlockCost)}</span>` : ''}
             </div>
           </div>
           ${ctaHtml}
@@ -445,9 +443,9 @@ export class UpgradesWorldsUi {
       theme: 'worlds',
       iconHtml: worldIconSvg,
       boxClass: `w-[740px] ${TW_SHOP_MODAL_RESP}`,
-      headerExtraHtml: `<div class="text-[20px] font-black text-[#facc15] mam-outline mr-1" data-worlds-cash="true">${fmtMoney(this.state.cash)}</div>`,
+      headerExtraHtml: `<div class="px-3 py-1 rounded-full bg-[#fef08a] border-2 border-[#14111d] text-[15px] font-black text-[#14111d] tabular-nums mr-1" data-worlds-cash="true">${fmtMoney(this.state.cash)}</div>`,
       bodyHtml: `
-        <div class="text-[13px] font-bold text-[#e9d5ff] -mt-1">Complete 100% of your current World's Research to unlock the next World. Core Research stays active across all Worlds.</div>
+        <div class="text-[13px] font-bold text-[#334155] -mt-1">Complete 100% of your current World's Research to unlock the next World. Core Research stays active across all Worlds.</div>
         <div class="flex flex-col gap-2.5 overflow-x-hidden overflow-y-auto mam-no-scrollbar flex-1 min-h-0 px-1 py-0.5" data-worlds-list="true">
           ${rowsHtml}
         </div>

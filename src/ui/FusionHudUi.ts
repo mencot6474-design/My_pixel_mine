@@ -1,7 +1,7 @@
 import { audio } from '../audio/AudioManager';
 import { assetUrl } from '../game/AssetUrl';
 import { FUSION_RECIPES, FusionRecipeDef, getFusionRecipeById } from '../game/FusionData';
-import { getMinerRarity, getOreById, RARITY_BORDER } from '../game/GameData';
+import { getMinerRarity, getOreById } from '../game/GameData';
 import { GameState } from '../game/GameState';
 import { fmtInt, fmtShort } from '../game/NumberFormat';
 import { getChibiById } from '../game3d/ChibiCatalog';
@@ -77,48 +77,48 @@ export class FusionHudUi {
 
     const bodyHtml = `
       <div class="w-full flex flex-col gap-3">
-        <div class="text-[12.5px] font-bold text-slate-300 text-center">
+        <div class="text-[12.5px] font-bold text-[#334155] text-center">
           Choose which Cosmic Chamber to enter through the Plaza Altar.
         </div>
         <div class="grid grid-cols-2 @max-[580px]:grid-cols-1 gap-3">
-          <div class="rounded-2xl border-2 border-purple-400 bg-[linear-gradient(160deg,#231342_0%,#0d0a1f_100%)] p-4 flex flex-col items-center text-center gap-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_12px_28px_rgba(0,0,0,0.65)]">
-            <div class="w-[78px] h-[78px] rounded-2xl border-2 border-purple-400 bg-[radial-gradient(circle_at_50%_45%,rgba(168,85,247,0.45),#110c26_82%)] flex items-center justify-center [&>.mam-3d-icon]:w-[58px] [&>.mam-3d-icon]:h-[58px]">
+          <div class="rounded-2xl border-[2.5px] border-[#14111d] bg-white p-4 flex flex-col items-center text-center gap-2.5">
+            <div class="w-[78px] h-[78px] rounded-2xl border-[2.5px] border-[#14111d] bg-[#f3e8ff] flex items-center justify-center [&>.mam-3d-icon]:w-[58px] [&>.mam-3d-icon]:h-[58px]">
               ${enchantDiceIconHtml(58)}
             </div>
-            <div class="text-[19px] font-black text-white leading-tight mam-outline-sm">Enchant Altar</div>
-            <div class="text-[12px] font-bold text-purple-200/90 leading-snug">
+            <div class="text-[19px] font-black text-[#14111d] leading-tight">Enchant Altar</div>
+            <div class="text-[12px] font-bold text-[#475569] leading-snug">
               Spin the Cosmic Clock to roll rare Auras &amp; Enchants for your Chibis.
             </div>
-            <span class="px-2.5 py-0.5 rounded-lg bg-[#140d2e] border border-purple-400/70 text-[11px] font-black tabular-nums text-purple-200">
+            <span class="px-2.5 py-0.5 rounded-lg bg-[#f3e8ff] border-2 border-[#14111d] text-[11px] font-black tabular-nums text-[#6b21a8]">
               Owned: ${fmtInt(this.state.enchantDice)} Dice
             </span>
             <button
               type="button"
-              class="mam-sheen-hover relative overflow-hidden mt-auto w-full py-2.5 px-4 rounded-xl border-2 border-purple-300 bg-[linear-gradient(135deg,#9333ea_0%,#581c87_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_4px_0_#2e1065] text-white text-[14px] font-black cursor-pointer transition-[transform,filter] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.97] mam-outline-sm"
+              class="mam-sheen-hover relative overflow-hidden mt-auto w-full py-2.5 px-4 rounded-xl border-[2.5px] border-[#14111d] bg-[#c084fc] hover:bg-[#d8b4fe] text-[#14111d] text-[14px] font-black cursor-pointer transition-transform duration-150 hover:scale-[0.97] active:scale-[0.94]"
               data-altar-choice="enchant"
             >
               Enter Enchant Altar
             </button>
           </div>
 
-          <div class="rounded-2xl border-2 border-cyan-400 bg-[linear-gradient(160deg,#112642_0%,#0b1024_100%)] p-4 flex flex-col items-center text-center gap-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_12px_28px_rgba(0,0,0,0.65)]">
-            <div class="w-[78px] h-[78px] rounded-2xl border-2 border-amber-300 bg-[radial-gradient(circle_at_50%_45%,rgba(56,189,248,0.45),#0d152b_82%)] flex items-center justify-center">
+          <div class="rounded-2xl border-[2.5px] border-[#14111d] bg-white p-4 flex flex-col items-center text-center gap-2.5">
+            <div class="w-[78px] h-[78px] rounded-2xl border-[2.5px] border-[#14111d] bg-[#e0f2fe] flex items-center justify-center">
               ${fusionPreviewHtml}
             </div>
-            <div class="text-[19px] font-black text-white leading-tight mam-outline-sm">Chibi Fusion</div>
-            <div class="text-[12px] font-bold text-sky-200/90 leading-snug">
+            <div class="text-[19px] font-black text-[#14111d] leading-tight">Chibi Fusion</div>
+            <div class="text-[12px] font-bold text-[#475569] leading-snug">
               Fuse 2–3 Chibis + Ores &amp; Gems in the 3D Synchro Chamber into Apex Units.
             </div>
-            <span class="px-2.5 py-0.5 rounded-lg border text-[11px] font-black tabular-nums ${
+            <span class="px-2.5 py-0.5 rounded-lg border-2 border-[#14111d] text-[11px] font-black tabular-nums ${
               readyFusions > 0
-                ? 'bg-[#0c3324] border-emerald-400 text-emerald-200'
-                : 'bg-[#0e1b33] border-cyan-400/70 text-cyan-200'
+                ? 'bg-[#bbf7d0] text-[#14532d]'
+                : 'bg-[#e0f2fe] text-[#0369a1]'
             }">
               ${readyFusions > 0 ? `${readyFusions} Fusion Ready!` : `${FUSION_RECIPES.length} Exclusive Recipes`}
             </span>
             <button
               type="button"
-              class="mam-sheen-hover relative overflow-hidden mt-auto w-full py-2.5 px-4 rounded-xl border-2 border-cyan-300 bg-[linear-gradient(135deg,#0284c7_0%,#7c3aed_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_4px_0_#1e1b4b] text-white text-[14px] font-black cursor-pointer transition-[transform,filter] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.97] mam-outline-sm"
+              class="mam-sheen-hover relative overflow-hidden mt-auto w-full py-2.5 px-4 rounded-xl border-[2.5px] border-[#14111d] bg-[#38bdf8] hover:bg-[#7dd3fc] text-[#14111d] text-[14px] font-black cursor-pointer transition-transform duration-150 hover:scale-[0.97] active:scale-[0.94]"
               data-altar-choice="fusion"
             >
               Enter Fusion World
@@ -169,33 +169,31 @@ export class FusionHudUi {
       const isSel = r.id === recipe.id;
       const isReady = this.state.canFuseRecipe(r.id);
       const rarity = getMinerRarity(r.resultChibiId);
-      const rColor = RARITY_BORDER[rarity];
       return `
         <button
           type="button"
-          class="relative flex items-center gap-2 px-2.5 py-2 rounded-xl border-2 text-left cursor-pointer transition-[transform,background,border-color,box-shadow] duration-150 hover:-translate-y-0.5 active:scale-[0.97] ${
-            isSel ? 'bg-[#1a294a]' : 'bg-[#0e162b] border-[#26385c] hover:bg-[#15213d]'
+          class="relative flex items-center gap-2 px-2.5 py-2 rounded-xl border-[2.5px] border-[#14111d] text-left cursor-pointer transition-transform duration-150 hover:scale-[0.97] even:hover:rotate-[1deg] odd:hover:-rotate-[1deg] active:scale-[0.94] ${
+            isSel ? 'bg-[#fde047] ring-[3px] ring-inset ring-[#14111d]' : 'bg-[#fff8e7] hover:bg-[#fcecc8]'
           }"
-          style="${isSel ? `border-color:${r.accentColor};box-shadow:0 0 16px -3px ${r.accentColor}88,inset 0 1px 0 rgba(255,255,255,0.2)` : ''}"
           data-fusion-select="${r.id}"
         >
-          <div class="w-11 h-11 rounded-lg border-2 shrink-0 flex items-center justify-center bg-[#090e1c] overflow-hidden [&_.mam-chibi-portrait_img]:max-w-[90%] [&_.mam-chibi-portrait_img]:max-h-[90%]" style="border-color:${rColor}">
+          <div class="w-11 h-11 rounded-lg border-2 border-[#14111d] shrink-0 flex items-center justify-center bg-white overflow-hidden [&_.mam-chibi-portrait_img]:max-w-[90%] [&_.mam-chibi-portrait_img]:max-h-[90%]">
             ${ch ? chibiPortraitHtml(ch, { usePose: true, draggable: false }) : ''}
           </div>
           <div class="flex-1 min-w-0 flex flex-col">
             <div class="flex items-center justify-between gap-1">
-              <span class="text-[12.5px] font-black text-white truncate mam-outline-sm">${r.title}</span>
+              <span class="text-[12.5px] font-black text-[#14111d] truncate">${r.title}</span>
               ${
                 isReady
-                  ? `<span class="px-1.5 py-0.5 rounded bg-[#0c3324] border border-emerald-400 text-[9px] font-black text-emerald-300 uppercase shrink-0">Ready</span>`
+                  ? `<span class="px-1.5 py-0.5 rounded bg-[#4ade80] border border-[#14111d] text-[9px] font-black text-[#14111d] uppercase shrink-0">Ready</span>`
                   : ''
               }
             </div>
             <div class="flex items-center gap-1.5 mt-1">
               ${renderRarityBadgeHtml(rarity, '!px-1.5 !py-[1px] !text-[8.5px]')}
-              <span class="text-[10.5px] font-black tabular-nums text-amber-300 mam-outline-sm">${ch ? `${fmtShort(ch.baseDps)}/s` : ''}</span>
+              <span class="text-[10.5px] font-black tabular-nums text-[#b45309]">${ch ? `${fmtShort(ch.baseDps)}/s` : ''}</span>
             </div>
-            <div class="text-[10px] font-extrabold text-cyan-300 truncate mt-0.5 mam-outline-sm">★ ${r.passive.label}</div>
+            <div class="text-[10px] font-extrabold text-[#0369a1] truncate mt-0.5">★ ${r.passive.label}</div>
           </div>
         </button>
       `;
@@ -207,15 +205,15 @@ export class FusionHudUi {
         const avail = this.state.getAvailableFusionMinerCount(ing.chibiId);
         const ok = avail >= ing.count;
         return `
-          <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border-2 ${
-            ok ? 'border-emerald-400 bg-[#0d2920]' : 'border-rose-400/70 bg-[#26111c]'
+          <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border-2 border-[#14111d] ${
+            ok ? 'bg-[#dcfce7]' : 'bg-[#fee2e2]'
           }">
-            <div class="w-9 h-9 rounded-lg bg-[#090e1c] border border-[#2f4369] shrink-0 flex items-center justify-center overflow-hidden [&_.mam-chibi-portrait_img]:max-w-[90%] [&_.mam-chibi-portrait_img]:max-h-[90%]">
+            <div class="w-9 h-9 rounded-lg bg-white border-[1.5px] border-[#14111d] shrink-0 flex items-center justify-center overflow-hidden [&_.mam-chibi-portrait_img]:max-w-[90%] [&_.mam-chibi-portrait_img]:max-h-[90%]">
               ${ch ? chibiPortraitHtml(ch, { usePose: true, draggable: false }) : ''}
             </div>
             <div class="flex flex-col min-w-0">
-              <span class="text-[11.5px] font-black text-white truncate">${ch?.name ?? ing.chibiId}</span>
-              <span class="text-[10.5px] font-black tabular-nums ${ok ? 'text-emerald-300' : 'text-rose-300'}">${avail}/${ing.count} unplaced</span>
+              <span class="text-[11.5px] font-black text-[#14111d] truncate">${ch?.name ?? ing.chibiId}</span>
+              <span class="text-[10.5px] font-black tabular-nums ${ok ? 'text-[#15803d]' : 'text-[#b91c1c]'}">${avail}/${ing.count} unplaced</span>
             </div>
           </div>
         `;
@@ -228,13 +226,13 @@ export class FusionHudUi {
         const have = this.state.getFusionOreCount(ing.oreId);
         const ok = have >= ing.count;
         return `
-          <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border-2 ${
-            ok ? 'border-emerald-400 bg-[#0d2920]' : 'border-[#2f4369] bg-[#10182d]'
+          <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border-2 border-[#14111d] ${
+            ok ? 'bg-[#dcfce7]' : 'bg-[#fcecc8]'
           }">
             <img src="${assetUrl(`/ores/${ing.oreId}.webp`)}" alt="${ore?.name ?? ing.oreId}" class="w-7 h-7 object-contain shrink-0" />
             <div class="flex flex-col min-w-0">
-              <span class="text-[11px] font-black text-white truncate">${ore?.name ?? ing.oreId}</span>
-              <span class="text-[10.5px] font-black tabular-nums ${ok ? 'text-emerald-300' : 'text-amber-300'}">${fmtInt(have)}/${fmtInt(ing.count)}</span>
+              <span class="text-[11px] font-black text-[#14111d] truncate">${ore?.name ?? ing.oreId}</span>
+              <span class="text-[10.5px] font-black tabular-nums ${ok ? 'text-[#15803d]' : 'text-[#b45309]'}">${fmtInt(have)}/${fmtInt(ing.count)}</span>
             </div>
           </div>
         `;
@@ -243,10 +241,10 @@ export class FusionHudUi {
 
     const gemsOk = this.state.gems >= recipe.gemCost;
     const fuseBtnCls = this.fusing
-      ? 'border-purple-300 bg-[linear-gradient(135deg,#a855f7_0%,#6d28d9_100%)] cursor-not-allowed opacity-95'
+      ? 'bg-[#c084fc] text-[#14111d] cursor-not-allowed opacity-95'
       : canFuse
-        ? 'mam-sheen-hover border-emerald-300 bg-[linear-gradient(135deg,#22c55e_0%,#059669_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.42),0_4px_0_#064e3b,0_10px_24px_-4px_rgba(34,197,94,0.55)] hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.97] cursor-pointer'
-        : 'border-[#33466b] bg-[#1a243b] text-slate-400 cursor-not-allowed';
+        ? 'mam-sheen-hover bg-[#4ade80] hover:bg-[#86efac] text-[#14111d] hover:scale-[0.97] active:scale-[0.94] cursor-pointer'
+        : 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed';
 
     const rev = this.revealedRecipe;
     const revChibi = rev ? getChibiById(rev.resultChibiId) : null;
@@ -255,9 +253,9 @@ export class FusionHudUi {
     if (this.fusing) {
       bottomSectionHtml = `
         <div class="absolute bottom-5 left-1/2 -translate-x-1/2 w-[min(560px,calc(100%-24px))] pointer-events-none">
-          <div class="rounded-2xl border-2 px-5 py-3 bg-[linear-gradient(180deg,#16203d_0%,#090e1c_100%)] shadow-[0_0_28px_rgba(34,211,238,0.45),0_16px_36px_rgba(0,0,0,0.85)] flex items-center justify-center gap-3" style="border-color:${recipe.accentColor}">
+          <div class="rounded-2xl border-[3px] border-[#14111d] px-5 py-3 bg-[#fff8e7] flex items-center justify-center gap-3">
             <span class="w-3.5 h-3.5 rounded-full animate-ping shrink-0" style="background:${recipe.accentColor}"></span>
-            <span class="text-[14.5px] font-black tracking-wider uppercase text-white mam-outline-sm">
+            <span class="text-[14.5px] font-black tracking-wider uppercase text-[#14111d]">
               ✦ Synchro Fusion in Progress — Converging Quantum Cores... ✦
             </span>
           </div>
@@ -266,32 +264,32 @@ export class FusionHudUi {
     } else if (rev) {
       bottomSectionHtml = `
         <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-[min(560px,calc(100%-24px))] pointer-events-auto" data-fusion-reveal="true">
-          <div class="rarity-fusion rounded-2xl border-2 p-4 bg-[linear-gradient(165deg,#182447_0%,#090d1c_100%)] shadow-[0_0_36px_rgba(250,204,21,0.45),0_20px_48px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.28)] flex flex-col items-center text-center gap-2.5" style="border-color:${rev.accentColor}">
-            <div class="px-3.5 py-1 rounded-full bg-[#1f163d] border border-amber-300 text-[11.5px] font-black tracking-widest uppercase text-amber-200 shadow-[0_0_16px_rgba(250,204,21,0.4)] mam-outline-sm">
+          <div class="rarity-fusion rounded-2xl border-[3px] border-[#14111d] p-4 bg-[#fff8e7] flex flex-col items-center text-center gap-2.5">
+            <div class="px-3.5 py-1 rounded-full bg-[#fde047] border-2 border-[#14111d] text-[11.5px] font-black tracking-widest uppercase text-[#14111d]">
               ✦ Synchro Fusion Complete! ✦
             </div>
-            <div class="flex items-center gap-3.5 w-full bg-[#0b1224] border-2 rounded-2xl p-3 text-left" style="border-color:${rev.accentColor}">
-              <div class="w-[76px] h-[76px] rounded-xl border-2 border-amber-300 bg-[radial-gradient(circle_at_50%_45%,${rev.accentColor}66,#090d1a_82%)] shrink-0 flex items-center justify-center overflow-hidden shadow-[0_0_20px_${rev.accentColor}66] [&_.mam-chibi-portrait_img]:max-w-[94%] [&_.mam-chibi-portrait_img]:max-h-[94%]">
+            <div class="flex items-center gap-3.5 w-full bg-white border-[2.5px] border-[#14111d] rounded-2xl p-3 text-left">
+              <div class="w-[76px] h-[76px] rounded-xl border-2 border-[#14111d] bg-[#fcecc8] shrink-0 flex items-center justify-center overflow-hidden [&_.mam-chibi-portrait_img]:max-w-[94%] [&_.mam-chibi-portrait_img]:max-h-[94%]">
                 ${revChibi ? chibiPortraitHtml(revChibi, { usePose: true, draggable: false }) : ''}
               </div>
               <div class="flex-1 min-w-0 flex flex-col gap-1">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="text-[20px] font-black text-white leading-tight mam-outline-sm">${rev.title}</span>
+                  <span class="text-[20px] font-black text-[#14111d] leading-tight">${rev.title}</span>
                   ${renderRarityBadgeHtml('fusion')}
                 </div>
-                <div class="text-[11.5px] font-bold text-slate-300">${rev.subtitle}</div>
+                <div class="text-[11.5px] font-bold text-[#475569]">${rev.subtitle}</div>
                 <div class="flex items-center gap-2 flex-wrap mt-0.5">
-                  ${revChibi ? `<span class="px-2.5 py-0.5 rounded-lg bg-[#291d09] border border-amber-400 text-[12px] font-black tabular-nums text-amber-300 mam-outline-sm">⚡ ${fmtShort(revChibi.baseDps)}/s Base DPS</span>` : ''}
-                  <span class="px-2.5 py-0.5 rounded-lg bg-[#0d263d] border border-cyan-400 text-[12px] font-black text-cyan-200 mam-outline-sm">★ Passive: ${rev.passive.label}</span>
+                  ${revChibi ? `<span class="px-2.5 py-0.5 rounded-lg bg-[#fef08a] border-[1.5px] border-[#14111d] text-[12px] font-black tabular-nums text-[#14111d]">⚡ ${fmtShort(revChibi.baseDps)}/s Base DPS</span>` : ''}
+                  <span class="px-2.5 py-0.5 rounded-lg bg-[#e0f2fe] border-[1.5px] border-[#14111d] text-[12px] font-black text-[#0369a1]">★ Passive: ${rev.passive.label}</span>
                 </div>
               </div>
             </div>
-            <div class="text-[11.5px] font-bold text-emerald-300">
+            <div class="text-[11.5px] font-black text-[#15803d]">
               Added to your Hotbar / Inventory — place on a Mine Plot to activate its Fusion Passive!
             </div>
             <button
               type="button"
-              class="mam-sheen-hover relative overflow-hidden w-full py-2.5 px-6 rounded-xl border-2 border-amber-200 bg-[linear-gradient(135deg,#f59e0b_0%,#0284c7_55%,#9333ea_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_4px_0_#1e1b4b,0_10px_24px_-4px_rgba(250,204,21,0.55)] text-white text-[15px] font-black uppercase tracking-wider cursor-pointer transition-[transform,filter] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.97] mam-outline-sm"
+              class="mam-sheen-hover relative overflow-hidden w-full py-2.5 px-6 rounded-xl border-[2.5px] border-[#14111d] bg-[#fde047] hover:bg-[#fef08a] text-[#14111d] text-[15px] font-black uppercase tracking-wider cursor-pointer transition-transform duration-150 hover:scale-[0.98] active:scale-[0.95]"
               data-action="dismiss-fusion-reveal"
             >
               Awesome! (Collect)
@@ -302,30 +300,30 @@ export class FusionHudUi {
     } else {
       bottomSectionHtml = `
         <div class="absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(1060px,calc(100%-24px))] flex flex-col gap-2 pointer-events-auto">
-          <div class="rounded-2xl border-2 bg-[linear-gradient(180deg,#141e36_0%,#090e1c_100%)] p-3 flex flex-col gap-2.5 shadow-[0_0_0_1px_#04070f,0_18px_40px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.18)]" style="border-color:${recipe.accentColor}">
-            <div class="flex items-center justify-between gap-2 flex-wrap border-b border-[#253657] pb-2">
+          <div class="rounded-2xl border-[3px] border-[#14111d] bg-[#fff8e7] p-3 flex flex-col gap-2.5">
+            <div class="flex items-center justify-between gap-2 flex-wrap border-b-2 border-[#14111d]/15 pb-2">
               <div class="flex items-center gap-2.5 min-w-0">
-                <span class="w-3 h-3 rounded-full shrink-0" style="background:${recipe.accentColor};box-shadow:0 0 10px ${recipe.accentColor}"></span>
+                <span class="w-3.5 h-3.5 rounded-full border-2 border-[#14111d] shrink-0" style="background:${recipe.accentColor}"></span>
                 <div class="flex flex-col min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-[16px] font-black text-white leading-tight mam-outline-sm">${recipe.title}</span>
+                    <span class="text-[16px] font-black text-[#14111d] leading-tight">${recipe.title}</span>
                     ${renderRarityBadgeHtml('fusion')}
-                    <span class="px-2 py-0.5 rounded-lg bg-[#0d263d] border border-cyan-400 text-[11px] font-black text-cyan-200 mam-outline-sm">★ Passive: ${recipe.passive.label}</span>
-                    ${resChibi ? `<span class="text-[13px] font-black tabular-nums text-amber-300 mam-outline-sm">${fmtShort(resChibi.baseDps)}/s Base DPS</span>` : ''}
+                    <span class="px-2 py-0.5 rounded-lg bg-[#e0f2fe] border-[1.5px] border-[#14111d] text-[11px] font-black text-[#0369a1]">★ Passive: ${recipe.passive.label}</span>
+                    ${resChibi ? `<span class="text-[13px] font-black tabular-nums text-[#b45309]">${fmtShort(resChibi.baseDps)}/s Base DPS</span>` : ''}
                   </div>
-                  <span class="text-[11px] font-bold text-slate-300">${recipe.subtitle} • Owned: ${fmtInt(ownedRes)}</span>
+                  <span class="text-[11px] font-bold text-[#475569]">${recipe.subtitle} • Owned: ${fmtInt(ownedRes)}</span>
                 </div>
               </div>
               <div class="flex items-center gap-2">
-                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 ${
-                  gemsOk ? 'border-sky-400 bg-[#0d223d] text-sky-200' : 'border-rose-400 bg-[#36101d] text-rose-200'
-                } text-[13px] font-black tabular-nums mam-outline-sm">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-[#14111d] ${
+                  gemsOk ? 'bg-[#e0f2fe] text-[#0369a1]' : 'bg-[#fee2e2] text-[#b91c1c]'
+                } text-[13px] font-black tabular-nums">
                   ${hudIconHtml('gem', 18, 'Gems')}
                   <span>${fmtInt(recipe.gemCost)}</span>
                 </div>
                 <button
                   type="button"
-                  class="relative overflow-hidden px-6 py-2 rounded-xl border-2 text-white text-[15px] font-black uppercase tracking-wide transition-[transform,filter] duration-150 mam-outline-sm ${fuseBtnCls}"
+                  class="relative overflow-hidden px-6 py-2 rounded-xl border-[2.5px] border-[#14111d] text-[15px] font-black uppercase tracking-wide transition-transform duration-150 ${fuseBtnCls}"
                   data-action="execute-fusion"
                   ${!canFuse || this.fusing ? 'disabled' : ''}
                 >
@@ -350,8 +348,8 @@ export class FusionHudUi {
     return `
       ${opts.weatherHtml}
       <div class="${TW_TOP_CENTER} flex items-center gap-2.5">
-        <button class="px-[38px] py-2 rounded-2xl border-2 border-orange-300 bg-[linear-gradient(135deg,#ea580c_0%,#9a3412_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_0_#431407,0_8px_22px_-4px_rgba(234,88,12,0.45)] text-white text-[19px] font-black cursor-pointer transition-[transform,filter] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.97] mam-outline" data-action="fusion-back">Back</button>
-        <button class="px-4 py-2 rounded-2xl border-2 border-purple-300 bg-[linear-gradient(135deg,#9333ea_0%,#581c87_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_0_#2e1065,0_8px_22px_-4px_rgba(147,51,234,0.45)] text-white text-[16px] font-black cursor-pointer inline-flex items-center gap-1.5 transition-[transform,filter] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.97] mam-outline-sm" data-action="switch-to-altar">
+        <button class="px-[38px] py-2 rounded-2xl border-[3px] border-[#14111d] bg-[#fb923c] hover:bg-[#fdba74] text-[#14111d] text-[19px] font-black cursor-pointer transition-transform duration-150 hover:scale-[0.97] active:scale-[0.94]" data-action="fusion-back">Back</button>
+        <button class="px-4 py-2 rounded-2xl border-[3px] border-[#14111d] bg-[#c084fc] hover:bg-[#d8b4fe] text-[#14111d] text-[16px] font-black cursor-pointer inline-flex items-center gap-1.5 transition-transform duration-150 hover:scale-[0.97] active:scale-[0.94]" data-action="switch-to-altar">
           ${hudIconHtml('enchant', 22, 'Enchant')}
           <span>Enchant Altar</span>
         </button>

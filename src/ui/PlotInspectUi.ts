@@ -11,7 +11,6 @@ import {
   isHighTierMutation,
   MUTATIONS,
   PICKAXES,
-  RARITY_BORDER,
 } from '../game/GameData';
 import { getFusionRecipeByResultChibiId } from '../game/FusionData';
 import { GameState, getChibiUpgradeCostMult } from '../game/GameState';
@@ -134,7 +133,6 @@ export class PlotInspectUi {
 
     const rarity = getMinerRarity(chibi.id);
     const mut = getMutationById(unit.mutationId);
-    const rColor = RARITY_BORDER[rarity];
     const star = this.state.getChibiStar(chibi.id);
     const worldId = getMinerWorldId(chibi.id);
     const resBonusPct = this.state.getWorldResonanceDmgBonusPct(worldId);
@@ -143,52 +141,52 @@ export class PlotInspectUi {
     const eqEnchant = getEnchantById(unit.enchantId);
 
     root.innerHTML = `
-      <button class="absolute top-4 @max-[720px]:top-2.5 left-1/2 -translate-x-1/2 px-[34px] py-[7px] rounded-2xl border-2 border-orange-300 bg-[linear-gradient(135deg,#ea580c,#c2410c)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_0_#431407,0_8px_22px_-4px_rgba(234,88,12,0.45)] text-white text-[19px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-inspect-action="exit">Exit</button>
+      <button class="absolute top-4 @max-[720px]:top-2.5 left-1/2 -translate-x-1/2 px-[34px] py-[7px] rounded-2xl border-[3px] border-[#14111d] bg-[#fb923c] hover:bg-[#fdba74] text-[#14111d] text-[19px] font-black cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.97] active:scale-[0.94]" data-inspect-action="exit">Exit</button>
 
-      <div class="absolute left-7 @max-[920px]:left-3 top-[38%] @max-[920px]:top-14 -translate-y-1/2 @max-[920px]:translate-y-0 w-[245px] @max-[920px]:w-[208px] px-3.5 py-3 rounded-2xl bg-[linear-gradient(180deg,#141e36_0%,#0a1020_100%)] border-2 border-[#2a3b5c] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_36px_rgba(0,0,0,0.72)] flex flex-col gap-[3px]">
+      <div class="absolute left-7 @max-[920px]:left-3 top-[38%] @max-[920px]:top-14 -translate-y-1/2 @max-[920px]:translate-y-0 w-[252px] @max-[920px]:w-[214px] px-3.5 py-3 rounded-2xl bg-[#fff8e7] border-[3px] border-[#14111d] flex flex-col gap-1">
         <div class="flex items-center justify-between gap-1.5">
-          <div class="text-[20px] font-black leading-[1.1] mam-outline-sm truncate">${chibi.name}</div>
-          ${star > 0 ? `<span class="px-1.5 py-0.5 rounded-md bg-[#3b290a] border border-amber-400 text-amber-300 text-[11px] font-black tabular-nums shrink-0">★${star}</span>` : ''}
+          <div class="text-[20px] font-black leading-[1.1] text-[#14111d] truncate">${chibi.name}</div>
+          ${star > 0 ? `<span class="px-1.5 py-0.5 rounded-md bg-[#fde047] border-2 border-[#14111d] text-[#14111d] text-[11px] font-black tabular-nums shrink-0">★${star}</span>` : ''}
         </div>
-        <div class="text-[15px] font-extrabold mam-outline-sm flex items-center gap-1.5 flex-wrap">
+        <div class="text-[14px] font-black flex items-center gap-1.5 flex-wrap">
           ${
             rarity === 'fusion'
               ? `<span class="mam-fusion-badge">✦ FUSION</span>`
               : rarity === 'limited'
                 ? `<span class="mam-limited-badge">✦ LIMITED</span>`
-                : `<span style="color:${rColor}">${rarity[0].toUpperCase() + rarity.slice(1)}</span>`
+                : `<span class="px-2 py-0.5 rounded-md bg-white border-[1.5px] border-[#14111d] text-[11px] font-black uppercase text-[#14111d]">${rarity}</span>`
           }
-          <span style="color:#fff">•</span>
-          <span class="${mut.id === 'rainbow' ? 'mam-rainbow-text' : ''}" style="${mut.id === 'rainbow' ? '' : `color:${mut.color}`}">${mut.name}</span>
+          <span class="text-[#14111d]">•</span>
+          <span class="px-2 py-0.5 rounded-md bg-white border-[1.5px] border-[#14111d] text-[11px] font-black ${mut.id === 'rainbow' ? 'mam-rainbow-text' : 'text-[#14111d]'}">${mut.name}</span>
         </div>
-        ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black tabular-nums text-violet-300 mam-outline-sm">✦ ${worldName} Resonance (+${Math.round(resBonusPct * 100)}% DMG)</div>` : ''}
-        ${fusionDef ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#0d263d] border border-cyan-400 text-[11px] font-black text-cyan-200 self-start mam-outline-sm">★ Passive: ${fusionDef.passive.label}</div>` : ''}
-        ${eqEnchant ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#141132] border text-[10.5px] font-black self-start mam-outline-sm" style="border-color:${eqEnchant.color};color:${eqEnchant.color}">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}
-        <div class="text-[13px] font-bold tabular-nums text-[#e2e8f0] mt-0.5 mam-outline-sm">
+        ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black tabular-nums text-[#7c3aed]">✦ ${worldName} Resonance (+${Math.round(resBonusPct * 100)}% DMG)</div>` : ''}
+        ${fusionDef ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#cffafe] border-2 border-[#14111d] text-[11px] font-black text-[#14111d] self-start">★ Passive: ${fusionDef.passive.label}</div>` : ''}
+        ${eqEnchant ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border-2 border-[#14111d] text-[10.5px] font-black text-[#14111d] self-start">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}
+        <div class="text-[12.5px] font-bold tabular-nums text-[#475569] mt-0.5">
           Lv. ${unit.damageLevel} • Speed ${stats.speed} • Mining x${stats.miningMult}
         </div>
-        <div class="text-[24px] font-black tabular-nums text-[#f87171] leading-[1.1] mt-1.5 mam-outline">${fmtShort(stats.dmg)} dmg</div>
-        <div class="text-[14px] font-extrabold tabular-nums text-[#4ade80] mam-outline-sm">Worth ${fmtMoney(stats.worth)}</div>
-        <button class="mt-2 px-3 py-1.5 rounded-xl border-2 border-rose-300 bg-[linear-gradient(135deg,#ef4444,#991b1b)] shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_3px_0_#450a0a,0_6px_16px_-2px_rgba(239,68,68,0.45)] text-white text-[13px] font-extrabold cursor-pointer self-start transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-inspect-action="pickup">Pick Up from Plot</button>
+        <div class="text-[24px] font-black tabular-nums text-[#dc2626] leading-[1.1] mt-1">${fmtShort(stats.dmg)} dmg</div>
+        <div class="text-[14px] font-black tabular-nums text-[#15803d]">Worth ${fmtMoney(stats.worth)}</div>
+        <button class="mt-2 px-3 py-1.5 rounded-xl border-[2.5px] border-[#14111d] bg-[#f43f5e] hover:bg-[#fb7185] text-white text-[13px] font-black cursor-pointer self-start transition-transform duration-150 ease-out hover:scale-[0.97] hover:-rotate-[1deg] active:scale-[0.94]" data-inspect-action="pickup">Pick Up from Plot</button>
       </div>
 
       <button class="${TW_INSPECT_ARROW} left-[31%] @max-[920px]:left-3" data-inspect-action="prev">&lt;</button>
       <button class="${TW_INSPECT_ARROW} right-[31%] @max-[920px]:right-3" data-inspect-action="next">&gt;</button>
 
-      <div class="absolute right-[22px] @max-[920px]:right-3 top-[48%] @max-[920px]:top-3 -translate-y-1/2 @max-[920px]:translate-y-0 flex flex-col items-end gap-1">
-        <div class="flex items-center gap-1.5 text-[22px] font-black tabular-nums text-[#67e8f9] mam-outline-sm" data-inspect-gems="true">${hudIconHtml('gem', 24, 'Gems')} <span>${fmtInt(this.state.gems)}</span></div>
-        <div class="text-[24px] font-black tabular-nums text-[#4ade80] mam-outline" data-inspect-cash="true">${fmtMoney(this.state.cash)}</div>
+      <div class="absolute right-[22px] @max-[920px]:right-3 top-[48%] @max-[920px]:top-3 -translate-y-1/2 @max-[920px]:translate-y-0 flex flex-col items-end gap-1.5">
+        <div class="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#fff8e7] border-[2.5px] border-[#14111d] text-[19px] font-black tabular-nums text-[#14111d]" data-inspect-gems="true">${hudIconHtml('gem', 22, 'Gems')} <span>${fmtInt(this.state.gems)}</span></div>
+        <div class="px-3 py-1 rounded-xl bg-[#dcfce7] border-[2.5px] border-[#14111d] text-[20px] font-black tabular-nums text-[#15803d]" data-inspect-cash="true">${fmtMoney(this.state.cash)}</div>
       </div>
 
       <div class="absolute bottom-[14px] left-1/2 -translate-x-1/2 w-[860px] max-w-[calc(100%-24px)] flex flex-col items-center gap-2 pointer-events-auto">
         <div class="grid grid-cols-[repeat(4,150px)] @max-[920px]:grid-cols-4 @max-[920px]:w-full gap-2 @max-[920px]:gap-1.5">
-          <button class="${TW_INSPECT_TAB} mam-outline-sm ${this.inspectTab === 'pickaxe' ? 'active' : ''}" data-inspect-tab="pickaxe">${hudIconHtml('pickaxe', 20, 'Pickaxe')} Pickaxe</button>
-          <button class="${TW_INSPECT_TAB} mam-outline-sm ${this.inspectTab === 'stats' ? 'active' : ''}" data-inspect-tab="stats">${hudIconHtml('stats', 20, 'Stats')} Stats</button>
-          <button class="${TW_INSPECT_TAB} mam-outline-sm ${this.inspectTab === 'mutation' ? 'active' : ''}" data-inspect-tab="mutation">${hudIconHtml('mutation', 20, 'Mutation')} Mutation</button>
-          <button class="${TW_INSPECT_TAB} mam-outline-sm ${this.inspectTab === 'enchants' ? 'active' : ''}" data-inspect-tab="enchants">${hudIconHtml('enchant', 20, 'Enchants')} Enchants</button>
+          <button class="${TW_INSPECT_TAB} ${this.inspectTab === 'pickaxe' ? 'active' : ''}" data-inspect-tab="pickaxe">${hudIconHtml('pickaxe', 20, 'Pickaxe')} Pickaxe</button>
+          <button class="${TW_INSPECT_TAB} ${this.inspectTab === 'stats' ? 'active' : ''}" data-inspect-tab="stats">${hudIconHtml('stats', 20, 'Stats')} Stats</button>
+          <button class="${TW_INSPECT_TAB} ${this.inspectTab === 'mutation' ? 'active' : ''}" data-inspect-tab="mutation">${hudIconHtml('mutation', 20, 'Mutation')} Mutation</button>
+          <button class="${TW_INSPECT_TAB} ${this.inspectTab === 'enchants' ? 'active' : ''}" data-inspect-tab="enchants">${hudIconHtml('enchant', 20, 'Enchants')} Enchants</button>
         </div>
 
-        <div class="mam-inspect-panel w-full p-2.5 rounded-2xl bg-[linear-gradient(180deg,#141e36_0%,#0a1020_100%)] border-2 border-[#2a3b5c] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_36px_rgba(0,0,0,0.72)] flex items-stretch gap-2 overflow-x-hidden [&.is-stats]:flex-col [&.is-stats]:gap-2 [&.is-pickaxe]:grid [&.is-pickaxe]:grid-cols-6 @max-[760px]:[&.is-pickaxe]:grid-cols-4 [&.is-pickaxe]:gap-1.5 [&.is-enchants]:grid [&.is-enchants]:grid-cols-10 @max-[760px]:[&.is-enchants]:grid-cols-5 [&.is-enchants]:gap-1.5 [&.is-mutation]:items-center [&.is-mutation]:gap-1.5 @max-[760px]:[&.is-mutation]:flex-wrap [&_.mam-strip-card]:min-w-0 [&_.mam-strip-card]:w-auto [&_.mam-strip-card_.mam-card-name]:text-[11px] [&_.mam-strip-card_.mam-card-name]:leading-tight [&_.mam-strip-card_.mam-card-name]:whitespace-nowrap [&_.mam-strip-card_.mam-card-name]:overflow-hidden [&_.mam-strip-card_.mam-card-name]:text-ellipsis [&.is-mutation_.mam-strip-card]:flex-1 [&.is-mutation_.mam-strip-card]:h-[84px] [&.is-mutation_.mam-strip-card]:py-1 [&.is-mutation_.mam-strip-card]:px-0.5 [&.is-enchants_.mam-strip-card]:h-[84px] [&.is-enchants_.mam-strip-card]:py-1 [&.is-enchants_.mam-strip-card]:px-0.5 [&.is-pickaxe_.mam-strip-card]:h-[84px] [&.is-pickaxe_.mam-strip-card]:py-1 [&.is-pickaxe_.mam-strip-card]:px-0.5 ${
+        <div class="mam-inspect-panel w-full p-2.5 rounded-2xl bg-[#fff8e7] border-[3px] border-[#14111d] flex items-stretch gap-2 overflow-x-hidden [&.is-stats]:flex-col [&.is-stats]:gap-2 [&.is-pickaxe]:grid [&.is-pickaxe]:grid-cols-6 @max-[760px]:[&.is-pickaxe]:grid-cols-4 [&.is-pickaxe]:gap-1.5 [&.is-enchants]:grid [&.is-enchants]:grid-cols-10 @max-[760px]:[&.is-enchants]:grid-cols-5 [&.is-enchants]:gap-1.5 [&.is-mutation]:items-center [&.is-mutation]:gap-1.5 @max-[760px]:[&.is-mutation]:flex-wrap [&_.mam-strip-card]:min-w-0 [&_.mam-strip-card]:w-auto [&_.mam-strip-card_.mam-card-name]:text-[11px] [&_.mam-strip-card_.mam-card-name]:leading-tight [&_.mam-strip-card_.mam-card-name]:whitespace-nowrap [&_.mam-strip-card_.mam-card-name]:overflow-hidden [&_.mam-strip-card_.mam-card-name]:text-ellipsis [&.is-mutation_.mam-strip-card]:flex-1 [&.is-mutation_.mam-strip-card]:h-[84px] [&.is-mutation_.mam-strip-card]:py-1 [&.is-mutation_.mam-strip-card]:px-0.5 [&.is-enchants_.mam-strip-card]:h-[84px] [&.is-enchants_.mam-strip-card]:py-1 [&.is-enchants_.mam-strip-card]:px-0.5 [&.is-pickaxe_.mam-strip-card]:h-[84px] [&.is-pickaxe_.mam-strip-card]:py-1 [&.is-pickaxe_.mam-strip-card]:px-0.5 ${
           this.inspectTab === 'mutation'
             ? 'is-mutation'
             : this.inspectTab === 'enchants'
@@ -251,15 +249,15 @@ export class PlotInspectUi {
       ];
       const modeToggleHtml = `
         <div class="w-full flex items-center justify-between gap-2 px-1">
-          <span class="text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">Upgrade Amount</span>
-          <div class="inline-flex items-center gap-1 p-0.5 rounded-lg border border-slate-700/90 bg-[#080d1a]">
+          <span class="text-[11px] font-black uppercase tracking-[0.12em] text-[#475569]">Upgrade Amount</span>
+          <div class="inline-flex items-center gap-1 p-0.5 rounded-xl border-2 border-[#14111d] bg-[#fcecc8]">
             ${buyModes
               .map(
                 (m) => `
-              <button class="px-2.5 py-0.5 rounded-md text-[11px] font-black cursor-pointer transition-colors ${
+              <button class="px-2.5 py-0.5 rounded-lg text-[11px] font-black cursor-pointer transition-colors ${
                 this.buyMode === m.id
-                  ? 'bg-sky-400 text-slate-950 shadow-[0_0_8px_rgba(56,189,248,0.45)]'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-[#38bdf8] text-[#14111d] border-[1.5px] border-[#14111d]'
+                  : 'text-[#475569] hover:bg-white hover:text-[#14111d]'
               }" data-buy-mode="${m.id}">${m.label}</button>
             `
               )
@@ -271,25 +269,25 @@ export class PlotInspectUi {
         ${modeToggleHtml}
         <div class="w-full grid grid-cols-3 @max-[640px]:grid-cols-1 gap-2">
           <div class="${TW_STAT_CARD}">
-            <div class="text-[13px] font-extrabold tabular-nums text-[#e2e8f0] mam-outline-sm">Damage Lv. ${unit.damageLevel} / 100</div>
-            <div class="text-[15px] font-black tabular-nums mam-outline-sm">
-              <span style="color:#ef4444">${fmtShort(stats.dmg)}</span> &gt; <span style="color:#4ade80">${fmtShort(stats.nextDmg)}</span>
+            <div class="text-[13px] font-black tabular-nums text-[#14111d]">Damage Lv. ${unit.damageLevel} / 100</div>
+            <div class="text-[15px] font-black tabular-nums">
+              <span class="text-[#dc2626]">${fmtShort(stats.dmg)}</span> &gt; <span class="text-[#15803d]">${fmtShort(stats.nextDmg)}</span>
             </div>
-            <button class="${TW_STAT_BTN} tabular-nums mam-outline-sm ${dmgMax ? 'maxed' : ''}" data-inspect-action="up-dmg">
+            <button class="${TW_STAT_BTN} tabular-nums ${dmgMax ? 'maxed' : ''}" data-inspect-action="up-dmg">
               ${fmtPlanBtn(dmgMax, dmgPlan)}
             </button>
           </div>
           <div class="${TW_STAT_CARD}">
-            <div class="text-[13px] font-extrabold tabular-nums text-[#e2e8f0] mam-outline-sm">Speed Lv. ${unit.speedLevel} / 17</div>
-            <div class="text-[15px] font-black tabular-nums mam-outline-sm" style="color:#4ade80">${stats.speed}</div>
-            <button class="${TW_STAT_BTN} tabular-nums mam-outline-sm ${spdMax ? 'maxed' : ''}" data-inspect-action="up-spd">
+            <div class="text-[13px] font-black tabular-nums text-[#14111d]">Speed Lv. ${unit.speedLevel} / 17</div>
+            <div class="text-[15px] font-black tabular-nums text-[#15803d]">${stats.speed}</div>
+            <button class="${TW_STAT_BTN} tabular-nums ${spdMax ? 'maxed' : ''}" data-inspect-action="up-spd">
               ${fmtPlanBtn(spdMax, spdPlan)}
             </button>
           </div>
           <div class="${TW_STAT_CARD}">
-            <div class="text-[13px] font-extrabold tabular-nums text-[#e2e8f0] mam-outline-sm">Mining Speed Lv. ${unit.miningSpeedLevel} / 16</div>
-            <div class="text-[15px] font-black tabular-nums mam-outline-sm" style="color:#4ade80">x${stats.miningMult}</div>
-            <button class="${TW_STAT_BTN} tabular-nums mam-outline-sm ${minMax ? 'maxed' : ''}" data-inspect-action="up-mine">
+            <div class="text-[13px] font-black tabular-nums text-[#14111d]">Mining Speed Lv. ${unit.miningSpeedLevel} / 16</div>
+            <div class="text-[15px] font-black tabular-nums text-[#15803d]">x${stats.miningMult}</div>
+            <button class="${TW_STAT_BTN} tabular-nums ${minMax ? 'maxed' : ''}" data-inspect-action="up-mine">
               ${fmtPlanBtn(minMax, minPlan)}
             </button>
           </div>
@@ -304,11 +302,11 @@ export class PlotInspectUi {
         const available = eq || owned > 0;
         return `
           <div class="${TW_STRIP_CARD} ${eq ? 'equipped' : ''} ${available ? '' : 'locked'}" style="${rarityVars(p.rarity)}" data-pickaxe-id="${p.id}" title="${eq ? 'Click to Unequip (returns to bag)' : owned > 0 ? 'Click to Equip (1 per Chibi)' : 'Locked — Buy in Pickaxe Shop'}">
-            ${eq ? '<span class="absolute top-0.5 right-1 text-[13px] font-black text-[#4ade80] [text-shadow:0_1px_2px_#000]">✓</span>' : ''}
-            <div class="mam-card-name mam-outline-sm">${p.name}</div>
+            ${eq ? '<span class="absolute top-0.5 right-1 px-1 rounded bg-[#22c55e] border border-[#14111d] text-[10px] font-black text-[#14111d]">✓</span>' : ''}
+            <div class="mam-card-name">${p.name}</div>
             <div>${available ? pickaxeIconHtml(p.id, 36, p.name) : hudIconHtml('lock', 30, 'Locked')}</div>
             <div class="mam-card-bottom">
-              <span class="mam-card-qty mam-outline-sm">${eq ? 'Equipped' : owned > 0 ? `x${owned}` : 'Locked'}</span>
+              <span class="mam-card-qty">${eq ? 'Equipped' : owned > 0 ? `x${owned}` : 'Locked'}</span>
             </div>
           </div>
         `;
@@ -321,9 +319,9 @@ export class PlotInspectUi {
         .map(
           (m) => `
           <div class="${TW_STRIP_CARD} ${m.rarity === 'rainbow' ? 'rarity-rainbow' : ''} ${unit.mutationId === m.id ? 'equipped' : ''}" style="${rarityVars(m.rarity)}">
-            <div class="mam-card-name mam-outline-sm ${m.id === 'rainbow' ? 'mam-rainbow-text' : ''}" style="${m.id === 'rainbow' ? '' : `color:${m.color}`}">${m.name}</div>
-            <div class="mam-outline-sm tabular-nums" style="font-size:15px;font-weight:900;color:#fca5a5">${m.mult}X</div>
-            <div class="mam-card-qty mam-outline-sm">${fmtPct(m.chancePct)}</div>
+            <div class="mam-card-name ${m.id === 'rainbow' ? 'mam-rainbow-text' : ''}">${m.name}</div>
+            <div class="tabular-nums text-[#dc2626]" style="font-size:14px;font-weight:900">${m.mult}X</div>
+            <div class="mam-card-qty">${fmtPct(m.chancePct)}</div>
           </div>
         `
         )
@@ -332,17 +330,17 @@ export class PlotInspectUi {
       const isAutoRolling = this.autoRollMutSlot !== null;
       return `
         ${mutCards}
-        <div class="flex-[0_0_184px] @max-[760px]:flex-[1_1_100%] h-[84px] px-2.5 py-2 rounded-xl bg-[#0a1224] border border-slate-700/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] flex flex-col justify-between">
+        <div class="flex-[0_0_184px] @max-[760px]:flex-[1_1_100%] h-[84px] px-2.5 py-2 rounded-xl bg-white border-[2.5px] border-[#14111d] flex flex-col justify-between">
           <div class="flex items-center justify-between gap-1.5">
-            <div class="mam-outline-sm truncate text-[14px] font-black ${curMut.id === 'rainbow' ? 'mam-rainbow-text' : ''}" style="${curMut.id === 'rainbow' ? '' : `color:${curMut.color}`}">${curMut.name}</div>
-            <div class="mam-outline-sm tabular-nums inline-flex items-center gap-1 text-[13px] font-black text-[#f9a8d4] shrink-0">${hudIconHtml('gem', 15, 'Gems')} ${fmtInt(stats.mutationCost)}</div>
+            <div class="truncate text-[13px] font-black ${curMut.id === 'rainbow' ? 'mam-rainbow-text' : 'text-[#14111d]'}">${curMut.name}</div>
+            <div class="tabular-nums inline-flex items-center gap-1 text-[13px] font-black text-[#db2777] shrink-0">${hudIconHtml('gem', 15, 'Gems')} ${fmtInt(stats.mutationCost)}</div>
           </div>
           <div class="grid grid-cols-2 gap-1.5">
-            <button class="mam-sheen-hover relative overflow-hidden h-9 rounded-lg border border-orange-300/70 bg-[linear-gradient(135deg,#f97316,#c2410c)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_3px_10px_rgba(234,88,12,0.4)] text-white text-[13px] font-black cursor-pointer transition-[transform,filter] duration-150 hover:brightness-110 active:scale-[0.97] mam-outline-sm" data-inspect-action="roll-mut">Roll</button>
-            <button class="h-9 rounded-lg border text-[12px] font-black cursor-pointer transition-colors mam-outline-sm ${
+            <button class="mam-sheen-hover relative overflow-hidden h-9 rounded-lg border-2 border-[#14111d] bg-[#fb923c] hover:bg-[#fdba74] text-[#14111d] text-[13px] font-black cursor-pointer transition-transform duration-150 hover:scale-[0.96] active:scale-[0.93]" data-inspect-action="roll-mut">Roll</button>
+            <button class="h-9 rounded-lg border-2 border-[#14111d] text-[12px] font-black cursor-pointer transition-colors ${
               isAutoRolling
-                ? 'border-rose-300 bg-rose-600 text-white animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.5)]'
-                : 'border-cyan-400/70 bg-[linear-gradient(180deg,#0e3a52,#082032)] text-cyan-200 hover:brightness-125'
+                ? 'bg-[#f43f5e] text-white animate-pulse'
+                : 'bg-[#bae6fd] text-[#14111d] hover:bg-[#7dd3fc]'
             }" data-inspect-action="toggle-auto-mut" title="Auto-stops on Frozen+ or when out of Gems">${isAutoRolling ? 'Stop' : 'Auto'}</button>
           </div>
         </div>
@@ -366,11 +364,11 @@ export class PlotInspectUi {
             : 'Locked — Roll in Enhance Altar';
       return `
         <div class="${TW_STRIP_CARD} ${eq ? 'equipped' : ''} ${available ? '' : 'locked'}" style="${rarityVars(e.rarity)}" data-enchant-id="${e.id}" tabindex="0" title="${e.name} • ${e.dmgMult}x DMG • +${orePct}% Ore Drop • +${sellPct}% Sell • +${spdPct}% Spd • ${statusHint}">
-          ${eq ? '<span class="absolute top-0.5 right-1 text-[13px] font-black text-[#4ade80] [text-shadow:0_1px_2px_#000]">✓</span>' : ''}
-          <div class="mam-card-name mam-outline-sm">${e.name}</div>
+          ${eq ? '<span class="absolute top-0.5 right-1 px-1 rounded bg-[#22c55e] border border-[#14111d] text-[10px] font-black text-[#14111d]">✓</span>' : ''}
+          <div class="mam-card-name">${e.name}</div>
           <div class="flex-1 min-h-0 flex items-center justify-center pointer-events-none">${enchantAuraIconHtml(e.id, e.color, 36, e.name)}</div>
           <div class="mam-card-bottom">
-            <span class="mam-card-qty mam-outline-sm">${eq ? 'Equipped' : spare > 0 ? `x${spare}` : totalOwned > 0 ? 'In Use' : 'Locked'}</span>
+            <span class="mam-card-qty">${eq ? 'Equipped' : spare > 0 ? `x${spare}` : totalOwned > 0 ? 'In Use' : 'Locked'}</span>
           </div>
         </div>
       `;
@@ -383,25 +381,25 @@ export class PlotInspectUi {
     const isObtained = this.pendingMutationConfirm.mode === 'obtained';
     const title = isObtained ? 'Rare Mutation Obtained!' : 'High Mutation Equipped!';
     const desc = isObtained
-      ? `${chibiName} rolled <span class="font-black" style="color:${mut.color}">${mut.name} (${mut.mult}X)</span>! Rolling again will replace it. Keep or continue rolling?`
-      : `${chibiName} already has <span class="font-black" style="color:${mut.color}">${mut.name} (${mut.mult}X)</span>! Rolling again will overwrite it. Continue rolling or stop?`;
+      ? `${chibiName} rolled <span class="font-black text-[#14111d] underline decoration-2">${mut.name} (${mut.mult}X)</span>! Rolling again will replace it. Keep or continue rolling?`
+      : `${chibiName} already has <span class="font-black text-[#14111d] underline decoration-2">${mut.name} (${mut.mult}X)</span>! Rolling again will overwrite it. Continue rolling or stop?`;
 
     return `
-      <div class="fixed inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 pointer-events-auto" data-mut-confirm-backdrop="true" role="dialog" aria-modal="true" aria-label="${title}">
-        <div class="w-[min(420px,100%)] rounded-2xl border-2 bg-[linear-gradient(180deg,#141d34_0%,#0a0f1d_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_20px_50px_rgba(0,0,0,0.85)] p-5 flex flex-col items-center gap-3.5 text-center" style="border-color:${mut.color}" data-mut-confirm-dialog="true">
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#362409] border border-amber-400 text-amber-300 text-[12px] font-black tracking-wide uppercase mam-outline-sm">
+      <div class="fixed inset-0 z-30 flex items-center justify-center bg-[#14111d]/60 p-4 pointer-events-auto" data-mut-confirm-backdrop="true" role="dialog" aria-modal="true" aria-label="${title}">
+        <div class="w-[min(420px,100%)] rounded-2xl border-[3.5px] border-[#14111d] bg-[#fff8e7] p-5 flex flex-col items-center gap-3.5 text-center" data-mut-confirm-dialog="true">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fde047] border-2 border-[#14111d] text-[#14111d] text-[12px] font-black tracking-wide uppercase">
             <span>&#9888;&#65039;</span> ${title}
           </div>
-          <div class="w-full py-3 px-4 rounded-xl bg-[#11192e] border flex flex-col items-center gap-0.5" style="border-color:${mut.color}">
-            <div class="text-[24px] font-black leading-tight mam-outline" style="color:${mut.color}">${mut.name}</div>
-            <div class="text-[16px] font-black text-[#fca5a5] mam-outline-sm">${mut.mult}X Damage &bull; ${fmtPct(mut.chancePct)}</div>
+          <div class="w-full py-3 px-4 rounded-xl bg-white border-[2.5px] border-[#14111d] flex flex-col items-center gap-0.5">
+            <div class="text-[24px] font-black leading-tight text-[#14111d] ${mut.id === 'rainbow' ? 'mam-rainbow-text' : ''}">${mut.name}</div>
+            <div class="text-[15px] font-black text-[#dc2626]">${mut.mult}X Damage &bull; ${fmtPct(mut.chancePct)}</div>
           </div>
-          <p class="text-[14px] leading-snug font-bold text-[#e2e8f0] m-0">${desc}</p>
+          <p class="text-[14px] leading-snug font-bold text-[#334155] m-0">${desc}</p>
           <div class="w-full grid grid-cols-2 gap-2.5 mt-1">
-            <button class="h-11 rounded-xl border-2 border-[#14532d] bg-[linear-gradient(180deg,#22c55e,#15803d)] shadow-[0_3px_0_#14532d] text-white text-[15px] font-black cursor-pointer transition-[transform,filter] duration-120 hover:brightness-110 active:translate-y-0.5 mam-outline-sm" data-inspect-action="mut-stop">Stop (Keep)</button>
-            <button class="h-11 rounded-xl border-2 border-[#7c2d12] bg-[linear-gradient(180deg,#fb923c,#dc2626)] shadow-[0_3px_0_#7c2d12] text-white text-[14px] font-black cursor-pointer inline-flex items-center justify-center gap-1.5 transition-[transform,filter] duration-120 hover:brightness-110 active:translate-y-0.5 mam-outline-sm" data-inspect-action="mut-continue">
+            <button class="h-11 rounded-xl border-[2.5px] border-[#14111d] bg-[#4ade80] hover:bg-[#86efac] text-[#14111d] text-[15px] font-black cursor-pointer transition-transform duration-120 hover:scale-[0.97] active:scale-[0.94]" data-inspect-action="mut-stop">Stop (Keep)</button>
+            <button class="h-11 rounded-xl border-[2.5px] border-[#14111d] bg-[#fb923c] hover:bg-[#fdba74] text-[#14111d] text-[14px] font-black cursor-pointer inline-flex items-center justify-center gap-1.5 transition-transform duration-120 hover:scale-[0.97] active:scale-[0.94]" data-inspect-action="mut-continue">
               <span>Continue</span>
-              <span class="inline-flex items-center gap-0.5 text-[#fbcfe8]">${hudIconHtml('gem', 16, 'Gems')} ${fmtInt(mutationCost)}</span>
+              <span class="inline-flex items-center gap-0.5 text-[#9d174d]">${hudIconHtml('gem', 16, 'Gems')} ${fmtInt(mutationCost)}</span>
             </button>
           </div>
         </div>

@@ -43,12 +43,12 @@ export class DailyLoginModalUi {
         const cardStyle = chibi ? `style="${rarityVars(chibi.rarity)}"` : '';
 
         const statusBadge = isClaimed
-          ? `<span class="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/60 text-emerald-300 text-[10px] font-black uppercase">Claimed</span>`
+          ? `<span class="px-2 py-0.5 rounded-md bg-[#2ee59d] border border-[#14111d] text-[#14111d] text-[10px] font-black uppercase">Claimed</span>`
           : isClaimable
-            ? `<span class="px-2 py-0.5 rounded-md bg-amber-400/20 border border-amber-300/70 text-amber-200 text-[10px] font-black uppercase animate-pulse">Ready!</span>`
+            ? `<span class="px-2 py-0.5 rounded-md bg-[#ff4d2e] border border-[#14111d] text-white text-[10px] font-black uppercase animate-pulse">Ready!</span>`
             : chibi
-              ? `<span class="px-2 py-0.5 rounded-md bg-purple-500/20 border border-purple-400/50 text-purple-200 text-[10px] font-black uppercase">Tomorrow</span>`
-              : `<span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-600/60 text-slate-400 text-[10px] font-black uppercase">Soon</span>`;
+              ? `<span class="px-2 py-0.5 rounded-md bg-[#e9d5ff] border border-[#14111d] text-[#14111d] text-[10px] font-black uppercase">Tomorrow</span>`
+              : `<span class="px-2 py-0.5 rounded-md bg-[#e2e8f0] border border-[#14111d] text-[#5b526e] text-[10px] font-black uppercase">Soon</span>`;
 
         const rarityHtml = chibi ? renderRarityBadgeHtml(chibi.rarity) : '';
 
@@ -58,15 +58,15 @@ export class DailyLoginModalUi {
               ${portraitHtml}
               <div class="flex-1 min-w-0 flex flex-col gap-1">
                 <div class="flex items-center justify-between gap-2">
-                  <span class="px-2 py-0.5 rounded-md bg-[#080d1a] border border-amber-300/40 text-[11px] font-black text-amber-200 tabular-nums">DAY ${r.day} • APEX FINALE</span>
+                  <span class="px-2 py-0.5 rounded-md bg-[#14111d] text-[11px] font-black text-[#fde047] tabular-nums">DAY ${r.day} • APEX FINALE</span>
                   ${statusBadge}
                 </div>
                 <div class="flex items-baseline justify-between gap-2 min-w-0">
-                  <div class="text-[14px] font-black text-white leading-tight truncate">${r.label}</div>
-                  <div class="text-[10px] font-bold text-slate-300 leading-tight shrink-0">${r.nonSellable ? 'Non-Sellable' : r.subtitle}</div>
+                  <div class="text-[14px] font-black text-[#14111d] leading-tight truncate">${r.label}</div>
+                  <div class="text-[10px] font-bold text-[#5b526e] leading-tight shrink-0">${r.nonSellable ? 'Non-Sellable' : r.subtitle}</div>
                 </div>
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="inline-flex items-center px-2 py-[2px] rounded-full bg-amber-400/15 border border-amber-300/60 text-amber-200 text-[10px] font-black tracking-[0.12em]">★★★★★</span>
+                  <span class="inline-flex items-center px-2 py-[2px] rounded-full bg-[#14111d] text-[#fde047] text-[10px] font-black tracking-[0.12em]">★★★★★</span>
                   ${rarityHtml}
                 </div>
               </div>
@@ -77,16 +77,16 @@ export class DailyLoginModalUi {
         return `
           <div class="${cardCls}" ${cardStyle}>
             <div class="w-full flex items-center justify-between gap-1">
-              <span class="px-2 py-0.5 rounded-md bg-[#080d1a] border border-white/15 text-[11px] font-black text-white tabular-nums">DAY ${r.day}</span>
+              <span class="px-2 py-0.5 rounded-md bg-[#14111d] text-[11px] font-black text-[#fff8e7] tabular-nums">DAY ${r.day}</span>
               ${statusBadge}
             </div>
             ${portraitHtml}
-            <div class="text-[12px] font-black text-white leading-tight truncate w-full">${r.label}</div>
+            <div class="text-[12px] font-black text-[#14111d] leading-tight truncate w-full">${r.label}</div>
             <div class="flex flex-col items-center justify-center gap-1">
-              <span class="inline-flex items-center px-2 py-[1px] rounded-full bg-amber-400/15 border border-amber-300/60 text-amber-200 text-[9.5px] font-black tracking-[0.12em]">★★★★★</span>
+              <span class="inline-flex items-center px-2 py-[1px] rounded-full bg-[#14111d] text-[#fde047] text-[9.5px] font-black tracking-[0.12em]">★★★★★</span>
               ${rarityHtml}
             </div>
-            <div class="text-[10px] font-bold text-slate-300 leading-tight">${r.nonSellable ? 'Non-Sellable' : r.subtitle}</div>
+            <div class="text-[10px] font-bold text-[#5b526e] leading-tight">${r.nonSellable ? 'Non-Sellable' : r.subtitle}</div>
           </div>
         `;
       })
@@ -96,25 +96,25 @@ export class DailyLoginModalUi {
     const actionAreaHtml = snap.canClaim && nextReward
       ? `<button
           type="button"
-          class="w-full py-2.5 px-4 rounded-xl border-2 border-amber-300/80 bg-[linear-gradient(135deg,#f59e0b_0%,#a855f7_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_8px_22px_-4px_rgba(168,85,247,0.6)] text-white text-[14px] font-black uppercase tracking-wider cursor-pointer transition-[transform,filter] duration-150 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.98] mam-outline-sm"
+          class="w-full py-2.5 px-4 rounded-xl border-[2.5px] border-[#14111d] bg-[#fde047] text-[#14111d] text-[14px] font-black uppercase tracking-wider cursor-pointer transition-[transform,filter] duration-150 hover:scale-[0.98] active:scale-[0.95]"
           data-action="claim-daily-login"
         >
           ✦ Claim Day ${nextReward.day}: ${nextReward.label} (5★)
         </button>`
-      : `<div class="w-full py-2 px-3 rounded-xl border border-slate-700 bg-[#0d1426] text-center text-[12px] font-extrabold text-slate-300">
+      : `<div class="w-full py-2 px-3 rounded-xl border-2 border-[#14111d] bg-[#fcecc8] text-center text-[12px] font-black text-[#5b526e]">
           ${snap.claimedDays.length >= 7 && !snap.nextDay ? 'All 7 Daily Login Limited Chibis claimed!' : 'Already claimed today — come back tomorrow!'}
         </div>`;
 
     const headerExtraHtml = `
-      <span class="px-3 py-1 rounded-xl bg-purple-500/20 border border-purple-400/50 text-[12px] font-black text-purple-200 tabular-nums">
+      <span class="px-3 py-1 rounded-xl bg-[#e9d5ff] border-2 border-[#14111d] text-[12px] font-black text-[#14111d] tabular-nums">
         Claimed: ${snap.claimedDays.length} / 7
       </span>
     `;
 
     const bodyHtml = `
       <div class="w-full flex-1 min-h-0 flex flex-col gap-2.5">
-        <div class="shrink-0 px-3 py-1.5 rounded-xl border border-purple-400/35 bg-[#161033] text-[12px] font-bold text-purple-100 text-left">
-          Claim exclusive <span class="text-amber-300 font-black">5★ Full-Star Limited Chibis</span> every day! Limited Chibis start at Max 5★ and <span class="text-rose-300 font-black">cannot be sold</span>.
+        <div class="shrink-0 px-3 py-1.5 rounded-xl border-2 border-[#14111d] bg-[#ffffff] text-[12px] font-bold text-[#14111d] text-left">
+          Claim exclusive <span class="text-[#b45309] font-black">5★ Full-Star Limited Chibis</span> every day! Limited Chibis start at Max 5★ and <span class="text-[#dc2626] font-black">cannot be sold</span>.
         </div>
         <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain mam-no-scrollbar p-0.5">
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">

@@ -48,15 +48,15 @@ export function renderAltarStripCardsHtml(state: GameState): string {
     const borderBg =
       e.rarity === 'rainbow'
         ? 'rarity-rainbow'
-        : 'border-[2.5px] border-[var(--rarity-border,#64748b)] bg-[radial-gradient(circle_at_50%_45%,var(--rarity-bg,rgba(100,116,139,0.3)),#0f172a_85%)]';
+        : 'border-[2.5px] border-[#14111d] bg-[#fff8e7]';
     return `
-        <div class="mam-altar-card relative h-[102px] @max-[920px]:h-[86px] rounded-[7px] flex flex-col items-center justify-between py-[5px] px-1 cursor-pointer transition-[transform,filter] duration-[140ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-[3px] hover:scale-[1.04] hover:brightness-[1.08] ${borderBg}" style="--rarity-border:${e.color};--rarity-bg:${e.color}33" data-altar-card="${e.id}" tabindex="0" title="${e.name} • ${e.dmgMult}x DMG • +${orePct}% Ore Drop • +${sellPct}% Sell • +${spdPct}% Spd (${e.chancePct}%)">
-          <div class="w-full flex items-center justify-center gap-1">
-            <span class="text-[12px] font-black mam-outline-sm" style="color:${e.color}">${e.name}</span>
-            <span class="text-[11px] font-black tabular-nums text-[#facc15] mam-outline-sm" data-altar-qty="${e.id}">${qty > 0 ? `x${fmtInt(qty)}` : ''}</span>
+        <div class="mam-altar-card relative h-[102px] @max-[920px]:h-[86px] rounded-xl flex flex-col items-center justify-between py-[5px] px-1 cursor-pointer transition-transform duration-[140ms] ease-out hover:scale-[0.96] even:hover:rotate-[1.2deg] odd:hover:-rotate-[1.2deg] ${borderBg}" style="--rarity-border:${e.color};--rarity-bg:${e.color}33" data-altar-card="${e.id}" tabindex="0" title="${e.name} • ${e.dmgMult}x DMG • +${orePct}% Ore Drop • +${sellPct}% Sell • +${spdPct}% Spd (${e.chancePct}%)">
+          <div class="w-full flex items-center justify-center gap-1 px-1">
+            <span class="text-[11.5px] font-black text-[#14111d] truncate">${e.name}</span>
+            <span class="text-[10.5px] font-black tabular-nums px-1 rounded bg-[#fde047] border border-[#14111d] text-[#14111d]" data-altar-qty="${e.id}">${qty > 0 ? `x${fmtInt(qty)}` : ''}</span>
           </div>
-          <div class="flex-1 min-h-0 flex items-center justify-center pointer-events-none [&>.mam-3d-icon]:w-[46px] [&>.mam-3d-icon]:h-[46px]">${enchantAuraIconHtml(e.id, e.color, 46, e.name)}</div>
-          <div class="text-[11px] font-black tabular-nums text-[#f8fafc] mam-outline-sm">${e.chancePct}%</div>
+          <div class="flex-1 min-h-0 flex items-center justify-center pointer-events-none [&>.mam-3d-icon]:w-[44px] [&>.mam-3d-icon]:h-[44px]">${enchantAuraIconHtml(e.id, e.color, 46, e.name)}</div>
+          <div class="text-[10.5px] font-black tabular-nums text-[#334155]">${e.chancePct}%</div>
         </div>
       `;
   }).join('');
@@ -71,45 +71,46 @@ export function renderShopWorldHudHtml(opts: {
   modalHtml: string;
   toastStackHtml: string;
 }): string {
-  const dockBtnPickaxe = `${TW_SHOP_DOCK_BTN_BASE} border-2 border-orange-400 bg-[linear-gradient(160deg,#ea580c_0%,#431407_100%)]`;
-  const dockBtnSell = `${TW_SHOP_DOCK_BTN_BASE} border-2 border-emerald-400 bg-[linear-gradient(160deg,#10b981_0%,#064e3b_100%)]`;
-  const dockBtnGem = `${TW_SHOP_DOCK_BTN_BASE} border-2 border-cyan-400 bg-[linear-gradient(160deg,#06b6d4_0%,#164e63_100%)]`;
-  const dockBtnRainbow = `${TW_SHOP_DOCK_BTN_BASE} border-2 border-transparent [background:linear-gradient(160deg,#581c87_0%,#111827_100%)_padding-box,linear-gradient(135deg,#f43f5e,#f59e0b,#22c55e,#38bdf8,#c084fc)_border-box]`;
-  const dockBtnTower = `${TW_SHOP_DOCK_BTN_BASE} border-2 border-sky-400 bg-[linear-gradient(160deg,#0e7490_0%,#1e1b4b_100%)]`;
+  const dockBtnPickaxe = `${TW_SHOP_DOCK_BTN_BASE} border-[2.5px] border-[#14111d] bg-[#fb923c] hover:bg-[#fdba74] text-[#14111d]`;
+  const dockBtnSell = `${TW_SHOP_DOCK_BTN_BASE} border-[2.5px] border-[#14111d] bg-[#4ade80] hover:bg-[#86efac] text-[#14111d]`;
+  const dockBtnForge = `${TW_SHOP_DOCK_BTN_BASE} border-[2.5px] border-[#14111d] bg-[#fde047] hover:bg-[#fef08a] text-[#14111d]`;
+  const dockBtnGem = `${TW_SHOP_DOCK_BTN_BASE} border-[2.5px] border-[#14111d] bg-[#38bdf8] hover:bg-[#7dd3fc] text-[#14111d]`;
+  const dockBtnRainbow = `${TW_SHOP_DOCK_BTN_BASE} border-[2.5px] border-[#14111d] bg-[linear-gradient(135deg,#fda4af,#fde047,#86efac,#7dd3fc,#d8b4fe)] text-[#14111d]`;
+  const dockBtnTower = `${TW_SHOP_DOCK_BTN_BASE} border-[2.5px] border-[#14111d] bg-[#c084fc] hover:bg-[#d8b4fe] text-[#14111d]`;
 
   return `
       ${opts.weatherHtml}
       <div class="${TW_TOP_CENTER}">
-        <button class="${TW_SHOPS_PILL} mam-outline" data-action="back-to-mine">
+        <button class="${TW_SHOPS_PILL}" data-action="back-to-mine">
           ${hudIconHtml('shops', 28, 'Mine')}
           <span>Back to Mine</span>
         </button>
       </div>
 
-      <div class="mam-no-scrollbar absolute left-1/2 bottom-[14px] -translate-x-1/2 flex flex-wrap justify-center items-center gap-2 @max-[760px]:gap-1.5 px-3 py-2 @max-[760px]:px-2 @max-[760px]:py-1.5 rounded-2xl bg-[linear-gradient(180deg,#151e34_0%,#0b101e_100%)] border-2 border-[#2b3c5e] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_16px_36px_rgba(0,0,0,0.75)] w-max max-w-[calc(100%-24px)]">
+      <div class="mam-no-scrollbar absolute left-1/2 bottom-[14px] -translate-x-1/2 flex flex-wrap justify-center items-center gap-2 @max-[760px]:gap-1.5 px-3 py-2 @max-[760px]:px-2 @max-[760px]:py-1.5 rounded-2xl bg-[#fff8e7] border-[3px] border-[#14111d] w-max max-w-[calc(100%-24px)]">
         <button class="${dockBtnPickaxe}" data-action="open-pickaxe-shop">
           ${hudIconHtml('pickaxe', 28, 'Pickaxe')}
-          <span class="mam-outline-sm">Pickaxes</span>
+          <span>Pickaxes</span>
         </button>
         <button class="${dockBtnSell}" data-action="open-sell-shop">
           ${hudIconHtml('trade', 28, 'Sell')}
-          <span class="mam-outline-sm">Sell</span>
+          <span>Sell</span>
         </button>
-        <button class="${dockBtnPickaxe}" data-action="open-relic-forge">
+        <button class="${dockBtnForge}" data-action="open-relic-forge">
           <img src="${assetUrl('/relics/ember_gauntlet.webp')}" alt="Relic Forge" class="w-[28px] h-[28px] object-contain" />
-          <span class="mam-outline-sm">Forge</span>
+          <span>Forge</span>
         </button>
         <button class="${dockBtnGem}" data-action="open-gem-shop">
           ${hudIconHtml('gem', 28, 'Gem Shop')}
-          <span class="mam-outline-sm">Gem Shop</span>
+          <span>Gem Shop</span>
         </button>
         <button class="${dockBtnRainbow}" data-action="open-enchant-altar">
           ${hudIconHtml('enchant', 28, 'Enchant')}
-          <span class="mam-outline-sm">Enhance</span>
+          <span>Enhance</span>
         </button>
         <button class="${dockBtnTower}" data-action="open-gem-tower">
           ${towerIconHtml(26)}
-          <span class="mam-outline-sm">Tower</span>
+          <span>Tower</span>
         </button>
       </div>
 
@@ -176,8 +177,8 @@ export class AltarShopHudUi {
     return `
       ${opts.weatherHtml}
       <div class="${TW_TOP_CENTER} flex items-center gap-2.5">
-        <button class="px-[42px] py-2 rounded-2xl border-2 border-orange-300 bg-[linear-gradient(135deg,#ea580c_0%,#9a3412_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_0_#431407,0_8px_22px_-4px_rgba(234,88,12,0.45)] text-white text-[19px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline" data-action="altar-back">Back</button>
-        <button class="px-4 py-2 rounded-2xl border-2 border-cyan-300 bg-[linear-gradient(135deg,#0284c7_0%,#7c3aed_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_0_#1e1b4b,0_8px_22px_-4px_rgba(56,189,248,0.45)] text-white text-[16px] font-black cursor-pointer inline-flex items-center gap-1.5 transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-action="switch-to-fusion">
+        <button class="px-[42px] py-2 rounded-2xl border-[3px] border-[#14111d] bg-[#fb923c] hover:bg-[#fdba74] text-[#14111d] text-[19px] font-black cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.97] active:scale-[0.94]" data-action="altar-back">Back</button>
+        <button class="px-4 py-2 rounded-2xl border-[3px] border-[#14111d] bg-[#7dd3fc] hover:bg-[#bae6fd] text-[#14111d] text-[16px] font-black cursor-pointer inline-flex items-center gap-1.5 transition-transform duration-150 ease-out hover:scale-[0.97] active:scale-[0.94]" data-action="switch-to-fusion">
           <span>✦ Chibi Fusion</span>
         </button>
       </div>
@@ -187,19 +188,19 @@ export class AltarShopHudUi {
 
       <div class="absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(1240px,calc(100%-24px))] flex flex-col items-center gap-2 pointer-events-auto">
         <div class="flex items-stretch gap-2.5 flex-wrap justify-center">
-          <div class="min-w-[88px] rounded-xl border-2 border-[#7c3aed] bg-[radial-gradient(circle_at_50%_55%,#2e1654,#0f172a_80%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_6px_16px_rgba(0,0,0,0.6)] flex flex-col items-center justify-between gap-0.5 px-2 py-[5px] text-center">
-            <div class="text-[12px] font-extrabold text-[#e2e8f0] leading-[1.1] mam-outline-sm">Enchanted<br/>Dice</div>
+          <div class="min-w-[92px] rounded-xl border-[2.5px] border-[#14111d] bg-[#fff8e7] flex flex-col items-center justify-between gap-0.5 px-2.5 py-[6px] text-center">
+            <div class="text-[11.5px] font-black text-[#14111d] leading-[1.1]">Enchanted<br/>Dice</div>
             <div class="flex items-center justify-center h-[34px] [&>.mam-3d-icon]:w-[34px] [&>.mam-3d-icon]:h-[34px]">${enchantDiceIconHtml(34)}</div>
-            <div class="text-[14px] font-black tabular-nums mam-outline-sm" data-altar-dice-count="true" style="color:${outOfRolls ? '#f87171' : '#4ade80'}">${fmtInt(this.state.enchantDice)}/1</div>
+            <div class="text-[14px] font-black tabular-nums" data-altar-dice-count="true" style="color:${outOfRolls ? '#dc2626' : '#15803d'}">${fmtInt(this.state.enchantDice)}/1</div>
           </div>
           <div class="flex flex-col gap-2 items-stretch justify-center">
-            <button class="mam-sheen-hover relative overflow-hidden w-full px-[18px] py-2 rounded-xl border-2 border-emerald-300 bg-[linear-gradient(135deg,#22c55e_0%,#15803d_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_3px_0_#052e16,0_8px_20px_-4px_rgba(34,197,94,0.45)] text-white text-[15px] font-black tabular-nums cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-action="buy-dice">Buy Dice (${ENCHANT_DICE_GEM_COST} Gems)</button>
-            <button class="${TW_ALTAR_AUTO_BTN} mam-outline-sm ${this.enchantAutoRolling ? 'is-active' : ''}" data-action="toggle-auto-enchant">${this.enchantAutoRolling ? 'Stop' : 'Auto Roll'}</button>
+            <button class="mam-sheen-hover relative overflow-hidden w-full px-[18px] py-2 rounded-xl border-[2.5px] border-[#14111d] bg-[#4ade80] hover:bg-[#86efac] text-[#14111d] text-[15px] font-black tabular-nums cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.97] active:scale-[0.94]" data-action="buy-dice">Buy Dice (${ENCHANT_DICE_GEM_COST} Gems)</button>
+            <button class="${TW_ALTAR_AUTO_BTN} ${this.enchantAutoRolling ? 'is-active' : ''}" data-action="toggle-auto-enchant">${this.enchantAutoRolling ? 'Stop' : 'Auto Roll'}</button>
           </div>
         </div>
 
         <button
-          class="${TW_ALTAR_ROLL_BTN} mam-outline ${rollBtn.extraClass}"
+          class="${TW_ALTAR_ROLL_BTN} ${rollBtn.extraClass}"
           data-action="roll-enchant"
           ${rollBtn.disabled ? 'disabled' : ''}
         >

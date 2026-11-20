@@ -178,8 +178,8 @@ function crystalPointerSvg(dir: 'down' | 'up' | 'left' | 'right', accent = '#fbb
   const rot = dir === 'down' ? 0 : dir === 'up' ? 180 : dir === 'left' ? 90 : -90;
   return `
   <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"
-    style="transform:rotate(${rot}deg)" class="drop-shadow-[0_6px_12px_rgba(0,0,0,0.85)]">
-    <path d="M20 35L7 17L14.5 17L14.5 6L25.5 6L25.5 17L33 17L20 35Z" fill="${accent}" stroke="#0f172a" stroke-width="3" stroke-linejoin="round"/>
+    style="transform:rotate(${rot}deg)">
+    <path d="M20 35L7 17L14.5 17L14.5 6L25.5 6L25.5 17L33 17L20 35Z" fill="${accent}" stroke="#14111d" stroke-width="3" stroke-linejoin="round"/>
     <path d="M20 31L11.5 19.5H17V9H23V19.5H28.5L20 31Z" fill="white" fill-opacity="0.32"/>
   </svg>`;
 }
@@ -187,9 +187,9 @@ function crystalPointerSvg(dir: 'down' | 'up' | 'left' | 'right', accent = '#fbb
 function badgePillHtml(text: string, variant: 'amber' | 'cyan' = 'amber'): string {
   const palette =
     variant === 'cyan'
-      ? 'border-cyan-200/80 bg-[linear-gradient(135deg,#0891b2,#0284c7)] shadow-[0_6px_18px_rgba(6,182,212,0.55),inset_0_1px_0_rgba(255,255,255,0.45)]'
-      : 'border-amber-200/80 bg-[linear-gradient(135deg,#f59e0b,#ea580c)] shadow-[0_6px_18px_rgba(245,158,11,0.55),inset_0_1px_0_rgba(255,255,255,0.45)]';
-  return `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full border ${palette} text-white text-[11px] font-black tracking-wider uppercase whitespace-nowrap [text-shadow:0_1px_2px_rgba(0,0,0,0.65)]">${text}</span>`;
+      ? 'border-[#14111d] bg-[#38bdf8] text-[#14111d]'
+      : 'border-[#14111d] bg-[#fde047] text-[#14111d]';
+  return `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full border-2 ${palette} text-[11px] font-black tracking-wider uppercase whitespace-nowrap">${text}</span>`;
 }
 
 export function buildTutorialCardHtml(step: Exclude<TutorialStep, 'done'>): string {
@@ -202,21 +202,21 @@ export function buildTutorialCardHtml(step: Exclude<TutorialStep, 'done'>): stri
     const filled = idx + 1 <= meta.stage;
     const active = idx + 1 === meta.stage;
     const barCls = active
-      ? 'bg-[linear-gradient(90deg,#38bdf8,#fde047)] shadow-[0_0_8px_rgba(56,189,248,0.7)]'
+      ? 'bg-[linear-gradient(90deg,#38bdf8,#fde047)] border border-[#14111d]'
       : filled
-        ? 'bg-sky-400/85'
-        : 'bg-slate-700/75';
-    return `<span class="flex-1 h-1.5 rounded-full ${barCls}"></span>`;
+        ? 'bg-[#38bdf8] border border-[#14111d]'
+        : 'bg-[#fcecc8] border border-[#14111d]/35';
+    return `<span class="flex-1 h-2 rounded-full ${barCls}"></span>`;
   }).join('');
 
   const rewardStripHtml =
     step === 'congrats'
       ? `
         <div class="flex items-center gap-2 flex-wrap my-0.5">
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-sky-300/50 bg-sky-500/15 text-[12px] font-black text-sky-200 tabular-nums">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border-2 border-[#14111d] bg-[#e0f2fe] text-[12px] font-black text-[#14111d] tabular-nums">
             ${hudIconHtml('gem', 18, 'Gems')} +${TUTORIAL_REWARD_GEMS} Gems
           </span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-purple-300/50 bg-purple-500/15 text-[12px] font-black text-purple-200 tabular-nums">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border-2 border-[#14111d] bg-[#f3e8ff] text-[12px] font-black text-[#14111d] tabular-nums">
             ${enchantDiceIconHtml(18)} +${TUTORIAL_REWARD_DICE} Enchant Dice
           </span>
         </div>
@@ -225,12 +225,12 @@ export function buildTutorialCardHtml(step: Exclude<TutorialStep, 'done'>): stri
 
   const ctaBtnCls =
     step === 'congrats'
-      ? 'border-amber-200/80 bg-[linear-gradient(135deg,#f59e0b,#ec4899)] shadow-[0_6px_18px_rgba(245,158,11,0.5),inset_0_1px_0_rgba(255,255,255,0.4)]'
-      : 'border-cyan-200/70 bg-[linear-gradient(135deg,#0284c7,#0ea5e9)] shadow-[0_6px_16px_rgba(14,165,233,0.45),inset_0_1px_0_rgba(255,255,255,0.38)]';
+      ? 'border-[#14111d] bg-[#fde047] hover:bg-[#fef08a] text-[#14111d]'
+      : 'border-[#14111d] bg-[#38bdf8] hover:bg-[#7dd3fc] text-[#14111d]';
 
   const skipBtnHtml =
     step !== 'congrats'
-      ? `<button type="button" class="pointer-events-auto px-2 py-0.5 rounded-lg border border-white/15 bg-white/[0.05] hover:bg-white/[0.12] text-[10.5px] font-extrabold text-slate-300 hover:text-white cursor-pointer transition-colors" data-tutorial-skip="true" title="Skip Tutorial">Skip</button>`
+      ? `<button type="button" class="pointer-events-auto px-2.5 py-0.5 rounded-lg border-2 border-[#14111d] bg-white hover:bg-[#fde047] text-[10.5px] font-black text-[#14111d] cursor-pointer transition-colors" data-tutorial-skip="true" title="Skip Tutorial">Skip</button>`
       : '';
 
   const compactCls = hasCta ? '' : 'is-compact';
@@ -246,25 +246,25 @@ export function buildTutorialCardHtml(step: Exclude<TutorialStep, 'done'>): stri
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2 min-w-0">
             <span class="mam-tut-nameplate">
-              <span class="text-[11px] font-black uppercase tracking-[0.08em] text-sky-200">ONEE</span>
-              <span class="text-[9.5px] font-bold uppercase tracking-wider text-slate-300">GUIDE</span>
+              <span class="text-[11px] font-black uppercase tracking-[0.08em] text-[#14111d]">ONEE</span>
+              <span class="text-[9.5px] font-black uppercase tracking-wider text-[#0369a1]">GUIDE</span>
             </span>
-            <span class="text-[10.5px] font-black uppercase tracking-wider text-amber-300 tabular-nums">Stage ${meta.stage}/${meta.total} • ${meta.label}</span>
+            <span class="text-[10.5px] font-black uppercase tracking-wider text-[#b45309] tabular-nums">Stage ${meta.stage}/${meta.total} • ${meta.label}</span>
           </div>
           ${skipBtnHtml}
         </div>
         <div class="flex items-center gap-1 w-full" aria-hidden="true">${stageBarsHtml}</div>
-        <p class="${textSizeCls} font-extrabold leading-snug text-white m-0 mam-outline-sm">${copy.text}</p>
+        <p class="${textSizeCls} font-extrabold leading-snug text-[#14111d] m-0">${copy.text}</p>
         ${rewardStripHtml}
         <div class="flex items-center justify-between gap-2 mt-0.5">
           ${
             copy.hint
-              ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-black text-amber-300 animate-pulse"><span class="w-1.5 h-1.5 rounded-full bg-amber-300"></span>${copy.hint}</span>`
-              : '<span class="text-[11px] font-bold text-slate-400">Click anywhere to continue</span>'
+              ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-black text-[#b45309] animate-pulse"><span class="w-1.5 h-1.5 rounded-full bg-[#ea580c]"></span>${copy.hint}</span>`
+              : '<span class="text-[11px] font-bold text-[#64748b]">Click anywhere to continue</span>'
           }
           ${
             copy.cta
-              ? `<button type="button" class="pointer-events-auto px-4 py-1.5 rounded-xl border ${ctaBtnCls} text-white text-[12.5px] font-black hover:brightness-110 active:scale-95 cursor-pointer transition-[transform,filter] duration-150 mam-outline-sm" data-tutorial-next="true">${copy.cta}</button>`
+              ? `<button type="button" class="pointer-events-auto px-4 py-1.5 rounded-xl border-2 ${ctaBtnCls} text-[12.5px] font-black hover:scale-[0.97] active:scale-95 cursor-pointer transition-transform duration-150" data-tutorial-next="true">${copy.cta}</button>`
               : ''
           }
         </div>

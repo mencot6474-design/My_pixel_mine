@@ -186,15 +186,11 @@
 
   .mam-modal {
     position: relative;
-    background: linear-gradient(180deg var(--in-oklab), var(--mam-m-surface-top, #121a30) 0%, var(--mam-m-surface-bot, #090d19) 100%);
-    border: 2px solid var(--mam-m-border, #2a3b5c);
-    border-radius: 18px;
-    box-shadow:
-      0 0 0 1px #04070f,
-      inset 0 1px 0 rgba(255, 255, 255, 0.16),
-      inset 0 -2px 0 rgba(0, 0, 0, 0.55),
-      0 26px 64px -10px rgba(0, 0, 0, 0.88),
-      0 0 38px -10px var(--mam-m-glow);
+    background: #fff8e7;
+    color: #14111d;
+    border: 4px solid #14111d;
+    border-radius: 24px;
+    box-shadow: none;
   }
 
   .mam-modal > :not(.mam-modal-surface):not(.mam-modal-rails):not(.mam-modal-rail-head) {
@@ -210,23 +206,19 @@
     pointer-events: none;
     z-index: 0;
     background-image:
-      radial-gradient(ellipse 76% 42% at 16% 0%, var(--mam-m-ambient), transparent 68%),
-      radial-gradient(ellipse 52% 38% at 90% 100%, var(--mam-m-ambient), transparent 72%),
-      linear-gradient(to right, rgba(255, 255, 255, 0.028) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+      radial-gradient(ellipse 75% 32% at 50% 0%, var(--mam-m-ambient), transparent 72%),
+      radial-gradient(rgba(20, 17, 29, 0.065) 1.3px, transparent 1.3px);
     background-size:
       100% 100%,
-      100% 100%,
-      26px 26px,
-      26px 26px;
+      11px 11px;
   }
 
   .mam-modal-surface::after {
     content: '';
     position: absolute;
-    inset: 3px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    inset: 4px;
+    border-radius: 17px;
+    border: 1.5px solid rgba(20, 17, 29, 0.08);
     pointer-events: none;
   }
 
@@ -238,71 +230,42 @@
     z-index: 2;
   }
 
-  .mam-modal-rails::before,
-  .mam-modal-rails::after {
-    content: '';
-    position: absolute;
-    left: 24px;
-    right: 24px;
-    border-radius: 9999px;
-    pointer-events: none;
+  @keyframes mam-tape-rail-move {
+    0% {
+      background-position: 0 0;
+    }
+    100% {
+      background-position: 44px 0;
+    }
   }
 
   .mam-modal-rails::before {
-    top: -1.5px;
-    height: 3px;
-    background: linear-gradient(90deg var(--in-oklab), transparent 0%, var(--mam-m-accent) 16%, var(--mam-m-accent-hi) 50%, var(--mam-m-accent) 84%, transparent 100%);
-    box-shadow: 0 0 14px var(--mam-m-glow);
+    content: none;
   }
 
   .mam-modal-rails::after {
-    bottom: -1.5px;
-    height: 2.5px;
-    opacity: 0.85;
-    background: linear-gradient(90deg var(--in-oklab), transparent 6%, var(--mam-m-accent) 50%, transparent 94%);
-    box-shadow: 0 0 10px var(--mam-m-glow);
+    content: '';
+    position: absolute;
+    left: 22px;
+    right: 22px;
+    bottom: -4px;
+    height: 10px;
+    border-radius: 9999px;
+    border: 2.5px solid #14111d;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      -50deg,
+      var(--mam-m-accent) 0px,
+      var(--mam-m-accent) 14px,
+      var(--mam-m-accent-hi) 14px,
+      var(--mam-m-accent-hi) 28px
+    );
+    background-size: 44px 44px;
+    animation: mam-tape-rail-move 2s linear infinite reverse;
   }
 
   .mam-rail-stud {
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    border-color: var(--mam-m-accent-hi);
-    opacity: 0.92;
-    pointer-events: none;
-    filter: drop-shadow(0 0 5px var(--mam-m-glow));
-  }
-
-  .mam-rail-stud.is-tl {
-    top: 6px;
-    left: 6px;
-    border-top: 2.5px solid var(--mam-m-accent-hi);
-    border-left: 2.5px solid var(--mam-m-accent-hi);
-    border-top-left-radius: 9px;
-  }
-
-  .mam-rail-stud.is-tr {
-    top: 6px;
-    right: 6px;
-    border-top: 2.5px solid var(--mam-m-accent-hi);
-    border-right: 2.5px solid var(--mam-m-accent-hi);
-    border-top-right-radius: 9px;
-  }
-
-  .mam-rail-stud.is-bl {
-    bottom: 6px;
-    left: 6px;
-    border-bottom: 2.5px solid var(--mam-m-accent-hi);
-    border-left: 2.5px solid var(--mam-m-accent-hi);
-    border-bottom-left-radius: 9px;
-  }
-
-  .mam-rail-stud.is-br {
-    bottom: 6px;
-    right: 6px;
-    border-bottom: 2.5px solid var(--mam-m-accent-hi);
-    border-right: 2.5px solid var(--mam-m-accent-hi);
-    border-bottom-right-radius: 9px;
+    display: none;
   }
 
   .mam-modal-rail-head {
@@ -310,11 +273,63 @@
     z-index: 6;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-top: -30px;
-    margin-bottom: 3px;
+    justify-content: center;
+    gap: 0;
+    margin-top: -38px;
+    margin-bottom: 6px;
+    padding: 0 4px;
     pointer-events: none;
+  }
+
+  .mam-wing-rail {
+    flex: 1;
+    height: 18px;
+    border-top: 3.5px solid #14111d;
+    border-bottom: 3.5px solid #14111d;
+    background: repeating-linear-gradient(
+      -50deg,
+      var(--mam-m-accent) 0px,
+      var(--mam-m-accent) 14px,
+      var(--mam-m-accent-hi) 14px,
+      var(--mam-m-accent-hi) 28px
+    );
+    background-size: 44px 44px;
+    animation: mam-tape-rail-move 1.8s linear infinite;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mam-wing-rail::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.42);
+  }
+
+  .mam-wing-rail.is-left {
+    border-left: 3.5px solid #14111d;
+    border-radius: 10px 0 0 10px;
+    margin-right: -12px;
+  }
+
+  .mam-wing-rail.is-right {
+    border-right: 3.5px solid #14111d;
+    border-radius: 0 10px 10px 0;
+    margin-left: -12px;
+    margin-right: 10px;
+    animation-direction: reverse;
+  }
+
+  @keyframes mam-plaque-glint {
+    0%, 58% {
+      transform: translateX(-120%) skewX(-24deg);
+    }
+    100% {
+      transform: translateX(520%) skewX(-24deg);
+    }
   }
 
   .mam-title-plaque {
@@ -323,35 +338,38 @@
     overflow: hidden;
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    min-height: 44px;
-    padding: 5px 22px 5px 7px;
-    border-radius: 13px 18px 13px 13px;
-    border: 2px solid var(--mam-m-accent);
-    background: linear-gradient(135deg var(--in-oklab), var(--mam-m-plaque-bg, #15223e) 0%, #0b1120 72%, #080c17 100%);
-    box-shadow:
-      0 0 0 1px #04070f,
-      inset 0 1px 0 rgba(255, 255, 255, 0.3),
-      inset 0 -2px 0 rgba(0, 0, 0, 0.5),
-      0 10px 24px -4px var(--mam-m-glow),
-      0 8px 18px rgba(0, 0, 0, 0.72);
+    justify-content: center;
+    gap: 12px;
+    min-width: min(260px, 62vw);
+    min-height: 50px;
+    padding: 8px 34px 8px 16px;
+    border-radius: 18px 18px 12px 12px;
+    border: 3.5px solid #14111d;
+    background:
+      radial-gradient(rgba(255, 255, 255, 0.24) 1.2px, transparent 1.2px),
+      linear-gradient(180deg var(--in-oklab), var(--mam-m-accent-hi) 0%, var(--mam-m-accent) 26%, var(--mam-m-accent-deep) 100%);
+    background-size: 8px 8px, 100% 100%;
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.45), inset 0 -3px 0 rgba(0, 0, 0, 0.22);
     color: #ffffff;
-    font-size: 20px;
-    font-weight: 800;
+    font-size: 21px;
+    font-weight: 900;
+    text-transform: uppercase;
     line-height: 1;
-    letter-spacing: 0.45px;
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+    letter-spacing: 0.08em;
+    text-shadow: 0 2px 0 rgba(20, 17, 29, 0.65);
+    z-index: 3;
   }
 
   .mam-title-plaque::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 14px;
-    right: 18px;
-    height: 2px;
-    border-radius: 9999px;
-    background: linear-gradient(90deg, var(--mam-m-accent-hi), var(--mam-m-accent), transparent);
+    top: -20%;
+    left: -40%;
+    width: 30%;
+    height: 150%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transform: skewX(-24deg);
+    animation: mam-plaque-glint 4.2s ease-in-out infinite;
     pointer-events: none;
   }
 
@@ -359,16 +377,11 @@
     content: '';
     position: absolute;
     top: 0;
-    right: 0;
-    bottom: 0;
-    width: 28px;
-    background: repeating-linear-gradient(
-      -52deg,
-      rgba(255, 255, 255, 0.08) 0px,
-      rgba(255, 255, 255, 0.08) 4px,
-      transparent 4px,
-      transparent 8px
-    );
+    left: 10px;
+    right: 10px;
+    height: 3px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.35);
     pointer-events: none;
   }
 
@@ -377,57 +390,77 @@
     z-index: 1;
     width: 32px;
     height: 32px;
-    border-radius: 9px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1.5px solid rgba(255, 255, 255, 0.45);
-    background: linear-gradient(145deg var(--in-oklab), var(--mam-m-accent-hi) 0%, var(--mam-m-accent) 48%, var(--mam-m-accent-deep) 100%);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.55),
-      inset 0 -2px 4px rgba(0, 0, 0, 0.32),
-      0 0 14px var(--mam-m-glow);
+    border: 2px solid #14111d;
+    background: #fef08a;
+    color: #14111d;
+    transform: rotate(-4deg);
+    box-shadow: none;
   }
 
   .mam-close-rail-btn {
     pointer-events: auto;
     margin-right: -2px;
+    box-shadow: none !important;
   }
 
   .mam-inspector-well {
-    background: linear-gradient(180deg var(--in-oklab), #101729 0%, #090e1b 100%);
-    border: 1.5px solid var(--mam-m-well-border);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.09),
-      inset 0 4px 16px rgba(0, 0, 0, 0.45);
+    background: #ffffff;
+    color: #14111d;
+    border: 3px solid #14111d;
+    box-shadow: none;
+  }
+
+  .mam-inspector-well .text-white,
+  .mam-inspector-well .text-slate-100,
+  .mam-inspector-well .text-slate-200 {
+    color: #14111d;
+  }
+
+  .mam-inspector-well .text-\[\#94a3b8\],
+  .mam-inspector-well .text-\[\#cbd5e1\],
+  .mam-inspector-well .text-slate-400 {
+    color: #5b526e;
+  }
+
+  .mam-inspector-well button .text-white,
+  .mam-inspector-well button.text-white,
+  .mam-inspector-well .mam-rarity-badge {
+    color: inherit;
   }
 
   .mam-tab-btn {
     position: relative;
     overflow: hidden;
-    background: linear-gradient(180deg, #1b253d 0%, #121a2d 100%);
-    border: 1.5px solid #2e3d5e;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.14),
-      0 4px 10px rgba(0, 0, 0, 0.4);
-    color: #cbd5e1;
-    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+    background: #fcecc8;
+    border: 2.5px solid #14111d;
+    box-shadow: none;
+    color: #14111d;
+    text-shadow: none !important;
+    transition: background-color 0.14s ease, border-color 0.14s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   .mam-tab-btn:hover {
-    background: linear-gradient(180deg, #243252 0%, #18233d 100%);
-    border-color: var(--mam-m-accent);
-    color: #fff;
+    background: #fde047;
+    border-color: #14111d;
+    color: #14111d;
+    transform: scale(0.95) rotate(-1.2deg);
+    z-index: 5;
+  }
+
+  .mam-tab-btn:nth-child(even):hover {
+    transform: scale(0.95) rotate(1.2deg);
   }
 
   .mam-tab-btn.active {
     background: linear-gradient(135deg var(--in-oklab), var(--mam-m-accent) 0%, var(--mam-m-accent-deep) 100%);
-    border-color: var(--mam-m-accent-hi);
-    color: #fff;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.42),
-      0 4px 16px -2px var(--mam-m-glow);
-    transform: translateY(-1px);
+    border-color: #14111d;
+    color: #ffffff;
+    box-shadow: none;
+    transform: none;
   }
 
 }

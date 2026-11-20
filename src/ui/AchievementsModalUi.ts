@@ -100,20 +100,20 @@ export class AchievementsModalUi {
           const style = TIER_MEDAL_STYLE[activeTier.tier];
 
           const cardBorder = allDone
-            ? 'border-[#22c55e]/50 bg-[#0d1c19]'
+            ? 'border-2 border-[#14111d] bg-[#d1fae5]'
             : ready
-              ? 'border-[#facc15]/85 bg-[#1b1811] shadow-[0_0_16px_rgba(250,204,21,0.24)]'
-              : 'border-white/14 bg-[#0d1323]';
+              ? 'border-2 border-[#14111d] bg-[#fef08a]'
+              : 'border-2 border-[#14111d] bg-[#ffffff]';
 
           const actionHtml = allDone
-            ? `<span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#14532d]/80 border border-[#4ade80]/60 text-[#86efac] text-[11px] font-black shrink-0">✓ Maxed</span>`
+            ? `<span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#2ee59d] border-2 border-[#14111d] text-[#14111d] text-[11px] font-black shrink-0">✓ Maxed</span>`
             : ready
-              ? `<button type="button" class="mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#fde047] bg-[linear-gradient(135deg,#eab308_0%,#f97316_100%)] text-white text-[12px] font-black cursor-pointer shrink-0 shadow-[0_4px_14px_rgba(234,179,8,0.45),inset_0_1px_0_rgba(255,255,255,0.4)] hover:brightness-110 active:scale-95 transition-[transform,filter] mam-outline-sm" data-claim-achievement="${activeTier.id}">${hudIconHtml('sparkle', 13, 'Claim')}Claim</button>`
-              : `<span class="px-2.5 py-1 rounded-lg bg-[#131b2e] border border-white/12 text-[#94a3b8] text-[11px] font-black shrink-0 tabular-nums">${fmtShort(Math.min(val, activeTier.target))}/${fmtShort(activeTier.target)}</span>`;
+              ? `<button type="button" class="mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 border-[#14111d] bg-[#ff4d2e] text-white text-[12px] font-black cursor-pointer shrink-0 hover:brightness-105 active:scale-95 transition-[transform,filter]" data-claim-achievement="${activeTier.id}">${hudIconHtml('sparkle', 13, 'Claim')}Claim</button>`
+              : `<span class="px-2.5 py-1 rounded-lg bg-[#fcecc8] border-2 border-[#14111d] text-[#5b526e] text-[11px] font-black shrink-0 tabular-nums">${fmtShort(Math.min(val, activeTier.target))}/${fmtShort(activeTier.target)}</span>`;
 
           return `
-            <div class="relative overflow-hidden rounded-2xl border ${cardBorder} p-3 flex items-center gap-3">
-              <div class="absolute top-0 left-0 right-0 h-[2.5px] ${allDone ? 'bg-[linear-gradient(90deg,#22c55e,#4ade80)]' : style.rail}" aria-hidden="true"></div>
+            <div class="relative overflow-hidden rounded-2xl ${cardBorder} p-3 flex items-center gap-3">
+              <div class="absolute top-0 left-0 right-0 h-[3px] ${allDone ? 'bg-[#2ee59d]' : style.rail}" aria-hidden="true"></div>
               <div class="relative w-14 h-14 rounded-2xl border-2 ${style.ring} ${style.bg} flex items-center justify-center shrink-0">
                 ${this.renderCategoryArt(cat.iconKind)}
                 <span class="absolute -bottom-1.5 -right-1.5 px-1.5 py-[1px] rounded-md border text-[10px] font-black leading-tight ${style.badge}">${TIER_ROMAN[activeTier.tier]}</span>
@@ -122,24 +122,24 @@ export class AchievementsModalUi {
               <div class="min-w-0 flex-1 flex flex-col gap-1.5 text-left">
                 <div class="flex items-center justify-between gap-2">
                   <div class="min-w-0">
-                    <div class="text-[14px] font-black text-white truncate mam-outline-sm">${cat.title} ${TIER_ROMAN[activeTier.tier]}</div>
-                    <div class="text-[11px] font-bold text-[#94a3b8] truncate">${cat.description}</div>
+                    <div class="text-[14px] font-black text-[#14111d] truncate">${cat.title} ${TIER_ROMAN[activeTier.tier]}</div>
+                    <div class="text-[11px] font-bold text-[#5b526e] truncate">${cat.description}</div>
                   </div>
                   ${actionHtml}
                 </div>
 
-                <div class="w-full h-2 rounded-full bg-black/55 border border-white/10 overflow-hidden">
-                  <div class="h-full rounded-full transition-[width] duration-300 ${allDone ? 'bg-[linear-gradient(90deg,#22c55e,#4ade80)]' : style.rail}" style="width:${allDone ? 100 : pct}%"></div>
+                <div class="w-full h-2.5 rounded-full bg-[#fcecc8] border-2 border-[#14111d] overflow-hidden">
+                  <div class="h-full rounded-full transition-[width] duration-300 ${allDone ? 'bg-[#2ee59d]' : style.rail}" style="width:${allDone ? 100 : pct}%"></div>
                 </div>
 
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#111c33] border border-[#38bdf8]/30 text-[#bae6fd] text-[10px] font-black tabular-nums">${hudIconHtml('gem', 12, 'Gems')}+${fmtShort(activeTier.gems)}</span>
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#bae6fd] border border-[#14111d] text-[#14111d] text-[10px] font-black tabular-nums">${hudIconHtml('gem', 12, 'Gems')}+${fmtShort(activeTier.gems)}</span>
                   ${
                     activeTier.enchantDice > 0
-                      ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#1f1333] border border-[#c084fc]/35 text-[#e9d5ff] text-[10px] font-black tabular-nums">${enchantDiceIconHtml(13)}+${activeTier.enchantDice}</span>`
+                      ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#e9d5ff] border border-[#14111d] text-[#14111d] text-[10px] font-black tabular-nums">${enchantDiceIconHtml(13)}+${activeTier.enchantDice}</span>`
                       : ''
                   }
-                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#26160e] border border-[#fb923c]/35 text-[#fdba74] text-[10px] font-black">+1% All DMG</span>
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#fed7aa] border border-[#14111d] text-[#14111d] text-[10px] font-black">+1% All DMG</span>
                 </div>
               </div>
             </div>
@@ -154,16 +154,16 @@ export class AchievementsModalUi {
     const claimedCount = this.state.claimedAchievements.size;
     const bonusPct = Math.round(this.state.getAchievementAllDmgBonus() * 100);
     const entries: Array<{ label: string; value: string; accent: string }> = [
-      { label: 'Total Ores Mined', value: fmtInt(stats.oresBroken), accent: 'text-[#38bdf8]' },
-      { label: 'Critical Taps Landed', value: fmtInt(stats.critTaps), accent: 'text-[#fde047]' },
-      { label: 'Highest Critical Hit', value: fmtShort(stats.highestCrit), accent: 'text-[#fb923c]' },
-      { label: 'Overclock Fever Triggers', value: fmtInt(stats.overclockTriggers), accent: 'text-[#facc15]' },
-      { label: 'Best Gem Tower Floor', value: `Floor ${fmtInt(this.state.towerBestFloor)}`, accent: 'text-[#c084fc]' },
-      { label: 'Relics Forged', value: `${this.state.craftedRelics.size}/12`, accent: 'text-[#4ade80]' },
-      { label: 'Bounties Completed', value: fmtInt(this.state.bountiesCompleted), accent: 'text-[#7dd3fc]' },
-      { label: 'Chibi Fusions Completed', value: fmtInt(stats.fusionsCompleted), accent: 'text-[#f472b6]' },
-      { label: 'Index Discovered', value: `${this.state.getDiscoveredCount()}/${this.state.getTotalIndexCount()}`, accent: 'text-white' },
-      { label: 'Achievement DMG Bonus', value: `+${bonusPct}% (${claimedCount}/${TOTAL_ACHIEVEMENT_TIERS})`, accent: 'text-[#86efac]' },
+      { label: 'Total Ores Mined', value: fmtInt(stats.oresBroken), accent: 'text-[#0284c7]' },
+      { label: 'Critical Taps Landed', value: fmtInt(stats.critTaps), accent: 'text-[#ca8a04]' },
+      { label: 'Highest Critical Hit', value: fmtShort(stats.highestCrit), accent: 'text-[#ea580c]' },
+      { label: 'Overclock Fever Triggers', value: fmtInt(stats.overclockTriggers), accent: 'text-[#d97706]' },
+      { label: 'Best Gem Tower Floor', value: `Floor ${fmtInt(this.state.towerBestFloor)}`, accent: 'text-[#9333ea]' },
+      { label: 'Relics Forged', value: `${this.state.craftedRelics.size}/12`, accent: 'text-[#16a34a]' },
+      { label: 'Bounties Completed', value: fmtInt(this.state.bountiesCompleted), accent: 'text-[#0369a1]' },
+      { label: 'Chibi Fusions Completed', value: fmtInt(stats.fusionsCompleted), accent: 'text-[#db2777]' },
+      { label: 'Index Discovered', value: `${this.state.getDiscoveredCount()}/${this.state.getTotalIndexCount()}`, accent: 'text-[#14111d]' },
+      { label: 'Achievement DMG Bonus', value: `+${bonusPct}% (${claimedCount}/${TOTAL_ACHIEVEMENT_TIERS})`, accent: 'text-[#15803d]' },
     ];
 
     return `
@@ -171,9 +171,9 @@ export class AchievementsModalUi {
         ${entries
           .map(
             (e) => `
-            <div class="rounded-xl border border-white/12 bg-[#0d1323] px-4 py-3 flex items-center justify-between gap-3">
-              <span class="text-[12px] font-extrabold text-[#94a3b8]">${e.label}</span>
-              <span class="text-[16px] font-black tabular-nums ${e.accent} mam-outline-sm">${e.value}</span>
+            <div class="rounded-xl border-[2.5px] border-[#14111d] bg-white px-4 py-3 flex items-center justify-between gap-3">
+              <span class="text-[12px] font-black text-[#475569]">${e.label}</span>
+              <span class="text-[16px] font-black tabular-nums ${e.accent}">${e.value}</span>
             </div>
           `
           )
@@ -185,7 +185,7 @@ export class AchievementsModalUi {
   public renderModal(): string {
     const claimedCount = this.state.claimedAchievements.size;
     const bonusPct = Math.round(this.state.getAchievementAllDmgBonus() * 100);
-    const trophySvg = `<svg class="w-6 h-6 text-[#fde047]" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4H17V10C17 12.8 14.8 15 12 15C9.2 15 7 12.8 7 10V4Z" fill="currentColor" fill-opacity="0.22" stroke="currentColor" stroke-width="1.8"/><path d="M7 6H4V8.5C4 10.2 5.3 11.5 7 11.5M17 6H20V8.5C20 10.2 18.7 11.5 17 11.5M12 15V19M8.5 19H15.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+    const trophySvg = `<svg class="w-5 h-5 text-[#14111d]" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4H17V10C17 12.8 14.8 15 12 15C9.2 15 7 12.8 7 10V4Z" fill="#fde047" stroke="#14111d" stroke-width="2"/><path d="M7 6H4V8.5C4 10.2 5.3 11.5 7 11.5M17 6H20V8.5C20 10.2 18.7 11.5 17 11.5M12 15V19M8.5 19H15.5" stroke="#14111d" stroke-width="2" stroke-linecap="round"/></svg>`;
 
     return renderModalShell({
       title: 'Achievements',
@@ -193,10 +193,10 @@ export class AchievementsModalUi {
       iconHtml: trophySvg,
       boxClass: 'w-[860px] max-w-[96vw] h-[640px] max-h-[90vh]',
       headerExtraHtml: `
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0d1424] border border-[#facc15]/45 text-[12px] font-black text-[#fef08a] tabular-nums">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border-2 border-[#14111d] text-[12px] font-black text-[#14111d] tabular-nums">
           <span>${claimedCount}/${TOTAL_ACHIEVEMENT_TIERS} Claimed</span>
           <span class="opacity-45">•</span>
-          <span class="text-[#86efac]">+${bonusPct}% All DMG</span>
+          <span class="text-[#15803d]">+${bonusPct}% All DMG</span>
         </div>
       `,
       bodyHtml: `

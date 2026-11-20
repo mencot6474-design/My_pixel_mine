@@ -7,65 +7,72 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 7px 10px 8px;
-    border-radius: 16px;
-    background: linear-gradient(180deg, #151e34 0%, #0b101e 100%);
-    border: 2px solid #2b3c5e;
-    box-shadow:
-      0 0 0 1px #050811,
-      inset 0 1px 0 rgba(255, 255, 255, 0.18),
-      inset 0 -3px 0 rgba(0, 0, 0, 0.55),
-      0 14px 32px rgba(0, 0, 0, 0.78);
+    padding: 8px 11px 9px;
+    border-radius: 20px;
+    background:
+      radial-gradient(rgba(20, 17, 29, 0.08) 1.2px, transparent 1.2px),
+      linear-gradient(180deg, #fff8e7 0%, #fcecc8 100%);
+    background-size: 9px 9px, 100% 100%;
+    border: 3.5px solid #14111d;
+    box-shadow: none;
   }
 
   .mam-hotbar-dock::before {
     content: '';
     position: absolute;
-    top: -1.5px;
-    left: 28px;
-    right: 28px;
-    height: 2.5px;
+    top: -3px;
+    left: 24px;
+    right: 24px;
+    height: 5px;
     border-radius: 9999px;
-    background: linear-gradient(90deg, transparent, #38bdf8 22%, #bae6fd 50%, #38bdf8 78%, transparent);
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
+    border: 1.5px solid #14111d;
+    background: repeating-linear-gradient(
+      -50deg,
+      #38bdf8 0px,
+      #38bdf8 10px,
+      #fde047 10px,
+      #fde047 20px
+    );
+    background-size: 32px 32px;
+    animation: mam-tape-rail-move 2.2s linear infinite;
     pointer-events: none;
   }
 
   .mam-hotbar-divider {
-    width: 2px;
-    height: 46px;
+    width: 3px;
+    height: 44px;
     border-radius: 9999px;
     margin: 0 2px;
-    background: linear-gradient(180deg, transparent, #3b4f78 30%, #38bdf8 50%, #3b4f78 70%, transparent);
+    background: rgba(255, 255, 255, 0.22);
     flex-shrink: 0;
   }
 
   .mam-hotbar-slot {
     position: relative;
-    border-radius: 11px;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.18),
-      0 4px 0 #050812,
-      0 6px 12px rgba(0, 0, 0, 0.55);
-    transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.14s ease, box-shadow 0.14s ease, filter 0.14s ease;
+    border-radius: 12px;
+    box-shadow: none;
+    transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.14s ease, filter 0.14s ease;
   }
 
   .mam-hotbar-slot:hover {
-    transform: translateY(-3px);
-    filter: brightness(1.09);
+    transform: scale(0.96) rotate(-1.5deg);
+    filter: brightness(1.08);
+    z-index: 5;
+  }
+
+  .mam-hotbar-slot:nth-child(even):hover {
+    transform: scale(0.96) rotate(1.5deg);
   }
 
   .mam-hotbar-slot:active {
-    transform: translateY(1px) scale(0.96);
+    transform: scale(0.94);
   }
 
   .mam-hotbar-slot.is-hotbar-selected {
     border-color: #facc15 !important;
-    transform: translateY(-4px);
-    box-shadow:
-      0 0 0 2px #facc15,
-      0 0 18px rgba(250, 204, 21, 0.58),
-      0 6px 14px rgba(0, 0, 0, 0.65) !important;
+    transform: none;
+    outline: none;
+    box-shadow: inset 0 0 0 2px #facc15 !important;
   }
 
   .mam-hotbar-slot.is-hotbar-selected::before {
@@ -74,38 +81,21 @@
     top: 0;
     left: 10px;
     right: 10px;
-    height: 2.5px;
+    height: 3px;
     z-index: 4;
     border-radius: 0 0 4px 4px;
     background: linear-gradient(90deg, #fde047, #ffffff, #fde047);
-    box-shadow: 0 0 8px #facc15;
     pointer-events: none;
   }
 
   .mam-empty-slot {
-    background:
-      repeating-linear-gradient(
-        -45deg,
-        rgba(255, 255, 255, 0.018) 0px,
-        rgba(255, 255, 255, 0.018) 4px,
-        transparent 4px,
-        transparent 9px
-      ),
-      linear-gradient(180deg, #10182b 0%, #090e1a 100%);
-    border: 2px solid #263552;
-    box-shadow:
-      inset 0 2px 8px rgba(0, 0, 0, 0.65),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      0 3px 0 #050812;
+    background: rgba(20, 17, 29, 0.08);
+    border: 2.5px dashed rgba(20, 17, 29, 0.35);
+    box-shadow: none;
   }
 
   .mam-empty-slot::after {
-    content: '';
-    position: absolute;
-    inset: 6px;
-    border-radius: 6px;
-    border: 1.5px solid #1b2740;
-    pointer-events: none;
+    content: none;
   }
 
   .mam-hotbar-keycap {
@@ -116,10 +106,10 @@
     min-width: 18px;
     height: 17px;
     padding: 0 4px;
-    border-radius: 5px;
-    background: #0a1020;
-    border: 1px solid #3c5078;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 3px rgba(0, 0, 0, 0.7);
+    border-radius: 6px;
+    background: #14111d;
+    border: 1.5px solid #ffffff;
+    box-shadow: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -127,14 +117,14 @@
     font-weight: 900;
     font-variant-numeric: tabular-nums;
     line-height: 1;
-    color: #e2e8f0;
+    color: #fff8e7;
   }
 
   .mam-hotbar-slot.is-hotbar-selected .mam-hotbar-keycap {
-    background: #facc15;
-    border-color: #fef08a;
-    color: #090d18;
-    box-shadow: 0 0 8px rgba(250, 204, 21, 0.75);
+    background: #fde047;
+    border-color: #14111d;
+    color: #14111d;
+    box-shadow: none;
   }
 
   .mam-hotbar-qty {
@@ -143,14 +133,14 @@
     right: 3px;
     z-index: 4;
     padding: 1px 4px;
-    border-radius: 5px;
-    background: #0a1020;
-    border: 1px solid #3c5078;
+    border-radius: 6px;
+    background: #ffffff;
+    border: 1.5px solid #14111d;
     font-size: 9.5px;
     font-weight: 900;
     font-variant-numeric: tabular-nums;
     line-height: 1.1;
-    color: #f8fafc;
+    color: #14111d;
   }
 
   .mam-hotbar-val-bar {
@@ -158,9 +148,9 @@
     z-index: 3;
     width: calc(100% + 4px);
     margin: auto -2px -2px;
-    padding: 1.5px 2px 2px;
-    background: linear-gradient(180deg, #0b1222 0%, #070b15 100%);
-    border-top: 1px solid #263552;
+    padding: 2px 2px;
+    background: #fcecc8;
+    border-top: 2px solid #14111d;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -168,21 +158,15 @@
   }
 
   .mam-hotbar-bag {
-    border: 2px solid #60a5fa;
-    background: linear-gradient(160deg, #1d4ed8 0%, #152954 55%, #0c1733 100%);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.35),
-      0 4px 0 #071024,
-      0 8px 18px rgba(37, 99, 235, 0.35);
+    border: 3px solid #14111d;
+    background: linear-gradient(180deg, #ff8a73 0%, #ff4d2e 32%, #c92a12 100%);
+    box-shadow: none;
   }
 
   .mam-hotbar-bag.is-open {
-    border-color: #4ade80;
-    background: linear-gradient(160deg, #22c55e 0%, #15803d 65%, #0d4a26 100%);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.45),
-      0 0 18px rgba(74, 222, 128, 0.5),
-      0 4px 0 #072613;
+    border-color: #14111d;
+    background: linear-gradient(180deg, #6ee7b7 0%, #2ee59d 40%, #059669 100%);
+    box-shadow: none;
   }
 
   .mam-hotbar-dragging {
@@ -193,17 +177,16 @@
   .mam-hotbar-drop-target {
     outline: 2.5px solid #38bdf8;
     outline-offset: 1px;
-    transform: translateY(-3px) scale(1.06);
-    box-shadow:
-      0 0 0 2px rgba(56, 189, 248, 0.45),
-      0 8px 18px rgba(14, 165, 233, 0.45);
+    transform: scale(1.03);
+    box-shadow: none;
   }
 
   .mam-placeholder-well {
-    border-radius: 14px;
-    border: 1.5px dashed var(--mam-m-well-border, #28354e);
-    background: #0c1222;
-    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.4);
+    border-radius: 16px;
+    border: 2.5px dashed rgba(20, 17, 29, 0.35);
+    background: #fcecc8;
+    color: #5b526e;
+    box-shadow: none;
   }
 
   .mam-gloss-btn {
@@ -550,7 +533,7 @@
   /* Native top-layer Chibi 4-pose Review Dialog */
   dialog.mam-review-dialog {
     margin: auto;
-    color: #f8fafc;
+    color: #14111d;
   }
 
   dialog.mam-review-dialog[open] {

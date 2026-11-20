@@ -96,12 +96,12 @@ export function buildMineOreBarsHtml(bars: OreHpScreen[]): string {
         const wDef = getWeatherById(b.meteorWeatherId ?? 'light_rain');
         return `
               <div class="absolute flex flex-col items-center gap-1 pointer-events-none select-none" data-ore-bar="${b.id}">
-                <div class="inline-flex items-center gap-1.5 px-2.5 py-[3px] rounded-lg bg-[#090e1c] border-[1.5px] whitespace-nowrap shadow-[0_3px_10px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.16)]" style="border-color:${wDef.accentColor}">
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-[3px] rounded-lg bg-[#fff8e7] border-2 border-[#14111d] whitespace-nowrap">
                   ${meteorIconHtml(wDef.id, 15, wDef.name)}
-                  <span class="text-[10.5px] font-black uppercase tracking-[0.06em] leading-none mam-outline-sm" style="color:${wDef.accentColor}">${wDef.name}</span>
-                  <span class="px-1 py-[1px] rounded text-[8.5px] font-black uppercase tracking-wider leading-none bg-white/10 text-white/95 border border-white/15">Meteor</span>
+                  <span class="text-[10.5px] font-black uppercase tracking-[0.06em] leading-none text-[#14111d]">${wDef.name}</span>
+                  <span class="px-1 py-[1px] rounded text-[8.5px] font-black uppercase tracking-wider leading-none bg-[#fde047] text-[#14111d] border border-[#14111d]">Meteor</span>
                 </div>
-                <div class="relative w-[184px] @max-[720px]:w-[156px] h-[22px] rounded-lg border-2 bg-[#060a14] overflow-hidden flex items-center justify-center" style="border-color:${wDef.accentColor};box-shadow:0 4px 14px rgba(0,0,0,0.85),0 0 12px ${wDef.accentColor}44">
+                <div class="relative w-[184px] @max-[720px]:w-[156px] h-[22px] rounded-lg border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center">
                   <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${wDef.glowColor},${wDef.accentColor})" data-ore-fill="true"></div>
                   <div class="absolute inset-x-0 top-0 h-[44%] bg-gradient-to-b from-white/30 to-transparent pointer-events-none z-[1]"></div>
                   <div class="absolute inset-0 flex justify-evenly pointer-events-none z-[1]">
@@ -118,10 +118,10 @@ export function buildMineOreBarsHtml(bars: OreHpScreen[]): string {
         const ev = PIT_EVENT_DEFS[b.pitEventKind];
         return `
           <div class="absolute flex flex-col items-center gap-1 pointer-events-none select-none" data-ore-bar="${b.id}">
-            <div class="inline-flex items-center gap-1 px-2 py-[2px] rounded-md bg-[#090e1c] border-[1.5px] whitespace-nowrap shadow-[0_3px_10px_rgba(0,0,0,0.85)]" style="border-color:${ev.colorHex}">
-              <span class="text-[9.5px] font-black uppercase tracking-[0.06em] leading-none mam-outline-sm" style="color:${ev.colorHex}">${ev.badgeText}</span>
+            <div class="inline-flex items-center gap-1 px-2 py-[2px] rounded-md bg-[#fff8e7] border-2 border-[#14111d] whitespace-nowrap">
+              <span class="text-[9.5px] font-black uppercase tracking-[0.06em] leading-none text-[#14111d]">${ev.badgeText}</span>
             </div>
-            <div class="relative w-28 h-[17px] rounded-md border-2 bg-[#070b15] overflow-hidden flex items-center justify-center shadow-[0_3px_10px_rgba(0,0,0,0.8)]" style="border-color:${ev.colorHex};box-shadow:0 3px 10px rgba(0,0,0,0.8),0 0 10px ${ev.colorHex}55">
+            <div class="relative w-28 h-[17px] rounded-md border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center">
               <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${ev.colorHex}bb,${ev.colorHex})" data-ore-fill="true"></div>
               <div class="relative z-[2] text-[10.5px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
             </div>
@@ -129,7 +129,7 @@ export function buildMineOreBarsHtml(bars: OreHpScreen[]): string {
         `;
       }
       return `
-          <div class="absolute w-24 h-4 rounded-md border-2 border-[#0f172a] bg-[#070b15] overflow-hidden flex items-center justify-center shadow-[0_3px_8px_rgba(0,0,0,0.75)]" data-ore-bar="${b.id}">
+          <div class="absolute w-24 h-4 rounded-md border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center" data-ore-bar="${b.id}">
             <div class="absolute left-0 top-0 bottom-0 bg-[linear-gradient(180deg,#38bdf8,#0284c7)] transition-[width] duration-[80ms] ease-linear" data-ore-fill="true"></div>
             <div class="relative z-[2] text-[10.5px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
           </div>
@@ -144,8 +144,8 @@ export function buildTowerOreBarsHtml(bars: TowerOreBarScreen[]): string {
     .map(
       (b) => `
           <div class="absolute flex flex-col items-center gap-1 pointer-events-none" data-tower-ore-bar="${b.index}">
-            <div class="px-2 py-0.5 rounded-md bg-[#0a1020] border text-[10.5px] font-black leading-none whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.7)] mam-outline-sm" style="color:${b.color};border-color:${b.color}">${b.name}</div>
-            <div class="w-[104px] h-[18px] rounded-md border-2 border-[#2b4266] bg-[#060a14] overflow-hidden relative flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.75)]">
+            <div class="px-2 py-0.5 rounded-md bg-[#fff8e7] border-[1.5px] border-[#14111d] text-[10.5px] font-black leading-none whitespace-nowrap text-[#14111d]">${b.name}</div>
+            <div class="w-[104px] h-[18px] rounded-md border-2 border-[#14111d] bg-[#1e293b] overflow-hidden relative flex items-center justify-center">
               <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[60ms] ease-linear" style="background:linear-gradient(180deg,${b.color},${b.color}cc)" data-ore-fill="true"></div>
               <div class="absolute inset-x-0 top-0 h-[42%] bg-gradient-to-b from-white/30 to-transparent pointer-events-none z-[1]"></div>
               <div class="absolute inset-0 flex justify-evenly pointer-events-none z-[1]">
@@ -164,25 +164,25 @@ export function buildTowerOreBarsHtml(bars: TowerOreBarScreen[]): string {
 function getShopSignStyle(id: ShopStationId): { bg: string; title: string } {
   if (id === 'gems') {
     return {
-      bg: 'bg-[linear-gradient(180deg,#6b21a8_0%,#3b0764_100%)] shadow-[inset_0_2px_0_rgba(244,114,182,0.35),0_5px_0_#1e1b4b,0_10px_20px_rgba(0,0,0,0.55)]',
-      title: 'text-[#f472b6]',
+      bg: 'bg-[#fce7f3]',
+      title: 'text-[#9d174d]',
     };
   }
   if (id === 'altar') {
     return {
-      bg: 'bg-[linear-gradient(180deg,#4c1d95_0%,#1e1b4b_100%)] shadow-[inset_0_2px_0_rgba(192,132,252,0.35),0_5px_0_#090d16,0_10px_20px_rgba(0,0,0,0.55)]',
-      title: 'text-[#e879f9]',
+      bg: 'bg-[#f3e8ff]',
+      title: 'text-[#6b21a8]',
     };
   }
   if (id === 'tower') {
     return {
-      bg: 'bg-[linear-gradient(180deg,#0369a1_0%,#1e1b4b_100%)] shadow-[inset_0_2px_0_rgba(56,189,248,0.4),0_5px_0_#090d16,0_10px_20px_rgba(0,0,0,0.58)]',
-      title: 'text-[#38bdf8]',
+      bg: 'bg-[#e0f2fe]',
+      title: 'text-[#0369a1]',
     };
   }
   return {
-    bg: 'bg-[linear-gradient(180deg,#475569_0%,#1e293b_100%)] shadow-[inset_0_2px_0_rgba(255,255,255,0.3),0_5px_0_#0f172a,0_10px_20px_rgba(0,0,0,0.5)]',
-    title: id === 'pickaxe' ? 'text-[#38bdf8]' : id === 'sell' ? 'text-[#4ade80]' : 'text-[#facc15]',
+    bg: id === 'pickaxe' ? 'bg-[#ffedd5]' : id === 'sell' ? 'bg-[#dcfce7]' : 'bg-[#fef9c3]',
+    title: id === 'pickaxe' ? 'text-[#9a3412]' : id === 'sell' ? 'text-[#15803d]' : 'text-[#a16207]',
   };
 }
 
@@ -192,9 +192,9 @@ export function buildShopAnchorsHtml(anchors: ShopStationAnchor[]): string {
     .map((a) => {
       const st = getShopSignStyle(a.id);
       return `
-          <button class="${TW_SHOP_SIGN_BASE} ${st.bg} mam-outline-sm" data-shop-station="${a.id}">
+          <button class="${TW_SHOP_SIGN_BASE} ${st.bg}" data-shop-station="${a.id}">
             <div class="text-[16px] font-black ${st.title}">${a.title}</div>
-            <div class="text-[12px] font-extrabold text-[#e2e8f0]">${a.subtitle}</div>
+            <div class="text-[12px] font-bold text-[#334155]">${a.subtitle}</div>
           </button>
         `;
     })
@@ -207,9 +207,9 @@ export function buildShopChibiBubblesHtml(bubbles: ShopChibiBubbleAnchor[]): str
     .map(
       (b) => `
           <div class="absolute -translate-x-1/2 -translate-y-full pointer-events-none" data-chibi-bubble="${b.id}">
-            <div class="relative px-3 py-1.5 rounded-2xl border-2 border-slate-900 bg-white text-slate-950 text-[12px] font-black leading-tight whitespace-nowrap shadow-[0_6px_16px_rgba(0,0,0,0.45)]">
+            <div class="relative px-3 py-1.5 rounded-2xl border-2 border-[#14111d] bg-[#fff8e7] text-[#14111d] text-[12px] font-black leading-tight whitespace-nowrap">
               ${b.text}
-              <span class="absolute left-1/2 -bottom-[7px] -translate-x-1/2 w-3 h-3 bg-white border-r-2 border-b-2 border-slate-900 rotate-45"></span>
+              <span class="absolute left-1/2 -bottom-[7px] -translate-x-1/2 w-3 h-3 bg-[#fff8e7] border-r-2 border-b-2 border-[#14111d] rotate-45"></span>
             </div>
           </div>
         `
@@ -223,11 +223,11 @@ export function buildAltarAnchorsHtml(anchors: AltarPedestalAnchor[]): string {
     .map(
       (a) => `
           <div class="absolute -translate-x-1/2 -translate-y-full text-left transition-transform duration-150 ease-out pointer-events-none [&.is-hi]:-translate-y-[115%] [&.is-hi]:scale-[1.16] ${a.highlighted ? 'is-hi' : ''}" data-altar-lbl="${a.id}">
-            <div class="inline-flex items-center gap-[5px] py-[3px] pr-2 pl-[5px] rounded-full border-[1.5px] border-[var(--aura-border,#a855f7)] bg-[rgba(10,12,24,0.84)] shadow-[0_3px_10px_rgba(0,0,0,0.55)] whitespace-nowrap [&>.mam-3d-icon]:w-[22px] [&>.mam-3d-icon]:h-[22px] [&>.mam-3d-icon]:shrink-0" style="--aura-border:${a.color}">
+            <div class="inline-flex items-center gap-[5px] py-[3px] pr-2.5 pl-[5px] rounded-full border-2 border-[#14111d] bg-[#fff8e7] whitespace-nowrap [&>.mam-3d-icon]:w-[22px] [&>.mam-3d-icon]:h-[22px] [&>.mam-3d-icon]:shrink-0">
               ${enchantAuraIconHtml(a.id, a.color, 22, a.name)}
               <div class="flex flex-col items-start leading-none">
-                <div class="text-[12px] font-black leading-[1.05] mam-outline-sm" style="color:${a.color}">${a.name}</div>
-                <div class="text-[10px] font-extrabold text-[#e2e8f0] mam-outline-sm">${a.chancePct}%</div>
+                <div class="text-[12px] font-black leading-[1.05] text-[#14111d]">${a.name}</div>
+                <div class="text-[10px] font-bold text-[#475569]">${a.chancePct}%</div>
               </div>
             </div>
           </div>

@@ -32,31 +32,30 @@ export function renderAudioControlsHtml(opts: {
       </svg>`;
 
   const frameCls = muted
-    ? 'border-rose-400 bg-[linear-gradient(160deg,#881337,#131b31)] shadow-[0_4px_0_#2b0714,0_8px_22px_rgba(225,29,72,0.32),inset_0_1px_0_rgba(255,255,255,0.28)]'
-    : 'border-sky-400 bg-[linear-gradient(160deg,#0e7490,#0f1c36)] shadow-[0_4px_0_#071022,0_8px_22px_rgba(56,189,248,0.34),inset_0_1px_0_rgba(255,255,255,0.32)]';
+    ? 'border-[#14111d] bg-[#fda4af]'
+    : 'border-[#14111d] bg-[#bae6fd]';
   const placementCls = floating ? 'absolute top-[14px] right-4 z-[15]' : 'mt-0.5';
   const gearIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
-    <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" stroke="#e2e8f0" stroke-width="2"/>
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="#94a3b8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" stroke="#14111d" stroke-width="2.2"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="#14111d" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
-  const gearFrameCls =
-    'border-[#4b6085] bg-[linear-gradient(160deg,#2b3a55,#10182b)] shadow-[0_4px_0_#060a14,0_8px_22px_rgba(15,23,42,0.58),inset_0_1px_0_rgba(255,255,255,0.24)]';
+  const gearFrameCls = 'border-[#14111d] bg-[#fff8e7]';
   const camFrameCls = cameraLocked
-    ? 'border-amber-400 bg-[linear-gradient(160deg,#b45309,#2e1065)] shadow-[0_4px_0_#1e1b4b,0_8px_22px_rgba(245,158,11,0.38),inset_0_1px_0_rgba(255,255,255,0.3)]'
+    ? 'border-[#14111d] bg-[#fde047]'
     : gearFrameCls;
   const camIcon = cameraLocked
     ? `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
-        <path d="M3.5 9.5a2 2 0 0 1 2-2h2l1.2-1.8a1.5 1.5 0 0 1 1.25-.7h4.1a1.5 1.5 0 0 1 1.25.7L16.5 7.5h2a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V9.5Z" stroke="#fde68a" stroke-width="1.8" stroke-linejoin="round"/>
-        <rect x="9" y="12.2" width="6" height="4.6" rx="1.2" fill="#facc15" stroke="#451a03" stroke-width="1.2"/>
-        <path d="M10.4 12.2v-1.1a1.6 1.6 0 0 1 3.2 0v1.1" stroke="#fef08a" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M3.5 9.5a2 2 0 0 1 2-2h2l1.2-1.8a1.5 1.5 0 0 1 1.25-.7h4.1a1.5 1.5 0 0 1 1.25.7L16.5 7.5h2a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V9.5Z" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+        <rect x="9" y="12.2" width="6" height="4.6" rx="1.2" fill="#ff4d2e" stroke="#14111d" stroke-width="1.3"/>
+        <path d="M10.4 12.2v-1.1a1.6 1.6 0 0 1 3.2 0v1.1" stroke="#14111d" stroke-width="1.8" stroke-linecap="round"/>
       </svg>`
     : `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
-        <path d="M3.5 9.5a2 2 0 0 1 2-2h2l1.2-1.8a1.5 1.5 0 0 1 1.25-.7h4.1a1.5 1.5 0 0 1 1.25.7L16.5 7.5h2a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V9.5Z" stroke="#cbd5e1" stroke-width="1.8" stroke-linejoin="round"/>
-        <circle cx="12" cy="13.2" r="2.7" stroke="#38bdf8" stroke-width="1.8"/>
-        <path d="M7.5 21l-2-1.8m11 1.8 2-1.8" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M3.5 9.5a2 2 0 0 1 2-2h2l1.2-1.8a1.5 1.5 0 0 1 1.25-.7h4.1a1.5 1.5 0 0 1 1.25.7L16.5 7.5h2a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V9.5Z" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="12" cy="13.2" r="2.7" stroke="#0284c7" stroke-width="2"/>
+        <path d="M7.5 21l-2-1.8m11 1.8 2-1.8" stroke="#14111d" stroke-width="1.8" stroke-linecap="round"/>
       </svg>`;
   const utilBtnCls =
-    'w-12 h-12 @max-[720px]:w-10 @max-[720px]:h-10 rounded-2xl border-2 flex items-center justify-center cursor-pointer touch-manipulation transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:scale-105 hover:brightness-110 active:translate-y-0.5 active:scale-95 pointer-events-auto';
+    'w-12 h-12 @max-[720px]:w-10 @max-[720px]:h-10 rounded-2xl border-[2.5px] flex items-center justify-center cursor-pointer touch-manipulation transition-[transform,filter] duration-150 ease-out hover:scale-[0.95] hover:-rotate-2 even:hover:rotate-2 hover:brightness-105 active:scale-90 pointer-events-auto';
 
   return `
     <div class="${placementCls} flex items-center gap-2 @max-[720px]:gap-1.5 pointer-events-none">
@@ -104,11 +103,11 @@ export function renderCurrencyRailHtml(opts: {
     ? 'top-[14px] right-4'
     : 'top-[42%] right-4 -translate-y-1/2 [[data-hud-compact=true]_&]:top-[72px] [[data-hud-compact=true]_&]:translate-y-0 [[data-hud-short=true]_&]:top-[36%]';
   const plusBtn = opts.showGemsPlus
-    ? `<button class="${TW_PLUS_BTN} mam-outline-sm" data-action="gems-plus">+</button>`
+    ? `<button class="${TW_PLUS_BTN}" data-action="gems-plus">+</button>`
     : '';
   const cashBar = opts.showCash
     ? `<div class="${TW_CURRENCY_BAR}">
-        <span class="text-[28px] font-black tabular-nums text-[#4ade80] tracking-[0.3px] mam-outline" data-hud-cash="true">${fmtMoney(opts.cash)}</span>
+        <span class="text-[26px] font-black tabular-nums text-[#059669] tracking-[0.2px]" data-hud-cash="true">${fmtMoney(opts.cash)}</span>
       </div>`
     : '';
   const quickRow = opts.quickButtonsHtml
@@ -121,7 +120,7 @@ export function renderCurrencyRailHtml(opts: {
       <div class="flex items-center gap-2">
         <div class="${TW_CURRENCY_BAR}">
           ${hudIconHtml('gem', 28, 'Gems')}
-          <span class="text-[20px] font-extrabold tabular-nums text-white mam-outline-sm" data-hud-gems="true">${fmtInt(opts.gems)}</span>
+          <span class="text-[20px] font-black tabular-nums text-[#14111d]" data-hud-gems="true">${fmtInt(opts.gems)}</span>
           ${plusBtn}
         </div>
       </div>

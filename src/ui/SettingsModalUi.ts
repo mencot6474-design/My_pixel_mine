@@ -34,12 +34,12 @@ export class SettingsModalUi {
     const qualityBtnsHtml = QUALITY_OPTIONS.map((opt) => {
       const isSelected = s.graphicsQuality === opt.id;
       const cls = isSelected
-        ? 'border-sky-300 bg-[linear-gradient(135deg,#0284c7,#1d4ed8)] text-white shadow-[0_0_16px_rgba(56,189,248,0.42),inset_0_1px_0_rgba(255,255,255,0.36)]'
-        : 'border-[#2a3b5c] bg-[#152036] text-slate-300 hover:bg-[#1e2d4d] hover:text-white';
+        ? 'border-[#14111d] bg-[#38bdf8] text-[#14111d]'
+        : 'border-[#14111d] bg-[#fcecc8] text-[#5b526e] hover:bg-[#fde047] hover:text-[#14111d]';
       return `
         <button
           type="button"
-          class="flex-1 py-2.5 px-3 rounded-xl border-2 text-[14px] font-black cursor-pointer transition-[transform,filter,background,border-color] duration-150 ease-out active:scale-[0.97] ${cls}"
+          class="flex-1 py-2.5 px-3 rounded-xl border-2 text-[14px] font-black cursor-pointer transition-[transform,filter,background] duration-150 ease-out active:scale-[0.97] ${cls}"
           data-settings-quality="${opt.id}"
           aria-pressed="${isSelected ? 'true' : 'false'}"
         >
@@ -50,20 +50,20 @@ export class SettingsModalUi {
 
     const togglePill = (on: boolean): string =>
       on
-        ? 'border-emerald-300 bg-[linear-gradient(135deg,#22c55e,#059669)] text-white shadow-[0_4px_14px_rgba(34,197,94,0.4)]'
-        : 'border-[#3b4b6b] bg-[#1b2438] text-slate-300';
+        ? 'border-2 border-[#14111d] bg-[#2ee59d] text-[#14111d]'
+        : 'border-2 border-[#14111d] bg-[#e2e8f0] text-[#5b526e]';
 
     const mutePill = muted
-      ? 'border-rose-400 bg-[linear-gradient(135deg,#f43f5e,#be123c)] text-white shadow-[0_4px_14px_rgba(244,63,94,0.4)]'
-      : 'border-sky-300 bg-[linear-gradient(135deg,#0ea5e9,#0284c7)] text-white shadow-[0_4px_14px_rgba(56,189,248,0.35)]';
+      ? 'border-2 border-[#14111d] bg-[#ff3b5c] text-white'
+      : 'border-2 border-[#14111d] bg-[#38bdf8] text-[#14111d]';
 
     const bodyHtml = `
       <div class="w-full flex flex-col gap-3.5 text-left">
         <section class="mam-inspector-well p-3.5 rounded-2xl flex flex-col gap-2.5">
           <div class="flex items-center justify-between gap-2">
             <div>
-              <div class="text-[14px] font-black text-white tracking-wide uppercase">Graphics Quality</div>
-              <div class="text-[12px] font-bold text-slate-300" data-settings-quality-desc="true">${activeQualityMeta.desc}</div>
+              <div class="text-[14px] font-black text-[#14111d] tracking-wide uppercase">Graphics Quality</div>
+              <div class="text-[12px] font-bold text-[#5b526e]" data-settings-quality-desc="true">${activeQualityMeta.desc}</div>
             </div>
           </div>
           <div class="flex items-center gap-2">
@@ -73,10 +73,10 @@ export class SettingsModalUi {
 
         <section class="mam-inspector-well p-3.5 rounded-2xl flex flex-col gap-3">
           <div class="flex items-center justify-between gap-2">
-            <div class="text-[14px] font-black text-white tracking-wide uppercase">Audio</div>
+            <div class="text-[14px] font-black text-[#14111d] tracking-wide uppercase">Audio</div>
             <button
               type="button"
-              class="px-3.5 py-1.5 rounded-xl border text-[12px] font-black uppercase tracking-wide cursor-pointer transition-[transform,filter] duration-150 hover:brightness-110 active:scale-[0.97] ${mutePill}"
+              class="px-3.5 py-1.5 rounded-xl text-[12px] font-black uppercase tracking-wide cursor-pointer transition-[transform,filter] duration-150 hover:brightness-105 active:scale-[0.97] ${mutePill}"
               data-settings-action="toggle-mute"
             >
               ${muted ? 'Muted' : 'Audio ON'}
@@ -84,9 +84,9 @@ export class SettingsModalUi {
           </div>
 
           <label class="flex flex-col gap-1.5">
-            <div class="flex items-center justify-between text-[13px] font-extrabold text-slate-200">
+            <div class="flex items-center justify-between text-[13px] font-black text-[#14111d]">
               <span>Music (BGM)</span>
-              <span class="tabular-nums text-sky-300" data-settings-val="bgm">${bgmPct}%</span>
+              <span class="tabular-nums text-[#0284c7]" data-settings-val="bgm">${bgmPct}%</span>
             </div>
             <input
               type="range"
@@ -95,15 +95,15 @@ export class SettingsModalUi {
               step="1"
               value="${bgmPct}"
               data-settings-slider="bgm"
-              class="w-full accent-sky-400 cursor-pointer h-2 rounded-lg bg-slate-800/90"
+              class="w-full accent-[#ff4d2e] cursor-pointer h-2 rounded-lg bg-[#fcecc8]"
               aria-label="Music Volume"
             />
           </label>
 
           <label class="flex flex-col gap-1.5">
-            <div class="flex items-center justify-between text-[13px] font-extrabold text-slate-200">
+            <div class="flex items-center justify-between text-[13px] font-black text-[#14111d]">
               <span>Sound Effects (SFX)</span>
-              <span class="tabular-nums text-sky-300" data-settings-val="sfx">${sfxPct}%</span>
+              <span class="tabular-nums text-[#0284c7]" data-settings-val="sfx">${sfxPct}%</span>
             </div>
             <input
               type="range"
@@ -112,7 +112,7 @@ export class SettingsModalUi {
               step="1"
               value="${sfxPct}"
               data-settings-slider="sfx"
-              class="w-full accent-sky-400 cursor-pointer h-2 rounded-lg bg-slate-800/90"
+              class="w-full accent-[#ff4d2e] cursor-pointer h-2 rounded-lg bg-[#fcecc8]"
               aria-label="Sound Effects Volume"
             />
           </label>
@@ -120,12 +120,12 @@ export class SettingsModalUi {
 
         <section class="mam-inspector-well p-3.5 rounded-2xl flex items-center justify-between gap-3">
           <div>
-            <div class="text-[14px] font-black text-white tracking-wide uppercase">Damage Popups</div>
-            <div class="text-[12px] font-bold text-slate-300">Show floating damage numbers when mining</div>
+            <div class="text-[14px] font-black text-[#14111d] tracking-wide uppercase">Damage Popups</div>
+            <div class="text-[12px] font-bold text-[#5b526e]">Show floating damage numbers when mining</div>
           </div>
           <button
             type="button"
-            class="min-w-[74px] px-3.5 py-1.5 rounded-xl border text-[13px] font-black uppercase tracking-wide cursor-pointer transition-[transform,filter] duration-150 hover:brightness-110 active:scale-[0.97] ${togglePill(s.showDamagePopups)}"
+            class="min-w-[74px] px-3.5 py-1.5 rounded-xl text-[13px] font-black uppercase tracking-wide cursor-pointer transition-[transform,filter] duration-150 hover:brightness-105 active:scale-[0.97] ${togglePill(s.showDamagePopups)}"
             data-settings-action="toggle-dmg-popups"
             aria-pressed="${s.showDamagePopups ? 'true' : 'false'}"
           >

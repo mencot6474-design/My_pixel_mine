@@ -27,7 +27,7 @@ export class OfflineModalUi {
 
     const durStr = formatOfflineDuration(summary.elapsedSec);
     const capBadge = summary.capped
-      ? `<span class="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/50 text-[10px] font-black uppercase text-amber-200">Max 8h</span>`
+      ? `<span class="px-2 py-0.5 rounded-full bg-[#fde047] border-2 border-[#14111d] text-[10px] font-black uppercase text-[#14111d]">Max 8h</span>`
       : '';
 
     const oresBrokenStr =
@@ -37,9 +37,9 @@ export class OfflineModalUi {
     const oresRow =
       summary.totalBonusOres > 0
         ? `
-          <div class="min-w-0 overflow-hidden flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#141e35] border border-[#2b3c5e]">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">Chest Ores</span>
-            <span class="max-w-full truncate text-[18px] font-black tabular-nums text-sky-300 mam-outline-sm">+${fmtInt(summary.totalBonusOres)}</span>
+          <div class="min-w-0 overflow-hidden flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#ffffff] border-2 border-[#14111d]">
+            <span class="text-[11px] font-black uppercase tracking-wider text-[#5b526e]">Chest Ores</span>
+            <span class="max-w-full truncate text-[18px] font-black tabular-nums text-[#0284c7]">+${fmtInt(summary.totalBonusOres)}</span>
           </div>
         `
         : '';
@@ -49,7 +49,7 @@ export class OfflineModalUi {
       ? `
         <button
           type="button"
-          class="flex-1 py-3 px-4 rounded-xl border border-amber-300/75 bg-[linear-gradient(135deg,#f59e0b_0%,#d97706_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_8px_20px_-4px_rgba(245,158,11,0.5)] text-white text-[15px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.97] mam-outline-sm"
+          class="flex-1 py-3 px-4 rounded-xl border-[2.5px] border-[#14111d] bg-[#fde047] text-[#14111d] text-[15px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.97] hover:rotate-1 active:scale-[0.94]"
           data-offline-claim="2"
         >
           2x Claim (Watch Ad)
@@ -60,26 +60,26 @@ export class OfflineModalUi {
     const bodyHtml = `
       <div class="w-full flex flex-col gap-3.5 text-center">
         <div class="mam-inspector-well p-3.5 rounded-2xl flex flex-col items-center gap-1.5">
-          <div class="text-[12px] font-extrabold uppercase tracking-wider text-amber-200/90">
+          <div class="text-[12px] font-black uppercase tracking-wider text-[#b45309]">
             Your Chibis kept mining in ${summary.worldName}!
           </div>
           <div class="flex items-center justify-center gap-2">
-            <span class="text-[22px] font-black tabular-nums text-white mam-outline-sm">${durStr}</span>
+            <span class="text-[22px] font-black tabular-nums text-[#14111d]">${durStr}</span>
             ${capBadge}
           </div>
-          <div class="text-[12px] font-bold text-slate-300 tabular-nums">
+          <div class="text-[12px] font-bold text-[#5b526e] tabular-nums">
             ~${oresBrokenStr} ores mined while away
           </div>
         </div>
 
         <div class="grid ${gridCols} gap-2">
-          <div class="min-w-0 overflow-hidden flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#141e35] border border-[#2b3c5e]">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">Cash</span>
-            <span class="max-w-full truncate text-[18px] font-black tabular-nums text-[#4ade80] mam-outline-sm">+${fmtMoney(summary.cash)}</span>
+          <div class="min-w-0 overflow-hidden flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#ffffff] border-2 border-[#14111d]">
+            <span class="text-[11px] font-black uppercase tracking-wider text-[#5b526e]">Cash</span>
+            <span class="max-w-full truncate text-[18px] font-black tabular-nums text-[#059669]">+${fmtMoney(summary.cash)}</span>
           </div>
-          <div class="min-w-0 overflow-hidden flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#141e35] border border-[#2b3c5e]">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300">Gems</span>
-            <span class="max-w-full truncate inline-flex items-center gap-1 text-[18px] font-black tabular-nums text-sky-200 mam-outline-sm">
+          <div class="min-w-0 overflow-hidden flex flex-col items-center justify-center p-2.5 rounded-xl bg-[#ffffff] border-2 border-[#14111d]">
+            <span class="text-[11px] font-black uppercase tracking-wider text-[#5b526e]">Gems</span>
+            <span class="max-w-full truncate inline-flex items-center gap-1 text-[18px] font-black tabular-nums text-[#0284c7]">
               ${hudIconHtml('gem', 18, 'Gems')} +${gemsStr}
             </span>
           </div>
@@ -89,7 +89,7 @@ export class OfflineModalUi {
         <div class="flex items-center gap-2.5 pt-1">
           <button
             type="button"
-            class="flex-1 py-3 px-4 rounded-xl border border-[#4ade80]/70 bg-[linear-gradient(135deg,#22c55e_0%,#059669_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_8px_20px_-4px_rgba(34,197,94,0.45)] text-white text-[15px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.97] mam-outline-sm"
+            class="flex-1 py-3 px-4 rounded-xl border-[2.5px] border-[#14111d] bg-[#2ee59d] text-[#14111d] text-[15px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.97] hover:-rotate-1 active:scale-[0.94]"
             data-offline-claim="1"
           >
             Claim

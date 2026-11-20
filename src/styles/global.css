@@ -11,7 +11,7 @@
     overflow: hidden;
     user-select: none;
     background: #0f172a;
-    font-family: 'Fredoka', sans-serif;
+    font-family: 'Rubik', 'Fredoka', sans-serif;
     cursor: auto;
   }
 
@@ -97,7 +97,7 @@
   input,
   select,
   textarea {
-    font-family: 'Fredoka', sans-serif;
+    font-family: 'Rubik', 'Fredoka', sans-serif;
   }
 
   #threeRoot canvas {

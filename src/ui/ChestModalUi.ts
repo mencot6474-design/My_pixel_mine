@@ -92,25 +92,25 @@ export class ChestModalUi {
       .map((r) => {
         const active = allOn || this.state.isAutoSellRarity(r.id);
         const border = RARITY_BORDER[r.id];
-        return `<button type="button" class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold border cursor-pointer transition-all ${
+        return `<button type="button" class="px-2.5 py-1 rounded-lg text-[11px] font-black border-2 border-[#14111d] cursor-pointer transition-all ${
           active
-            ? 'text-white shadow-[0_0_10px_rgba(255,255,255,0.18)]'
-            : 'bg-slate-900/65 text-slate-400 border-white/15 hover:text-white hover:border-white/30'
-        }" style="${active ? `border-color:${border};background:${border}33;` : ''}" data-autosell-rarity="${r.id}">${active ? '✓ ' : ''}${r.label}</button>`;
+            ? 'text-[#14111d]'
+            : 'bg-[#fcecc8] text-[#5b526e] hover:bg-[#fde047] hover:text-[#14111d]'
+        }" style="${active ? `background:${border};` : ''}" data-autosell-rarity="${r.id}">${active ? '✓ ' : ''}${r.label}</button>`;
       })
       .join('');
     return `
-      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-950/60 border border-white/12">
+      <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#ffffff] border-2 border-[#14111d]">
         <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="text-[11px] font-black uppercase tracking-wider text-amber-200/90 mr-1">Auto-Sell:</span>
+          <span class="text-[11px] font-black uppercase tracking-wider text-[#14111d] mr-1">Auto-Sell:</span>
           ${pills}
-          <button type="button" class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold border cursor-pointer transition-all ${
+          <button type="button" class="px-2.5 py-1 rounded-lg text-[11px] font-black border-2 border-[#14111d] cursor-pointer transition-all ${
             allOn
-              ? 'bg-emerald-500/30 border-emerald-300/70 text-emerald-100'
-              : 'bg-slate-900/65 border-white/15 text-slate-400 hover:text-white'
+              ? 'bg-[#2ee59d] text-[#14111d]'
+              : 'bg-[#fcecc8] text-[#5b526e] hover:bg-[#fde047] hover:text-[#14111d]'
           }" data-action="chest-toggle-autosell-all">${allOn ? '✓ All Ores' : 'All Ores'}</button>
         </div>
-        <span class="text-[10px] font-bold text-slate-400">🔒 Locked ores are never sold</span>
+        <span class="text-[10px] font-bold text-[#5b526e]">🔒 Locked ores are never sold</span>
       </div>
     `;
   }
@@ -134,14 +134,14 @@ export class ChestModalUi {
           ${cardsHtml}
         </div>
 
-        <div class="relative h-6 rounded-full bg-[rgba(15,18,28,0.82)] border border-amber-300/35 shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)] overflow-hidden flex items-center justify-center backdrop-blur-sm">
-          <div class="absolute left-0 top-0 bottom-0 bg-[linear-gradient(90deg,#f59e0b,#fbbf24)] rounded-full shadow-[0_0_12px_rgba(251,191,36,0.45)]" data-chest-cap-fill="true" style="width:${pct}%"></div>
-          <div class="relative z-[2] text-[12px] font-extrabold text-white tracking-wide [text-shadow:0_1px_4px_rgba(0,0,0,0.75)]" data-chest-cap-text="true">${fmtInt(count)}/${fmtShort(cap)} Items</div>
+        <div class="relative h-6 rounded-full bg-[#fcecc8] border-2 border-[#14111d] overflow-hidden flex items-center justify-center">
+          <div class="absolute left-0 top-0 bottom-0 bg-[#fde047] rounded-full border-r-2 border-[#14111d]" data-chest-cap-fill="true" style="width:${pct}%"></div>
+          <div class="relative z-[2] text-[12px] font-black text-[#14111d] tracking-wide" data-chest-cap-text="true">${fmtInt(count)}/${fmtShort(cap)} Items</div>
         </div>
 
         <div class="flex flex-wrap justify-center items-center gap-3">
-          <button class="mam-sheen-hover relative overflow-hidden h-11 min-w-[200px] px-6 rounded-xl border border-emerald-300/45 bg-[linear-gradient(135deg,rgba(34,197,94,0.9),rgba(5,150,105,0.94))] shadow-[0_8px_20px_rgba(16,185,129,0.28),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[16px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 hover:-translate-y-0.5 hover:scale-[1.01] hover:brightness-110 active:translate-y-0.5 active:scale-[0.98] [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="chest-take-all">Take All</button>
-          <button class="mam-sheen-hover relative overflow-hidden h-11 min-w-[200px] px-6 rounded-xl border border-amber-300/50 bg-[linear-gradient(135deg,rgba(245,158,11,0.92),rgba(217,119,6,0.96))] shadow-[0_8px_20px_rgba(245,158,11,0.28),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[16px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 hover:-translate-y-0.5 hover:scale-[1.01] hover:brightness-110 active:translate-y-0.5 active:scale-[0.98] [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="chest-sell-ores">${this.state.isChestFullBonusReady() ? 'Sell Ores (+35%)' : 'Sell Ores'}</button>
+          <button class="mam-sheen-hover relative overflow-hidden h-11 min-w-[200px] px-6 rounded-xl border-[2.5px] border-[#14111d] bg-[#2ee59d] text-[#14111d] text-[16px] font-black cursor-pointer transition-[transform,filter] duration-150 hover:scale-[0.97] hover:-rotate-1 active:scale-[0.94]" data-action="chest-take-all">Take All</button>
+          <button class="mam-sheen-hover relative overflow-hidden h-11 min-w-[200px] px-6 rounded-xl border-[2.5px] border-[#14111d] bg-[#fde047] text-[#14111d] text-[16px] font-black cursor-pointer transition-[transform,filter] duration-150 hover:scale-[0.97] hover:rotate-1 active:scale-[0.94]" data-action="chest-sell-ores">${this.state.isChestFullBonusReady() ? 'Sell Ores (+35%)' : 'Sell Ores'}</button>
         </div>
       `,
     });

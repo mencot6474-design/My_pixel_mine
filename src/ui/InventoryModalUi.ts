@@ -116,28 +116,28 @@ export class InventoryModalUi {
         subtitle: `Backpack • ${worldName} Miner`,
         badgesHtml: `
           <div class="flex items-center justify-center gap-1 flex-wrap">
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-black border ${isEq ? 'bg-[#14532d]/60 border-[#4ade80]/70 text-[#86efac]' : 'bg-[#1e293b] border-[#475569] text-[#cbd5e1]'}">${isEq ? `Hotbar #${hotbarIdx + 1}` : 'Not Equipped'}</span>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-black border ${star > 0 ? 'bg-amber-500/20 border-amber-400/70 text-amber-300' : 'bg-[#1e293b] border-[#475569] text-[#94a3b8]'}">${'★'.repeat(Math.max(1, star))}${star === 0 ? ' 0' : ` ${star}/5`}</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black border-2 border-[#14111d] ${isEq ? 'bg-[#6ee7b7] text-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e]'}">${isEq ? `Hotbar #${hotbarIdx + 1}` : 'Not Equipped'}</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black border-2 border-[#14111d] ${star > 0 ? 'bg-[#fde047] text-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e]'}">${'★'.repeat(Math.max(1, star))}${star === 0 ? ' 0' : ` ${star}/5`}</span>
           </div>
         `,
         artHtml: chibiPortraitHtml(def),
         stats: [
-          ['Owned', `x${fmtInt(qty)} (${fmtInt(spare)} spare)`, 'text-white'],
-          ['Effective DPS', `${fmtShort(Math.round(def.baseDps * starTier.dmgMult))}/s`, 'text-[#facc15]'],
-          ['Star Bonus', star > 0 ? starBonusParts.join(' • ') : 'None (★0)', star > 0 ? 'text-amber-300' : 'text-[#94a3b8]'],
-          ['On Plot', `${fmtInt(onPlot)} placed`, 'text-[#7dd3fc]'],
+          ['Owned', `x${fmtInt(qty)} (${fmtInt(spare)} spare)`, 'text-[#14111d]'],
+          ['Effective DPS', `${fmtShort(Math.round(def.baseDps * starTier.dmgMult))}/s`, 'text-[#d97706]'],
+          ['Star Bonus', star > 0 ? starBonusParts.join(' • ') : 'None (★0)', star > 0 ? 'text-[#b45309]' : 'text-[#5b526e]'],
+          ['On Plot', `${fmtInt(onPlot)} placed`, 'text-[#0284c7]'],
         ],
         actionHtml: `
           <div class="flex flex-col gap-1.5">
-            <button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-[7px] border-2 ${isEq ? 'border-[#7c2d12] bg-[linear-gradient(180deg,#fb923c,#ea580c)] shadow-[0_3px_0_#7c2d12]' : 'border-[#14532d] bg-[linear-gradient(180deg,#4ade80,#16a34a)] shadow-[0_3px_0_#14532d]'} text-white text-[13px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] mam-outline-sm" data-insp-inv-action="toggle-miner" data-insp-id="${def.id}">
+            <button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border-2 border-[#14111d] ${isEq ? 'bg-[#ff922b] text-[#14111d]' : 'bg-[#2ee59d] text-[#14111d]'} text-[13px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:brightness-105 active:scale-[0.96]" data-insp-inv-action="toggle-miner" data-insp-id="${def.id}">
               ${isEq ? 'Unequip from Hotbar' : 'Equip to Hotbar'}
             </button>
-            <button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-[7px] border-2 transition-[transform,filter,box-shadow] duration-150 ease-out ${
+            <button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border-2 border-[#14111d] transition-[transform,filter] duration-150 ease-out ${
               !nextTier
-                ? 'disabled border-amber-600/60 bg-amber-950/60 text-amber-300 cursor-default'
+                ? 'disabled bg-[#fef08a] text-[#b45309] cursor-default'
                 : canStarUp
-                  ? 'border-[#854d0e] bg-[linear-gradient(180deg,#facc15,#eab308)] shadow-[0_3px_0_#854d0e] text-[#1e293b] cursor-pointer hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96]'
-                  : 'disabled border-slate-700 bg-slate-800/80 text-slate-400 cursor-not-allowed opacity-75'
+                  ? 'bg-[#fde047] text-[#14111d] cursor-pointer hover:brightness-105 active:scale-[0.96]'
+                  : 'disabled bg-[#e2e8f0] text-[#64748b] border-[#94a3b8] cursor-not-allowed opacity-75'
             } text-[12.5px] font-black" data-insp-inv-action="star-up-miner" data-insp-id="${def.id}" ${!nextTier || !canStarUp ? 'disabled' : ''}>
               ${
                 nextTier
@@ -164,20 +164,20 @@ export class InventoryModalUi {
         rarity: def.rarity,
         title: def.name,
         subtitle: `Backpack • ${worldName} Ore`,
-        badgesHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] font-black border ${isEq ? 'bg-[#14532d]/60 border-[#4ade80]/70 text-[#86efac]' : 'bg-[#1e293b] border-[#475569] text-[#cbd5e1]'}">${isEq ? `Hotbar #${hotbarIdx + 1}` : 'In Bag'}</span>`,
+        badgesHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] font-black border-2 border-[#14111d] ${isEq ? 'bg-[#bbf7d0] text-[#14532d]' : 'bg-[#fcecc8] text-[#14111d]'}">${isEq ? `Hotbar #${hotbarIdx + 1}` : 'In Bag'}</span>`,
         artHtml: oreIconSvg(def.color, def.secondaryColor, def.rarity, `inv_${def.id}`),
         stats: [
-          ['Quantity', `x${fmtInt(qty)}`, 'text-white'],
-          ['Drop Rate', fmtPct(def.chancePct), 'text-[#7dd3fc]'],
-          ['Unit Value', fmtMoney(unitVal), 'text-[#4ade80]'],
-          ['Stack Value', fmtMoney(totalVal), 'text-[#facc15]'],
+          ['Quantity', `x${fmtInt(qty)}`, 'text-[#14111d]'],
+          ['Drop Rate', fmtPct(def.chancePct), 'text-[#0284c7]'],
+          ['Unit Value', fmtMoney(unitVal), 'text-[#15803d]'],
+          ['Stack Value', fmtMoney(totalVal), 'text-[#b45309]'],
         ],
         actionHtml: `
           <div class="grid grid-cols-2 gap-1.5">
-            <button class="mam-sheen-hover relative overflow-hidden h-9 rounded-[7px] border-2 ${isEq ? 'border-[#7c2d12] bg-[linear-gradient(180deg,#fb923c,#ea580c)]' : 'border-[#0369a1] bg-[linear-gradient(180deg,#38bdf8,#0284c7)]'} text-white text-[12.5px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] mam-outline-sm" data-insp-inv-action="toggle-ore" data-insp-id="${def.id}">
+            <button class="mam-sheen-hover relative overflow-hidden h-9 rounded-xl border-[2.5px] border-[#14111d] ${isEq ? 'bg-[#fb923c] hover:bg-[#fdba74]' : 'bg-[#38bdf8] hover:bg-[#7dd3fc]'} text-[#14111d] text-[12.5px] font-black cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.96] hover:-rotate-[1.2deg] active:scale-[0.93]" data-insp-inv-action="toggle-ore" data-insp-id="${def.id}">
               ${isEq ? 'Unequip' : 'Equip'}
             </button>
-            <button class="mam-sheen-hover relative overflow-hidden h-9 rounded-[7px] border-2 border-[#14532d] bg-[linear-gradient(180deg,#4ade80,#16a34a)] text-white text-[12.5px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] mam-outline-sm" data-insp-inv-action="sell-ore-all" data-insp-id="${def.id}">
+            <button class="mam-sheen-hover relative overflow-hidden h-9 rounded-xl border-[2.5px] border-[#14111d] bg-[#4ade80] hover:bg-[#86efac] text-[#14111d] text-[12.5px] font-black cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.96] hover:rotate-[1.2deg] active:scale-[0.93]" data-insp-inv-action="sell-ore-all" data-insp-id="${def.id}">
               Sell All
             </button>
           </div>
@@ -198,17 +198,17 @@ export class InventoryModalUi {
       title: pot.name,
       subtitle: 'Backpack • Boost Potion',
       badgesHtml: isActive
-        ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#14532d]/60 border border-[#4ade80]/70 text-[#86efac] tabular-nums">Active ${mm}:${ss}</span>`
-        : `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#1e293b] border border-[#475569] text-[#cbd5e1]">Ready</span>`,
+        ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#bbf7d0] border-2 border-[#14111d] text-[#14532d] tabular-nums">Active ${mm}:${ss}</span>`
+        : `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#fcecc8] border-2 border-[#14111d] text-[#14111d]">Ready</span>`,
       artHtml: gemPotionIconHtml(pot.id, 84, pot.name, pot.color),
       stats: [
-        ['In Bag', `x${fmtInt(qty)}`, 'text-white'],
-        ['Duration', pot.durationLabel, 'text-[#7dd3fc]'],
-        ['Effect', pot.effectText, 'text-[#4ade80]'],
-        ['Timer', isActive ? `${mm}:${ss}` : 'Inactive', isActive ? 'text-[#4ade80]' : 'text-[#94a3b8]'],
+        ['In Bag', `x${fmtInt(qty)}`, 'text-[#14111d]'],
+        ['Duration', pot.durationLabel, 'text-[#0284c7]'],
+        ['Effect', pot.effectText, 'text-[#15803d]'],
+        ['Timer', isActive ? `${mm}:${ss}` : 'Inactive', isActive ? 'text-[#15803d]' : 'text-[#64748b]'],
       ],
       actionHtml: `
-        <button class="mam-sheen-hover relative overflow-hidden w-full h-10 rounded-[7px] border-2 border-[#0369a1] bg-[linear-gradient(180deg,#38bdf8,#0284c7)] shadow-[0_3px_0_#075985] text-white text-[14px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] mam-outline-sm" data-insp-inv-action="use-potion" data-insp-id="${pot.id}">
+        <button class="mam-sheen-hover relative overflow-hidden w-full h-10 rounded-xl border-[2.5px] border-[#14111d] bg-[#38bdf8] hover:bg-[#7dd3fc] text-[#14111d] text-[14px] font-black cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.97] hover:rotate-[1deg] active:scale-[0.94]" data-insp-inv-action="use-potion" data-insp-id="${pot.id}">
           Use Potion (x${fmtInt(qty)})
         </button>
       `,
@@ -238,16 +238,16 @@ export class InventoryModalUi {
         const isEquipped = hotbarIdx !== -1;
         const isInsp = selTarget?.kind === 'miner' && selTarget.id === def.id;
         cards.push(`
-          <div class="${rarityCardClasses(rarity, isInsp ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.4)]' : '')}" style="${rarityVars(rarity)}" data-equip-miner="${def.id}" title="Click to Equip / Unequip">
-            ${star > 0 ? `<span class="absolute bottom-1 left-1 z-[4] px-1 py-px rounded bg-amber-500/90 border border-amber-200/70 text-[#0f172a] text-[9px] font-black leading-none">★${star}</span>` : ''}
+          <div class="${rarityCardClasses(rarity, isInsp ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '')}" style="${rarityVars(rarity)}" data-equip-miner="${def.id}" title="Click to Equip / Unequip">
+            ${star > 0 ? `<span class="absolute bottom-1 left-1 z-[4] px-1.5 py-px rounded-md bg-[#fde047] border-[1.5px] border-[#14111d] text-[#14111d] text-[9px] font-black leading-none">★${star}</span>` : ''}
             ${isEquipped ? `<span class="mam-equipped-tag">${hotbarIdx + 1}</span>` : ''}
             <div class="mam-card-art">
               ${chibiPortraitHtml(def)}
             </div>
-            <div class="mam-card-name mam-outline-sm truncate ${isEquipped ? '!text-left pl-1 pr-[22px]' : 'px-1'}">${def.name}</div>
+            <div class="mam-card-name truncate ${isEquipped ? '!text-left pl-1 pr-[22px]' : 'px-1'}">${def.name}</div>
             <div class="mam-card-bottom">
-              <span class="mam-card-dps mam-outline-sm">${fmtShort(effDps)}</span>
-              <span class="mam-card-qty mam-outline-sm">x${fmtInt(qty)}</span>
+              <span class="mam-card-dps">${fmtShort(effDps)}</span>
+              <span class="mam-card-qty">x${fmtInt(qty)}</span>
             </div>
           </div>
         `);
@@ -261,13 +261,13 @@ export class InventoryModalUi {
         if (q && !pot.name.toLowerCase().includes(q)) continue;
         const isInsp = selTarget?.kind === 'gem-item' && selTarget.id === pot.id;
         cards.push(`
-          <div class="${rarityCardClasses(pot.rarity, `${isInsp ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.4)]' : ''} [&.is-boost-active]:shadow-[inset_0_0_12px_rgba(74,222,128,0.35)]`.trim())}" style="${rarityVars(pot.rarity)}" data-inv-potion-card="true" data-inspect-inv-only="gem-item:${pot.id}" title="${pot.name} • ${pot.effectText} ${pot.durationLabel} — Click to Inspect, USE to Activate">
-            <button type="button" class="absolute top-0.5 right-[3px] z-[4] px-1 py-px rounded bg-[#0284c7] border border-[#082f49] text-[9px] font-black text-white cursor-pointer hover:brightness-110" data-use-potion="${pot.id}">USE</button>
+          <div class="${rarityCardClasses(pot.rarity, `${isInsp ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : ''} [&.is-boost-active]:ring-[3px] [&.is-boost-active]:ring-inset [&.is-boost-active]:ring-[#22c55e]`.trim())}" style="${rarityVars(pot.rarity)}" data-inv-potion-card="true" data-inspect-inv-only="gem-item:${pot.id}" title="${pot.name} • ${pot.effectText} ${pot.durationLabel} — Click to Inspect, USE to Activate">
+            <button type="button" class="absolute top-1 right-1 z-[4] px-1.5 py-0.5 rounded-md bg-[#38bdf8] border-[1.5px] border-[#14111d] text-[9px] font-black text-[#14111d] cursor-pointer hover:bg-[#7dd3fc] hover:scale-95 transition-transform" data-use-potion="${pot.id}">USE</button>
             <div class="mam-card-art">${gemPotionIconHtml(pot.id, 54, pot.name, pot.color)}</div>
-            <div class="mam-card-name mam-outline-sm truncate !text-left pl-1 pr-[32px]">${pot.name}</div>
+            <div class="mam-card-name truncate !text-left pl-1 pr-[34px]">${pot.name}</div>
             <div class="mam-card-bottom">
-              <span class="text-[10px] font-black tabular-nums text-[#4ade80] leading-[1.05] mam-outline-sm" data-gem-timer="${pot.id}" data-timer-compact="true"></span>
-              <span class="mam-card-qty mam-outline-sm">x${fmtInt(qty)}</span>
+              <span class="text-[10px] font-black tabular-nums text-[#15803d] leading-[1.05]" data-gem-timer="${pot.id}" data-timer-compact="true"></span>
+              <span class="mam-card-qty">x${fmtInt(qty)}</span>
             </div>
           </div>
         `);
@@ -287,13 +287,13 @@ export class InventoryModalUi {
         const isEquipped = hotbarIdx !== -1;
         const isInsp = selTarget?.kind === 'ore' && selTarget.id === def.id;
         cards.push(`
-          <div class="${rarityCardClasses(def.rarity, isInsp ? 'ring-[2.5px] ring-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.4)]' : '')}" style="${rarityVars(def.rarity)}" data-equip-ore="${def.id}" title="${def.name} (${fmtMoney(def.sellValue)}) — Click to Equip / Unequip">
+          <div class="${rarityCardClasses(def.rarity, isInsp ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '')}" style="${rarityVars(def.rarity)}" data-equip-ore="${def.id}" title="${def.name} (${fmtMoney(def.sellValue)}) — Click to Equip / Unequip">
             ${isEquipped ? `<span class="mam-equipped-tag">${hotbarIdx + 1}</span>` : ''}
             <div class="mam-card-art">${oreIconSvg(def.color, def.secondaryColor, def.rarity, `inv_${def.id}`)}</div>
-            <div class="mam-card-name mam-outline-sm truncate ${isEquipped ? '!text-left pl-1 pr-[22px]' : 'px-1'}">${def.name}</div>
+            <div class="mam-card-name truncate ${isEquipped ? '!text-left pl-1 pr-[22px]' : 'px-1'}">${def.name}</div>
             <div class="mam-card-bottom">
-              <span class="mam-card-val mam-outline-sm">${fmtMoney(def.sellValue)}</span>
-              <span class="mam-card-qty mam-outline-sm">x${fmtInt(qty)}</span>
+              <span class="mam-card-val">${fmtMoney(def.sellValue)}</span>
+              <span class="mam-card-qty">x${fmtInt(qty)}</span>
             </div>
           </div>
         `);
@@ -302,7 +302,7 @@ export class InventoryModalUi {
 
     return cards.length
       ? cards.join('')
-      : '<div class="mam-placeholder-well col-span-full text-center py-10 px-4 text-[#cbd5e1] text-[15px] font-extrabold mam-outline-sm">No matching items in Backpack.</div>';
+      : '<div class="mam-placeholder-well col-span-full text-center py-10 px-4 text-[#475569] text-[15px] font-black">No matching items in Backpack.</div>';
   }
 
   private buildTeamPresetsBarHtml(): string {
@@ -329,25 +329,25 @@ export class InventoryModalUi {
         : `<span class="text-[10px] font-bold text-[#64748b] italic">Empty Slot</span>`;
 
       const wrapCls = isCurrentActive
-        ? 'border-[#38bdf8] bg-[#10243d] shadow-[0_0_12px_rgba(56,189,248,0.3)]'
+        ? 'border-2 border-[#14111d] bg-[#bae6fd]'
         : populated
-          ? 'border-[#38bdf8]/45 bg-[#0e192d]'
-          : 'border-white/12 bg-[#0c1220]';
+          ? 'border-2 border-[#14111d] bg-[#ffffff]'
+          : 'border-2 border-dashed border-[#14111d]/35 bg-[#fcecc8]';
 
       return `
-        <div class="inline-flex items-stretch rounded-xl overflow-hidden border ${wrapCls} transition-colors">
+        <div class="inline-flex items-stretch rounded-xl overflow-hidden ${wrapCls} transition-colors">
           <button
             type="button"
-            class="px-2.5 py-1.5 inline-flex items-center gap-2 text-left cursor-pointer hover:bg-white/[0.06] active:scale-[0.98] transition-[background-color,transform] border-0 bg-transparent"
+            class="px-2.5 py-1.5 inline-flex items-center gap-2 text-left cursor-pointer hover:bg-[#fde047]/40 active:scale-[0.98] transition-[background-color,transform] border-0 bg-transparent"
             data-team-preset-load="${idx}"
             title="${populated ? `Equip Team ${idx + 1}` : `Save current plot team to Team ${idx + 1}`}"
           >
-            <span class="px-1.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${isCurrentActive ? 'bg-[#38bdf8] text-[#081220]' : 'bg-white/10 text-white'}">T${idx + 1}</span>
+            <span class="px-1.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border border-[#14111d] ${isCurrentActive ? 'bg-[#38bdf8] text-[#14111d]' : 'bg-[#14111d] text-[#fff8e7]'}">T${idx + 1}</span>
             <span class="inline-flex items-center gap-1">${thumbsHtml}</span>
           </button>
           <button
             type="button"
-            class="px-2 inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase bg-[#152238] text-[#7dd3fc] border-l border-white/12 cursor-pointer hover:bg-[#1d3254] hover:text-white active:scale-95 transition-colors"
+            class="px-2 inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase bg-[#fde047] text-[#14111d] border-l-2 border-[#14111d] cursor-pointer hover:bg-[#facc15] active:scale-95 transition-colors"
             data-team-preset-save="${idx}"
             title="Save current plot team to Team ${idx + 1}"
           >${saveIconSvg}<span>Save</span></button>
@@ -356,8 +356,8 @@ export class InventoryModalUi {
     }).join('');
 
     return `
-      <div class="flex items-center gap-2 flex-wrap px-2.5 py-1.5 rounded-xl bg-[#0a101d] border border-white/10" data-team-presets-bar="true">
-        <span class="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-[#bae6fd] mr-0.5">${squadIconSvg}<span>Loadouts</span></span>
+      <div class="flex items-center gap-2 flex-wrap px-2.5 py-1.5 rounded-xl bg-[#ffffff] border-2 border-[#14111d]" data-team-presets-bar="true">
+        <span class="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-[#14111d] mr-0.5">${squadIconSvg}<span>Loadouts</span></span>
         ${itemsHtml}
       </div>
     `;
@@ -377,10 +377,10 @@ export class InventoryModalUi {
       boxClass: `w-[980px] ${TW_SHOP_MODAL_RESP}`,
       headerExtraHtml: `
         <div class="flex items-center gap-1.5">
-          <button class="mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-amber-300/45 bg-[linear-gradient(135deg,rgba(245,158,11,0.88),rgba(217,119,6,0.92))] shadow-[0_6px_16px_rgba(245,158,11,0.25),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[13px] font-extrabold cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="auto-star-up" title="Merge all spare Chibi duplicates into Stars">
+          <button class="mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border-2 border-[#14111d] bg-[#fde047] text-[#14111d] text-[13px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-1 active:scale-[0.94]" data-action="auto-star-up" title="Merge all spare Chibi duplicates into Stars">
             <span>★ Auto Star-Up</span>
           </button>
-          <button class="mam-equip-best-btn mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-emerald-300/45 bg-[linear-gradient(135deg,rgba(34,197,94,0.88),rgba(5,150,105,0.92))] shadow-[0_6px_16px_rgba(16,185,129,0.28),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[14px] font-extrabold cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.96] [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]" data-action="equip-best">
+          <button class="mam-equip-best-btn mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border-2 border-[#14111d] bg-[#2ee59d] text-[#14111d] text-[14px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:rotate-1 active:scale-[0.94]" data-action="equip-best">
             ${hudIconHtml('sparkle', 18, 'Equip Best')}
             <span>Equip Best</span>
           </button>
@@ -392,7 +392,7 @@ export class InventoryModalUi {
           <button class="${TW_TAB_BTN} ${this.invTab === 'miners' ? 'active' : ''}" data-inv-tab="miners">Miners</button>
           <button class="${TW_TAB_BTN} ${this.invTab === 'ores' ? 'active' : ''}" data-inv-tab="ores">Ores</button>
           <button class="${TW_TAB_BTN} ${this.invTab === 'other' ? 'active' : ''}" data-inv-tab="other">Other</button>
-          <input class="flex-1 min-w-[160px] h-9 px-3.5 rounded-xl border border-white/15 bg-[rgba(10,14,24,0.72)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] text-white text-[14px] font-semibold outline-none placeholder:text-slate-400/80 focus:border-sky-400/70 focus:bg-[rgba(14,20,36,0.88)] transition-[border-color,background-color] duration-150" type="search" placeholder="Search items..." value="${this.invSearch.replace(/"/g, '&quot;')}" data-inv-search="true" />
+          <input class="flex-1 min-w-[160px] h-9 px-3.5 rounded-xl border-2 border-[#14111d] bg-[#ffffff] text-[#14111d] text-[14px] font-bold outline-none placeholder:text-[#5b526e]/70 focus:bg-[#fef9c3] transition-colors duration-150" type="search" placeholder="Search items..." value="${this.invSearch.replace(/"/g, '&quot;')}" data-inv-search="true" />
         </div>
 
         ${this.buildTeamPresetsBarHtml()}

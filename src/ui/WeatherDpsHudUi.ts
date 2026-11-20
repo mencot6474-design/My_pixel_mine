@@ -48,8 +48,8 @@ export function buildActivePotionsDockContent(
           <div class="${TW_ACTIVE_POT_PILL}" style="--pot-color:${def.color}" data-hud-pot="${def.id}" title="${def.name} • ${def.effectText}">
             <div class="w-[28px] h-[28px] shrink-0 flex items-center justify-center @max-[720px]:w-[24px] @max-[720px]:h-[24px]">${gemPotionIconHtml(def.id, 28, def.name, def.color)}</div>
             <div class="flex items-center justify-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-[#4ade80] shrink-0 animate-[mamPotDotPulse_1.4s_ease-in-out_infinite]"></span>
-              <span class="text-[11px] font-black text-[#4ade80] tabular-nums leading-none mam-outline-sm" data-hud-pot-timer="${def.id}">${formatWeatherTimer(rem)}</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-[#16a34a] shrink-0 animate-[mamPotDotPulse_1.4s_ease-in-out_infinite]"></span>
+              <span class="text-[11px] font-black text-[#059669] tabular-nums leading-none" data-hud-pot-timer="${def.id}">${formatWeatherTimer(rem)}</span>
             </div>
           </div>
         `;
@@ -84,19 +84,18 @@ export function buildWeatherWidgetInnerHtml(
   const popoverHtml = opts.popoverOpen
     ? `
       <div
-        class="relative w-[596px] @max-[640px]:w-[310px] max-w-[calc(100vw-24px)] max-h-[76vh] overflow-y-auto mam-no-scrollbar rounded-2xl border-2 bg-[linear-gradient(180deg,#121c33_0%,#090e1c_100%)] shadow-[0_0_0_1px_#04070f,0_20px_48px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.18)]"
-        style="border-color:${inspected.accentColor};box-shadow:0 0 0 1px #04070f,0 20px 48px rgba(0,0,0,0.88),0 0 28px -8px ${inspected.glowColor}66,inset 0 1px 0 rgba(255,255,255,0.18)"
+        class="relative w-[596px] @max-[640px]:w-[310px] max-w-[calc(100vw-24px)] max-h-[76vh] overflow-y-auto mam-no-scrollbar rounded-2xl border-[3px] border-[#14111d] bg-[#fff8e7] text-[#14111d]"
       >
         <div
-          class="h-[3px] w-full"
-          style="background:linear-gradient(90deg,transparent 0%,${inspected.accentColor} 22%,#ffffff 50%,${inspected.accentColor} 78%,transparent 100%)"
+          class="h-[6px] w-full border-b-2 border-[#14111d]"
+          style="background:${inspected.accentColor}"
         ></div>
-        <div class="flex items-center justify-between gap-2 px-3 py-2 bg-[#0c1326] border-b border-[#253657]">
+        <div class="flex items-center justify-between gap-2 px-3 py-2 bg-[#fcecc8] border-b-2 border-[#14111d]">
           <div class="inline-flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${inspected.accentColor};box-shadow:0 0 8px ${inspected.glowColor}"></span>
-            <span class="text-[12px] font-black uppercase tracking-wider text-white mam-outline-sm">Weather Forecast</span>
+            <span class="w-3 h-3 rounded-full shrink-0 border-2 border-[#14111d]" style="background:${inspected.accentColor}"></span>
+            <span class="text-[12px] font-black uppercase tracking-wider text-[#14111d]">Weather Forecast</span>
           </div>
-          <span class="px-2 py-0.5 rounded-lg bg-[#11203d] border border-sky-400/60 text-[10px] font-black text-sky-200 tabular-nums">Rolls every 3:00</span>
+          <span class="px-2 py-0.5 rounded-full bg-[#bae6fd] border-2 border-[#14111d] text-[10px] font-black text-[#14111d] tabular-nums">Rolls every 3:00</span>
         </div>
 
         <div class="grid grid-cols-[276px_minmax(0,1fr)] @max-[640px]:grid-cols-1 gap-2.5 p-2.5 items-stretch">
@@ -107,78 +106,76 @@ export function buildWeatherWidgetInnerHtml(
               return `
                 <button
                   type="button"
-                  class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-xl border-2 cursor-pointer transition-[transform,background,border-color,box-shadow] duration-150 ${
+                  class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-xl border-2 border-[#14111d] cursor-pointer transition-[transform,background] duration-150 ${
                     isInsp
-                      ? 'bg-[#1a2948] translate-x-0.5'
+                      ? 'bg-[#fde047] translate-x-0.5'
                       : isActive
-                        ? 'bg-[#142038] hover:bg-[#1a2845]'
-                        : 'bg-[#0e1629] border-[#22314f] hover:bg-[#16223b]'
+                        ? 'bg-[#d1fae5] hover:bg-[#fef08a]'
+                        : 'bg-[#ffffff] hover:bg-[#fcecc8]'
                   }"
-                  style="${isInsp || isActive ? `border-color:${item.accentColor};${isInsp ? `box-shadow:0 0 14px -2px ${item.glowColor}66,inset 0 1px 0 rgba(255,255,255,0.16)` : ''}` : ''}"
                   data-weather-inspect="${item.id}"
                 >
                   <div
-                    class="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center border border-[#32466b] [&>.mam-3d-icon]:w-8 [&>.mam-3d-icon]:h-8"
-                    style="background:radial-gradient(circle at 50% 45%,${item.glowColor}44,#0a1020 82%)"
+                    class="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center border-2 border-[#14111d] [&>.mam-3d-icon]:w-8 [&>.mam-3d-icon]:h-8"
+                    style="background:radial-gradient(circle at 50% 45%,${item.glowColor}33,#ffffff 85%)"
                   >
                     ${weatherIconHtml(item.id, 32, item.name)}
                   </div>
                   <div class="flex-1 min-w-0 flex flex-col">
                     <div class="flex items-center justify-between gap-1">
-                      <span class="text-[12px] font-black leading-tight truncate mam-outline-sm" style="color:${item.accentColor}">${item.name}${isActive ? ' • Now' : ''}</span>
-                      <span class="text-[10px] font-black tabular-nums px-1.5 py-0.5 rounded-md bg-[#080d18] text-slate-100 border border-[#2d4066]">${item.chancePct}%</span>
+                      <span class="text-[12px] font-black leading-tight truncate text-[#14111d]">${item.name}${isActive ? ' • Now' : ''}</span>
+                      <span class="text-[10px] font-black tabular-nums px-1.5 py-0.5 rounded-md bg-[#14111d] text-[#fff8e7]">${item.chancePct}%</span>
                     </div>
-                    <div class="flex items-center gap-1 text-[10px] font-extrabold leading-tight mt-0.5 whitespace-nowrap">
-                      <span class="text-amber-300">${item.oreDropMult}x Ore</span>
-                      <span class="text-slate-500">•</span>
-                      <span class="text-fuchsia-300">${item.gemDropMult}x Gems</span>
-                      <span class="text-slate-500">•</span>
-                      <span class="text-rose-300">${item.damageMult}x DMG</span>
+                    <div class="flex items-center gap-1 text-[10px] font-black leading-tight mt-0.5 whitespace-nowrap">
+                      <span class="text-[#b45309]">${item.oreDropMult}x Ore</span>
+                      <span class="text-[#94a3b8]">•</span>
+                      <span class="text-[#7e22ce]">${item.gemDropMult}x Gems</span>
+                      <span class="text-[#94a3b8]">•</span>
+                      <span class="text-[#dc2626]">${item.damageMult}x DMG</span>
                     </div>
                   </div>
-                  ${isInsp ? `<span class="text-[12px] font-black shrink-0" style="color:${item.accentColor}" aria-hidden="true">▸</span>` : ''}
+                  ${isInsp ? `<span class="text-[12px] font-black shrink-0 text-[#14111d]" aria-hidden="true">▸</span>` : ''}
                 </button>
               `;
             }).join('')}
           </div>
 
           <div
-            class="rounded-xl border-2 bg-[#0a1020] p-2.5 flex flex-col gap-2 shadow-[inset_0_2px_12px_rgba(0,0,0,0.5)]"
-            style="border-color:${inspected.accentColor}88"
+            class="rounded-xl border-2 border-[#14111d] bg-[#ffffff] p-2.5 flex flex-col gap-2"
           >
-            <div class="flex items-center gap-2.5 pb-2 border-b border-[#22314f]">
+            <div class="flex items-center gap-2.5 pb-2 border-b-2 border-[#14111d]/15">
               <div
-                class="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center border-2"
-                style="border-color:${inspected.accentColor};background:radial-gradient(circle at 50% 45%,${inspected.glowColor}55,#0d1529 85%)"
+                class="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center border-2 border-[#14111d]"
+                style="background:radial-gradient(circle at 50% 45%,${inspected.glowColor}44,#fff8e7 85%)"
               >
                 ${meteorIconHtml(inspected.id, 28, inspOre.meteorName)}
               </div>
               <div class="flex-1 min-w-0 flex flex-col">
-                <span class="text-[13px] font-black leading-tight truncate mam-outline-sm" style="color:${inspected.accentColor}">${inspOre.meteorName} Drops</span>
+                <span class="text-[13px] font-black leading-tight truncate text-[#14111d]">${inspOre.meteorName} Drops</span>
                 <div class="flex items-center gap-1.5 mt-1">
-                  <span class="px-1.5 py-0.5 rounded-md bg-[#16223b] border border-[#2f4369] text-[9.5px] font-black text-slate-200 uppercase tracking-wide">500x Pit HP</span>
-                  <span class="text-[10px] font-extrabold text-slate-400">Meteor Loot</span>
+                  <span class="px-1.5 py-0.5 rounded-md bg-[#fcecc8] border border-[#14111d] text-[9.5px] font-black text-[#14111d] uppercase tracking-wide">500x Pit HP</span>
+                  <span class="text-[10px] font-extrabold text-[#5b526e]">Meteor Loot</span>
                 </div>
               </div>
             </div>
 
             <div class="flex flex-col gap-1.5 flex-1 justify-between">
-              <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-[#121c33] border border-[#2a3d61]">
+              <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-[#fff8e7] border-2 border-[#14111d]">
                 <div class="inline-flex items-center gap-2 min-w-0">
-                  <div class="w-8 h-8 rounded-lg bg-[#0a1020] border border-[#2a3d61] flex items-center justify-center shrink-0">
+                  <div class="w-8 h-8 rounded-lg bg-[#ffffff] border-2 border-[#14111d] flex items-center justify-center shrink-0">
                     <img class="w-6 h-6 object-contain" src="${assetUrl(`/ores/${inspOre.id}.webp`)}" alt="${inspOre.name}" />
                   </div>
                   <div class="flex flex-col min-w-0">
-                    <span class="text-[12px] font-black text-white truncate">${inspOre.name}</span>
-                    <span class="text-[10px] font-bold text-slate-300">${inspOreQtyRange} per meteor</span>
+                    <span class="text-[12px] font-black text-[#14111d] truncate">${inspOre.name}</span>
+                    <span class="text-[10px] font-bold text-[#5b526e]">${inspOreQtyRange} per meteor</span>
                   </div>
                 </div>
-                <span class="text-[10.5px] font-black tabular-nums px-2 py-0.5 rounded-lg bg-[#0d3325] text-emerald-300 border border-emerald-400 shrink-0">100%</span>
+                <span class="text-[10.5px] font-black tabular-nums px-2 py-0.5 rounded-lg bg-[#2ee59d] text-[#14111d] border-2 border-[#14111d] shrink-0">100%</span>
               </div>
 
-              <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-[#121c33] border border-[#2a3d61]">
+              <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-[#fff8e7] border-2 border-[#14111d]">
                 <div class="inline-flex items-center gap-2 min-w-0">
-                  <div class="w-8 h-8 rounded-lg bg-[#0a1020] border border-[#2a3d61] flex items-center justify-center shrink-0 overflow-hidden">
+                  <div class="w-8 h-8 rounded-lg bg-[#ffffff] border-2 border-[#14111d] flex items-center justify-center shrink-0 overflow-hidden">
                     ${
                       inspChibi
                         ? `<img class="w-7 h-7 object-contain" src="${assetUrl(inspChibi.poses.pose)}" alt="${inspChibi.name}" />`
@@ -186,8 +183,8 @@ export function buildWeatherWidgetInnerHtml(
                     }
                   </div>
                   <div class="flex flex-col min-w-0">
-                    <span class="text-[12px] font-black text-white truncate">${inspChibi ? inspChibi.name : 'Celestial Limited'}</span>
-                    <span class="text-[10px] font-bold text-slate-300">${
+                    <span class="text-[12px] font-black text-[#14111d] truncate">${inspChibi ? inspChibi.name : 'Celestial Limited'}</span>
+                    <span class="text-[10px] font-bold text-[#5b526e]">${
                       inspChibi && inspChibiEntries[0]
                         ? `${inspChibiEntries[0].rarity.toUpperCase()} Chibi`
                         : 'Coming Soon'
@@ -195,19 +192,19 @@ export function buildWeatherWidgetInnerHtml(
                   </div>
                 </div>
                 <span class="text-[10.5px] font-black tabular-nums px-2 py-0.5 rounded-lg ${
-                  inspChibi ? 'bg-[#36134a] text-fuchsia-300 border-fuchsia-400' : 'bg-[#1e293b] text-slate-300 border-[#334155]'
-                } border shrink-0">${inspChibi && inspChibiEntries[0] ? `${inspChibiEntries[0].chancePct}%` : 'Soon'}</span>
+                  inspChibi ? 'bg-[#f472b6] text-white border-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e] border-[#14111d]'
+                } border-2 shrink-0">${inspChibi && inspChibiEntries[0] ? `${inspChibiEntries[0].chancePct}%` : 'Soon'}</span>
               </div>
 
-              <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-[#121c33] border border-[#2a3d61]">
+              <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-[#fff8e7] border-2 border-[#14111d]">
                 <div class="inline-flex items-center gap-2 min-w-0">
-                  <div class="w-8 h-8 rounded-lg bg-[#0a1020] border border-[#2a3d61] flex items-center justify-center shrink-0 [&>img]:w-6 [&>img]:h-6">${enchantDiceIconHtml(24)}</div>
+                  <div class="w-8 h-8 rounded-lg bg-[#ffffff] border-2 border-[#14111d] flex items-center justify-center shrink-0 [&>img]:w-6 [&>img]:h-6">${enchantDiceIconHtml(24)}</div>
                   <div class="flex flex-col min-w-0">
-                    <span class="text-[12px] font-black text-white truncate">Enchant Dice + Gems</span>
-                    <span class="text-[10px] font-bold text-slate-300">Bonus meteor reward</span>
+                    <span class="text-[12px] font-black text-[#14111d] truncate">Enchant Dice + Gems</span>
+                    <span class="text-[10px] font-bold text-[#5b526e]">Bonus meteor reward</span>
                   </div>
                 </div>
-                <span class="text-[10.5px] font-black tabular-nums px-2 py-0.5 rounded-lg bg-[#0c2d4a] text-sky-300 border border-sky-400 shrink-0">${inspDicePct}%</span>
+                <span class="text-[10.5px] font-black tabular-nums px-2 py-0.5 rounded-lg bg-[#7dd3fc] text-[#14111d] border-2 border-[#14111d] shrink-0">${inspDicePct}%</span>
               </div>
             </div>
           </div>
@@ -218,52 +215,51 @@ export function buildWeatherWidgetInnerHtml(
 
   return `
       <button
-        class="group relative flex items-center gap-2.5 @max-[720px]:gap-2 pl-2 pr-3 py-1.5 rounded-2xl border-2 bg-[linear-gradient(135deg,#141e36_0%,#0b1121_100%)] cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.98]"
-        style="border-color:${w.accentColor};box-shadow:0 0 18px ${w.glowColor}44,inset 0 1px 0 rgba(255,255,255,0.22),0_4px_0 #050812,0_10px_24px rgba(0,0,0,0.65)"
+        class="group relative flex items-center gap-2.5 @max-[720px]:gap-2 pl-2 pr-3 py-1.5 rounded-2xl border-[3px] border-[#14111d] bg-[#fff8e7] text-[#14111d] cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.97] hover:-rotate-1 active:scale-95"
         data-action="toggle-weather-info"
         title="${w.name} (${w.chancePct}%): ${w.oreDropMult}x Ore • ${w.gemDropMult}x Gems • ${w.damageMult}x Damage — Click for forecast"
       >
         <div
-          class="w-[42px] h-[42px] @max-[720px]:w-[36px] @max-[720px]:h-[36px] rounded-xl shrink-0 flex items-center justify-center border border-[#3b4f78] [&>.mam-3d-icon]:w-[38px] [&>.mam-3d-icon]:h-[38px] @max-[720px]:[&>.mam-3d-icon]:w-[32px] @max-[720px]:[&>.mam-3d-icon]:h-[32px]"
-          style="background:radial-gradient(circle at 50% 42%,${w.glowColor}55,#0f172a 82%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25)"
+          class="w-[42px] h-[42px] @max-[720px]:w-[36px] @max-[720px]:h-[36px] rounded-xl shrink-0 flex items-center justify-center border-2 border-[#14111d] [&>.mam-3d-icon]:w-[38px] [&>.mam-3d-icon]:h-[38px] @max-[720px]:[&>.mam-3d-icon]:w-[32px] @max-[720px]:[&>.mam-3d-icon]:h-[32px]"
+          style="background:radial-gradient(circle at 50% 42%,${w.glowColor}44,#ffffff 85%)"
         >
           ${weatherIconHtml(w.id, 38, w.name)}
         </div>
         <div class="flex flex-col items-start min-w-0 leading-none">
           <div class="flex items-center gap-1.5">
-            <span class="text-[14px] @max-[720px]:text-[13px] font-black tracking-tight mam-outline-sm" style="color:${w.accentColor}">${w.name}</span>
-            <span class="px-1.5 py-[2px] rounded-md bg-[#0a1020] border border-[#2f4266] text-[10px] font-black text-white tabular-nums mam-outline-sm" data-hud-weather-timer="true">${timerTxt}</span>
+            <span class="text-[14px] @max-[720px]:text-[13px] font-black tracking-tight text-[#14111d]">${w.name}</span>
+            <span class="px-1.5 py-[2px] rounded-md bg-[#14111d] text-[10px] font-black text-[#fff8e7] tabular-nums" data-hud-weather-timer="true">${timerTxt}</span>
           </div>
-          <div class="flex items-center gap-1.5 mt-1 text-[11px] @max-[720px]:text-[10px] font-extrabold whitespace-nowrap mam-outline-sm">
-            <span class="text-amber-300">${w.oreDropMult}x Ore</span>
-            <span class="text-white/35">•</span>
-            <span class="text-fuchsia-300">${w.gemDropMult}x Gem</span>
-            <span class="text-white/35">•</span>
-            <span class="text-rose-300">${w.damageMult}x DMG</span>
+          <div class="flex items-center gap-1.5 mt-1 text-[11px] @max-[720px]:text-[10px] font-black whitespace-nowrap">
+            <span class="text-[#b45309]">${w.oreDropMult}x Ore</span>
+            <span class="text-[#94a3b8]">•</span>
+            <span class="text-[#7e22ce]">${w.gemDropMult}x Gem</span>
+            <span class="text-[#94a3b8]">•</span>
+            <span class="text-[#dc2626]">${w.damageMult}x DMG</span>
           </div>
         </div>
       </button>
       <button
         type="button"
-        class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border-2 cursor-pointer transition-[transform,filter,border-color,background] duration-150 hover:brightness-110 active:scale-[0.97] ${
+        class="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border-[2.5px] border-[#14111d] cursor-pointer transition-[transform,filter,background] duration-150 hover:scale-[0.97] active:scale-[0.95] ${
           state.autoMeteor
-            ? 'border-cyan-400 bg-[#0e223d] shadow-[0_3px_0_#061020,0_4px_14px_rgba(34,211,238,0.28)]'
-            : 'border-[#2a3b5c] bg-[#10182b] shadow-[0_3px_0_#060a14]'
+            ? 'bg-[#d1fae5]'
+            : 'bg-[#fff8e7]'
         }"
         data-action="toggle-auto-meteor"
         aria-pressed="${state.autoMeteor}"
         title="Toggle automatic Meteor spawn on weather change"
       >
         ${meteorIconHtml(w.id, 16, 'Auto Meteor')}
-        <span class="text-[11px] font-black text-slate-200 mam-outline-sm">Auto Meteor</span>
-        <span class="relative inline-flex items-center w-9 h-[18px] rounded-full transition-colors duration-150 ${
-          state.autoMeteor ? 'bg-emerald-500' : 'bg-slate-600'
+        <span class="text-[11px] font-black text-[#14111d]">Auto Meteor</span>
+        <span class="relative inline-flex items-center w-9 h-[18px] rounded-full border-2 border-[#14111d] transition-colors duration-150 ${
+          state.autoMeteor ? 'bg-[#2ee59d]' : 'bg-[#cbd5e1]'
         }">
-          <span class="inline-block w-3.5 h-3.5 rounded-full bg-white shadow transition-transform duration-150 ${
-            state.autoMeteor ? 'translate-x-[19px]' : 'translate-x-[3px]'
+          <span class="inline-block w-3 h-3 rounded-full bg-white border border-[#14111d] transition-transform duration-150 ${
+            state.autoMeteor ? 'translate-x-[18px]' : 'translate-x-[2px]'
           }"></span>
         </span>
-        <span class="text-[10px] font-black uppercase ${state.autoMeteor ? 'text-emerald-300' : 'text-slate-400'}">${
+        <span class="text-[10px] font-black uppercase ${state.autoMeteor ? 'text-[#059669]' : 'text-[#5b526e]'}">${
           state.autoMeteor ? 'ON' : 'OFF'
         }</span>
       </button>
@@ -293,12 +289,12 @@ export function buildDpsMeterInnerHtml(state: GameState, dpsMeterOpen: boolean):
   const panelHtml = dpsMeterOpen
     ? `
         <div class="mam-dps-panel flex flex-col gap-2">
-          <div class="flex items-center justify-between gap-2 border-b border-white/10 pb-1.5">
-            <span class="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.06em] text-sky-200 mam-outline-sm">
+          <div class="flex items-center justify-between gap-2 border-b-2 border-[#14111d]/15 pb-1.5">
+            <span class="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.06em] text-[#14111d]">
               ${DPS_SWORD_SVG}
               <span>Damage Breakdown</span>
             </span>
-            <span class="px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-300/40 text-[10.5px] font-black text-amber-200 tabular-nums">Tap ${fmtShort(bd.tapDamage)}</span>
+            <span class="px-1.5 py-0.5 rounded-md bg-[#fde047] border border-[#14111d] text-[10.5px] font-black text-[#14111d] tabular-nums">Tap ${fmtShort(bd.tapDamage)}</span>
           </div>
           ${
             bd.units.length > 0
@@ -306,22 +302,22 @@ export function buildDpsMeterInnerHtml(state: GameState, dpsMeterOpen: boolean):
                   ${bd.units
                     .map((u) => {
                       const pctStr = `${u.pct >= 10 ? Math.round(u.pct) : u.pct.toFixed(1)}%`;
-                      const starTag = u.stars > 0 ? ` <span class="text-amber-300">★${u.stars}</span>` : '';
+                      const starTag = u.stars > 0 ? ` <span class="text-[#d97706]">★${u.stars}</span>` : '';
                       return `
-                        <button type="button" class="w-full text-left flex flex-col gap-0.5 px-1.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-sky-400/10 hover:border-sky-300/35 cursor-pointer transition-colors" data-dps-inspect-slot="${u.slotIndex}" title="Inspect ${u.name} (Plot ${u.slotIndex + 1})">
-                          <div class="flex items-center justify-between text-[10.5px] font-extrabold text-slate-100 gap-1.5">
-                            <span class="truncate"><span class="text-[9px] text-slate-400 font-black mr-1">#${u.slotIndex + 1}</span>${u.name}${starTag}</span>
-                            <span class="shrink-0 text-sky-300 font-black tabular-nums">${fmtShort(u.dps)} <span class="text-slate-400 font-bold text-[9.5px]">(${pctStr})</span></span>
+                        <button type="button" class="w-full text-left flex flex-col gap-0.5 px-1.5 py-1 rounded-lg bg-[#ffffff] border-2 border-[#14111d] hover:bg-[#fef08a] cursor-pointer transition-colors" data-dps-inspect-slot="${u.slotIndex}" title="Inspect ${u.name} (Plot ${u.slotIndex + 1})">
+                          <div class="flex items-center justify-between text-[10.5px] font-black text-[#14111d] gap-1.5">
+                            <span class="truncate"><span class="text-[9px] text-[#5b526e] font-black mr-1">#${u.slotIndex + 1}</span>${u.name}${starTag}</span>
+                            <span class="shrink-0 text-[#0284c7] font-black tabular-nums">${fmtShort(u.dps)} <span class="text-[#5b526e] font-bold text-[9.5px]">(${pctStr})</span></span>
                           </div>
-                          <div class="h-1 w-full rounded-full bg-slate-950/90 border border-white/10 overflow-hidden">
-                            <div class="h-full rounded-full bg-[linear-gradient(90deg,#0284c7,#38bdf8,#a855f7)]" style="width:${Math.min(100, Math.max(2, u.pct))}%"></div>
+                          <div class="h-1.5 w-full rounded-full bg-[#fcecc8] border border-[#14111d] overflow-hidden">
+                            <div class="h-full rounded-full bg-[#38bdf8]" style="width:${Math.min(100, Math.max(2, u.pct))}%"></div>
                           </div>
                         </button>
                       `;
                     })
                     .join('')}
                 </div>`
-              : '<div class="text-[11px] font-bold text-slate-400 py-1">Place Chibis on plots to track DPS.</div>'
+              : '<div class="text-[11px] font-bold text-[#5b526e] py-1">Place Chibis on plots to track DPS.</div>'
           }
         </div>
       `
@@ -329,13 +325,13 @@ export function buildDpsMeterInnerHtml(state: GameState, dpsMeterOpen: boolean):
 
   return `
       ${panelHtml}
-      <button type="button" class="mam-dps-pill text-white text-[11px] font-black tabular-nums cursor-pointer mam-outline-sm" data-action="toggle-dps-meter" title="Toggle DPS Breakdown">
+      <button type="button" class="mam-dps-pill text-[#14111d] text-[11px] font-black tabular-nums cursor-pointer" data-action="toggle-dps-meter" title="Toggle DPS Breakdown">
         <span class="mam-dps-emblem" aria-hidden="true">${DPS_SWORD_SVG}</span>
         <span class="flex-1 min-w-0 flex items-center justify-between gap-1.5">
           <span class="inline-flex items-center gap-1 min-w-0">
-            <span class="text-sky-300 truncate">${fmtShort(total)}/s</span>
-            <span class="w-1 h-1 rounded-full bg-slate-500 shrink-0"></span>
-            <span class="text-amber-300 shrink-0">Tap ${fmtShort(bd.tapDamage)}</span>
+            <span class="text-[#0284c7] truncate">${fmtShort(total)}/s</span>
+            <span class="w-1 h-1 rounded-full bg-[#94a3b8] shrink-0"></span>
+            <span class="text-[#d97706] shrink-0">Tap ${fmtShort(bd.tapDamage)}</span>
           </span>
           <span class="shrink-0 opacity-90" data-dps-chevron="${dpsMeterOpen ? 'down' : 'up'}">${dpsMeterOpen ? DPS_CHEVRON_DOWN : DPS_CHEVRON_UP}</span>
         </span>
@@ -550,17 +546,17 @@ export class WeatherDpsHudUi {
 
     titleEl.textContent = snap.active ? 'OVERCLOCK ACTIVE' : 'OVERCLOCK FEVER';
     titleEl.className = snap.active
-      ? 'text-[10px] font-black italic uppercase tracking-[0.06em] text-[#fef08a] mam-outline-sm truncate transition-colors duration-300'
-      : 'text-[10px] font-black italic uppercase tracking-[0.06em] text-sky-200 mam-outline-sm truncate transition-colors duration-300';
+      ? 'text-[10px] font-black italic uppercase tracking-[0.06em] text-[#14111d] truncate transition-colors duration-300'
+      : 'text-[10px] font-black italic uppercase tracking-[0.06em] text-[#14111d] truncate transition-colors duration-300';
 
     valEl.textContent = snap.active ? `${snap.remainingSec.toFixed(1)}s` : `${pct}%`;
     valEl.className = snap.active
-      ? 'px-1.5 py-[1px] rounded bg-amber-400/20 border border-amber-300/60 text-[10px] font-black tabular-nums text-white leading-none mam-outline-sm shrink-0 transition-all duration-300'
-      : 'px-1.5 py-[1px] rounded bg-sky-400/15 border border-sky-300/40 text-[10px] font-black tabular-nums text-sky-100 leading-none mam-outline-sm shrink-0 transition-all duration-300';
+      ? 'px-1.5 py-[1px] rounded bg-[#ff4d2e] border border-[#14111d] text-[10px] font-black tabular-nums text-white leading-none shrink-0 transition-all duration-300'
+      : 'px-1.5 py-[1px] rounded bg-[#bae6fd] border border-[#14111d] text-[10px] font-black tabular-nums text-[#14111d] leading-none shrink-0 transition-all duration-300';
 
     badgesEl.className = snap.active
       ? 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-100'
-      : 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-55';
+      : 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-75';
   }
 }
 
@@ -582,16 +578,14 @@ export function buildOverclockGaugeInnerHtml(snap: OverclockSnapshot): string {
   const shellCls = snap.active ? 'mam-fever-shell is-active' : 'mam-fever-shell';
   const stateAttr = snap.active ? 'active' : 'charging';
   const titleText = snap.active ? 'OVERCLOCK ACTIVE' : 'OVERCLOCK FEVER';
-  const titleCls = snap.active
-    ? 'text-[10px] font-black italic uppercase tracking-[0.06em] text-[#fef08a] mam-outline-sm truncate transition-colors duration-300'
-    : 'text-[10px] font-black italic uppercase tracking-[0.06em] text-sky-200 mam-outline-sm truncate transition-colors duration-300';
+  const titleCls = 'text-[10px] font-black italic uppercase tracking-[0.06em] text-[#14111d] truncate transition-colors duration-300';
   const valText = snap.active ? `${snap.remainingSec.toFixed(1)}s` : `${pct}%`;
   const valCls = snap.active
-    ? 'px-1.5 py-[1px] rounded bg-amber-400/20 border border-amber-300/60 text-[10px] font-black tabular-nums text-white leading-none mam-outline-sm shrink-0 transition-all duration-300'
-    : 'px-1.5 py-[1px] rounded bg-sky-400/15 border border-sky-300/40 text-[10px] font-black tabular-nums text-sky-100 leading-none mam-outline-sm shrink-0 transition-all duration-300';
+    ? 'px-1.5 py-[1px] rounded bg-[#ff4d2e] border border-[#14111d] text-[10px] font-black tabular-nums text-white leading-none shrink-0 transition-all duration-300'
+    : 'px-1.5 py-[1px] rounded bg-[#bae6fd] border border-[#14111d] text-[10px] font-black tabular-nums text-[#14111d] leading-none shrink-0 transition-all duration-300';
   const badgesCls = snap.active
     ? 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-100'
-    : 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-55';
+    : 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-75';
 
   return `
     <div class="${shellCls}" data-overclock-state="${stateAttr}">
@@ -606,9 +600,9 @@ export function buildOverclockGaugeInnerHtml(snap: OverclockSnapshot): string {
           ${OVERCLOCK_TICKS_HTML}
         </div>
         <div class="${badgesCls}" data-oc-badges="true">
-          <span class="px-1 py-[1px] rounded bg-amber-500/25 border border-amber-300/50 text-amber-200">2x SPD</span>
-          <span class="px-1 py-[1px] rounded bg-fuchsia-500/25 border border-fuchsia-300/50 text-fuchsia-200">2x TAP</span>
-          <span class="px-1 py-[1px] rounded bg-sky-500/25 border border-sky-300/50 text-sky-200">+50% ORE</span>
+          <span class="px-1 py-[1px] rounded bg-[#fde047] border border-[#14111d] text-[#14111d]">2x SPD</span>
+          <span class="px-1 py-[1px] rounded bg-[#f9a8d4] border border-[#14111d] text-[#14111d]">2x TAP</span>
+          <span class="px-1 py-[1px] rounded bg-[#7dd3fc] border border-[#14111d] text-[#14111d]">+50% ORE</span>
         </div>
       </div>
     </div>
