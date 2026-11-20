@@ -22,6 +22,7 @@ import { compactHotbarSlots, PlotUnitState } from './GameStateSave';
 import { getDailyLoginRewardByChibiId } from './DailyLoginData';
 import { RelicEffectStat } from './RelicData';
 import { getFusionRecipeByResultChibiId } from './FusionData';
+import { getAchievementAllDmgBonusDomain } from './AchievementsDomain';
 import { getActiveFusionPassiveBonuses } from './FusionDomain';
 import { getActiveIndexPassiveBonusesDomain } from './IndexRewardsDomain';
 import { ResearchEffectType } from './ResearchData';
@@ -69,6 +70,7 @@ export interface PlotUnitsContext {
   ownedPickaxes: Record<string, number>;
   ownedEnchants: Record<string, number>;
   claimedIndexRewards?: ReadonlySet<string>;
+  claimedAchievements?: ReadonlySet<string>;
   getActiveResearchBonus(effectType: ResearchEffectType): number;
   getRelicBonus(stat: RelicEffectStat): number;
   getWeatherDamageMult(): number;
@@ -288,9 +290,10 @@ export function computePlotUnitStats(
   const starTier = getChibiStarTier(getChibiStarCount(ctx, chibi.id));
   const resonanceDmgMult = 1 + getWorldResonanceDmgPct(ctx, getMinerWorldId(chibi.id));
   const fusionTeamDmgMult = 1 + getActiveFusionPassiveBonuses(ctx.plotMiners).teamDmgPct;
-  const indexAllDmgMult = ctx.claimedIndexRewards
-    ? 1 + getActiveIndexPassiveBonusesDomain(ctx.claimedIndexRewards).allDmgPct
-    : 1;
+  const indexAllDmgMult =
+    1 +
+    (ctx.claimedIndexRewards ? getActiveIndexPassiveBonusesDomain(ctx.claimedIndexRewards).allDmgPct : 0) +
+    (ctx.claimedAchievements ? getAchievementAllDmgBonusDomain(ctx.claimedAchievements) : 0);
   const baseDmg =
     chibi.baseDps *
     lvlScale(unit.damageLevel) *

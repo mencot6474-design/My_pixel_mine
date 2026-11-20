@@ -97,6 +97,7 @@ async function bootstrap(): Promise<void> {
       hud?.spawnDamagePopup(dmg, sx, sy, isClick, isCrit);
       audio.playOreHit(isClick);
       if (isClick) {
+        if (isCrit) gameState.recordCritTap(dmg);
         gameState.chargeOverclock(isCrit ? OVERCLOCK_TAP_CHARGE * 1.5 : OVERCLOCK_TAP_CHARGE);
       }
     },

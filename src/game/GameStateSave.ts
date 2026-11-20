@@ -8,6 +8,11 @@ import {
   WORLDS,
 } from './GameData';
 import { getRelicById, MAX_EQUIPPED_RELICS } from './RelicData';
+import {
+  CareerStats,
+  createDefaultCareerStats,
+  isValidAchievementTierId,
+} from './AchievementsDomain';
 import { BountyEntry, isValidBountyEntry } from './BountiesDomain';
 import { isValidIndexMilestoneId } from './IndexRewardsDomain';
 import { ResearchTreeId } from './ResearchData';
@@ -114,6 +119,8 @@ export interface SavePayload {
   dailyLoginClaimedDays?: number[];
   claimedIndexRewards?: string[];
   teamPresets?: TeamPresetSlots[];
+  careerStats?: Partial<CareerStats>;
+  claimedAchievements?: string[];
 }
 
 export interface SaveableGameState {
@@ -158,6 +165,8 @@ export interface SaveableGameState {
   dailyLoginClaimedDays: number[];
   claimedIndexRewards: Set<string>;
   teamPresets: TeamPresetSlots[];
+  careerStats: CareerStats;
+  claimedAchievements: Set<string>;
 }
 
 /** Maps retired World 2–5 ore IDs onto current catalog ore IDs. */
@@ -250,6 +259,8 @@ export function serializeSavePayload(state: SaveableGameState): SavePayload {
     dailyLoginClaimedDays: state.dailyLoginClaimedDays,
     claimedIndexRewards: [...state.claimedIndexRewards],
     teamPresets: state.teamPresets.map((p) => p.slice(0, STAGE_PEDESTAL_COUNT)),
+    careerStats: { ...state.careerStats },
+    claimedAchievements: [...state.claimedAchievements],
   };
 }
 
@@ -513,6 +524,24 @@ export function deserializeSaveJson(
         }
       }
       state.teamPresets = presets;
+    }
+    if (data.careerStats && typeof data.careerStats === 'object') {
+      const defStats = createDefaultCareerStats();
+      const s = data.careerStats;
+      state.careerStats = {
+        oresBroken: typeof s.oresBroken === 'number' && Number.isFinite(s.oresBroken) ? Math.max(0, Math.floor(s.oresBroken)) : defStats.oresBroken,
+        critTaps: typeof s.critTaps === 'number' && Number.isFinite(s.critTaps) ? Math.max(0, Math.floor(s.critTaps)) : defStats.critTaps,
+        highestCrit: typeof s.highestCrit === 'number' && Number.isFinite(s.highestCrit) ? Math.max(0, Math.floor(s.highestCrit)) : defStats.highestCrit,
+        overclockTriggers: typeof s.overclockTriggers === 'number' && Number.isFinite(s.overclockTriggers) ? Math.max(0, Math.floor(s.overclockTriggers)) : defStats.overclockTriggers,
+        fusionsCompleted: typeof s.fusionsCompleted === 'number' && Number.isFinite(s.fusionsCompleted) ? Math.max(0, Math.floor(s.fusionsCompleted)) : defStats.fusionsCompleted,
+      };
+    }
+    if (Array.isArray(data.claimedAchievements)) {
+      state.claimedAchievements = new Set(
+        data.claimedAchievements.filter(
+          (id): id is string => typeof id === 'string' && isValidAchievementTierId(id)
+        )
+      );
     }
   } catch {
     // Ignore corrupt saves

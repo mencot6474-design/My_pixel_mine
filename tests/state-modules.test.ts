@@ -784,4 +784,37 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(reloaded.teamPresets[1][0]).toBe('cosmic-monarch');
     });
   });
+
+  describe('Career Achievements & Stats', () => {
+    it('tracks career stats, unlocks & claims achievement tiers, grants +1% All DMG, and persists via save/load', () => {
+      const state = new GameState();
+      expect(state.getReadyAchievementCount()).toBe(0);
+
+      // Record 10 crit taps -> unlocks crit_striker:1
+      for (let i = 0; i < 10; i++) {
+        state.recordCritTap(250 + i * 10);
+      }
+      expect(state.careerStats.critTaps).toBe(10);
+      expect(state.careerStats.highestCrit).toBe(340);
+      expect(state.getReadyAchievementCount()).toBeGreaterThanOrEqual(1);
+
+      const gemsBefore = state.gems;
+      const tapBefore = state.getTapDamage();
+      const res = state.claimAchievementTier('crit_striker:1');
+      expect(res).not.toBeNull();
+      expect(res!.gemsGranted).toBe(300);
+      expect(state.gems).toBe(gemsBefore + 300);
+      expect(state.getAchievementAllDmgBonus()).toBeCloseTo(0.01, 5);
+      expect(state.getTapDamage()).toBeGreaterThanOrEqual(tapBefore);
+      expect(state.claimAchievementTier('crit_striker:1')).toBeNull();
+
+      // Persist via save/load
+      const raw = JSON.stringify(serializeSavePayload(state));
+      const reloaded = new GameState();
+      deserializeSaveJson(reloaded, raw);
+      expect(reloaded.careerStats.critTaps).toBe(10);
+      expect(reloaded.careerStats.highestCrit).toBe(340);
+      expect(reloaded.claimedAchievements.has('crit_striker:1')).toBe(true);
+    });
+  });
 });

@@ -9,6 +9,7 @@ import { GameState } from '../game/GameState';
 import { WeatherId } from '../game/WeatherData';
 import { fmtInt, fmtMoney } from '../game/NumberFormat';
 import { getTowerFloorDef, TowerWaveOreState } from '../game/TowerData';
+import { AchievementsModalUi } from './AchievementsModalUi';
 import { AltarShopHudUi } from './AltarShopHudUi';
 import { BountiesModalUi } from './BountiesModalUi';
 import { ChestModalUi } from './ChestModalUi';
@@ -82,6 +83,7 @@ export class GameHud {
   private readonly settingsUi: SettingsModalUi;
   private readonly offlineUi: OfflineModalUi;
   private readonly bountiesUi: BountiesModalUi;
+  private readonly achievementsUi: AchievementsModalUi;
   private readonly dailyLoginUi: DailyLoginModalUi;
 
   constructor(
@@ -135,6 +137,11 @@ export class GameHud {
       this.state,
       (msg) => this.pushToast(msg),
       () => this.render()
+    );
+    this.achievementsUi = new AchievementsModalUi(
+      this.state,
+      () => this.render(),
+      (msg) => this.pushToast(msg)
     );
     this.dailyLoginUi = new DailyLoginModalUi(
       this.state,
@@ -372,6 +379,7 @@ export class GameHud {
       if (ocActive !== this.lastOverclockActive) {
         this.lastOverclockActive = ocActive;
         this.onOverclockChange?.(ocActive);
+        this.syncFeverScreenFx(ocActive, ocActive);
         if (ocActive) {
           audio.playSfx('rare-fanfare', { volume: 0.65 });
           this.pushToast('⚡ OVERCLOCK ACTIVE! 2x Speed • 2x Tap • +50% Ore!');
@@ -849,6 +857,10 @@ export class GameHud {
           <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] mam-outline-sm ${readyBounties > 0 ? '' : 'hidden'}" data-bounties-badge="true">${readyBounties}</span>
           ${hudIconHtml('quest', 22, 'Bounties')}
         </button>
+        <button class="${TW_QUICK_BTN_QUEST} !px-2 mam-outline-sm" title="Achievements & Career Stats" data-action="open-achievements">
+          <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] mam-outline-sm ${this.state.getReadyAchievementCount() > 0 ? '' : 'hidden'}" data-achievements-badge="true">${this.state.getReadyAchievementCount()}</span>
+          <svg class="w-[21px] h-[21px] text-[#fde047] drop-shadow-[0_1px_4px_rgba(0,0,0,0.65)]" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4H17V10C17 12.8 14.8 15 12 15C9.2 15 7 12.8 7 10V4Z" fill="currentColor" fill-opacity="0.28" stroke="currentColor" stroke-width="1.9"/><path d="M7 6H4V8.5C4 10.2 5.3 11.5 7 11.5M17 6H20V8.5C20 10.2 18.7 11.5 17 11.5M12 15V19M8.5 19H15.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+        </button>
         <button class="${TW_QUICK_BTN_CHEST} mam-outline-sm" title="Chest (${fmtInt(chestCount)})" data-action="open-chest">
           ${hudIconHtml('chest', 22, 'Chest')}
         </button>
@@ -936,6 +948,7 @@ export class GameHud {
       ${this.hotbarUi.renderHotbarSection()}
 
       ${this.weatherDpsUi.renderActivePotionsDock()}
+      ${this.renderFeverScreenFx()}
       ${this.renderActiveModal()}
       ${this.renderToastStack()}
     `;
@@ -955,6 +968,49 @@ export class GameHud {
     }
   }
 
+  private renderFeverScreenFx(): string {
+    const active = this.sceneMode === 'mine' && this.state.isOverclockActive();
+    return `
+      <div class="mam-fever-screen-fx ${active ? 'is-active' : ''}" data-fever-screen-fx="true" aria-hidden="true">
+        <div class="mam-fever-vignette"></div>
+        <span class="mam-fever-corner is-tl"></span>
+        <span class="mam-fever-corner is-tr"></span>
+        <span class="mam-fever-corner is-bl"></span>
+        <span class="mam-fever-corner is-br"></span>
+        <div class="mam-fever-burst" data-fever-burst="true">
+          <div class="mam-fever-ticker">OVERCLOCK // FEVER // OVERCLOCK // FEVER // OVERCLOCK // FEVER //</div>
+          <div class="mam-fever-slash"></div>
+          <div class="mam-fever-burst-row">
+            <span class="mam-fever-chevrons">&gt;&gt;&gt;</span>
+            <div class="mam-fever-burst-title">OVERCLOCK FEVER!</div>
+            <span class="mam-fever-chevrons">&lt;&lt;&lt;</span>
+          </div>
+          <div class="mam-fever-burst-sub">
+            <span>2× TAP</span>
+            <span>•</span>
+            <span>1.5× ORE</span>
+            <span>•</span>
+            <span>30% CRIT</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private syncFeverScreenFx(active: boolean, triggerBurst: boolean): void {
+    const fx = this.root.querySelector<HTMLElement>('[data-fever-screen-fx="true"]');
+    if (!fx) return;
+    fx.classList.toggle('is-active', active && this.sceneMode === 'mine');
+    if (triggerBurst && active && this.sceneMode === 'mine') {
+      const burst = fx.querySelector<HTMLElement>('[data-fever-burst="true"]');
+      if (burst) {
+        burst.classList.remove('is-bursting');
+        void burst.offsetWidth;
+        burst.classList.add('is-bursting');
+      }
+    }
+  }
+
   private renderActiveModal(): string {
     if (this.activeModal === 'index') return this.indexUi.renderModal();
     if (this.activeModal === 'inventory') return this.inventoryUi.renderModal();
@@ -969,6 +1025,7 @@ export class GameHud {
     if (this.activeModal === 'settings') return this.settingsUi.renderModal();
     if (this.activeModal === 'offline') return this.offlineUi.renderModal();
     if (this.activeModal === 'bounties') return this.bountiesUi.renderModal();
+    if (this.activeModal === 'achievements') return this.achievementsUi.renderModal();
     if (this.activeModal === 'daily-login') return this.dailyLoginUi.renderModal();
     if (this.activeModal === 'altar-hub') return this.fusionUi.renderAltarChoiceModal();
     return '';
@@ -1059,6 +1116,7 @@ export class GameHud {
         this.render();
       },
       'open-bounties': () => this.toggleModal('bounties'),
+      'open-achievements': () => this.toggleModal('achievements'),
       'open-daily-login': () => this.toggleModal('daily-login'),
       'toggle-audio': () => {
         const nextMuted = audio.toggleMuted();
@@ -1144,6 +1202,7 @@ export class GameHud {
     this.settingsUi.bindEvents(this.root);
     this.offlineUi.bindEvents(this.root);
     this.bountiesUi.bindEvents(this.root);
+    this.achievementsUi.bindEvents(this.root);
     this.dailyLoginUi.bindEvents(this.root);
     this.fusionUi.bindAltarChoiceEvents(this.root);
     this.fusionUi.bindFusionWorldEvents(this.root);
@@ -1165,6 +1224,12 @@ export class GameHud {
       const readyIndex = this.state.getReadyIndexRewardCount();
       indexBadge.textContent = String(readyIndex);
       indexBadge.classList.toggle('hidden', readyIndex <= 0);
+    }
+    const achBadge = this.root.querySelector<HTMLElement>('[data-achievements-badge="true"]');
+    if (achBadge) {
+      const readyAch = this.state.getReadyAchievementCount();
+      achBadge.textContent = String(readyAch);
+      achBadge.classList.toggle('hidden', readyAch <= 0);
     }
   }
 }

@@ -1,5 +1,14 @@
 import { MAX_PIT_NODE_COUNT, OreVariantKey, STAGE_PEDESTAL_COUNT } from '../game3d/MineWorldPalette';
 import {
+  AchievementClaimResult,
+  AchievementProgressSnapshot,
+  CareerStats,
+  claimAchievementTierDomain,
+  createDefaultCareerStats,
+  getAchievementAllDmgBonusDomain,
+  getReadyAchievementCountDomain,
+} from './AchievementsDomain';
+import {
   claimIndexRewardDomain,
   getActiveIndexPassiveBonusesDomain,
   getIndexMilestonesForTab,
@@ -273,6 +282,8 @@ export class GameState {
   public dailyLoginClaimedDays: number[] = [];
   public claimedIndexRewards = new Set<string>();
   public teamPresets: TeamPresetSlots[] = createEmptyTeamPresets();
+  public careerStats: CareerStats = createDefaultCareerStats();
+  public claimedAchievements = new Set<string>();
   public readonly overclock: OverclockState = createInitialOverclockState();
   private loadedLastSavedAt = 0;
 
@@ -364,6 +375,42 @@ export class GameState {
     if (!res) return null;
     this.emit();
     return res;
+  }
+
+  public recordCritTap(damage: number): void {
+    this.careerStats.critTaps += 1;
+    const rounded = Math.max(1, Math.round(damage));
+    if (rounded > this.careerStats.highestCrit) {
+      this.careerStats.highestCrit = rounded;
+    }
+  }
+
+  public getAchievementSnapshot(): AchievementProgressSnapshot {
+    return {
+      oresBroken: this.careerStats.oresBroken,
+      critTaps: this.careerStats.critTaps,
+      overclockTriggers: this.careerStats.overclockTriggers,
+      discoveredCount: this.getDiscoveredCount(),
+      towerBestFloor: this.towerBestFloor,
+      craftedRelicsCount: this.craftedRelics.size,
+      bountiesCompleted: this.bountiesCompleted,
+      unlockedWorldsCount: this.unlockedWorlds.length,
+    };
+  }
+
+  public getReadyAchievementCount(): number {
+    return getReadyAchievementCountDomain(this.getAchievementSnapshot(), this.claimedAchievements);
+  }
+
+  public claimAchievementTier(tierId: string): AchievementClaimResult | null {
+    const res = claimAchievementTierDomain(this, tierId);
+    if (!res) return null;
+    this.emit();
+    return res;
+  }
+
+  public getAchievementAllDmgBonus(): number {
+    return getAchievementAllDmgBonusDomain(this.claimedAchievements);
   }
 
   public getChestItemCount(): number {
@@ -600,6 +647,7 @@ export class GameState {
   }
 
   public onOreBroken(variantKey: OreVariantKey, rng: () => number = Math.random): void {
+    this.careerStats.oresBroken += 1;
     recordBountyProgressDomain(this, 'mine_ores', 1);
     if (variantKey === 'vein' || variantKey === 'geode') {
       recordBountyProgressDomain(this, 'break_rare_ore', 1);
@@ -771,7 +819,8 @@ export class GameState {
       1 +
       this.getRelicBonus('tapDmgPct') +
       this.getActiveFusionPassives().tapDmgPct +
-      this.getActiveIndexPassiveBonuses().allDmgPct;
+      this.getActiveIndexPassiveBonuses().allDmgPct +
+      this.getAchievementAllDmgBonus();
     const overclockMult = this.isOverclockActive(nowMs) ? OVERCLOCK_TAP_MULT : 1;
     return Math.max(
       1,
@@ -1128,7 +1177,12 @@ export class GameState {
   }
 
   public chargeOverclock(amount: number, nowMs = Date.now()): boolean {
-    return chargeOverclockDomain(this.overclock, amount, nowMs);
+    const wasActive = this.isOverclockActive(nowMs);
+    const activated = chargeOverclockDomain(this.overclock, amount, nowMs);
+    if (!wasActive && activated) {
+      this.careerStats.overclockTriggers += 1;
+    }
+    return activated;
   }
 
   public stepOverclock(nowMs = Date.now()): boolean {
@@ -1160,7 +1214,11 @@ export class GameState {
   }
 
   public fuseChibiRecipe(recipeId: string): FusionRecipeDef | null {
-    return fuseChibiRecipeDomain(this.fusionCtx(), recipeId);
+    const res = fuseChibiRecipeDomain(this.fusionCtx(), recipeId);
+    if (res) {
+      this.careerStats.fusionsCompleted += 1;
+    }
+    return res;
   }
 
   private fusionCtx(): FusionDomainContext {

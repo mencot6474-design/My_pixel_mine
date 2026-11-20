@@ -38,6 +38,7 @@ export type ModalKind =
   | 'settings'
   | 'offline'
   | 'bounties'
+  | 'achievements'
   | 'daily-login'
   | 'altar-hub';
 
