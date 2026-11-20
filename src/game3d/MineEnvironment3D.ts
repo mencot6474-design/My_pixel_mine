@@ -146,7 +146,7 @@ export class MineEnvironment3D {
     // Pit hole: x [-5.78..5.78], z [-2.63..3.93]
     // Center stairwell bay: x [-1.30..1.30], z [-3.18..-2.63]
     // Left Drop Shaft trench: x [-7.15..-5.78], z [-0.55..0.85]
-    // Right Plasma Refinery escalator channel: x [5.78..7.12], z [1.05..2.35]
+    // Right Plasma Refinery escalator channel: x [5.78..7.12], z [-0.55..0.85]
     const courtyardSpecs: [number, number, number, number][] = [
       [0, -5.14, 19.6, 3.92],
       [-5.55, -2.905, 8.5, 0.55],
@@ -156,8 +156,8 @@ export class MineEnvironment3D {
       [-6.465, -1.59, 1.37, 2.08],
       [-6.465, 2.39, 1.37, 3.08],
       [8.46, 0.65, 2.68, 6.56],
-      [6.45, -0.79, 1.34, 3.68],
-      [6.45, 3.14, 1.34, 1.58],
+      [6.45, -1.59, 1.34, 2.08],
+      [6.45, 2.39, 1.34, 3.08],
     ];
     for (const [cx, cz, cw, cd] of courtyardSpecs) {
       const slab = new THREE.Mesh(new THREE.BoxGeometry(cw, 0.28, cd), this.cobbleMat);
@@ -170,11 +170,11 @@ export class MineEnvironment3D {
       this.group.add(underSkirt);
     }
 
-    // Sunken Basalt Trench Floors Under Left Track & Right Escalator (y = -0.74)
+    // Sunken Basalt Trench Floors Under Left Track & Right Escalator (y = -0.74, z = 0.15)
     const leftTrench = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.14, 1.44), this.cliffMat);
     leftTrench.position.set(-6.465, -0.74, 0.15);
-    const rightTrench = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.14, 1.34), this.cliffMat);
-    rightTrench.position.set(6.45, -0.74, 1.7);
+    const rightTrench = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.14, 1.44), this.cliffMat);
+    rightTrench.position.set(6.45, -0.74, 0.15);
     this.group.add(leftTrench, rightTrench);
 
     // Dark Basalt / Cyber-Industrial Outer Deck Terraces cleanly abutting courtyard x = +-9.80 (zero overlap!)
@@ -220,8 +220,8 @@ export class MineEnvironment3D {
     };
     addSideCurbSeg(-9.66, -4.875, 6.05);
     addSideCurbSeg(-9.66, 4.625, 4.95);
-    addSideCurbSeg(9.66, -4.15, 7.5);
-    addSideCurbSeg(9.66, 5.15, 3.9);
+    addSideCurbSeg(9.66, -4.875, 6.05);
+    addSideCurbSeg(9.66, 4.625, 4.95);
 
     for (const sx of [-1, 1]) {
       const outerFlankTrim = new THREE.Mesh(
@@ -436,7 +436,7 @@ export class MineEnvironment3D {
         new THREE.Vector3(-19.6, 3.35, -15.4),
       ],
       [
-        new THREE.Vector3(10.61, 2.09, 0.35),
+        new THREE.Vector3(10.61, 2.09, 0.15),
         new THREE.Vector3(13.8, 1.95, -4.2),
         new THREE.Vector3(16.8, 2.95, -8.8),
       ],

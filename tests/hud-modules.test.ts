@@ -282,6 +282,8 @@ describe('Tahap B HUD Modules', () => {
       expect(slotsHtml).toContain(firstOre.name);
       expect(slotsHtml).toContain('x3');
       expect(slotsHtml).toContain('mam-hotbar-keycap');
+      expect(slotsHtml).toContain('mam-empty-slot');
+      expect(slotsHtml).not.toContain('rounded-full bg-[#14111d]/18');
       expect(slotsHtml).toContain('is-hotbar-selected');
       expect(slotsHtml).not.toContain(zeroOre.name);
 

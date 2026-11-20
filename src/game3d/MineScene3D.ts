@@ -402,13 +402,16 @@ export class MineScene3D {
 
     // Center Basalt Quarry Pit with 3D Ore & Crystal Nodes
     this.pit = new OrePit3D(palette);
+    this.pit.onMeteorLanded = () => {
+      this.tapShakeIntensity = Math.max(this.tapShakeIntensity, 0.34);
+    };
     this.scene.add(this.pit.group);
     for (const m of this.pit.clickableMeshes) {
       this.clickableMeshes.push(m);
     }
 
-    // Right Wing Cyber Vault Container on Elevated Plasma Refinery Dais
-    this.crateGroup.position.set(8.45, 0.48, 1.7);
+    // Right Wing Cyber Vault Container on Elevated Plasma Refinery Dais (aligned to rail Z = 0.15)
+    this.crateGroup.position.set(8.45, 0.48, 0.15);
     this.chestVisual = createProceduralTreasureChest({
       scale: 1.08,
       woodColor: 0x1e293b,

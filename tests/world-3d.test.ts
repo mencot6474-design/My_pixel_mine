@@ -1728,6 +1728,10 @@ describe('Pure 3D Mine World', () => {
     };
     try {
       const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+      let meteorLandedCount = 0;
+      pit.onMeteorLanded = () => {
+        meteorLandedCount += 1;
+      };
       expect(pit.hasAliveMeteor()).toBe(false);
 
       pit.spawnWeatherMeteor('celestial', 2);
@@ -1735,8 +1739,18 @@ describe('Pure 3D Mine World', () => {
 
       const meteorInfo = pit.getAliveNodesInfo().find((n) => n.isMeteor);
       expect(meteorInfo).toBeDefined();
+      expect(meteorInfo?.worldX).toBeLessThan(0);
+      expect(meteorInfo?.worldY).toBeGreaterThan(5);
       expect(meteorInfo?.maxHp).toBe(180 * 2 * METEOR_HP_MULT);
       expect(meteorInfo?.meteorWeatherId).toBe('celestial');
+
+      for (let i = 0; i < 16; i++) {
+        pit.update(0.05, (i + 1) * 0.05);
+      }
+      const landedInfo = pit.getAliveNodesInfo().find((n) => n.isMeteor);
+      expect(landedInfo?.worldX).toBeCloseTo(0, 3);
+      expect(meteorLandedCount).toBe(1);
+      expect(pit.getImpactFxCounts().shockwaves).toBeGreaterThan(0);
 
       const firstHit = pit.hitNode(meteorInfo!.id, meteorInfo!.maxHp, true);
       expect(firstHit?.broken).toBe(false);
@@ -1998,6 +2012,8 @@ describe('Pure 3D Mine World', () => {
 
     const station = createChestVaultStation({ crystalColor: '#38bdf8', cliffColor: '#78716c' });
     station.group.updateMatrixWorld(true);
+    const stationCenter = new THREE.Box3().setFromObject(station.group).getCenter(new THREE.Vector3());
+    expect(stationCenter.z).toBeCloseTo(0.15, 1);
     let stationInstancedCount = 0;
     station.group.traverse((obj) => {
       if (obj instanceof THREE.InstancedMesh) stationInstancedCount += 1;

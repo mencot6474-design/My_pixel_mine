@@ -17,6 +17,7 @@ import { createCyberLanternBollardFinial } from './CyberProps3D';
 import {
   getHazardStripeTexture,
   getQuarryFloorTexture,
+  getShockwaveRingTexture,
 } from './ProceduralTextures3D';
 
 export const PIT_NODE_COUNT = 1;
@@ -534,7 +535,9 @@ export class OreBillboard2D {
     scaleMult: number,
     flashActive: boolean,
     camera?: THREE.Camera,
-    recoilX = 0
+    recoilX = 0,
+    rollOverride = 0,
+    stretchY = 1
   ): void {
     if (camera) {
       this.root.getWorldPosition(this.tmpWorldPos);
@@ -547,13 +550,13 @@ export class OreBillboard2D {
       this.spritePivot.rotation.x = -Math.max(0, Math.min(0.62, camPitch * 0.65));
     }
 
-    const sy = Math.max(0.32, 1 - squashAmt) * this.baseSize * scaleMult;
-    const sx = (1 + squashAmt * 0.85) * this.baseSize * scaleMult;
+    const sy = Math.max(0.32, 1 - squashAmt) * this.baseSize * scaleMult * stretchY;
+    const sx = (1 + squashAmt * 0.85) * this.baseSize * scaleMult / Math.sqrt(Math.max(0.6, stretchY));
     const tremor = squashAmt > 0.005 ? Math.sin(elapsed * 64 + phase) * squashAmt * 0.14 : 0;
     this.visualGroup.scale.set(sx, sy, 1);
     // Keep rock firmly grounded in its stone crater (zero idle hover float)
     this.visualGroup.position.set(tremor + recoilX, 0, 0);
-    this.visualGroup.rotation.z = recoilX === 0 ? 0 : -recoilX * 0.42;
+    this.visualGroup.rotation.z = rollOverride !== 0 ? rollOverride : recoilX === 0 ? 0 : -recoilX * 0.42;
     const collarMult = (this.baseSize / 1.45) * Math.max(0.08, Math.min(1.06, scaleMult));
     this.shadowDisc.scale.setScalar(collarMult * (1 + squashAmt * 0.25));
     this.rockSkirtGroup.scale.set(
@@ -598,11 +601,22 @@ interface InternalOreNode {
   meteorWeatherId?: WeatherId | null;
   pitEventKind?: PitEventKind;
   dropY?: number;
+  dropProgress?: number;
+  dropDuration?: number;
+  trailTimer?: number;
 }
+
+const METEOR_TARGET_X = 0;
+const METEOR_TARGET_Z = -0.25;
+const METEOR_START_X = -5.4;
+const METEOR_START_Y = 14.5;
+const METEOR_START_Z = -4.2;
+const METEOR_DROP_DURATION = 0.72;
 
 export class OrePit3D {
   public readonly group = new THREE.Group();
   public readonly clickableMeshes: THREE.Mesh[] = [];
+  public onMeteorLanded?: () => void;
 
   private readonly floorMat: THREE.MeshStandardMaterial;
   private readonly wallMat: THREE.MeshStandardMaterial;
@@ -627,6 +641,18 @@ export class OrePit3D {
   private activeNodeCount = PIT_NODE_COUNT;
   private hpScale = 1;
   private meteorNode: InternalOreNode;
+  private readonly meteorEntryGroup = new THREE.Group();
+  private readonly meteorCoreMat: THREE.MeshBasicMaterial;
+  private readonly meteorBowMat: THREE.MeshBasicMaterial;
+  private readonly meteorTailOuterMat: THREE.MeshBasicMaterial;
+  private readonly meteorTailInnerMat: THREE.MeshBasicMaterial;
+  private readonly meteorTailOuterMesh: THREE.Mesh;
+  private readonly meteorTailInnerMesh: THREE.Mesh;
+  private readonly meteorTargetGroup = new THREE.Group();
+  private readonly meteorTargetShadow: THREE.Mesh;
+  private readonly meteorTargetShadowMat: THREE.MeshBasicMaterial;
+  private readonly meteorTargetRing: THREE.Mesh;
+  private readonly meteorTargetRingMat: THREE.MeshBasicMaterial;
 
   constructor(palette: MineWorldPalette) {
     this.activePalette = palette;
@@ -671,16 +697,16 @@ export class OrePit3D {
     const wallH = 0.86;
     // Open portals:
     // - North center (x in [-1.3, +1.3]) for stepped cyber stairwell descending from deck
-    // - Left spur (z in [-1.15, +0.15]) for sloped Drop Shaft shuttle entry
-    // - Right chute (z in [+0.38, +1.72] -> world z=1.70) for inclined Plasma Refinery conveyor exit
+    // - Left spur (z in [-1.25, +0.25] -> world z=0.15) for sloped Drop Shaft shuttle entry
+    // - Right chute (z in [-1.25, +0.25] -> world z=0.15) for inclined Plasma Refinery conveyor exit
     const wallSpecs: [number, number, number, number, number][] = [
       [-3.6, -pitD / 2, 4.6, wallH, 0.36],
       [3.6, -pitD / 2, 4.6, wallH, 0.36],
       [0, pitD / 2, pitW, wallH, 0.36],
       [-pitW / 2, -2.325, 0.36, wallH, 2.15],
       [-pitW / 2, 1.825, 0.36, wallH, 3.15],
-      [pitW / 2, -1.51, 0.36, wallH, 3.78],
-      [pitW / 2, 2.56, 0.36, wallH, 1.68],
+      [pitW / 2, -2.325, 0.36, wallH, 2.15],
+      [pitW / 2, 1.825, 0.36, wallH, 3.15],
     ];
     for (const [wx, wz, ww, wh, wd] of wallSpecs) {
       const wallGeo = new THREE.BoxGeometry(ww, wh, wd);
@@ -797,6 +823,109 @@ export class OrePit3D {
     this.meteorNode.geodeRing.scale.setScalar(1.95);
     this.group.add(this.meteorNode.root);
     this.clickableMeshes.push(this.meteorNode.hitMesh);
+
+    // 3D Atmospheric Entry Plasma Envelope & Tail Plume (oriented along dive trajectory)
+    const entryBackDir = new THREE.Vector3(
+      METEOR_START_X - METEOR_TARGET_X,
+      METEOR_START_Y,
+      METEOR_START_Z - METEOR_TARGET_Z
+    ).normalize();
+    this.meteorEntryGroup.position.set(0, 1.4, 0);
+    this.meteorEntryGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), entryBackDir);
+    this.meteorEntryGroup.visible = false;
+
+    const coreGeo = new THREE.IcosahedronGeometry(0.92, 1);
+    const bowGeo = new THREE.ConeGeometry(1.36, 1.75, 9, 1, true);
+    const tailOuterGeo = new THREE.ConeGeometry(1.06, 5.4, 9, 1, true);
+    const tailInnerGeo = new THREE.ConeGeometry(0.54, 4.1, 7, 1, true);
+    this.ownedGeos.push(coreGeo, bowGeo, tailOuterGeo, tailInnerGeo);
+
+    this.meteorCoreMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.48,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.meteorBowMat = new THREE.MeshBasicMaterial({
+      color: 0xf472b6,
+      transparent: true,
+      opacity: 0.36,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    this.meteorTailOuterMat = new THREE.MeshBasicMaterial({
+      color: 0xf472b6,
+      transparent: true,
+      opacity: 0.34,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    this.meteorTailInnerMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.56,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    this.ownedMats.push(
+      this.meteorCoreMat,
+      this.meteorBowMat,
+      this.meteorTailOuterMat,
+      this.meteorTailInnerMat
+    );
+
+    const coreMesh = new THREE.Mesh(coreGeo, this.meteorCoreMat);
+    const bowMesh = new THREE.Mesh(bowGeo, this.meteorBowMat);
+    bowMesh.rotation.x = Math.PI;
+    bowMesh.position.y = -0.35;
+
+    this.meteorTailOuterMesh = new THREE.Mesh(tailOuterGeo, this.meteorTailOuterMat);
+    this.meteorTailOuterMesh.position.y = 2.6;
+    this.meteorTailInnerMesh = new THREE.Mesh(tailInnerGeo, this.meteorTailInnerMat);
+    this.meteorTailInnerMesh.position.y = 2.1;
+
+    this.meteorEntryGroup.add(coreMesh, bowMesh, this.meteorTailOuterMesh, this.meteorTailInnerMesh);
+    this.meteorNode.root.add(this.meteorEntryGroup);
+
+    // Ground Strike Telegraph Shadow & Contracting Target Ring
+    this.meteorTargetGroup.position.set(METEOR_TARGET_X, 0.038, METEOR_TARGET_Z);
+    this.meteorTargetGroup.visible = false;
+    const targetShadowGeo = new THREE.CircleGeometry(1.55, 24);
+    const targetRingGeo = new THREE.PlaneGeometry(3.6, 3.6);
+    this.ownedGeos.push(targetShadowGeo, targetRingGeo);
+
+    const shadowTex = getSoftContactShadowTexture();
+    this.meteorTargetShadowMat = new THREE.MeshBasicMaterial({
+      ...(shadowTex ? { map: shadowTex } : {}),
+      color: 0x020617,
+      transparent: true,
+      opacity: 0.25,
+      depthWrite: false,
+    });
+    const ringTex = getShockwaveRingTexture();
+    this.meteorTargetRingMat = new THREE.MeshBasicMaterial({
+      ...(ringTex ? { map: ringTex } : {}),
+      color: 0xf472b6,
+      transparent: true,
+      opacity: 0.6,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    this.ownedMats.push(this.meteorTargetShadowMat, this.meteorTargetRingMat);
+
+    this.meteorTargetShadow = new THREE.Mesh(targetShadowGeo, this.meteorTargetShadowMat);
+    this.meteorTargetShadow.rotation.x = -Math.PI / 2;
+    this.meteorTargetRing = new THREE.Mesh(targetRingGeo, this.meteorTargetRingMat);
+    this.meteorTargetRing.rotation.x = -Math.PI / 2;
+    this.meteorTargetRing.position.y = 0.008;
+    this.meteorTargetGroup.add(this.meteorTargetShadow, this.meteorTargetRing);
+    this.group.add(this.meteorTargetGroup);
+
     this.group.add(this.impactFx.group);
 
     this.setPalette(palette, true);
@@ -937,18 +1066,21 @@ export class OrePit3D {
     const n = this.meteorNode;
     n.meteorWeatherId = weatherId;
     n.variant = ORE_VARIANTS.find((v) => v.key === 'geode') ?? ORE_VARIANTS[0];
-    n.x = 0;
-    n.z = -0.25;
+    n.x = METEOR_START_X;
+    n.z = METEOR_START_Z;
     n.hp = meteorHp;
     n.maxHp = meteorHp;
     n.alive = true;
     n.respawnTimer = 0;
-    n.squashAmt = 0.25;
+    n.squashAmt = 0;
     n.recoilAmt = 0;
     n.recoilDirX = 1;
     n.flashTimer = 0.14;
-    n.spawnScale = 1;
-    n.dropY = 12;
+    n.spawnScale = 0.62;
+    n.dropY = METEOR_START_Y;
+    n.dropProgress = 0;
+    n.dropDuration = METEOR_DROP_DURATION;
+    n.trailTimer = 0;
 
     n.root.position.set(n.x, n.dropY, n.z);
     n.root.visible = true;
@@ -958,6 +1090,17 @@ export class OrePit3D {
     n.oreSprite.setCollarVisible(false);
     n.oreSprite.setCollarAccent(weather.accentColor);
     n.oreSprite.setMeteor(weatherId, 3.15);
+
+    this.meteorCoreMat.color.set(weather.accentColor).lerp(new THREE.Color('#ffffff'), 0.45);
+    this.meteorBowMat.color.set(weather.accentColor);
+    this.meteorTailOuterMat.color.set(weather.accentColor);
+    this.meteorTargetRingMat.color.set(weather.accentColor);
+    this.meteorEntryGroup.visible = true;
+    this.meteorTargetGroup.visible = true;
+    this.meteorTargetShadow.scale.setScalar(1.85);
+    this.meteorTargetShadowMat.opacity = 0.16;
+    this.meteorTargetRing.scale.setScalar(1.55);
+    this.meteorTargetRingMat.opacity = 0.35;
   }
 
   public clearWeatherMeteor(): void {
@@ -965,8 +1108,12 @@ export class OrePit3D {
     n.alive = false;
     n.meteorWeatherId = null;
     n.respawnTimer = 0;
+    n.dropProgress = 1;
+    n.dropY = 0;
     n.root.visible = false;
     n.hitMesh.visible = false;
+    this.meteorEntryGroup.visible = false;
+    this.meteorTargetGroup.visible = false;
   }
 
   public hasAliveMeteor(): boolean {
@@ -1149,6 +1296,8 @@ export class OrePit3D {
       if (node.isMeteor) {
         node.respawnTimer = 0;
         node.meteorWeatherId = null;
+        this.meteorEntryGroup.visible = false;
+        this.meteorTargetGroup.visible = false;
       } else {
         node.respawnTimer = BASE_ORE_RESPAWN_SEC;
       }
@@ -1301,19 +1450,81 @@ export class OrePit3D {
         continue;
       }
 
-      if (node.isMeteor && (node.dropY ?? 0) > 0) {
-        node.dropY = Math.max(0, (node.dropY ?? 0) - dtSec * 28);
-        node.root.position.y = node.dropY;
-        const landed = node.dropY <= 0.25;
-        node.oreSprite.setCollarVisible(landed);
-        node.geodeRing.visible = landed;
-        if (node.dropY === 0 && this.group.visible) {
-          node.squashAmt = 0.48;
-          this.spawnShardsAt(node.x, node.z, 11);
+      let meteorRoll = 0;
+      let meteorStretchY = 1;
+      if (node.isMeteor && (node.dropProgress ?? 1) < 1) {
+        const prevP = node.dropProgress ?? 0;
+        const dur = node.dropDuration ?? METEOR_DROP_DURATION;
+        const nextP = Math.min(1, prevP + dtSec / dur);
+        node.dropProgress = nextP;
+        // Accelerating atmospheric dive curve toward impact center
+        const ease = nextP * nextP * (0.35 + 0.65 * nextP);
+        node.x = METEOR_START_X + (METEOR_TARGET_X - METEOR_START_X) * ease;
+        node.z = METEOR_START_Z + (METEOR_TARGET_Z - METEOR_START_Z) * ease;
+        node.dropY = METEOR_START_Y * (1 - ease);
+        node.root.position.set(node.x, node.dropY, node.z);
+        node.spawnScale = 0.62 + ease * 0.38;
+
+        const accent = node.meteorWeatherId
+          ? getWeatherById(node.meteorWeatherId).accentColor
+          : '#f472b6';
+
+        if (nextP < 1) {
+          this.meteorEntryGroup.visible = true;
+          this.meteorTargetGroup.visible = true;
+          this.meteorTailOuterMesh.rotation.y += dtSec * 10;
+          this.meteorTailInnerMesh.rotation.y -= dtSec * 15;
+          const flamePulse = 0.88 + Math.sin(elapsed * 48) * 0.16;
+          this.meteorTailOuterMesh.scale.set(1, flamePulse, 1);
+          this.meteorTailInnerMesh.scale.set(1, 0.92 + Math.cos(elapsed * 56) * 0.14, 1);
+
+          this.meteorTargetShadow.scale.setScalar(1.85 - ease * 0.95);
+          this.meteorTargetShadowMat.opacity = 0.16 + ease * 0.72;
+          const ringPulse = 1 + Math.sin(elapsed * 18) * 0.08;
+          this.meteorTargetRing.scale.setScalar((1.55 - ease * 0.78) * ringPulse);
+          this.meteorTargetRing.rotation.z -= dtSec * 2.4;
+          this.meteorTargetRingMat.opacity = 0.35 + ease * 0.55;
+
+          meteorRoll = -0.28 * (1 - ease) + Math.sin(elapsed * 42) * 0.06;
+          meteorStretchY = 1 + (1 - ease) * 0.24;
+
+          node.trailTimer = (node.trailTimer ?? 0) - dtSec;
+          if (nextP < 0.94 && (node.trailTimer ?? 0) <= 0 && this.group.visible) {
+            node.trailTimer = 0.04;
+            this.impactFx.spawnMeteorTrail({
+              x: node.x,
+              y: node.dropY + 1.35,
+              z: node.z,
+              accentColor: accent,
+              camera,
+            });
+          }
+        } else {
+          node.x = METEOR_TARGET_X;
+          node.z = METEOR_TARGET_Z;
+          node.dropY = 0;
+          node.spawnScale = 1;
+          node.root.position.set(node.x, 0, node.z);
+          this.meteorEntryGroup.visible = false;
+          this.meteorTargetGroup.visible = false;
+          node.oreSprite.setCollarVisible(true);
+          node.geodeRing.visible = true;
+          node.squashAmt = 0.56;
+          node.flashTimer = 0.14;
+          if (this.group.visible) {
+            this.impactFx.spawnMeteorLanding({
+              targetX: node.x,
+              targetZ: node.z,
+              accentColor: accent,
+              camera,
+            });
+            this.spawnShardsAt(node.x, node.z, 18, true, true);
+            this.onMeteorLanded?.();
+          }
         }
       }
 
-      if (node.spawnScale < 1) {
+      if (node.spawnScale < 1 && !(node.isMeteor && (node.dropProgress ?? 1) < 1)) {
         node.spawnScale = Math.min(1, node.spawnScale + dtSec * 4.5);
       }
 
@@ -1338,7 +1549,9 @@ export class OrePit3D {
         hoverMult,
         flashing,
         camera,
-        node.recoilAmt * node.recoilDirX
+        node.recoilAmt * node.recoilDirX,
+        meteorRoll,
+        meteorStretchY
       );
 
       if (node.geodeRing.visible) {

@@ -82,7 +82,6 @@ export function renderHotbarSlotsHtml(state: GameState): string {
             <div class="relative z-[4] w-full flex items-center justify-start px-0.5 pt-0.5">
               <span class="${TW_HOTBAR_NUM}">${idx + 1}</span>
             </div>
-            <span class="w-2.5 h-2.5 rounded-full bg-[#14111d]/18 my-auto" aria-hidden="true"></span>
           </button>
         `;
       if (!itemId) return emptySlot;

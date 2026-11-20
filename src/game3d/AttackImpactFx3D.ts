@@ -499,6 +499,118 @@ export class AttackImpactFxController {
     }
   }
 
+  public spawnMeteorTrail(opts: {
+    x: number;
+    y: number;
+    z: number;
+    accentColor: string;
+    camera?: THREE.Camera;
+  }): void {
+    const activeCam = opts.camera ?? this.lastCamera;
+    this.prepareCameraAxes(activeCam);
+    const streakTex = getSparkStreakTexture();
+    const starTex = getHitSparkStarTexture();
+
+    for (let i = 0; i < 2; i++) {
+      const sColor = i === 0 ? '#ffffff' : opts.accentColor;
+      const { mesh: sMesh, mat: sMat } = this.acquireMesh(
+        this.streakFree,
+        this.sharedStreakGeo,
+        streakTex,
+        sColor,
+        0.95
+      );
+      sMesh.position.set(
+        opts.x + (Math.random() - 0.5) * 0.55,
+        opts.y + (Math.random() - 0.3) * 0.45,
+        opts.z + (Math.random() - 0.5) * 0.55
+      );
+      const baseScale = 1.05 + Math.random() * 0.55;
+      sMesh.scale.setScalar(baseScale);
+      // Shoot upward-back along atmospheric entry wake
+      const item: StreakItem = {
+        mesh: sMesh,
+        mat: sMat,
+        age: 0,
+        dur: 0.24 + Math.random() * 0.08,
+        vx: -1.8 + (Math.random() - 0.5) * 1.4,
+        vy: 3.4 + Math.random() * 2.4,
+        vz: -1.2 + (Math.random() - 0.5) * 1.4,
+        baseScale,
+      };
+      this.orientStreak(item, activeCam);
+      this.pushPooled(this.streaks, this.streakFree, MAX_STREAKS, item);
+    }
+
+    const { mesh: mMesh, mat: mMat } = this.acquireMesh(
+      this.moteFree,
+      this.sharedMoteGeo,
+      starTex,
+      opts.accentColor,
+      0.92
+    );
+    mMesh.position.set(
+      opts.x + (Math.random() - 0.5) * 0.6,
+      opts.y + Math.random() * 0.4,
+      opts.z + (Math.random() - 0.5) * 0.6
+    );
+    const baseScale = 1.15 + Math.random() * 0.5;
+    const roll = Math.random() * Math.PI * 2;
+    mMesh.scale.setScalar(baseScale);
+    this.orientBillboard(mMesh, roll, 0, activeCam);
+    this.pushPooled(this.motes, this.moteFree, MAX_MOTES, {
+      mesh: mMesh,
+      mat: mMat,
+      age: 0,
+      dur: 0.36 + Math.random() * 0.14,
+      vx: -0.9 + (Math.random() - 0.5) * 1.2,
+      vy: 1.6 + Math.random() * 1.4,
+      vz: -0.7 + (Math.random() - 0.5) * 1.2,
+      baseScale,
+      phase: Math.random() * Math.PI * 2,
+      roll,
+      rollVel: (Math.random() - 0.5) * 8,
+    });
+  }
+
+  public spawnMeteorLanding(opts: {
+    targetX: number;
+    targetZ: number;
+    accentColor: string;
+    camera?: THREE.Camera;
+  }): void {
+    this.spawnShatter({
+      targetX: opts.targetX,
+      targetY: 0.65,
+      targetZ: opts.targetZ,
+      oreColor: opts.accentColor,
+      secondaryColor: '#ffffff',
+      isMeteor: true,
+      camera: opts.camera,
+    });
+
+    const ringTex = getShockwaveRingTexture();
+    const { mesh, mat } = this.acquireMesh(
+      this.shockwaveFree,
+      this.sharedShockwaveGeo,
+      ringTex,
+      opts.accentColor,
+      0.92
+    );
+    mesh.position.set(opts.targetX, this.floorY + 0.03, opts.targetZ);
+    mesh.rotation.set(-Math.PI / 2, 0, Math.random() * Math.PI);
+    mesh.scale.setScalar(1.2);
+    this.pushPooled(this.shockwaves, this.shockwaveFree, MAX_SHOCKWAVES, {
+      mesh,
+      mat,
+      age: 0,
+      dur: 0.46,
+      startScale: 1.2,
+      endScale: 6.4,
+      spinSpeed: 2.2,
+    });
+  }
+
   public update(dtSec: number, camera?: THREE.Camera): void {
     if (camera) this.lastCamera = camera;
     const activeCam = camera ?? this.lastCamera;

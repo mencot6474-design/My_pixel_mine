@@ -34,7 +34,7 @@ const ESCALATOR_START_X = 5.48;
 const ESCALATOR_START_Y = -0.52;
 const ESCALATOR_END_X = 7.76;
 const ESCALATOR_END_Y = 0.46;
-const ESCALATOR_Z = 1.7;
+const ESCALATOR_Z = 0.15;
 
 const RAMP_DX = ESCALATOR_END_X - ESCALATOR_START_X;
 const RAMP_DY = ESCALATOR_END_Y - ESCALATOR_START_Y;
@@ -214,7 +214,7 @@ export function createChestVaultStation(
   }
 
   // =========================================================================
-  // 3. TIERED VAULT SANCTUARY PLATFORM ("Tempat Chest" at x = 8.45, z = 1.7)
+  // 3. TIERED VAULT SANCTUARY PLATFORM ("Tempat Chest" at x = 8.45, z = 0.15)
   // =========================================================================
   const vaultGroup = new THREE.Group();
   vaultGroup.position.set(8.45, 0, ESCALATOR_Z);
@@ -344,10 +344,9 @@ export function createChestVaultStation(
     vaultGroup.add(pylonGroup);
   }
 
-  // Relocated Multi-Part Plasma Ore Refinery onto right wing terrace (world ~ 10.80, 0.17, +0.35)
-  // keeping >2.7m clearance from Chest while staying 100% visible inside default camera below top-right HUD
+  // Multi-Part Plasma Ore Refinery aligned behind Chest Vault along rail axis (world 10.80, 0.17, 0.15)
   const refineryGroup = new THREE.Group();
-  refineryGroup.position.set(2.35, 0.17, -1.35);
+  refineryGroup.position.set(2.35, 0.17, 0.0);
   refineryGroup.scale.setScalar(0.86);
   vaultGroup.add(refineryGroup);
 
@@ -414,10 +413,10 @@ export function createChestVaultStation(
 
   // Single Precision-Socketed Plasma Conduit Connecting Refinery Drum Cleanly to Chest Vault Deck
   const conduitCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.56, 1.02, 0.18),
-    new THREE.Vector3(-0.88, 0.86, 0.62),
-    new THREE.Vector3(-1.12, 0.44, 1.15),
-    new THREE.Vector3(-1.34, 0.17, 1.57),
+    new THREE.Vector3(-0.56, 1.02, 0.0),
+    new THREE.Vector3(-0.84, 0.88, 0.0),
+    new THREE.Vector3(-1.12, 0.48, 0.0),
+    new THREE.Vector3(-1.34, 0.17, 0.0),
   ]);
   const plasmaPipe = new THREE.Mesh(new THREE.TubeGeometry(conduitCurve, 16, 0.048, 6, false), darkIronMat);
 
@@ -433,11 +432,11 @@ export function createChestVaultStation(
   // Mechanical Brass Socket Couplings on Both Ends + Top Cable Collar (zero floating/imprecise ends)
   const flangeGeo = new THREE.CylinderGeometry(0.09, 0.105, 0.14, 8);
   const drumOutletSocket = new THREE.Mesh(flangeGeo, brassMat);
-  drumOutletSocket.position.set(-0.56, 1.02, 0.18);
+  drumOutletSocket.position.set(-0.56, 1.02, 0.0);
   drumOutletSocket.rotation.z = Math.PI / 2;
 
   const deckSocket = new THREE.Mesh(flangeGeo, brassMat);
-  deckSocket.position.set(-1.34, 0.17, 1.57);
+  deckSocket.position.set(-1.34, 0.17, 0.0);
 
   const smelterTopCollar = new THREE.Mesh(
     new THREE.CylinderGeometry(0.14, 0.18, 0.16, 8),
