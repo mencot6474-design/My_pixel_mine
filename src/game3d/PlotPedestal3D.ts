@@ -846,8 +846,8 @@ export class PlotPedestal3D {
     });
     this.labelSprite = new THREE.Sprite(this.labelMat);
     this.labelSprite.center.set(0.5, 0);
-    this.labelSprite.scale.set(2.28, 0.91, 1);
-    this.labelSprite.position.set(0, 2.68, 0);
+    this.labelSprite.scale.set(2.72, 1.12, 1);
+    this.labelSprite.position.set(0, 2.72, 0);
     this.labelSprite.renderOrder = 15;
     this.labelSprite.raycast = () => {};
     this.labelSprite.visible = false;
@@ -1014,7 +1014,8 @@ export class PlotPedestal3D {
     const targetScale = this.hovered ? 1.06 : 1;
     this.tmpScale.set(targetScale, 1, targetScale);
     this.group.scale.lerp(this.tmpScale, Math.min(1, safeDt * 12));
-    this.labelSprite.scale.x = 2.28 / Math.max(0.01, this.group.scale.x);
+    this.labelSprite.scale.x = 2.72 / Math.max(0.01, this.group.scale.x);
+    this.labelSprite.scale.y = 1.12 / Math.max(0.01, this.group.scale.y);
     if (this.chibiSprite && camera) {
       this.chibiSprite.update(safeDt, elapsed, camera);
     }
@@ -1090,19 +1091,23 @@ export class PlotPedestal3D {
       });
     }
 
+    const logicalW = 480;
+    const logicalH = 192;
+    const dpr = 2;
     const canvas = document.createElement('canvas');
-    canvas.width = 480;
-    canvas.height = 192;
+    canvas.width = logicalW * dpr;
+    canvas.height = logicalH * dpr;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, logicalW, logicalH);
     ctx.textBaseline = 'middle';
 
-    // Row 1: Chibi Name + Level (auto-fits inside compact 480px width)
+    // Row 1: Chibi Name + Level (auto-fits inside compact 480px logical width, rendered 2x HiDPI)
     const lvText = `Lv.${info.level}`;
-    let namePx = 38;
-    let lvlPx = 31;
+    let namePx = 43;
+    let lvlPx = 34;
     let nameW = 0;
     let lvW = 0;
     const gap1 = 10;
@@ -1111,11 +1116,11 @@ export class PlotPedestal3D {
       nameW = ctx.measureText(info.name).width;
       ctx.font = `800 ${lvlPx}px "Nunito", "Segoe UI", system-ui, sans-serif`;
       lvW = ctx.measureText(lvText).width;
-      if (nameW + gap1 + lvW <= canvas.width - 20) break;
+      if (nameW + gap1 + lvW <= logicalW - 20) break;
       namePx -= 2;
       lvlPx -= 1.5;
     }
-    let startX = (canvas.width - (nameW + gap1 + lvW)) * 0.5;
+    let startX = (logicalW - (nameW + gap1 + lvW)) * 0.5;
     ctx.textAlign = 'left';
     ctx.font = `900 ${namePx}px "Nunito", "Segoe UI", system-ui, sans-serif`;
     drawOutlinedCanvasText(ctx, info.name, startX, 42, '#ffffff', 9);
@@ -1125,7 +1130,7 @@ export class PlotPedestal3D {
     // Row 2: Rarity Label + Mutation Icon + Enchant WebP Icon (compact, zero neighbor overlap)
     const hasMut = Boolean(info.mutationLabel && info.mutationId !== 'normal');
     const hasEnc = Boolean(info.enchantId);
-    const rarityFont = '800 31px "Nunito", "Segoe UI", system-ui, sans-serif';
+    const rarityFont = '800 35px "Nunito", "Segoe UI", system-ui, sans-serif';
     ctx.font = rarityFont;
     const rarityW = ctx.measureText(info.rarityLabel).width;
     const mutSize = 32;
@@ -1133,7 +1138,7 @@ export class PlotPedestal3D {
     const iconGap = 10;
     const row2TotalW =
       rarityW + (hasMut ? iconGap + mutSize : 0) + (hasEnc ? iconGap + encSize : 0);
-    let cursorX = (canvas.width - row2TotalW) * 0.5;
+    let cursorX = (logicalW - row2TotalW) * 0.5;
     const row2Y = 96;
 
     drawOutlinedCanvasText(ctx, info.rarityLabel, cursorX, row2Y, info.rarityColor, 8);
@@ -1185,12 +1190,12 @@ export class PlotPedestal3D {
     }
 
     // Row 3: Crisp Target Reticle + Damage Value
-    const dmgFont = '900 37px "Nunito", "Segoe UI", system-ui, sans-serif';
+    const dmgFont = '900 42px "Nunito", "Segoe UI", system-ui, sans-serif';
     ctx.font = dmgFont;
     const dmgW = ctx.measureText(info.dmgText).width;
     const iconSize = 28;
     const gap3 = 10;
-    startX = (canvas.width - (iconSize + gap3 + dmgW)) * 0.5;
+    startX = (logicalW - (iconSize + gap3 + dmgW)) * 0.5;
     const cx = startX + iconSize * 0.5;
     const cy = 152;
     ctx.save();
@@ -1223,9 +1228,9 @@ export class PlotPedestal3D {
 
     const nextTex = new THREE.CanvasTexture(canvas);
     nextTex.colorSpace = THREE.SRGBColorSpace;
-    nextTex.minFilter = THREE.LinearMipmapLinearFilter;
+    nextTex.generateMipmaps = false;
+    nextTex.minFilter = THREE.LinearFilter;
     nextTex.magFilter = THREE.LinearFilter;
-    nextTex.anisotropy = 4;
     nextTex.needsUpdate = true;
 
     this.labelTex?.dispose();

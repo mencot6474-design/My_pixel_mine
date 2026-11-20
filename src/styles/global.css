@@ -57,6 +57,42 @@
     animation: mamPickaxeSwing 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
+  #mamPickaxeCursor.is-hold-mining {
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.95)) drop-shadow(0 0 18px rgba(250, 204, 21, 0.7));
+  }
+
+  #mamPickaxeCursor.is-hold-mining img {
+    animation: mamPickaxeSwing 0.18s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+
+  @keyframes mamElectricArcPop {
+    0% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(0.55) rotate(var(--arc-rot, 0deg));
+    }
+    45% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.18) rotate(var(--arc-rot, 0deg));
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(1.42) rotate(var(--arc-rot, 0deg));
+    }
+  }
+
+  .mam-electric-spark {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 84px;
+    height: 84px;
+    pointer-events: none;
+    z-index: 94;
+    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.95)) drop-shadow(0 0 14px rgba(250, 204, 21, 0.8));
+    animation: mamElectricArcPop 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity;
+  }
+
   button,
   input,
   select,

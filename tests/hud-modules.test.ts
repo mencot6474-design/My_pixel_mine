@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { shouldStopAutoMutationRoll } from '../src/ui/PlotInspectUi';
 import { AudioManager } from '../src/audio/AudioManager';
 import { ENCHANTS, GEM_SHOP_ITEMS, ORES } from '../src/game/GameData';
 import {
@@ -817,6 +818,16 @@ describe('Tahap B HUD Modules', () => {
       expect(plotCardHtml).toContain('2%');
       expect(plotCardHtml).toContain('Status');
       expect(plotCardHtml).toContain('Equipped');
+    });
+  });
+
+  describe('Auto-Roll Mutation Guard', () => {
+    it('stops auto-rolling on Frozen+ mutations or insufficient Gems and continues otherwise', () => {
+      expect(shouldStopAutoMutationRoll({ mutationId: 'normal', gems: 100, cost: 20 })).toBeNull();
+      expect(shouldStopAutoMutationRoll({ mutationId: 'golden', gems: 100, cost: 20 })).toBeNull();
+      expect(shouldStopAutoMutationRoll({ mutationId: 'frozen', gems: 100, cost: 20 })).toBe('high-tier');
+      expect(shouldStopAutoMutationRoll({ mutationId: 'unreal', gems: 100, cost: 20 })).toBe('high-tier');
+      expect(shouldStopAutoMutationRoll({ mutationId: 'normal', gems: 10, cost: 20 })).toBe('no-gems');
     });
   });
 });

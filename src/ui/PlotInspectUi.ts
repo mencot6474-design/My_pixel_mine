@@ -14,7 +14,12 @@ import {
   RARITY_BORDER,
 } from '../game/GameData';
 import { getFusionRecipeByResultChibiId } from '../game/FusionData';
-import { GameState } from '../game/GameState';
+import { GameState, getChibiUpgradeCostMult } from '../game/GameState';
+import {
+  computeBulkUpgradePlan,
+  getPlotStatUpgradeCost,
+  type UpgradeBuyMode,
+} from '../game/UpgradeBulkHelper';
 import { fmtInt, fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
 import { enchantAuraIconHtml, hudIconHtml, pickaxeIconHtml } from './HudIcons';
 import {
@@ -28,8 +33,21 @@ import {
   TW_STRIP_CARD,
 } from './HudShared';
 
+export function shouldStopAutoMutationRoll(opts: {
+  mutationId: string;
+  gems: number;
+  cost: number;
+}): 'high-tier' | 'no-gems' | null {
+  if (isHighTierMutation(opts.mutationId)) return 'high-tier';
+  if (opts.gems < opts.cost) return 'no-gems';
+  return null;
+}
+
 export class PlotInspectUi {
   private inspectTab: InspectTab = 'stats';
+  private buyMode: UpgradeBuyMode = '1';
+  private autoRollMutSlot: number | null = null;
+  private autoRollMutTimer: number | null = null;
   private pendingMutationConfirm: {
     slot: number;
     mutId: string;
@@ -45,11 +63,63 @@ export class PlotInspectUi {
     private readonly renderToasts: () => void
   ) {}
 
+  public stopAutoRollMutation(): void {
+    if (this.autoRollMutTimer !== null) {
+      window.clearInterval(this.autoRollMutTimer);
+      this.autoRollMutTimer = null;
+    }
+    this.autoRollMutSlot = null;
+  }
+
+  private startAutoRollMutation(slot: number): void {
+    this.stopAutoRollMutation();
+    this.autoRollMutSlot = slot;
+    this.executeMutationRoll(slot);
+    if (this.pendingMutationConfirm) {
+      this.stopAutoRollMutation();
+      return;
+    }
+    this.autoRollMutTimer = window.setInterval(() => {
+      if (this.autoRollMutSlot !== slot || this.pendingMutationConfirm) {
+        this.stopAutoRollMutation();
+        return;
+      }
+      const unit = this.state.getPlotUnit(slot);
+      const stats = this.state.getPlotUnitStats(slot);
+      if (!unit || !stats) {
+        this.stopAutoRollMutation();
+        return;
+      }
+      const stopReason = shouldStopAutoMutationRoll({
+        mutationId: unit.mutationId,
+        gems: this.state.gems,
+        cost: stats.mutationCost,
+      });
+      if (stopReason === 'high-tier') {
+        this.stopAutoRollMutation();
+        this.onRequestRender();
+        return;
+      }
+      if (stopReason === 'no-gems') {
+        this.stopAutoRollMutation();
+        audio.playSfx('ui-error');
+        this.pushToast('Auto Roll stopped: Not enough Gems!');
+        this.onRequestRender();
+        return;
+      }
+      this.executeMutationRoll(slot);
+      if (this.pendingMutationConfirm) {
+        this.stopAutoRollMutation();
+      }
+    }, 260);
+  }
+
   public render(root: HTMLElement, slot: number): void {
     const unit = this.state.getPlotUnit(slot);
     const stats = this.state.getPlotUnitStats(slot);
     const chibi = unit ? getChibiById(unit.chibiId) : null;
     if (!unit || !stats || !chibi) {
+      this.stopAutoRollMutation();
       this.pendingMutationConfirm = null;
       this.onOpenPlotInspector(null);
       return;
@@ -118,7 +188,7 @@ export class PlotInspectUi {
           <button class="${TW_INSPECT_TAB} mam-outline-sm ${this.inspectTab === 'enchants' ? 'active' : ''}" data-inspect-tab="enchants">${hudIconHtml('enchant', 20, 'Enchants')} Enchants</button>
         </div>
 
-        <div class="mam-inspect-panel w-full p-2.5 rounded-2xl bg-[linear-gradient(180deg,#141e36_0%,#0a1020_100%)] border-2 border-[#2a3b5c] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_36px_rgba(0,0,0,0.72)] flex items-stretch gap-2 overflow-x-hidden [&.is-stats]:flex-wrap [&.is-pickaxe]:grid [&.is-pickaxe]:grid-cols-7 @max-[760px]:[&.is-pickaxe]:grid-cols-4 [&.is-pickaxe]:gap-1.5 [&.is-enchants]:grid [&.is-enchants]:grid-cols-10 @max-[760px]:[&.is-enchants]:grid-cols-5 [&.is-enchants]:gap-1.5 [&.is-mutation]:gap-1.5 @max-[760px]:[&.is-mutation]:flex-wrap [&_.mam-strip-card]:min-w-0 [&_.mam-strip-card]:w-auto [&_.mam-strip-card_.mam-card-name]:text-[11px] [&_.mam-strip-card_.mam-card-name]:leading-tight [&_.mam-strip-card_.mam-card-name]:whitespace-nowrap [&_.mam-strip-card_.mam-card-name]:overflow-hidden [&_.mam-strip-card_.mam-card-name]:text-ellipsis [&.is-mutation_.mam-strip-card]:flex-1 [&.is-mutation_.mam-strip-card]:h-[82px] [&.is-mutation_.mam-strip-card]:py-1 [&.is-mutation_.mam-strip-card]:px-0.5 [&.is-enchants_.mam-strip-card]:h-[84px] [&.is-enchants_.mam-strip-card]:py-1 [&.is-enchants_.mam-strip-card]:px-0.5 [&.is-pickaxe_.mam-strip-card]:h-[86px] [&.is-pickaxe_.mam-strip-card]:py-1 [&.is-pickaxe_.mam-strip-card]:px-0.5 ${
+        <div class="mam-inspect-panel w-full p-2.5 rounded-2xl bg-[linear-gradient(180deg,#141e36_0%,#0a1020_100%)] border-2 border-[#2a3b5c] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_36px_rgba(0,0,0,0.72)] flex items-stretch gap-2 overflow-x-hidden [&.is-stats]:flex-col [&.is-stats]:gap-2 [&.is-pickaxe]:grid [&.is-pickaxe]:grid-cols-6 @max-[760px]:[&.is-pickaxe]:grid-cols-4 [&.is-pickaxe]:gap-1.5 [&.is-enchants]:grid [&.is-enchants]:grid-cols-10 @max-[760px]:[&.is-enchants]:grid-cols-5 [&.is-enchants]:gap-1.5 [&.is-mutation]:items-center [&.is-mutation]:gap-1.5 @max-[760px]:[&.is-mutation]:flex-wrap [&_.mam-strip-card]:min-w-0 [&_.mam-strip-card]:w-auto [&_.mam-strip-card_.mam-card-name]:text-[11px] [&_.mam-strip-card_.mam-card-name]:leading-tight [&_.mam-strip-card_.mam-card-name]:whitespace-nowrap [&_.mam-strip-card_.mam-card-name]:overflow-hidden [&_.mam-strip-card_.mam-card-name]:text-ellipsis [&.is-mutation_.mam-strip-card]:flex-1 [&.is-mutation_.mam-strip-card]:h-[84px] [&.is-mutation_.mam-strip-card]:py-1 [&.is-mutation_.mam-strip-card]:px-0.5 [&.is-enchants_.mam-strip-card]:h-[84px] [&.is-enchants_.mam-strip-card]:py-1 [&.is-enchants_.mam-strip-card]:px-0.5 [&.is-pickaxe_.mam-strip-card]:h-[84px] [&.is-pickaxe_.mam-strip-card]:py-1 [&.is-pickaxe_.mam-strip-card]:px-0.5 ${
           this.inspectTab === 'mutation'
             ? 'is-mutation'
             : this.inspectTab === 'enchants'
@@ -147,29 +217,82 @@ export class PlotInspectUi {
       const dmgMax = unit.damageLevel >= 100;
       const spdMax = unit.speedLevel >= 17;
       const minMax = unit.miningSpeedLevel >= 16;
-      return `
-        <div class="${TW_STAT_CARD}">
-          <div class="text-[14px] font-extrabold tabular-nums text-[#e2e8f0] mam-outline-sm">Damage Level ${unit.damageLevel} / 100</div>
-          <div class="text-[16px] font-black tabular-nums mam-outline-sm">
-            <span style="color:#ef4444">${fmtShort(stats.dmg)}</span> &gt; <span style="color:#4ade80">${fmtShort(stats.nextDmg)}</span>
+      const costMult = getChibiUpgradeCostMult(unit.chibiId);
+      const dmgPlan = computeBulkUpgradePlan({
+        currentLevel: unit.damageLevel,
+        maxLevel: 100,
+        currency: this.state.cash,
+        mode: this.buyMode,
+        costAtLevel: (l) => getPlotStatUpgradeCost('dmg', l, costMult),
+      });
+      const spdPlan = computeBulkUpgradePlan({
+        currentLevel: unit.speedLevel,
+        maxLevel: 17,
+        currency: this.state.cash,
+        mode: this.buyMode,
+        costAtLevel: (l) => getPlotStatUpgradeCost('speed', l, costMult),
+      });
+      const minPlan = computeBulkUpgradePlan({
+        currentLevel: unit.miningSpeedLevel,
+        maxLevel: 16,
+        currency: this.state.cash,
+        mode: this.buyMode,
+        costAtLevel: (l) => getPlotStatUpgradeCost('mining', l, costMult),
+      });
+      const fmtPlanBtn = (maxed: boolean, plan: { levels: number; totalCost: number }): string => {
+        if (maxed) return 'Max';
+        if (plan.levels > 1) return `+${plan.levels} • ${fmtMoney(plan.totalCost)}`;
+        return fmtMoney(plan.totalCost);
+      };
+      const buyModes: { id: UpgradeBuyMode; label: string }[] = [
+        { id: '1', label: '×1' },
+        { id: '10', label: '×10' },
+        { id: 'max', label: 'MAX' },
+      ];
+      const modeToggleHtml = `
+        <div class="w-full flex items-center justify-between gap-2 px-1">
+          <span class="text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">Upgrade Amount</span>
+          <div class="inline-flex items-center gap-1 p-0.5 rounded-lg border border-slate-700/90 bg-[#080d1a]">
+            ${buyModes
+              .map(
+                (m) => `
+              <button class="px-2.5 py-0.5 rounded-md text-[11px] font-black cursor-pointer transition-colors ${
+                this.buyMode === m.id
+                  ? 'bg-sky-400 text-slate-950 shadow-[0_0_8px_rgba(56,189,248,0.45)]'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+              }" data-buy-mode="${m.id}">${m.label}</button>
+            `
+              )
+              .join('')}
           </div>
-          <button class="${TW_STAT_BTN} tabular-nums mam-outline-sm ${dmgMax ? 'maxed' : ''}" data-inspect-action="up-dmg">
-            ${dmgMax ? 'Max' : fmtMoney(stats.dmgCost)}
-          </button>
         </div>
-        <div class="${TW_STAT_CARD}">
-          <div class="text-[14px] font-extrabold tabular-nums text-[#e2e8f0] mam-outline-sm">Speed Level ${unit.speedLevel} / 17</div>
-          <div class="text-[16px] font-black tabular-nums mam-outline-sm" style="color:#4ade80">${stats.speed}</div>
-          <button class="${TW_STAT_BTN} tabular-nums mam-outline-sm ${spdMax ? 'maxed' : ''}" data-inspect-action="up-spd">
-            ${spdMax ? 'Max' : fmtMoney(stats.speedCost)}
-          </button>
-        </div>
-        <div class="${TW_STAT_CARD}">
-          <div class="text-[14px] font-extrabold tabular-nums text-[#e2e8f0] mam-outline-sm">Mining Speed Level ${unit.miningSpeedLevel} / 16</div>
-          <div class="text-[16px] font-black tabular-nums mam-outline-sm" style="color:#4ade80">x${stats.miningMult}</div>
-          <button class="${TW_STAT_BTN} tabular-nums mam-outline-sm ${minMax ? 'maxed' : ''}" data-inspect-action="up-mine">
-            ${minMax ? 'Max' : fmtMoney(stats.miningCost)}
-          </button>
+      `;
+      return `
+        ${modeToggleHtml}
+        <div class="w-full grid grid-cols-3 @max-[640px]:grid-cols-1 gap-2">
+          <div class="${TW_STAT_CARD}">
+            <div class="text-[13px] font-extrabold tabular-nums text-[#e2e8f0] mam-outline-sm">Damage Lv. ${unit.damageLevel} / 100</div>
+            <div class="text-[15px] font-black tabular-nums mam-outline-sm">
+              <span style="color:#ef4444">${fmtShort(stats.dmg)}</span> &gt; <span style="color:#4ade80">${fmtShort(stats.nextDmg)}</span>
+            </div>
+            <button class="${TW_STAT_BTN} tabular-nums mam-outline-sm ${dmgMax ? 'maxed' : ''}" data-inspect-action="up-dmg">
+              ${fmtPlanBtn(dmgMax, dmgPlan)}
+            </button>
+          </div>
+          <div class="${TW_STAT_CARD}">
+            <div class="text-[13px] font-extrabold tabular-nums text-[#e2e8f0] mam-outline-sm">Speed Lv. ${unit.speedLevel} / 17</div>
+            <div class="text-[15px] font-black tabular-nums mam-outline-sm" style="color:#4ade80">${stats.speed}</div>
+            <button class="${TW_STAT_BTN} tabular-nums mam-outline-sm ${spdMax ? 'maxed' : ''}" data-inspect-action="up-spd">
+              ${fmtPlanBtn(spdMax, spdPlan)}
+            </button>
+          </div>
+          <div class="${TW_STAT_CARD}">
+            <div class="text-[13px] font-extrabold tabular-nums text-[#e2e8f0] mam-outline-sm">Mining Speed Lv. ${unit.miningSpeedLevel} / 16</div>
+            <div class="text-[15px] font-black tabular-nums mam-outline-sm" style="color:#4ade80">x${stats.miningMult}</div>
+            <button class="${TW_STAT_BTN} tabular-nums mam-outline-sm ${minMax ? 'maxed' : ''}" data-inspect-action="up-mine">
+              ${fmtPlanBtn(minMax, minPlan)}
+            </button>
+          </div>
         </div>
       `;
     }
@@ -206,12 +329,22 @@ export class PlotInspectUi {
         )
         .join('');
 
+      const isAutoRolling = this.autoRollMutSlot !== null;
       return `
         ${mutCards}
-        <div class="flex-[0_0_132px] py-1 px-2 flex flex-col items-center justify-center gap-1">
-          <div class="mam-outline-sm ${curMut.id === 'rainbow' ? 'mam-rainbow-text' : ''}" style="font-size:18px;font-weight:900;${curMut.id === 'rainbow' ? '' : `color:${curMut.color}`}">${curMut.name}</div>
-          <div class="mam-outline-sm tabular-nums" style="display:flex;align-items:center;gap:4px;font-size:15px;font-weight:800;color:#f9a8d4">${hudIconHtml('gem', 20, 'Gems')} ${fmtInt(stats.mutationCost)}</div>
-          <button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border border-orange-300/60 bg-[linear-gradient(135deg,rgba(249,115,22,0.92),rgba(194,65,12,0.96))] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_16px_-2px_rgba(234,88,12,0.42)] text-white text-[16px] font-black cursor-pointer transition-[transform,filter,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline-sm" data-inspect-action="roll-mut">Roll</button>
+        <div class="flex-[0_0_184px] @max-[760px]:flex-[1_1_100%] h-[84px] px-2.5 py-2 rounded-xl bg-[#0a1224] border border-slate-700/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] flex flex-col justify-between">
+          <div class="flex items-center justify-between gap-1.5">
+            <div class="mam-outline-sm truncate text-[14px] font-black ${curMut.id === 'rainbow' ? 'mam-rainbow-text' : ''}" style="${curMut.id === 'rainbow' ? '' : `color:${curMut.color}`}">${curMut.name}</div>
+            <div class="mam-outline-sm tabular-nums inline-flex items-center gap-1 text-[13px] font-black text-[#f9a8d4] shrink-0">${hudIconHtml('gem', 15, 'Gems')} ${fmtInt(stats.mutationCost)}</div>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button class="mam-sheen-hover relative overflow-hidden h-9 rounded-lg border border-orange-300/70 bg-[linear-gradient(135deg,#f97316,#c2410c)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_3px_10px_rgba(234,88,12,0.4)] text-white text-[13px] font-black cursor-pointer transition-[transform,filter] duration-150 hover:brightness-110 active:scale-[0.97] mam-outline-sm" data-inspect-action="roll-mut">Roll</button>
+            <button class="h-9 rounded-lg border text-[12px] font-black cursor-pointer transition-colors mam-outline-sm ${
+              isAutoRolling
+                ? 'border-rose-300 bg-rose-600 text-white animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.5)]'
+                : 'border-cyan-400/70 bg-[linear-gradient(180deg,#0e3a52,#082032)] text-cyan-200 hover:brightness-125'
+            }" data-inspect-action="toggle-auto-mut" title="Auto-stops on Frozen+ or when out of Gems">${isAutoRolling ? 'Stop' : 'Auto'}</button>
+          </div>
         </div>
       `;
     }
@@ -306,6 +439,7 @@ export class PlotInspectUi {
     root.querySelectorAll('[data-inspect-tab]').forEach((btn) => {
       btn.addEventListener('click', () => {
         audio.playSfx('ui-tab');
+        this.stopAutoRollMutation();
         this.pendingMutationConfirm = null;
         this.inspectTab = (btn as HTMLElement).dataset.inspectTab as InspectTab;
         this.onRequestRender();
@@ -314,6 +448,7 @@ export class PlotInspectUi {
 
     root.querySelector('[data-mut-confirm-backdrop]')?.addEventListener('click', (e) => {
       if (e.target === e.currentTarget) {
+        this.stopAutoRollMutation();
         this.pendingMutationConfirm = null;
         this.onRequestRender();
       }
@@ -324,10 +459,12 @@ export class PlotInspectUi {
         const act = (btn as HTMLElement).dataset.inspectAction;
         if (act === 'exit') {
           audio.playSfx('ui-close');
+          this.stopAutoRollMutation();
           this.pendingMutationConfirm = null;
           this.onOpenPlotInspector(null);
         } else if (act === 'pickup') {
           audio.playSfx('place-chibi');
+          this.stopAutoRollMutation();
           this.pendingMutationConfirm = null;
           this.state.removeMinerFromPlot(slot);
           this.onOpenPlotInspector(null);
@@ -337,6 +474,7 @@ export class PlotInspectUi {
             .filter((idx) => idx >= 0);
           if (occupied.length <= 1) return;
           audio.playSfx('ui-tab');
+          this.stopAutoRollMutation();
           this.pendingMutationConfirm = null;
           const pos = occupied.indexOf(slot);
           const nextIdx =
@@ -344,24 +482,20 @@ export class PlotInspectUi {
               ? occupied[(pos + 1) % occupied.length]
               : occupied[(pos - 1 + occupied.length) % occupied.length];
           this.onOpenPlotInspector(nextIdx);
-        } else if (act === 'up-dmg') {
-          if (!this.state.upgradePlotDamage(slot)) {
-            audio.playSfx('ui-error');
-            this.pushToast('Not enough Cash!');
-          } else {
-            audio.playSfx('upgrade');
-            this.onRequestRender();
+        } else if (act === 'up-dmg' || act === 'up-spd' || act === 'up-mine') {
+          const maxSteps = this.buyMode === '1' ? 1 : this.buyMode === '10' ? 10 : 100;
+          let bought = 0;
+          for (let i = 0; i < maxSteps; i++) {
+            const ok =
+              act === 'up-dmg'
+                ? this.state.upgradePlotDamage(slot)
+                : act === 'up-spd'
+                  ? this.state.upgradePlotSpeed(slot)
+                  : this.state.upgradePlotMiningSpeed(slot);
+            if (!ok) break;
+            bought += 1;
           }
-        } else if (act === 'up-spd') {
-          if (!this.state.upgradePlotSpeed(slot)) {
-            audio.playSfx('ui-error');
-            this.pushToast('Not enough Cash!');
-          } else {
-            audio.playSfx('upgrade');
-            this.onRequestRender();
-          }
-        } else if (act === 'up-mine') {
-          if (!this.state.upgradePlotMiningSpeed(slot)) {
+          if (bought === 0) {
             audio.playSfx('ui-error');
             this.pushToast('Not enough Cash!');
           } else {
@@ -388,12 +522,50 @@ export class PlotInspectUi {
             return;
           }
           this.executeMutationRoll(slot);
+        } else if (act === 'toggle-auto-mut') {
+          if (this.autoRollMutSlot !== null) {
+            this.stopAutoRollMutation();
+            audio.playSfx('ui-close');
+            this.onRequestRender();
+            return;
+          }
+          const unit = this.state.getPlotUnit(slot);
+          const stats = this.state.getPlotUnitStats(slot);
+          if (!unit || !stats) return;
+          if (this.state.gems < stats.mutationCost) {
+            audio.playSfx('ui-error');
+            this.pushToast('Not enough Gems!');
+            return;
+          }
+          if (isHighTierMutation(unit.mutationId)) {
+            audio.playSfx('ui-tab');
+            this.pendingMutationConfirm = {
+              slot,
+              mutId: unit.mutationId,
+              mode: 'overwrite',
+            };
+            this.onRequestRender();
+            return;
+          }
+          this.startAutoRollMutation(slot);
         } else if (act === 'mut-stop') {
+          this.stopAutoRollMutation();
           audio.playSfx('ui-close');
           this.pendingMutationConfirm = null;
           this.onRequestRender();
         } else if (act === 'mut-continue') {
           this.executeMutationRoll(slot);
+        }
+      });
+    });
+
+    root.querySelectorAll<HTMLElement>('[data-buy-mode]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.buyMode as UpgradeBuyMode | undefined;
+        if (mode && mode !== this.buyMode) {
+          this.buyMode = mode;
+          audio.playSfx('ui-tab');
+          this.onRequestRender();
         }
       });
     });

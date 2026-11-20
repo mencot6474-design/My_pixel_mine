@@ -2,7 +2,21 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { applyCameraOrbitDrag, clampCameraZoomRadius } from '../src/game3d/MineScene3D';
+import {
+  PIT_EVENT_COOLDOWN_MAX_SEC,
+  PIT_EVENT_COOLDOWN_MIN_SEC,
+  PIT_EVENT_DEFS,
+  computePitEventBonusGems,
+  rollNextPitEventCooldownSec,
+  rollPitEventKind,
+} from '../src/game/PitEventsDomain';
+import {
+  applyCameraOrbitDrag,
+  clampCameraZoomRadius,
+  HOLD_MINE_INITIAL_DELAY_SEC,
+  HOLD_MINE_INTERVAL_SEC,
+  stepHoldMineTimer,
+} from '../src/game3d/MineScene3D';
 import { AudioManager } from '../src/audio/AudioManager';
 import {
   cgBindAdLifecycle,
@@ -2612,5 +2626,64 @@ describe('Pure 3D Mine World', () => {
     expect(byId.sundering).toBe(0.2);
     expect(byId.timeless).toBe(0.05);
     expect(byId.spellbound).toBe(0.01);
+  });
+
+  it('triggers Hold-to-Mine after initial delay and repeats at steady interval until released', () => {
+    // Before initial delay: no swing yet
+    let state = stepHoldMineTimer({ holding: true, elapsedSec: 0, firedInitial: false, dtSec: 0.1 });
+    expect(state.shouldMine).toBe(false);
+    expect(state.firedInitial).toBe(false);
+
+    // Crossing initial delay: fires first hold swing
+    state = stepHoldMineTimer({
+      holding: true,
+      elapsedSec: state.elapsedSec,
+      firedInitial: state.firedInitial,
+      dtSec: HOLD_MINE_INITIAL_DELAY_SEC,
+    });
+    expect(state.shouldMine).toBe(true);
+    expect(state.firedInitial).toBe(true);
+
+    // Subsequent swings use HOLD_MINE_INTERVAL_SEC
+    state = stepHoldMineTimer({
+      holding: true,
+      elapsedSec: 0,
+      firedInitial: true,
+      dtSec: HOLD_MINE_INTERVAL_SEC,
+    });
+    expect(state.shouldMine).toBe(true);
+
+    // Releasing resets timer cleanly
+    const released = stepHoldMineTimer({
+      holding: false,
+      elapsedSec: 0.12,
+      firedInitial: true,
+      dtSec: 0.05,
+    });
+    expect(released).toEqual({ elapsedSec: 0, firedInitial: false, shouldMine: false });
+  });
+
+  it('activates, exposes, and clears Random Pit Events (Golden Vein & Crystal Surge) on OrePit3D', () => {
+    expect(rollNextPitEventCooldownSec(() => 0)).toBe(PIT_EVENT_COOLDOWN_MIN_SEC);
+    expect(rollNextPitEventCooldownSec(() => 1)).toBe(PIT_EVENT_COOLDOWN_MAX_SEC);
+    expect(rollPitEventKind(() => 0.1)).toBe('golden_vein');
+    expect(rollPitEventKind(() => 0.9)).toBe('crystal_surge');
+    expect(computePitEventBonusGems(0, 'crystal_surge')).toBe(PIT_EVENT_DEFS.crystal_surge.baseBonusGems);
+    expect(computePitEventBonusGems(5, 'crystal_surge')).toBe(PIT_EVENT_DEFS.crystal_surge.baseBonusGems * 6);
+    expect(computePitEventBonusGems(3, 'golden_vein')).toBe(0);
+
+    const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    const nodeId = pit.activatePitEvent('golden_vein');
+    expect(nodeId).not.toBeNull();
+    const info = pit.getAliveNodesInfo().find((n) => n.id === nodeId);
+    expect(info?.pitEventKind).toBe('golden_vein');
+
+    const hitRes = pit.hitNode(nodeId!, 999_999, true);
+    expect(hitRes?.broken).toBe(true);
+    expect(hitRes?.pitEventKind).toBe('golden_vein');
+
+    pit.clearPitEvent();
+    expect(pit.getAliveNodesInfo().some((n) => n.pitEventKind !== undefined)).toBe(false);
+    pit.dispose();
   });
 });

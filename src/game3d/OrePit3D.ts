@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { assetUrl } from '../game/AssetUrl';
 import { getOresByWorld, type OreDef, type WorldId } from '../game/GameData';
 import { getWeatherById, type WeatherId } from '../game/WeatherData';
+import { PIT_EVENT_DEFS, type PitEventKind } from '../game/PitEventsDomain';
 import {
   MAX_PIT_NODE_COUNT,
   type MineWorldPalette,
@@ -70,6 +71,7 @@ export interface OreHitResult {
   variantKey: OreVariantKey;
   dmgDealt: number;
   meteorWeatherId?: WeatherId;
+  pitEventKind?: PitEventKind;
 }
 
 export interface OreAttackFxOptions {
@@ -594,6 +596,7 @@ interface InternalOreNode {
   phase: number;
   isMeteor?: boolean;
   meteorWeatherId?: WeatherId | null;
+  pitEventKind?: PitEventKind;
   dropY?: number;
 }
 
@@ -1099,8 +1102,10 @@ export class OrePit3D {
           : -1;
     node.recoilAmt = heavy ? 0.24 : 0.16;
     node.flashTimer = 0.09;
+    const pitEventKind = node.pitEventKind;
     if (this.group.visible) {
-      const fxAccent = attackFx?.accentColor ?? (heavy ? '#fbbf24' : this.activePalette.crystalColor);
+      const eventColor = pitEventKind ? PIT_EVENT_DEFS[pitEventKind].colorHex : undefined;
+      const fxAccent = eventColor ?? attackFx?.accentColor ?? (heavy ? '#fbbf24' : this.activePalette.crystalColor);
       this.spawnShardsAt(
         node.x,
         node.z,
@@ -1109,9 +1114,11 @@ export class OrePit3D {
         node.isMeteor
       );
       if (pure.broken) {
-        const oreBreakColor = node.isMeteor
-          ? (node.meteorWeatherId ? getWeatherById(node.meteorWeatherId).accentColor : '#f472b6')
-          : this.activePalette.crystalColor;
+        const oreBreakColor = eventColor
+          ? eventColor
+          : node.isMeteor
+            ? (node.meteorWeatherId ? getWeatherById(node.meteorWeatherId).accentColor : '#f472b6')
+            : this.activePalette.crystalColor;
         this.impactFx.spawnShatter({
           targetX: node.x,
           targetY: node.isMeteor ? 1.15 : 0.92,
@@ -1138,6 +1145,7 @@ export class OrePit3D {
     if (pure.broken) {
       node.root.visible = false;
       node.hitMesh.visible = false;
+      node.pitEventKind = undefined;
       if (node.isMeteor) {
         node.respawnTimer = 0;
         node.meteorWeatherId = null;
@@ -1151,6 +1159,7 @@ export class OrePit3D {
       variantKey: node.variant.key,
       dmgDealt: pure.dmgDealt,
       meteorWeatherId,
+      pitEventKind,
     };
   }
 
@@ -1208,6 +1217,21 @@ export class OrePit3D {
     return this.nodes.filter((n) => n.alive).map((n) => n.id);
   }
 
+  public activatePitEvent(kind: PitEventKind): number | null {
+    this.clearPitEvent();
+    const alive = this.nodes.filter((n) => n.alive);
+    if (alive.length === 0) return null;
+    const picked = alive[Math.floor(Math.random() * alive.length)];
+    picked.pitEventKind = kind;
+    return picked.id;
+  }
+
+  public clearPitEvent(): void {
+    for (const n of this.nodes) {
+      n.pitEventKind = undefined;
+    }
+  }
+
   public getAliveNodesInfo(): Array<{
     id: number;
     worldX: number;
@@ -1218,6 +1242,7 @@ export class OrePit3D {
     variantKey: OreVariantKey;
     isMeteor?: boolean;
     meteorWeatherId?: WeatherId;
+    pitEventKind?: PitEventKind;
   }> {
     const list: Array<{
       id: number;
@@ -1229,6 +1254,7 @@ export class OrePit3D {
       variantKey: OreVariantKey;
       isMeteor?: boolean;
       meteorWeatherId?: WeatherId;
+      pitEventKind?: PitEventKind;
     }> = this.nodes
       .filter((n) => n.alive)
       .map((n) => ({
@@ -1239,6 +1265,7 @@ export class OrePit3D {
         hp: n.hp,
         maxHp: n.maxHp,
         variantKey: n.variant.key,
+        pitEventKind: n.pitEventKind,
       }));
     if (this.meteorNode.alive) {
       list.push({

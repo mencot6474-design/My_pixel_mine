@@ -14,6 +14,7 @@ import { GameSettings, gameSettings } from '../game/GameSettings';
 import { GameState } from '../game/GameState';
 import { fmtShort } from '../game/NumberFormat';
 import { getWeatherById } from '../game/WeatherData';
+import { PIT_EVENT_DEFS } from '../game/PitEventsDomain';
 import { enchantAuraIconHtml, meteorIconHtml } from './HudIcons';
 import { ModalKind, TW_SHOP_SIGN_BASE } from './HudShared';
 
@@ -112,6 +113,20 @@ export function buildMineOreBarsHtml(bars: OreHpScreen[]): string {
                 </div>
               </div>
             `;
+      }
+      if (b.pitEventKind) {
+        const ev = PIT_EVENT_DEFS[b.pitEventKind];
+        return `
+          <div class="absolute flex flex-col items-center gap-1 pointer-events-none select-none" data-ore-bar="${b.id}">
+            <div class="inline-flex items-center gap-1 px-2 py-[2px] rounded-md bg-[#090e1c] border-[1.5px] whitespace-nowrap shadow-[0_3px_10px_rgba(0,0,0,0.85)]" style="border-color:${ev.colorHex}">
+              <span class="text-[9.5px] font-black uppercase tracking-[0.06em] leading-none mam-outline-sm" style="color:${ev.colorHex}">${ev.badgeText}</span>
+            </div>
+            <div class="relative w-28 h-[17px] rounded-md border-2 bg-[#070b15] overflow-hidden flex items-center justify-center shadow-[0_3px_10px_rgba(0,0,0,0.8)]" style="border-color:${ev.colorHex};box-shadow:0 3px 10px rgba(0,0,0,0.8),0 0 10px ${ev.colorHex}55">
+              <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${ev.colorHex}bb,${ev.colorHex})" data-ore-fill="true"></div>
+              <div class="relative z-[2] text-[10.5px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
+            </div>
+          </div>
+        `;
       }
       return `
           <div class="absolute w-24 h-4 rounded-md border-2 border-[#0f172a] bg-[#070b15] overflow-hidden flex items-center justify-center shadow-[0_3px_8px_rgba(0,0,0,0.75)]" data-ore-bar="${b.id}">
@@ -400,7 +415,7 @@ export class WorldOverlayHudUi {
       return;
     }
 
-    const key = `mine:${bars.map((b) => `${b.id}:${b.meteorWeatherId ?? ''}`).join(',')}`;
+    const key = `mine:${bars.map((b) => `${b.id}:${b.meteorWeatherId ?? ''}:${b.pitEventKind ?? ''}`).join(',')}`;
     if (this.oreBarLayerEl.dataset.keys !== key) {
       this.oreBarLayerEl.dataset.keys = key;
       this.oreBarLayerEl.innerHTML = buildMineOreBarsHtml(bars);

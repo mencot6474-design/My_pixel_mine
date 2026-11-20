@@ -5,6 +5,14 @@ import { assetUrl } from './game/AssetUrl';
 import { gameSettings, type GameSettingsData } from './game/GameSettings';
 import { GameState } from './game/GameState';
 import { OVERCLOCK_TAP_CHARGE } from './game/OverclockDomain';
+import { WORLDS } from './game/GameData';
+import {
+  PIT_EVENT_DEFS,
+  computePitEventBonusGems,
+  rollNextPitEventCooldownSec,
+  rollPitEventKind,
+  type PitEventKind,
+} from './game/PitEventsDomain';
 import { getWeatherById, type WeatherId } from './game/WeatherData';
 import { getChibiById } from './game3d/ChibiCatalog';
 import { init3dHudIcons } from './game3d/HudIcon3DRenderer';
@@ -71,9 +79,32 @@ async function bootstrap(): Promise<void> {
 
   const gameState = new GameState();
   let hud: GameHud | null = null;
+  let activePitEvent: { kind: PitEventKind; expiresAt: number } | null = null;
+  let nextPitEventAt = Date.now() + rollNextPitEventCooldownSec() * 1000;
+
+  let holdMiningVisualActive = false;
+  const spawnElectricSpark = (sx: number, sy: number): void => {
+    const el = document.createElement('div');
+    el.className = 'mam-electric-spark';
+    el.style.left = `${sx}px`;
+    el.style.top = `${sy}px`;
+    el.style.setProperty('--arc-rot', `${Math.round(Math.random() * 360)}deg`);
+    el.innerHTML = `
+      <svg viewBox="0 0 84 84" width="84" height="84" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M42 42 L26 24 L33 18 L14 6" stroke="#38bdf8" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M42 42 L26 24 L33 18 L14 6" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M42 42 L62 28 L55 20 L74 10" stroke="#facc15" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M42 42 L58 60 L50 64 L68 78" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M42 42 L20 56 L27 64 L10 74" stroke="#7dd3fc" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="42" cy="42" r="6" fill="#ffffff" fill-opacity="0.9"/>
+      </svg>
+    `;
+    document.body.appendChild(el);
+    window.setTimeout(() => el.remove(), 270);
+  };
 
   const scene = new MineScene3D(threeRoot, {
-    onOreBroken: (variantKey, meteorWeatherId) => {
+    onOreBroken: (variantKey, meteorWeatherId, pitEventKind) => {
       if (meteorWeatherId) {
         const reward = gameState.onMeteorBroken(meteorWeatherId);
         audio.playOreBreak('geode');
@@ -89,17 +120,53 @@ async function bootstrap(): Promise<void> {
         hud?.notifyTutorialOreBroken();
         return;
       }
+      if (pitEventKind === 'golden_vein') {
+        const drops = PIT_EVENT_DEFS.golden_vein.oreDropMult;
+        for (let i = 0; i < drops; i++) {
+          gameState.onOreBroken(variantKey);
+        }
+        activePitEvent = null;
+        nextPitEventAt = Date.now() + rollNextPitEventCooldownSec() * 1000;
+        audio.playOreBreak('geode');
+        audio.playSfx('rare-fanfare', { volume: 0.5 });
+        hud?.pushToast(`★ GOLDEN VEIN shattered! ${drops}× Ore Drops!`);
+        hud?.notifyTutorialOreBroken();
+        return;
+      }
+      if (pitEventKind === 'crystal_surge') {
+        gameState.onOreBroken(variantKey);
+        const worldIdx = Math.max(0, WORLDS.findIndex((w) => w.id === gameState.activeWorldId));
+        const bonusGems = computePitEventBonusGems(worldIdx, 'crystal_surge');
+        if (bonusGems > 0) gameState.grantAdGems(bonusGems);
+        activePitEvent = null;
+        nextPitEventAt = Date.now() + rollNextPitEventCooldownSec() * 1000;
+        audio.playOreBreak('geode');
+        audio.playSfx('rare-fanfare', { volume: 0.5 });
+        hud?.pushToast(`⚡ CRYSTAL SURGE shattered! +${bonusGems} Gems!`);
+        hud?.notifyTutorialOreBroken();
+        return;
+      }
       gameState.onOreBroken(variantKey);
       audio.playOreBreak(variantKey);
       hud?.notifyTutorialOreBroken();
     },
-    onOreDamage: (dmg, sx, sy, isClick, isCrit) => {
+    onOreDamage: (dmg, sx, sy, isClick, isCrit, pitEventKind) => {
       hud?.spawnDamagePopup(dmg, sx, sy, isClick, isCrit);
       audio.playOreHit(isClick);
       if (isClick) {
+        if (holdMiningVisualActive) {
+          spawnElectricSpark(sx, sy);
+        }
         if (isCrit) gameState.recordCritTap(dmg);
-        gameState.chargeOverclock(isCrit ? OVERCLOCK_TAP_CHARGE * 1.5 : OVERCLOCK_TAP_CHARGE);
+        const eventFeverMult = pitEventKind ? PIT_EVENT_DEFS[pitEventKind].feverChargeMult : 1;
+        gameState.chargeOverclock(
+          (isCrit ? OVERCLOCK_TAP_CHARGE * 1.5 : OVERCLOCK_TAP_CHARGE) * eventFeverMult
+        );
       }
+    },
+    onHoldMineChange: (active) => {
+      holdMiningVisualActive = active;
+      pickaxeCursorEl.classList.toggle('is-hold-mining', active);
     },
     onChestClick: () => {
       audio.playSfx('ui-open');
@@ -276,6 +343,29 @@ async function bootstrap(): Promise<void> {
       spawnMeteorIfAllowed(gameState.weatherId);
     }
   }
+  window.setInterval(() => {
+    if (isAdPlaying() || hud?.isTutorialActive()) return;
+    const now = Date.now();
+    if (activePitEvent) {
+      if (now >= activePitEvent.expiresAt) {
+        scene.clearPitEvent();
+        activePitEvent = null;
+        nextPitEventAt = now + rollNextPitEventCooldownSec() * 1000;
+      }
+      return;
+    }
+    if (now >= nextPitEventAt && scene.getMode() === 'mine') {
+      const kind = rollPitEventKind();
+      if (scene.spawnPitEvent(kind)) {
+        const def = PIT_EVENT_DEFS[kind];
+        activePitEvent = { kind, expiresAt: now + def.durationSec * 1000 };
+        hud?.pushToast(`${def.badgeText} appeared! ${def.subtitle}`);
+      } else {
+        nextPitEventAt = now + 15_000;
+      }
+    }
+  }, 1000);
+
   audio.setSceneMode('mine');
   cgLoadingStop();
   if (!document.hidden) {

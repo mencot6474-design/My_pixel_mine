@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { getEnchantById } from '../game/GameData';
 import { type WeatherId } from '../game/WeatherData';
+import { type PitEventKind } from '../game/PitEventsDomain';
 import { ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
 import { disposeObject3D } from './ChestVaultStation3D';
@@ -216,7 +217,7 @@ export class FieldMiner3D {
     elapsed: number,
     camera: THREE.Camera,
     pit: OrePit3D,
-    onOreBroken?: (variantKey: OreVariantKey, meteorWeatherId?: WeatherId) => void,
+    onOreBroken?: (variantKey: OreVariantKey, meteorWeatherId?: WeatherId, pitEventKind?: PitEventKind) => void,
     onOreHit?: (dmg: number, wx: number, wy: number, wz: number) => void,
     renderVisuals = true
   ): void {
@@ -326,7 +327,7 @@ export class FieldMiner3D {
           }
           if (res.broken) {
             this.targetNodeId = -1;
-            onOreBroken?.(res.variantKey, res.meteorWeatherId);
+            onOreBroken?.(res.variantKey, res.meteorWeatherId, res.pitEventKind);
           }
         }
       }

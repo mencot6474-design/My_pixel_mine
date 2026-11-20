@@ -441,10 +441,10 @@ export class IndexModalUi {
             : `<span class="px-2.5 py-1 rounded-lg bg-[#131b2e] border border-white/12 text-[#94a3b8] text-[11px] font-black shrink-0 tabular-nums">${progress.found}/${needed}</span>`;
 
         return `
-          <div class="relative overflow-hidden flex-1 min-w-[260px] rounded-xl border ${cardBorder} px-3 py-2 flex items-center justify-between gap-2.5">
+          <div class="relative overflow-hidden rounded-xl border ${cardBorder} px-2.5 py-1.5 flex items-center justify-between gap-2">
             <div class="absolute top-0 left-0 right-0 h-[2px] ${topRail}" aria-hidden="true"></div>
-            <div class="min-w-0 flex-1 flex flex-col gap-1.5 text-left">
-              <div class="flex items-center gap-1.5 flex-wrap">
+            <div class="min-w-0 flex-1 flex flex-col gap-1 text-left">
+              <div class="flex items-center gap-1 flex-wrap">
                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/10 border border-white/15 text-[10px] font-black ${m.thresholdPct === 100 ? 'text-[#fde047]' : 'text-[#38bdf8]'} tabular-nums">
                   <svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.5l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.3l-3.8 2 .7-4.3-3.1-3 4.3-.6L8 1.5z"/></svg>
                   ${m.thresholdPct}%
@@ -463,11 +463,11 @@ export class IndexModalUi {
 
     const passiveSummaryHtml =
       activePassiveChips.length > 0
-        ? `<div class="hidden @min-[900px]:flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 rounded-xl bg-[#0e1729] border border-[#38bdf8]/35 text-[11px] font-black text-[#bae6fd]">${hudIconHtml('sparkle', 14, 'Bonus')}${activePassiveChips.join('')}</div>`
+        ? `<div class="col-span-2 @max-[640px]:col-span-1 flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0e1729] border border-[#38bdf8]/35 text-[11px] font-black text-[#bae6fd]">${hudIconHtml('sparkle', 13, 'Bonus')}${activePassiveChips.join('')}</div>`
         : '';
 
     return `
-      <div class="flex items-center gap-2 flex-wrap" data-index-milestones="true">
+      <div class="grid grid-cols-2 @max-[640px]:grid-cols-1 gap-2 shrink-0" data-index-milestones="true">
         ${cardsHtml}
         ${passiveSummaryHtml}
       </div>
@@ -497,30 +497,30 @@ export class IndexModalUi {
         </div>
       `,
       bodyHtml: `
-        <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-1.5 overflow-x-auto mam-no-scrollbar pb-0.5 shrink-0">
           ${WORLDS.map((w) => {
             const wp = this.state.getWorldIndexProgress(w.id);
             return `
-            <button class="${TW_TAB_BTN} mam-outline-sm ${this.indexWorldId === w.id ? 'active' : ''}" data-index-world="${w.id}">
+            <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 mam-outline-sm ${this.indexWorldId === w.id ? 'active' : ''}" data-index-world="${w.id}">
               <span>${w.name}</span>
-              <span class="text-[11px] font-bold opacity-85" data-index-world-count="${w.id}">(${wp.found}/${wp.total})</span>
+              <span class="text-[10.5px] font-bold opacity-85" data-index-world-count="${w.id}">(${wp.found}/${wp.total})</span>
               ${this.buildTabReadyDotHtml(w.id)}
             </button>
           `;
           }).join('')}
-          <button class="${TW_TAB_BTN} mam-outline-sm ${this.indexWorldId === 'weather' ? 'active' : ''}" data-index-world="weather">
-            <span class="inline-flex items-center gap-1">${meteorIconHtml('celestial', 16, 'Weather')} Weather</span>
-            <span class="text-[11px] font-bold opacity-85">(${WEATHER_ORES.filter((o) => this.state.discovered.has(o.id)).length + getWeatherLimitedMiners().filter((m) => this.state.discovered.has(m.chibi.id)).length}/${WEATHER_ORES.length + getWeatherLimitedMiners().length})</span>
+          <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 mam-outline-sm ${this.indexWorldId === 'weather' ? 'active' : ''}" data-index-world="weather">
+            <span class="inline-flex items-center gap-1">${meteorIconHtml('celestial', 14, 'Weather')} Weather</span>
+            <span class="text-[10.5px] font-bold opacity-85">(${WEATHER_ORES.filter((o) => this.state.discovered.has(o.id)).length + getWeatherLimitedMiners().filter((m) => this.state.discovered.has(m.chibi.id)).length}/${WEATHER_ORES.length + getWeatherLimitedMiners().length})</span>
             ${this.buildTabReadyDotHtml('weather')}
           </button>
-          <button class="${TW_TAB_BTN} mam-outline-sm ${this.indexWorldId === 'fusion' ? 'active' : ''}" data-index-world="fusion">
+          <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 mam-outline-sm ${this.indexWorldId === 'fusion' ? 'active' : ''}" data-index-world="fusion">
             <span class="inline-flex items-center gap-1">✦ Fusion</span>
-            <span class="text-[11px] font-bold opacity-85">(${FUSION_RECIPES.filter((r) => this.state.discovered.has(r.resultChibiId)).length}/${FUSION_RECIPES.length})</span>
+            <span class="text-[10.5px] font-bold opacity-85">(${FUSION_RECIPES.filter((r) => this.state.discovered.has(r.resultChibiId)).length}/${FUSION_RECIPES.length})</span>
             ${this.buildTabReadyDotHtml('fusion')}
           </button>
-          <button class="${TW_TAB_BTN} mam-outline-sm ${this.indexWorldId === 'limited' ? 'active' : ''}" data-index-world="limited">
+          <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 mam-outline-sm ${this.indexWorldId === 'limited' ? 'active' : ''}" data-index-world="limited">
             <span class="inline-flex items-center gap-1 text-amber-200">★ Limited</span>
-            <span class="text-[11px] font-bold opacity-85">(${getDailyLoginLimitedChibiIds().filter((id) => this.state.discovered.has(id)).length}/${getDailyLoginLimitedChibiIds().length})</span>
+            <span class="text-[10.5px] font-bold opacity-85">(${getDailyLoginLimitedChibiIds().filter((id) => this.state.discovered.has(id)).length}/${getDailyLoginLimitedChibiIds().length})</span>
             ${this.buildTabReadyDotHtml('limited')}
           </button>
         </div>

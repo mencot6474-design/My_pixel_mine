@@ -10,6 +10,7 @@ import {
   ResearchTreeId,
 } from '../game/ResearchData';
 import { GameState } from '../game/GameState';
+import { computeBulkUpgradePlan, type UpgradeBuyMode } from '../game/UpgradeBulkHelper';
 import { fmtMoney } from '../game/NumberFormat';
 import { hudIconHtml, researchIconHtml } from './HudIcons';
 import { ModalKind, renderModalShell, TW_CLOSE_BTN, TW_SHOP_BUY_BTN, TW_SHOP_MODAL_RESP } from './HudShared';
@@ -17,6 +18,7 @@ import { ModalKind, renderModalShell, TW_CLOSE_BTN, TW_SHOP_BUY_BTN, TW_SHOP_MOD
 export class UpgradesWorldsUi {
   private researchTab: ResearchTreeId = 'underground';
   private selectedResearchNodeId: string | null = 'ug-deposits-1';
+  private buyMode: UpgradeBuyMode = '1';
   private lastUpgradesStateKey = '';
   private lastWorldsListHtml = '';
   private animateNodeSelectId: string | null = null;
@@ -209,6 +211,13 @@ export class UpgradesWorldsUi {
       const pct = Math.round((lvl / Math.max(1, maxLvl)) * 100);
       const status = this.state.canUpgradeResearch(selNode.id);
       const cost = getNodeNextCost(selNode, lvl);
+      const bulkPlan = computeBulkUpgradePlan({
+        currentLevel: lvl,
+        maxLevel: maxLvl,
+        currency: this.state.cash,
+        mode: this.buyMode,
+        costAtLevel: (l) => getNodeNextCost(selNode, l),
+      });
       const reqNames = selNode.requires.map((id) => getResearchNodeById(id)?.name ?? id).join(', ');
       const worldIdIfWorld = selNode.treeId === 'core' ? null : (selNode.treeId as WorldId);
       const isWorldInactive = Boolean(worldIdIfWorld && worldIdIfWorld !== this.state.activeWorldId);
@@ -236,8 +245,34 @@ export class UpgradesWorldsUi {
       } else if (status === 'no-cash') {
         actionBtnHtml = `<button class="${TW_SHOP_BUY_BTN} disabled !h-11 !text-[16px]" data-upgrade-node="${selNode.id}">${fmtMoney(cost)}</button>`;
       } else {
-        actionBtnHtml = `<button class="${TW_SHOP_BUY_BTN} ${animUpgradeId === selNode.id ? 'mam-pop-click' : ''} !h-11 !text-[17px]" data-upgrade-node="${selNode.id}">Upgrade • ${fmtMoney(cost)}</button>`;
+        const buyLabel =
+          bulkPlan.levels > 1
+            ? `Upgrade +${bulkPlan.levels} • ${fmtMoney(bulkPlan.totalCost)}`
+            : `Upgrade • ${fmtMoney(bulkPlan.totalCost)}`;
+        actionBtnHtml = `<button class="${TW_SHOP_BUY_BTN} ${animUpgradeId === selNode.id ? 'mam-pop-click' : ''} !h-11 !text-[16px]" data-upgrade-node="${selNode.id}">${buyLabel}</button>`;
       }
+
+      const showBuyToggle = status === 'ok' || status === 'no-cash';
+      const buyModes: { id: UpgradeBuyMode; label: string }[] = [
+        { id: '1', label: '×1' },
+        { id: '10', label: '×10' },
+        { id: 'max', label: 'MAX' },
+      ];
+      const buyToggleHtml = showBuyToggle
+        ? `<div class="grid grid-cols-3 gap-1.5 w-full">
+            ${buyModes
+              .map(
+                (m) => `
+              <button class="h-7 rounded-lg text-[11px] font-black cursor-pointer transition-colors ${
+                this.buyMode === m.id
+                  ? 'bg-sky-500 text-slate-950 shadow-[0_0_8px_rgba(56,189,248,0.45)]'
+                  : 'bg-slate-800/90 text-slate-300 border border-slate-700 hover:bg-slate-700'
+              }" data-research-buy-mode="${m.id}">${m.label}</button>
+            `
+              )
+              .join('')}
+          </div>`
+        : '';
 
       const inspIconAnim =
         animUpgradeId === selNode.id ? 'mam-upgrade-pop' : animNodeSelectId === selNode.id ? 'mam-pop-click' : '';
@@ -253,6 +288,7 @@ export class UpgradesWorldsUi {
         <div class="text-[15px] font-black text-[#4ade80]">${lvl > 0 ? formatNodeEffectLine(selNode, lvl) : `Next: ${formatNodeEffectLine(selNode, 1)}`}</div>
         ${lvl > 0 && lvl < maxLvl ? `<div class="text-[12px] font-extrabold text-[#7dd3fc]">Next Lv: ${formatNodeEffectLine(selNode, lvl + 1)}</div>` : ''}
         <div class="text-[12px] font-medium text-[#cbd5e1] leading-snug">${selNode.descTemplate}</div>
+        ${buyToggleHtml}
         <div class="w-full mt-1">${actionBtnHtml}</div>
       `;
     }
@@ -461,6 +497,17 @@ export class UpgradesWorldsUi {
       });
     });
 
+    shell.querySelectorAll<HTMLElement>('[data-research-buy-mode]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.researchBuyMode as UpgradeBuyMode | undefined;
+        if (mode && mode !== this.buyMode) {
+          this.buyMode = mode;
+          audio.playSfx('ui-tab');
+          this.onRequestRender();
+        }
+      });
+    });
+
     shell.querySelectorAll('[data-upgrade-node]').forEach((el) => {
       el.addEventListener('click', () => {
         const nodeId = (el as HTMLElement).dataset.upgradeNode;
@@ -469,7 +516,11 @@ export class UpgradesWorldsUi {
         if (status === 'ok') {
           audio.playSfx('upgrade');
           this.animateUpgradeBurstId = nodeId;
-          this.state.upgradeResearch(nodeId);
+          const maxSteps = this.buyMode === '1' ? 1 : this.buyMode === '10' ? 10 : 100;
+          for (let i = 0; i < maxSteps; i++) {
+            if (this.state.canUpgradeResearch(nodeId) !== 'ok') break;
+            if (!this.state.upgradeResearch(nodeId)) break;
+          }
           if (this.animateUpgradeBurstId !== null) this.onRequestRender();
         } else {
           audio.playSfx('ui-error');

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { computeBulkUpgradePlan, getPlotStatUpgradeCost } from '../src/game/UpgradeBulkHelper';
 import { getIndexTabEntryIds } from '../src/game/IndexRewardsDomain';
 import { rollTapCriticalDamage, TAP_CRIT_MULT } from '../src/game3d/MineScene3D';
 import { getOreById, ORES } from '../src/game/GameData';
@@ -815,6 +816,30 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(reloaded.careerStats.critTaps).toBe(10);
       expect(reloaded.careerStats.highestCrit).toBe(340);
       expect(reloaded.claimedAchievements.has('crit_striker:1')).toBe(true);
+    });
+  });
+
+  describe('Bulk Upgrade Multiplier (x1 / x10 / MAX)', () => {
+    it('computes exact multi-level plans and respects currency and maxLevel caps', () => {
+      const linearCost = (lvl: number) => lvl * 100;
+      expect(
+        computeBulkUpgradePlan({ currentLevel: 1, maxLevel: 20, currency: 50, mode: '10', costAtLevel: linearCost })
+      ).toEqual({ levels: 0, totalCost: 100, targetLevel: 1 });
+
+      // Currency 650 buys lv1 (100) + lv2 (200) + lv3 (300) = 600
+      expect(
+        computeBulkUpgradePlan({ currentLevel: 1, maxLevel: 20, currency: 650, mode: '10', costAtLevel: linearCost })
+      ).toEqual({ levels: 3, totalCost: 600, targetLevel: 4 });
+
+      // Mode MAX caps at maxLevel
+      expect(
+        computeBulkUpgradePlan({ currentLevel: 18, maxLevel: 20, currency: 999_999, mode: 'max', costAtLevel: linearCost })
+      ).toEqual({ levels: 2, totalCost: 3700, targetLevel: 20 });
+
+      // Plot stat cost formula matches PlotUnitsDomain
+      expect(getPlotStatUpgradeCost('dmg', 1, 1)).toBe(50);
+      expect(getPlotStatUpgradeCost('speed', 1, 1)).toBe(75);
+      expect(getPlotStatUpgradeCost('mining', 1, 1)).toBe(90);
     });
   });
 });
