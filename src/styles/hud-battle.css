@@ -1,0 +1,431 @@
+@layer components {
+  /* =========================================================
+     CYBER-ANIME BATTLE TOWER ARENA HUD & BOSS HP BAR
+     ========================================================= */
+  .mam-battle-exit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px 7px 10px;
+    border-radius: 13px;
+    border: 2px solid #fb7185;
+    background: linear-gradient(145deg, #be123c 0%, #7f1d1d 100%);
+    box-shadow:
+      0 0 0 1px #04070f,
+      inset 0 1px 0 rgba(255, 255, 255, 0.32),
+      0 4px 0 #450a0a,
+      0 10px 22px -4px rgba(225, 29, 72, 0.48);
+    color: #ffffff;
+    font-size: 13.5px;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 140ms ease-out, filter 140ms ease-out, box-shadow 140ms ease-out;
+  }
+
+  .mam-battle-exit-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+  }
+
+  .mam-battle-exit-btn:active {
+    transform: translateY(1px) scale(0.97);
+  }
+
+  .mam-battle-hp-card {
+    position: relative;
+    width: 100%;
+    padding: 9px 14px 11px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #16223d 0%, #0b1122 100%);
+    border: 2px solid #38588a;
+    box-shadow:
+      0 0 0 1px #04070f,
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 14px 36px rgba(0, 0, 0, 0.8),
+      0 0 26px -6px rgba(56, 189, 248, 0.38);
+    overflow: hidden;
+  }
+
+  .mam-battle-hp-card.is-boss {
+    background: linear-gradient(180deg, #2a132b 0%, #100816 100%);
+    border-color: #f59e0b;
+    box-shadow:
+      0 0 0 1px #04070f,
+      inset 0 1px 0 rgba(254, 240, 138, 0.3),
+      0 16px 38px rgba(0, 0, 0, 0.86),
+      0 0 32px -6px rgba(244, 63, 94, 0.58);
+  }
+
+  .mam-battle-hp-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 22px;
+    right: 22px;
+    height: 2.5px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, transparent, #38bdf8 22%, #e0f2fe 50%, #8b5cf6 78%, transparent);
+    pointer-events: none;
+  }
+
+  .mam-battle-hp-card.is-boss::before {
+    background: linear-gradient(90deg, transparent, #f43f5e 18%, #fde047 50%, #f43f5e 82%, transparent);
+  }
+
+  .mam-battle-emblem {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    transform: skewX(-10deg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #7dd3fc;
+    background: linear-gradient(145deg, #0284c7 0%, #3730a3 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 0 10px rgba(56, 189, 248, 0.45);
+  }
+
+  .mam-battle-hp-card.is-boss .mam-battle-emblem {
+    border-color: #fde047;
+    background: linear-gradient(145deg, #e11d48 0%, #d97706 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 0 12px rgba(244, 63, 94, 0.65);
+  }
+
+  .mam-battle-emblem > svg {
+    transform: skewX(10deg);
+  }
+
+  .mam-battle-hp-track {
+    position: relative;
+    width: 100%;
+    height: 30px;
+    border-radius: 10px;
+    background: #060a14;
+    border: 2px solid #2e4870;
+    box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.85);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mam-battle-hp-card.is-boss .mam-battle-hp-track {
+    height: 34px;
+    border-color: #fbbf24;
+    box-shadow:
+      inset 0 3px 10px rgba(0, 0, 0, 0.9),
+      0 0 14px -4px rgba(244, 63, 94, 0.55);
+  }
+
+  .mam-battle-hp-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transition: width 75ms linear;
+    background-size: 28px 100%, 100% 100%;
+    animation: mamFeverStripes 0.95s linear infinite;
+  }
+
+  .mam-battle-hp-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    background: #ffffff;
+    box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.85);
+    opacity: 0.9;
+  }
+
+  .mam-battle-hp-ticks {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .mam-battle-hp-ticks > span {
+    border-right: 1px solid rgba(4, 7, 15, 0.5);
+  }
+
+  .mam-battle-hp-ticks > span:last-child {
+    border-right: none;
+  }
+
+  .mam-battle-dock {
+    position: relative;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #16223d 0%, #0a1020 100%);
+    border: 2px solid #324a72;
+    box-shadow:
+      0 0 0 1px #04070f,
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 14px 34px rgba(0, 0, 0, 0.84);
+  }
+
+  .mam-battle-dock::before {
+    content: '';
+    position: absolute;
+    top: -1.5px;
+    left: 28px;
+    right: 28px;
+    height: 2.5px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, transparent, #38bdf8 25%, #c084fc 75%, transparent);
+    pointer-events: none;
+  }
+
+  .mam-battle-stat-cell {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 4px 10px;
+    border-radius: 11px;
+    border: 1.5px solid rgba(148, 163, 184, 0.25);
+    background: #0c1426;
+    min-width: 78px;
+  }
+
+  .mam-battle-stat-label {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.78;
+    line-height: 1.1;
+  }
+
+  .mam-battle-stat-val {
+    font-size: 13px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.25;
+  }
+
+  /* ═══ OVERCLOCK FEVER FULLSCREEN PULSE FX ═══ */
+  .mam-fever-screen-fx {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 14;
+    opacity: 0;
+    transition: opacity 240ms ease-out;
+    overflow: hidden;
+  }
+
+  .mam-fever-screen-fx.is-active {
+    opacity: 1;
+  }
+
+  .mam-fever-vignette {
+    position: absolute;
+    inset: 0;
+    box-shadow:
+      inset 0 0 64px rgba(245, 158, 11, 0.42),
+      inset 0 0 18px rgba(254, 240, 138, 0.35);
+    animation: mamFeverEdgePulse 0.72s ease-in-out infinite alternate;
+  }
+
+  .mam-fever-corner {
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    border-color: #fde047;
+    filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.85));
+    animation: mamFeverEdgePulse 0.72s ease-in-out infinite alternate;
+  }
+  .mam-fever-corner.is-tl { top: 10px; left: 10px; border-top: 3px solid; border-left: 3px solid; border-top-left-radius: 6px; }
+  .mam-fever-corner.is-tr { top: 10px; right: 10px; border-top: 3px solid; border-right: 3px solid; border-top-right-radius: 6px; }
+  .mam-fever-corner.is-bl { bottom: 10px; left: 10px; border-bottom: 3px solid; border-left: 3px solid; border-bottom-left-radius: 6px; }
+  .mam-fever-corner.is-br { bottom: 10px; right: 10px; border-bottom: 3px solid; border-right: 3px solid; border-bottom-right-radius: 6px; }
+
+  .mam-fever-burst {
+    position: absolute;
+    top: 32%;
+    left: 50%;
+    width: 116vw;
+    padding: 16px 24px 14px;
+    background:
+      linear-gradient(
+        90deg,
+        rgba(8, 12, 24, 0.1) 0%,
+        rgba(10, 14, 28, 0.94) 16%,
+        rgba(18, 16, 30, 0.97) 50%,
+        rgba(10, 14, 28, 0.94) 84%,
+        rgba(8, 12, 24, 0.1) 100%
+      );
+    border-top: 3px solid #fde047;
+    border-bottom: 3px solid #f97316;
+    box-shadow:
+      0 0 42px rgba(245, 158, 11, 0.65),
+      0 12px 36px rgba(0, 0, 0, 0.85),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(254, 240, 138, 0.4);
+    transform: translate(-50%, -50%) rotate(-3deg) scaleY(0.05);
+    opacity: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+  }
+
+  .mam-fever-burst::before,
+  .mam-fever-burst::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: repeating-linear-gradient(
+      -55deg,
+      #facc15 0 12px,
+      #090d16 12px 22px
+    );
+    opacity: 0.88;
+    pointer-events: none;
+  }
+  .mam-fever-burst::before { top: 0; }
+  .mam-fever-burst::after { bottom: 0; }
+
+  .mam-fever-burst.is-bursting {
+    animation: mamFeverBannerCycle 2.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .mam-fever-ticker {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    font-size: 62px;
+    font-weight: 900;
+    font-style: italic;
+    letter-spacing: 0.16em;
+    color: rgba(250, 204, 21, 0.08);
+    text-transform: uppercase;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .mam-fever-burst.is-bursting .mam-fever-ticker {
+    animation: mamFeverTickerScroll 2.15s linear forwards;
+  }
+
+  .mam-fever-slash {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 38%,
+      rgba(255, 255, 255, 0.85) 49%,
+      rgba(254, 240, 138, 0.95) 51%,
+      transparent 62%
+    );
+    transform: translateX(-120%);
+    pointer-events: none;
+  }
+
+  .mam-fever-burst.is-bursting .mam-fever-slash {
+    animation: mamFeverSlashSweep 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards;
+  }
+
+  .mam-fever-burst-row {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .mam-fever-burst.is-bursting .mam-fever-burst-row {
+    animation: mamFeverTitleSlam 2.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .mam-fever-chevrons {
+    font-size: clamp(20px, 2.8vw, 32px);
+    font-weight: 900;
+    font-style: italic;
+    letter-spacing: -0.08em;
+    color: #f97316;
+    text-shadow: 0 0 14px rgba(249, 115, 22, 0.9);
+  }
+
+  .mam-fever-burst-title {
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 900;
+    font-style: italic;
+    letter-spacing: 0.12em;
+    line-height: 1;
+    text-transform: uppercase;
+    background: linear-gradient(180deg, #ffffff 10%, #fef08a 46%, #f59e0b 78%, #ea580c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter:
+      drop-shadow(0 3px 0 #451a03)
+      drop-shadow(0 0 18px rgba(250, 204, 21, 0.85))
+      drop-shadow(0 0 36px rgba(234, 88, 12, 0.65));
+    white-space: nowrap;
+  }
+
+  .mam-fever-burst-sub {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 18px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, rgba(154, 52, 18, 0.9), rgba(234, 88, 12, 0.95), rgba(154, 52, 18, 0.9));
+    border: 1.5px solid #fef08a;
+    box-shadow: 0 4px 18px rgba(234, 88, 12, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    color: #fffbeb;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  @keyframes mamFeverEdgePulse {
+    0% { opacity: 0.55; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes mamFeverBannerCycle {
+    0% { opacity: 0; transform: translate(-50%, -50%) rotate(-3deg) scaleY(0.04); }
+    10% { opacity: 1; transform: translate(-50%, -50%) rotate(-3deg) scaleY(1.08); }
+    18% { opacity: 1; transform: translate(-50%, -50%) rotate(-3deg) scaleY(1); }
+    82% { opacity: 1; transform: translate(-50%, -50%) rotate(-3deg) scaleY(1); }
+    92% { opacity: 1; transform: translate(-50%, -50%) rotate(-3deg) scaleY(0.18); }
+    100% { opacity: 0; transform: translate(-50%, -50%) rotate(-3deg) scaleY(0.02); }
+  }
+
+  @keyframes mamFeverTitleSlam {
+    0% { opacity: 0; transform: translateX(-18vw) skewX(-18deg) scale(1.22); }
+    14% { opacity: 1; transform: translateX(0.8vw) skewX(-4deg) scale(1.04); }
+    22% { opacity: 1; transform: translateX(0) skewX(0deg) scale(1); }
+    42% { opacity: 1; transform: translateX(0) skewX(0deg) scale(1.05); }
+    62% { opacity: 1; transform: translateX(0) skewX(0deg) scale(0.99); }
+    80% { opacity: 1; transform: translateX(0) skewX(0deg) scale(1.02); }
+    100% { opacity: 0; transform: translateX(22vw) skewX(16deg) scale(0.94); }
+  }
+
+  @keyframes mamFeverTickerScroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-28%); }
+  }
+
+  @keyframes mamFeverSlashSweep {
+    0% { transform: translateX(-120%); opacity: 0.95; }
+    100% { transform: translateX(120%); opacity: 0; }
+  }
+}

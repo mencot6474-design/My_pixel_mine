@@ -1,0 +1,446 @@
+:root {
+  --mam-font: 'Fredoka', sans-serif;
+  --mam-panel: #0e1424;
+  --mam-panel-dark: #090d18;
+  --mam-border: #28354e;
+  --mam-green: #22c55e;
+  --mam-green-bright: #16c64f;
+  --mam-orange: #ea6a1d;
+  --in-oklab: ;
+  --in-oklch: ;
+  --mam-m-accent: #38bdf8;
+  --mam-m-accent-hi: #7dd3fc;
+  --mam-m-accent-deep: #2563eb;
+  --mam-m-surface-top: #121a30;
+  --mam-m-surface-bot: #090d19;
+  --mam-m-plaque-bg: #15223e;
+  --mam-m-border: #2a3b5c;
+  --mam-m-ambient: rgba(56, 189, 248, 0.16);
+  --mam-m-glow: rgba(56, 189, 248, 0.42);
+  --mam-m-well-border: #253452;
+}
+
+@supports (linear-gradient(in oklab, white, black)) {
+  :root {
+    --in-oklab: in oklab;
+    --in-oklch: in oklch;
+  }
+}
+
+@layer components {
+  .mam-outline {
+    text-shadow:
+      -1.5px -1.5px 0 #000,
+      1.5px -1.5px 0 #000,
+      -1.5px 1.5px 0 #000,
+      1.5px 1.5px 0 #000,
+      0 2px 0 #000;
+  }
+
+  .mam-outline-sm {
+    text-shadow:
+      -1px -1px 0 #000,
+      1px -1px 0 #000,
+      -1px 1px 0 #000,
+      1px 1px 0 #000;
+  }
+
+  .mam-rainbow-text {
+    background: linear-gradient(90deg, #ef4444, #facc15, #22c55e, #38bdf8, #a855f7, #ec4899);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
+    text-shadow: none !important;
+    filter: drop-shadow(0 1.2px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000);
+  }
+
+  #hudRoot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform-origin: top left;
+    container-type: inline-size;
+    pointer-events: none;
+    font-family: var(--mam-font);
+    color: #fff;
+    z-index: 20;
+  }
+
+  #plotOverlayLayer > [data-label-slot],
+  #shopOverlayLayer > [data-altar-lbl],
+  #shopOverlayLayer > [data-shop-station] {
+    transform: scale(var(--mam-float-scale, 1));
+    transform-origin: bottom center;
+  }
+
+  #dmgPopupLayer > div {
+    scale: var(--mam-float-scale, 1);
+  }
+
+  #hudRoot button,
+  #hudRoot input {
+    font-family: inherit;
+    pointer-events: auto;
+  }
+
+  .mam-3d-icon {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55));
+  }
+
+  /* Shared Card Tile (Hotbar, Inventory, Index, Chest, Shop, Sell) */
+  .mam-card {
+    position: relative;
+    border-radius: 7px;
+    border: 2.5px solid var(--rarity-border, #cbd5e1);
+    background: radial-gradient(circle at 50% 42%, var(--rarity-bg, rgba(100, 116, 139, 0.35)), #1e222a 85%);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s ease, filter 0.1s ease;
+  }
+
+  .mam-card:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+  }
+
+  .mam-modal .mam-card:hover,
+  .mam-modal .mam-tab-btn:hover,
+  .mam-modal .mam-equip-best-btn:hover,
+  .mam-inspect-panel .mam-strip-card:hover {
+    transform: none;
+    filter: brightness(1.08);
+  }
+
+  .mam-modal .mam-card:active,
+  .mam-modal .mam-tab-btn:active,
+  .mam-modal .mam-equip-best-btn:active,
+  .mam-inspect-panel .mam-strip-card:active {
+    transform: scale(0.95);
+    filter: brightness(0.96);
+  }
+
+  .mam-modal .mam-tab-btn,
+  .mam-modal .mam-equip-best-btn,
+  .mam-inspect-panel .mam-strip-card {
+    transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.12s ease;
+  }
+
+  .mam-modal .mam-card .mam-card-art,
+  .mam-modal .mam-tab-btn > *,
+  .mam-modal .mam-equip-best-btn > *,
+  .mam-inspect-panel .mam-strip-card > * {
+    transition: transform 0.14s ease;
+  }
+
+  .mam-modal .mam-card:hover .mam-card-art,
+  .mam-modal .mam-tab-btn:hover > *,
+  .mam-modal .mam-equip-best-btn:hover > *,
+  .mam-inspect-panel .mam-strip-card:hover > * {
+    transform: scale(1.08);
+  }
+
+  .mam-card.rarity-rainbow,
+  .mam-strip-card.rarity-rainbow,
+  .mam-altar-card.rarity-rainbow {
+    border: 2.5px solid transparent;
+    background:
+      radial-gradient(circle at 50% 45%, rgba(250, 204, 21, 0.4), #1e222a 85%) padding-box,
+      linear-gradient(135deg, #ef4444, #facc15, #22c55e, #38bdf8, #a855f7) border-box;
+  }
+
+  .mam-card.rarity-mythic {
+    border-color: #f472b6;
+    box-shadow: inset 0 0 14px rgba(236, 72, 153, 0.45);
+  }
+
+  .mam-card.rarity-exotic,
+  .mam-strip-card.rarity-exotic,
+  .mam-altar-card.rarity-exotic {
+    border: 2.5px solid transparent;
+    background:
+      radial-gradient(circle at 50% 44%, rgba(20, 184, 166, 0.42), #0f1722 85%) padding-box,
+      linear-gradient(135deg, #2dd4bf, #06b6d4, #34d399, #22d3ee) border-box;
+    animation: mamExoticPulse 2.4s ease-in-out infinite;
+  }
+
+  .mam-card.rarity-secret,
+  .mam-strip-card.rarity-secret,
+  .mam-altar-card.rarity-secret {
+    border: 2.5px solid transparent;
+    background:
+      radial-gradient(circle at 50% 44%, rgba(244, 63, 94, 0.45), #090a12 85%) padding-box,
+      linear-gradient(135deg, #f43f5e, #fbbf24, #9f1239, #f59e0b) border-box;
+    animation: mamSecretPulse 1.8s ease-in-out infinite;
+  }
+
+  .mam-card.rarity-fusion,
+  .mam-strip-card.rarity-fusion,
+  .mam-altar-card.rarity-fusion {
+    border: 2.5px solid transparent;
+    background:
+      linear-gradient(155deg, rgba(34, 211, 238, 0.42) 0%, rgba(129, 140, 248, 0.36) 48%, rgba(232, 121, 249, 0.42) 100%) padding-box,
+      linear-gradient(180deg, #13254a 0%, #1c123d 100%) padding-box,
+      linear-gradient(135deg, #22d3ee, #818cf8, #e879f9, #facc15, #22d3ee) border-box;
+    animation: mamFusionPulse 2s ease-in-out infinite;
+  }
+
+  .mam-fusion-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 9px;
+    border-radius: 9999px;
+    border: 1.5px solid #e0f2fe;
+    background: linear-gradient(135deg, #06b6d4 0%, #8b5cf6 52%, #ec4899 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      0 0 12px rgba(232, 121, 249, 0.65),
+      0 2px 6px rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.15;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  }
+
+  .mam-card.rarity-limited,
+  .mam-strip-card.rarity-limited,
+  .mam-altar-card.rarity-limited {
+    border: 2.5px solid transparent;
+    background:
+      linear-gradient(155deg, rgba(251, 191, 36, 0.44) 0%, rgba(236, 72, 153, 0.32) 52%, rgba(245, 158, 11, 0.42) 100%) padding-box,
+      linear-gradient(180deg, #2b1847 0%, #1d1033 100%) padding-box,
+      linear-gradient(135deg, #fef08a, #fbbf24, #f472b6, #f59e0b, #fef08a) border-box;
+    animation: mamLimitedPulse 2.2s ease-in-out infinite;
+  }
+
+  @keyframes mamLimitedPulse {
+    0%,
+    100% {
+      box-shadow:
+        0 0 14px -2px rgba(251, 191, 36, 0.45),
+        inset 0 1px 0 rgba(254, 240, 138, 0.25);
+    }
+    50% {
+      box-shadow:
+        0 0 22px 0 rgba(244, 114, 182, 0.55),
+        inset 0 1px 0 rgba(254, 240, 138, 0.42);
+    }
+  }
+
+  .mam-limited-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 9px;
+    border-radius: 9999px;
+    border: 1.5px solid #fef08a;
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 40%, #ec4899 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      0 0 12px rgba(251, 191, 36, 0.65),
+      0 2px 6px rgba(0, 0, 0, 0.65);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.15;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  }
+
+  .mam-fusion-text {
+    background: linear-gradient(90deg, #22d3ee, #a5b4fc, #f0abfc, #fde047);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
+    text-shadow: none !important;
+    filter: drop-shadow(0 1.2px 0 #000) drop-shadow(0 -1px 0 #000) drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000);
+  }
+
+  @keyframes mamFusionPulse {
+    0%,
+    100% {
+      box-shadow:
+        inset 0 0 16px rgba(34, 211, 238, 0.5),
+        0 0 10px rgba(56, 189, 248, 0.45);
+    }
+    50% {
+      box-shadow:
+        inset 0 0 24px rgba(232, 121, 249, 0.65),
+        0 0 18px rgba(232, 121, 249, 0.7);
+    }
+  }
+
+  @keyframes mamExoticPulse {
+    0%,
+    100% {
+      box-shadow: inset 0 0 14px rgba(20, 184, 166, 0.48), 0 0 8px rgba(34, 211, 238, 0.28);
+    }
+    50% {
+      box-shadow: inset 0 0 22px rgba(52, 211, 153, 0.68), 0 0 14px rgba(45, 212, 191, 0.5);
+    }
+  }
+
+  @keyframes mamSecretPulse {
+    0%,
+    100% {
+      box-shadow: inset 0 0 16px rgba(244, 63, 94, 0.55), 0 0 10px rgba(244, 63, 94, 0.35);
+    }
+    50% {
+      box-shadow: inset 0 0 24px rgba(251, 191, 36, 0.62), 0 0 16px rgba(244, 63, 94, 0.65);
+    }
+  }
+
+  .mam-card.locked,
+  .mam-strip-card.locked {
+    filter: grayscale(1) brightness(0.42);
+  }
+
+  .mam-card.is-selected {
+    border-color: #4ade80 !important;
+    box-shadow: inset 0 0 0 2px #4ade80, inset 0 0 18px rgba(74, 222, 128, 0.42), 0 0 10px rgba(74, 222, 128, 0.35);
+  }
+
+  .mam-card-art {
+    position: absolute;
+    inset: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .mam-chibi-portrait {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mam-chibi-portrait img {
+    max-width: 84%;
+    max-height: 84%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    image-rendering: pixelated;
+    pointer-events: none;
+  }
+
+  .mam-chibi-portrait img.mam-chibi-smooth {
+    image-rendering: auto;
+  }
+
+  .mam-card-name {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    padding: 3px 3px 0;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.05;
+    color: #fff;
+  }
+
+  .mam-card-bottom {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    padding: 0 3px 3px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.02;
+  }
+
+  .mam-card-dps {
+    font-size: 13px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    color: #ef4444;
+  }
+
+  .mam-card-val {
+    font-size: 12px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    color: #4ade80;
+  }
+
+  .mam-card-qty {
+    font-size: 11px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #f8fafc;
+  }
+
+  .mam-card-pct {
+    font-size: 14px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    color: #f8fafc;
+  }
+
+  .mam-equipped-tag {
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    z-index: 3;
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: #16c64f;
+    border: 1px solid #052e16;
+    font-size: 9px;
+    font-weight: 900;
+    color: #fff;
+  }
+
+  /* Scrollbar-free modal grids/panels & default 1:1 card aspect */
+  .mam-grid {
+    grid-auto-rows: max-content;
+    align-items: start;
+  }
+
+  .mam-grid,
+  .mam-no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .mam-grid::-webkit-scrollbar,
+  .mam-no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mam-grid .mam-card {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    align-self: start;
+  }
+
+  /* Inspector strip card base (shared rarity radial background) */
+  .mam-strip-card {
+    background: radial-gradient(circle at 50% 45%, var(--rarity-bg, rgba(100, 116, 139, 0.35)), #1e222a 85%);
+    border: 2.5px solid var(--rarity-border, #cbd5e1);
+  }
+
+}

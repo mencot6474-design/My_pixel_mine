@@ -1,0 +1,497 @@
+@layer components {
+  /* =========================================================
+     CYBER-ANIME FEVER / OVERCLOCK GAUGE (ZZZ / HSR Inspired)
+     ========================================================= */
+  .mam-fever-shell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 10px 5px 7px;
+    background: linear-gradient(135deg, #0d1529 0%, #15213d 100%);
+    border: 1.5px solid #38bdf8;
+    border-radius: 10px 14px 10px 14px;
+    box-shadow:
+      0 8px 24px -6px rgba(0, 0, 0, 0.78),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 0 16px -4px rgba(56, 189, 248, 0.34);
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    transition:
+      background 0.35s ease,
+      border-color 0.35s ease,
+      box-shadow 0.35s ease,
+      transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .mam-fever-shell.is-active {
+    background: linear-gradient(135deg, #24103a 0%, #3a1430 100%);
+    border-color: #facc15;
+    animation: mamFeverPulse 0.85s ease-in-out infinite alternate;
+  }
+
+  .mam-fever-emblem {
+    position: relative;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transform: skewX(-12deg);
+    background: linear-gradient(145deg, rgba(14, 165, 233, 0.32) 0%, rgba(30, 58, 138, 0.6) 100%);
+    border: 1px solid rgba(125, 211, 252, 0.65);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 0 14px rgba(56, 189, 248, 0.4);
+    transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
+  }
+
+  .mam-fever-emblem > svg {
+    transform: skewX(12deg);
+    filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.75));
+  }
+
+  .mam-fever-shell.is-active .mam-fever-emblem {
+    background: linear-gradient(145deg, #f59e0b 0%, #ec4899 100%);
+    border-color: #fef08a;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      0 0 18px rgba(250, 204, 21, 0.78);
+  }
+
+  .mam-fever-shell.is-active .mam-fever-emblem > svg {
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.9));
+  }
+
+  .mam-fever-track {
+    position: relative;
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    transform: skewX(-14deg);
+    background: rgba(2, 6, 23, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.75);
+    overflow: hidden;
+  }
+
+  .mam-fever-shell.is-active .mam-fever-track {
+    height: 9px;
+    border-color: rgba(253, 224, 71, 0.6);
+  }
+
+  .mam-fever-fill {
+    position: relative;
+    height: 100%;
+    background: linear-gradient(90deg, #0284c7 0%, #38bdf8 55%, #a855f7 100%);
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.7);
+    transition: width 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .mam-fever-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: 100%;
+    background: #ffffff;
+    box-shadow: 0 0 10px 2px #7dd3fc;
+    opacity: 0.92;
+  }
+
+  .mam-fever-shell.is-active .mam-fever-fill {
+    background-image:
+      repeating-linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.26) 0px,
+        rgba(255, 255, 255, 0.26) 7px,
+        transparent 7px,
+        transparent 14px
+      ),
+      linear-gradient(90deg, #f59e0b 0%, #ec4899 52%, #fde047 100%);
+    background-size: 28px 100%, 100% 100%;
+    box-shadow: 0 0 16px rgba(250, 204, 21, 0.85);
+    animation: mamFeverStripes 0.55s linear infinite;
+  }
+
+  .mam-fever-ticks {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    pointer-events: none;
+  }
+
+  .mam-fever-ticks > span {
+    border-right: 1px solid rgba(2, 6, 23, 0.65);
+  }
+
+  .mam-fever-ticks > span:last-child {
+    border-right: none;
+  }
+
+  @keyframes mamFeverStripes {
+    from {
+      background-position: 0 0, 0 0;
+    }
+    to {
+      background-position: 28px 0, 0 0;
+    }
+  }
+
+  @keyframes mamFeverPulse {
+    0% {
+      border-color: rgba(250, 204, 21, 0.65);
+      box-shadow:
+        0 8px 26px -4px rgba(236, 72, 153, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35),
+        0 0 18px rgba(250, 204, 21, 0.45);
+    }
+    100% {
+      border-color: rgba(254, 240, 138, 1);
+      box-shadow:
+        0 10px 30px -2px rgba(245, 158, 11, 0.65),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 0 28px rgba(250, 204, 21, 0.85);
+    }
+  }
+
+  /* =========================================================
+     CYBER-ANIME TOAST NOTIFICATION BANNERS & BADGES
+     ========================================================= */
+  .mam-toast-banner {
+    --toast-accent: #38bdf8;
+    --toast-glow: rgba(56, 189, 248, 0.38);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: min(460px, 92vw);
+    padding: 7px 14px 7px 9px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0d1529 0%, #15213d 100%);
+    border: 1.5px solid color-mix(in srgb, var(--toast-accent) 65%, #1e293b);
+    border-left: 4px solid var(--toast-accent);
+    box-shadow:
+      0 10px 26px -6px rgba(0, 0, 0, 0.78),
+      0 0 18px -4px var(--toast-glow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    animation: mamToastIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .mam-toast-banner[data-toast-tone='overclock'] {
+    --toast-accent: #facc15;
+    --toast-glow: rgba(250, 204, 21, 0.55);
+  }
+
+  .mam-toast-banner[data-toast-tone='bounty'] {
+    --toast-accent: #34d399;
+    --toast-glow: rgba(52, 211, 153, 0.48);
+  }
+
+  .mam-toast-banner[data-toast-tone='reward'] {
+    --toast-accent: #4ade80;
+    --toast-glow: rgba(74, 222, 128, 0.45);
+  }
+
+  .mam-toast-banner[data-toast-tone='meteor'] {
+    --toast-accent: #c084fc;
+    --toast-glow: rgba(192, 132, 252, 0.52);
+  }
+
+  .mam-toast-banner[data-toast-tone='error'] {
+    --toast-accent: #fb7185;
+    --toast-glow: rgba(244, 63, 94, 0.48);
+  }
+
+  .mam-toast-banner[data-toast-tone='audio'] {
+    --toast-accent: #7dd3fc;
+    --toast-glow: rgba(125, 211, 252, 0.4);
+  }
+
+  .mam-toast-icon {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--toast-accent) 20%, rgba(15, 23, 42, 0.9));
+    border: 1px solid color-mix(in srgb, var(--toast-accent) 60%, transparent);
+    box-shadow: 0 0 10px -2px var(--toast-glow);
+  }
+
+  .mam-toast-icon > img,
+  .mam-toast-icon > svg {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+  }
+
+  @keyframes mamToastIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .mam-notif-badge {
+    border-radius: 9999px;
+    box-shadow:
+      0 0 0 2px rgba(15, 23, 42, 0.9),
+      0 4px 12px rgba(244, 63, 94, 0.65),
+      inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    animation: mamBadgePulse 1.8s ease-in-out infinite;
+  }
+
+  /* =========================================================
+     CYBER-ANIME DPS BREAKDOWN PILL & PANEL (Bottom-Left Dock)
+     ========================================================= */
+  .mam-dps-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 4px 8px 4px 6px;
+    border-radius: 9px 11px 9px 11px;
+    background: linear-gradient(135deg, #0d1529 0%, #15213d 100%);
+    border: 1.5px solid #2e4a73;
+    box-shadow:
+      0 8px 20px -6px rgba(0, 0, 0, 0.72),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: border-color 0.15s ease, filter 0.15s ease, transform 0.15s ease;
+  }
+
+  .mam-dps-pill:hover {
+    border-color: #7dd3fc;
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+
+  .mam-dps-emblem {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 7px;
+    transform: skewX(-10deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(145deg, #0c4a6e 0%, #1e3a8a 100%);
+    border: 1px solid #7dd3fc;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.32),
+      0 0 10px rgba(56, 189, 248, 0.32);
+  }
+
+  .mam-dps-emblem > svg {
+    transform: skewX(10deg);
+    filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.7));
+  }
+
+  .mam-dps-panel {
+    width: 100%;
+    padding: 10px 11px;
+    border-radius: 14px;
+    background: linear-gradient(160deg, #0e162b 0%, #090e1d 100%);
+    border: 1.5px solid #2e4a73;
+    box-shadow:
+      0 14px 32px -6px rgba(0, 0, 0, 0.8),
+      0 0 20px -6px rgba(56, 189, 248, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+
+  /* =========================================================
+     CYBER-ANIME FTUE TUTORIAL OVERLAY (ZZZ / HSR Inspired)
+     ========================================================= */
+  .mam-tut-card {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    padding: 14px 16px 14px 14px;
+    border-radius: 18px;
+    background: linear-gradient(155deg, #0d152c 0%, #142140 100%);
+    border: 2px solid #38bdf8;
+    box-shadow:
+      0 18px 46px -8px rgba(0, 0, 0, 0.84),
+      0 0 28px -6px rgba(56, 189, 248, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.26);
+    animation: mamTutCardIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .mam-tut-card.is-compact {
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px 9px 10px;
+    border-radius: 15px;
+    background: linear-gradient(155deg, #0d152c 0%, #142140 100%);
+  }
+
+  .mam-tut-card.is-compact .mam-tut-portrait-wrap {
+    width: 58px;
+    height: 62px;
+    margin-top: -12px;
+    margin-bottom: -2px;
+  }
+
+  .mam-tut-card.is-compact .mam-tut-portrait-img {
+    width: 56px;
+    height: 60px;
+  }
+
+  .mam-tut-scale-wrap {
+    transform: translateX(-50%) scale(var(--mam-float-scale, 1));
+  }
+
+  .mam-tut-scale-wrap.is-top {
+    transform-origin: top center;
+  }
+
+  .mam-tut-scale-wrap.is-bottom {
+    transform-origin: bottom center;
+  }
+
+  .mam-tut-card::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 22px;
+    right: 22px;
+    height: 2.5px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, transparent, #38bdf8, #a855f7, #fde047, transparent);
+    pointer-events: none;
+  }
+
+  .mam-tut-portrait-wrap {
+    position: relative;
+    width: 96px;
+    height: 108px;
+    margin-top: -34px;
+    margin-bottom: -4px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .mam-tut-portrait-halo {
+    position: absolute;
+    inset: 14px 4px 2px;
+    border-radius: 16px;
+    background: radial-gradient(circle at 50% 62%, rgba(56, 189, 248, 0.36) 0%, rgba(14, 116, 144, 0.14) 58%, transparent 78%);
+    border: 1px solid rgba(125, 211, 252, 0.32);
+    box-shadow: inset 0 0 16px rgba(56, 189, 248, 0.22);
+  }
+
+  .mam-tut-portrait-img {
+    position: relative;
+    z-index: 2;
+    width: 94px;
+    height: 106px;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 10px rgba(56, 189, 248, 0.32));
+    animation: mamTutFloat 2.6s ease-in-out infinite;
+  }
+
+  .mam-tut-nameplate {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px;
+    border-radius: 6px;
+    transform: skewX(-12deg);
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.28), rgba(99, 102, 241, 0.32));
+    border: 1px solid rgba(125, 211, 252, 0.55);
+  }
+
+  .mam-tut-nameplate > span {
+    transform: skewX(12deg);
+  }
+
+  .mam-tut-target-ring {
+    outline: 3px solid #fde047 !important;
+    outline-offset: 3px !important;
+    box-shadow:
+      0 0 0 6px rgba(250, 204, 21, 0.28),
+      0 0 26px rgba(56, 189, 248, 0.65) !important;
+    animation: mamTutRingPulse 1.15s ease-in-out infinite !important;
+  }
+
+  @keyframes mamTutFloat {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+
+  @keyframes mamTutCardIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes mamTutRingPulse {
+    0%,
+    100% {
+      outline-color: #fde047;
+      box-shadow:
+        0 0 0 5px rgba(250, 204, 21, 0.25),
+        0 0 22px rgba(250, 204, 21, 0.55);
+    }
+    50% {
+      outline-color: #38bdf8;
+      box-shadow:
+        0 0 0 9px rgba(56, 189, 248, 0.34),
+        0 0 32px rgba(56, 189, 248, 0.8);
+    }
+  }
+
+  @media (max-width: 720px) {
+    .mam-tut-portrait-wrap {
+      width: 74px;
+      height: 84px;
+      margin-top: -22px;
+    }
+
+    .mam-tut-portrait-img {
+      width: 72px;
+      height: 82px;
+    }
+  }
+
+  @keyframes mamBadgePulse {
+    0%,
+    100% {
+      transform: scale(1);
+      box-shadow:
+        0 0 0 2px rgba(15, 23, 42, 0.9),
+        0 4px 12px rgba(244, 63, 94, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    }
+    50% {
+      transform: scale(1.09);
+      box-shadow:
+        0 0 0 2px rgba(15, 23, 42, 0.9),
+        0 0 16px rgba(251, 113, 133, 0.95),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+  }
+
+}

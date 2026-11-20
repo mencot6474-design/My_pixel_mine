@@ -1,0 +1,600 @@
+@layer components {
+  /* ============================================================
+   * Cyber-Anime Tactical Hotbar Dock & Slots 1–9 (ZZZ / HSR Inspired)
+   * ============================================================ */
+  .mam-hotbar-dock {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px 8px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #151e34 0%, #0b101e 100%);
+    border: 2px solid #2b3c5e;
+    box-shadow:
+      0 0 0 1px #050811,
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      inset 0 -3px 0 rgba(0, 0, 0, 0.55),
+      0 14px 32px rgba(0, 0, 0, 0.78);
+  }
+
+  .mam-hotbar-dock::before {
+    content: '';
+    position: absolute;
+    top: -1.5px;
+    left: 28px;
+    right: 28px;
+    height: 2.5px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, transparent, #38bdf8 22%, #bae6fd 50%, #38bdf8 78%, transparent);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
+    pointer-events: none;
+  }
+
+  .mam-hotbar-divider {
+    width: 2px;
+    height: 46px;
+    border-radius: 9999px;
+    margin: 0 2px;
+    background: linear-gradient(180deg, transparent, #3b4f78 30%, #38bdf8 50%, #3b4f78 70%, transparent);
+    flex-shrink: 0;
+  }
+
+  .mam-hotbar-slot {
+    position: relative;
+    border-radius: 11px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      0 4px 0 #050812,
+      0 6px 12px rgba(0, 0, 0, 0.55);
+    transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.14s ease, box-shadow 0.14s ease, filter 0.14s ease;
+  }
+
+  .mam-hotbar-slot:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.09);
+  }
+
+  .mam-hotbar-slot:active {
+    transform: translateY(1px) scale(0.96);
+  }
+
+  .mam-hotbar-slot.is-hotbar-selected {
+    border-color: #facc15 !important;
+    transform: translateY(-4px);
+    box-shadow:
+      0 0 0 2px #facc15,
+      0 0 18px rgba(250, 204, 21, 0.58),
+      0 6px 14px rgba(0, 0, 0, 0.65) !important;
+  }
+
+  .mam-hotbar-slot.is-hotbar-selected::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10px;
+    right: 10px;
+    height: 2.5px;
+    z-index: 4;
+    border-radius: 0 0 4px 4px;
+    background: linear-gradient(90deg, #fde047, #ffffff, #fde047);
+    box-shadow: 0 0 8px #facc15;
+    pointer-events: none;
+  }
+
+  .mam-empty-slot {
+    background:
+      repeating-linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.018) 0px,
+        rgba(255, 255, 255, 0.018) 4px,
+        transparent 4px,
+        transparent 9px
+      ),
+      linear-gradient(180deg, #10182b 0%, #090e1a 100%);
+    border: 2px solid #263552;
+    box-shadow:
+      inset 0 2px 8px rgba(0, 0, 0, 0.65),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 3px 0 #050812;
+  }
+
+  .mam-empty-slot::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border-radius: 6px;
+    border: 1.5px solid #1b2740;
+    pointer-events: none;
+  }
+
+  .mam-hotbar-keycap {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    z-index: 4;
+    min-width: 18px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 5px;
+    background: #0a1020;
+    border: 1px solid #3c5078;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 3px rgba(0, 0, 0, 0.7);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: #e2e8f0;
+  }
+
+  .mam-hotbar-slot.is-hotbar-selected .mam-hotbar-keycap {
+    background: #facc15;
+    border-color: #fef08a;
+    color: #090d18;
+    box-shadow: 0 0 8px rgba(250, 204, 21, 0.75);
+  }
+
+  .mam-hotbar-qty {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    z-index: 4;
+    padding: 1px 4px;
+    border-radius: 5px;
+    background: #0a1020;
+    border: 1px solid #3c5078;
+    font-size: 9.5px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    color: #f8fafc;
+  }
+
+  .mam-hotbar-val-bar {
+    position: relative;
+    z-index: 3;
+    width: calc(100% + 4px);
+    margin: auto -2px -2px;
+    padding: 1.5px 2px 2px;
+    background: linear-gradient(180deg, #0b1222 0%, #070b15 100%);
+    border-top: 1px solid #263552;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .mam-hotbar-bag {
+    border: 2px solid #60a5fa;
+    background: linear-gradient(160deg, #1d4ed8 0%, #152954 55%, #0c1733 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 4px 0 #071024,
+      0 8px 18px rgba(37, 99, 235, 0.35);
+  }
+
+  .mam-hotbar-bag.is-open {
+    border-color: #4ade80;
+    background: linear-gradient(160deg, #22c55e 0%, #15803d 65%, #0d4a26 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      0 0 18px rgba(74, 222, 128, 0.5),
+      0 4px 0 #072613;
+  }
+
+  .mam-hotbar-dragging {
+    opacity: 0.35;
+    transform: scale(0.94);
+  }
+
+  .mam-hotbar-drop-target {
+    outline: 2.5px solid #38bdf8;
+    outline-offset: 1px;
+    transform: translateY(-3px) scale(1.06);
+    box-shadow:
+      0 0 0 2px rgba(56, 189, 248, 0.45),
+      0 8px 18px rgba(14, 165, 233, 0.45);
+  }
+
+  .mam-placeholder-well {
+    border-radius: 14px;
+    border: 1.5px dashed var(--mam-m-well-border, #28354e);
+    background: #0c1222;
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .mam-gloss-btn {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mam-stud-surface {
+    background-image: radial-gradient(ellipse 90% 60% at 50% 0%, rgba(255, 255, 255, 0.1), transparent 65%);
+  }
+
+  #hudRoot[data-hud-compact='true'] .mam-modal-rail-head {
+    margin-top: -24px;
+  }
+
+  #hudRoot[data-hud-compact='true'] .mam-title-plaque {
+    min-height: 36px;
+    padding: 3px 12px 3px 5px;
+    font-size: 17px;
+    border-radius: 11px;
+  }
+
+  #hudRoot[data-hud-compact='true'] .mam-title-plaque-icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  @media (forced-colors: active) {
+    .mam-modal,
+    .mam-title-plaque,
+    .mam-tab-btn,
+    .mam-inspector-well,
+    .mam-empty-slot,
+    .mam-placeholder-well {
+      border-color: CanvasText;
+    }
+  }
+
+  /* Glossy sheen pseudo-elements */
+  .mam-sheen-hover:not(.disabled):not(.sold-out):not(:disabled)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 42%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.36), transparent);
+    transform: translate3d(-160%, 0, 0) skewX(-22deg);
+    pointer-events: none;
+  }
+
+  .mam-sheen-hover:not(.disabled):not(.sold-out):not(:disabled):hover::after {
+    animation: mamBtnSheen 0.58s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .mam-altar-roll-btn:not(.is-empty):not(.is-spinning)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 36%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.38), transparent);
+    transform: translate3d(-180%, 0, 0) skewX(-22deg);
+    pointer-events: none;
+    animation: mamBtnSheen 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+
+  .mam-altar-roll-btn.is-spinning::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 48%;
+    background: linear-gradient(90deg, transparent, rgba(250, 204, 21, 0.42), rgba(255, 255, 255, 0.45), transparent);
+    transform: translate3d(-150%, 0, 0) skewX(-20deg);
+    pointer-events: none;
+    animation: mamSpinSweep 0.72s linear infinite;
+  }
+
+  /* Bottom-Right Active Potion Pills (2-column upward grid aligned with Backpack) */
+  .mam-active-pots {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    display: grid;
+    grid-template-columns: repeat(2, 62px);
+    gap: 6px;
+    align-items: end;
+    justify-items: stretch;
+    pointer-events: none;
+    z-index: 22;
+  }
+
+  .mam-active-pots.is-single {
+    grid-template-columns: 62px;
+  }
+
+  .mam-active-pots.is-empty {
+    display: none;
+  }
+
+  .mam-active-pots:not(.is-single) > [data-hud-pot]:first-child:nth-last-child(odd) {
+    grid-column: 2;
+  }
+
+  @keyframes mamDmgFloat {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, 6px) scale(0.75);
+    }
+    18% {
+      opacity: 1;
+      transform: translate(-50%, -14px) scale(1.12);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -62px) scale(0.92);
+    }
+  }
+
+  @keyframes mamCritFloat {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, 8px) scale(0.55) rotate(-4deg);
+    }
+    16% {
+      opacity: 1;
+      transform: translate(-50%, -18px) scale(1.38) rotate(2deg);
+    }
+    34% {
+      opacity: 1;
+      transform: translate(-50%, -26px) scale(1.08) rotate(0deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -74px) scale(1.02) rotate(0deg);
+    }
+  }
+
+  @keyframes mamBtnSheen {
+    0% {
+      transform: translate3d(-180%, 0, 0) skewX(-22deg);
+      opacity: 0;
+    }
+    12% {
+      opacity: 1;
+    }
+    42% {
+      transform: translate3d(320%, 0, 0) skewX(-22deg);
+      opacity: 0;
+    }
+    100% {
+      transform: translate3d(320%, 0, 0) skewX(-22deg);
+      opacity: 0;
+    }
+  }
+
+  @keyframes mamSpinSweep {
+    0% {
+      transform: translate3d(-140%, 0, 0) skewX(-20deg);
+    }
+    100% {
+      transform: translate3d(260%, 0, 0) skewX(-20deg);
+    }
+  }
+
+  @keyframes mamSpinPulse {
+    0% {
+      transform: scale(0.97);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(1.04);
+      opacity: 1;
+    }
+  }
+
+  @keyframes mamPotDotPulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.45;
+      transform: scale(0.75);
+    }
+  }
+
+  .mam-pop-click {
+    animation: mamPopClick 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .mam-pop-selected {
+    animation: mamPopSelected 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .mam-upgrade-pop {
+    animation: mamUpgradePop 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .mam-upgrade-ring {
+    position: absolute;
+    inset: -5px;
+    border-radius: 13px;
+    border: 3px solid #67e8f9;
+    pointer-events: none;
+    animation: mamUpgradeRing 0.44s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .mam-btn-shake {
+    animation: mamBtnShake 0.28s ease-in-out;
+  }
+
+  .mam-backdrop-enter {
+    animation: mamBackdropFadeIn 0.16s ease-out;
+  }
+
+  .mam-modal-enter {
+    animation: mamModalEnter 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes mamBackdropFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes mamModalEnter {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mam-backdrop-enter,
+    .mam-modal-enter {
+      animation: none;
+    }
+  }
+
+  @keyframes mamPopClick {
+    0% {
+      transform: scale(0.93);
+    }
+    55% {
+      transform: scale(1.04);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes mamPopSelected {
+    0% {
+      transform: scale(0.9);
+    }
+    55% {
+      transform: scale(1.13);
+    }
+    100% {
+      transform: scale(1.06);
+    }
+  }
+
+  @keyframes mamUpgradePop {
+    0% {
+      transform: scale(0.86);
+      filter: brightness(1.38);
+    }
+    50% {
+      transform: scale(1.15);
+      filter: brightness(1.22);
+    }
+    100% {
+      transform: scale(1.06);
+      filter: brightness(1);
+    }
+  }
+
+  @keyframes mamUpgradeRing {
+    0% {
+      opacity: 0.95;
+      transform: scale(0.86);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.42);
+    }
+  }
+
+  @keyframes mamBtnShake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-5px) scale(0.98);
+    }
+    55% {
+      transform: translateX(5px) scale(0.98);
+    }
+    80% {
+      transform: translateX(-3px);
+    }
+  }
+
+  #hudRoot[data-hud-pots-above="true"] .mam-active-pots {
+    bottom: 108px;
+    right: 12px;
+    grid-template-columns: repeat(2, 60px);
+  }
+
+  #hudRoot[data-hud-pots-above="true"] .mam-active-pots.is-single {
+    grid-template-columns: 60px;
+  }
+
+  #hudRoot[data-hud-compact="true"] .mam-active-pots {
+    bottom: 94px;
+    right: 8px;
+    grid-template-columns: repeat(2, 56px);
+    gap: 5px;
+  }
+
+  #hudRoot[data-hud-compact="true"] .mam-active-pots.is-single {
+    grid-template-columns: 56px;
+  }
+
+  #hudRoot[data-hud-short="true"] .mam-active-pots {
+    bottom: 12px;
+    right: 10px;
+    grid-template-columns: repeat(2, 58px);
+    gap: 5px;
+  }
+
+  #hudRoot[data-hud-short="true"] .mam-active-pots.is-single {
+    grid-template-columns: 58px;
+  }
+
+  /* Native top-layer Chibi 4-pose Review Dialog */
+  dialog.mam-review-dialog {
+    margin: auto;
+    color: #f8fafc;
+  }
+
+  dialog.mam-review-dialog[open] {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(840px, calc(100vw - 24px));
+    max-width: min(840px, calc(100vw - 24px));
+    max-height: calc(100dvh - 36px);
+    padding: 18px 20px 20px;
+    overflow: visible;
+  }
+
+  dialog.mam-review-dialog:modal {
+    overscroll-behavior: contain;
+  }
+
+  dialog.mam-review-dialog::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
+    background: rgba(2, 6, 23, 0.78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .mam-review-pose-art .mam-chibi-portrait img {
+    max-width: 94%;
+    max-height: 94%;
+  }
+
+  @media (max-width: 720px) {
+    dialog.mam-review-dialog[open] {
+      padding: 14px 14px 16px;
+      gap: 10px;
+    }
+
+    .mam-review-poses-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .mam-review-pose-art {
+      height: 150px;
+    }
+  }
+
+}

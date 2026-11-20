@@ -36,7 +36,6 @@ import {
   getOreById,
   getOresByWorld,
   getWorldById,
-  getWorldIndex,
   ItemRarity,
   ORES,
   PICKAXE_RESTOCK_MS,
@@ -44,24 +43,34 @@ import {
   WORLD_MINERS,
   WorldId,
   WorldResonanceStatus,
-  WORLDS,
 } from './GameData';
 import {
   DENSE_ORE_DROP_MULT,
   DENSE_ORE_HP_MULT,
-  getNodeNextCost,
-  getResearchNodeById,
-  getResearchNodesForTree,
   getResearchTreeMaxPoints,
-  RESEARCH_NODES,
   ResearchEffectType,
   ResearchTreeId,
 } from './ResearchData';
+import { RelicEffectStat } from './RelicData';
 import {
-  getRelicById,
-  MAX_EQUIPPED_RELICS,
-  RelicEffectStat,
-} from './RelicData';
+  canCraftRelicDomain,
+  canUnlockWorldDomain,
+  canUpgradeResearchDomain,
+  craftRelicDomain,
+  getActiveResearchBonusDomain,
+  getAffordableResearchCountDomain,
+  getRelicBonusDomain,
+  getResearchLevelDomain,
+  getTotalOwnedOreCountDomain,
+  getTreeSpentPointsDomain,
+  isNodePrereqMetDomain,
+  isTreeCompleteDomain,
+  isWorldUnlockedDomain,
+  setActiveWorldDomain,
+  toggleEquipRelicDomain,
+  unlockWorldDomain,
+  upgradeResearchDomain,
+} from './ResearchRelicsDomain';
 import { FusionRecipeDef } from './FusionData';
 import {
   canFuseRecipeDomain,
@@ -99,7 +108,6 @@ import {
   isOreLockedDomain,
   onMeteorBrokenDomain,
   onOreBrokenDomain,
-  removeFromHotbarDomain,
   selectHotbarSlotDomain,
   sellAllChestOresDomain,
   shouldAutoSellOreDomain,
@@ -522,21 +530,15 @@ export class GameState {
   }
 
   public isWorldUnlocked(worldId: WorldId): boolean {
-    return this.unlockedWorlds.includes(worldId);
+    return isWorldUnlockedDomain(this, worldId);
   }
 
   public getResearchLevel(nodeId: string): number {
-    const node = getResearchNodeById(nodeId);
-    if (!node) return 0;
-    return this.researchLevels[node.treeId]?.[node.id] ?? 0;
+    return getResearchLevelDomain(this, nodeId);
   }
 
   public getTreeSpentPoints(treeId: ResearchTreeId): number {
-    let sum = 0;
-    for (const node of getResearchNodesForTree(treeId)) {
-      sum += Math.min(node.maxLevel, this.getResearchLevel(node.id));
-    }
-    return sum;
+    return getTreeSpentPointsDomain(this, treeId);
   }
 
   public getTreeMaxPoints(treeId: ResearchTreeId): number {
@@ -544,94 +546,40 @@ export class GameState {
   }
 
   public isTreeComplete(treeId: ResearchTreeId): boolean {
-    const maxPts = this.getTreeMaxPoints(treeId);
-    return maxPts > 0 && this.getTreeSpentPoints(treeId) >= maxPts;
+    return isTreeCompleteDomain(this, treeId);
   }
 
   public isNodePrereqMet(nodeId: string): boolean {
-    const node = getResearchNodeById(nodeId);
-    if (!node) return false;
-    if (node.treeId !== 'core' && !this.isWorldUnlocked(node.treeId)) return false;
-    for (const reqId of node.requires) {
-      if (this.getResearchLevel(reqId) < 1) return false;
-    }
-    return true;
+    return isNodePrereqMetDomain(this, nodeId);
   }
 
   public canUpgradeResearch(nodeId: string): 'ok' | 'locked-world' | 'locked-prereq' | 'maxed' | 'no-cash' {
-    const node = getResearchNodeById(nodeId);
-    if (!node) return 'locked-prereq';
-    if (node.treeId !== 'core' && !this.isWorldUnlocked(node.treeId)) return 'locked-world';
-    const lvl = this.getResearchLevel(nodeId);
-    if (lvl >= node.maxLevel) return 'maxed';
-    if (!this.isNodePrereqMet(nodeId)) return 'locked-prereq';
-    const cost = getNodeNextCost(node, lvl);
-    if (this.cash < cost) return 'no-cash';
-    return 'ok';
+    return canUpgradeResearchDomain(this, nodeId);
   }
 
   public upgradeResearch(nodeId: string): boolean {
-    if (this.canUpgradeResearch(nodeId) !== 'ok') return false;
-    const node = getResearchNodeById(nodeId)!;
-    const lvl = this.getResearchLevel(nodeId);
-    const cost = getNodeNextCost(node, lvl);
-    this.cash -= cost;
-    this.researchLevels[node.treeId][node.id] = lvl + 1;
-    this.emit();
-    return true;
+    return upgradeResearchDomain(this, nodeId, () => this.emit());
   }
 
   public getAffordableResearchCount(): number {
-    let count = 0;
-    for (const node of RESEARCH_NODES) {
-      if (this.canUpgradeResearch(node.id) === 'ok') count++;
-    }
-    return count;
+    return getAffordableResearchCountDomain(this);
   }
 
   public canUnlockWorld(worldId: WorldId): 'ok' | 'unlocked' | 'locked-prereq' | 'no-cash' {
-    if (this.isWorldUnlocked(worldId)) return 'unlocked';
-    const idx = getWorldIndex(worldId);
-    if (idx <= 0) return 'unlocked';
-    const prevWorld = WORLDS[idx - 1];
-    if (!this.isWorldUnlocked(prevWorld.id) || !this.isTreeComplete(prevWorld.id)) {
-      return 'locked-prereq';
-    }
-    const target = WORLDS[idx];
-    if (this.cash < target.unlockCost) return 'no-cash';
-    return 'ok';
+    return canUnlockWorldDomain(this, worldId);
   }
 
   public unlockWorld(worldId: WorldId): boolean {
-    if (this.canUnlockWorld(worldId) !== 'ok') return false;
-    const def = getWorldById(worldId);
-    this.cash -= def.unlockCost;
-    if (!this.unlockedWorlds.includes(worldId)) {
-      this.unlockedWorlds.push(worldId);
-    }
-    this.activeWorldId = worldId;
-    this.emit();
-    return true;
+    return unlockWorldDomain(this, worldId, () => this.emit());
   }
 
   /** Core research applies everywhere; world research is strictly isolated to activeWorldId. */
   public getActiveResearchBonus(effectType: ResearchEffectType): number {
-    let total = 0;
-    for (const node of RESEARCH_NODES) {
-      if (node.effectType !== effectType) continue;
-      if (node.treeId !== 'core' && node.treeId !== this.activeWorldId) continue;
-      const lvl = Math.min(node.maxLevel, this.researchLevels[node.treeId]?.[node.id] ?? 0);
-      if (lvl > 0) total += node.perLevel * lvl;
-    }
-    return total;
+    return getActiveResearchBonusDomain(this, effectType);
   }
 
   public setActiveWorld(worldId: WorldId): boolean {
-    if (!this.isWorldUnlocked(worldId)) return false;
-    if (this.activeWorldId === worldId) return true;
-    this.activeWorldId = worldId;
-    this.emit();
-    return true;
+    return setActiveWorldDomain(this, worldId, () => this.emit());
   }
 
   public selectHotbarSlot(slot: number): void {
@@ -921,72 +869,23 @@ export class GameState {
   }
 
   public getTotalOwnedOreCount(oreId: string): number {
-    return (this.ores[oreId] || 0) + (this.chestOres[oreId] || 0);
+    return getTotalOwnedOreCountDomain(this, oreId);
   }
 
   public canCraftRelic(relicId: string): boolean {
-    const def = getRelicById(relicId);
-    if (!def || this.craftedRelics.has(relicId)) return false;
-    if (this.gems < def.gemCost) return false;
-    for (const ing of def.ingredients) {
-      if (this.getTotalOwnedOreCount(ing.oreId) < ing.amount) return false;
-    }
-    return true;
+    return canCraftRelicDomain(this, relicId);
   }
 
   public craftRelic(relicId: string): boolean {
-    const def = getRelicById(relicId);
-    if (!def || !this.canCraftRelic(relicId)) return false;
-    this.gems -= def.gemCost;
-    for (const ing of def.ingredients) {
-      let rem = ing.amount;
-      const inBag = this.ores[ing.oreId] || 0;
-      if (inBag > 0) {
-        const takeBag = Math.min(inBag, rem);
-        this.ores[ing.oreId] = inBag - takeBag;
-        if (this.ores[ing.oreId] <= 0) {
-          delete this.ores[ing.oreId];
-          removeFromHotbarDomain(this, ing.oreId);
-        }
-        rem -= takeBag;
-      }
-      if (rem > 0) {
-        const inChest = this.chestOres[ing.oreId] || 0;
-        const takeChest = Math.min(inChest, rem);
-        this.chestOres[ing.oreId] = inChest - takeChest;
-        if (this.chestOres[ing.oreId] <= 0) delete this.chestOres[ing.oreId];
-      }
-    }
-    this.craftedRelics.add(relicId);
-    if (this.equippedRelics.length < MAX_EQUIPPED_RELICS && !this.equippedRelics.includes(relicId)) {
-      this.equippedRelics.push(relicId);
-    }
-    this.emit();
-    return true;
+    return craftRelicDomain(this, relicId, () => this.emit());
   }
 
   public toggleEquipRelic(relicId: string): 'equipped' | 'unequipped' | 'full' | 'not-crafted' {
-    if (!this.craftedRelics.has(relicId)) return 'not-crafted';
-    const idx = this.equippedRelics.indexOf(relicId);
-    if (idx >= 0) {
-      this.equippedRelics.splice(idx, 1);
-      this.emit();
-      return 'unequipped';
-    }
-    if (this.equippedRelics.length >= MAX_EQUIPPED_RELICS) return 'full';
-    this.equippedRelics.push(relicId);
-    this.emit();
-    return 'equipped';
+    return toggleEquipRelicDomain(this, relicId, () => this.emit());
   }
 
   public getRelicBonus(stat: RelicEffectStat): number {
-    let total = 0;
-    for (const id of this.equippedRelics) {
-      const def = getRelicById(id);
-      if (!def) continue;
-      total += def.effects[stat] ?? 0;
-    }
-    return total;
+    return getRelicBonusDomain(this, stat);
   }
 
   public buyEnchantDice(amount = 1): boolean {
