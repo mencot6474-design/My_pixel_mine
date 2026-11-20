@@ -4,7 +4,11 @@ import { audio } from './audio/AudioManager';
 import { assetUrl } from './game/AssetUrl';
 import { gameSettings, type GameSettingsData } from './game/GameSettings';
 import { GameState } from './game/GameState';
-import { OVERCLOCK_TAP_CHARGE } from './game/OverclockDomain';
+import {
+  OVERCLOCK_CHIBI_METEOR_CHARGE,
+  OVERCLOCK_METEOR_TAP_MULT,
+  OVERCLOCK_TAP_CHARGE,
+} from './game/OverclockDomain';
 import { WORLDS } from './game/GameData';
 import {
   PIT_EVENT_DEFS,
@@ -150,7 +154,7 @@ async function bootstrap(): Promise<void> {
       audio.playOreBreak(variantKey);
       hud?.notifyTutorialOreBroken();
     },
-    onOreDamage: (dmg, sx, sy, isClick, isCrit, pitEventKind) => {
+    onOreDamage: (dmg, sx, sy, isClick, isCrit, pitEventKind, isMeteor) => {
       hud?.spawnDamagePopup(dmg, sx, sy, isClick, isCrit);
       audio.playOreHit(isClick);
       if (isClick) {
@@ -159,9 +163,12 @@ async function bootstrap(): Promise<void> {
         }
         if (isCrit) gameState.recordCritTap(dmg);
         const eventFeverMult = pitEventKind ? PIT_EVENT_DEFS[pitEventKind].feverChargeMult : 1;
+        const meteorFeverMult = isMeteor ? OVERCLOCK_METEOR_TAP_MULT : 1;
         gameState.chargeOverclock(
-          (isCrit ? OVERCLOCK_TAP_CHARGE * 1.5 : OVERCLOCK_TAP_CHARGE) * eventFeverMult
+          (isCrit ? OVERCLOCK_TAP_CHARGE * 1.5 : OVERCLOCK_TAP_CHARGE) * eventFeverMult * meteorFeverMult
         );
+      } else if (isMeteor) {
+        gameState.chargeOverclock(OVERCLOCK_CHIBI_METEOR_CHARGE);
       }
     },
     onHoldMineChange: (active) => {

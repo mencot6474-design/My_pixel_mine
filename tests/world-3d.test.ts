@@ -1423,17 +1423,28 @@ describe('Pure 3D Mine World', () => {
         attackFx?: { accentColor?: string; attackerX?: number; comboStep?: number }
       ) => {
         receivedFx.push(attackFx);
-        return { broken: false, dmgDealt: 10, variantKey: 'common' as const };
+        return { broken: false, dmgDealt: 10, variantKey: 'common' as const, isMeteor: true };
       },
     } as unknown as OrePit3D;
 
     const fm = new FieldMiner3D(chibi, 0);
     const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
     cam.position.set(0, 11.7, 15.6);
+    const hitFlags: Array<boolean | undefined> = [];
     for (let i = 0; i < 30; i++) {
-      fm.update(0.1, (i + 1) * 0.1, cam, fakePit, undefined, undefined, true);
+      fm.update(
+        0.1,
+        (i + 1) * 0.1,
+        cam,
+        fakePit,
+        undefined,
+        (_dmg, _wx, _wy, _wz, isMeteor) => hitFlags.push(isMeteor),
+        true
+      );
     }
     expect(receivedFx.length).toBeGreaterThanOrEqual(2);
+    expect(hitFlags.length).toBeGreaterThanOrEqual(2);
+    expect(hitFlags[0]).toBe(true);
     expect(receivedFx[0]?.accentColor).toBe(chibi.accentColor);
     expect(typeof receivedFx[0]?.attackerX).toBe('number');
     expect(receivedFx.slice(0, 3).map((x) => x?.comboStep)).toEqual(
@@ -1754,6 +1765,7 @@ describe('Pure 3D Mine World', () => {
 
       const firstHit = pit.hitNode(meteorInfo!.id, meteorInfo!.maxHp, true);
       expect(firstHit?.broken).toBe(false);
+      expect(firstHit?.isMeteor).toBe(true);
       expect(firstHit?.dmgDealt).toBe(Math.ceil(meteorInfo!.maxHp * 0.03));
       expect(pit.hasAliveMeteor()).toBe(true);
 
@@ -1772,7 +1784,9 @@ describe('Pure 3D Mine World', () => {
 
     const gs = new GameState();
     const gemsBefore = gs.gems;
+    expect(gs.getOverclockSnapshot().chargePct).toBe(0);
     const reward = gs.onMeteorBroken('celestial', () => 0.1);
+    expect(gs.getOverclockSnapshot().chargePct).toBe(40);
     expect(reward.weatherOre.id).toBe('astral-nova-fragment');
     expect(reward.chibiId).toBe('eclipse-seraph');
     expect(gs.discovered.has('eclipse-seraph')).toBe(true);
@@ -1783,6 +1797,7 @@ describe('Pure 3D Mine World', () => {
     expect(gs.enchantDice).toBeGreaterThanOrEqual(2);
 
     const voidReward = gs.onMeteorBroken('void', () => 0.05);
+    expect(gs.getOverclockSnapshot().chargePct).toBe(80);
     expect(voidReward.chibiId).toBe('singularity');
     expect(gs.discovered.has('singularity')).toBe(true);
 

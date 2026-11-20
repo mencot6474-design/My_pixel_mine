@@ -360,7 +360,7 @@ export class TowerUi {
       ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M4 17L6 7L12 11L18 7L20 17H4Z" fill="#fde047" stroke="#14111d" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="14" r="1.6" fill="#be123c"/></svg>`
       : `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><polygon points="12,3 20,7.5 20,16.5 12,21 4,16.5 4,7.5" fill="#38bdf8" stroke="#14111d" stroke-width="1.8"/><circle cx="12" cy="12" r="2.6" fill="#ffffff"/></svg>`;
     const stripeOverlay =
-      'repeating-linear-gradient(-45deg,rgba(255,255,255,0.2) 0px,rgba(255,255,255,0.2) 7px,transparent 7px,transparent 14px)';
+      'linear-gradient(-45deg,rgba(255,255,255,0.2) 25%,transparent 25%,transparent 50%,rgba(255,255,255,0.2) 50%,rgba(255,255,255,0.2) 75%,transparent 75%,transparent 100%)';
     const barFillBg = run.isBossWave
       ? invulLeft > 0
         ? `${stripeOverlay},linear-gradient(90deg,#0284c7,#22d3ee,#7dd3fc)`

@@ -6,8 +6,7 @@
     position: relative;
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 5px 10px 5px 7px;
+    padding: 6px 10px;
     background: #fff8e7;
     color: #14111d;
     border: 2.5px solid #14111d;
@@ -23,35 +22,6 @@
     background: #fde047;
     border-color: #14111d;
     animation: none;
-  }
-
-  .mam-fever-emblem {
-    position: relative;
-    width: 26px;
-    height: 26px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    background: #38bdf8;
-    border: 2px solid #14111d;
-    box-shadow: none;
-    transition: background 0.25s ease, border-color 0.25s ease;
-  }
-
-  .mam-fever-emblem > svg {
-    filter: none;
-  }
-
-  .mam-fever-shell.is-active .mam-fever-emblem {
-    background: #ff4d2e;
-    border-color: #14111d;
-    box-shadow: none;
-  }
-
-  .mam-fever-shell.is-active .mam-fever-emblem > svg {
-    filter: none;
   }
 
   .mam-fever-track {
@@ -73,14 +43,17 @@
   .mam-fever-fill {
     position: relative;
     height: 100%;
-    background: repeating-linear-gradient(
+    background: linear-gradient(
       -45deg,
-      #38bdf8 0px,
-      #38bdf8 8px,
-      #7dd3fc 8px,
-      #7dd3fc 16px
+      #38bdf8 25%,
+      #7dd3fc 25%,
+      #7dd3fc 50%,
+      #38bdf8 50%,
+      #38bdf8 75%,
+      #7dd3fc 75%,
+      #7dd3fc 100%
     );
-    background-size: 23px 100%;
+    background-size: 24px 24px;
     box-shadow: none;
     transition: width 0.14s cubic-bezier(0.22, 1, 0.36, 1);
   }
@@ -90,15 +63,17 @@
   }
 
   .mam-fever-shell.is-active .mam-fever-fill {
-    background-image:
-      repeating-linear-gradient(
-        -45deg,
-        #ff4d2e 0px,
-        #ff4d2e 8px,
-        #fde047 8px,
-        #fde047 16px
-      );
-    background-size: 23px 100%;
+    background-image: linear-gradient(
+      -45deg,
+      #ff4d2e 25%,
+      #fde047 25%,
+      #fde047 50%,
+      #ff4d2e 50%,
+      #ff4d2e 75%,
+      #fde047 75%,
+      #fde047 100%
+    );
+    background-size: 24px 24px;
     box-shadow: none;
     animation: mamFeverStripes 0.55s linear infinite;
   }
@@ -121,10 +96,10 @@
 
   @keyframes mamFeverStripes {
     from {
-      background-position: 0 0, 0 0;
+      background-position: 0 0;
     }
     to {
-      background-position: 28px 0, 0 0;
+      background-position: 24px 0;
     }
   }
 

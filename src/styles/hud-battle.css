@@ -112,8 +112,17 @@
     top: 0;
     bottom: 0;
     transition: width 75ms linear;
-    background-size: 28px 100%, 100% 100%;
-    animation: mamFeverStripes 0.95s linear infinite;
+    background-size: 28px 28px, 100% 100%;
+    animation: mamBattleHpStripes 0.95s linear infinite;
+  }
+
+  @keyframes mamBattleHpStripes {
+    from {
+      background-position: 0 0, 0 0;
+    }
+    to {
+      background-position: 28px 0, 0 0;
+    }
   }
 
   .mam-battle-hp-fill::after {

@@ -158,7 +158,7 @@ export const TW_QUICK_BTN_QUEST =
   'relative h-[36px] min-w-[36px] px-3 rounded-xl border-[2.5px] border-[#14111d] bg-[#6ee7b7] shadow-none text-[#14111d] text-[13px] font-black inline-flex items-center justify-center gap-[5px] cursor-pointer touch-manipulation transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-1 even:hover:rotate-1 hover:brightness-105 active:scale-95';
 export const TW_QUICK_BTN_TRADE = TW_QUICK_BTN;
 export const TW_HOTBAR_SLOT =
-  'mam-hotbar-slot relative w-[70px] h-[72px] @max-[860px]:w-[58px] @max-[860px]:h-[60px] overflow-hidden cursor-pointer flex flex-col items-center justify-between p-0.5';
+  'mam-hotbar-slot relative w-[74px] h-[76px] @max-[860px]:w-[60px] @max-[860px]:h-[62px] overflow-hidden cursor-pointer flex flex-col items-center justify-between p-0.5';
 export const TW_HOTBAR_NUM = 'mam-hotbar-keycap';
 export const TW_TOAST_STACK =
   'fixed bottom-[102px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none z-50';

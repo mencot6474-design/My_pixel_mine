@@ -69,7 +69,6 @@ export function renderShopWorldHudHtml(opts: {
   weatherHtml: string;
   currencyRailHtml: string;
   activePotionsHtml: string;
-  dpsMeterHtml: string;
   modalHtml: string;
   toastStackHtml: string;
 }): string {
@@ -119,7 +118,6 @@ export function renderShopWorldHudHtml(opts: {
       ${opts.currencyRailHtml}
 
       ${opts.activePotionsHtml}
-      ${opts.dpsMeterHtml}
       ${opts.modalHtml}
       ${opts.toastStackHtml}
     `;
@@ -159,7 +157,6 @@ export class AltarShopHudUi {
     weatherHtml: string;
     currencyRailHtml: string;
     activePotionsHtml: string;
-    dpsMeterHtml: string;
     modalHtml: string;
     toastStackHtml: string;
   }): string {
@@ -178,9 +175,9 @@ export class AltarShopHudUi {
 
     return `
       ${opts.weatherHtml}
-      <div class="${TW_TOP_CENTER} flex items-center gap-2.5">
-        <button class="px-[42px] py-2 rounded-2xl border-[3px] border-[#14111d] bg-[#fb923c] hover:bg-[#fdba74] text-[#14111d] text-[19px] font-black cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.97] active:scale-[0.94]" data-action="altar-back">Back</button>
-        <button class="px-4 py-2 rounded-2xl border-[3px] border-[#14111d] bg-[#7dd3fc] hover:bg-[#bae6fd] text-[#14111d] text-[16px] font-black cursor-pointer inline-flex items-center gap-1.5 transition-transform duration-150 ease-out hover:scale-[0.97] active:scale-[0.94]" data-action="switch-to-fusion">
+      <div class="${TW_TOP_CENTER} flex items-center gap-2.5 @max-[720px]:gap-1.5">
+        <button class="h-11 @max-[720px]:h-9 min-w-[148px] @max-[720px]:min-w-[108px] px-5 @max-[720px]:px-3.5 rounded-2xl border-[3px] border-[#14111d] bg-[#fb923c] hover:bg-[#fdba74] text-[#14111d] text-[17px] @max-[720px]:text-[14px] font-black cursor-pointer inline-flex items-center justify-center whitespace-nowrap transition-transform duration-150 ease-out hover:scale-[0.97] active:scale-[0.94]" data-action="altar-back">Back</button>
+        <button class="h-11 @max-[720px]:h-9 min-w-[148px] @max-[720px]:min-w-[108px] px-5 @max-[720px]:px-3.5 rounded-2xl border-[3px] border-[#14111d] bg-[#7dd3fc] hover:bg-[#bae6fd] text-[#14111d] text-[17px] @max-[720px]:text-[14px] font-black cursor-pointer inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition-transform duration-150 ease-out hover:scale-[0.97] active:scale-[0.94]" data-action="switch-to-fusion">
           <span>✦ Chibi Fusion</span>
         </button>
       </div>

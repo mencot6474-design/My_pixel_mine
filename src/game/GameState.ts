@@ -207,6 +207,7 @@ import {
   isOverclockActiveDomain,
   OVERCLOCK_BREAK_CHARGE,
   OVERCLOCK_DROP_MULT,
+  OVERCLOCK_METEOR_BREAK_CHARGE,
   OVERCLOCK_TAP_MULT,
   type OverclockSnapshot,
   type OverclockState,
@@ -609,6 +610,7 @@ export class GameState {
 
   public onMeteorBroken(weatherId: WeatherId, rng: () => number = Math.random) {
     recordBountyProgressDomain(this, 'shatter_meteor', 1);
+    this.chargeOverclock(OVERCLOCK_METEOR_BREAK_CHARGE);
     return onMeteorBrokenDomain(this, weatherId, rng, () => this.emit());
   }
 

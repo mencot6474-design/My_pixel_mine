@@ -613,25 +613,29 @@ export class WeatherDpsHudUi {
     fillEl.style.width = `${pct}%`;
 
     titleEl.textContent = snap.active ? 'OVERCLOCK ACTIVE' : 'OVERCLOCK FEVER';
-    titleEl.className = snap.active
-      ? 'text-[10px] font-black italic uppercase tracking-[0.06em] text-[#14111d] truncate transition-colors duration-300'
-      : 'text-[10px] font-black italic uppercase tracking-[0.06em] text-[#14111d] truncate transition-colors duration-300';
+    titleEl.className = OVERCLOCK_TITLE_CLASS;
 
     valEl.textContent = snap.active ? `${snap.remainingSec.toFixed(1)}s` : `${pct}%`;
-    valEl.className = snap.active
-      ? 'px-1.5 py-[1px] rounded bg-[#ff4d2e] border border-[#14111d] text-[10px] font-black tabular-nums text-white leading-none shrink-0 transition-all duration-300'
-      : 'px-1.5 py-[1px] rounded bg-[#bae6fd] border border-[#14111d] text-[10px] font-black tabular-nums text-[#14111d] leading-none shrink-0 transition-all duration-300';
+    valEl.className = getOverclockValueClass(snap.active);
 
-    badgesEl.className = snap.active
-      ? 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-100'
-      : 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-75';
+    badgesEl.className = getOverclockBadgesClass(snap.active);
   }
 }
 
-const OVERCLOCK_BOLT_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
-  <path d="M13.8 2L4.2 13.4H11.2L10 22L19.8 10.4H12.8L13.8 2Z" fill="#fde047" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M12.6 5.2L7.4 11.8H11.6" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
+const OVERCLOCK_TITLE_CLASS =
+  'text-[10px] font-black italic uppercase tracking-[0.06em] text-[#14111d] truncate transition-colors duration-300';
+
+function getOverclockValueClass(active: boolean): string {
+  return active
+    ? 'px-1.5 py-[1px] rounded bg-[#ff4d2e] border border-[#14111d] text-[10px] font-black tabular-nums text-white leading-none shrink-0 transition-all duration-300'
+    : 'px-1.5 py-[1px] rounded bg-[#bae6fd] border border-[#14111d] text-[10px] font-black tabular-nums text-[#14111d] leading-none shrink-0 transition-all duration-300';
+}
+
+function getOverclockBadgesClass(active: boolean): string {
+  return `flex items-center justify-center gap-1 mt-[2px] text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 ${
+    active ? 'opacity-100' : 'opacity-75'
+  }`;
+}
 
 const OVERCLOCK_TICKS_HTML = '<div class="mam-fever-ticks" aria-hidden="true">' + '<span></span>'.repeat(10) + '</div>';
 
@@ -640,28 +644,20 @@ export function buildOverclockGaugeInnerHtml(snap: OverclockSnapshot): string {
   const shellCls = snap.active ? 'mam-fever-shell is-active' : 'mam-fever-shell';
   const stateAttr = snap.active ? 'active' : 'charging';
   const titleText = snap.active ? 'OVERCLOCK ACTIVE' : 'OVERCLOCK FEVER';
-  const titleCls = 'text-[10px] font-black italic uppercase tracking-[0.06em] text-[#14111d] truncate transition-colors duration-300';
   const valText = snap.active ? `${snap.remainingSec.toFixed(1)}s` : `${pct}%`;
-  const valCls = snap.active
-    ? 'px-1.5 py-[1px] rounded bg-[#ff4d2e] border border-[#14111d] text-[10px] font-black tabular-nums text-white leading-none shrink-0 transition-all duration-300'
-    : 'px-1.5 py-[1px] rounded bg-[#bae6fd] border border-[#14111d] text-[10px] font-black tabular-nums text-[#14111d] leading-none shrink-0 transition-all duration-300';
-  const badgesCls = snap.active
-    ? 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-100'
-    : 'flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 opacity-75';
 
   return `
     <div class="${shellCls}" data-overclock-state="${stateAttr}">
-      <div class="mam-fever-emblem">${OVERCLOCK_BOLT_SVG}</div>
-      <div class="flex-1 min-w-0 flex flex-col gap-0.5">
-        <div class="flex items-center justify-between gap-1 leading-none">
-          <span class="${titleCls}" data-oc-title="true">${titleText}</span>
-          <span class="${valCls}" data-oc-value="true">${valText}</span>
+      <div class="flex-1 min-w-0 flex flex-col gap-1">
+        <div class="flex items-center justify-center gap-1.5 leading-none">
+          <span class="${OVERCLOCK_TITLE_CLASS}" data-oc-title="true">${titleText}</span>
+          <span class="${getOverclockValueClass(snap.active)}" data-oc-value="true">${valText}</span>
         </div>
         <div class="mam-fever-track">
           <div class="mam-fever-fill" style="width:${pct}%"></div>
           ${OVERCLOCK_TICKS_HTML}
         </div>
-        <div class="${badgesCls}" data-oc-badges="true">
+        <div class="${getOverclockBadgesClass(snap.active)}" data-oc-badges="true">
           <span class="px-1 py-[1px] rounded bg-[#fde047] border border-[#14111d] text-[#14111d]">2x SPD</span>
           <span class="px-1 py-[1px] rounded bg-[#f9a8d4] border border-[#14111d] text-[#14111d]">2x TAP</span>
           <span class="px-1 py-[1px] rounded bg-[#7dd3fc] border border-[#14111d] text-[#14111d]">+50% ORE</span>

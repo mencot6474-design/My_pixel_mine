@@ -66,7 +66,7 @@ export function renderHotbarBagButtonHtml(activeModal: ModalKind): string {
         <div class="relative z-[4] w-full flex items-center justify-start px-0.5 pt-0.5">
           <span class="${TW_HOTBAR_NUM}">\`</span>
         </div>
-        <div class="mam-card-art !inset-[17px_5px_5px]">${hudIconHtml('backpack', 44, 'Backpack')}</div>
+        <div class="mam-card-art !inset-[13px_3px_3px]">${hudIconHtml('backpack', 52, 'Backpack')}</div>
       </button>
     `;
 }

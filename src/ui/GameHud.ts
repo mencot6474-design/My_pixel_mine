@@ -906,7 +906,6 @@ export class GameHud {
       weatherHtml: this.weatherDpsUi.renderWeatherWidget(),
       currencyRailHtml: this.renderCurrencyRail({ topAlign: true, showCash: true, showAudioBelow: true }),
       activePotionsHtml: this.weatherDpsUi.renderActivePotionsDock(),
-      dpsMeterHtml: this.weatherDpsUi.renderDpsMeterWidget(),
       modalHtml: this.renderActiveModal(),
       toastStackHtml: this.renderToastStack(),
     });

@@ -218,7 +218,7 @@ export class FieldMiner3D {
     camera: THREE.Camera,
     pit: OrePit3D,
     onOreBroken?: (variantKey: OreVariantKey, meteorWeatherId?: WeatherId, pitEventKind?: PitEventKind) => void,
-    onOreHit?: (dmg: number, wx: number, wy: number, wz: number) => void,
+    onOreHit?: (dmg: number, wx: number, wy: number, wz: number, isMeteor?: boolean) => void,
     renderVisuals = true
   ): void {
     if (renderVisuals) {
@@ -323,7 +323,7 @@ export class FieldMiner3D {
         );
         if (res) {
           if (renderVisuals) {
-            onOreHit?.(res.dmgDealt, target.worldX, target.worldY + 0.95, target.worldZ);
+            onOreHit?.(res.dmgDealt, target.worldX, target.worldY + 0.95, target.worldZ, res.isMeteor);
           }
           if (res.broken) {
             this.targetNodeId = -1;

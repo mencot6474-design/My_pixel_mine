@@ -71,6 +71,7 @@ export interface OreHitResult {
   broken: boolean;
   variantKey: OreVariantKey;
   dmgDealt: number;
+  isMeteor?: boolean;
   meteorWeatherId?: WeatherId;
   pitEventKind?: PitEventKind;
 }
@@ -1307,6 +1308,7 @@ export class OrePit3D {
       broken: pure.broken,
       variantKey: node.variant.key,
       dmgDealt: pure.dmgDealt,
+      isMeteor: node.isMeteor,
       meteorWeatherId,
       pitEventKind,
     };

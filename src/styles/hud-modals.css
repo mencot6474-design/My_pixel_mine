@@ -253,12 +253,15 @@
     border-radius: 9999px;
     border: 2.5px solid #14111d;
     pointer-events: none;
-    background: repeating-linear-gradient(
-      -50deg,
-      var(--mam-m-accent) 0px,
-      var(--mam-m-accent) 14px,
-      var(--mam-m-accent-hi) 14px,
-      var(--mam-m-accent-hi) 28px
+    background: linear-gradient(
+      -45deg,
+      var(--mam-m-accent) 25%,
+      var(--mam-m-accent-hi) 25%,
+      var(--mam-m-accent-hi) 50%,
+      var(--mam-m-accent) 50%,
+      var(--mam-m-accent) 75%,
+      var(--mam-m-accent-hi) 75%,
+      var(--mam-m-accent-hi) 100%
     );
     background-size: 44px 44px;
     animation: mam-tape-rail-move 2s linear infinite reverse;
@@ -286,12 +289,15 @@
     height: 18px;
     border-top: 3.5px solid #14111d;
     border-bottom: 3.5px solid #14111d;
-    background: repeating-linear-gradient(
-      -50deg,
-      var(--mam-m-accent) 0px,
-      var(--mam-m-accent) 14px,
-      var(--mam-m-accent-hi) 14px,
-      var(--mam-m-accent-hi) 28px
+    background: linear-gradient(
+      -45deg,
+      var(--mam-m-accent) 25%,
+      var(--mam-m-accent-hi) 25%,
+      var(--mam-m-accent-hi) 50%,
+      var(--mam-m-accent) 50%,
+      var(--mam-m-accent) 75%,
+      var(--mam-m-accent-hi) 75%,
+      var(--mam-m-accent-hi) 100%
     );
     background-size: 44px 44px;
     animation: mam-tape-rail-move 1.8s linear infinite;

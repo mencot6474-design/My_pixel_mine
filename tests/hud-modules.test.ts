@@ -328,10 +328,10 @@ describe('Tahap B HUD Modules', () => {
         weatherHtml: '<div id="w"></div>',
         currencyRailHtml: '<div id="c"></div>',
         activePotionsHtml: '<div id="p"></div>',
-        dpsMeterHtml: '<div id="d"></div>',
         modalHtml: '',
         toastStackHtml: '<div id="t"></div>',
       });
+      expect(shopHtml).not.toContain('data-hud-dps');
       expect(shopHtml).toContain('data-action="back-to-mine"');
       expect(shopHtml).toContain('data-action="open-pickaxe-shop"');
       expect(shopHtml).toContain('data-action="open-sell-shop"');
@@ -678,6 +678,8 @@ describe('Tahap B HUD Modules', () => {
       expect(activeHtml).toContain('2x SPD');
       expect(activeHtml).toContain('mam-fever-shell is-active');
       expect(activeHtml).toContain('mam-fever-ticks');
+      expect(activeHtml).not.toContain('mam-fever-emblem');
+      expect(activeHtml).toContain('justify-center');
 
       const ocToast = renderToastBannerHtml('⚡ OVERCLOCK ACTIVE! 2x Speed');
       expect(ocToast).toContain('data-toast-tone="overclock"');

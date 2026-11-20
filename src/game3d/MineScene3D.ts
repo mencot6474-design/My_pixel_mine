@@ -115,7 +115,8 @@ export interface MineSceneCallbacks {
     screenY: number,
     isClick: boolean,
     isCrit?: boolean,
-    pitEventKind?: PitEventKind
+    pitEventKind?: PitEventKind,
+    isMeteor?: boolean
   ) => void;
   onHoldMineChange?: (active: boolean) => void;
   onChestClick?: () => void;
@@ -767,7 +768,16 @@ export class MineScene3D {
         this.tapShakeIntensity = Math.max(this.tapShakeIntensity, isCrit ? 0.14 : 0.04);
         const wp = new THREE.Vector3();
         hit.getWorldPosition(wp);
-        this.emitDamageScreen(res.dmgDealt, wp.x, wp.y + 0.9, wp.z, true, isCrit, res.pitEventKind);
+        this.emitDamageScreen(
+          res.dmgDealt,
+          wp.x,
+          wp.y + 0.9,
+          wp.z,
+          true,
+          isCrit,
+          res.pitEventKind,
+          res.isMeteor
+        );
         if (res.broken) {
           this.callbacks.onOreBroken?.(res.variantKey, res.meteorWeatherId, res.pitEventKind);
         }
@@ -797,7 +807,8 @@ export class MineScene3D {
               best.worldZ,
               true,
               isCrit,
-              res.pitEventKind
+              res.pitEventKind,
+              res.isMeteor
             );
             if (res.broken) {
               this.callbacks.onOreBroken?.(res.variantKey, res.meteorWeatherId, res.pitEventKind);
@@ -860,7 +871,8 @@ export class MineScene3D {
     }
 
     const hitCb = inMine
-      ? (dmg: number, wx: number, wy: number, wz: number) => this.emitDamageScreen(dmg, wx, wy, wz, false)
+      ? (dmg: number, wx: number, wy: number, wz: number, isMeteor?: boolean) =>
+          this.emitDamageScreen(dmg, wx, wy, wz, false, false, undefined, isMeteor)
       : undefined;
 
     const minerDt = inMine && this.overclockActive ? dtSec * OVERCLOCK_SPEED_MULT : dtSec;
@@ -1039,7 +1051,8 @@ export class MineScene3D {
     wz: number,
     isClick: boolean,
     isCrit = false,
-    pitEventKind?: PitEventKind
+    pitEventKind?: PitEventKind,
+    isMeteor?: boolean
   ): void {
     if (!this.callbacks.onOreDamage || dmg <= 0) return;
     const w = this.mountEl.clientWidth || 1;
@@ -1048,7 +1061,7 @@ export class MineScene3D {
     if (this.projVec.z <= -1 || this.projVec.z >= 1) return;
     const sx = (this.projVec.x * 0.5 + 0.5) * w;
     const sy = (-this.projVec.y * 0.5 + 0.5) * h;
-    this.callbacks.onOreDamage(dmg, sx, sy, isClick, isCrit, pitEventKind);
+    this.callbacks.onOreDamage(dmg, sx, sy, isClick, isCrit, pitEventKind, isMeteor);
   }
 
   private emitPlotAnchors(): void {
