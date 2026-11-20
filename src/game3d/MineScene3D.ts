@@ -837,7 +837,7 @@ export class MineScene3D {
         this.emitDamageScreen(shownDmg, strike.wx, strike.wy, strike.wz, false);
       }
     });
-    this.weatherFx.update(dtSec, this.elapsed, this.mode === 'mine' || this.mode === 'shop');
+    this.weatherFx.update(dtSec, this.elapsed, this.mode === 'mine' || this.mode === 'shop' || this.mode === 'fusion');
 
     const inMine = this.mode === 'mine';
     const wasHoldFired = this.holdMineFiredInitial;
@@ -1097,7 +1097,7 @@ export class MineScene3D {
 
   public setMode(mode: SceneMode): void {
     this.mode = mode;
-    this.weatherFx.setShopMode(mode === 'shop');
+    this.weatherFx.setShopMode(mode === 'shop' || mode === 'fusion');
     if (mode !== 'mine' && mode !== 'tower') {
       this.renderer.domElement.classList.remove('mam-mining-cursor');
     }
@@ -1111,7 +1111,7 @@ export class MineScene3D {
     this.fusionWorld.group.visible = mode === 'fusion';
     this.towerArena.group.visible = mode === 'tower';
     this.env.group.visible = isMine;
-    this.env.skyDome.visible = mode === 'mine' || mode === 'shop';
+    this.env.skyDome.visible = mode === 'mine' || mode === 'shop' || mode === 'fusion';
     this.pit.group.visible = isMine;
     this.crateGroup.visible = isMine;
     this.pedestals.forEach((p) => {
@@ -1130,13 +1130,11 @@ export class MineScene3D {
       this.targetCamRadius = 12.2;
       this.lookAtPos.set(0, 1.05, -2.4);
     } else if (mode === 'fusion') {
-      this.scene.background = new THREE.Color(0x040614);
-      this.scene.fog = new THREE.Fog(0x060a1f, 34, 96);
-      this.applyWeatherAtmosphere();
       this.targetOrbitYaw = 0;
-      this.targetOrbitPitch = -0.14;
-      this.targetCamRadius = 15.8;
-      this.lookAtPos.set(0, 1.45, -0.75);
+      this.targetOrbitPitch = -0.04;
+      this.targetCamRadius = 18.2;
+      this.lookAtPos.set(0, 1.85, -1.15);
+      this.applyWeatherAtmosphere();
     } else if (mode === 'tower') {
       this.scene.background = new THREE.Color(0x101a30);
       this.scene.fog = new THREE.Fog(0x182338, 26, 76);
@@ -1167,26 +1165,31 @@ export class MineScene3D {
     const weather = getWeatherById(this.activeWeatherId);
     this.env.setWeatherSky(weather.id, weather.cloudHex);
     const isShop = this.mode === 'shop';
+    const isFusion = this.mode === 'fusion';
     const isTower = this.mode === 'tower';
     this.hemiLight.color.set(weather.hemiTintHex);
     this.hemiLight.intensity = isTower
       ? Math.max(weather.hemiIntensity, 1.32)
-      : isShop
+      : isShop || isFusion
         ? Math.max(weather.hemiIntensity, 1.24)
         : Math.max(weather.hemiIntensity, 1.18);
     this.sunLight.intensity = isTower
       ? Math.max(weather.sunIntensity, 1.75)
-      : isShop
+      : isShop || isFusion
         ? Math.max(weather.sunIntensity, 1.62)
         : Math.max(weather.sunIntensity, 1.55);
     this.rimLight.color.set(isShop ? 0x38bdf8 : weather.rimTintHex);
 
-    if (this.mode !== 'mine' && !isShop) return;
+    if (this.mode !== 'mine' && !isShop && !isFusion) return;
     const fogColor = new THREE.Color(weather.fogTintHex);
-    fogColor.lerp(new THREE.Color(0x0b162b), isShop ? 0.56 : 0.28);
+    fogColor.lerp(new THREE.Color(0x0b162b), isShop ? 0.56 : isFusion ? 0.42 : 0.28);
     this.scene.background = fogColor;
     // Softly blend distant terrain border into the sky shader's horizon mist band
-    this.scene.fog = isShop ? new THREE.Fog(fogColor, 50, 108) : new THREE.Fog(fogColor, 30, 78);
+    this.scene.fog = isShop
+      ? new THREE.Fog(fogColor, 50, 108)
+      : isFusion
+        ? new THREE.Fog(fogColor, 42, 98)
+        : new THREE.Fog(fogColor, 30, 78);
   }
 
   public setWeather(weatherId: WeatherId): void {

@@ -4,6 +4,7 @@ import {
   GEM_SHOP_ITEMS,
   GemShopItemDef,
   getWeatherOreByWeatherId,
+  getWorldById,
   RARITY_BORDER,
   WEATHER_METEOR_CHIBIS,
   WEATHER_METEOR_DICE_CHANCE,
@@ -65,10 +66,52 @@ export function buildActivePotionsDockContent(
   };
 }
 
+const SYNERGY_STAR_SVG = `<svg viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true">
+  <path d="M10 1.8L12.3 7.7L18.2 10L12.3 12.3L10 18.2L7.7 12.3L1.8 10L7.7 7.7L10 1.8Z" fill="#fde047" stroke="#14111d" stroke-width="1.7" stroke-linejoin="round"/>
+</svg>`;
+
+export function buildWorldSynergyBadgesHtml(state: GameState): string {
+  const resonances = state.getActiveWorldResonances();
+  if (!resonances.length) return '';
+  const cards = resonances
+    .map((r) => {
+      const wDef = getWorldById(r.worldId);
+      const dmgPct = Math.round(r.tier.dmgBonusPct * 100);
+      const orePct = Math.round(r.tier.oreDropBonusPct * 100);
+      const gemPct = Math.round(r.tier.gemBonusPct * 100);
+      return `
+        <div
+          class="inline-flex items-center gap-2 @max-[720px]:gap-1.5 pl-1.5 pr-2.5 py-1 rounded-xl border-[2.5px] border-[#14111d] bg-[#fff8e7] text-[#14111d] pointer-events-none select-none"
+          data-world-synergy-badge="${r.worldId}"
+          title="World Synergy • ${r.worldName} (${r.count}/5 Chibis)"
+        >
+          <span
+            class="w-7 h-7 @max-[720px]:w-6 @max-[720px]:h-6 rounded-lg border-2 border-[#14111d] flex items-center justify-center shrink-0"
+            style="background:radial-gradient(circle at 35% 30%,#ffffff 0%,${wDef.iconColor} 88%)"
+          >${SYNERGY_STAR_SVG}</span>
+          <div class="flex flex-col items-start min-w-0 leading-none gap-1">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[9px] font-black uppercase tracking-wider text-[#6d28d9]">Synergy</span>
+              <span class="text-[11.5px] @max-[720px]:text-[10.5px] font-black text-[#14111d] truncate">${r.worldName}</span>
+              <span class="px-1.5 py-[1px] rounded-md bg-[#14111d] text-[#fff8e7] text-[9.5px] font-black tabular-nums">${r.count}/5</span>
+            </div>
+            <div class="flex items-center gap-1 text-[9.5px] font-black tabular-nums whitespace-nowrap">
+              <span class="px-1.5 py-[1px] rounded bg-[#fee2e2] border border-[#14111d] text-[#dc2626]">+${dmgPct}% DMG</span>
+              ${orePct > 0 ? `<span class="px-1.5 py-[1px] rounded bg-[#fef08a] border border-[#14111d] text-[#b45309]">+${orePct}% Ore</span>` : ''}
+              ${gemPct > 0 ? `<span class="px-1.5 py-[1px] rounded bg-[#f3e8ff] border border-[#14111d] text-[#7e22ce]">+${gemPct}% Gem</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+  return `<div class="flex flex-col items-start gap-1" data-hud-synergy="true">${cards}</div>`;
+}
+
 /** Builds inner HTML for the top-left Weather widget and optional Forecast popover. */
 export function buildWeatherWidgetInnerHtml(
   state: GameState,
-  opts: { popoverOpen: boolean; inspectId: WeatherId | null },
+  opts: { popoverOpen: boolean; inspectId: WeatherId | null; showSynergy?: boolean },
   now = Date.now()
 ): string {
   const w = state.getActiveWeather();
@@ -264,6 +307,7 @@ export function buildWeatherWidgetInnerHtml(
           state.autoMeteor ? 'ON' : 'OFF'
         }</span>
       </button>
+      ${opts.showSynergy && !opts.popoverOpen ? buildWorldSynergyBadgesHtml(state) : ''}
       ${popoverHtml}
     `;
 }
@@ -366,15 +410,25 @@ export class WeatherDpsHudUi {
     private readonly onToggleAutoMeteor?: (enabled: boolean) => void
   ) {}
 
-  public renderWeatherWidget(now = Date.now()): string {
+  private buildWeatherStateKey(showSynergy: boolean): string {
     const w = this.state.getActiveWeather();
+    const synKey = showSynergy
+      ? this.state
+          .getActiveWorldResonances()
+          .map((r) => `${r.worldId}:${r.count}`)
+          .join(',')
+      : '';
+    return `${w.id}:${this.weatherPopoverOpen ? 1 : 0}:${this.state.autoMeteor ? 1 : 0}:${showSynergy ? 1 : 0}:${synKey}`;
+  }
+
+  public renderWeatherWidget(now = Date.now(), showSynergy = false): string {
     const inner = buildWeatherWidgetInnerHtml(
       this.state,
-      { popoverOpen: this.weatherPopoverOpen, inspectId: this.weatherInspectId },
+      { popoverOpen: this.weatherPopoverOpen, inspectId: this.weatherInspectId, showSynergy },
       now
     );
     return `
-      <div class="absolute top-[14px] left-4 @max-[720px]:top-2.5 @max-[720px]:left-2.5 z-[5] flex flex-col items-start gap-1.5 pointer-events-auto" data-hud-weather="true" data-weather-key="${w.id}:${this.weatherPopoverOpen ? 1 : 0}:${this.state.autoMeteor ? 1 : 0}">
+      <div class="absolute top-[14px] left-4 @max-[720px]:top-2.5 @max-[720px]:left-2.5 z-[5] flex flex-col items-start gap-1.5 pointer-events-auto" data-hud-weather="true" data-show-synergy="${showSynergy ? '1' : '0'}" data-weather-key="${this.buildWeatherStateKey(showSynergy)}">
         ${inner}
       </div>
     `;
@@ -472,13 +526,13 @@ export class WeatherDpsHudUi {
   public syncWeatherWidget(root: HTMLElement, forceRebuild: boolean, now = Date.now()): void {
     const host = root.querySelector<HTMLElement>('[data-hud-weather="true"]');
     if (!host) return;
-    const w = this.state.getActiveWeather();
-    const nextKey = `${w.id}:${this.weatherPopoverOpen ? 1 : 0}:${this.state.autoMeteor ? 1 : 0}`;
+    const showSynergy = host.dataset.showSynergy === '1';
+    const nextKey = this.buildWeatherStateKey(showSynergy);
     if (forceRebuild || host.dataset.weatherKey !== nextKey) {
       host.dataset.weatherKey = nextKey;
       host.innerHTML = buildWeatherWidgetInnerHtml(
         this.state,
-        { popoverOpen: this.weatherPopoverOpen, inspectId: this.weatherInspectId },
+        { popoverOpen: this.weatherPopoverOpen, inspectId: this.weatherInspectId, showSynergy },
         now
       );
       this.bindWeatherHostEvents(root, host);

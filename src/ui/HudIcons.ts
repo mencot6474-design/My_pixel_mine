@@ -246,7 +246,7 @@ export function enchantAuraIconHtml(enchantId: string, color: string, sizePx: nu
 
 export function enchantDiceIconHtml(sizePx = 34): string {
   const artUrl = assetUrl('/enchants/enchant_dice.webp');
-  return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="Enchanted Dice" />`;
+  return `<img class="mam-3d-icon shrink-0 drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" style="width:${sizePx}px;height:${sizePx}px" alt="Dice" />`;
 }
 
 export function weatherIconHtml(weatherId: WeatherId, sizePx = 38, alt = 'Weather'): string {

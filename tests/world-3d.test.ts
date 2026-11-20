@@ -261,7 +261,11 @@ describe('Pure 3D Mine World', () => {
     expect(getMinersByWorld('starwell').length).toBe(5);
 
     const gs = new GameState();
-    expect(gs.getTotalIndexCount()).toBe(78);
+    expect(gs.getTotalIndexCount()).toBe(99);
+    gs.discovered.add('stormwater-opal');
+    gs.discovered.add('glitch-cheshire');
+    gs.discovered.add('cosmic-monarch');
+    expect(gs.getDiscoveredCount()).toBe(4);
     expect(gs.getWorldIndexProgress('astral')).toEqual({ found: 0, total: 13, pct: 0 });
     expect(gs.getWorldIndexProgress('starwell')).toEqual({ found: 0, total: 13, pct: 0 });
     expect(gs.hotbar.every((s) => s === null)).toBe(true);
@@ -2543,14 +2547,13 @@ describe('Pure 3D Mine World', () => {
     cam.lookAt(0, 1.3, -0.35);
     cam.updateMatrixWorld();
 
-    // Unready recipe -> hologram mode on missing slot, dormant crimson status, NPC speech bubbles active
+    // Unready recipe -> hologram mode on missing slot, dormant crimson status, no walking NPC speech bubbles
     const recipe = FUSION_RECIPES[0];
     fusionWorld.syncRecipe(recipe, [false, true], [false, true], false);
     fusionWorld.update(0.05, 0.5, cam);
 
     const bubbles = fusionWorld.getNpcBubbleAnchors(cam, 1280, 720);
-    expect(bubbles.length).toBeGreaterThan(0);
-    expect(bubbles[0].text.length).toBeGreaterThan(3);
+    expect(bubbles).toEqual([]);
 
     // Ready recipe -> switches to ready cyan/gold state
     fusionWorld.syncRecipe(recipe, [true, true], [true, true], true);

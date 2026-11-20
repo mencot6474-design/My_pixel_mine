@@ -271,7 +271,7 @@ export class IndexModalUi {
             rarity: chibi.rarity,
             title: `${chibi.name} (Day ${reward.day} Limited)`,
             artHtml: chibiPortraitHtml(chibi, { usePose: true }),
-            bottomHtml: `<span class="px-1.5 py-[1px] rounded-md bg-[#fde047] border border-[#14111d] text-[#14111d] text-[8.5px] font-black mb-0.5">✦ LIMITED</span><span class="mam-card-pct">${fmtShort(chibi.baseDps)}/s</span>`,
+            bottomHtml: `${renderRarityBadgeHtml(chibi.rarity, 'is-compact mb-0.5')}<span class="mam-card-pct">${fmtShort(chibi.baseDps)}/s</span>`,
             unlocked: this.state.discovered.has(chibi.id),
             selected: selectedId === chibi.id,
           });
@@ -289,7 +289,7 @@ export class IndexModalUi {
           rarity: chibi.rarity,
           title: `${chibi.name} (${recipe.subtitle})`,
           artHtml: chibiPortraitHtml(chibi, { usePose: true }),
-          bottomHtml: `<span class="px-1.5 py-[1px] rounded-md bg-[linear-gradient(90deg,#38bdf8,#a855f7,#ec4899)] border border-[#14111d] text-white text-[8.5px] font-black mb-0.5">✦ FUSION</span><span class="mam-card-pct">${fmtShort(chibi.baseDps)}/s</span>`,
+          bottomHtml: `${renderRarityBadgeHtml(chibi.rarity, 'is-compact mb-0.5')}<span class="mam-card-pct">${fmtShort(chibi.baseDps)}/s</span>`,
           unlocked: this.state.discovered.has(chibi.id),
           selected: selectedId === chibi.id,
         });
@@ -488,12 +488,11 @@ export class IndexModalUi {
       iconHtml: hudIconHtml('indexBook', 26, 'Index'),
       boxClass: `w-[980px] ${TW_SHOP_MODAL_RESP}`,
       headerExtraHtml: `
-        <div class="relative flex-1 max-w-[440px] h-7 rounded-full bg-[#fcecc8] border-[2.5px] border-[#14111d] overflow-hidden flex items-center justify-center">
+        <div class="relative w-full max-w-[640px] mx-auto h-7 rounded-full bg-[#fcecc8] border-[2.5px] border-[#14111d] overflow-hidden flex items-center justify-center">
           <div class="absolute left-0 top-0 bottom-0 bg-[linear-gradient(90deg,#a855f7,#ec4899,#38bdf8)] rounded-full transition-[width] duration-250 ease-out" data-index-fill="true" style="width:${pct}%"></div>
-          <div class="relative z-[2] w-full px-3.5 flex items-center justify-between text-[13px] font-black text-[#14111d]" data-index-progress-text="true">
-            <span></span>
-            <span class="px-2 py-px rounded-full bg-[#fff8e7]/90 border border-[#14111d]">${found}/${total} Found</span>
-            <span class="px-2 py-px rounded-full bg-[#14111d] text-[#fff8e7]">${pct}%</span>
+          <div class="relative z-[2] w-full px-1.5 flex items-center justify-center text-[13px] font-black" data-index-progress-text="true">
+            <span class="text-white mam-outline-sm tabular-nums leading-none tracking-wide" data-index-found-label="true">${found}/${total} Found</span>
+            <span class="absolute right-1.5 px-2 py-px rounded-full bg-[#14111d] text-[#fff8e7] tabular-nums leading-tight" data-index-pct-label="true">${pct}%</span>
           </div>
         </div>
       `,
@@ -511,17 +510,17 @@ export class IndexModalUi {
           }).join('')}
           <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 ${this.indexWorldId === 'weather' ? 'active' : ''}" data-index-world="weather">
             <span class="inline-flex items-center gap-1">${meteorIconHtml('celestial', 14, 'Weather')} Weather</span>
-            <span class="text-[10.5px] font-bold opacity-85">(${WEATHER_ORES.filter((o) => this.state.discovered.has(o.id)).length + getWeatherLimitedMiners().filter((m) => this.state.discovered.has(m.chibi.id)).length}/${WEATHER_ORES.length + getWeatherLimitedMiners().length})</span>
+            <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="weather">(${WEATHER_ORES.filter((o) => this.state.discovered.has(o.id)).length + getWeatherLimitedMiners().filter((m) => this.state.discovered.has(m.chibi.id)).length}/${WEATHER_ORES.length + getWeatherLimitedMiners().length})</span>
             ${this.buildTabReadyDotHtml('weather')}
           </button>
           <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 ${this.indexWorldId === 'fusion' ? 'active' : ''}" data-index-world="fusion">
             <span class="inline-flex items-center gap-1">✦ Fusion</span>
-            <span class="text-[10.5px] font-bold opacity-85">(${FUSION_RECIPES.filter((r) => this.state.discovered.has(r.resultChibiId)).length}/${FUSION_RECIPES.length})</span>
+            <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="fusion">(${FUSION_RECIPES.filter((r) => this.state.discovered.has(r.resultChibiId)).length}/${FUSION_RECIPES.length})</span>
             ${this.buildTabReadyDotHtml('fusion')}
           </button>
           <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 ${this.indexWorldId === 'limited' ? 'active' : ''}" data-index-world="limited">
             <span class="inline-flex items-center gap-1">★ Limited</span>
-            <span class="text-[10.5px] font-bold opacity-85">(${getDailyLoginLimitedChibiIds().filter((id) => this.state.discovered.has(id)).length}/${getDailyLoginLimitedChibiIds().length})</span>
+            <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="limited">(${getDailyLoginLimitedChibiIds().filter((id) => this.state.discovered.has(id)).length}/${getDailyLoginLimitedChibiIds().length})</span>
             ${this.buildTabReadyDotHtml('limited')}
           </button>
         </div>
@@ -721,17 +720,23 @@ export class IndexModalUi {
 
     const fill = root.querySelector<HTMLElement>('[data-index-fill="true"]');
     if (fill) fill.style.width = `${pct}%`;
-    const spans = root.querySelectorAll<HTMLElement>('[data-index-progress-text="true"] span');
-    if (spans.length >= 3) {
-      spans[1].textContent = `${found}/${total} Found`;
-      spans[2].textContent = `${pct}%`;
-    }
+    const foundLabel = root.querySelector<HTMLElement>('[data-index-found-label="true"]');
+    if (foundLabel) foundLabel.textContent = `${found}/${total} Found`;
+    const pctLabel = root.querySelector<HTMLElement>('[data-index-pct-label="true"]');
+    if (pctLabel) pctLabel.textContent = `${pct}%`;
 
     for (const w of WORLDS) {
       const wBadge = root.querySelector<HTMLElement>(`[data-index-world-count="${w.id}"]`);
       if (wBadge) {
         const wp = this.state.getWorldIndexProgress(w.id);
         wBadge.textContent = `(${wp.found}/${wp.total})`;
+      }
+    }
+    for (const tabId of ['weather', 'fusion', 'limited'] as const) {
+      const badge = root.querySelector<HTMLElement>(`[data-index-tab-count="${tabId}"]`);
+      if (badge) {
+        const tp = this.state.getIndexTabProgress(tabId);
+        badge.textContent = `(${tp.found}/${tp.total})`;
       }
     }
 

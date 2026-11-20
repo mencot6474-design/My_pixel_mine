@@ -9,9 +9,11 @@ import {
   getReadyAchievementCountDomain,
 } from './AchievementsDomain';
 import {
+  ALL_INDEX_TABS,
   claimIndexRewardDomain,
   getActiveIndexPassiveBonusesDomain,
   getIndexMilestonesForTab,
+  getIndexTabEntryIds,
   getIndexTabProgressDomain,
   getReadyIndexRewardCountDomain,
   getTabReadyIndexRewardCountDomain,
@@ -37,10 +39,8 @@ import {
   getOresByWorld,
   getWorldById,
   ItemRarity,
-  ORES,
   PICKAXE_RESTOCK_MS,
   rollEnchantDef,
-  WORLD_MINERS,
   WorldId,
   WorldResonanceStatus,
 } from './GameData';
@@ -316,16 +316,19 @@ export class GameState {
   }
 
   public getTotalIndexCount(): number {
-    return ORES.length + WORLD_MINERS.length;
+    let total = 0;
+    for (const tabId of ALL_INDEX_TABS) {
+      total += getIndexTabEntryIds(tabId).length;
+    }
+    return total;
   }
 
   public getDiscoveredCount(): number {
     let count = 0;
-    for (const ore of ORES) {
-      if (this.discovered.has(ore.id)) count++;
-    }
-    for (const wm of WORLD_MINERS) {
-      if (this.discovered.has(wm.chibiId)) count++;
+    for (const tabId of ALL_INDEX_TABS) {
+      for (const id of getIndexTabEntryIds(tabId)) {
+        if (this.discovered.has(id)) count++;
+      }
     }
     return count;
   }

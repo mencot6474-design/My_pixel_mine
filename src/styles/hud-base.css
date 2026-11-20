@@ -765,6 +765,29 @@
     --mam-ring-c2: #fde047;
   }
 
+  .mam-rarity-badge.is-compact {
+    padding: 2px 9px 2px 8px;
+    font-size: 8.5px;
+    letter-spacing: 0.04em;
+    margin-left: 4px;
+    gap: 3px;
+  }
+
+  .mam-rarity-badge.is-compact .mam-rarity-emblem {
+    width: 15px;
+    height: 15px;
+    margin: -4px 1px -4px -10px;
+  }
+
+  .mam-rarity-badge.is-compact .mam-rarity-emblem svg {
+    width: 8px;
+    height: 8px;
+  }
+
+  .mam-rarity-badge.is-compact .mam-rarity-spark {
+    font-size: 9px;
+  }
+
   /* ============================================================
    * Sticker-Pop Mutation Tier Badges & Mutation Strip Cards
    * ============================================================ */

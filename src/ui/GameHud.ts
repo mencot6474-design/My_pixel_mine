@@ -777,22 +777,9 @@ export class GameHud {
       const activeWorld = getWorldById(this.state.activeWorldId);
       const activeWorldNum = Math.max(1, getWorldIndex(this.state.activeWorldId) + 1);
       const upgradeCount = this.state.getAffordableResearchCount();
-      const resonances = this.state.getActiveWorldResonances();
-      const resonanceStripHtml = resonances.length
-        ? `<div class="absolute top-[68px] @max-[720px]:top-[54px] left-1/2 -translate-x-1/2 flex items-center gap-1.5 flex-wrap justify-center pointer-events-none">
-            ${resonances
-              .map((r) => {
-                const extras: string[] = [`+${Math.round(r.tier.dmgBonusPct * 100)}% DMG`];
-                if (r.tier.oreDropBonusPct > 0) extras.push(`+${Math.round(r.tier.oreDropBonusPct * 100)}% Ore`);
-                if (r.tier.gemBonusPct > 0) extras.push(`+${Math.round(r.tier.gemBonusPct * 100)}% Gem`);
-                return `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border-2 border-[#14111d] bg-[#e9d5ff] text-[11px] font-black text-[#14111d]">✦ ${r.worldName} (${r.count}) • ${extras.join(' • ')}</span>`;
-              })
-              .join('')}
-          </div>`
-        : '';
 
       this.root.innerHTML = `
-      ${this.weatherDpsUi.renderWeatherWidget()}
+      ${this.weatherDpsUi.renderWeatherWidget(Date.now(), true)}
       <div class="${TW_TOP_CENTER} flex flex-wrap items-center justify-center gap-2.5 @max-[720px]:gap-1.5">
         <button class="${TW_SHOPS_PILL} whitespace-nowrap" data-action="shops-pill">
           ${hudIconHtml('shops', 28, 'Shops')}
@@ -831,7 +818,6 @@ export class GameHud {
           >${activeWorldNum}</span>
         </button>
       </div>
-      ${resonanceStripHtml}
 
       <div class="absolute left-4 @max-[720px]:left-2.5 top-1/2 -translate-y-1/2 flex flex-col gap-2.5 @max-[720px]:gap-2">
         <button class="${TW_SIDE_BTN_RAINBOW}" data-action="open-shop">

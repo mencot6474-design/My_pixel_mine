@@ -1,7 +1,7 @@
 import { audio } from '../audio/AudioManager';
 import { assetUrl } from '../game/AssetUrl';
 import { FUSION_RECIPES, FusionRecipeDef, getFusionRecipeById } from '../game/FusionData';
-import { getMinerRarity, getOreById } from '../game/GameData';
+import { getOreById } from '../game/GameData';
 import { GameState } from '../game/GameState';
 import { fmtInt, fmtShort } from '../game/NumberFormat';
 import { getChibiById } from '../game3d/ChibiCatalog';
@@ -168,32 +168,30 @@ export class FusionHudUi {
       const ch = getChibiById(r.resultChibiId);
       const isSel = r.id === recipe.id;
       const isReady = this.state.canFuseRecipe(r.id);
-      const rarity = getMinerRarity(r.resultChibiId);
       return `
         <button
           type="button"
-          class="relative flex items-center gap-2 px-2.5 py-2 rounded-xl border-[2.5px] border-[#14111d] text-left cursor-pointer transition-transform duration-150 hover:scale-[0.97] even:hover:rotate-[1deg] odd:hover:-rotate-[1deg] active:scale-[0.94] ${
-            isSel ? 'bg-[#fde047] ring-[3px] ring-inset ring-[#14111d]' : 'bg-[#fff8e7] hover:bg-[#fcecc8]'
+          class="relative flex items-center gap-2 px-2 py-1.5 rounded-xl border-[2.5px] border-[#14111d] text-left cursor-pointer transition-transform duration-150 hover:scale-[0.97] active:scale-[0.94] ${
+            isSel ? 'bg-[#fde047] ring-[2.5px] ring-inset ring-[#14111d]' : 'bg-[#fff8e7] hover:bg-[#fcecc8]'
           }"
           data-fusion-select="${r.id}"
         >
-          <div class="w-11 h-11 rounded-lg border-2 border-[#14111d] shrink-0 flex items-center justify-center bg-white overflow-hidden [&_.mam-chibi-portrait_img]:max-w-[90%] [&_.mam-chibi-portrait_img]:max-h-[90%]">
+          <div class="w-9 h-9 rounded-lg border-2 border-[#14111d] shrink-0 flex items-center justify-center bg-white overflow-hidden [&_.mam-chibi-portrait_img]:max-w-[90%] [&_.mam-chibi-portrait_img]:max-h-[90%]">
             ${ch ? chibiPortraitHtml(ch, { usePose: true, draggable: false }) : ''}
           </div>
           <div class="flex-1 min-w-0 flex flex-col">
             <div class="flex items-center justify-between gap-1">
-              <span class="text-[12.5px] font-black text-[#14111d] truncate">${r.title}</span>
+              <span class="text-[12px] font-black text-[#14111d] truncate leading-tight">${r.title}</span>
               ${
                 isReady
-                  ? `<span class="px-1.5 py-0.5 rounded bg-[#4ade80] border border-[#14111d] text-[9px] font-black text-[#14111d] uppercase shrink-0">Ready</span>`
+                  ? `<span class="px-1 py-[1px] rounded bg-[#4ade80] border border-[#14111d] text-[8.5px] font-black text-[#14111d] uppercase shrink-0 leading-none">Ready</span>`
                   : ''
               }
             </div>
-            <div class="flex items-center gap-1.5 mt-1">
-              ${renderRarityBadgeHtml(rarity, '!px-1.5 !py-[1px] !text-[8.5px]')}
-              <span class="text-[10.5px] font-black tabular-nums text-[#b45309]">${ch ? `${fmtShort(ch.baseDps)}/s` : ''}</span>
+            <div class="flex items-center gap-1.5 mt-0.5 min-w-0">
+              <span class="text-[10px] font-black tabular-nums text-[#b45309] shrink-0">${ch ? `${fmtShort(ch.baseDps)}/s` : ''}</span>
+              <span class="text-[9.5px] font-extrabold text-[#0369a1] truncate">★ ${r.passive.label}</span>
             </div>
-            <div class="text-[10px] font-extrabold text-[#0369a1] truncate mt-0.5">★ ${r.passive.label}</div>
           </div>
         </button>
       `;
@@ -205,15 +203,15 @@ export class FusionHudUi {
         const avail = this.state.getAvailableFusionMinerCount(ing.chibiId);
         const ok = avail >= ing.count;
         return `
-          <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border-2 border-[#14111d] ${
+          <div class="flex items-center gap-1.5 px-2 py-1 rounded-xl border-2 border-[#14111d] ${
             ok ? 'bg-[#dcfce7]' : 'bg-[#fee2e2]'
           }">
-            <div class="w-9 h-9 rounded-lg bg-white border-[1.5px] border-[#14111d] shrink-0 flex items-center justify-center overflow-hidden [&_.mam-chibi-portrait_img]:max-w-[90%] [&_.mam-chibi-portrait_img]:max-h-[90%]">
+            <div class="w-7 h-7 rounded-lg bg-white border-[1.5px] border-[#14111d] shrink-0 flex items-center justify-center overflow-hidden [&_.mam-chibi-portrait_img]:max-w-[90%] [&_.mam-chibi-portrait_img]:max-h-[90%]">
               ${ch ? chibiPortraitHtml(ch, { usePose: true, draggable: false }) : ''}
             </div>
-            <div class="flex flex-col min-w-0">
-              <span class="text-[11.5px] font-black text-[#14111d] truncate">${ch?.name ?? ing.chibiId}</span>
-              <span class="text-[10.5px] font-black tabular-nums ${ok ? 'text-[#15803d]' : 'text-[#b91c1c]'}">${avail}/${ing.count} unplaced</span>
+            <div class="flex flex-col min-w-0 leading-tight">
+              <span class="text-[11px] font-black text-[#14111d] truncate max-w-[118px]">${ch?.name ?? ing.chibiId}</span>
+              <span class="text-[10px] font-black tabular-nums ${ok ? 'text-[#15803d]' : 'text-[#b91c1c]'}">${avail}/${ing.count} unplaced</span>
             </div>
           </div>
         `;
@@ -226,13 +224,13 @@ export class FusionHudUi {
         const have = this.state.getFusionOreCount(ing.oreId);
         const ok = have >= ing.count;
         return `
-          <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border-2 border-[#14111d] ${
+          <div class="flex items-center gap-1.5 px-2 py-1 rounded-xl border-2 border-[#14111d] ${
             ok ? 'bg-[#dcfce7]' : 'bg-[#fcecc8]'
           }">
-            <img src="${assetUrl(`/ores/${ing.oreId}.webp`)}" alt="${ore?.name ?? ing.oreId}" class="w-7 h-7 object-contain shrink-0" />
-            <div class="flex flex-col min-w-0">
-              <span class="text-[11px] font-black text-[#14111d] truncate">${ore?.name ?? ing.oreId}</span>
-              <span class="text-[10.5px] font-black tabular-nums ${ok ? 'text-[#15803d]' : 'text-[#b45309]'}">${fmtInt(have)}/${fmtInt(ing.count)}</span>
+            <img src="${assetUrl(`/ores/${ing.oreId}.webp`)}" alt="${ore?.name ?? ing.oreId}" class="w-6 h-6 object-contain shrink-0" />
+            <div class="flex flex-col min-w-0 leading-tight">
+              <span class="text-[11px] font-black text-[#14111d] truncate max-w-[110px]">${ore?.name ?? ing.oreId}</span>
+              <span class="text-[10px] font-black tabular-nums ${ok ? 'text-[#15803d]' : 'text-[#b45309]'}">${fmtInt(have)}/${fmtInt(ing.count)}</span>
             </div>
           </div>
         `;
@@ -299,31 +297,31 @@ export class FusionHudUi {
       `;
     } else {
       bottomSectionHtml = `
-        <div class="absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(1060px,calc(100%-24px))] flex flex-col gap-2 pointer-events-auto">
-          <div class="rounded-2xl border-[3px] border-[#14111d] bg-[#fff8e7] p-3 flex flex-col gap-2.5">
-            <div class="flex items-center justify-between gap-2 flex-wrap border-b-2 border-[#14111d]/15 pb-2">
-              <div class="flex items-center gap-2.5 min-w-0">
-                <span class="w-3.5 h-3.5 rounded-full border-2 border-[#14111d] shrink-0" style="background:${recipe.accentColor}"></span>
-                <div class="flex flex-col min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-[16px] font-black text-[#14111d] leading-tight">${recipe.title}</span>
-                    ${renderRarityBadgeHtml('fusion')}
-                    <span class="px-2 py-0.5 rounded-lg bg-[#e0f2fe] border-[1.5px] border-[#14111d] text-[11px] font-black text-[#0369a1]">★ Passive: ${recipe.passive.label}</span>
-                    ${resChibi ? `<span class="text-[13px] font-black tabular-nums text-[#b45309]">${fmtShort(resChibi.baseDps)}/s Base DPS</span>` : ''}
-                  </div>
-                  <span class="text-[11px] font-bold text-[#475569]">${recipe.subtitle} • Owned: ${fmtInt(ownedRes)}</span>
-                </div>
+        <div class="absolute bottom-2.5 left-1/2 -translate-x-1/2 w-[min(940px,calc(100%-20px))] flex flex-col gap-1.5 pointer-events-auto">
+          <div class="grid grid-cols-4 @max-[820px]:grid-cols-2 gap-1.5">
+            ${recipeCardsHtml}
+          </div>
+
+          <div class="rounded-2xl border-[3px] border-[#14111d] bg-[#fff8e7] px-3 py-2 flex flex-col gap-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap border-b-2 border-[#14111d]/12 pb-1.5">
+              <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                <span class="w-3 h-3 rounded-full border-2 border-[#14111d] shrink-0" style="background:${recipe.accentColor}"></span>
+                <span class="text-[15px] font-black text-[#14111d] leading-tight">${recipe.title}</span>
+                ${renderRarityBadgeHtml('fusion', 'is-compact')}
+                <span class="px-2 py-0.5 rounded-lg bg-[#e0f2fe] border-[1.5px] border-[#14111d] text-[10.5px] font-black text-[#0369a1]">★ ${recipe.passive.label}</span>
+                ${resChibi ? `<span class="text-[12px] font-black tabular-nums text-[#b45309]">${fmtShort(resChibi.baseDps)}/s</span>` : ''}
+                <span class="text-[11px] font-bold text-[#5b526e]">• Owned: ${fmtInt(ownedRes)}</span>
               </div>
               <div class="flex items-center gap-2">
-                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-[#14111d] ${
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border-2 border-[#14111d] ${
                   gemsOk ? 'bg-[#e0f2fe] text-[#0369a1]' : 'bg-[#fee2e2] text-[#b91c1c]'
-                } text-[13px] font-black tabular-nums">
-                  ${hudIconHtml('gem', 18, 'Gems')}
+                } text-[12.5px] font-black tabular-nums">
+                  ${hudIconHtml('gem', 16, 'Gems')}
                   <span>${fmtInt(recipe.gemCost)}</span>
                 </div>
                 <button
                   type="button"
-                  class="relative overflow-hidden px-6 py-2 rounded-xl border-[2.5px] border-[#14111d] text-[15px] font-black uppercase tracking-wide transition-transform duration-150 ${fuseBtnCls}"
+                  class="relative overflow-hidden px-5 py-1.5 rounded-xl border-[2.5px] border-[#14111d] text-[14px] font-black uppercase tracking-wide transition-transform duration-150 ${fuseBtnCls}"
                   data-action="execute-fusion"
                   ${!canFuse || this.fusing ? 'disabled' : ''}
                 >
@@ -332,14 +330,10 @@ export class FusionHudUi {
               </div>
             </div>
 
-            <div class="flex items-center gap-2 flex-wrap">
+            <div class="flex items-center gap-1.5 flex-wrap">
               ${minerChipsHtml}
               ${oreChipsHtml}
             </div>
-          </div>
-
-          <div class="grid grid-cols-4 @max-[860px]:grid-cols-2 gap-2">
-            ${recipeCardsHtml}
           </div>
         </div>
       `;
@@ -347,10 +341,10 @@ export class FusionHudUi {
 
     return `
       ${opts.weatherHtml}
-      <div class="${TW_TOP_CENTER} flex items-center gap-2.5">
-        <button class="px-[38px] py-2 rounded-2xl border-[3px] border-[#14111d] bg-[#fb923c] hover:bg-[#fdba74] text-[#14111d] text-[19px] font-black cursor-pointer transition-transform duration-150 hover:scale-[0.97] active:scale-[0.94]" data-action="fusion-back">Back</button>
-        <button class="px-4 py-2 rounded-2xl border-[3px] border-[#14111d] bg-[#c084fc] hover:bg-[#d8b4fe] text-[#14111d] text-[16px] font-black cursor-pointer inline-flex items-center gap-1.5 transition-transform duration-150 hover:scale-[0.97] active:scale-[0.94]" data-action="switch-to-altar">
-          ${hudIconHtml('enchant', 22, 'Enchant')}
+      <div class="${TW_TOP_CENTER} flex items-center gap-2">
+        <button class="h-11 @max-[720px]:h-9 px-7 @max-[720px]:px-4 rounded-2xl border-[3px] border-[#14111d] bg-[#fb923c] hover:bg-[#fdba74] text-[#14111d] text-[17px] @max-[720px]:text-[14px] font-black cursor-pointer inline-flex items-center justify-center transition-transform duration-150 hover:scale-[0.97] active:scale-[0.94]" data-action="fusion-back">Back</button>
+        <button class="h-11 @max-[720px]:h-9 px-4 @max-[720px]:px-3 rounded-2xl border-[3px] border-[#14111d] bg-[#c084fc] hover:bg-[#d8b4fe] text-[#14111d] text-[15px] @max-[720px]:text-[13px] font-black cursor-pointer inline-flex items-center gap-1.5 transition-transform duration-150 hover:scale-[0.97] active:scale-[0.94]" data-action="switch-to-altar">
+          ${hudIconHtml('enchant', 20, 'Enchant')}
           <span>Enchant Altar</span>
         </button>
       </div>

@@ -48,24 +48,6 @@ interface OreCrystalNode {
   baseY: number;
   phase: number;
 }
-interface FusionNpcWalker {
-  id: string;
-  sprite: ChibiSprite3D;
-  holoCube: THREE.Mesh;
-  homeX: number;
-  homeZ: number;
-  patrolX: number;
-  patrolZ: number;
-  x: number;
-  z: number;
-  targetX: number;
-  targetZ: number;
-  pauseTimer: number;
-  bubbleText: string | null;
-  bubbleTimer: number;
-  nextBubbleCooldown: number;
-  facingRight: boolean;
-}
 interface EnergyOrb {
   mesh: THREE.Mesh;
   mat: THREE.MeshBasicMaterial;
@@ -76,26 +58,12 @@ interface EnergyOrb {
   arcH: number;
 }
 const MAX_MAT_SLOTS = 3;
-const PORTAL_CENTER = new THREE.Vector3(0, 5.15, -6.85);
-const STAGE_CENTER_Z = -2.45;
+const PORTAL_CENTER = new THREE.Vector3(0, 5.45, -7.15);
+const STAGE_CENTER_Z = -2.85;
 const STAGE_DECK_Y = 0.76;
-const APEX_PODIUM_SCALE = 1.32;
-const MAT_PODIUM_SCALE = 1.12;
+const APEX_PODIUM_SCALE = 1.68;
+const MAT_PODIUM_SCALE = 1.48;
 const DAIS_TOP_Y = STAGE_DECK_Y + 0.285 * APEX_PODIUM_SCALE;
-const FUSION_NPC_DEFAULT_LINES: readonly string[] = [
-  'Synthesizing cyber-core...',
-  'Need more Azurine!',
-  'Energy levels stable!',
-  'Synchro Portal rings aligned!',
-  'Calibrating quantum resonators...',
-  'Hologram matrix locked!',
-];
-const FUSION_NPC_READY_LINES: readonly string[] = [
-  'All materials ready! Hit FUSE!',
-  'Synchro output at 100%!',
-  'Energy levels stable!',
-  'Portal resonance critical - ready!',
-];
 export class FusionWorld3D {
   public readonly group = new THREE.Group();
   private readonly impactFx = new AttackImpactFxController({ floorY: DAIS_TOP_Y });
@@ -133,11 +101,8 @@ export class FusionWorld3D {
   private readonly lightBeamInnerMesh: THREE.Mesh;
   private readonly lightBeamOuterMat: THREE.MeshBasicMaterial;
   private readonly lightBeamInnerMat: THREE.MeshBasicMaterial;
-  private readonly starField: THREE.Points;
   private readonly floatingIslands: FloatingIslandNode[] = [];
   private readonly oreClusters: OreCrystalNode[] = [];
-  private readonly fusionNpcs: FusionNpcWalker[] = [];
-  private readonly npcProjVec = new THREE.Vector3();
   private readonly materialSlots: MaterialPedestalSlot[] = [];
   private readonly resultMount = new THREE.Group();
   private resultSprite: ChibiSprite3D | null = null;
@@ -156,7 +121,6 @@ export class FusionWorld3D {
   private fusionAccentHex = '#22d3ee';
   private fusionGlowHex = '#d946ef';
   private allRequirementsReady = false;
-  private missingOreName: string | null = null;
   private onFusionAnimComplete: (() => void) | null = null;
   private revealPopTimer = 0;
   private portalFlashTimer = 0;
@@ -221,32 +185,7 @@ export class FusionWorld3D {
       this.deckTrimMagentaMat,
       this.stageNeonMat
     );
-    // 1. Wide Cosmic Starfield
-    const starCount = 340;
-    const starPos = new Float32Array(starCount * 3);
-    for (let i = 0; i < starCount; i++) {
-      const r = 24 + Math.random() * 38;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      starPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      starPos[i * 3 + 1] = Math.abs(r * Math.cos(phi)) * 0.72 + 1.2;
-      starPos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta) - 3;
-    }
-    const starGeo = new THREE.BufferGeometry();
-    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-    const starMat = new THREE.PointsMaterial({
-      color: '#bae6fd',
-      size: 0.24,
-      transparent: true,
-      opacity: 0.85,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-    this.ownedGeos.push(starGeo);
-    this.ownedMats.push(starMat);
-    this.starField = new THREE.Points(starGeo, starMat);
-    this.group.add(this.starField);
-    // 2. Expanded 23m-Wide Multi-Layered Octagonal Arena Deck + Dual Neon Trims + 17.2m Circuit Grid
+    // 1. Expanded 23m-Wide Multi-Layered Octagonal Arena Deck + Dual Neon Trims + 17.2m Circuit Grid
     this.buildExpandedOctagonalArenaDeck(darkBasaltMat);
     this.magicCircleMat = new THREE.MeshBasicMaterial({
       map: getFusionMagicCircuitTexture(),
@@ -266,7 +205,7 @@ export class FusionWorld3D {
     this.magicCircleMesh.position.y = 0.036;
     this.magicCircleMesh.renderOrder = 1;
     this.group.add(this.magicCircleMesh);
-    const innerRingGeo = new THREE.RingGeometry(2.75, 2.92, 48);
+    const innerRingGeo = new THREE.RingGeometry(3.45, 3.65, 56);
     this.innerRingMat = new THREE.MeshBasicMaterial({
       color: '#38bdf8',
       transparent: true,
@@ -280,11 +219,10 @@ export class FusionWorld3D {
     });
     this.innerRingMesh = new THREE.Mesh(innerRingGeo, this.innerRingMat);
     this.innerRingMesh.rotation.x = -Math.PI / 2;
-    // Center in the open front Crescent Arc arena instead of underneath the rear stage stairs
-    this.innerRingMesh.position.set(0, 0.048, 1.35);
+    this.innerRingMesh.position.set(0, 0.048, 0.35);
     this.innerRingMesh.renderOrder = 2;
     this.group.add(this.innerRingMesh);
-    const outerRingGeo = new THREE.RingGeometry(6.85, 7.08, 64);
+    const outerRingGeo = new THREE.RingGeometry(7.25, 7.48, 64);
     this.outerRingMat = new THREE.MeshBasicMaterial({
       color: '#d946ef',
       transparent: true,
@@ -400,8 +338,6 @@ export class FusionWorld3D {
     // 7. Physical Recipe Ore Crystal Clusters + 8 Large Floating Cosmic Islands
     this.buildRecipeOreClusters();
     this.buildFloatingCosmicIslands(darkBasaltMat);
-    // 8. Alchemist / Cyber-Scientist NPCs + Holographic Consoles
-    this.buildFusionNpcs();
     // Default initial preview
     if (FUSION_RECIPES[0]) {
       this.syncRecipe(FUSION_RECIPES[0], [false, false], [false, false], false);
@@ -514,7 +450,7 @@ export class FusionWorld3D {
     }
   }
   private buildRecipeOreClusters(): void {
-    // 4 physical Ore Crystal Clusters flanking the expanded arena deck (Left pair = Ore 0, Right pair = Ore 1)
+    // 4 physical Ore Crystal Clusters flanking the stage & material podiums (Left pair = Ore 0, Right pair = Ore 1)
     const specs: ReadonlyArray<{
       x: number;
       z: number;
@@ -523,10 +459,10 @@ export class FusionWorld3D {
       defaultHex: string;
       phase: number;
     }> = [
-      { x: -7.85, z: 2.15, scale: 1.45, oreSlotIndex: 0, defaultHex: '#38bdf8', phase: 0.2 },
-      { x: -3.65, z: 5.85, scale: 1.15, oreSlotIndex: 0, defaultHex: '#38bdf8', phase: 1.5 },
-      { x: 7.85, z: 2.15, scale: 1.45, oreSlotIndex: 1, defaultHex: '#facc15', phase: 0.8 },
-      { x: 3.65, z: 5.85, scale: 1.15, oreSlotIndex: 1, defaultHex: '#facc15', phase: 2.3 },
+      { x: -6.85, z: -2.85, scale: 1.45, oreSlotIndex: 0, defaultHex: '#38bdf8', phase: 0.2 },
+      { x: -7.55, z: 1.85, scale: 1.3, oreSlotIndex: 0, defaultHex: '#38bdf8', phase: 1.5 },
+      { x: 6.85, z: -2.85, scale: 1.45, oreSlotIndex: 1, defaultHex: '#facc15', phase: 0.8 },
+      { x: 7.55, z: 1.85, scale: 1.3, oreSlotIndex: 1, defaultHex: '#facc15', phase: 2.3 },
     ];
     const shardGeo = new THREE.OctahedronGeometry(0.16, 0);
     this.ownedGeos.push(shardGeo);
@@ -578,96 +514,6 @@ export class FusionWorld3D {
     }
   }
   private buildFloatingCosmicIslands(darkBasaltMat: THREE.Material): void { buildFloatingCosmicIslands(this.arenaBuildCtx(), darkBasaltMat); }
-  private buildFusionNpcs(): void {
-    // 2 Alchemist / Cyber-Scientist NPCs with Holographic Control Consoles on the wide lateral observation bays
-    const npcConfigs: ReadonlyArray<{
-      id: string;
-      chibiId: string;
-      consoleX: number;
-      consoleZ: number;
-      homeX: number;
-      homeZ: number;
-      patrolX: number;
-      patrolZ: number;
-      accentHex: string;
-    }> = [
-      {
-        id: 'fusion-npc-left',
-        chibiId: 'chrono-sovereign',
-        consoleX: -8.15,
-        consoleZ: -0.95,
-        homeX: -7.35,
-        homeZ: -0.85,
-        patrolX: -6.85,
-        patrolZ: -2.45,
-        accentHex: '#22d3ee',
-      },
-      {
-        id: 'fusion-npc-right',
-        chibiId: 'nebula-hex',
-        consoleX: 8.15,
-        consoleZ: -0.95,
-        homeX: 7.35,
-        homeZ: -0.85,
-        patrolX: 6.85,
-        patrolZ: -2.45,
-        accentHex: '#d946ef',
-      },
-    ];
-    const standGeo = new THREE.CylinderGeometry(0.26, 0.38, 0.9, 6);
-    const screenFrameGeo = new THREE.BoxGeometry(0.84, 0.52, 0.08);
-    const holoCubeGeo = new THREE.OctahedronGeometry(0.2, 0);
-    this.ownedGeos.push(standGeo, screenFrameGeo, holoCubeGeo);
-    for (let i = 0; i < npcConfigs.length; i++) {
-      const cfg = npcConfigs[i];
-      const screenMat = new THREE.MeshStandardMaterial({
-        color: cfg.accentHex,
-        emissive: cfg.accentHex,
-        emissiveIntensity: 1.3,
-        roughness: 0.2,
-        metalness: 0.3,
-        flatShading: true,
-      });
-      this.ownedMats.push(screenMat);
-      const consoleGroup = new THREE.Group();
-      consoleGroup.position.set(cfg.consoleX, 0.04, cfg.consoleZ);
-      consoleGroup.lookAt(0, 0.04, STAGE_CENTER_Z);
-      const stand = new THREE.Mesh(standGeo, this.armorSteelMat);
-      stand.position.y = 0.45;
-      stand.castShadow = true;
-      const screen = new THREE.Mesh(screenFrameGeo, this.brightSteelMat);
-      screen.position.set(0, 0.96, 0.06);
-      screen.rotation.x = -0.55;
-      const holoCube = new THREE.Mesh(holoCubeGeo, screenMat);
-      holoCube.position.set(0, 1.38, 0.05);
-      consoleGroup.add(stand, screen, holoCube);
-      this.group.add(consoleGroup);
-      const def = getChibiById(cfg.chibiId);
-      if (!def) continue;
-      const sprite = new ChibiSprite3D(def, 1.56, i * 1.7);
-      sprite.group.position.set(cfg.homeX, 0.04, cfg.homeZ);
-      sprite.setAccentColor(cfg.accentHex);
-      this.group.add(sprite.group);
-      this.fusionNpcs.push({
-        id: cfg.id,
-        sprite,
-        holoCube,
-        homeX: cfg.homeX,
-        homeZ: cfg.homeZ,
-        patrolX: cfg.patrolX,
-        patrolZ: cfg.patrolZ,
-        x: cfg.homeX,
-        z: cfg.homeZ,
-        targetX: cfg.patrolX,
-        targetZ: cfg.patrolZ,
-        pauseTimer: 1.2 + i * 1.4,
-        bubbleText: i === 0 ? 'Synthesizing cyber-core...' : 'Energy levels stable!',
-        bubbleTimer: 3.4,
-        nextBubbleCooldown: 4.5 + i * 2.0,
-        facingRight: cfg.homeX < 0,
-      });
-    }
-  }
   public isAnimating(): boolean {
     return this.fusionAnimTimer > 0;
   }
@@ -695,18 +541,18 @@ export class FusionWorld3D {
       if (elapsedAnim < 1.72) {
         // Act 1 & 2: Glide closer to frame the levitating Material Chibis converging into the Synchro Gate
         const p = Math.min(1, elapsedAnim / 1.45);
-        this.camFocusPos.set(0, 7.2 - p * 1.1, 13.2 - p * 2.4);
-        this.camFocusLook.set(0, 1.85 + p * 1.1, -1.6 - p * 2.1);
+        this.camFocusPos.set(0, 7.8 - p * 1.1, 14.2 - p * 2.4);
+        this.camFocusLook.set(0, 2.1 + p * 1.1, -1.8 - p * 2.1);
       } else {
         // Act 3: Heroic low-angle close-up on the Grand APEX Podium & spinning Synchro Gate Halo
-        this.camFocusPos.set(0, 3.35, 3.85);
-        this.camFocusLook.set(0, 2.55, STAGE_CENTER_Z - 0.35);
+        this.camFocusPos.set(0, 3.75, 4.35);
+        this.camFocusLook.set(0, 3.05, STAGE_CENTER_Z - 0.3);
       }
       return { active: true, camPos: this.camFocusPos, lookAt: this.camFocusLook };
     }
     if (this.revealHold) {
-      this.camFocusPos.set(0, 3.35, 3.85);
-      this.camFocusLook.set(0, 2.55, STAGE_CENTER_Z - 0.35);
+      this.camFocusPos.set(0, 3.75, 4.35);
+      this.camFocusLook.set(0, 3.05, STAGE_CENTER_Z - 0.3);
       return { active: true, camPos: this.camFocusPos, lookAt: this.camFocusLook };
     }
     return { active: false, camPos: this.camFocusPos, lookAt: this.camFocusLook };
@@ -773,15 +619,6 @@ export class FusionWorld3D {
       ? recipe.requiredOres.every((_, idx) => Boolean(oreReadyFlags[idx]))
       : minersAllReady;
     this.allRequirementsReady = canFuse ?? (minersAllReady && oresAllReady);
-    this.missingOreName = null;
-    for (let i = 0; i < recipe.requiredOres.length; i++) {
-      const oreReady = oreReadyFlags ? Boolean(oreReadyFlags[i]) : this.allRequirementsReady;
-      if (!oreReady) {
-        this.missingOreName =
-          getOreById(recipe.requiredOres[i].oreId)?.name ?? recipe.requiredOres[i].oreId;
-        break;
-      }
-    }
     // Update Grand Apex Podium Aura, Stage Trims & Rear Synchro Portal
     this.applyPodiumTheme(
       this.apexPodium,
@@ -857,13 +694,13 @@ export class FusionWorld3D {
     const coords: Array<[number, number]> =
       count === 2
         ? [
-            [-4.55, 2.05],
-            [4.55, 2.05],
+            [-4.65, 0.95],
+            [4.65, 0.95],
           ]
         : [
-            [-5.35, 1.05],
-            [5.35, 1.05],
-            [0, 3.45],
+            [-4.95, 0.55],
+            [4.95, 0.55],
+            [0, 2.35],
           ];
     for (let i = 0; i < MAX_MAT_SLOTS; i++) {
       const slot = this.materialSlots[i];
@@ -879,13 +716,21 @@ export class FusionWorld3D {
       slot.pos.set(px, slot.podium.topY, pz);
       slot.podium.group.position.set(px, 0, pz);
       slot.podium.group.visible = true;
-      // Orient floor energy conduit channel from material podium into the Elevated Rear Stage (0, STAGE_CENTER_Z)
-      const dx = px;
-      const dz = pz - STAGE_CENTER_Z;
+      // Orient floor energy conduit cleanly from podium rim into the stage/stair threshold without clipping treads
+      const isCenterFront = count === 3 && i === 2;
+      const targetX = isCenterFront ? 0 : px * 0.38;
+      const targetZ = isCenterFront ? STAGE_CENTER_Z + 3.05 : STAGE_CENTER_Z + 1.65;
+      const dx = px - targetX;
+      const dz = pz - targetZ;
       const dist = Math.hypot(dx, dz);
-      const conduitLen = Math.max(0.8, dist - 2.95);
+      const startPad = 1.28;
+      const endPad = 0.08;
+      const conduitLen = Math.max(0.55, dist - startPad - endPad);
+      const nx = dist > 0.001 ? dx / dist : 0;
+      const nz = dist > 0.001 ? dz / dist : 1;
+      const midDist = endPad + conduitLen * 0.5;
       slot.conduitGroup.visible = true;
-      slot.conduitGroup.position.set(px * 0.52, 0, STAGE_CENTER_Z + dz * 0.52);
+      slot.conduitGroup.position.set(targetX + nx * midDist, 0, targetZ + nz * midDist);
       slot.conduitGroup.scale.set(1, 1, conduitLen);
       slot.conduitGroup.rotation.set(0, Math.atan2(dx, dz), 0);
       const def = getChibiById(ing.chibiId);
@@ -916,7 +761,7 @@ export class FusionWorld3D {
         }
         slot.chibiId = ing.chibiId;
         if (def) {
-          const sp = new ChibiSprite3D(def, 2.05 / MAT_PODIUM_SCALE);
+          const sp = new ChibiSprite3D(def, 2.95 / MAT_PODIUM_SCALE);
           sp.group.position.set(0, 0.285, 0);
           sp.setAccentColor(def.accentColor);
           slot.podium.group.add(sp.group);
@@ -937,7 +782,7 @@ export class FusionWorld3D {
       this.resultChibiId = recipe.resultChibiId;
       const resDef = getChibiById(recipe.resultChibiId);
       if (resDef) {
-        const sp = new ChibiSprite3D(resDef, 2.95);
+        const sp = new ChibiSprite3D(resDef, 3.85);
         sp.setAccentColor(recipe.accentColor);
         this.resultMount.add(sp.group);
         this.resultSprite = sp;
@@ -990,93 +835,12 @@ export class FusionWorld3D {
       }
     }
   }
-  private pickNpcBubbleLine(): string {
-    if (this.allRequirementsReady) {
-      return (
-        FUSION_NPC_READY_LINES[Math.floor(Math.random() * FUSION_NPC_READY_LINES.length)] ??
-        'All materials ready! Hit FUSE!'
-      );
-    }
-    if (this.missingOreName && Math.random() < 0.42) {
-      return `Need more ${this.missingOreName}!`;
-    }
-    return (
-      FUSION_NPC_DEFAULT_LINES[Math.floor(Math.random() * FUSION_NPC_DEFAULT_LINES.length)] ??
-      'Synthesizing cyber-core...'
-    );
-  }
-  private updateFusionNpcs(dt: number, elapsed: number, camera?: THREE.Camera): void {
-    const walkSpeed = 1.55;
-    for (let i = 0; i < this.fusionNpcs.length; i++) {
-      const npc = this.fusionNpcs[i];
-      npc.holoCube.rotation.y = elapsed * 1.8 + i;
-      npc.holoCube.rotation.x = elapsed * 1.1;
-      npc.holoCube.position.y = 1.38 + Math.sin(elapsed * 3.0 + i) * 0.06;
-      if (npc.bubbleTimer > 0) {
-        npc.bubbleTimer = Math.max(0, npc.bubbleTimer - dt);
-        if (npc.bubbleTimer <= 0) {
-          npc.bubbleText = null;
-        }
-      }
-      if (npc.nextBubbleCooldown > 0) {
-        npc.nextBubbleCooldown -= dt;
-      }
-      if (npc.pauseTimer > 0) {
-        npc.pauseTimer -= dt;
-        npc.sprite.setAnimState('idle');
-        if (npc.nextBubbleCooldown <= 0) {
-          npc.bubbleText = this.pickNpcBubbleLine();
-          npc.bubbleTimer = 3.2;
-          npc.nextBubbleCooldown = 5.2 + Math.random() * 3.5;
-        }
-        if (npc.pauseTimer <= 0) {
-          const atHome = Math.hypot(npc.x - npc.homeX, npc.z - npc.homeZ) < 0.35;
-          npc.targetX = atHome ? npc.patrolX : npc.homeX;
-          npc.targetZ = atHome ? npc.patrolZ : npc.homeZ;
-          npc.sprite.setAnimState('dash');
-        }
-      } else {
-        const dx = npc.targetX - npc.x;
-        const dz = npc.targetZ - npc.z;
-        const dist = Math.hypot(dx, dz);
-        if (dist < 0.12) {
-          npc.pauseTimer = 2.4 + Math.random() * 2.2;
-          npc.sprite.setAnimState('idle');
-          npc.facingRight = npc.x < 0;
-        } else {
-          const step = Math.min(dist, walkSpeed * dt);
-          npc.x += (dx / dist) * step;
-          npc.z += (dz / dist) * step;
-          npc.facingRight = dx >= 0;
-          npc.sprite.setAnimState('dash');
-        }
-      }
-      npc.sprite.group.position.set(npc.x, 0.04, npc.z);
-      npc.sprite.setFacing(npc.facingRight ? 1 : -1);
-      if (camera) {
-        npc.sprite.update(dt, elapsed, camera);
-      }
-    }
-  }
   public getNpcBubbleAnchors(
-    camera: THREE.Camera,
-    width: number,
-    height: number
+    _camera: THREE.Camera,
+    _width: number,
+    _height: number
   ): ShopChibiBubbleAnchor[] {
-    if (!this.group.visible) return [];
-    const out: ShopChibiBubbleAnchor[] = [];
-    for (const npc of this.fusionNpcs) {
-      if (!npc.bubbleText || npc.bubbleTimer <= 0) continue;
-      this.npcProjVec.set(npc.x, 2.15, npc.z).project(camera);
-      if (this.npcProjVec.z <= -1 || this.npcProjVec.z >= 1) continue;
-      out.push({
-        id: npc.id,
-        x: (this.npcProjVec.x * 0.5 + 0.5) * width,
-        y: (-this.npcProjVec.y * 0.5 + 0.5) * height,
-        text: npc.bubbleText,
-      });
-    }
-    return out;
+    return [];
   }
   private stepPodiumAura(podium: CyberShowcasePodiumHandle, elapsed: number): void {
     if (!podium.auraGroup.visible) return;
@@ -1091,8 +855,7 @@ export class FusionWorld3D {
     const isFusing = this.fusionAnimTimer > 0;
     const readyPulse = this.allRequirementsReady ? 0.5 + 0.5 * Math.sin(elapsed * 4.6) : 0;
     const spinBoost = isFusing ? 7.2 : this.allRequirementsReady ? 1.85 : 0.75;
-    // 1. Rotate Cosmic Starfield, Floor Magic Circle, Podium Auras & Triple Synchro Portal Rings
-    this.starField.rotation.y = elapsed * 0.025;
+    // 1. Rotate Floor Magic Circle, Podium Auras & Triple Synchro Portal Rings
     this.magicCircleMesh.rotation.z = elapsed * 0.14 * (this.allRequirementsReady ? 1.6 : 0.6);
     this.innerRingMesh.rotation.z += dt * 0.78 * spinBoost;
     this.outerRingMesh.rotation.z -= dt * 0.46 * spinBoost;
@@ -1196,16 +959,14 @@ export class FusionWorld3D {
       isl.group.position.y = isl.baseY + Math.sin(elapsed * isl.bobSpeed + isl.phase) * 0.28;
       isl.group.rotation.y = Math.sin(elapsed * 0.25 + isl.phase) * 0.12;
     }
-    // 5. Update Alchemist / Scientist NPCs
-    this.updateFusionNpcs(dt, elapsed, camera);
-    // 6. Levitate or Descend Result Fusion Chibi on Grand Apex Podium
+    // 5. Levitate or Descend Result Fusion Chibi on Grand Apex Podium
     const popScale =
       this.revealPopTimer > 0 ? 1 + Math.sin((this.revealPopTimer / 0.58) * Math.PI) * 0.28 : 1;
     if (this.revealPopTimer > 0) this.revealPopTimer = Math.max(0, this.revealPopTimer - dt);
     if (isFusing && elapsedAnim >= 1.98) {
       const descendP = Math.min(1, (elapsedAnim - 1.98) / 0.42);
       const easeOut = 1 - Math.pow(1 - descendP, 3);
-      this.resultMount.position.y = THREE.MathUtils.lerp(4.25, DAIS_TOP_Y + 0.04, easeOut);
+      this.resultMount.position.y = THREE.MathUtils.lerp(4.95, DAIS_TOP_Y + 0.04, easeOut);
     } else {
       this.resultMount.position.y = DAIS_TOP_Y + 0.04 + Math.sin(elapsed * 2.4) * 0.08;
     }
@@ -1331,11 +1092,6 @@ export class FusionWorld3D {
         slot.sprite = null;
       }
     }
-    for (const npc of this.fusionNpcs) {
-      this.group.remove(npc.sprite.group);
-      npc.sprite.dispose();
-    }
-    this.fusionNpcs.length = 0;
     for (const disposeFn of this.customDisposers) {
       disposeFn();
     }

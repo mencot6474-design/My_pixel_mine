@@ -36,8 +36,8 @@ export interface FusionArenaBuildCtx {
   customDisposers: Array<() => void>;
 }
 
-const PORTAL_CENTER = new THREE.Vector3(0, 5.15, -6.85);
-const STAGE_CENTER_Z = -2.45;
+const PORTAL_CENTER = new THREE.Vector3(0, 5.45, -7.15);
+const STAGE_CENTER_Z = -2.85;
 const STAGE_DECK_Y = 0.76;
 
 export function buildExpandedOctagonalArenaDeck(ctx: FusionArenaBuildCtx, darkBasaltMat: THREE.Material): void {
@@ -98,17 +98,17 @@ export function buildElevatedShowcaseStage(ctx: FusionArenaBuildCtx): void {
   const stageGroup = new THREE.Group();
   stageGroup.position.set(0, 0, STAGE_CENTER_Z);
   ctx.group.add(stageGroup);
-  const stageBaseGeo = createChamferPadGeometry(7.6, 0.46, 3.8, 0.55, 0.02);
-  const rackDeckGeo = createChamferPadGeometry(7.1, 0.3, 3.4, 0.48, 0.018);
-  const rearBridgeGeo = new THREE.BoxGeometry(1.45, 0.07, 2.4);
-  const frontTrimGeo = new THREE.BoxGeometry(2.25, 0.07, 0.11);
-  const rearTrimGeo = new THREE.BoxGeometry(6.8, 0.07, 0.11);
-  const sideWingGeo = createChamferPadGeometry(1.45, 0.14, 2.4, 0.22, 0.014);
-  const stepGeo = new THREE.BoxGeometry(2.48, 0.16, 0.36);
-  const stepLedGeo = new THREE.BoxGeometry(2.42, 0.035, 0.055);
-  const cheekGeo = new THREE.BoxGeometry(0.24, 0.88, 1.62);
-  const cheekCapGeo = new THREE.BoxGeometry(0.28, 0.07, 1.66);
-  const cheekLedGeo = new THREE.BoxGeometry(0.06, 0.035, 1.62);
+  const stageBaseGeo = createChamferPadGeometry(8.4, 0.46, 4.3, 0.58, 0.02);
+  const rackDeckGeo = createChamferPadGeometry(7.8, 0.3, 3.9, 0.5, 0.018);
+  const rearBridgeGeo = new THREE.BoxGeometry(1.55, 0.07, 2.4);
+  const frontTrimGeo = new THREE.BoxGeometry(2.55, 0.07, 0.11);
+  const rearTrimGeo = new THREE.BoxGeometry(7.5, 0.07, 0.11);
+  const sideWingGeo = createChamferPadGeometry(1.55, 0.14, 2.7, 0.24, 0.014);
+  const stepGeo = new THREE.BoxGeometry(2.56, 0.16, 0.36);
+  const stepLedGeo = new THREE.BoxGeometry(2.48, 0.035, 0.055);
+  const cheekGeo = new THREE.BoxGeometry(0.24, 0.88, 1.56);
+  const cheekCapGeo = new THREE.BoxGeometry(0.28, 0.07, 1.6);
+  const cheekLedGeo = new THREE.BoxGeometry(0.06, 0.035, 1.56);
   ctx.ownedGeos.push(
     stageBaseGeo,
     rackDeckGeo,
@@ -131,39 +131,39 @@ export function buildElevatedShowcaseStage(ctx: FusionArenaBuildCtx): void {
   rackDeck.castShadow = true;
   // Low-profile floor conduit runway connecting stage to rear portal dock (zero collision with floating rings)
   const rearBridge = new THREE.Mesh(rearBridgeGeo, ctx.armorSteelMat);
-  rearBridge.position.set(0, 0.035, -2.55);
+  rearBridge.position.set(0, 0.035, -2.75);
   rearBridge.receiveShadow = true;
   stageGroup.add(stageBase, rackDeck, rearBridge);
   for (const sx of [-1, 1]) {
     const sideWing = new THREE.Mesh(sideWingGeo, ctx.brightSteelMat);
-    sideWing.position.set(sx * 2.45, STAGE_DECK_Y - 0.02, 0);
+    sideWing.position.set(sx * 2.75, STAGE_DECK_Y - 0.02, 0);
     sideWing.receiveShadow = true;
     sideWing.castShadow = true;
     const frontTrim = new THREE.Mesh(frontTrimGeo, ctx.stageNeonMat);
-    frontTrim.position.set(sx * 2.38, STAGE_DECK_Y - 0.02, 1.71);
+    frontTrim.position.set(sx * 2.55, STAGE_DECK_Y - 0.02, 1.96);
     stageGroup.add(sideWing, frontTrim);
   }
   const rearTrim = new THREE.Mesh(rearTrimGeo, ctx.stageNeonMat);
-  rearTrim.position.set(0, STAGE_DECK_Y - 0.02, -1.71);
+  rearTrim.position.set(0, STAGE_DECK_Y - 0.02, -1.96);
   stageGroup.add(rearTrim);
   // Futuristic Steel Stairwell & Illuminated Treads Descending Forward from the Apex Stage
   for (const sx of [-1, 1]) {
     const cheek = new THREE.Mesh(cheekGeo, ctx.armorSteelMat);
-    cheek.position.set(sx * 1.36, 0.38, 2.15);
+    cheek.position.set(sx * 1.4, 0.38, 2.38);
     cheek.castShadow = true;
     cheek.receiveShadow = true;
     const cheekCap = new THREE.Mesh(cheekCapGeo, ctx.brightSteelMat);
-    cheekCap.position.set(sx * 1.36, 0.84, 2.15);
+    cheekCap.position.set(sx * 1.4, 0.84, 2.38);
     cheekCap.castShadow = true;
     const cheekLed = new THREE.Mesh(cheekLedGeo, ctx.stageNeonMat);
-    cheekLed.position.set(sx * 1.36, 0.88, 2.15);
+    cheekLed.position.set(sx * 1.4, 0.88, 2.38);
     stageGroup.add(cheek, cheekCap, cheekLed);
   }
   const stairStepCount = 4;
   for (let s = 0; s < stairStepCount; s++) {
     const t = (s + 0.5) / stairStepCount;
     const stepY = STAGE_DECK_Y - 0.06 - t * 0.64;
-    const stepZ = 1.56 + t * 1.32;
+    const stepZ = 1.82 + t * 1.24;
     const stepMesh = new THREE.Mesh(stepGeo, ctx.armorSteelMat);
     stepMesh.position.set(0, stepY, stepZ);
     stepMesh.castShadow = true;
