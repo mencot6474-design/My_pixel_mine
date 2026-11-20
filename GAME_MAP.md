@@ -36,7 +36,7 @@ docs/superpowers/               Design specs & implementation plans (`specs/`, `
 === ENTRY & TESTS ===
 src/main.ts                     455 baris — Bootstrap Three.js scene (`MineScene3D`), `GameState`, `GameHud` (+ plot drop, Fusion 3D ops & `setFusionRevealHold` camera lock, 3D label sync ops, `'limit'` toast,
                                             weather & CC0 `AudioManager` sync, `gameSettings` live sync, offline earnings boot modal, Overclock tap/Meteor/Chibi/sync, `recordCritTap`, `onHoldMineChange`, `triggerTapCombo` beside pickaxe, `spawnPitEvent`/`clearPitEvent`, tutorial-guarded `spawnMeteorIfAllowed`), CrazyGames SDK init & ad-pause lifecycle, Tower callbacks & game loop
-tests/hud-modules.test.ts         929 baris — 28 Vitest specs untuk modul UI Tahap B + `GameSettings`, `AudioManager` volume scaling, `SettingsModalUi`,
+tests/hud-modules.test.ts         945 baris — 29 Vitest specs untuk modul UI Tahap B + `GameSettings`, `AudioManager` volume scaling, `SettingsModalUi`,
                                             `OfflineModalUi`, `BountiesModalUi`, `DailyLoginModalUi` layout, Overclock HUD + semantic toast banners, Tactical Hotbar (`mam-hotbar-keycap`/`mam-hotbar-bag`), & `TutorialUi` 5-stage FTUE
 tests/state-modules.test.ts       845 baris — 22 Vitest specs untuk modul domain state (`GameStateSave`, `PlotUnitsDomain`,
                                             `TowerRunDomain`, `LootChestDomain`, `ShopWeatherDomain`, `OfflineEarningsDomain` + physical rock-break & gem caps, `BountiesDomain`, `OverclockDomain`, `FusionDomain` + 4 Passives & cost scaling, `DailyLoginDomain` + Limited/Fusion non-sellable protection)

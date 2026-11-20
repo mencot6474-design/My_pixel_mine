@@ -90,7 +90,7 @@ export class AchievementsModalUi {
   private renderAchievementsGrid(): string {
     const snap = this.state.getAchievementSnapshot();
     return `
-      <div class="grid grid-cols-2 @max-[720px]:grid-cols-1 gap-2.5 overflow-y-auto mam-no-scrollbar pr-1 flex-1 min-h-0">
+      <div class="grid grid-cols-2 @max-[720px]:grid-cols-1 content-start auto-rows-max gap-2.5 overflow-y-auto mam-no-scrollbar pr-1 flex-1 min-h-0">
         ${ACHIEVEMENT_CATEGORIES.map((cat) => {
           const activeTier = getActiveAchievementTierForCategory(cat, this.state.claimedAchievements);
           const allDone = this.state.claimedAchievements.has(activeTier.id);
@@ -112,7 +112,7 @@ export class AchievementsModalUi {
               : `<span class="px-2.5 py-1 rounded-lg bg-[#fcecc8] border-2 border-[#14111d] text-[#5b526e] text-[11px] font-black shrink-0 tabular-nums">${fmtShort(Math.min(val, activeTier.target))}/${fmtShort(activeTier.target)}</span>`;
 
           return `
-            <div class="relative overflow-hidden rounded-2xl ${cardBorder} p-3 flex items-center gap-3">
+            <div class="relative overflow-hidden rounded-2xl ${cardBorder} px-3 py-3.5 flex items-center gap-3 min-h-max">
               <div class="absolute top-0 left-0 right-0 h-[3px] ${allDone ? 'bg-[#2ee59d]' : style.rail}" aria-hidden="true"></div>
               <div class="relative w-14 h-14 rounded-2xl border-2 ${style.ring} ${style.bg} flex items-center justify-center shrink-0">
                 ${this.renderCategoryArt(cat.iconKind)}
@@ -167,7 +167,7 @@ export class AchievementsModalUi {
     ];
 
     return `
-      <div class="grid grid-cols-2 @max-[640px]:grid-cols-1 gap-2.5 overflow-y-auto mam-no-scrollbar pr-1 flex-1 min-h-0">
+      <div class="grid grid-cols-2 @max-[640px]:grid-cols-1 content-start auto-rows-max gap-2.5 overflow-y-auto mam-no-scrollbar pr-1 flex-1 min-h-0">
         ${entries
           .map(
             (e) => `
@@ -191,7 +191,7 @@ export class AchievementsModalUi {
       title: 'Achievements',
       theme: 'bounties',
       iconHtml: trophySvg,
-      boxClass: 'w-[860px] max-w-[96vw] h-[640px] max-h-[90vh]',
+      boxClass: 'w-[860px] max-w-[96vw]',
       headerExtraHtml: `
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border-2 border-[#14111d] text-[12px] font-black text-[#14111d] tabular-nums">
           <span>${claimedCount}/${TOTAL_ACHIEVEMENT_TIERS} Claimed</span>

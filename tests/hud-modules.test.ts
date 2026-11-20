@@ -56,6 +56,7 @@ import {
   WorldOverlayHudUi,
 } from '../src/ui/WorldOverlayHudUi';
 import { BountiesModalUi } from '../src/ui/BountiesModalUi';
+import { AchievementsModalUi } from '../src/ui/AchievementsModalUi';
 import { getTapComboTier, stepTapCombo, TAP_COMBO_WINDOW_MS } from '../src/game/TapComboHelper';
 import { OfflineModalUi } from '../src/ui/OfflineModalUi';
 import { SettingsModalUi } from '../src/ui/SettingsModalUi';
@@ -924,6 +925,21 @@ describe('Tahap B HUD Modules', () => {
 
       const expired = stepTapCombo(s, 1200 + TAP_COMBO_WINDOW_MS + 1);
       expect(expired.count).toBe(1);
+    });
+  });
+
+  describe('Achievements Modal Grid Anti-Squish', () => {
+    it('prevents achievement cards from vertical compression inside short iframe viewports', () => {
+      const state = new GameState();
+      const ui = new AchievementsModalUi(
+        state,
+        () => {},
+        () => {}
+      );
+      const html = ui.renderModal();
+      expect(html).toContain('content-start');
+      expect(html).toContain('auto-rows-max');
+      expect(html).toContain('min-h-max');
     });
   });
 });
