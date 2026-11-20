@@ -161,14 +161,14 @@ export const TW_HOTBAR_SLOT =
   'mam-hotbar-slot relative w-[74px] h-[76px] @max-[860px]:w-[60px] @max-[860px]:h-[62px] overflow-hidden cursor-pointer flex flex-col items-center justify-between p-0.5';
 export const TW_HOTBAR_NUM = 'mam-hotbar-keycap';
 export const TW_TOAST_STACK =
-  'fixed bottom-[102px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none z-50';
+  'absolute bottom-[102px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none z-50';
 export const TW_TOAST_ITEM =
   'px-4 py-1.5 rounded-xl bg-[#fff8e7] border-[2.5px] border-[#14111d] shadow-none text-[14px] font-black text-[#14111d]';
 export const TW_ACTIVE_POT_PILL =
   'pointer-events-auto flex flex-col items-center justify-center gap-0.5 min-w-0 px-1.5 py-1.5 rounded-xl border-[2.5px] border-[#14111d] bg-[#fff8e7] text-[#14111d] shadow-none cursor-default transition-[transform,filter] duration-150 ease-out hover:brightness-105 @max-[720px]:px-1 @max-[720px]:py-1';
 
 export const TW_MODAL_BACKDROP =
-  'fixed inset-0 bg-[rgba(12,10,18,0.58)] backdrop-blur-[4px] flex items-center justify-center p-3 pt-9 @max-[720px]:p-2 @max-[720px]:pt-8 pointer-events-auto z-40';
+  'absolute inset-0 bg-[rgba(12,10,18,0.62)] flex items-center justify-center p-3 pt-9 @max-[720px]:p-2 @max-[720px]:pt-8 pointer-events-auto z-40';
 export const TW_MODAL_BOX =
   'mam-modal max-w-full h-[min(640px,calc(100%-18px))] min-h-0 flex flex-col pt-3 px-4 pb-4 gap-2.5';
 export const TW_SHOP_MODAL_RESP =

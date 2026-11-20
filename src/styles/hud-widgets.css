@@ -301,7 +301,11 @@
   }
 
   .mam-tut-scale-wrap {
-    transform: translateX(-50%) scale(var(--mam-float-scale, 1));
+    transform: translateX(-50%);
+  }
+
+  .mam-tut-scale-wrap .mam-tut-card {
+    zoom: var(--mam-float-scale, 1);
   }
 
   .mam-tut-scale-wrap.is-top {

@@ -309,7 +309,7 @@ export class UpgradesWorldsUi {
         : '';
 
     return `
-      <div class="fixed inset-0 z-40 bg-[rgba(4,7,15,0.58)] backdrop-blur-[5px] flex items-center justify-center p-3 pt-7 @max-[720px]:p-2 @max-[720px]:pt-6 pointer-events-auto" data-backdrop="true" data-upgrades-shell="true">
+      <div class="absolute inset-0 z-40 bg-[rgba(4,7,15,0.62)] flex items-center justify-center p-3 pt-7 @max-[720px]:p-2 @max-[720px]:pt-6 pointer-events-auto" data-backdrop="true" data-upgrades-shell="true">
         <div class="mam-modal w-[min(1180px,100%)] h-[min(740px,calc(100%-14px))] flex flex-col pt-3 px-4 pb-3.5 gap-2.5 @max-[720px]:px-2.5 @max-[720px]:pb-2.5" data-modal-theme="upgrades" role="dialog" aria-modal="true" aria-label="Upgrades">
           <div class="mam-modal-surface" aria-hidden="true"></div>
           <div class="mam-modal-rails" aria-hidden="true">
@@ -518,7 +518,7 @@ export class UpgradesWorldsUi {
     }).join('');
 
     return `
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#14111d]/60 backdrop-blur-[3px] p-3 pointer-events-auto" data-action="worlds-synergy-close" role="dialog" aria-modal="true" aria-label="World Synergy Combo">
+      <div class="absolute inset-0 z-50 flex items-center justify-center bg-[#14111d]/64 p-3 pointer-events-auto" data-action="worlds-synergy-close" role="dialog" aria-modal="true" aria-label="World Synergy Combo">
         <div class="w-[min(640px,100%)] max-h-[min(590px,calc(100vh-24px))] rounded-2xl border-[3.5px] border-[#14111d] bg-[#fff8e7] text-[#14111d] p-4 flex flex-col gap-3 min-h-0" data-synergy-info-dialog="true" onclick="event.stopPropagation()">
           <div class="flex items-center justify-between gap-2 shrink-0">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-[#ede9fe] border-[2.5px] border-[#14111d]">

@@ -308,7 +308,7 @@ export class TowerUi {
 
     const blessingOverlay = run.pendingBlessings
       ? `
-        <div class="fixed inset-0 z-40 bg-[#14111d]/60 flex items-center justify-center p-4 pointer-events-auto">
+        <div class="absolute inset-0 z-40 bg-[#14111d]/60 flex items-center justify-center p-4 pointer-events-auto">
           <div class="mam-modal w-[min(780px,100%)] p-5 flex flex-col gap-3.5" data-modal-theme="tower">
             <div class="mam-modal-surface" aria-hidden="true"></div>
             <div class="mam-modal-rails" aria-hidden="true">
@@ -368,7 +368,7 @@ export class TowerUi {
       : `${stripeOverlay},linear-gradient(90deg,#0284c7,#38bdf8,#8b5cf6)`;
 
     return `
-      <div class="fixed top-3 left-3 z-20 pointer-events-auto">
+      <div class="absolute top-3 left-3 z-20 pointer-events-auto">
         <button class="mam-battle-exit-btn" data-action="tower-exit">
           ${towerIconHtml(20)}
           <span>Exit Tower</span>
@@ -377,7 +377,7 @@ export class TowerUi {
 
       ${currencyRailHtml}
 
-      <div class="fixed top-3 left-1/2 -translate-x-1/2 w-[min(600px,calc(100%-260px))] @max-[900px]:top-[58px] @max-[900px]:w-[min(580px,calc(100%-24px))] flex flex-col items-center gap-1.5 pointer-events-none z-20">
+      <div class="absolute top-3 left-1/2 -translate-x-1/2 w-[min(600px,calc(100%-260px))] @max-[900px]:top-[58px] @max-[900px]:w-[min(580px,calc(100%-24px))] flex flex-col items-center gap-1.5 pointer-events-none z-20">
         <div class="mam-battle-hp-card ${run.isBossWave ? 'is-boss' : ''} flex flex-col gap-2">
           <div class="w-full flex items-center justify-between gap-2 flex-wrap">
             <div class="inline-flex items-center gap-2 min-w-0">
@@ -432,7 +432,7 @@ export class TowerUi {
         </div>
       </div>
 
-      <div class="mam-battle-dock fixed bottom-3 left-1/2 -translate-x-1/2 w-[min(740px,calc(100%-24px))] px-3.5 py-2 flex items-center justify-between gap-3 flex-wrap pointer-events-auto z-20">
+      <div class="mam-battle-dock absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(740px,calc(100%-24px))] px-3.5 py-2 flex items-center justify-between gap-3 flex-wrap pointer-events-auto z-20">
         <div class="flex items-center gap-1.5 flex-wrap">
           <div class="mam-battle-stat-cell bg-[#fce7f3]">
             <span class="mam-battle-stat-label text-[#9d174d]">Run Gems</span>

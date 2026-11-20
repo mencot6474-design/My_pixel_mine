@@ -388,7 +388,7 @@ export class PlotInspectUi {
       : `${chibiName} already has <span class="font-black text-[#14111d] underline decoration-2">${mut.name} (${mut.mult}X)</span>! Rolling again will overwrite it. Continue rolling or stop?`;
 
     return `
-      <div class="fixed inset-0 z-30 flex items-center justify-center bg-[#14111d]/60 p-4 pointer-events-auto" data-mut-confirm-backdrop="true" role="dialog" aria-modal="true" aria-label="${title}">
+      <div class="absolute inset-0 z-30 flex items-center justify-center bg-[#14111d]/60 p-4 pointer-events-auto" data-mut-confirm-backdrop="true" role="dialog" aria-modal="true" aria-label="${title}">
         <div class="w-[min(420px,100%)] rounded-2xl border-[3.5px] border-[#14111d] bg-[#fff8e7] p-5 flex flex-col items-center gap-3.5 text-center" data-mut-confirm-dialog="true">
           <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fde047] border-2 border-[#14111d] text-[#14111d] text-[12px] font-black tracking-wide uppercase">
             <span>&#9888;&#65039;</span> ${title}

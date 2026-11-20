@@ -208,6 +208,16 @@ export class MineScene3D {
   private tutorialFocusSellShop = false;
   private currentLookAt = new THREE.Vector3(0, 0.55, -0.55);
   private readonly projVec = new THREE.Vector3();
+  private mountResizeObserver: ResizeObserver | null = null;
+  private readonly handleViewportResize = (): void => {
+    const w = Math.max(1, this.mountEl.clientWidth);
+    const h = Math.max(1, this.mountEl.clientHeight);
+    const preset = GRAPHICS_PRESETS[this.graphicsQuality];
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.maxPixelRatio));
+    this.renderer.setSize(w, h);
+  };
 
   constructor(
     private readonly mountEl: HTMLElement,
@@ -224,7 +234,9 @@ export class MineScene3D {
     this.camera.lookAt(this.lookAtPos);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio || 1, GRAPHICS_PRESETS[this.graphicsQuality].maxPixelRatio)
+    );
     this.renderer.setSize(w, h);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -678,15 +690,12 @@ export class MineScene3D {
       { passive: false }
     );
 
-    window.addEventListener('resize', () => {
-      const w = Math.max(1, this.mountEl.clientWidth);
-      const h = Math.max(1, this.mountEl.clientHeight);
-      const preset = GRAPHICS_PRESETS[this.graphicsQuality];
-      this.camera.aspect = w / h;
-      this.camera.updateProjectionMatrix();
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.maxPixelRatio));
-      this.renderer.setSize(w, h);
-    });
+    window.addEventListener('resize', this.handleViewportResize);
+    window.visualViewport?.addEventListener('resize', this.handleViewportResize);
+    if (typeof ResizeObserver !== 'undefined') {
+      this.mountResizeObserver = new ResizeObserver(this.handleViewportResize);
+      this.mountResizeObserver.observe(this.mountEl);
+    }
   }
 
   public getPedestalAtClientPos(clientX: number, clientY: number): number | null {
@@ -1500,6 +1509,10 @@ export class MineScene3D {
   }
 
   public destroy(): void {
+    window.removeEventListener('resize', this.handleViewportResize);
+    window.visualViewport?.removeEventListener('resize', this.handleViewportResize);
+    this.mountResizeObserver?.disconnect();
+    this.mountResizeObserver = null;
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
       this.rafId = 0;

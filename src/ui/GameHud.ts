@@ -672,10 +672,12 @@ export class GameHud {
       this.root.style.width = '100%';
       this.root.style.height = '100%';
       this.root.style.transform = 'none';
+      this.root.style.setProperty('zoom', '1');
     } else {
       this.root.style.width = `${logicalW.toFixed(2)}px`;
       this.root.style.height = `${logicalH.toFixed(2)}px`;
-      this.root.style.transform = `scale(${scale.toFixed(4)})`;
+      this.root.style.transform = 'none';
+      this.root.style.setProperty('zoom', scale.toFixed(4));
     }
     this.root.style.transformOrigin = 'top left';
     this.root.dataset.hudCompact = logicalW < 920 ? 'true' : 'false';
@@ -683,7 +685,7 @@ export class GameHud {
     this.root.dataset.hudDpsAbove = logicalW < 1140 ? 'true' : 'false';
     this.root.dataset.hudShort = logicalH < 640 ? 'true' : 'false';
 
-    const floatScale = Math.max(0.68, Math.min(1, scale));
+    const floatScale = Math.max(0.72, Math.min(1, scale));
     document.documentElement.style.setProperty('--mam-ui-scale', scale.toFixed(4));
     document.documentElement.style.setProperty('--mam-float-scale', floatScale.toFixed(4));
   }

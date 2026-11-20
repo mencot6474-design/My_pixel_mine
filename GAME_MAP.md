@@ -34,8 +34,8 @@ docs/superpowers/               Design specs & implementation plans (`specs/`, `
 .agent/skills/procedural-3d-assets/SKILL.md Standar seni & arsitektur 3D prosedural multi-part, larangan gyroscopic/armillary tumbling hoops, PBR material + emissive, pivot `y = 0`, `InstancedMesh`, & `.dispose()`
 
 === ENTRY & TESTS ===
-src/main.ts                     455 baris — Bootstrap Three.js scene (`MineScene3D`), `GameState`, `GameHud` (+ plot drop, Fusion 3D ops & `setFusionRevealHold` camera lock, 3D label sync ops, `'limit'` toast,
-                                            weather & CC0 `AudioManager` sync, `gameSettings` live sync, offline earnings boot modal, Overclock tap/Meteor/Chibi/sync, `recordCritTap`, `onHoldMineChange`, `triggerTapCombo` beside pickaxe, `spawnPitEvent`/`clearPitEvent`, tutorial-guarded `spawnMeteorIfAllowed`), CrazyGames SDK init & ad-pause lifecycle, Tower callbacks & game loop
+src/main.ts                     496 baris — Bootstrap Three.js scene (`MineScene3D`), `GameState`, `GameHud` (+ plot drop, Fusion 3D ops & `setFusionRevealHold` camera lock, 3D label sync ops, `'limit'` toast,
+                                            weather & CC0 `AudioManager` sync, `gameSettings` live sync, offline earnings boot modal, Overclock tap/Meteor/Chibi/sync, `recordCritTap`, `onHoldMineChange`, `triggerTapCombo` beside pickaxe incl. mobile touch taps, `spawnPitEvent`/`clearPitEvent`, tutorial-guarded `spawnMeteorIfAllowed`), CrazyGames SDK init & ad-pause lifecycle, Tower callbacks & game loop
 tests/hud-modules.test.ts         945 baris — 29 Vitest specs untuk modul UI Tahap B + `GameSettings`, `AudioManager` volume scaling, `SettingsModalUi`,
                                             `OfflineModalUi`, `BountiesModalUi`, `DailyLoginModalUi` layout, Overclock HUD + semantic toast banners, Tactical Hotbar (`mam-hotbar-keycap`/`mam-hotbar-bag`), & `TutorialUi` 5-stage FTUE
 tests/state-modules.test.ts       845 baris — 22 Vitest specs untuk modul domain state (`GameStateSave`, `PlotUnitsDomain`,
@@ -131,7 +131,7 @@ src/sdk/crazygames.ts           259 baris — CrazyGames SDK v3 wrapper (`isAdPl
                                             `cgLoadingStart`, `cgGameplayStart`, `cgHappyTime`, `cgRequestRewardedAd`, `cgTryMidgameAd`)
 
 === UI HUD, MODALS & CSS (Modular Architecture — Sticker-Pop Deluxe) ===
-src/ui/GameHud.ts             1.099 baris — `GameHud`: Thin UI coordinator (`activeModal` incl. `altar-hub`/`daily-login`, `sceneMode` incl. `fusion`, `inspectedSlot`, `adPaused`, viewport scaling `updateViewportScale` + `hudPotsAbove` `< 1080`,
+src/ui/GameHud.ts             1.101 baris — `GameHud`: Thin UI coordinator (`activeModal` incl. `altar-hub`/`daily-login`, `sceneMode` incl. `fusion`, `inspectedSlot`, `adPaused`, crisp CSS `zoom` viewport scaling `updateViewportScale` + `hudPotsAbove` `< 1080`,
                                             top `Shops` + `Overclock Fever (224px)` + `Teleport` (`TW_TELEPORT_PILL` + Warp Portal icon + `1`–`6` world badge), modal router `renderActiveModal`, semantic toast stack,
                                             1000ms/100ms timers + Overclock live sync, `isTutorialActive`, `handleTower*` dispatch & public pass-through API incl. `setFusionRevealHold` untuk `main.ts`)
 src/ui/HudChromeRenderer.ts     182 baris — Pure HUD chrome HTML & DOM helpers (`renderAudioControlsHtml` camera-lock/settings/audio SVG buttons, `renderCurrencyRailHtml` uniform centered inline DPS + Gems + Cash `224×44` rail w/ `+` action, `renderFeverScreenFxHtml` & `syncFeverScreenFxDom` ZZZ-style Overclock cut-in)
@@ -173,11 +173,11 @@ src/ui/HudIcons.ts              314 baris — SVG, 2D fantasy art (`public/{ench
                                             `weatherIconHtml`, `towerIconHtml`, `pickaxeIconHtml`, `gemPotionIconHtml`,
                                             `enchantAuraIconHtml`, `enchantDiceIconHtml`, `researchIconHtml` 305)
 src/styles/global.css           296 baris — Tailwind v4 entry (`@import "tailwindcss";`) + `Rubik`/`Fredoka` typography/reset + pickaxe cursor, beside-pickaxe `.mam-pickaxe-combo` (`cool`..`godlike`) & hold-mine spark styles
-src/styles/hud.css                5 baris — Entry stylesheet mengimpor 5 partial CSS secara berurutan (`hud-base.css` 1267, `hud-modals.css` 472, `hud-hotbar.css` 621, `hud-widgets.css` 443, `hud-battle.css` 409)
+src/styles/hud.css                5 baris — Entry stylesheet mengimpor 5 partial CSS secara berurutan (`hud-base.css` 1271, `hud-modals.css` 472, `hud-hotbar.css` 619, `hud-widgets.css` 447, `hud-battle.css` 409)
                                             untuk sistem Sticker-Pop Deluxe (Warm Cream paper surfaces, `#14111d` borders, hidden scrollbars `.mam-no-scrollbar`, animated seamless `-45deg` wing/hotbar rails & Fever/HP stripes, conic-ring `.mam-rarity-badge`, `.mam-mutation-badge`, Tactical Hotbar, Fever Gauge, Toast, DPS Breakdown, FTUE Tutorial, & Battle Tower HUD)
 
 === 3D WORLD & RENDERERS ===
-src/game3d/MineScene3D.ts     1.517 baris — Main Three.js scene controller: switches `mine` / `shop` / `altar` / `fusion` / `tower`, `SRGBColorSpace` renderer (`1024×1024` sun shadow map),
+src/game3d/MineScene3D.ts     1.530 baris — Main Three.js scene controller: switches `mine` / `shop` / `altar` / `fusion` / `tower`, `SRGBColorSpace` renderer (`1024×1024` sun shadow map, `ResizeObserver` + `visualViewport`),
                                             `setCameraLocked` / `applyCameraOrbitDrag` / `clampCameraZoomRadius` + 2-finger touch pinch zoom, widened cyber-holographic rear `"My Chibi"` stage (`3.22m` pedestal pitch, steel bay dividers, rear busbar & illuminated cyber stairwell, `y + 3.72` overlay anchor), procedural Cyber Loot Chest on Refinery Dais,
                                             `setGraphicsQuality` (`low`/`medium`/`high`), `setOverclockActive` (2x miner speed + amber-gold overdrive lights), `syncFusionRecipe`/`triggerFusionAnimation`/`setFusionRevealHold` + dynamic Fusion cinematic camera zoom & NPC bubble gating, `setAdPaused` pause/resume, background pit/miner ticks, pit-floor click auto-target, Tower strike FX pass-through,
                                             weather sky/fog/safe-zone lighting shared across `mine`/`shop`/`fusion` + tower night lift (`setWeather`, `applyWeatherAtmosphere` w/ `isTower` hemi/sun boost), syncs 3D pedestal labels (`syncPlotLabel`) & plot/station/tower-ore anchors, & `destroy()` (`pedestals`, `pit`, `shopWorld`, `fusionWorld`, `towerArena`, `weatherFx.dispose`)

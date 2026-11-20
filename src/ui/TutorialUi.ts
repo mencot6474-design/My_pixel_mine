@@ -626,7 +626,7 @@ export class TutorialUi {
     const cardWidthCls = hasCta ? 'w-[min(540px,calc(100vw-24px))]' : 'w-[min(450px,calc(100vw-20px))]';
 
     this.overlayEl.innerHTML = `
-      ${hasCta ? '<div class="fixed inset-0 bg-slate-950/42 backdrop-blur-[2px] pointer-events-auto" data-tutorial-backdrop="true"></div>' : ''}
+      ${hasCta ? '<div class="fixed inset-0 bg-slate-950/48 pointer-events-auto" data-tutorial-backdrop="true"></div>' : ''}
       ${pointerArrowHtml}
       <div class="fixed ${positionClass} ${cardWidthCls} ${hasCta ? 'pointer-events-auto' : 'pointer-events-none'} z-10">
         ${buildTutorialCardHtml(this.step)}

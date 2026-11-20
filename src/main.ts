@@ -64,28 +64,68 @@ async function bootstrap(): Promise<void> {
   const hudRoot = document.getElementById('hudRoot');
   if (!threeRoot || !hudRoot) return;
 
+  let lastPointerType = 'mouse';
   let tapComboState: TapComboState = { count: 0, lastTapAtMs: 0 };
   let tapComboExpireTimer: number | null = null;
+  let touchCursorHideTimer: number | null = null;
   const resetTapCombo = (): void => {
     tapComboState = { count: 0, lastTapAtMs: 0 };
     if (tapComboExpireTimer !== null) {
       window.clearTimeout(tapComboExpireTimer);
       tapComboExpireTimer = null;
     }
+    if (touchCursorHideTimer !== null) {
+      window.clearTimeout(touchCursorHideTimer);
+      touchCursorHideTimer = null;
+    }
     pickaxeComboEl.style.display = 'none';
     pickaxeComboEl.classList.remove('is-pop', 'is-draining', 'is-crit');
+    if (lastPointerType === 'touch') {
+      pickaxeCursorEl.style.display = 'none';
+    }
   };
 
-  const triggerTapCombo = (isCrit: boolean): void => {
+  const syncComboEdgeFlip = (x: number, y: number): void => {
+    pickaxeComboEl.classList.toggle('is-flip-left', x > window.innerWidth - 150);
+    pickaxeComboEl.classList.toggle('is-flip-down', y < 64);
+  };
+
+  const triggerPickaxeSwing = (): void => {
+    pickaxeCursorEl.classList.remove('is-swinging');
+    void pickaxeCursorEl.offsetWidth;
+    pickaxeCursorEl.classList.add('is-swinging');
+  };
+
+  const triggerTapCombo = (isCrit: boolean, sx: number, sy: number): void => {
     const now = performance.now();
     tapComboState = stepTapCombo(tapComboState, now, TAP_COMBO_WINDOW_MS);
     if (tapComboExpireTimer !== null) {
       window.clearTimeout(tapComboExpireTimer);
     }
+    if (touchCursorHideTimer !== null) {
+      window.clearTimeout(touchCursorHideTimer);
+      touchCursorHideTimer = null;
+    }
     tapComboExpireTimer = window.setTimeout(resetTapCombo, TAP_COMBO_WINDOW_MS + 30);
+
+    if (lastPointerType === 'touch' || pickaxeCursorEl.style.display !== 'block') {
+      pickaxeCursorEl.style.display = 'block';
+      pickaxeCursorEl.style.left = `${Math.round(sx)}px`;
+      pickaxeCursorEl.style.top = `${Math.round(sy)}px`;
+      syncComboEdgeFlip(sx, sy);
+      triggerPickaxeSwing();
+    }
 
     if (tapComboState.count < 2) {
       pickaxeComboEl.style.display = 'none';
+      if (lastPointerType === 'touch') {
+        touchCursorHideTimer = window.setTimeout(() => {
+          touchCursorHideTimer = null;
+          if (lastPointerType === 'touch' && tapComboState.count < 2) {
+            pickaxeCursorEl.style.display = 'none';
+          }
+        }, 260);
+      }
       return;
     }
 
@@ -107,8 +147,12 @@ async function bootstrap(): Promise<void> {
   };
 
   const syncPickaxeCursor = (e: PointerEvent): void => {
+    lastPointerType = e.pointerType || 'mouse';
     if (isAdPlaying()) {
       pickaxeCursorEl.style.display = 'none';
+      return;
+    }
+    if (lastPointerType === 'touch') {
       return;
     }
     const canvas = threeRoot.querySelector('canvas');
@@ -120,18 +164,15 @@ async function bootstrap(): Promise<void> {
     pickaxeCursorEl.style.display = 'block';
     pickaxeCursorEl.style.left = `${e.clientX}px`;
     pickaxeCursorEl.style.top = `${e.clientY}px`;
-    pickaxeComboEl.classList.toggle('is-flip-left', e.clientX > window.innerWidth - 150);
-    pickaxeComboEl.classList.toggle('is-flip-down', e.clientY < 64);
+    syncComboEdgeFlip(e.clientX, e.clientY);
   };
   window.addEventListener('pointermove', syncPickaxeCursor, true);
   window.addEventListener(
     'pointerdown',
     (e) => {
       syncPickaxeCursor(e);
-      if (pickaxeCursorEl.style.display === 'block') {
-        pickaxeCursorEl.classList.remove('is-swinging');
-        void pickaxeCursorEl.offsetWidth;
-        pickaxeCursorEl.classList.add('is-swinging');
+      if (lastPointerType !== 'touch' && pickaxeCursorEl.style.display === 'block') {
+        triggerPickaxeSwing();
       }
     },
     true
@@ -214,7 +255,7 @@ async function bootstrap(): Promise<void> {
       hud?.spawnDamagePopup(dmg, sx, sy, isClick, isCrit);
       audio.playOreHit(isClick);
       if (isClick) {
-        triggerTapCombo(Boolean(isCrit));
+        triggerTapCombo(Boolean(isCrit), sx, sy);
         if (holdMiningVisualActive) {
           spawnElectricSpark(sx, sy);
         }

@@ -593,8 +593,6 @@
     overflow: hidden;
     overscroll-behavior: contain;
     background: rgba(2, 6, 23, 0.78);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
   }
 
   .mam-review-pose-art .mam-chibi-portrait img {

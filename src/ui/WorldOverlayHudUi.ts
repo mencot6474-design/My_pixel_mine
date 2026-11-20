@@ -371,7 +371,7 @@ export class WorldOverlayHudUi {
         for (const item of items) {
           const el = this.plotLayerEl.querySelector<HTMLElement>(`[data-label-slot="${item.slotIndex}"]`);
           if (!el) continue;
-          el.style.transform = `translate3d(${item.x}px, ${item.y}px, 0) translate(-50%, -100%) scale(var(--mam-float-scale, 1))`;
+          el.style.transform = `translate3d(${item.x}px, ${item.y}px, 0) translate(-50%, -100%)`;
         }
       }
     }
