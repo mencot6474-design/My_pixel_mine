@@ -109,9 +109,9 @@ let sharedCollarRockMat: THREE.MeshStandardMaterial | null = null;
 function getSharedCollarRockMaterial(): THREE.MeshStandardMaterial {
   if (!sharedCollarRockMat) {
     sharedCollarRockMat = new THREE.MeshStandardMaterial({
-      color: 0x243147,
-      roughness: 0.84,
-      metalness: 0.16,
+      color: 0x354764,
+      roughness: 0.82,
+      metalness: 0.08,
       flatShading: true,
     });
   }
@@ -645,11 +645,11 @@ export class OrePit3D {
     floor.receiveShadow = true;
     this.group.add(floor);
 
-    // Full-Height Excavated Dark Basalt Retaining Walls + Hazard Collar + Thin Neon Rim
+    // Full-Height Excavated Cyber-Slate Retaining Walls + Hazard Collar + Thin Neon Rim
     this.wallMat = new THREE.MeshStandardMaterial({
-      color: 0x1a2335,
-      roughness: 0.72,
-      metalness: 0.24,
+      color: 0x2a3952,
+      roughness: 0.76,
+      metalness: 0.1,
       flatShading: true,
     });
     this.trimMat = new THREE.MeshStandardMaterial({

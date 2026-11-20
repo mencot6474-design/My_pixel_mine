@@ -295,60 +295,73 @@ export function getWeatherSkyDomeTexture(weatherId: WeatherId): THREE.Texture | 
   return tex;
 }
 
-export function getTerrainTexture(_baseHex: string, accentHex: string): THREE.Texture {
-  return paintCachedTexture(`terrain3-cyber|${accentHex}`, 256, 256, 4, 3, [13, 20, 34, 255], (ctx) => {
-    // Dark basalt / cyber-industrial deck plates (replaces bright green grass)
-    ctx.fillStyle = '#0d1422';
+function mixHex(baseHex: string, tintHex: string, ratio: number): string {
+  const c = new THREE.Color(baseHex);
+  c.lerp(new THREE.Color(tintHex), ratio);
+  return `#${c.getHexString()}`;
+}
+
+export function getTerrainTexture(baseHex: string, accentHex: string): THREE.Texture {
+  return paintCachedTexture(`terrain4-cyber|${baseHex}|${accentHex}`, 256, 256, 4, 3, [46, 63, 90, 255], (ctx) => {
+    // Brightened cyber-slate deck plates subtly tinted by each world's terrain palette
+    ctx.fillStyle = mixHex('#27364d', baseHex, 0.28);
     ctx.fillRect(0, 0, 256, 256);
 
+    const tileLight = mixHex('#334663', baseHex, 0.3);
+    const tileMid = mixHex('#2b3b54', baseHex, 0.28);
     const step = 64;
     for (let gy = 0; gy < 256; gy += step) {
       for (let gx = 0; gx < 256; gx += step) {
         const parity = ((gx + gy) / step) % 2 === 0;
-        ctx.fillStyle = parity ? '#131d31' : '#0f172a';
+        ctx.fillStyle = parity ? tileLight : tileMid;
         ctx.fillRect(gx + 2, gy + 2, step - 4, step - 4);
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.1)';
+        ctx.strokeStyle = 'rgba(203, 213, 225, 0.2)';
         ctx.lineWidth = 1.5;
         ctx.strokeRect(gx + 2, gy + 2, step - 4, step - 4);
 
         // Subtle industrial rivet & diagonal basalt grain ticks
-        ctx.fillStyle = 'rgba(100, 116, 139, 0.25)';
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.35)';
         ctx.fillRect(gx + 6, gy + 6, 3, 3);
         ctx.fillRect(gx + step - 9, gy + step - 9, 3, 3);
       }
     }
 
     // Thin glowing cyber circuit traces accented softly by world crystal color
-    ctx.globalAlpha = 0.24;
+    ctx.globalAlpha = 0.32;
     ctx.fillStyle = accentHex;
     ctx.fillRect(0, 63, 256, 2);
     ctx.fillRect(127, 0, 2, 256);
-    ctx.globalAlpha = 0.36;
+    ctx.globalAlpha = 0.45;
     ctx.fillRect(28, 28, 12, 2);
     ctx.fillRect(156, 156, 14, 2);
     ctx.globalAlpha = 1;
   });
 }
 
-export function getQuarryFloorTexture(_stoneHex: string, crystalHex: string): THREE.Texture {
-  return paintCachedTexture(`quarry3-cyber|${crystalHex}`, 256, 256, 3, 2, [18, 25, 40, 255], (ctx) => {
-    // Deep dark basalt blast-deck floor so vibrant ores, chibis, & slash VFX pop clearly
-    ctx.fillStyle = '#121928';
+export function getQuarryFloorTexture(stoneHex: string, crystalHex: string): THREE.Texture {
+  return paintCachedTexture(`quarry4-cyber|${stoneHex}|${crystalHex}`, 256, 256, 3, 2, [54, 73, 102, 255], (ctx) => {
+    // Readable mid-slate quarry blast-deck tinted by world stone palette so ores & VFX stay crisp
+    ctx.fillStyle = mixHex('#2c3c54', stoneHex, 0.3);
     ctx.fillRect(0, 0, 256, 256);
 
+    const tileLight = mixHex('#384c69', stoneHex, 0.32);
+    const tileMid = mixHex('#30415c', stoneHex, 0.3);
     const step = 64;
     for (let gx = 0; gx < 256; gx += step) {
       for (let gy = 0; gy < 256; gy += step) {
         const parity = ((gx + gy) / step) % 2 === 0;
-        ctx.fillStyle = parity ? '#192338' : '#141d2f';
+        ctx.fillStyle = parity ? tileLight : tileMid;
         ctx.fillRect(gx + 2, gy + 2, step - 4, step - 4);
-        ctx.strokeStyle = 'rgba(15, 23, 42, 0.72)';
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.45)';
         ctx.lineWidth = 2;
         ctx.strokeRect(gx + 1, gy + 1, step - 2, step - 2);
+        ctx.strokeStyle = 'rgba(226, 232, 240, 0.14)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(gx + 3, gy + 3, step - 6, step - 6);
       }
     }
 
-    ctx.globalAlpha = 0.2;
+    ctx.globalAlpha = 0.28;
     ctx.strokeStyle = crystalHex;
     ctx.lineWidth = 1.5;
     ctx.strokeRect(64, 64, 128, 128);
@@ -394,20 +407,22 @@ export function getWoodPlankTexture(): THREE.Texture {
   });
 }
 
-export function getCobblePathTexture(_stoneHex: string): THREE.Texture {
-  return paintCachedTexture('cobble3-cyber-basalt', 256, 256, 4, 3, [21, 30, 48, 255], (ctx) => {
-    // Dark basalt / cyber-industrial deck concrete matching Neo-Cyber City Plaza
-    ctx.fillStyle = '#151e30';
+export function getCobblePathTexture(stoneHex: string): THREE.Texture {
+  return paintCachedTexture(`cobble4-cyber|${stoneHex}`, 256, 256, 4, 3, [50, 68, 96, 255], (ctx) => {
+    // Brightened cyber-slate courtyard concrete tinted by world stone palette
+    ctx.fillStyle = mixHex('#2b3b54', stoneHex, 0.25);
     ctx.fillRect(0, 0, 256, 256);
 
+    const tileLight = mixHex('#364966', stoneHex, 0.28);
+    const tileMid = mixHex('#2d3e57', stoneHex, 0.25);
     const step = 64;
     for (let row = 0; row < 4; row++) {
       for (let col = 0; col < 4; col++) {
         const x = col * step;
         const y = row * step;
-        ctx.fillStyle = (row + col) % 2 === 0 ? '#1b263b' : '#131c2c';
+        ctx.fillStyle = (row + col) % 2 === 0 ? tileLight : tileMid;
         ctx.fillRect(x + 2, y + 2, step - 4, step - 4);
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
         ctx.lineWidth = 1;
         ctx.strokeRect(x + 3, y + 3, step - 6, step - 6);
       }

@@ -15,7 +15,7 @@ import {
   TOWER_WAVES_PER_FLOOR,
 } from '../game/TowerData';
 import { hudIconHtml, towerIconHtml } from './HudIcons';
-import { ModalKind, renderModalShell, TW_TOP_CENTER } from './HudShared';
+import { ModalKind, renderModalShell } from './HudShared';
 
 const BATTLE_SHIELD_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" class="shrink-0 drop-shadow-[0_0_5px_rgba(34,211,238,0.85)]" fill="none" aria-hidden="true">
   <defs>
@@ -301,10 +301,10 @@ export class TowerUi {
         ? run.blessings
             .map(
               (b) =>
-                `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border bg-[#0c1428] text-[10.5px] font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]" style="color:${b.color};border-color:${b.color}">✦ ${b.name}</span>`
+                `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border bg-[#0b1326] text-[10.5px] font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] whitespace-nowrap" style="color:${b.color};border-color:${b.color}">✦ ${b.name}</span>`
             )
             .join('')
-        : `<span class="px-2.5 py-1 rounded-lg border border-[#243454] bg-[#0b1120] text-[11px] font-bold text-slate-400">Defeat Wave 10 Boss to pick a Spire Blessing</span>`;
+        : `<span class="px-2.5 py-1 rounded-lg border border-[#243454] bg-[#0a1020] text-[10.5px] font-bold text-slate-400 whitespace-nowrap">Clear Wave 10 Boss for Blessings</span>`;
 
     const blessingOverlay = run.pendingBlessings
       ? `
@@ -368,73 +368,92 @@ export class TowerUi {
       : `${stripeOverlay},linear-gradient(90deg,#0284c7,#38bdf8,#8b5cf6)`;
 
     return `
-      <div class="${TW_TOP_CENTER}">
-        <button class="inline-flex items-center justify-center gap-2 @max-[720px]:gap-1.5 px-5 @max-[720px]:px-4 py-2 @max-[720px]:py-1.5 rounded-2xl border-2 border-rose-400 bg-[linear-gradient(135deg,#dc2626_0%,#991b1b_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.38),0_4px_0_#450a0a,0_10px_24px_-4px_rgba(239,68,68,0.45)] text-white text-[18px] @max-[720px]:text-[15px] font-extrabold cursor-pointer transition-[transform,box-shadow,filter] duration-150 ease-out hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5 active:scale-[0.97] mam-outline" data-action="tower-exit">
-          ${towerIconHtml(24)}
+      <div class="fixed top-3 left-3 z-20 pointer-events-auto">
+        <button class="mam-battle-exit-btn mam-outline-sm" data-action="tower-exit">
+          ${towerIconHtml(20)}
           <span>Exit Tower</span>
         </button>
       </div>
 
       ${currencyRailHtml}
 
-      <div class="fixed top-[68px] left-1/2 -translate-x-1/2 w-[min(640px,calc(100%-24px))] flex flex-col items-center gap-2 pointer-events-none z-20">
-        <div class="flex items-center gap-2 flex-wrap justify-center">
-          <span class="px-3 py-1 rounded-xl border-2 border-cyan-400 bg-[linear-gradient(135deg,#132242,#0b1326)] text-[13px] font-black text-white shadow-[0_3px_10px_rgba(0,0,0,0.65)] mam-outline-sm">
-            FLOOR ${run.floor} • WAVE ${run.wave}/${run.maxWaves}
-          </span>
-          ${waveBadge}
-          <span class="px-3 py-1 rounded-xl border-2 border-[#354c73] bg-[#0e182e] text-[12px] font-black shadow-[0_3px_10px_rgba(0,0,0,0.6)] mam-outline-sm" style="color:${floorDef.anomaly.color}">
-            ✦ ${floorDef.anomaly.name}
-          </span>
-          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border-2 ${
-            timerDanger
-              ? 'border-rose-400 bg-[#4a0b1d] text-rose-100 animate-pulse'
-              : 'border-[#354c73] bg-[#0e182e] text-cyan-200'
-          } text-[13px] font-black tabular-nums shadow-[0_3px_10px_rgba(0,0,0,0.6)] mam-outline-sm" data-tower-timer="true">
-            ${BATTLE_TIMER_SVG}<span data-tower-timer-label="true">${run.timeLeft.toFixed(1)}s</span>
-          </span>
-        </div>
-
-        <div class="mam-battle-hp-card ${run.isBossWave ? 'is-boss' : ''} flex flex-col gap-1.5">
-          <div class="w-full flex items-center justify-between gap-2">
+      <div class="fixed top-3 left-1/2 -translate-x-1/2 w-[min(600px,calc(100%-260px))] @max-[900px]:top-[58px] @max-[900px]:w-[min(580px,calc(100%-24px))] flex flex-col items-center gap-1.5 pointer-events-none z-20">
+        <div class="mam-battle-hp-card ${run.isBossWave ? 'is-boss' : ''} flex flex-col gap-2">
+          <div class="w-full flex items-center justify-between gap-2 flex-wrap">
             <div class="inline-flex items-center gap-2 min-w-0">
               <span class="mam-battle-emblem">${emblemSvg}</span>
-              <span class="w-2 h-2 rounded-full shrink-0 ${
-                run.isBossWave
-                  ? 'bg-rose-400 shadow-[0_0_8px_#fb7185] animate-ping'
-                  : 'bg-cyan-400 shadow-[0_0_8px_#22d3ee] animate-pulse'
-              }"></span>
-              <span class="text-[13px] font-black uppercase tracking-wider truncate ${
-                run.isBossWave ? 'text-amber-200' : 'text-cyan-100'
-              } mam-outline-sm">${
-                run.isBossWave ? 'SERAPHIM AI OVERLORD' : `WAVE ${run.wave}/9 • DATA NODES`
-              }</span>
+              <div class="flex flex-col min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="px-2 py-0.5 rounded-md border border-cyan-400/70 bg-[#0d1d38] text-[10.5px] font-black tracking-wide text-cyan-200 leading-none">
+                    FLOOR ${run.floor} • W${run.wave}/${run.maxWaves}
+                  </span>
+                  <span class="px-2 py-0.5 rounded-md border border-[#354c73] bg-[#0b1428] text-[10.5px] font-black leading-none" style="color:${floorDef.anomaly.color}">
+                    ✦ ${floorDef.anomaly.name}
+                  </span>
+                </div>
+                <div class="mt-0.5 flex items-center gap-1.5 min-w-0">
+                  <span class="w-2 h-2 rounded-full shrink-0 ${
+                    run.isBossWave
+                      ? 'bg-rose-400 shadow-[0_0_8px_#fb7185] animate-ping'
+                      : 'bg-cyan-400 shadow-[0_0_8px_#22d3ee] animate-pulse'
+                  }"></span>
+                  <span class="text-[13.5px] font-black uppercase tracking-wider truncate ${
+                    run.isBossWave ? 'text-amber-200' : 'text-white'
+                  } mam-outline-sm">${
+                    run.isBossWave ? 'SERAPHIM AI OVERLORD' : `WAVE ${run.wave}/9 • DATA NODES`
+                  }</span>
+                </div>
+              </div>
             </div>
-            ${bossShieldBadge}
+
+            <div class="flex items-center gap-1.5 shrink-0">
+              ${run.isBossWave ? bossShieldBadge : waveBadge}
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border-2 ${
+                timerDanger
+                  ? 'border-rose-400 bg-[#4a0b1d] text-rose-100 animate-pulse'
+                  : 'border-[#354c73] bg-[#0c162b] text-cyan-200'
+              } text-[13px] font-black tabular-nums shadow-[0_3px_10px_rgba(0,0,0,0.55)] mam-outline-sm" data-tower-timer="true">
+                ${BATTLE_TIMER_SVG}<span data-tower-timer-label="true">${run.timeLeft.toFixed(1)}s</span>
+              </span>
+            </div>
           </div>
 
           <div class="mam-battle-hp-track">
             <div class="mam-battle-hp-fill" data-tower-hp-fill="true" style="width:${hpPct}%;background-image:${barFillBg}"></div>
-            <div class="absolute inset-x-0 top-0 h-[40%] bg-gradient-to-b from-white/25 to-transparent pointer-events-none z-[1]"></div>
+            <div class="absolute inset-x-0 top-0 h-[42%] bg-gradient-to-b from-white/25 to-transparent pointer-events-none z-[1]"></div>
             <div class="mam-battle-hp-ticks" aria-hidden="true">
               <span></span><span></span><span></span><span></span><span></span>
               <span></span><span></span><span></span><span></span><span></span>
             </div>
-            <div class="relative z-[2] text-[14px] font-black tabular-nums text-white mam-outline-sm" data-tower-hp-text="true">
+            <div class="relative z-[2] text-[13.5px] font-black tabular-nums text-white mam-outline-sm" data-tower-hp-text="true">
               ${hpLabel}
             </div>
           </div>
         </div>
       </div>
 
-      <div class="mam-battle-dock fixed bottom-3.5 left-1/2 -translate-x-1/2 w-[min(780px,calc(100%-24px))] px-3.5 py-2.5 flex items-center justify-between gap-2.5 flex-wrap pointer-events-auto z-20">
-        <div class="flex items-center gap-2 flex-wrap text-[12.5px] font-black tabular-nums">
-          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border border-pink-400/70 bg-[#2b102c] text-pink-200 mam-outline-sm" data-tower-run-gems="true">+${fmtInt(run.gemsEarned)} Gems</span>
-          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border border-purple-400/70 bg-[#20133d] text-purple-200 mam-outline-sm" data-tower-run-dice="true">+${run.diceEarned} Dice</span>
-          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border border-cyan-400/70 bg-[#0d243b] text-cyan-200 mam-outline-sm">${fmtShort(effDps)}/s DPS</span>
-          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border border-emerald-400/70 bg-[#0c2e22] text-emerald-200 mam-outline-sm">${fmtShort(effTap)} Tap</span>
+      <div class="mam-battle-dock fixed bottom-3 left-1/2 -translate-x-1/2 w-[min(740px,calc(100%-24px))] px-3.5 py-2 flex items-center justify-between gap-3 flex-wrap pointer-events-auto z-20">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <div class="mam-battle-stat-cell border-pink-400/50 bg-[#241029]">
+            <span class="mam-battle-stat-label text-pink-300">Run Gems</span>
+            <span class="mam-battle-stat-val text-pink-100" data-tower-run-gems="true">+${fmtInt(run.gemsEarned)} Gems</span>
+          </div>
+          <div class="mam-battle-stat-cell border-purple-400/50 bg-[#1c1336]">
+            <span class="mam-battle-stat-label text-purple-300">Run Dice</span>
+            <span class="mam-battle-stat-val text-purple-100" data-tower-run-dice="true">+${run.diceEarned} Dice</span>
+          </div>
+          <div class="mam-battle-stat-cell border-cyan-400/50 bg-[#0d2238]">
+            <span class="mam-battle-stat-label text-cyan-300">Team DPS</span>
+            <span class="mam-battle-stat-val text-cyan-100">${fmtShort(effDps)}/s</span>
+          </div>
+          <div class="mam-battle-stat-cell border-emerald-400/50 bg-[#0b291f]">
+            <span class="mam-battle-stat-label text-emerald-300">Tap DMG</span>
+            <span class="mam-battle-stat-val text-emerald-100">${fmtShort(effTap)}</span>
+          </div>
         </div>
-        <div class="flex items-center gap-1.5 flex-wrap">${blessingsStrip}</div>
+        <div class="flex items-center gap-1.5 flex-wrap pl-2 border-l border-slate-600/40 @max-[680px]:border-l-0 @max-[680px]:pl-0">
+          ${blessingsStrip}
+        </div>
       </div>
 
       ${blessingOverlay}

@@ -138,10 +138,10 @@ function createCyberPlazaFloorTexture(): THREE.CanvasTexture | null {
   const ctx = c.getContext('2d');
   if (!ctx) return null;
 
-  ctx.fillStyle = '#1b2436';
+  ctx.fillStyle = '#31435e';
   ctx.fillRect(0, 0, size, size);
 
-  ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+  ctx.strokeStyle = 'rgba(203, 213, 225, 0.22)';
   ctx.lineWidth = 2;
   const step = 64;
   for (let i = 0; i <= size; i += step) {
@@ -159,10 +159,10 @@ function createCyberPlazaFloorTexture(): THREE.CanvasTexture | null {
   for (let y = 0; y < size; y += step) {
     for (let x = 0; x < size; x += step) {
       const alt = (x / step + y / step) % 2 === 0;
-      ctx.fillStyle = alt ? 'rgba(30, 41, 59, 0.28)' : 'rgba(15, 23, 42, 0.22)';
+      ctx.fillStyle = alt ? '#3a4f6e' : '#2f4059';
       ctx.fillRect(x + 3, y + 3, step - 6, step - 6);
       if (((x * 3 + y * 5) / step) % 5 === 0) {
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.24)';
         ctx.fillRect(x + 8, y + 8, 8, 2);
       }
     }
@@ -259,29 +259,29 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
   const pulseMaterials: PulseMaterialSpec[] = [];
 
   const darkHullMat = new THREE.MeshStandardMaterial({
-    color: 0x111827,
-    roughness: 0.72,
-    metalness: 0.35,
+    color: 0x1e2b40,
+    roughness: 0.74,
+    metalness: 0.16,
     flatShading: true,
   });
   const slateConcreteMat = new THREE.MeshStandardMaterial({
-    color: 0x1f293d,
+    color: 0x354866,
     roughness: 0.78,
-    metalness: 0.16,
+    metalness: 0.08,
     flatShading: true,
   });
   const plazaFloorTex = createCyberPlazaFloorTexture();
   if (plazaFloorTex) ownedTextures.push(plazaFloorTex);
   const plazaDeckMat = new THREE.MeshStandardMaterial({
-    color: plazaFloorTex ? 0xffffff : 0x1e293b,
+    color: plazaFloorTex ? 0xffffff : 0x334663,
     ...(plazaFloorTex ? { map: plazaFloorTex } : {}),
-    roughness: 0.74,
-    metalness: 0.18,
+    roughness: 0.78,
+    metalness: 0.06,
   });
   const recessedZoneMat = new THREE.MeshStandardMaterial({
-    color: 0x151e30,
+    color: 0x2a3b54,
     roughness: 0.82,
-    metalness: 0.15,
+    metalness: 0.08,
     flatShading: true,
   });
   const gunmetalMat = new THREE.MeshStandardMaterial({
@@ -321,9 +321,9 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     flatShading: true,
   });
   const roadAsphaltMat = new THREE.MeshStandardMaterial({
-    color: 0x121927,
+    color: 0x25334a,
     roughness: 0.84,
-    metalness: 0.12,
+    metalness: 0.06,
     flatShading: true,
   });
 

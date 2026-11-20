@@ -75,22 +75,22 @@ export class MineEnvironment3D {
       this.clouds.push({ group: cg, speed: 0.2 + (scale - 1) * 0.14 });
     }
 
-    // Shared Cyber-Basalt & Gunmetal Industrial Materials (synced visually with Neo-Cyber City Plaza)
+    // Shared Cyber-Slate & Gunmetal Industrial Materials (low metalness so floor stays bright without envMap)
     this.terrainMat = new THREE.MeshStandardMaterial({
       map: getTerrainTexture(palette.terrainColor, palette.crystalColor),
-      roughness: 0.68,
-      metalness: 0.24,
+      roughness: 0.78,
+      metalness: 0.08,
     });
     this.cobbleMat = new THREE.MeshStandardMaterial({
       map: getCobblePathTexture(palette.pitFloorColor),
-      color: 0xdbeafe,
-      roughness: 0.66,
-      metalness: 0.22,
+      color: 0xe2ecff,
+      roughness: 0.76,
+      metalness: 0.08,
     });
     this.cliffMat = new THREE.MeshStandardMaterial({
-      color: 0x151e30,
-      roughness: 0.72,
-      metalness: 0.26,
+      color: 0x26354d,
+      roughness: 0.78,
+      metalness: 0.1,
       flatShading: true,
     });
     this.cyberDeckTrimMat = new THREE.MeshStandardMaterial({
@@ -582,7 +582,7 @@ export class MineEnvironment3D {
     this.cobbleMat.map = getCobblePathTexture(palette.pitFloorColor);
     this.cobbleMat.needsUpdate = true;
 
-    this.cliffMat.color.setHex(0x111828).lerp(new THREE.Color(palette.cliffColor), 0.16);
+    this.cliffMat.color.setHex(0x24334a).lerp(new THREE.Color(palette.cliffColor), 0.28);
     this.cyberDeckTrimMat.color.set(palette.crystalColor);
     this.cyberDeckTrimMat.emissive.set(palette.crystalColor);
 

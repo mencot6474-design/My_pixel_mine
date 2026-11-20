@@ -233,7 +233,7 @@ export class MineScene3D {
     mountEl.appendChild(this.renderer.domElement);
 
     // Urban Night Cyber Hemisphere + Directional Key & Cool Cyan Rim Light
-    this.hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 1.05);
+    this.hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x3b4f6e, 1.18);
     this.scene.add(this.hemiLight);
 
     this.sunLight = new THREE.DirectionalLight(0xfffbeb, 1.85);
@@ -1172,11 +1172,13 @@ export class MineScene3D {
     this.hemiLight.intensity = isTower
       ? Math.max(weather.hemiIntensity, 1.32)
       : isShop
-        ? Math.max(weather.hemiIntensity, 1.12)
-        : Math.max(weather.hemiIntensity, 0.96);
+        ? Math.max(weather.hemiIntensity, 1.24)
+        : Math.max(weather.hemiIntensity, 1.18);
     this.sunLight.intensity = isTower
       ? Math.max(weather.sunIntensity, 1.75)
-      : isShop ? Math.max(weather.sunIntensity, 1.52) : weather.sunIntensity;
+      : isShop
+        ? Math.max(weather.sunIntensity, 1.62)
+        : Math.max(weather.sunIntensity, 1.55);
     this.rimLight.color.set(isShop ? 0x38bdf8 : weather.rimTintHex);
 
     if (this.mode !== 'mine' && !isShop) return;
