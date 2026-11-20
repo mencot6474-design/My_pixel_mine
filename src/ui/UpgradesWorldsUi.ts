@@ -1,6 +1,13 @@
 import { audio } from '../audio/AudioManager';
 import { assetUrl } from '../game/AssetUrl';
-import { getWorldById, getWorldIndex, WorldId, WORLDS } from '../game/GameData';
+import {
+  getWorldById,
+  getWorldIndex,
+  getWorldResonanceScale,
+  WORLD_RESONANCE_TIERS,
+  WorldId,
+  WORLDS,
+} from '../game/GameData';
 import {
   formatNodeEffectLine,
   getNodeNextCost,
@@ -21,6 +28,7 @@ export class UpgradesWorldsUi {
   private buyMode: UpgradeBuyMode = '1';
   private lastUpgradesStateKey = '';
   private lastWorldsListHtml = '';
+  private worldsSynergyInfoOpen = false;
   private animateNodeSelectId: string | null = null;
   private animateResearchTabId: ResearchTreeId | null = null;
   private animateUpgradeBurstId: string | null = null;
@@ -34,6 +42,10 @@ export class UpgradesWorldsUi {
 
   public syncActiveWorldTab(): void {
     this.researchTab = this.state.activeWorldId;
+  }
+
+  public closeSynergyInfoModal(): void {
+    this.worldsSynergyInfoOpen = false;
   }
 
   private focusWorldTree(wid: WorldId): void {
@@ -410,9 +422,145 @@ export class UpgradesWorldsUi {
     }).join('');
   }
 
+  private renderWorldsSynergyInfoOverlay(): string {
+    if (!this.worldsSynergyInfoOpen) return '';
+    const activeResonances = this.state.getActiveWorldResonances();
+    const totalOrePct = Math.round(
+      activeResonances.reduce((sum, r) => sum + r.tier.oreDropBonusPct, 0) * 100
+    );
+    const totalSellPct = Math.round(
+      activeResonances.reduce((sum, r) => sum + r.tier.sellBonusPct, 0) * 100
+    );
+    const totalGemPct = Math.round(
+      activeResonances.reduce((sum, r) => sum + r.tier.gemBonusPct, 0) * 100
+    );
+
+    const activeHtml = activeResonances.length
+      ? `
+        <div class="flex flex-col gap-1.5">
+          ${activeResonances
+            .map((r) => {
+              const wDef = getWorldById(r.worldId);
+              const dmgPct = Math.round(r.tier.dmgBonusPct * 100);
+              const orePct = Math.round(r.tier.oreDropBonusPct * 100);
+              const sellPct = Math.round(r.tier.sellBonusPct * 100);
+              const gemPct = Math.round(r.tier.gemBonusPct * 100);
+              return `
+                <div class="px-2.5 py-2 rounded-xl bg-white border-2 border-[#14111d] flex items-center justify-between gap-2 flex-wrap">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="w-3 h-3 rounded-full border-[1.5px] border-[#14111d] shrink-0" style="background:${wDef.iconColor}"></span>
+                    <span class="text-[12.5px] font-black text-[#14111d] truncate">${r.worldName}</span>
+                    <span class="px-1.5 py-[1px] rounded-md bg-[#14111d] text-[#fde047] text-[10px] font-black tabular-nums">${r.count}/5 • ${r.worldScale}×</span>
+                  </div>
+                  <div class="flex items-center gap-1 text-[10px] font-black tabular-nums flex-wrap">
+                    <span class="px-1.5 py-[1px] rounded bg-[#fee2e2] border border-[#14111d] text-[#dc2626]">+${dmgPct}% DMG</span>
+                    <span class="px-1.5 py-[1px] rounded bg-[#fef08a] border border-[#14111d] text-[#b45309]">+${orePct}% Ore</span>
+                    <span class="px-1.5 py-[1px] rounded bg-[#dcfce7] border border-[#14111d] text-[#15803d]">+${sellPct}% Sell</span>
+                    ${gemPct > 0 ? `<span class="px-1.5 py-[1px] rounded bg-[#f3e8ff] border border-[#14111d] text-[#7e22ce]">+${gemPct}% Gem</span>` : ''}
+                  </div>
+                </div>
+              `;
+            })
+            .join('')}
+          <div class="px-2.5 py-1.5 rounded-xl bg-[#fcecc8] border-2 border-[#14111d] flex items-center justify-between gap-2 flex-wrap text-[11px] font-black tabular-nums">
+            <span class="text-[#14111d]">Total Global Combo Buff:</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-[#b45309]">+${totalOrePct}% Ore Drop</span>
+              <span class="text-[#5b526e]">•</span>
+              <span class="text-[#15803d]">+${totalSellPct}% Ore Sell</span>
+              ${totalGemPct > 0 ? `<span class="text-[#5b526e]">•</span><span class="text-[#7e22ce]">+${totalGemPct}% Gem</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `
+      : `<div class="px-3 py-2.5 rounded-xl bg-white border-2 border-dashed border-[#14111d]/45 text-[12px] font-bold text-[#5b526e] text-center">No World Synergy active yet — place 2+ Chibis from the same World on your Mine Plots!</div>`;
+
+    const tiersHtml = WORLD_RESONANCE_TIERS.map((t) => {
+      const dmg = Math.round(t.dmgBonusPct * 100);
+      const ore = Math.round(t.oreDropBonusPct * 100);
+      const sell = Math.round(t.sellBonusPct * 100);
+      const gem = Math.round(t.gemBonusPct * 100);
+      return `
+        <div class="px-2.5 py-2 rounded-xl bg-white border-2 border-[#14111d] flex flex-col gap-1">
+          <div class="flex items-center justify-between gap-1.5">
+            <span class="text-[12px] font-black text-[#14111d]">${t.label}</span>
+            <span class="px-1.5 py-[1px] rounded-md bg-[#ede9fe] border border-[#14111d] text-[#6d28d9] text-[10px] font-black tabular-nums">${t.minCount}/5 Same World</span>
+          </div>
+          <div class="flex items-center gap-1 flex-wrap text-[10px] font-black tabular-nums">
+            <span class="px-1.5 py-[1px] rounded bg-[#fee2e2] border border-[#14111d] text-[#dc2626]">+${dmg}% DMG</span>
+            <span class="px-1.5 py-[1px] rounded bg-[#fef08a] border border-[#14111d] text-[#b45309]">+${ore}% Ore</span>
+            <span class="px-1.5 py-[1px] rounded bg-[#dcfce7] border border-[#14111d] text-[#15803d]">+${sell}% Sell</span>
+            ${gem > 0 ? `<span class="px-1.5 py-[1px] rounded bg-[#f3e8ff] border border-[#14111d] text-[#7e22ce]">+${gem}% Gem</span>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const fullTier = WORLD_RESONANCE_TIERS[WORLD_RESONANCE_TIERS.length - 1];
+    const worldScaleRowsHtml = WORLDS.map((w, idx) => {
+      const scale = getWorldResonanceScale(w.id);
+      const fullDmg = Math.round(fullTier.dmgBonusPct * scale * 100);
+      const fullOre = Math.round(fullTier.oreDropBonusPct * scale * 100);
+      const fullSell = Math.round(fullTier.sellBonusPct * scale * 100);
+      const fullGem = Math.round(fullTier.gemBonusPct * scale * 100);
+      return `
+        <div class="px-2.5 py-1.5 rounded-xl bg-white border-2 border-[#14111d] flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="px-1.5 py-[1px] rounded bg-[#fde047] border border-[#14111d] text-[9.5px] font-black text-[#14111d] tabular-nums">W${idx + 1}</span>
+            <span class="text-[12px] font-black text-[#14111d] truncate">${w.name}</span>
+            <span class="px-1.5 py-[1px] rounded bg-[#e0f2fe] border border-[#14111d] text-[#0369a1] text-[10px] font-black tabular-nums">${scale.toFixed(1)}×</span>
+          </div>
+          <div class="text-[10.5px] font-black tabular-nums text-[#334155]">
+            5/5 Max: <span class="text-[#dc2626]">+${fullDmg}% DMG</span> • <span class="text-[#b45309]">+${fullOre}% Ore</span> • <span class="text-[#15803d]">+${fullSell}% Sell</span> • <span class="text-[#7e22ce]">+${fullGem}% Gem</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#14111d]/60 backdrop-blur-[3px] p-3 pointer-events-auto" data-action="worlds-synergy-close" role="dialog" aria-modal="true" aria-label="World Synergy Combo">
+        <div class="w-[min(640px,100%)] max-h-[min(590px,calc(100vh-24px))] rounded-2xl border-[3.5px] border-[#14111d] bg-[#fff8e7] text-[#14111d] p-4 flex flex-col gap-3 min-h-0" data-synergy-info-dialog="true" onclick="event.stopPropagation()">
+          <div class="flex items-center justify-between gap-2 shrink-0">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-[#ede9fe] border-[2.5px] border-[#14111d]">
+              <span class="text-[15px] leading-none text-[#7c3aed]">✦</span>
+              <span class="text-[16px] font-black text-[#14111d]">World Synergy Combo</span>
+            </div>
+            <button type="button" class="${TW_CLOSE_BTN}" data-action="worlds-synergy-close" aria-label="Close Synergy Info">✕</button>
+          </div>
+
+          <div class="text-[12.5px] font-bold text-[#334155] leading-snug shrink-0">
+            Deploy <b class="text-[#14111d]">2–5 Chibis</b> from the same World on your Mine Plots to trigger a <b class="text-[#6d28d9]">World Synergy</b>! Higher Worlds &amp; bigger combos grant stronger <b class="text-[#dc2626]">DMG</b>, <b class="text-[#b45309]">Ore Drop</b>, <b class="text-[#15803d]">Ore Sell</b> &amp; <b class="text-[#7e22ce]">Gem</b> buffs—and multiple active Worlds stack globally.
+          </div>
+
+          <div class="flex flex-col gap-3 overflow-y-auto mam-no-scrollbar min-h-0 pr-0.5">
+            <div class="flex flex-col gap-1.5">
+              <div class="text-[11px] font-black uppercase tracking-wider text-[#5b526e]">Active On Your Plots (${activeResonances.length})</div>
+              ${activeHtml}
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <div class="text-[11px] font-black uppercase tracking-wider text-[#5b526e]">Combo Tiers (Base World 1 • 1.0×)</div>
+              <div class="grid grid-cols-2 @max-[560px]:grid-cols-1 gap-2">
+                ${tiersHtml}
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <div class="text-[11px] font-black uppercase tracking-wider text-[#5b526e]">Higher World Multipliers (W1 → W6)</div>
+              <div class="flex flex-col gap-1.5">
+                ${worldScaleRowsHtml}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   public renderWorldsModal(): string {
     const rowsHtml = this.buildWorldsListHtml();
     this.lastWorldsListHtml = rowsHtml;
+    const activeCount = this.state.getActiveWorldResonances().length;
 
     const worldIconSvg = `
       <svg viewBox="0 0 32 32" width="22" height="22" class="shrink-0" aria-hidden="true">
@@ -438,19 +586,30 @@ export class UpgradesWorldsUi {
       </svg>
     `;
 
-    return renderModalShell({
-      title: 'World Teleport',
-      theme: 'worlds',
-      iconHtml: worldIconSvg,
-      boxClass: `w-[740px] ${TW_SHOP_MODAL_RESP}`,
-      headerExtraHtml: `<div class="px-3 py-1 rounded-full bg-[#fef08a] border-2 border-[#14111d] text-[15px] font-black text-[#14111d] tabular-nums mr-1" data-worlds-cash="true">${fmtMoney(this.state.cash)}</div>`,
-      bodyHtml: `
-        <div class="text-[13px] font-bold text-[#334155] -mt-1">Complete 100% of your current World's Research to unlock the next World. Core Research stays active across all Worlds.</div>
-        <div class="flex flex-col gap-2.5 overflow-x-hidden overflow-y-auto mam-no-scrollbar flex-1 min-h-0 px-1 py-0.5" data-worlds-list="true">
-          ${rowsHtml}
-        </div>
-      `,
-    });
+    return `
+      ${renderModalShell({
+        title: 'World Teleport',
+        theme: 'worlds',
+        iconHtml: worldIconSvg,
+        boxClass: `w-[740px] ${TW_SHOP_MODAL_RESP}`,
+        headerExtraHtml: `
+          <div class="w-full flex items-center justify-between gap-2 flex-wrap">
+            <div class="inline-flex items-center gap-1.5">
+              <button type="button" class="w-7 h-7 rounded-full border-2 border-[#14111d] bg-[#e0f2fe] hover:bg-[#bae6fd] text-[#14111d] text-[14px] font-black italic font-serif inline-flex items-center justify-center cursor-pointer transition-transform duration-150 hover:scale-105 active:scale-95" data-action="worlds-synergy-info" title="World Synergy Combo Info" aria-label="World Synergy Combo Info">i</button>
+              <span class="text-[12px] font-black text-[#5b526e]">Combo Synergy${activeCount > 0 ? ` <span class="px-1.5 py-[1px] rounded-full bg-[#ede9fe] border border-[#14111d] text-[#6d28d9] text-[10.5px] font-black tabular-nums">${activeCount} Active</span>` : ''}</span>
+            </div>
+            <div class="px-3 py-1 rounded-full bg-[#fef08a] border-2 border-[#14111d] text-[15px] font-black text-[#14111d] tabular-nums mr-1" data-worlds-cash="true">${fmtMoney(this.state.cash)}</div>
+          </div>
+        `,
+        bodyHtml: `
+          <div class="text-[13px] font-bold text-[#334155] -mt-1">Complete 100% of your current World's Research to unlock the next World. Core Research stays active across all Worlds.</div>
+          <div class="flex flex-col gap-2.5 overflow-x-hidden overflow-y-auto mam-no-scrollbar flex-1 min-h-0 px-1 py-0.5" data-worlds-list="true">
+            ${rowsHtml}
+          </div>
+        `,
+      })}
+      ${this.renderWorldsSynergyInfoOverlay()}
+    `;
   }
 
   public bindUpgradesEvents(root: HTMLElement, bindClose = false): void {
@@ -591,6 +750,24 @@ export class UpgradesWorldsUi {
   }
 
   public bindWorldsEvents(root: HTMLElement, scope: ParentNode = root): void {
+    scope.querySelectorAll('[data-action="worlds-synergy-info"]').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        audio.playSfx('ui-open');
+        this.worldsSynergyInfoOpen = true;
+        this.onRequestRender();
+      });
+    });
+
+    scope.querySelectorAll('[data-action="worlds-synergy-close"]').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        audio.playSfx('ui-close');
+        this.worldsSynergyInfoOpen = false;
+        this.onRequestRender();
+      });
+    });
+
     scope.querySelectorAll('[data-teleport-world]').forEach((el) => {
       el.addEventListener('click', () => {
         const wid = (el as HTMLElement).dataset.teleportWorld as WorldId;

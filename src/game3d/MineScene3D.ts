@@ -765,7 +765,6 @@ export class MineScene3D {
       const { damage, isCrit } = rollTapCriticalDamage(this.tapDamage, this.overclockActive);
       const res = this.pit.hitNode(Number(hit.userData.nodeId || 0), damage, true, isHold ? 5 : 4, holdFx);
       if (res) {
-        this.tapShakeIntensity = Math.max(this.tapShakeIntensity, isCrit ? 0.14 : 0.04);
         const wp = new THREE.Vector3();
         hit.getWorldPosition(wp);
         this.emitDamageScreen(
@@ -799,7 +798,6 @@ export class MineScene3D {
           const { damage, isCrit } = rollTapCriticalDamage(this.tapDamage, this.overclockActive);
           const res = this.pit.hitNode(best.id, damage, true, isHold ? 5 : 4, holdFx);
           if (res) {
-            this.tapShakeIntensity = Math.max(this.tapShakeIntensity, isCrit ? 0.14 : 0.04);
             this.emitDamageScreen(
               res.dmgDealt,
               best.worldX,

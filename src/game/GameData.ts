@@ -622,20 +622,40 @@ export interface WorldResonanceTierDef {
   minCount: number;
   dmgBonusPct: number;
   oreDropBonusPct: number;
+  sellBonusPct: number;
   gemBonusPct: number;
   label: string;
 }
 
 export const WORLD_RESONANCE_TIERS: readonly WorldResonanceTierDef[] = [
-  { minCount: 2, dmgBonusPct: 0.15, oreDropBonusPct: 0, gemBonusPct: 0, label: 'Duo Resonance' },
-  { minCount: 3, dmgBonusPct: 0.3, oreDropBonusPct: 0.1, gemBonusPct: 0, label: 'Trio Resonance' },
-  { minCount: 5, dmgBonusPct: 0.6, oreDropBonusPct: 0.25, gemBonusPct: 0.15, label: 'Full World Roster' },
+  { minCount: 2, dmgBonusPct: 0.15, oreDropBonusPct: 0.05, sellBonusPct: 0.08, gemBonusPct: 0, label: 'Duo Resonance' },
+  { minCount: 3, dmgBonusPct: 0.3, oreDropBonusPct: 0.1, sellBonusPct: 0.18, gemBonusPct: 0, label: 'Trio Resonance' },
+  { minCount: 4, dmgBonusPct: 0.45, oreDropBonusPct: 0.18, sellBonusPct: 0.28, gemBonusPct: 0.08, label: 'Quad Resonance' },
+  { minCount: 5, dmgBonusPct: 0.6, oreDropBonusPct: 0.25, sellBonusPct: 0.4, gemBonusPct: 0.15, label: 'Full World Roster' },
 ];
+
+export const WORLD_RESONANCE_WORLD_SCALES: Record<WorldId, number> = {
+  underground: 1.0,
+  crystal: 1.2,
+  magma: 1.4,
+  ruins: 1.6,
+  astral: 1.8,
+  starwell: 2.0,
+};
+
+export function getWorldResonanceScale(worldId: WorldId): number {
+  return WORLD_RESONANCE_WORLD_SCALES[worldId] ?? 1.0;
+}
+
+function scaleResonancePct(basePct: number, scale: number): number {
+  return Math.round(basePct * scale * 100) / 100;
+}
 
 export interface WorldResonanceStatus {
   worldId: WorldId;
   worldName: string;
   count: number;
+  worldScale: number;
   tier: WorldResonanceTierDef;
 }
 
@@ -655,7 +675,20 @@ export function computeWorldResonances(plotChibiIds: Array<string | null>): Worl
       if (count >= tier.minCount) bestTier = tier;
     }
     if (bestTier) {
-      active.push({ worldId: world.id, worldName: world.name, count, tier: bestTier });
+      const worldScale = getWorldResonanceScale(world.id);
+      active.push({
+        worldId: world.id,
+        worldName: world.name,
+        count,
+        worldScale,
+        tier: {
+          ...bestTier,
+          dmgBonusPct: scaleResonancePct(bestTier.dmgBonusPct, worldScale),
+          oreDropBonusPct: scaleResonancePct(bestTier.oreDropBonusPct, worldScale),
+          sellBonusPct: scaleResonancePct(bestTier.sellBonusPct, worldScale),
+          gemBonusPct: scaleResonancePct(bestTier.gemBonusPct, worldScale),
+        },
+      });
     }
   }
   return active;

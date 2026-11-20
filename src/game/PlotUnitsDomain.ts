@@ -234,8 +234,9 @@ export function getWorldResonanceDmgPct(
 
 export function getActiveStarAndResonanceBonuses(
   ctx: Pick<PlotUnitsContext, 'plotUnits' | 'plotMiners' | 'chibiStars'>
-): { oreDropBonusPct: number; gemBonusPct: number } {
+): { oreDropBonusPct: number; sellBonusPct: number; gemBonusPct: number } {
   let oreDropBonusPct = 0;
+  let sellBonusPct = 0;
   let gemBonusPct = 0;
   for (const unit of ctx.plotUnits) {
     if (!unit) continue;
@@ -247,9 +248,10 @@ export function getActiveStarAndResonanceBonuses(
   }
   for (const res of computeWorldResonances(ctx.plotMiners)) {
     oreDropBonusPct += res.tier.oreDropBonusPct;
+    sellBonusPct += res.tier.sellBonusPct;
     gemBonusPct += res.tier.gemBonusPct;
   }
-  return { oreDropBonusPct, gemBonusPct };
+  return { oreDropBonusPct, sellBonusPct, gemBonusPct };
 }
 
 /** Sums global Ore Drop and Sell Value bonuses from Enchants equipped on active plot Chibis. */

@@ -78,12 +78,13 @@ export function buildWorldSynergyBadgesHtml(state: GameState): string {
       const wDef = getWorldById(r.worldId);
       const dmgPct = Math.round(r.tier.dmgBonusPct * 100);
       const orePct = Math.round(r.tier.oreDropBonusPct * 100);
+      const sellPct = Math.round(r.tier.sellBonusPct * 100);
       const gemPct = Math.round(r.tier.gemBonusPct * 100);
       return `
         <div
           class="inline-flex items-center gap-2 @max-[720px]:gap-1.5 pl-1.5 pr-2.5 py-1 rounded-xl border-[2.5px] border-[#14111d] bg-[#fff8e7] text-[#14111d] pointer-events-none select-none"
           data-world-synergy-badge="${r.worldId}"
-          title="World Synergy • ${r.worldName} (${r.count}/5 Chibis)"
+          title="World Synergy • ${r.worldName} (${r.count}/5 Chibis • ${r.worldScale}×)"
         >
           <span
             class="w-7 h-7 @max-[720px]:w-6 @max-[720px]:h-6 rounded-lg border-2 border-[#14111d] flex items-center justify-center shrink-0"
@@ -95,9 +96,10 @@ export function buildWorldSynergyBadgesHtml(state: GameState): string {
               <span class="text-[11.5px] @max-[720px]:text-[10.5px] font-black text-[#14111d] truncate">${r.worldName}</span>
               <span class="px-1.5 py-[1px] rounded-md bg-[#14111d] text-[#fff8e7] text-[9.5px] font-black tabular-nums">${r.count}/5</span>
             </div>
-            <div class="flex items-center gap-1 text-[9.5px] font-black tabular-nums whitespace-nowrap">
+            <div class="flex items-center gap-1 text-[9.5px] font-black tabular-nums whitespace-nowrap flex-wrap">
               <span class="px-1.5 py-[1px] rounded bg-[#fee2e2] border border-[#14111d] text-[#dc2626]">+${dmgPct}% DMG</span>
               ${orePct > 0 ? `<span class="px-1.5 py-[1px] rounded bg-[#fef08a] border border-[#14111d] text-[#b45309]">+${orePct}% Ore</span>` : ''}
+              ${sellPct > 0 ? `<span class="px-1.5 py-[1px] rounded bg-[#dcfce7] border border-[#14111d] text-[#15803d]">+${sellPct}% Sell</span>` : ''}
               ${gemPct > 0 ? `<span class="px-1.5 py-[1px] rounded bg-[#f3e8ff] border border-[#14111d] text-[#7e22ce]">+${gemPct}% Gem</span>` : ''}
             </div>
           </div>

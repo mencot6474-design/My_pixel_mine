@@ -29,6 +29,8 @@ import {
   formatCountdownTimer,
   getElementPath,
   rarityCardClasses,
+  renderMutationBadgeHtml,
+  renderRarityBadgeHtml,
   renderToastBannerHtml,
   restoreRootScrolls,
   shouldDismissModalBackdrop,
@@ -38,8 +40,10 @@ import {
   buildDpsMeterInnerHtml,
   buildOverclockGaugeInnerHtml,
   buildWeatherWidgetInnerHtml,
+  buildWorldSynergyBadgesHtml,
   formatWeatherTimer,
 } from '../src/ui/WeatherDpsHudUi';
+import { UpgradesWorldsUi } from '../src/ui/UpgradesWorldsUi';
 import {
   buildAltarAnchorsHtml,
   buildMineOreBarsHtml,
@@ -52,6 +56,7 @@ import {
   WorldOverlayHudUi,
 } from '../src/ui/WorldOverlayHudUi';
 import { BountiesModalUi } from '../src/ui/BountiesModalUi';
+import { getTapComboTier, stepTapCombo, TAP_COMBO_WINDOW_MS } from '../src/game/TapComboHelper';
 import { OfflineModalUi } from '../src/ui/OfflineModalUi';
 import { SettingsModalUi } from '../src/ui/SettingsModalUi';
 import { buildTutorialCardHtml, getTutorialStageMeta, TUTORIAL_REWARD_DICE, TUTORIAL_REWARD_GEMS } from '../src/ui/TutorialUi';
@@ -832,6 +837,93 @@ describe('Tahap B HUD Modules', () => {
       expect(shouldStopAutoMutationRoll({ mutationId: 'frozen', gems: 100, cost: 20 })).toBe('high-tier');
       expect(shouldStopAutoMutationRoll({ mutationId: 'unreal', gems: 100, cost: 20 })).toBe('high-tier');
       expect(shouldStopAutoMutationRoll({ mutationId: 'normal', gems: 10, cost: 20 })).toBe('no-gems');
+    });
+  });
+
+  describe('Rarity Badge Labels (Common through Limited)', () => {
+    it('wraps label text in .mam-rarity-label for animated gradient styling across all 11 tiers', () => {
+      for (const tier of [
+        'common',
+        'uncommon',
+        'rare',
+        'epic',
+        'legendary',
+        'rainbow',
+        'mythic',
+        'exotic',
+        'secret',
+        'fusion',
+        'limited',
+      ] as const) {
+        const html = renderRarityBadgeHtml(tier);
+        expect(html).toContain(`mam-rarity-${tier}`);
+        expect(html).toContain('<span class="mam-rarity-label">');
+      }
+      expect(renderRarityBadgeHtml('common')).toContain('Common');
+      expect(renderRarityBadgeHtml('mythic')).toContain('Mythic');
+      expect(renderRarityBadgeHtml('exotic')).toContain('Exotic');
+      expect(renderRarityBadgeHtml('secret')).toContain('SECRET');
+      expect(renderRarityBadgeHtml('fusion')).toContain('FUSION');
+      expect(renderRarityBadgeHtml('limited')).toContain('LIMITED');
+    });
+
+    it('wraps label text in .mam-mut-label for animated gradient styling across all 9 mutations', () => {
+      for (const mut of [
+        ['normal', 'Normal'],
+        ['bronze', 'Bronze'],
+        ['diamond', 'Diamond'],
+        ['platinum', 'Platinum'],
+        ['rainbow', 'Rainbow'],
+        ['frozen', 'Frozen'],
+        ['inferno', 'Inferno'],
+        ['nightmare', 'Nightmare'],
+        ['unreal', 'Unreal'],
+      ] as const) {
+        const html = renderMutationBadgeHtml(mut[0], mut[1]);
+        expect(html).toContain(`mam-mut-${mut[0]}`);
+        expect(html).toContain(`<span class="mam-mut-label">${mut[1]}</span>`);
+      }
+    });
+  });
+
+  describe('World Teleport Synergy Info & Badges', () => {
+    it('renders the small info (i) button in World Teleport modal and +Sell% on World Synergy badges', () => {
+      const state = new GameState();
+      const ui = new UpgradesWorldsUi(
+        state,
+        () => {},
+        () => {},
+        () => {}
+      );
+      const modalHtml = ui.renderWorldsModal();
+      expect(modalHtml).toContain('data-action="worlds-synergy-info"');
+      expect(modalHtml).toContain('Combo Synergy');
+
+      state.miners['solar-striker'] = 1;
+      state.hotbar[0] = 'solar-striker';
+      state.selectedHotbarSlot = 0;
+      state.placeSelectedOnPlot(1);
+      const badgeHtml = buildWorldSynergyBadgesHtml(state);
+      expect(badgeHtml).toContain('+15% DMG');
+      expect(badgeHtml).toContain('+5% Ore');
+      expect(badgeHtml).toContain('+8% Sell');
+    });
+  });
+
+  describe('Pickaxe Tap Combo Helper', () => {
+    it('increments combo within window, resets after expiry, and escalates visual tiers', () => {
+      let s = stepTapCombo({ count: 0, lastTapAtMs: 0 }, 1000);
+      expect(s.count).toBe(1);
+      s = stepTapCombo(s, 1200);
+      expect(s.count).toBe(2);
+      expect(getTapComboTier(s.count)).toEqual({ id: 'cool', badgeText: 'COMBO' });
+      expect(getTapComboTier(10)).toEqual({ id: 'super', badgeText: 'SUPER!' });
+      expect(getTapComboTier(25)).toEqual({ id: 'hyper', badgeText: 'HYPER!' });
+      expect(getTapComboTier(50)).toEqual({ id: 'overdrive', badgeText: 'OVERDRIVE!' });
+      expect(getTapComboTier(100)).toEqual({ id: 'godlike', badgeText: 'GODLIKE!' });
+
+      const expired = stepTapCombo(s, 1200 + TAP_COMBO_WINDOW_MS + 1);
+      expect(expired.count).toBe(1);
     });
   });
 });

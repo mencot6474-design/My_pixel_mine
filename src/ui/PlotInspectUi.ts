@@ -137,7 +137,10 @@ export class PlotInspectUi {
     const mut = getMutationById(unit.mutationId);
     const star = this.state.getChibiStar(chibi.id);
     const worldId = getMinerWorldId(chibi.id);
-    const resBonusPct = this.state.getWorldResonanceDmgBonusPct(worldId);
+    const resMatch = worldId ? this.state.getActiveWorldResonances().find((r) => r.worldId === worldId) : undefined;
+    const resBonusPct = resMatch ? resMatch.tier.dmgBonusPct : 0;
+    const resOrePct = resMatch ? Math.round(resMatch.tier.oreDropBonusPct * 100) : 0;
+    const resSellPct = resMatch ? Math.round(resMatch.tier.sellBonusPct * 100) : 0;
     const worldName = worldId ? getWorldById(worldId).name : null;
     const fusionDef = getFusionRecipeByResultChibiId(chibi.id);
     const eqEnchant = getEnchantById(unit.enchantId);
@@ -155,7 +158,7 @@ export class PlotInspectUi {
           <span class="text-[#14111d]">•</span>
           ${renderMutationBadgeHtml(mut.id, mut.name)}
         </div>
-        ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black tabular-nums text-[#7c3aed]">✦ ${worldName} Resonance (+${Math.round(resBonusPct * 100)}% DMG)</div>` : ''}
+        ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black tabular-nums text-[#7c3aed]">✦ ${worldName} Synergy (+${Math.round(resBonusPct * 100)}% DMG${resOrePct > 0 ? ` • +${resOrePct}% Ore` : ''}${resSellPct > 0 ? ` • +${resSellPct}% Sell` : ''})</div>` : ''}
         ${fusionDef ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#cffafe] border-2 border-[#14111d] text-[11px] font-black text-[#14111d] self-start leading-snug">★ Passive: ${fusionDef.passive.label}</div>` : ''}
         ${eqEnchant ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border-2 border-[#14111d] text-[10.5px] font-black text-[#14111d] self-start leading-snug">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}
         <div class="text-[12.5px] font-bold tabular-nums text-[#475569] mt-0.5">

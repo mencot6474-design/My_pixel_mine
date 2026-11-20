@@ -17,6 +17,12 @@ import {
   rollPitEventKind,
   type PitEventKind,
 } from './game/PitEventsDomain';
+import {
+  TAP_COMBO_WINDOW_MS,
+  getTapComboTier,
+  stepTapCombo,
+  type TapComboState,
+} from './game/TapComboHelper';
 import { getWeatherById, type WeatherId } from './game/WeatherData';
 import { getChibiById } from './game3d/ChibiCatalog';
 import { init3dHudIcons } from './game3d/HudIcon3DRenderer';
@@ -46,11 +52,59 @@ async function bootstrap(): Promise<void> {
   pickaxeCursorEl.id = 'mamPickaxeCursor';
   pickaxeCursorEl.style.display = 'none';
   pickaxeCursorEl.innerHTML = `<img src="${assetUrl('/pickaxes/sunwheel.webp')}" alt="" />`;
+  const pickaxeComboEl = document.createElement('div');
+  pickaxeComboEl.id = 'mamPickaxeCombo';
+  pickaxeComboEl.className = 'mam-pickaxe-combo tier-cool';
+  pickaxeComboEl.style.display = 'none';
+  pickaxeComboEl.style.setProperty('--combo-ms', `${TAP_COMBO_WINDOW_MS}ms`);
+  pickaxeCursorEl.appendChild(pickaxeComboEl);
   document.body.appendChild(pickaxeCursorEl);
 
   const threeRoot = document.getElementById('threeRoot');
   const hudRoot = document.getElementById('hudRoot');
   if (!threeRoot || !hudRoot) return;
+
+  let tapComboState: TapComboState = { count: 0, lastTapAtMs: 0 };
+  let tapComboExpireTimer: number | null = null;
+  const resetTapCombo = (): void => {
+    tapComboState = { count: 0, lastTapAtMs: 0 };
+    if (tapComboExpireTimer !== null) {
+      window.clearTimeout(tapComboExpireTimer);
+      tapComboExpireTimer = null;
+    }
+    pickaxeComboEl.style.display = 'none';
+    pickaxeComboEl.classList.remove('is-pop', 'is-draining', 'is-crit');
+  };
+
+  const triggerTapCombo = (isCrit: boolean): void => {
+    const now = performance.now();
+    tapComboState = stepTapCombo(tapComboState, now, TAP_COMBO_WINDOW_MS);
+    if (tapComboExpireTimer !== null) {
+      window.clearTimeout(tapComboExpireTimer);
+    }
+    tapComboExpireTimer = window.setTimeout(resetTapCombo, TAP_COMBO_WINDOW_MS + 30);
+
+    if (tapComboState.count < 2) {
+      pickaxeComboEl.style.display = 'none';
+      return;
+    }
+
+    const tier = getTapComboTier(tapComboState.count);
+    pickaxeComboEl.className = `mam-pickaxe-combo tier-${tier.id}${isCrit ? ' is-crit' : ''}${
+      pickaxeComboEl.classList.contains('is-flip-left') ? ' is-flip-left' : ''
+    }${pickaxeComboEl.classList.contains('is-flip-down') ? ' is-flip-down' : ''}`;
+    pickaxeComboEl.innerHTML = `
+      <span class="mam-pickaxe-combo-row">
+        <span class="mam-pickaxe-combo-num">${tapComboState.count}x</span>
+        <span class="mam-pickaxe-combo-tag">${tier.badgeText}</span>
+        ${isCrit ? '<span class="mam-pickaxe-combo-crit">CRIT!</span>' : ''}
+      </span>
+      <span class="mam-pickaxe-combo-bar"></span>
+    `;
+    pickaxeComboEl.style.display = 'flex';
+    void pickaxeComboEl.offsetWidth;
+    pickaxeComboEl.classList.add('is-pop', 'is-draining');
+  };
 
   const syncPickaxeCursor = (e: PointerEvent): void => {
     if (isAdPlaying()) {
@@ -66,6 +120,8 @@ async function bootstrap(): Promise<void> {
     pickaxeCursorEl.style.display = 'block';
     pickaxeCursorEl.style.left = `${e.clientX}px`;
     pickaxeCursorEl.style.top = `${e.clientY}px`;
+    pickaxeComboEl.classList.toggle('is-flip-left', e.clientX > window.innerWidth - 150);
+    pickaxeComboEl.classList.toggle('is-flip-down', e.clientY < 64);
   };
   window.addEventListener('pointermove', syncPickaxeCursor, true);
   window.addEventListener(
@@ -158,6 +214,7 @@ async function bootstrap(): Promise<void> {
       hud?.spawnDamagePopup(dmg, sx, sy, isClick, isCrit);
       audio.playOreHit(isClick);
       if (isClick) {
+        triggerTapCombo(Boolean(isCrit));
         if (holdMiningVisualActive) {
           spawnElectricSpark(sx, sy);
         }
@@ -336,6 +393,7 @@ async function bootstrap(): Promise<void> {
       hud?.setAdPaused(paused);
       if (paused) {
         pickaxeCursorEl.style.display = 'none';
+        resetTapCombo();
       }
     },
     setAudioMuted: (muted) => audio.setAdMuted(muted),

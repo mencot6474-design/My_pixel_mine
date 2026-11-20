@@ -477,7 +477,7 @@ export class GameState {
     return getWorldResonanceDmgPct(this, worldId);
   }
 
-  public getActiveStarDropAndGemBonus(): { oreDropBonusPct: number; gemBonusPct: number } {
+  public getActiveStarDropAndGemBonus(): { oreDropBonusPct: number; sellBonusPct: number; gemBonusPct: number } {
     return getActiveStarAndResonanceBonuses(this);
   }
 
@@ -801,9 +801,11 @@ export class GameState {
   }
 
   public getOreValueMult(): number {
+    const { sellBonusPct } = this.getActiveStarDropAndGemBonus();
     return (
       1 +
       this.getActiveResearchBonus('oreValuePct') +
+      sellBonusPct +
       this.getRelicBonus('oreValuePct') +
       this.getActiveFusionPassives().oreSellPct +
       this.getActiveEnchantBonuses().sellValuePct +

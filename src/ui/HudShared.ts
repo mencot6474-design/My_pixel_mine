@@ -62,18 +62,18 @@ export function rarityCardClasses(rarity: ItemRarity, extra = ''): string {
 export function renderRarityBadgeHtml(rarity: ItemRarity, extraCls = ''): string {
   const extra = extraCls ? ` ${extraCls}` : '';
   if (rarity === 'fusion') {
-    return `<span class="mam-rarity-badge mam-rarity-fusion mam-fusion-badge${extra}"><span class="mam-rarity-glint"></span><span class="mam-rarity-emblem" style="background:linear-gradient(135deg,#38bdf8,#e879f9);color:#fff"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L14.8 9.2L23 12L14.8 14.8L12 23L9.2 14.8L1 12L9.2 9.2L12 1Z"/></svg></span><span>FUSION</span><span class="mam-rarity-spark s1">✦</span><span class="mam-rarity-spark s2">✧</span></span>`;
+    return `<span class="mam-rarity-badge mam-rarity-fusion mam-fusion-badge${extra}"><span class="mam-rarity-glint"></span><span class="mam-rarity-emblem" style="background:linear-gradient(135deg,#38bdf8,#e879f9);color:#fff"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L14.8 9.2L23 12L14.8 14.8L12 23L9.2 14.8L1 12L9.2 9.2L12 1Z"/></svg></span><span class="mam-rarity-label">FUSION</span><span class="mam-rarity-spark s1">✦</span><span class="mam-rarity-spark s2">✧</span></span>`;
   }
   if (rarity === 'limited') {
-    return `<span class="mam-rarity-badge mam-rarity-limited mam-limited-badge${extra}"><span class="mam-rarity-glint"></span><span class="mam-rarity-emblem" style="background:#fde047;color:#14111d"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v2H3v-2zm0-2l2-10 5 4 2-6 2 6 5-4 2 10H3z"/></svg></span><span>LIMITED</span><span class="mam-rarity-spark s1">★</span><span class="mam-rarity-spark s2">✦</span></span>`;
+    return `<span class="mam-rarity-badge mam-rarity-limited mam-limited-badge${extra}"><span class="mam-rarity-glint"></span><span class="mam-rarity-emblem" style="background:#fde047;color:#14111d"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v2H3v-2zm0-2l2-10 5 4 2-6 2 6 5-4 2 10H3z"/></svg></span><span class="mam-rarity-label">LIMITED</span><span class="mam-rarity-spark s1">★</span><span class="mam-rarity-spark s2">✦</span></span>`;
   }
   if (rarity === 'secret') {
-    return `<span class="mam-rarity-badge mam-rarity-secret${extra}"><span class="mam-rarity-glint"></span><span class="mam-rarity-emblem" style="background:#fde047;color:#14111d;border-color:#14111d"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2L12 16.6 5.7 21l2.3-7.2-6-4.6h7.6z"/></svg></span><span>SECRET</span><span class="mam-rarity-spark s1">✦</span><span class="mam-rarity-spark s2">✦</span></span>`;
+    return `<span class="mam-rarity-badge mam-rarity-secret${extra}"><span class="mam-rarity-glint"></span><span class="mam-rarity-emblem" style="background:#fde047;color:#14111d;border-color:#14111d"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2L12 16.6 5.7 21l2.3-7.2-6-4.6h7.6z"/></svg></span><span class="mam-rarity-label">SECRET</span><span class="mam-rarity-spark s1">✦</span><span class="mam-rarity-spark s2">✦</span></span>`;
   }
   const hasGlint = rarity === 'legendary' || rarity === 'rainbow' || rarity === 'mythic' || rarity === 'exotic';
   const glintHtml = hasGlint ? '<span class="mam-rarity-glint"></span>' : '';
   const rarityLabel = rarity.charAt(0).toUpperCase() + rarity.slice(1);
-  return `<span class="mam-rarity-badge mam-rarity-${rarity}${extra}">${glintHtml}<span>${rarityLabel}</span></span>`;
+  return `<span class="mam-rarity-badge mam-rarity-${rarity}${extra}">${glintHtml}<span class="mam-rarity-label">${rarityLabel}</span></span>`;
 }
 
 export function renderMutationBadgeHtml(mutationId: string, mutationName?: string, extraCls = ''): string {
@@ -89,7 +89,7 @@ export function renderMutationBadgeHtml(mutationId: string, mutationName?: strin
       ? '<span class="mam-rarity-spark s1">✦</span><span class="mam-rarity-spark s2">✧</span>'
       : '';
 
-  return `<span class="mam-mut-badge mam-mut-${id}${ringCls}${extra}">${glintHtml}<span>${label}</span>${sparksHtml}</span>`;
+  return `<span class="mam-mut-badge mam-mut-${id}${ringCls}${extra}">${glintHtml}<span class="mam-mut-label">${label}</span>${sparksHtml}</span>`;
 }
 
 export function rarityVars(rarity: ItemRarity): string {

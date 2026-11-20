@@ -24,6 +24,7 @@ import {
   renderEmptyInspectorPanel,
   renderInspectorPanel,
   renderModalShell,
+  renderRarityBadgeHtml,
   TW_MODAL_GRID_BASE,
   TW_SHOP_MODAL_RESP,
   TW_TAB_BTN,
@@ -348,9 +349,9 @@ export class ForgeModalUi {
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-2 min-w-0">
               <span class="w-7 h-7 shrink-0 flex items-center justify-center [&>img]:w-7 [&>img]:h-7 [&>svg]:w-7 [&>svg]:h-7">${oreIconSvg(ore.color, ore.secondaryColor, ore.rarity, ore.id, ore.id)}</span>
-              <div class="flex flex-col items-start min-w-0">
+              <div class="flex flex-col items-start gap-0.5 min-w-0">
                 <span class="text-[12.5px] font-black text-[#14111d] truncate max-w-full">${ore.name}</span>
-                <span class="text-[9.5px] font-black uppercase px-1.5 py-px rounded bg-white border border-[#14111d] text-[#14111d]">${ore.rarity}</span>
+                ${renderRarityBadgeHtml(ore.rarity, 'is-compact !ml-0')}
               </div>
             </div>
             <button type="button" class="w-6 h-6 rounded-lg bg-[#f43f5e] border-2 border-[#14111d] hover:bg-[#e11d48] text-white text-[11px] font-black cursor-pointer shrink-0 transition-transform duration-150 hover:scale-110 active:scale-90" data-action="forge-ore-info-close">✕</button>

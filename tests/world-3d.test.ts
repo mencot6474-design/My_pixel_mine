@@ -1661,23 +1661,28 @@ describe('Pure 3D Mine World', () => {
     state.placeSelectedOnPlot(0);
     expect(state.getActiveWorldResonances()).toHaveLength(0);
 
-    // 2 Underground chibis -> Duo Resonance (+15% DMG)
+    // 2 Underground chibis -> Duo Resonance (+15% DMG, +5% Ore Drop, +8% Ore Sell)
     state.hotbar[0] = ugIds[1];
     state.placeSelectedOnPlot(1);
     let res = state.getActiveWorldResonances();
     expect(res).toHaveLength(1);
     expect(res[0].worldId).toBe('underground');
     expect(res[0].tier.dmgBonusPct).toBeCloseTo(0.15, 5);
+    expect(res[0].tier.oreDropBonusPct).toBeCloseTo(0.05, 5);
+    expect(res[0].tier.sellBonusPct).toBeCloseTo(0.08, 5);
+    expect(state.getOreValueMult()).toBeCloseTo(1.08, 5);
 
-    // 3 Underground chibis -> Trio Resonance (+30% DMG, +10% Ore Drop)
+    // 3 Underground chibis -> Trio Resonance (+30% DMG, +10% Ore Drop, +18% Ore Sell)
     state.hotbar[0] = ugIds[2];
     state.placeSelectedOnPlot(2);
     res = state.getActiveWorldResonances();
     expect(res[0].tier.dmgBonusPct).toBeCloseTo(0.3, 5);
     expect(res[0].tier.oreDropBonusPct).toBeCloseTo(0.1, 5);
+    expect(res[0].tier.sellBonusPct).toBeCloseTo(0.18, 5);
     expect(state.getOreOutputMult()).toBeCloseTo(1.1, 5);
+    expect(state.getOreValueMult()).toBeCloseTo(1.18, 5);
 
-    // 5 Underground chibis -> Full World Roster (+60% DMG, +25% Ore Drop, +15% Gem Gain)
+    // 5 Underground chibis -> Full World Roster (+60% DMG, +25% Ore Drop, +40% Ore Sell, +15% Gem Gain)
     state.hotbar[0] = ugIds[3];
     state.placeSelectedOnPlot(3);
     state.hotbar[0] = ugIds[4];
@@ -1686,8 +1691,31 @@ describe('Pure 3D Mine World', () => {
     expect(res[0].count).toBe(5);
     expect(res[0].tier.dmgBonusPct).toBeCloseTo(0.6, 5);
     expect(res[0].tier.oreDropBonusPct).toBeCloseTo(0.25, 5);
+    expect(res[0].tier.sellBonusPct).toBeCloseTo(0.4, 5);
     expect(res[0].tier.gemBonusPct).toBeCloseTo(0.15, 5);
     expect(state.getActiveStarDropAndGemBonus().gemBonusPct).toBeCloseTo(0.15, 5);
+    expect(state.getOreValueMult()).toBeCloseTo(1.4, 5);
+  });
+
+  it('scales World Synergy buffs higher on advanced Worlds (e.g. Starwell 2.0x vs Underground 1.0x)', () => {
+    const state = new GameState();
+    const starIds = ['draconic-blademaster', 'aegis-wyrm', 'ashen-titan', 'vesper-reaver', 'null-prism'];
+    starIds.forEach((id, idx) => {
+      state.miners[id] = 1;
+      state.hotbar[0] = id;
+      state.selectedHotbarSlot = 0;
+      state.placeSelectedOnPlot(idx);
+    });
+    const res = state.getActiveWorldResonances();
+    expect(res).toHaveLength(1);
+    expect(res[0].worldId).toBe('starwell');
+    expect(res[0].worldScale).toBeCloseTo(2.0, 5);
+    expect(res[0].tier.dmgBonusPct).toBeCloseTo(1.2, 5);
+    expect(res[0].tier.oreDropBonusPct).toBeCloseTo(0.5, 5);
+    expect(res[0].tier.sellBonusPct).toBeCloseTo(0.8, 5);
+    expect(res[0].tier.gemBonusPct).toBeCloseTo(0.3, 5);
+    expect(state.getOreOutputMult()).toBeCloseTo(1.5, 5);
+    expect(state.getOreValueMult()).toBeCloseTo(1.8, 5);
   });
 
   it('prevents deploying 1 owned Chibi or 1 owned Enchant onto multiple plots', () => {

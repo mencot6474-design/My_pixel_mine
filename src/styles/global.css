@@ -65,6 +65,193 @@
     animation: mamPickaxeSwing 0.18s cubic-bezier(0.22, 1, 0.36, 1) infinite;
   }
 
+  @keyframes mamComboPop {
+    0% {
+      transform: scale(0.76) rotate(-7deg) translateY(3px);
+    }
+    45% {
+      transform: scale(1.16) rotate(2deg) translateY(-2px);
+    }
+    100% {
+      transform: scale(1) rotate(-3deg) translateY(0);
+    }
+  }
+
+  @keyframes mamComboDrain {
+    0% {
+      transform: scaleX(1);
+    }
+    100% {
+      transform: scaleX(0);
+    }
+  }
+
+  @keyframes mamComboGodlikeFlow {
+    0% {
+      background-position: 0% 50%;
+    }
+    100% {
+      background-position: 200% 50%;
+    }
+  }
+
+  .mam-pickaxe-combo {
+    position: absolute;
+    left: 22px;
+    top: -46px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    padding: 3px 9px 5px;
+    border-radius: 10px;
+    border: 2.5px solid #14111d;
+    background: #fff8e7;
+    color: #14111d;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    transform-origin: bottom left;
+    transform: rotate(-3deg);
+    will-change: transform;
+  }
+
+  .mam-pickaxe-combo.is-flip-left {
+    left: auto;
+    right: 34px;
+    transform-origin: bottom right;
+  }
+
+  .mam-pickaxe-combo.is-flip-down {
+    top: 8px;
+  }
+
+  .mam-pickaxe-combo.is-pop {
+    animation: mamComboPop 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .mam-pickaxe-combo-row {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    line-height: 1;
+  }
+
+  .mam-pickaxe-combo-num {
+    font-size: 16px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    color: #0284c7;
+  }
+
+  .mam-pickaxe-combo-tag {
+    font-size: 9.5px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #14111d;
+  }
+
+  .mam-pickaxe-combo-crit {
+    margin-left: 2px;
+    padding: 1px 4px;
+    border-radius: 5px;
+    border: 1.5px solid #14111d;
+    background: linear-gradient(90deg, #fde047, #fb923c);
+    color: #14111d;
+    font-size: 8.5px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    line-height: 1;
+  }
+
+  .mam-pickaxe-combo-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: #38bdf8;
+    transform-origin: left center;
+  }
+
+  .mam-pickaxe-combo.is-draining .mam-pickaxe-combo-bar {
+    animation: mamComboDrain var(--combo-ms, 1350ms) linear forwards;
+  }
+
+  .mam-pickaxe-combo.tier-cool {
+    background: #e0f2fe;
+  }
+  .mam-pickaxe-combo.tier-cool .mam-pickaxe-combo-num {
+    color: #0369a1;
+  }
+  .mam-pickaxe-combo.tier-cool .mam-pickaxe-combo-bar {
+    background: #0ea5e9;
+  }
+
+  .mam-pickaxe-combo.tier-super {
+    background: #fef9c3;
+  }
+  .mam-pickaxe-combo.tier-super .mam-pickaxe-combo-num {
+    color: #d97706;
+  }
+  .mam-pickaxe-combo.tier-super .mam-pickaxe-combo-bar {
+    background: #f59e0b;
+  }
+
+  .mam-pickaxe-combo.tier-hyper {
+    background: #ffe4e6;
+  }
+  .mam-pickaxe-combo.tier-hyper .mam-pickaxe-combo-num {
+    color: #e11d48;
+  }
+  .mam-pickaxe-combo.tier-hyper .mam-pickaxe-combo-bar {
+    background: #f43f5e;
+  }
+
+  .mam-pickaxe-combo.tier-overdrive {
+    background: #1e1b4b;
+    color: #ffffff;
+  }
+  .mam-pickaxe-combo.tier-overdrive .mam-pickaxe-combo-tag {
+    color: #e0e7ff;
+  }
+  .mam-pickaxe-combo.tier-overdrive .mam-pickaxe-combo-num {
+    background: linear-gradient(95deg, #67e8f9, #c084fc, #f472b6, #67e8f9);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: mamComboGodlikeFlow 1.6s linear infinite;
+  }
+  .mam-pickaxe-combo.tier-overdrive .mam-pickaxe-combo-bar {
+    background: linear-gradient(90deg, #38bdf8, #c084fc);
+  }
+
+  .mam-pickaxe-combo.tier-godlike {
+    background: #14111d;
+    color: #ffffff;
+  }
+  .mam-pickaxe-combo.tier-godlike .mam-pickaxe-combo-tag {
+    color: #fde047;
+  }
+  .mam-pickaxe-combo.tier-godlike .mam-pickaxe-combo-num {
+    background: linear-gradient(95deg, #fde047, #fb7185, #38bdf8, #ffffff, #fde047);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: mamComboGodlikeFlow 1.3s linear infinite;
+  }
+  .mam-pickaxe-combo.tier-godlike .mam-pickaxe-combo-bar {
+    background: linear-gradient(90deg, #fde047, #fb7185, #38bdf8);
+  }
+
+  .mam-pickaxe-combo.is-crit {
+    border-color: #f59e0b;
+  }
+
   @keyframes mamElectricArcPop {
     0% {
       opacity: 1;

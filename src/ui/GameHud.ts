@@ -470,6 +470,9 @@ export class GameHud {
     if (kind !== 'index') {
       this.indexUi.closeReviewDialog();
     }
+    if (kind !== 'worlds') {
+      this.upgradesUi.closeSynergyInfoModal();
+    }
     if (kind !== prev) {
       audio.playSfx(kind === 'none' ? 'ui-close' : 'ui-open');
     }
@@ -484,6 +487,9 @@ export class GameHud {
     }
     if (next !== 'index') {
       this.indexUi.closeReviewDialog();
+    }
+    if (next !== 'worlds') {
+      this.upgradesUi.closeSynergyInfoModal();
     }
     audio.playSfx(next === 'none' ? 'ui-close' : 'ui-open');
     this.render();
