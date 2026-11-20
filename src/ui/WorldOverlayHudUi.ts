@@ -457,20 +457,42 @@ export class WorldOverlayHudUi {
     }
   }
 
-  public spawnDamagePopup(dmg: number, screenX: number, screenY: number, isClick = false): void {
+  public spawnDamagePopup(
+    dmg: number,
+    screenX: number,
+    screenY: number,
+    isClick = false,
+    isCrit = false
+  ): void {
     if (!this.settings.get().showDamagePopups) return;
     if (!this.dmgLayerEl || this.getUiContext().inspectedSlot !== null) return;
     if (this.dmgLayerEl.childElementCount >= 24) {
       this.dmgLayerEl.firstElementChild?.remove();
     }
     const el = document.createElement('div');
-    const sizeColor = isClick ? 'text-[22px] text-[#facc15]' : 'text-[20px] text-[#ef4444]';
-    el.className = `absolute font-black tabular-nums whitespace-nowrap will-change-[transform,opacity] animate-[mamDmgFloat_0.68s_cubic-bezier(0.22,1,0.36,1)_forwards] mam-outline ${sizeColor}`;
     const jitterX = (Math.random() - 0.5) * 32;
     const jitterY = (Math.random() - 0.5) * 14;
     el.style.left = `${screenX + jitterX}px`;
     el.style.top = `${screenY + jitterY}px`;
-    el.textContent = `-${fmtShort(Math.max(1, Math.round(dmg)))}`;
+    const dmgText = fmtShort(Math.max(1, Math.round(dmg)));
+    if (isCrit) {
+      el.className =
+        'absolute inline-flex items-center gap-1 font-black tabular-nums whitespace-nowrap will-change-[transform,opacity] animate-[mamCritFloat_0.82s_cubic-bezier(0.22,1,0.36,1)_forwards] pointer-events-none';
+      el.innerHTML = `
+        <svg class="w-6 h-6 shrink-0 drop-shadow-[0_0_8px_rgba(251,191,36,0.95)]" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <path d="M14 1.5L17.2 9.4L25.5 7.5L19.6 13.8L26.5 18.5L17.6 18.6L14 26.5L10.4 18.6L1.5 18.5L8.4 13.8L2.5 7.5L10.8 9.4L14 1.5Z" fill="#f59e0b" stroke="#fef08a" stroke-width="1.4" stroke-linejoin="round"/>
+          <path d="M14 5.5L16.1 11.1L21.8 11.4L17.1 14.9L18.8 20.5L14 17.2L9.2 20.5L10.9 14.9L6.2 11.4L11.9 11.1L14 5.5Z" fill="#fffbeb"/>
+        </svg>
+        <span class="inline-flex flex-col items-start leading-none">
+          <span class="px-1.5 py-[1px] rounded bg-[linear-gradient(90deg,#f59e0b,#ef4444)] border border-[#fef08a]/85 text-[9px] tracking-[0.12em] text-white uppercase shadow-[0_0_10px_rgba(245,158,11,0.75)]">CRIT</span>
+          <span class="text-[28px] text-[#fef08a] mam-outline drop-shadow-[0_0_12px_rgba(245,158,11,0.9)]">-${dmgText}!</span>
+        </span>
+      `;
+    } else {
+      const sizeColor = isClick ? 'text-[22px] text-[#facc15]' : 'text-[20px] text-[#ef4444]';
+      el.className = `absolute font-black tabular-nums whitespace-nowrap will-change-[transform,opacity] animate-[mamDmgFloat_0.68s_cubic-bezier(0.22,1,0.36,1)_forwards] mam-outline ${sizeColor}`;
+      el.textContent = `-${dmgText}`;
+    }
     el.addEventListener('animationend', () => el.remove(), { once: true });
     this.dmgLayerEl.appendChild(el);
   }

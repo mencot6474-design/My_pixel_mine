@@ -23,6 +23,7 @@ import { getDailyLoginRewardByChibiId } from './DailyLoginData';
 import { RelicEffectStat } from './RelicData';
 import { getFusionRecipeByResultChibiId } from './FusionData';
 import { getActiveFusionPassiveBonuses } from './FusionDomain';
+import { getActiveIndexPassiveBonusesDomain } from './IndexRewardsDomain';
 import { ResearchEffectType } from './ResearchData';
 import { WeatherId } from './WeatherData';
 
@@ -67,6 +68,7 @@ export interface PlotUnitsContext {
   chibiStars: Record<string, number>;
   ownedPickaxes: Record<string, number>;
   ownedEnchants: Record<string, number>;
+  claimedIndexRewards?: ReadonlySet<string>;
   getActiveResearchBonus(effectType: ResearchEffectType): number;
   getRelicBonus(stat: RelicEffectStat): number;
   getWeatherDamageMult(): number;
@@ -286,6 +288,9 @@ export function computePlotUnitStats(
   const starTier = getChibiStarTier(getChibiStarCount(ctx, chibi.id));
   const resonanceDmgMult = 1 + getWorldResonanceDmgPct(ctx, getMinerWorldId(chibi.id));
   const fusionTeamDmgMult = 1 + getActiveFusionPassiveBonuses(ctx.plotMiners).teamDmgPct;
+  const indexAllDmgMult = ctx.claimedIndexRewards
+    ? 1 + getActiveIndexPassiveBonusesDomain(ctx.claimedIndexRewards).allDmgPct
+    : 1;
   const baseDmg =
     chibi.baseDps *
     lvlScale(unit.damageLevel) *
@@ -295,7 +300,8 @@ export function computePlotUnitStats(
     dmgResearchMult *
     starTier.dmgMult *
     resonanceDmgMult *
-    fusionTeamDmgMult;
+    fusionTeamDmgMult *
+    indexAllDmgMult;
   const dmg = Math.round(baseDmg * weatherDmgMult);
   const nextDmg = Math.round(
     chibi.baseDps *
@@ -307,6 +313,7 @@ export function computePlotUnitStats(
       starTier.dmgMult *
       resonanceDmgMult *
       fusionTeamDmgMult *
+      indexAllDmgMult *
       weatherDmgMult
   );
   const speed = 10 + (unit.speedLevel - 1) * 2;

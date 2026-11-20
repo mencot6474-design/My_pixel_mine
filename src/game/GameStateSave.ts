@@ -9,7 +9,9 @@ import {
 } from './GameData';
 import { getRelicById, MAX_EQUIPPED_RELICS } from './RelicData';
 import { BountyEntry, isValidBountyEntry } from './BountiesDomain';
+import { isValidIndexMilestoneId } from './IndexRewardsDomain';
 import { ResearchTreeId } from './ResearchData';
+import { createEmptyTeamPresets, TEAM_PRESET_COUNT, TeamPresetSlots } from './TeamPresetsDomain';
 import { TOWER_MAX_KEYS, TowerSaveData } from './TowerData';
 import { isValidWeatherId, WeatherId } from './WeatherData';
 
@@ -110,6 +112,8 @@ export interface SavePayload {
   bountiesCompleted?: number;
   dailyLoginLastClaimDate?: string;
   dailyLoginClaimedDays?: number[];
+  claimedIndexRewards?: string[];
+  teamPresets?: TeamPresetSlots[];
 }
 
 export interface SaveableGameState {
@@ -152,6 +156,8 @@ export interface SaveableGameState {
   bountiesCompleted: number;
   dailyLoginLastClaimDate: string;
   dailyLoginClaimedDays: number[];
+  claimedIndexRewards: Set<string>;
+  teamPresets: TeamPresetSlots[];
 }
 
 /** Maps retired World 2–5 ore IDs onto current catalog ore IDs. */
@@ -242,6 +248,8 @@ export function serializeSavePayload(state: SaveableGameState): SavePayload {
     bountiesCompleted: state.bountiesCompleted,
     dailyLoginLastClaimDate: state.dailyLoginLastClaimDate,
     dailyLoginClaimedDays: state.dailyLoginClaimedDays,
+    claimedIndexRewards: [...state.claimedIndexRewards],
+    teamPresets: state.teamPresets.map((p) => p.slice(0, STAGE_PEDESTAL_COUNT)),
   };
 }
 
@@ -486,6 +494,25 @@ export function deserializeSaveJson(
         }
       }
       state.dailyLoginClaimedDays = [...validDays].sort((a, b) => a - b);
+    }
+    if (Array.isArray(data.claimedIndexRewards)) {
+      state.claimedIndexRewards = new Set(
+        data.claimedIndexRewards.filter(
+          (id): id is string => typeof id === 'string' && isValidIndexMilestoneId(id)
+        )
+      );
+    }
+    if (Array.isArray(data.teamPresets)) {
+      const presets = createEmptyTeamPresets();
+      for (let i = 0; i < TEAM_PRESET_COUNT; i++) {
+        const rawPreset = data.teamPresets[i];
+        if (!Array.isArray(rawPreset)) continue;
+        for (let s = 0; s < STAGE_PEDESTAL_COUNT; s++) {
+          const id = rawPreset[s];
+          presets[i][s] = typeof id === 'string' && getChibiById(id) ? id : null;
+        }
+      }
+      state.teamPresets = presets;
     }
   } catch {
     // Ignore corrupt saves

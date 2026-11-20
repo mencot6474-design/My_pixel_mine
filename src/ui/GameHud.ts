@@ -146,7 +146,7 @@ export class GameHud {
       (msg) => this.pushToast(msg),
       () => this.render()
     );
-    this.indexUi = new IndexModalUi(this.state, () => this.render());
+    this.indexUi = new IndexModalUi(this.state, () => this.render(), (msg) => this.pushToast(msg));
     this.inventoryUi = new InventoryModalUi(this.state, (msg) => this.pushToast(msg));
     this.chestUi = new ChestModalUi(
       this.state,
@@ -406,8 +406,14 @@ export class GameHud {
     this.worldOverlayUi.updateTowerOreBars(bars);
   }
 
-  public spawnDamagePopup(dmg: number, screenX: number, screenY: number, isClick = false): void {
-    this.worldOverlayUi.spawnDamagePopup(dmg, screenX, screenY, isClick);
+  public spawnDamagePopup(
+    dmg: number,
+    screenX: number,
+    screenY: number,
+    isClick = false,
+    isCrit = false
+  ): void {
+    this.worldOverlayUi.spawnDamagePopup(dmg, screenX, screenY, isClick, isCrit);
   }
 
   public openPlotInspector(slotIndex: number | null): void {
@@ -918,6 +924,7 @@ export class GameHud {
           <span class="text-[14px] font-extrabold leading-none mam-outline-sm">Upgrades</span>
         </button>
         <button class="${TW_SIDE_BTN_INDEX}" data-action="open-index">
+          <span class="${TW_BADGE_BASE} min-w-[24px] h-6 px-1.5 text-[13px] mam-outline-sm ${this.state.getReadyIndexRewardCount() > 0 ? '' : 'hidden'}" data-index-badge="true">${this.state.getReadyIndexRewardCount()}</span>
           ${hudIconHtml('indexBook', 44, 'Index')}
           <span class="text-[14px] font-extrabold leading-none mam-outline-sm">Index</span>
         </button>
@@ -1152,6 +1159,12 @@ export class GameHud {
       const ready = this.state.getReadyBountyCount();
       bountiesBadge.textContent = String(ready);
       bountiesBadge.classList.toggle('hidden', ready <= 0);
+    }
+    const indexBadge = this.root.querySelector<HTMLElement>('[data-index-badge="true"]');
+    if (indexBadge) {
+      const readyIndex = this.state.getReadyIndexRewardCount();
+      indexBadge.textContent = String(readyIndex);
+      indexBadge.classList.toggle('hidden', readyIndex <= 0);
     }
   }
 }

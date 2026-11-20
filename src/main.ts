@@ -93,11 +93,11 @@ async function bootstrap(): Promise<void> {
       audio.playOreBreak(variantKey);
       hud?.notifyTutorialOreBroken();
     },
-    onOreDamage: (dmg, sx, sy, isClick) => {
-      hud?.spawnDamagePopup(dmg, sx, sy, isClick);
+    onOreDamage: (dmg, sx, sy, isClick, isCrit) => {
+      hud?.spawnDamagePopup(dmg, sx, sy, isClick, isCrit);
       audio.playOreHit(isClick);
       if (isClick) {
-        gameState.chargeOverclock(OVERCLOCK_TAP_CHARGE);
+        gameState.chargeOverclock(isCrit ? OVERCLOCK_TAP_CHARGE * 1.5 : OVERCLOCK_TAP_CHARGE);
       }
     },
     onChestClick: () => {

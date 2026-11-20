@@ -60,9 +60,27 @@ export interface OreHpScreen {
   meteorWeatherId?: WeatherId;
 }
 
+export const BASE_TAP_CRIT_CHANCE = 0.15;
+export const OVERCLOCK_TAP_CRIT_CHANCE = 0.3;
+export const TAP_CRIT_MULT = 2.5;
+
+export function rollTapCriticalDamage(
+  baseTapDamage: number,
+  overclockActive: boolean,
+  rng: () => number = Math.random
+): { damage: number; isCrit: boolean } {
+  const safeBase = Math.max(1, Math.round(baseTapDamage));
+  const critChance = overclockActive ? OVERCLOCK_TAP_CRIT_CHANCE : BASE_TAP_CRIT_CHANCE;
+  const isCrit = rng() < critChance;
+  return {
+    damage: isCrit ? Math.max(1, Math.round(safeBase * TAP_CRIT_MULT)) : safeBase,
+    isCrit,
+  };
+}
+
 export interface MineSceneCallbacks {
   onOreBroken?: (variantKey: OreVariantKey, meteorWeatherId?: WeatherId) => void;
-  onOreDamage?: (dmg: number, screenX: number, screenY: number, isClick: boolean) => void;
+  onOreDamage?: (dmg: number, screenX: number, screenY: number, isClick: boolean, isCrit?: boolean) => void;
   onChestClick?: () => void;
   onPedestalClick?: (slotIndex: number) => void;
   onPlotAnchors?: (anchors: PlotAnchorScreen[]) => void;
@@ -110,6 +128,7 @@ export class MineScene3D {
   private graphicsQuality: GraphicsQuality = 'high';
   private overclockActive = false;
   private tapDamage = 45;
+  private tapShakeIntensity = 0;
 
   private readonly crateGroup = new THREE.Group();
   private readonly chestVisual: ProceduralChestHandle;
@@ -539,9 +558,11 @@ export class MineScene3D {
             for (let i = 1; i < pool.length; i++) {
               if (pool[i].hp > best.hp) best = pool[i];
             }
-            const res = this.pit.hitNode(best.id, this.tapDamage, true);
+            const { damage, isCrit } = rollTapCriticalDamage(this.tapDamage, this.overclockActive);
+            const res = this.pit.hitNode(best.id, damage, true);
             if (res) {
-              this.emitDamageScreen(res.dmgDealt, best.worldX, best.worldY + 0.9, best.worldZ, true);
+              this.tapShakeIntensity = Math.max(this.tapShakeIntensity, isCrit ? 0.14 : 0.04);
+              this.emitDamageScreen(res.dmgDealt, best.worldX, best.worldY + 0.9, best.worldZ, true, isCrit);
               if (res.broken) {
                 this.callbacks.onOreBroken?.(res.variantKey, res.meteorWeatherId);
               }
@@ -552,11 +573,13 @@ export class MineScene3D {
       }
       if (!hit) return;
       if (hit.userData.kind === 'ore-node') {
-        const res = this.pit.hitNode(Number(hit.userData.nodeId || 0), this.tapDamage, true);
+        const { damage, isCrit } = rollTapCriticalDamage(this.tapDamage, this.overclockActive);
+        const res = this.pit.hitNode(Number(hit.userData.nodeId || 0), damage, true);
         if (res) {
+          this.tapShakeIntensity = Math.max(this.tapShakeIntensity, isCrit ? 0.14 : 0.04);
           const wp = new THREE.Vector3();
           hit.getWorldPosition(wp);
-          this.emitDamageScreen(res.dmgDealt, wp.x, wp.y + 0.9, wp.z, true);
+          this.emitDamageScreen(res.dmgDealt, wp.x, wp.y + 0.9, wp.z, true, isCrit);
           if (res.broken) {
             this.callbacks.onOreBroken?.(res.variantKey, res.meteorWeatherId);
           }
@@ -790,6 +813,13 @@ export class MineScene3D {
         this.lookAtPos.z + Math.cos(this.orbitYaw) * this.camRadius
       );
       this.camera.position.lerp(targetCam, damp);
+      if (this.mode === 'mine' && this.tapShakeIntensity > 0.001) {
+        const sx = (Math.sin(this.elapsed * 95) * 0.7 + Math.cos(this.elapsed * 143) * 0.3) * this.tapShakeIntensity;
+        const sy = Math.cos(this.elapsed * 117) * this.tapShakeIntensity * 0.75;
+        this.camera.position.x += sx;
+        this.camera.position.y += sy;
+        this.tapShakeIntensity = Math.max(0, this.tapShakeIntensity - dtSec * 1.4);
+      }
       this.currentLookAt.lerp(this.lookAtPos, damp);
       this.camera.lookAt(this.currentLookAt);
     }
@@ -882,7 +912,14 @@ export class MineScene3D {
     this.callbacks.onOreBars(bars);
   }
 
-  private emitDamageScreen(dmg: number, wx: number, wy: number, wz: number, isClick: boolean): void {
+  private emitDamageScreen(
+    dmg: number,
+    wx: number,
+    wy: number,
+    wz: number,
+    isClick: boolean,
+    isCrit = false
+  ): void {
     if (!this.callbacks.onOreDamage || dmg <= 0) return;
     const w = this.mountEl.clientWidth || 1;
     const h = this.mountEl.clientHeight || 1;
@@ -890,7 +927,7 @@ export class MineScene3D {
     if (this.projVec.z <= -1 || this.projVec.z >= 1) return;
     const sx = (this.projVec.x * 0.5 + 0.5) * w;
     const sy = (-this.projVec.y * 0.5 + 0.5) * h;
-    this.callbacks.onOreDamage(dmg, sx, sy, isClick);
+    this.callbacks.onOreDamage(dmg, sx, sy, isClick, isCrit);
   }
 
   private emitPlotAnchors(): void {

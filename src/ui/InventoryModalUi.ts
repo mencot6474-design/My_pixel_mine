@@ -12,6 +12,7 @@ import {
 } from '../game/GameData';
 import { GameState } from '../game/GameState';
 import { fmtInt, fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
+import { isTeamPresetPopulated, TEAM_PRESET_COUNT } from '../game/TeamPresetsDomain';
 import { gemPotionIconHtml, hudIconHtml, oreIconSvg } from './HudIcons';
 import {
   applyInspectRing,
@@ -304,6 +305,64 @@ export class InventoryModalUi {
       : '<div class="mam-placeholder-well col-span-full text-center py-10 px-4 text-[#cbd5e1] text-[15px] font-extrabold mam-outline-sm">No matching items in Backpack.</div>';
   }
 
+  private buildTeamPresetsBarHtml(): string {
+    const squadIconSvg = `<svg class="w-4 h-4 text-[#38bdf8] shrink-0" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5L16.5 5.2V10.1C16.5 14 13.7 16.9 10 18C6.3 16.9 3.5 14 3.5 10.1V5.2L10 2.5Z" fill="currentColor" fill-opacity="0.18" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 6.5L11.2 9L13.9 9.4L11.9 11.3L12.4 14L10 12.7L7.6 14L8.1 11.3L6.1 9.4L8.8 9L10 6.5Z" fill="currentColor"/></svg>`;
+    const saveIconSvg = `<svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 2.5H11L13.5 5V13.5H3V2.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5.5 2.5V6H10.5V2.5M5.5 13.5V9.5H10.5V13.5" stroke="currentColor" stroke-width="1.3"/></svg>`;
+
+    const itemsHtml = Array.from({ length: TEAM_PRESET_COUNT }, (_, idx) => {
+      const preset = this.state.teamPresets[idx];
+      const populated = isTeamPresetPopulated(preset);
+      const isCurrentActive =
+        populated &&
+        this.state.plotMiners.every((id, slotIdx) => (id ?? null) === (preset[slotIdx] ?? null));
+
+      const thumbsHtml = populated
+        ? preset
+            .filter((id): id is string => typeof id === 'string' && id.length > 0)
+            .slice(0, 5)
+            .map((id) => {
+              const chibi = getChibiById(id);
+              if (!chibi) return '';
+              return `<span class="w-5 h-5 rounded-md overflow-hidden border border-white/25 bg-[#090e1a] inline-flex items-center justify-center shrink-0 [&_.mam-chibi-portrait]:w-full [&_.mam-chibi-portrait]:h-full">${chibiPortraitHtml(chibi)}</span>`;
+            })
+            .join('')
+        : `<span class="text-[10px] font-bold text-[#64748b] italic">Empty Slot</span>`;
+
+      const wrapCls = isCurrentActive
+        ? 'border-[#38bdf8] bg-[#10243d] shadow-[0_0_12px_rgba(56,189,248,0.3)]'
+        : populated
+          ? 'border-[#38bdf8]/45 bg-[#0e192d]'
+          : 'border-white/12 bg-[#0c1220]';
+
+      return `
+        <div class="inline-flex items-stretch rounded-xl overflow-hidden border ${wrapCls} transition-colors">
+          <button
+            type="button"
+            class="px-2.5 py-1.5 inline-flex items-center gap-2 text-left cursor-pointer hover:bg-white/[0.06] active:scale-[0.98] transition-[background-color,transform] border-0 bg-transparent"
+            data-team-preset-load="${idx}"
+            title="${populated ? `Equip Team ${idx + 1}` : `Save current plot team to Team ${idx + 1}`}"
+          >
+            <span class="px-1.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${isCurrentActive ? 'bg-[#38bdf8] text-[#081220]' : 'bg-white/10 text-white'}">T${idx + 1}</span>
+            <span class="inline-flex items-center gap-1">${thumbsHtml}</span>
+          </button>
+          <button
+            type="button"
+            class="px-2 inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase bg-[#152238] text-[#7dd3fc] border-l border-white/12 cursor-pointer hover:bg-[#1d3254] hover:text-white active:scale-95 transition-colors"
+            data-team-preset-save="${idx}"
+            title="Save current plot team to Team ${idx + 1}"
+          >${saveIconSvg}<span>Save</span></button>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="flex items-center gap-2 flex-wrap px-2.5 py-1.5 rounded-xl bg-[#0a101d] border border-white/10" data-team-presets-bar="true">
+        <span class="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-[#bae6fd] mr-0.5">${squadIconSvg}<span>Loadouts</span></span>
+        ${itemsHtml}
+      </div>
+    `;
+  }
+
   public renderModal(): string {
     this.getResolvedInvInspectTarget();
     const cardsHtml = this.buildInventoryCardsHtml();
@@ -336,6 +395,8 @@ export class InventoryModalUi {
           <input class="flex-1 min-w-[160px] h-9 px-3.5 rounded-xl border border-white/15 bg-[rgba(10,14,24,0.72)] shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] text-white text-[14px] font-semibold outline-none placeholder:text-slate-400/80 focus:border-sky-400/70 focus:bg-[rgba(14,20,36,0.88)] transition-[border-color,background-color] duration-150" type="search" placeholder="Search items..." value="${this.invSearch.replace(/"/g, '&quot;')}" data-inv-search="true" />
         </div>
 
+        ${this.buildTeamPresetsBarHtml()}
+
         <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto">
           <div class="${TW_MODAL_GRID_BASE} grid-cols-5 @max-[720px]:grid-cols-3 gap-2 flex-1 min-h-[220px] @max-[920px]:flex-none @max-[920px]:max-h-[340px]" data-inv-grid="true">
             ${cardsHtml}
@@ -345,6 +406,60 @@ export class InventoryModalUi {
           </div>
         </div>
       `,
+    });
+  }
+
+  private bindTeamPresetEvents(root: HTMLElement): void {
+    const bar = root.querySelector<HTMLElement>('[data-team-presets-bar="true"]');
+    if (!bar) return;
+
+    const refreshBar = () => {
+      const next = this.buildTeamPresetsBarHtml();
+      const wrap = document.createElement('div');
+      wrap.innerHTML = next.trim();
+      const nextBar = wrap.firstElementChild as HTMLElement | null;
+      if (nextBar && bar.parentElement) {
+        bar.replaceWith(nextBar);
+        this.bindTeamPresetEvents(root);
+      }
+    };
+
+    bar.querySelectorAll<HTMLElement>('[data-team-preset-save]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.teamPresetSave ?? -1);
+        if (this.state.saveTeamPreset(idx)) {
+          audio.playSfx('ui-click');
+          this.pushToast(`Saved current plot team to Team ${idx + 1}!`);
+          refreshBar();
+        } else {
+          this.pushToast('Place at least 1 Chibi on a plot first.');
+        }
+      });
+    });
+
+    bar.querySelectorAll<HTMLElement>('[data-team-preset-load]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.teamPresetLoad ?? -1);
+        if (!isTeamPresetPopulated(this.state.teamPresets[idx])) {
+          if (this.state.saveTeamPreset(idx)) {
+            audio.playSfx('ui-click');
+            this.pushToast(`Saved current plot team to Team ${idx + 1}!`);
+            refreshBar();
+          } else {
+            this.pushToast('Place at least 1 Chibi on a plot first.');
+          }
+          return;
+        }
+        const res = this.state.applyTeamPreset(idx);
+        if (res && res.equippedCount > 0) {
+          audio.playSfx('ui-open');
+          const skipMsg = res.skippedCount > 0 ? ` (${res.skippedCount} unavailable)` : '';
+          this.pushToast(`Equipped Team ${idx + 1}: ${res.equippedCount} Chibis${skipMsg}`);
+          this.updateLive(root);
+        } else {
+          this.pushToast(`Team ${idx + 1} has no available Chibis.`);
+        }
+      });
     });
   }
 
@@ -367,6 +482,7 @@ export class InventoryModalUi {
       });
     }
 
+    this.bindTeamPresetEvents(root);
     this.bindInventoryGridEvents(root, root);
     const invPanel = root.querySelector<HTMLElement>('[data-inv-inspector="true"]');
     if (invPanel) {

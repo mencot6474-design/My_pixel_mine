@@ -14,13 +14,13 @@ import {
   ItemRarity,
   RARITY_BORDER,
   WEATHER_ORES,
-  WorldId,
   WORLDS,
 } from '../game/GameData';
 import { GameState } from '../game/GameState';
+import { IndexTabId, isIndexMilestoneUnlocked } from '../game/IndexRewardsDomain';
 import { fmtInt, fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
 import { getWeatherById } from '../game/WeatherData';
-import { hudIconHtml, meteorIconHtml, oreIconSvg } from './HudIcons';
+import { enchantDiceIconHtml, hudIconHtml, meteorIconHtml, oreIconSvg } from './HudIcons';
 import {
   applyInspectRing,
   chibiPortraitHtml,
@@ -35,8 +35,6 @@ import {
   TW_TAB_BTN,
 } from './HudShared';
 
-type IndexTabId = WorldId | 'weather' | 'fusion' | 'limited';
-
 export class IndexModalUi {
   private indexWorldId: IndexTabId = 'underground';
   private indexInspectId: string | null = null;
@@ -44,7 +42,8 @@ export class IndexModalUi {
 
   constructor(
     private readonly state: GameState,
-    private readonly onRequestRender: () => void
+    private readonly onRequestRender: () => void,
+    private readonly onToast?: (msg: string) => void
   ) {}
 
   private getResolvedIndexInspectId(): string | null {
@@ -362,6 +361,119 @@ export class IndexModalUi {
     return `${oreCards}${minerCards}`;
   }
 
+  private buildTabReadyDotHtml(tabId: IndexTabId): string {
+    const ready = this.state.getTabReadyIndexRewardCount(tabId);
+    if (ready <= 0) return '';
+    return `<span class="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-[#ef4444] text-white text-[10px] font-black leading-none shadow-[0_0_8px_rgba(239,68,68,0.65)]" data-index-tab-ready="${tabId}">${ready}</span>`;
+  }
+
+  private buildPassiveBadgeIconSvg(kind: 'oreSellPct' | 'oreDropPct' | 'allDmgPct'): string {
+    if (kind === 'oreSellPct') {
+      return `<svg class="w-3.5 h-3.5 shrink-0 text-[#4ade80]" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="currentColor" fill-opacity="0.18" stroke="currentColor" stroke-width="1.8"/><path d="M10 5.5v9M12.3 7.8c0-.9-1-1.6-2.3-1.6s-2.3.7-2.3 1.6c0 1 1 1.4 2.3 1.7 1.3.3 2.3.7 2.3 1.7 0 .9-1 1.6-2.3 1.6s-2.3-.7-2.3-1.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+    }
+    if (kind === 'oreDropPct') {
+      return `<svg class="w-3.5 h-3.5 shrink-0 text-[#38bdf8]" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5L16.5 7.5L14 16.5H6L3.5 7.5L10 2.5Z" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 2.5V16.5M3.5 7.5H16.5" stroke="currentColor" stroke-width="1.2" opacity="0.7"/></svg>`;
+    }
+    return `<svg class="w-3.5 h-3.5 shrink-0 text-[#fb923c]" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M15.5 3.5L16.5 4.5L9.2 11.8L11 13.6L9.6 15L7.8 13.2L5 16L4 15L6.8 12.2L5 10.4L6.4 9L8.2 10.8L15.5 3.5Z" fill="currentColor" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>`;
+  }
+
+  private buildMilestoneRewardsStripHtml(): string {
+    const progress = this.state.getIndexTabProgress(this.indexWorldId);
+    const milestones = this.state.getIndexMilestones(this.indexWorldId);
+    const passives = this.state.getActiveIndexPassiveBonuses();
+    const activePassiveChips: string[] = [];
+    if (passives.oreSellPct > 0) {
+      activePassiveChips.push(
+        `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#0f2419] border border-[#4ade80]/40 text-[#86efac]">${this.buildPassiveBadgeIconSvg('oreSellPct')}+${Math.round(passives.oreSellPct * 100)}%</span>`
+      );
+    }
+    if (passives.oreDropPct > 0) {
+      activePassiveChips.push(
+        `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#0e2030] border border-[#38bdf8]/40 text-[#7dd3fc]">${this.buildPassiveBadgeIconSvg('oreDropPct')}+${Math.round(passives.oreDropPct * 100)}%</span>`
+      );
+    }
+    if (passives.allDmgPct > 0) {
+      activePassiveChips.push(
+        `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#26160e] border border-[#fb923c]/40 text-[#fdba74]">${this.buildPassiveBadgeIconSvg('allDmgPct')}+${Math.round(passives.allDmgPct * 100)}%</span>`
+      );
+    }
+
+    const cardsHtml = milestones
+      .map((m) => {
+        const claimed = this.state.claimedIndexRewards.has(m.id);
+        const unlocked = isIndexMilestoneUnlocked(this.state.discovered, m);
+        const ready = unlocked && !claimed;
+        const needed = m.thresholdPct === 100 ? progress.total : Math.ceil((progress.total * m.thresholdPct) / 100);
+        const fillPct = needed > 0 ? Math.min(100, Math.round((progress.found / needed) * 100)) : 0;
+
+        const rewardChips: string[] = [
+          `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#111c33] border border-[#38bdf8]/30 text-[#bae6fd] text-[11px] font-black tabular-nums">${hudIconHtml('gem', 14, 'Gems')}+${fmtShort(m.gems)}</span>`,
+        ];
+        if (m.enchantDice > 0) {
+          rewardChips.push(
+            `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#1f1333] border border-[#c084fc]/35 text-[#e9d5ff] text-[11px] font-black tabular-nums">${enchantDiceIconHtml(15)}+${m.enchantDice}</span>`
+          );
+        }
+        if (m.passive) {
+          rewardChips.push(
+            `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#161c2e] border border-[#facc15]/35 text-[#fef08a] text-[11px] font-black">${this.buildPassiveBadgeIconSvg(m.passive.kind)}${m.passive.label}</span>`
+          );
+        }
+
+        const topRail = claimed
+          ? 'bg-[linear-gradient(90deg,#22c55e,#4ade80)]'
+          : ready
+            ? 'bg-[linear-gradient(90deg,#facc15,#f97316,#facc15)]'
+            : m.thresholdPct === 100
+              ? 'bg-[linear-gradient(90deg,#a855f7,#facc15)]'
+              : 'bg-[linear-gradient(90deg,#38bdf8,#6366f1)]';
+
+        const cardBorder = claimed
+          ? 'border-[#22c55e]/50 bg-[#0d1c19]'
+          : ready
+            ? 'border-[#facc15]/85 bg-[#1b1811] shadow-[0_0_16px_rgba(250,204,21,0.28)]'
+            : 'border-white/14 bg-[#0c1222]';
+
+        const actionHtml = claimed
+          ? `<span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#14532d]/80 border border-[#4ade80]/60 text-[#86efac] text-[11px] font-black shrink-0"><svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Claimed</span>`
+          : ready
+            ? `<button type="button" class="mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#fde047] bg-[linear-gradient(135deg,#eab308_0%,#f97316_100%)] text-white text-[11px] font-black cursor-pointer shrink-0 shadow-[0_4px_14px_rgba(234,179,8,0.45),inset_0_1px_0_rgba(255,255,255,0.4)] hover:brightness-110 active:scale-95 transition-[transform,filter] mam-outline-sm" data-claim-index-milestone="${m.id}">${hudIconHtml('sparkle', 13, 'Claim')}Claim</button>`
+            : `<span class="px-2.5 py-1 rounded-lg bg-[#131b2e] border border-white/12 text-[#94a3b8] text-[11px] font-black shrink-0 tabular-nums">${progress.found}/${needed}</span>`;
+
+        return `
+          <div class="relative overflow-hidden flex-1 min-w-[260px] rounded-xl border ${cardBorder} px-3 py-2 flex items-center justify-between gap-2.5">
+            <div class="absolute top-0 left-0 right-0 h-[2px] ${topRail}" aria-hidden="true"></div>
+            <div class="min-w-0 flex-1 flex flex-col gap-1.5 text-left">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/10 border border-white/15 text-[10px] font-black ${m.thresholdPct === 100 ? 'text-[#fde047]' : 'text-[#38bdf8]'} tabular-nums">
+                  <svg class="w-3 h-3" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.5l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.3l-3.8 2 .7-4.3-3.1-3 4.3-.6L8 1.5z"/></svg>
+                  ${m.thresholdPct}%
+                </span>
+                ${rewardChips.join('')}
+              </div>
+              <div class="w-full h-1.5 rounded-full bg-black/55 border border-white/10 overflow-hidden">
+                <div class="h-full rounded-full transition-[width] duration-300 ${topRail}" style="width:${fillPct}%"></div>
+              </div>
+            </div>
+            ${actionHtml}
+          </div>
+        `;
+      })
+      .join('');
+
+    const passiveSummaryHtml =
+      activePassiveChips.length > 0
+        ? `<div class="hidden @min-[900px]:flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 rounded-xl bg-[#0e1729] border border-[#38bdf8]/35 text-[11px] font-black text-[#bae6fd]">${hudIconHtml('sparkle', 14, 'Bonus')}${activePassiveChips.join('')}</div>`
+        : '';
+
+    return `
+      <div class="flex items-center gap-2 flex-wrap" data-index-milestones="true">
+        ${cardsHtml}
+        ${passiveSummaryHtml}
+      </div>
+    `;
+  }
+
   public renderModal(): string {
     const found = this.state.getDiscoveredCount();
     const total = this.state.getTotalIndexCount();
@@ -392,22 +504,28 @@ export class IndexModalUi {
             <button class="${TW_TAB_BTN} mam-outline-sm ${this.indexWorldId === w.id ? 'active' : ''}" data-index-world="${w.id}">
               <span>${w.name}</span>
               <span class="text-[11px] font-bold opacity-85" data-index-world-count="${w.id}">(${wp.found}/${wp.total})</span>
+              ${this.buildTabReadyDotHtml(w.id)}
             </button>
           `;
           }).join('')}
           <button class="${TW_TAB_BTN} mam-outline-sm ${this.indexWorldId === 'weather' ? 'active' : ''}" data-index-world="weather">
             <span class="inline-flex items-center gap-1">${meteorIconHtml('celestial', 16, 'Weather')} Weather</span>
             <span class="text-[11px] font-bold opacity-85">(${WEATHER_ORES.filter((o) => this.state.discovered.has(o.id)).length + getWeatherLimitedMiners().filter((m) => this.state.discovered.has(m.chibi.id)).length}/${WEATHER_ORES.length + getWeatherLimitedMiners().length})</span>
+            ${this.buildTabReadyDotHtml('weather')}
           </button>
           <button class="${TW_TAB_BTN} mam-outline-sm ${this.indexWorldId === 'fusion' ? 'active' : ''}" data-index-world="fusion">
             <span class="inline-flex items-center gap-1">✦ Fusion</span>
             <span class="text-[11px] font-bold opacity-85">(${FUSION_RECIPES.filter((r) => this.state.discovered.has(r.resultChibiId)).length}/${FUSION_RECIPES.length})</span>
+            ${this.buildTabReadyDotHtml('fusion')}
           </button>
           <button class="${TW_TAB_BTN} mam-outline-sm ${this.indexWorldId === 'limited' ? 'active' : ''}" data-index-world="limited">
             <span class="inline-flex items-center gap-1 text-amber-200">★ Limited</span>
             <span class="text-[11px] font-bold opacity-85">(${getDailyLoginLimitedChibiIds().filter((id) => this.state.discovered.has(id)).length}/${getDailyLoginLimitedChibiIds().length})</span>
+            ${this.buildTabReadyDotHtml('limited')}
           </button>
         </div>
+
+        ${this.buildMilestoneRewardsStripHtml()}
 
         <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto">
           <div class="${TW_MODAL_GRID_BASE} grid-cols-5 @max-[720px]:grid-cols-3 gap-2 flex-1 min-h-0 @max-[920px]:min-h-[200px] @max-[920px]:flex-none @max-[920px]:max-h-[340px]" data-index-grid="true">
@@ -436,6 +554,21 @@ export class IndexModalUi {
         if (!id) return;
         this.indexInspectId = id;
         this.refreshIndexInspectorLive(root);
+      });
+    });
+
+    root.querySelectorAll('[data-claim-index-milestone]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const id = (el as HTMLElement).dataset.claimIndexMilestone;
+        if (!id) return;
+        const res = this.state.claimIndexReward(id);
+        if (!res) return;
+        audio.playSfx('coin');
+        const parts: string[] = [`+${fmtShort(res.gemsGranted)} Gems`];
+        if (res.diceGranted > 0) parts.push(`+${res.diceGranted} Dice`);
+        if (res.milestone.passive) parts.push(res.milestone.passive.label);
+        this.onToast?.(`Index Reward Claimed: ${parts.join(' • ')}`);
+        this.onRequestRender();
       });
     });
 

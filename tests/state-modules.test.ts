@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { getIndexTabEntryIds } from '../src/game/IndexRewardsDomain';
+import { rollTapCriticalDamage, TAP_CRIT_MULT } from '../src/game3d/MineScene3D';
 import { getOreById, ORES } from '../src/game/GameData';
 import { FUSION_RECIPES } from '../src/game/FusionData';
 import { getChibiById } from '../src/game3d/ChibiCatalog';
@@ -684,6 +686,102 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(state.getOreOutputMult()).toBeCloseTo(baseDrop + 1.2, 5);
       expect(state.getOreValueMult()).toBeCloseTo(baseSell + 1.5, 5);
       expect(state.getPlotUnitStats(0)!.miningMult).toBeCloseTo(baseUnitMining + 0.85, 2);
+    });
+  });
+
+  describe('Index Completion Rewards', () => {
+    it('unlocks 50% and 100% milestones, grants Gems/Dice + permanent passives, and persists via save/load', () => {
+      const state = new GameState();
+      const ids = getIndexTabEntryIds('underground');
+      expect(ids.length).toBeGreaterThanOrEqual(8);
+
+      // Initially not enough discovered for 50%
+      expect(state.getTabReadyIndexRewardCount('underground')).toBe(0);
+      expect(state.claimIndexReward('underground:50')).toBeNull();
+
+      // Discover half of underground entries -> 50% milestone unlocks
+      const halfCount = Math.ceil(ids.length / 2);
+      for (let i = 0; i < halfCount; i++) {
+        state.discovered.add(ids[i]);
+      }
+      expect(state.getTabReadyIndexRewardCount('underground')).toBe(1);
+      const gemsBefore = state.gems;
+      const halfClaim = state.claimIndexReward('underground:50');
+      expect(halfClaim).not.toBeNull();
+      expect(halfClaim!.gemsGranted).toBe(500);
+      expect(state.gems).toBe(gemsBefore + 500);
+      expect(state.claimIndexReward('underground:50')).toBeNull();
+
+      // Discover all underground entries -> 100% milestone unlocks (+1500 Gems, +1 Dice, +5% Ore Sell)
+      for (const id of ids) state.discovered.add(id);
+      const sellBefore = state.getOreValueMult();
+      const diceBefore = state.enchantDice;
+      const fullClaim = state.claimIndexReward('underground:100');
+      expect(fullClaim).not.toBeNull();
+      expect(fullClaim!.gemsGranted).toBe(1500);
+      expect(fullClaim!.diceGranted).toBe(1);
+      expect(state.enchantDice).toBe(diceBefore + 1);
+      expect(state.getActiveIndexPassiveBonuses().oreSellPct).toBeCloseTo(0.05, 5);
+      expect(state.getOreValueMult()).toBeCloseTo(sellBefore + 0.05, 5);
+
+      // Verify save/load persistence
+      const raw = JSON.stringify(serializeSavePayload(state));
+      const reloaded = new GameState();
+      deserializeSaveJson(reloaded, raw);
+      expect(reloaded.claimedIndexRewards.has('underground:50')).toBe(true);
+      expect(reloaded.claimedIndexRewards.has('underground:100')).toBe(true);
+      expect(reloaded.getActiveIndexPassiveBonuses().oreSellPct).toBeCloseTo(0.05, 5);
+    });
+  });
+
+  describe('Critical Tap Damage', () => {
+    it('rolls 2.5x critical tap damage at 15% base and 30% during Overclock Fever', () => {
+      const normalHit = rollTapCriticalDamage(100, false, () => 0.2);
+      expect(normalHit).toEqual({ damage: 100, isCrit: false });
+
+      const critHit = rollTapCriticalDamage(100, false, () => 0.1);
+      expect(critHit).toEqual({ damage: Math.round(100 * TAP_CRIT_MULT), isCrit: true });
+
+      const overclockCrit = rollTapCriticalDamage(100, true, () => 0.25);
+      expect(overclockCrit).toEqual({ damage: Math.round(100 * TAP_CRIT_MULT), isCrit: true });
+    });
+  });
+
+  describe('Team Presets Domain', () => {
+    it('saves and switches 3 team presets while preserving unit upgrades and persisting via save/load', () => {
+      const state = new GameState();
+      state.cash = 1_000_000;
+      state.miners['astral-recruit'] = 1;
+      state.miners['cosmic-monarch'] = 1;
+
+      // Upgrade slot 0 (astral-recruit) and save as Team 1
+      expect(state.upgradePlotDamage(0)).toBe(true);
+      const dmgLvlBefore = state.plotUnits[0]!.damageLevel;
+      expect(state.saveTeamPreset(0)).toBe(true);
+
+      // Swap slot 0 to cosmic-monarch and save as Team 2
+      state.removeMinerFromPlot(0);
+      state.hotbar[1] = 'cosmic-monarch';
+      expect(state.placeHotbarItemOnPlot(1, 0)).toBe('placed');
+      expect(state.saveTeamPreset(1)).toBe(true);
+
+      // Switch back to Team 1 -> astral-recruit restored with its upgraded damageLevel
+      const res1 = state.applyTeamPreset(0);
+      expect(res1).toEqual({ equippedCount: 1, skippedCount: 0 });
+      expect(state.plotMiners[0]).toBe('astral-recruit');
+      expect(state.plotUnits[0]!.damageLevel).toBe(dmgLvlBefore);
+
+      // Switch to Team 2 -> cosmic-monarch restored
+      const res2 = state.applyTeamPreset(1);
+      expect(res2).toEqual({ equippedCount: 1, skippedCount: 0 });
+      expect(state.plotMiners[0]).toBe('cosmic-monarch');
+
+      // Persist presets via save/load
+      const raw = JSON.stringify(serializeSavePayload(state));
+      const reloaded = new GameState();
+      deserializeSaveJson(reloaded, raw);
+      expect(reloaded.teamPresets[0][0]).toBe('astral-recruit');
+      expect(reloaded.teamPresets[1][0]).toBe('cosmic-monarch');
     });
   });
 });

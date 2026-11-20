@@ -1,5 +1,25 @@
 import { MAX_PIT_NODE_COUNT, OreVariantKey, STAGE_PEDESTAL_COUNT } from '../game3d/MineWorldPalette';
 import {
+  claimIndexRewardDomain,
+  getActiveIndexPassiveBonusesDomain,
+  getIndexMilestonesForTab,
+  getIndexTabProgressDomain,
+  getReadyIndexRewardCountDomain,
+  getTabReadyIndexRewardCountDomain,
+  IndexMilestoneDef,
+  IndexPassiveBonuses,
+  IndexRewardClaimResult,
+  IndexTabId,
+  IndexTabProgress,
+} from './IndexRewardsDomain';
+import {
+  applyTeamPresetDomain,
+  ApplyTeamPresetResult,
+  createEmptyTeamPresets,
+  saveTeamPresetDomain,
+  TeamPresetSlots,
+} from './TeamPresetsDomain';
+import {
   DEFAULT_PICKAXE_STOCK,
   ENCHANT_DICE_GEM_COST,
   EnchantDef,
@@ -251,6 +271,8 @@ export class GameState {
   public bountiesCompleted = 0;
   public dailyLoginLastClaimDate = '';
   public dailyLoginClaimedDays: number[] = [];
+  public claimedIndexRewards = new Set<string>();
+  public teamPresets: TeamPresetSlots[] = createEmptyTeamPresets();
   public readonly overclock: OverclockState = createInitialOverclockState();
   private loadedLastSavedAt = 0;
 
@@ -302,6 +324,46 @@ export class GameState {
     }
     const pct = total > 0 ? Math.round((found / total) * 100) : 0;
     return { found, total, pct };
+  }
+
+  public getIndexTabProgress(tabId: IndexTabId): IndexTabProgress {
+    return getIndexTabProgressDomain(this.discovered, tabId);
+  }
+
+  public getIndexMilestones(tabId: IndexTabId): IndexMilestoneDef[] {
+    return getIndexMilestonesForTab(tabId);
+  }
+
+  public getReadyIndexRewardCount(): number {
+    return getReadyIndexRewardCountDomain(this.discovered, this.claimedIndexRewards);
+  }
+
+  public getTabReadyIndexRewardCount(tabId: IndexTabId): number {
+    return getTabReadyIndexRewardCountDomain(this.discovered, this.claimedIndexRewards, tabId);
+  }
+
+  public claimIndexReward(milestoneId: string): IndexRewardClaimResult | null {
+    const res = claimIndexRewardDomain(this, milestoneId);
+    if (!res) return null;
+    this.emit();
+    return res;
+  }
+
+  public getActiveIndexPassiveBonuses(): IndexPassiveBonuses {
+    return getActiveIndexPassiveBonusesDomain(this.claimedIndexRewards);
+  }
+
+  public saveTeamPreset(presetIndex: number): boolean {
+    const ok = saveTeamPresetDomain(this, presetIndex);
+    if (ok) this.emit();
+    return ok;
+  }
+
+  public applyTeamPreset(presetIndex: number): ApplyTeamPresetResult | null {
+    const res = applyTeamPresetDomain(this, presetIndex);
+    if (!res) return null;
+    this.emit();
+    return res;
   }
 
   public getChestItemCount(): number {
@@ -705,7 +767,11 @@ export class GameState {
   }
 
   public getTapDamage(nowMs = Date.now()): number {
-    const tapMult = 1 + this.getRelicBonus('tapDmgPct') + this.getActiveFusionPassives().tapDmgPct;
+    const tapMult =
+      1 +
+      this.getRelicBonus('tapDmgPct') +
+      this.getActiveFusionPassives().tapDmgPct +
+      this.getActiveIndexPassiveBonuses().allDmgPct;
     const overclockMult = this.isOverclockActive(nowMs) ? OVERCLOCK_TAP_MULT : 1;
     return Math.max(
       1,
@@ -738,7 +804,8 @@ export class GameState {
       this.getActiveResearchBonus('oreValuePct') +
       this.getRelicBonus('oreValuePct') +
       this.getActiveFusionPassives().oreSellPct +
-      this.getActiveEnchantBonuses().sellValuePct
+      this.getActiveEnchantBonuses().sellValuePct +
+      this.getActiveIndexPassiveBonuses().oreSellPct
     );
   }
 
@@ -756,7 +823,8 @@ export class GameState {
       oreDropBonusPct +
       this.getRelicBonus('oreDropPct') +
       this.getActiveFusionPassives().oreDropPct +
-      this.getActiveEnchantBonuses().oreDropPct;
+      this.getActiveEnchantBonuses().oreDropPct +
+      this.getActiveIndexPassiveBonuses().oreDropPct;
     if (isBoostActiveDomain(this, 'ore-elixir-1')) mult += 0.1;
     if (isBoostActiveDomain(this, 'ore-elixir-2')) mult += 0.25;
     if (isBoostActiveDomain(this, 'ore-elixir-3')) mult += 0.5;
