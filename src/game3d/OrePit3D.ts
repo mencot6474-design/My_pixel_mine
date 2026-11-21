@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { getOresByWorld, type OreDef, type WorldId } from '../game/GameData';
+import { type OreDef, type WorldId } from '../game/GameData';
 import { getWeatherById, type WeatherId } from '../game/WeatherData';
 import { PIT_EVENT_DEFS, type PitEventKind } from '../game/PitEventsDomain';
 import {
@@ -9,10 +9,8 @@ import {
   type OreVariantDef,
   type OreVariantKey,
   rollOreVariant,
-  WORLD_PALETTES,
 } from './MineWorldPalette';
 import { AttackImpactFxController } from './AttackImpactFx3D';
-import { createCyberLanternBollardFinial } from './CyberProps3D';
 import {
   getGeodeGlowTexture,
   getSoftContactShadowTexture,
@@ -22,9 +20,18 @@ import {
 import {
   getHazardStripeTexture,
   getQuarryFloorTexture,
-  getShockwaveRingTexture,
 } from './ProceduralTextures3D';
-
+import {
+  buildOrePitEnvironmentMeshes,
+  buildOrePitMeteorAndSpotFx,
+  pickWorldOreForVariant,
+  resolveWorldIdFromPalette,
+  spawnOrePitShards,
+  stepOrePitMeteorDrop,
+  stepOrePitShards,
+  updateSweetSpotRingMesh,
+  type OrePitShardParticle,
+} from './OrePitStage3D';
 export {
   getGeodeGlowTexture,
   getSoftContactShadowTexture,
@@ -116,45 +123,6 @@ export interface SweetSpotPitState {
   isMeteor: boolean;
 }
 
-interface ShardParticle {
-  mesh: THREE.Mesh;
-  vx: number;
-  vy: number;
-  vz: number;
-  rx: number;
-  ry: number;
-  rz: number;
-  baseScale: number;
-  bounces: number;
-  age: number;
-  dur: number;
-}
-
-function resolveWorldIdFromPalette(palette: MineWorldPalette): WorldId {
-  for (const [id, p] of Object.entries(WORLD_PALETTES) as Array<[WorldId, MineWorldPalette]>) {
-    if (p === palette) return id;
-  }
-  return 'underground';
-}
-
-function pickWorldOreForVariant(worldId: WorldId, variantKey: OreVariantKey): OreDef {
-  const ores = getOresByWorld(worldId);
-  const pool =
-    ores.length <= 5
-      ? variantKey === 'geode'
-        ? ores.slice(Math.max(0, ores.length - 2))
-        : variantKey === 'vein'
-          ? ores.slice(1, Math.min(ores.length, 4))
-          : ores.slice(0, 2)
-      : variantKey === 'geode'
-        ? ores.slice(5, 8)
-        : variantKey === 'vein'
-          ? ores.slice(2, 5)
-          : ores.slice(0, 2);
-  const list = pool.length > 0 ? pool : ores;
-  return list[Math.floor(Math.random() * list.length)] ?? ores[0];
-}
-
 interface InternalOreNode {
   id: number;
   root: THREE.Group;
@@ -204,7 +172,7 @@ export class OrePit3D {
   private readonly rockChipMat: THREE.MeshStandardMaterial;
   private readonly sharedShardGeo = new THREE.OctahedronGeometry(0.14, 0);
   private readonly sharedRockGeo = new THREE.DodecahedronGeometry(0.125, 0);
-  private readonly shardPool: ShardParticle[] = [];
+  private readonly shardPool: OrePitShardParticle[] = [];
   private readonly shardFreeCrystal: THREE.Mesh[] = [];
   private readonly shardFreeRock: THREE.Mesh[] = [];
   private readonly impactFx = new AttackImpactFxController({ floorY: 0.045 });
@@ -223,7 +191,6 @@ export class OrePit3D {
   private readonly meteorCoreMat: THREE.MeshBasicMaterial;
   private readonly meteorBowMat: THREE.MeshBasicMaterial;
   private readonly meteorTailOuterMat: THREE.MeshBasicMaterial;
-  private readonly meteorTailInnerMat: THREE.MeshBasicMaterial;
   private readonly meteorTailOuterMesh: THREE.Mesh;
   private readonly meteorTailInnerMesh: THREE.Mesh;
   private readonly meteorTargetGroup = new THREE.Group();
@@ -240,134 +207,16 @@ export class OrePit3D {
     this.activePalette = palette;
     this.group.position.set(0, PIT_FLOOR_Y, PIT_CENTER_Z);
 
-    // Sunlit Textured Sunken Quarry Floor (sits cleanly 0.68m below courtyard deck y=0)
-    this.floorMat = new THREE.MeshStandardMaterial({
-      map: getQuarryFloorTexture(palette.pitFloorColor, palette.crystalColor),
-      roughness: 0.85,
-      metalness: 0.05,
+    const envMeshes = buildOrePitEnvironmentMeshes({
+      group: this.group,
+      palette,
+      ownedGeos: this.ownedGeos,
+      ownedMats: this.ownedMats,
     });
-    const floorGeo = new THREE.BoxGeometry(11.8, 0.14, 6.8);
-    this.ownedGeos.push(floorGeo);
-    const floor = new THREE.Mesh(floorGeo, this.floorMat);
-    floor.position.y = -0.05;
-    floor.receiveShadow = true;
-    this.group.add(floor);
-
-    // Full-Height Excavated Cyber-Slate Retaining Walls + Hazard Collar + Thin Neon Rim
-    this.wallMat = new THREE.MeshStandardMaterial({
-      color: 0x2a3952,
-      roughness: 0.76,
-      metalness: 0.1,
-      flatShading: true,
-    });
-    this.trimMat = new THREE.MeshStandardMaterial({
-      map: getHazardStripeTexture(palette.crystalColor),
-      roughness: 0.42,
-      metalness: 0.25,
-    });
-    this.pitNeonMat = new THREE.MeshStandardMaterial({
-      color: palette.crystalColor,
-      emissive: palette.crystalColor,
-      emissiveIntensity: 1.05,
-      roughness: 0.2,
-      metalness: 0.25,
-      flatShading: true,
-    });
-
-    const pitW = 11.8;
-    const pitD = 6.8;
-    const wallH = 0.86;
-    // Open portals:
-    // - North center (x in [-1.3, +1.3]) for stepped cyber stairwell descending from deck
-    // - Left spur (z in [-1.25, +0.25] -> world z=0.15) for sloped Drop Shaft shuttle entry
-    // - Right chute (z in [-1.25, +0.25] -> world z=0.15) for inclined Plasma Refinery conveyor exit
-    const wallSpecs: [number, number, number, number, number][] = [
-      [-3.6, -pitD / 2, 4.6, wallH, 0.36],
-      [3.6, -pitD / 2, 4.6, wallH, 0.36],
-      [0, pitD / 2, pitW, wallH, 0.36],
-      [-pitW / 2, -2.325, 0.36, wallH, 2.15],
-      [-pitW / 2, 1.825, 0.36, wallH, 3.15],
-      [pitW / 2, -2.325, 0.36, wallH, 2.15],
-      [pitW / 2, 1.825, 0.36, wallH, 3.15],
-    ];
-    for (const [wx, wz, ww, wh, wd] of wallSpecs) {
-      const wallGeo = new THREE.BoxGeometry(ww, wh, wd);
-      const wall = new THREE.Mesh(wallGeo, this.wallMat);
-      wall.position.set(wx, wh * 0.5, wz);
-      wall.castShadow = true;
-      wall.receiveShadow = true;
-      this.group.add(wall);
-
-      const trimGeo = new THREE.BoxGeometry(ww > wd ? ww : 0.34, 0.11, wd > ww ? wd : 0.34);
-      const trim = new THREE.Mesh(trimGeo, this.trimMat);
-      trim.position.set(wx, wh + 0.04, wz);
-      trim.castShadow = true;
-      this.group.add(trim);
-
-      const isHoriz = ww > wd;
-      const neonGeo = new THREE.BoxGeometry(isHoriz ? ww + 0.04 : 0.06, 0.035, isHoriz ? 0.06 : wd + 0.04);
-      const neonRim = new THREE.Mesh(neonGeo, this.pitNeonMat);
-      neonRim.position.set(wx, wh + 0.115, wz);
-      this.group.add(neonRim);
-      this.ownedGeos.push(wallGeo, trimGeo, neonGeo);
-    }
-
-    // Stepped inner basalt retaining ledge along bottom perimeter
-    const benchSpecs: [number, number, number, number][] = [
-      [-3.6, -pitD / 2 + 0.26, 4.4, 0.28],
-      [3.6, -pitD / 2 + 0.26, 4.4, 0.28],
-      [0, pitD / 2 - 0.26, 11.4, 0.28],
-    ];
-    for (const [bx, bz, bw, bd] of benchSpecs) {
-      const benchGeo = new THREE.BoxGeometry(bw, 0.26, bd);
-      this.ownedGeos.push(benchGeo);
-      const bench = new THREE.Mesh(benchGeo, this.wallMat);
-      bench.position.set(bx, 0.13, bz);
-      bench.receiveShadow = true;
-      bench.castShadow = true;
-      this.group.add(bench);
-    }
-
-    // Corner Cyber Steel Anchor Pylons + Glowing Beacon Collars framing the excavated pit rim
-    const postMat = new THREE.MeshStandardMaterial({
-      color: 0x223047,
-      roughness: 0.44,
-      metalness: 0.42,
-      flatShading: true,
-    });
-    const steelCapMat = new THREE.MeshStandardMaterial({
-      color: 0x3b4d6b,
-      metalness: 0.48,
-      roughness: 0.34,
-      flatShading: true,
-    });
-    const postGeo = new THREE.CylinderGeometry(0.24, 0.28, 1.04, 8);
-    this.ownedGeos.push(postGeo);
-    this.ownedMats.push(postMat, steelCapMat);
-    const trackedCornerGeos = new Set<THREE.BufferGeometry>();
-    for (const sx of [-1, 1]) {
-      for (const sz of [-1, 1]) {
-        const px = sx * (pitW / 2);
-        const pz = sz * (pitD / 2);
-        const post = new THREE.Mesh(postGeo, postMat);
-        post.position.set(px, 0.52, pz);
-        post.castShadow = true;
-        const finial = createCyberLanternBollardFinial({
-          frameMat: postMat,
-          steelMat: steelCapMat,
-          coreMat: this.pitNeonMat,
-          scale: 0.86,
-        });
-        finial.position.set(px, 1.02, pz);
-        finial.traverse((child) => {
-          if (child instanceof THREE.Mesh && !trackedCornerGeos.has(child.geometry)) {
-            trackedCornerGeos.add(child.geometry);
-            this.ownedGeos.push(child.geometry);
-          }
-        });
-        this.group.add(post, finial);
-      }
-    }
+    this.floorMat = envMeshes.floorMat;
+    this.wallMat = envMeshes.wallMat;
+    this.trimMat = envMeshes.trimMat;
+    this.pitNeonMat = envMeshes.pitNeonMat;
 
     this.sharedShardGeo.scale(0.75, 1.45, 0.75);
     this.shardMat = new THREE.MeshStandardMaterial({
@@ -406,126 +255,30 @@ export class OrePit3D {
     this.group.add(this.meteorNode.root);
     this.clickableMeshes.push(this.meteorNode.hitMesh);
 
-    // 3D Atmospheric Entry Plasma Envelope & Tail Plume (oriented along dive trajectory)
-    const entryBackDir = new THREE.Vector3(
-      METEOR_START_X - METEOR_TARGET_X,
-      METEOR_START_Y,
-      METEOR_START_Z - METEOR_TARGET_Z
-    ).normalize();
-    this.meteorEntryGroup.position.set(0, 1.4, 0);
-    this.meteorEntryGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), entryBackDir);
-    this.meteorEntryGroup.visible = false;
-
-    const coreGeo = new THREE.IcosahedronGeometry(0.92, 1);
-    const bowGeo = new THREE.ConeGeometry(1.36, 1.75, 9, 1, true);
-    const tailOuterGeo = new THREE.ConeGeometry(1.06, 5.4, 9, 1, true);
-    const tailInnerGeo = new THREE.ConeGeometry(0.54, 4.1, 7, 1, true);
-    this.ownedGeos.push(coreGeo, bowGeo, tailOuterGeo, tailInnerGeo);
-
-    this.meteorCoreMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.48,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
+    const spotFx = buildOrePitMeteorAndSpotFx({
+      group: this.group,
+      meteorRoot: this.meteorNode.root,
+      meteorEntryGroup: this.meteorEntryGroup,
+      meteorTargetGroup: this.meteorTargetGroup,
+      ownedGeos: this.ownedGeos,
+      ownedMats: this.ownedMats,
+      meteorTargetX: METEOR_TARGET_X,
+      meteorTargetZ: METEOR_TARGET_Z,
+      meteorStartX: METEOR_START_X,
+      meteorStartY: METEOR_START_Y,
+      meteorStartZ: METEOR_START_Z,
     });
-    this.meteorBowMat = new THREE.MeshBasicMaterial({
-      color: 0xf472b6,
-      transparent: true,
-      opacity: 0.36,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-    this.meteorTailOuterMat = new THREE.MeshBasicMaterial({
-      color: 0xf472b6,
-      transparent: true,
-      opacity: 0.34,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-    this.meteorTailInnerMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.56,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-    this.ownedMats.push(
-      this.meteorCoreMat,
-      this.meteorBowMat,
-      this.meteorTailOuterMat,
-      this.meteorTailInnerMat
-    );
-
-    const coreMesh = new THREE.Mesh(coreGeo, this.meteorCoreMat);
-    const bowMesh = new THREE.Mesh(bowGeo, this.meteorBowMat);
-    bowMesh.rotation.x = Math.PI;
-    bowMesh.position.y = -0.35;
-
-    this.meteorTailOuterMesh = new THREE.Mesh(tailOuterGeo, this.meteorTailOuterMat);
-    this.meteorTailOuterMesh.position.y = 2.6;
-    this.meteorTailInnerMesh = new THREE.Mesh(tailInnerGeo, this.meteorTailInnerMat);
-    this.meteorTailInnerMesh.position.y = 2.1;
-
-    this.meteorEntryGroup.add(coreMesh, bowMesh, this.meteorTailOuterMesh, this.meteorTailInnerMesh);
-    this.meteorNode.root.add(this.meteorEntryGroup);
-
-    // Ground Strike Telegraph Shadow & Contracting Target Ring
-    this.meteorTargetGroup.position.set(METEOR_TARGET_X, 0.038, METEOR_TARGET_Z);
-    this.meteorTargetGroup.visible = false;
-    const targetShadowGeo = new THREE.CircleGeometry(1.55, 24);
-    const targetRingGeo = new THREE.PlaneGeometry(3.6, 3.6);
-    this.ownedGeos.push(targetShadowGeo, targetRingGeo);
-
-    const shadowTex = getSoftContactShadowTexture();
-    this.meteorTargetShadowMat = new THREE.MeshBasicMaterial({
-      ...(shadowTex ? { map: shadowTex } : {}),
-      color: 0x020617,
-      transparent: true,
-      opacity: 0.25,
-      depthWrite: false,
-    });
-    const ringTex = getShockwaveRingTexture();
-    this.meteorTargetRingMat = new THREE.MeshBasicMaterial({
-      ...(ringTex ? { map: ringTex } : {}),
-      color: 0xf472b6,
-      transparent: true,
-      opacity: 0.6,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-    this.ownedMats.push(this.meteorTargetShadowMat, this.meteorTargetRingMat);
-
-    this.meteorTargetShadow = new THREE.Mesh(targetShadowGeo, this.meteorTargetShadowMat);
-    this.meteorTargetShadow.rotation.x = -Math.PI / 2;
-    this.meteorTargetRing = new THREE.Mesh(targetRingGeo, this.meteorTargetRingMat);
-    this.meteorTargetRing.rotation.x = -Math.PI / 2;
-    this.meteorTargetRing.position.y = 0.008;
-    this.meteorTargetGroup.add(this.meteorTargetShadow, this.meteorTargetRing);
-    this.group.add(this.meteorTargetGroup);
-
-    // Flat horizontal Weak-Spot / Sweet-Spot floor ring (never tilted/tumbling)
-    const sweetRingGeo = new THREE.PlaneGeometry(2.75, 2.75);
-    this.ownedGeos.push(sweetRingGeo);
-    this.sweetSpotFloorMat = new THREE.MeshBasicMaterial({
-      ...(ringTex ? { map: ringTex } : {}),
-      color: 0xfde047,
-      transparent: true,
-      opacity: 0.72,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-    this.ownedMats.push(this.sweetSpotFloorMat);
-    this.sweetSpotFloorRing = new THREE.Mesh(sweetRingGeo, this.sweetSpotFloorMat);
-    this.sweetSpotFloorRing.rotation.x = -Math.PI / 2;
-    this.sweetSpotFloorRing.position.y = 0.042;
-    this.sweetSpotFloorRing.visible = false;
-    this.group.add(this.sweetSpotFloorRing);
+    this.meteorCoreMat = spotFx.meteorCoreMat;
+    this.meteorBowMat = spotFx.meteorBowMat;
+    this.meteorTailOuterMat = spotFx.meteorTailOuterMat;
+    this.meteorTailOuterMesh = spotFx.meteorTailOuterMesh;
+    this.meteorTailInnerMesh = spotFx.meteorTailInnerMesh;
+    this.meteorTargetShadow = spotFx.meteorTargetShadow;
+    this.meteorTargetShadowMat = spotFx.meteorTargetShadowMat;
+    this.meteorTargetRing = spotFx.meteorTargetRing;
+    this.meteorTargetRingMat = spotFx.meteorTargetRingMat;
+    this.sweetSpotFloorRing = spotFx.sweetSpotFloorRing;
+    this.sweetSpotFloorMat = spotFx.sweetSpotFloorMat;
 
     this.group.add(this.impactFx.group);
 
@@ -930,49 +683,16 @@ export class OrePit3D {
   }
 
   private spawnShardsAt(lx: number, lz: number, count: number, isShatter = false, isMeteor = false): void {
-    const maxCap = 36;
-    for (let i = 0; i < count; i++) {
-      if (this.shardPool.length >= maxCap) {
-        const oldest = this.shardPool.shift();
-        if (oldest) {
-          this.group.remove(oldest.mesh);
-          const freeArr = oldest.mesh.material === this.shardMat ? this.shardFreeCrystal : this.shardFreeRock;
-          if (freeArr.length < maxCap) freeArr.push(oldest.mesh);
-        }
-      }
-      const isCrystal = isShatter ? i % 3 !== 2 : i % 2 === 0;
-      const freeArr = isCrystal ? this.shardFreeCrystal : this.shardFreeRock;
-      const mesh =
-        freeArr.pop() ??
-        new THREE.Mesh(
-          isCrystal ? this.sharedShardGeo : this.sharedRockGeo,
-          isCrystal ? this.shardMat : this.rockChipMat
-        );
-      mesh.position.set(
-        lx + (Math.random() - 0.5) * (isShatter ? 0.8 : 0.5),
-        0.55 + Math.random() * (isShatter ? 0.85 : 0.5),
-        lz + (Math.random() - 0.5) * (isShatter ? 0.8 : 0.5)
-      );
-      const ang = Math.random() * Math.PI * 2;
-      const spd = (isShatter ? (isMeteor ? 3.8 : 2.8) : 1.8) + Math.random() * (isShatter ? 4.4 : 2.8);
-      const baseScale = (isShatter ? (isMeteor ? 1.15 : 0.85) : 0.65) + Math.random() * (isShatter ? 0.65 : 0.42);
-      mesh.scale.setScalar(baseScale);
-      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-      this.group.add(mesh);
-      this.shardPool.push({
-        mesh,
-        vx: Math.cos(ang) * spd,
-        vy: (isShatter ? (isMeteor ? 4.4 : 3.4) : 2.5) + Math.random() * (isShatter ? 4.0 : 2.6),
-        vz: Math.sin(ang) * spd,
-        rx: (Math.random() - 0.5) * 16,
-        ry: (Math.random() - 0.5) * 14,
-        rz: (Math.random() - 0.5) * 16,
-        baseScale,
-        bounces: 0,
-        age: 0,
-        dur: (isShatter ? 0.68 : 0.48) + Math.random() * 0.28,
-      });
-    }
+    spawnOrePitShards(lx, lz, count, isShatter, isMeteor, {
+      group: this.group,
+      shardPool: this.shardPool,
+      shardFreeCrystal: this.shardFreeCrystal,
+      shardFreeRock: this.shardFreeRock,
+      shardMat: this.shardMat,
+      rockChipMat: this.rockChipMat,
+      sharedShardGeo: this.sharedShardGeo,
+      sharedRockGeo: this.sharedRockGeo,
+    });
   }
 
   public getAliveNodeIds(): number[] {
@@ -1066,77 +786,33 @@ export class OrePit3D {
       let meteorRoll = 0;
       let meteorStretchY = 1;
       if (node.isMeteor && (node.dropProgress ?? 1) < 1) {
-        const prevP = node.dropProgress ?? 0;
-        const dur = node.dropDuration ?? METEOR_DROP_DURATION;
-        const nextP = Math.min(1, prevP + dtSec / dur);
-        node.dropProgress = nextP;
-        // Accelerating atmospheric dive curve toward impact center
-        const ease = nextP * nextP * (0.35 + 0.65 * nextP);
-        node.x = METEOR_START_X + (METEOR_TARGET_X - METEOR_START_X) * ease;
-        node.z = METEOR_START_Z + (METEOR_TARGET_Z - METEOR_START_Z) * ease;
-        node.dropY = METEOR_START_Y * (1 - ease);
-        node.root.position.set(node.x, node.dropY, node.z);
-        node.spawnScale = 0.62 + ease * 0.38;
-
-        const accent = node.meteorWeatherId
-          ? getWeatherById(node.meteorWeatherId).accentColor
-          : '#f472b6';
-
-        if (nextP < 1) {
-          this.meteorEntryGroup.visible = true;
-          this.meteorTargetGroup.visible = true;
-          this.meteorTailOuterMesh.rotation.y += dtSec * 10;
-          this.meteorTailInnerMesh.rotation.y -= dtSec * 15;
-          const flamePulse = 0.88 + Math.sin(elapsed * 48) * 0.16;
-          this.meteorTailOuterMesh.scale.set(1, flamePulse, 1);
-          this.meteorTailInnerMesh.scale.set(1, 0.92 + Math.cos(elapsed * 56) * 0.14, 1);
-
-          this.meteorTargetShadow.scale.setScalar(1.85 - ease * 0.95);
-          this.meteorTargetShadowMat.opacity = 0.16 + ease * 0.72;
-          const ringPulse = 1 + Math.sin(elapsed * 18) * 0.08;
-          this.meteorTargetRing.scale.setScalar((1.55 - ease * 0.78) * ringPulse);
-          this.meteorTargetRing.rotation.z -= dtSec * 2.4;
-          this.meteorTargetRingMat.opacity = 0.35 + ease * 0.55;
-
-          meteorRoll = -0.28 * (1 - ease) + Math.sin(elapsed * 42) * 0.06;
-          meteorStretchY = 1 + (1 - ease) * 0.24;
-
-          node.trailTimer = (node.trailTimer ?? 0) - dtSec;
-          if (nextP < 0.94 && (node.trailTimer ?? 0) <= 0 && this.group.visible) {
-            node.trailTimer = 0.04;
-            this.impactFx.spawnMeteorTrail({
-              x: node.x,
-              y: node.dropY + 1.35,
-              z: node.z,
-              accentColor: accent,
-              camera,
-            });
-          }
-        } else {
-          node.x = METEOR_TARGET_X;
-          node.z = METEOR_TARGET_Z;
-          node.dropY = 0;
-          node.spawnScale = 1;
-          node.root.position.set(node.x, 0, node.z);
-          this.meteorEntryGroup.visible = false;
-          this.meteorTargetGroup.visible = false;
-          node.oreSprite.setCollarVisible(true);
-          node.geodeRing.visible = true;
-          node.squashAmt = 0.56;
-          node.flashTimer = 0.14;
-          if (this.group.visible) {
-            this.impactFx.spawnMeteorLanding({
-              targetX: node.x,
-              targetZ: node.z,
-              accentColor: accent,
-              camera,
-            });
-            this.spawnShardsAt(node.x, node.z, 18, true, true);
-            this.onMeteorLanded?.();
-          }
-        }
+        const dropRes = stepOrePitMeteorDrop({
+          node,
+          dtSec,
+          elapsed,
+          camera,
+          dropDuration: METEOR_DROP_DURATION,
+          startX: METEOR_START_X,
+          startY: METEOR_START_Y,
+          startZ: METEOR_START_Z,
+          targetX: METEOR_TARGET_X,
+          targetZ: METEOR_TARGET_Z,
+          meteorEntryGroup: this.meteorEntryGroup,
+          meteorTargetGroup: this.meteorTargetGroup,
+          meteorTailOuterMesh: this.meteorTailOuterMesh,
+          meteorTailInnerMesh: this.meteorTailInnerMesh,
+          meteorTargetShadow: this.meteorTargetShadow,
+          meteorTargetShadowMat: this.meteorTargetShadowMat,
+          meteorTargetRing: this.meteorTargetRing,
+          meteorTargetRingMat: this.meteorTargetRingMat,
+          group: this.group,
+          impactFx: this.impactFx,
+          spawnShardsAt: (lx, lz, count, s, m) => this.spawnShardsAt(lx, lz, count, s, m),
+          onMeteorLanded: this.onMeteorLanded,
+        });
+        meteorRoll = dropRes.meteorRoll;
+        meteorStretchY = dropRes.meteorStretchY;
       }
-
       if (node.spawnScale < 1 && !(node.isMeteor && (node.dropProgress ?? 1) < 1)) {
         node.spawnScale = Math.min(1, node.spawnScale + dtSec * 4.5);
       }
@@ -1172,44 +848,13 @@ export class OrePit3D {
       }
     }
 
-    for (let i = this.shardPool.length - 1; i >= 0; i--) {
-      const p = this.shardPool[i];
-      p.age += dtSec;
-      if (p.age >= p.dur) {
-        this.group.remove(p.mesh);
-        const freeArr = p.mesh.material === this.shardMat ? this.shardFreeCrystal : this.shardFreeRock;
-        if (freeArr.length < 72) freeArr.push(p.mesh);
-        this.shardPool.splice(i, 1);
-        continue;
-      }
-      p.vy -= 15.5 * dtSec;
-      p.mesh.position.x += p.vx * dtSec;
-      let nextY = p.mesh.position.y + p.vy * dtSec;
-      if (nextY <= 0.09) {
-        nextY = 0.09;
-        if (p.vy < -0.6 && p.bounces < 2) {
-          p.vy = -p.vy * 0.42;
-          p.vx *= 0.72;
-          p.vz *= 0.72;
-          p.rx *= 0.65;
-          p.rz *= 0.65;
-          p.bounces++;
-        } else {
-          p.vy = 0;
-          p.vx *= Math.max(0.2, 1 - dtSec * 6);
-          p.vz *= Math.max(0.2, 1 - dtSec * 6);
-        }
-      }
-      p.mesh.position.y = nextY;
-      p.mesh.position.z += p.vz * dtSec;
-      p.mesh.rotation.x += p.rx * dtSec;
-      p.mesh.rotation.y += p.ry * dtSec;
-      p.mesh.rotation.z += p.rz * dtSec;
-      const lifeRatio = p.age / p.dur;
-      const shrink = lifeRatio < 0.62 ? 1 : Math.max(0.04, 1 - (lifeRatio - 0.62) / 0.38);
-      p.mesh.scale.setScalar(p.baseScale * shrink);
-    }
-
+    stepOrePitShards(dtSec, {
+      group: this.group,
+      shardPool: this.shardPool,
+      shardFreeCrystal: this.shardFreeCrystal,
+      shardFreeRock: this.shardFreeRock,
+      shardMat: this.shardMat,
+    });
     this.impactFx.update(dtSec, camera);
     this.stepSweetSpot(dtSec, elapsed);
   }
@@ -1286,14 +931,16 @@ export class OrePit3D {
       }
       const progress = this.sweetSpot.age / this.sweetSpot.duration;
       const inWindow = isSweetSpotWindowPure(progress);
-      this.sweetSpotFloorRing.visible = true;
-      this.sweetSpotFloorRing.position.set(node.x, 0.042, node.z);
-      const scaleBase = node.isMeteor ? 1.55 : 1.0;
-      const contractScale = Math.max(0.32, 1.38 - progress * 0.96) * scaleBase;
-      this.sweetSpotFloorRing.scale.setScalar(contractScale);
-      this.sweetSpotFloorRing.rotation.z = -elapsed * 1.4;
-      this.sweetSpotFloorMat.color.setHex(inWindow ? 0x38bdf8 : 0xfde047);
-      this.sweetSpotFloorMat.opacity = inWindow ? 0.92 : 0.62;
+      updateSweetSpotRingMesh({
+        ring: this.sweetSpotFloorRing,
+        mat: this.sweetSpotFloorMat,
+        x: node.x,
+        z: node.z,
+        isMeteor: Boolean(node.isMeteor),
+        progress,
+        inWindow,
+        elapsed,
+      });
       return;
     }
 

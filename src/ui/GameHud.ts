@@ -1,7 +1,7 @@
 import { audio } from '../audio/AudioManager';
-import { cgHappyTime, cgTryMidgameAd } from '../sdk/crazygames';
+import { cgTryMidgameAd } from '../sdk/crazygames';
 import { OreHpScreen, PlotAnchorScreen, SceneMode, SweetSpotScreen } from '../game3d/MineScene3D';
-import { type LootVacuumBreakKind, spawnLootVacuumParticles, triggerPerfectStrikeFlash } from './LootVacuumFx';
+import { type LootVacuumBreakKind, spawnLootVacuumParticles } from './LootVacuumFx';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
 import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId } from '../game3d/ShopWorld3D';
 import { getWorldById, getWorldIndex } from '../game/GameData';
@@ -10,7 +10,7 @@ import { GameState } from '../game/GameState';
 import type { OverclockTier } from '../game/OverclockDomain';
 import { WeatherId } from '../game/WeatherData';
 import { fmtInt } from '../game/NumberFormat';
-import { getTowerFloorDef, TowerWaveOreState } from '../game/TowerData';
+import { TowerWaveOreState } from '../game/TowerData';
 import { AchievementsModalUi } from './AchievementsModalUi';
 import { AltarShopHudUi } from './AltarShopHudUi';
 import { BountiesModalUi } from './BountiesModalUi';
@@ -26,9 +26,11 @@ import {
   renderAudioControlsHtml,
   renderCurrencyRailHtml,
   renderFeverScreenFxHtml,
+  renderMineChromeHtml,
+  renderMineQuickButtonsHtml,
   syncFeverScreenFxDom,
 } from './HudChromeRenderer';
-import { hudIconHtml } from './HudIcons';
+import { HudTowerBridge } from './HudTowerBridge';
 import {
   buildHudCoordinatorActions,
   renderActiveModalHtml,
@@ -44,17 +46,7 @@ import {
   renderToastBannerHtml,
   restoreRootScrolls,
   shouldDismissModalBackdrop,
-  TW_BADGE_BASE,
-  TW_QUICK_BTN_CHEST,
-  TW_QUICK_BTN_DAILY,
-  TW_QUICK_BTN_QUEST,
-  TW_SHOPS_PILL,
-  TW_TELEPORT_PILL,
-  TW_SIDE_BTN_INDEX,
-  TW_SIDE_BTN_RAINBOW,
-  TW_SIDE_BTN_UPGRADES,
   TW_TOAST_STACK,
-  TW_TOP_CENTER,
 } from './HudShared';
 import { OfflineModalUi } from './OfflineModalUi';
 import { PlotInspectUi } from './PlotInspectUi';
@@ -100,6 +92,7 @@ export class GameHud {
   private readonly bountiesUi: BountiesModalUi;
   private readonly achievementsUi: AchievementsModalUi;
   private readonly dailyLoginUi: DailyLoginModalUi;
+  private readonly towerBridge: HudTowerBridge;
 
   constructor(
     private readonly root: HTMLElement,
@@ -197,6 +190,17 @@ export class GameHud {
       () => this.setSceneMode('tower'),
       () => this.setSceneMode('shop'),
       () => this.render()
+    );
+    this.towerBridge = new HudTowerBridge(
+      this.root,
+      this.state,
+      this.towerUi,
+      () => this.sceneMode,
+      (mode) => this.setSceneMode(mode),
+      (kind) => this.openModal(kind),
+      (msg) => this.pushToast(msg),
+      () => this.render(),
+      this.onSyncTowerVisual
     );
     this.tutorialUi = new TutorialUi(
       (zoomed) => this.onSetTutorialPitZoom?.(zoomed),
@@ -521,127 +525,14 @@ export class GameHud {
   }
 
   private syncTowerSceneVisual(): void {
-    const run = this.state.towerRun;
-    const floor = run?.floor ?? 1;
-    const def = getTowerFloorDef(floor);
-    const placedCount = this.state.plotMiners.filter(Boolean).length;
-    const paused = Boolean(run?.pendingBlessings);
-    if (this.sceneMode === 'tower') {
-      audio.setSceneMode('tower', Boolean(run?.isBossWave));
-    }
-    this.onSyncTowerVisual?.({
-      floor,
-      wave: run?.wave ?? 1,
-      isBossWave: Boolean(run?.isBossWave),
-      isCheckpointFloor: def.isBoss,
-      waveOres: run?.waveOres ?? [],
-      anomalyColorHex: def.anomaly.color,
-      equippedMinerCount: placedCount,
-      paused,
-      bossShieldActive: Boolean(run?.isBossWave && (run.bossInvulLeft ?? 0) > 0),
-    });
-  }
-
-  private handleTowerHitResolution(res: {
-    dmgDealt: number;
-    rockBroken: boolean;
-    waveCleared: boolean;
-    floorCleared: boolean;
-    towerCompleted?: boolean;
-    clearedFloor: number | null;
-    clearedWave: number | null;
-    gemsAwarded: number;
-    diceAwarded: number;
-    coinsAwarded?: number;
-    milestoneUnlocked: number | null;
-    isCrit?: boolean;
-    pityTriggered?: boolean;
-  }): { dmg: number; broken: boolean; isCrit?: boolean } | undefined {
-    if (res.dmgDealt <= 0 && !res.waveCleared && !res.floorCleared) return undefined;
-    const coins = res.coinsAwarded ?? 0;
-    if (res.towerCompleted) {
-      audio.playSfx('rare-fanfare', { volume: 0.85 });
-      const diceTxt = res.diceAwarded > 0 ? ` +${res.diceAwarded} Dice` : '';
-      const coinTxt = coins > 0 ? ` +${fmtInt(coins)} Spire Coins` : '';
-      this.pushToast(`🏆 TOWER CONQUERED! Floor 80 Final Boss Defeated! +${fmtInt(res.gemsAwarded)} Gems${diceTxt}${coinTxt}`);
-      if (res.milestoneUnlocked) {
-        this.pushToast(`Tower Milestone Floor ${res.milestoneUnlocked} Unlocked!`);
-      }
-      cgHappyTime();
-      this.setSceneMode('shop');
-      this.openModal('tower');
-      return { dmg: res.dmgDealt, broken: res.rockBroken, isCrit: res.isCrit };
-    }
-    if (res.floorCleared) {
-      audio.playSfx('rare-fanfare', { volume: 0.72 });
-      const diceTxt = res.diceAwarded > 0 ? ` +${res.diceAwarded} Dice` : '';
-      this.pushToast(`Floor ${res.clearedFloor} Cleared! +${fmtInt(res.gemsAwarded)} Gems${diceTxt}`);
-      if (coins > 0) {
-        audio.playCrystalChord('perfect');
-        this.pushToast(`🪙 BOSS DROP! +${fmtInt(coins)} Spire Coins!`);
-      }
-      if (res.pityTriggered) {
-        this.pushToast('🎲 Boss Pity Triggered! Guaranteed Enchant Dice!');
-      }
-      if (res.milestoneUnlocked) {
-        this.pushToast(`Tower Milestone Floor ${res.milestoneUnlocked} Unlocked!`);
-      }
-      cgHappyTime();
-      this.syncTowerSceneVisual();
-      this.render();
-    } else if (res.waveCleared) {
-      audio.playSfx('wave-clear', { volume: 0.58 });
-      const nextWave = this.state.towerRun?.wave ?? 1;
-      const bossHint = nextWave === 10 ? ' • Boss Incoming!' : '';
-      this.pushToast(`Wave ${res.clearedWave}/9 Cleared! +${fmtInt(res.gemsAwarded)} Gems${bossHint}`);
-      if (coins > 0) {
-        audio.playCrystalChord('perfect');
-        this.pushToast(`🪙 RARE DROP! +${fmtInt(coins)} Spire Coin${coins > 1 ? 's' : ''}!`);
-      }
-      this.syncTowerSceneVisual();
-      this.render();
-    } else {
-      if (res.rockBroken) {
-        audio.playOreBreak('tower');
-        if (coins > 0) {
-          audio.playCrystalChord('perfect');
-          this.pushToast(`🪙 RARE DROP! +${fmtInt(coins)} Spire Coin${coins > 1 ? 's' : ''}!`);
-        }
-        this.syncTowerSceneVisual();
-      }
-      this.towerUi.updateLiveValues(this.root);
-    }
-    return { dmg: res.dmgDealt, broken: res.rockBroken, isCrit: res.isCrit };
+    this.towerBridge.syncTowerSceneVisual();
   }
 
   public handleTowerTargetClick(
     targetOreIndex: number | null,
     opts?: { isShieldBreak?: boolean }
   ): { dmg: number; broken?: boolean; isCrit?: boolean; shieldBroken?: boolean; shieldShaved?: boolean } | undefined {
-    if (this.sceneMode !== 'tower' || !this.state.towerRun) return undefined;
-    const run = this.state.towerRun;
-    if (targetOreIndex === null && opts?.isShieldBreak && run.isBossWave && (run.bossInvulLeft ?? 0) > 0) {
-      const shieldRes = this.state.hitTowerBossShieldSweetSpot();
-      if (shieldRes.hit) {
-        audio.playCrystalChord('perfect');
-        triggerPerfectStrikeFlash();
-        if (shieldRes.shieldBroken) {
-          this.pushToast('⚡ SHIELD SHATTERED! Boss EXPOSED (+50% DMG for 4s)!');
-        } else {
-          this.pushToast('⚡ SHIELD CRACKED! -2.5s Boss Shield!');
-        }
-        this.syncTowerSceneVisual();
-        this.towerUi.updateLiveValues(this.root);
-        return { dmg: 0, shieldBroken: shieldRes.shieldBroken, shieldShaved: true };
-      }
-    }
-    const res = this.state.tapTowerTarget(targetOreIndex);
-    if (res.dmgDealt > 0) {
-      audio.playOreHit(true, Boolean(res.isCrit));
-    } else if (run.isBossWave && (run.bossInvulLeft ?? 0) > 0 && !run.pendingBlessings) {
-      audio.playSfx('ui-error', { volume: 0.25, cooldownMs: 320, bucket: 'shield-block' });
-    }
-    return this.handleTowerHitResolution(res);
+    return this.towerBridge.handleTowerTargetClick(targetOreIndex, opts);
   }
 
   public handleTowerFighterStrike(
@@ -649,16 +540,11 @@ export class GameHud {
     targetOreIndex: number | null,
     attackInterval: number
   ): { dmg: number; broken?: boolean; isCrit?: boolean } | undefined {
-    if (this.sceneMode !== 'tower' || !this.state.towerRun) return undefined;
-    const res = this.state.applyTowerChibiStrike(slotIndex, targetOreIndex, attackInterval);
-    if (res.dmgDealt > 0) {
-      audio.playSfx('chibi-swing', { volume: 0.28, cooldownMs: 120, bucket: 'chibi-swing' });
-    }
-    return this.handleTowerHitResolution(res);
+    return this.towerBridge.handleTowerFighterStrike(slotIndex, targetOreIndex, attackInterval);
   }
 
   public handleTowerMonolithClick(): { dmg: number } | undefined {
-    return this.handleTowerTargetClick(null);
+    return this.towerBridge.handleTowerMonolithClick();
   }
 
   public openShopStation(station: ShopStationId): void {
@@ -812,100 +698,31 @@ export class GameHud {
         return;
       }
 
-      const chestCount = this.state.getChestItemCount();
-      const readyBounties = this.state.getReadyBountyCount();
-      const dailyReady = this.state.canClaimDailyLogin();
-      const quickButtonsHtml = `
-        <button class="${TW_QUICK_BTN_DAILY}" title="Daily Login" data-action="open-daily-login">
-          <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] ${dailyReady ? '' : 'hidden'}" data-daily-badge="true">1</span>
-          <span class="text-[#b45309] text-[15px] leading-none" aria-hidden="true">✦</span>
-          <span>Daily</span>
-        </button>
-        <button class="${TW_QUICK_BTN_QUEST} !px-2" title="Mining Bounties" data-action="open-bounties">
-          <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] ${readyBounties > 0 ? '' : 'hidden'}" data-bounties-badge="true">${readyBounties}</span>
-          ${hudIconHtml('quest', 22, 'Bounties')}
-        </button>
-        <button class="${TW_QUICK_BTN_QUEST} !px-2" title="Achievements & Career Stats" data-action="open-achievements">
-          <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] ${this.state.getReadyAchievementCount() > 0 ? '' : 'hidden'}" data-achievements-badge="true">${this.state.getReadyAchievementCount()}</span>
-          <svg class="w-[21px] h-[21px] text-[#14111d]" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4H17V10C17 12.8 14.8 15 12 15C9.2 15 7 12.8 7 10V4Z" fill="#fde047" stroke="currentColor" stroke-width="2"/><path d="M7 6H4V8.5C4 10.2 5.3 11.5 7 11.5M17 6H20V8.5C20 10.2 18.7 11.5 17 11.5M12 15V19M8.5 19H15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        </button>
-        <button class="${TW_QUICK_BTN_CHEST}" title="Chest (${fmtInt(chestCount)})" data-action="open-chest">
-          ${hudIconHtml('chest', 22, 'Chest')}
-        </button>
-      `;
-
+      const quickButtonsHtml = renderMineQuickButtonsHtml({
+        chestCount: this.state.getChestItemCount(),
+        readyBounties: this.state.getReadyBountyCount(),
+        readyAchievements: this.state.getReadyAchievementCount(),
+        dailyReady: this.state.canClaimDailyLogin(),
+      });
       const activeWorld = getWorldById(this.state.activeWorldId);
       const activeWorldNum = Math.max(1, getWorldIndex(this.state.activeWorldId) + 1);
-      const upgradeCount = this.state.getAffordableResearchCount();
 
-      this.root.innerHTML = `
-      ${this.weatherDpsUi.renderWeatherWidget(Date.now(), true)}
-      <div class="${TW_TOP_CENTER} flex flex-wrap items-center justify-center gap-2.5 @max-[720px]:gap-1.5">
-        <button class="${TW_SHOPS_PILL} whitespace-nowrap" data-action="shops-pill" title="Go to Shop Plaza">
-          ${hudIconHtml('shops', 28, 'Plaza')}
-          <span>Plaza</span>
-        </button>
-        <div class="w-[224px] @max-[720px]:w-[202px] shrink-0">
-          ${this.weatherDpsUi.renderOverclockWidget()}
-        </div>
-        <button class="${TW_TELEPORT_PILL} whitespace-nowrap" data-action="open-worlds" title="Teleport • World ${activeWorldNum}: ${activeWorld.name}">
-          <svg viewBox="0 0 32 32" width="28" height="28" class="shrink-0" aria-hidden="true">
-            <defs>
-              <radialGradient id="mam-tp-core" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#ffffff"/>
-                <stop offset="32%" stop-color="#67e8f9"/>
-                <stop offset="68%" stop-color="#6366f1"/>
-                <stop offset="100%" stop-color="#1e1b4b"/>
-              </radialGradient>
-              <linearGradient id="mam-tp-ring" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#e0f2fe"/>
-                <stop offset="50%" stop-color="#38bdf8"/>
-                <stop offset="100%" stop-color="#c084fc"/>
-              </linearGradient>
-            </defs>
-            <circle cx="16" cy="16" r="13" fill="url(#mam-tp-core)" stroke="#14111d" stroke-width="2.4"/>
-            <ellipse cx="16" cy="16" rx="12" ry="5.4" transform="rotate(-26 16 16)" fill="none" stroke="#bae6fd" stroke-width="1.8"/>
-            <ellipse cx="16" cy="16" rx="11" ry="4.4" transform="rotate(34 16 16)" fill="none" stroke="#e879f9" stroke-width="1.4" opacity="0.9"/>
-            <path d="M16 7.5L17.9 14.1L24.5 16L17.9 17.9L16 24.5L14.1 17.9L7.5 16L14.1 14.1Z" fill="#ffffff"/>
-            <circle cx="25.5" cy="7.5" r="1.7" fill="#fde047"/>
-            <circle cx="6.5" cy="24.5" r="1.3" fill="#67e8f9"/>
-          </svg>
-          <span>Teleport</span>
-          <span
-            class="absolute -top-2 -right-2 min-w-[23px] h-[23px] px-1 rounded-full border-2 border-[#14111d] text-[12px] font-black tabular-nums leading-none text-[#14111d] flex items-center justify-center"
-            style="background:${activeWorld.iconColor}"
-            data-teleport-world-badge="true"
-          >${activeWorldNum}</span>
-        </button>
-      </div>
-
-      <div class="absolute left-4 @max-[720px]:left-2.5 top-1/2 -translate-y-1/2 flex flex-col gap-2.5 @max-[720px]:gap-2">
-        <button class="${TW_SIDE_BTN_RAINBOW}" data-action="open-shop" title="Premium Shop">
-          ${hudIconHtml('shopBasket', 44, 'Shop')}
-          <span class="text-[14px] font-black leading-none text-[#14111d]">Shop</span>
-        </button>
-        <button class="${TW_SIDE_BTN_UPGRADES}" data-action="open-upgrades">
-          <span class="${TW_BADGE_BASE} min-w-[24px] h-6 px-1.5 text-[13px] ${upgradeCount > 0 ? '' : 'hidden'}" data-upgrades-badge="true">${upgradeCount}</span>
-          ${hudIconHtml('hourglass', 44, 'Upgrades')}
-          <span class="text-[14px] font-black leading-none text-[#14111d]">Upgrades</span>
-        </button>
-        <button class="${TW_SIDE_BTN_INDEX}" data-action="open-index">
-          <span class="${TW_BADGE_BASE} min-w-[24px] h-6 px-1.5 text-[13px] ${this.state.getReadyIndexRewardCount() > 0 ? '' : 'hidden'}" data-index-badge="true">${this.state.getReadyIndexRewardCount()}</span>
-          ${hudIconHtml('indexBook', 44, 'Index')}
-          <span class="text-[14px] font-black leading-none text-[#14111d]">Index</span>
-        </button>
-      </div>
-
-      ${this.renderAudioToggleBtn()}
-      ${this.renderCurrencyRail({ showGemsPlus: true, showCash: true, showDpsAbove: true, quickButtonsHtml })}
-
-      ${this.hotbarUi.renderHotbarSection()}
-
-      ${this.weatherDpsUi.renderActivePotionsDock()}
-      ${this.renderFeverScreenFx()}
-      ${this.renderActiveModal()}
-      ${this.renderToastStack()}
-    `;
+      this.root.innerHTML = renderMineChromeHtml({
+        weatherHtml: this.weatherDpsUi.renderWeatherWidget(Date.now(), true),
+        overclockHtml: this.weatherDpsUi.renderOverclockWidget(),
+        activeWorldName: activeWorld.name,
+        activeWorldColor: activeWorld.iconColor,
+        activeWorldNum,
+        upgradeCount: this.state.getAffordableResearchCount(),
+        readyIndexCount: this.state.getReadyIndexRewardCount(),
+        audioHtml: this.renderAudioToggleBtn(),
+        currencyRailHtml: this.renderCurrencyRail({ showGemsPlus: true, showCash: true, showDpsAbove: true, quickButtonsHtml }),
+        hotbarHtml: this.hotbarUi.renderHotbarSection(),
+        potionsHtml: this.weatherDpsUi.renderActivePotionsDock(),
+        feverFxHtml: this.renderFeverScreenFx(),
+        modalHtml: this.renderActiveModal(),
+        toastStackHtml: this.renderToastStack(),
+      });
 
       this.bindEvents();
       refreshPotionTimersInDom(this.root, this.state);

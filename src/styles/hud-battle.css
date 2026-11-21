@@ -195,6 +195,40 @@
     content: none;
   }
 
+  .mam-battle-blessing-summary-btn {
+    background: #fde047;
+    color: #14111d;
+    cursor: pointer;
+    transition: transform 120ms ease-out, background-color 120ms ease-out;
+  }
+
+  .mam-battle-blessing-summary-btn:hover {
+    background: #fef08a;
+    transform: scale(0.97);
+  }
+
+  .mam-battle-blessing-summary-btn:active {
+    transform: scale(0.94);
+  }
+
+  .mam-battle-blessing-summary-btn.is-open {
+    background: #bae6fd;
+  }
+
+  .mam-battle-blessing-popover {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 8px);
+    padding: 10px 12px;
+    border-radius: 16px;
+    border: 3px solid #14111d;
+    background: #fff8e7;
+    color: #14111d;
+    box-shadow: none;
+    z-index: 30;
+  }
+
   .mam-battle-stat-cell {
     display: flex;
     flex-direction: column;

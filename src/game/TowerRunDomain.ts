@@ -11,6 +11,7 @@ import {
   getTowerWaveDef,
   pickTowerBlessingChoices,
   rollTowerWaveOres,
+  summarizeTowerBlessings,
   TOWER_BLESSING_AUTO_PICK_SEC,
   TOWER_BLESSING_REROLL_GEM_COST,
   TOWER_BOSS_COIN_CHANCE,
@@ -160,56 +161,6 @@ export function getTowerEffectiveTapDamageDomain(ctx: TowerRunContext): number {
   const blessingPct = (ctx.towerRun?.blessings ?? []).reduce((s, b) => s + (b.tapBonusPct ?? 0), 0);
   const towerRelicMult = 1 + ctx.getRelicBonus('towerDmgPct');
   return Math.max(1, Math.round(ctx.getTapDamage() * def.anomaly.tapMult * (1 + blessingPct) * towerRelicMult));
-}
-
-interface TowerBlessingAggregate {
-  dpsBonusPct: number;
-  tapBonusPct: number;
-  gemBonusPct: number;
-  extraTimerSec: number;
-  overkillPct: number;
-  chainTargets: number;
-  chainPct: number;
-  critChanceBonus: number;
-  critDmgBonus: number;
-  bossDmgPct: number;
-  diceChanceBonus: number;
-  extraStrikeChance: number;
-  extraStrikePct: number;
-}
-
-function summarizeTowerBlessings(blessings: readonly TowerBlessingDef[]): TowerBlessingAggregate {
-  const acc: TowerBlessingAggregate = {
-    dpsBonusPct: 0,
-    tapBonusPct: 0,
-    gemBonusPct: 0,
-    extraTimerSec: 0,
-    overkillPct: 0,
-    chainTargets: 0,
-    chainPct: 0,
-    critChanceBonus: 0,
-    critDmgBonus: 0,
-    bossDmgPct: 0,
-    diceChanceBonus: 0,
-    extraStrikeChance: 0,
-    extraStrikePct: 0,
-  };
-  for (const b of blessings) {
-    acc.dpsBonusPct += b.dpsBonusPct ?? 0;
-    acc.tapBonusPct += b.tapBonusPct ?? 0;
-    acc.gemBonusPct += b.gemBonusPct ?? 0;
-    acc.extraTimerSec += b.extraTimerSec ?? 0;
-    acc.overkillPct += b.overkillPct ?? 0;
-    acc.chainTargets += b.chainTargets ?? 0;
-    acc.chainPct = Math.max(acc.chainPct, b.chainPct ?? 0);
-    acc.critChanceBonus += b.critChanceBonus ?? 0;
-    acc.critDmgBonus += b.critDmgBonus ?? 0;
-    acc.bossDmgPct += b.bossDmgPct ?? 0;
-    acc.diceChanceBonus += b.diceChanceBonus ?? 0;
-    acc.extraStrikeChance += b.extraStrikeChance ?? 0;
-    acc.extraStrikePct = Math.max(acc.extraStrikePct, b.extraStrikePct ?? 0);
-  }
-  return acc;
 }
 
 function getTowerExtraTimerSec(ctx: Pick<TowerRunContext, 'towerRun'>): number {
@@ -387,7 +338,7 @@ function completeCurrentTowerWaveOrFloor(
     };
   }
 
-  run.pendingBlessings = pickTowerBlessingChoices(rng);
+  run.pendingBlessings = pickTowerBlessingChoices(rng, [], run.blessings);
   run.blessingTimerLeft = TOWER_BLESSING_AUTO_PICK_SEC;
   emit();
   return {
@@ -451,7 +402,8 @@ export function rerollTowerBlessingsDomain(
     run.freeBlessingRerolls = freeLeft - 1;
     run.pendingBlessings = pickTowerBlessingChoices(
       rng,
-      run.pendingBlessings.map((b) => b.id)
+      run.pendingBlessings.map((b) => b.id),
+      run.blessings
     );
     run.blessingTimerLeft = TOWER_BLESSING_AUTO_PICK_SEC;
     hooks.emit?.();
@@ -463,7 +415,8 @@ export function rerollTowerBlessingsDomain(
   ctx.gems -= TOWER_BLESSING_REROLL_GEM_COST;
   run.pendingBlessings = pickTowerBlessingChoices(
     rng,
-    run.pendingBlessings.map((b) => b.id)
+    run.pendingBlessings.map((b) => b.id),
+    run.blessings
   );
   run.blessingTimerLeft = TOWER_BLESSING_AUTO_PICK_SEC;
   hooks.save?.();

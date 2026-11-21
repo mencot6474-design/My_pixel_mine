@@ -60,14 +60,20 @@ import {
 } from '../src/game/PlotUnitsDomain';
 import { RELICS } from '../src/game/RelicData';
 import {
+  buildTowerRunBuffPills,
+  formatBlessingPickPreview,
   getTowerFloorDef,
   getTowerStreakGemMult,
+  getTowerWaveDef,
+  groupTowerBlessings,
+  pickTowerBlessingChoices,
   TOWER_BLESSINGS,
   TOWER_BLESSING_REROLL_GEM_COST,
   TOWER_BOSS_EXPOSE_DMG_MULT,
   TOWER_BOSS_EXPOSE_SEC,
   TOWER_BOSS_INVUL_SEC,
   TOWER_DICE_PITY_MAX,
+  TOWER_GEM_DROP_MULT,
   TOWER_KEY_REGEN_MS,
   TOWER_MAX_FLOOR,
   TOWER_MAX_KEYS,
@@ -431,6 +437,52 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(state.towerLastSummary?.reason).toBe('victory');
       expect(state.towerLastSummary?.highestReached).toBe(TOWER_MAX_FLOOR);
       expect(getTowerFloorDef(99).floor).toBe(TOWER_MAX_FLOOR);
+      expect(TOWER_GEM_DROP_MULT).toBeCloseTo(0.2, 6);
+      expect(getTowerFloorDef(1).gemReward).toBe(7);
+      expect(getTowerFloorDef(50).gemReward).toBe(335); // includes Floor 50 Gem Surge (1.45x) at 0.2x scale
+      expect(getTowerWaveDef(1, 1).waveGemReward).toBe(1);
+      expect(getTowerWaveDef(49, 1).waveGemReward).toBe(16);
+    });
+
+    it('filters maxed mechanical blessings out of RNG & reroll pools and summarizes grouped buffs & previews', () => {
+      const cappedDefs = TOWER_BLESSINGS.filter((b) => b.maxStacks !== undefined);
+      expect(cappedDefs.length).toBeGreaterThanOrEqual(6);
+
+      // Fill every capped mechanical blessing to its maxStacks
+      const maxedOwned = cappedDefs.flatMap((def) =>
+        Array.from({ length: def.maxStacks! }, () => def)
+      );
+      const cappedIds = new Set(cappedDefs.map((b) => b.id));
+
+      for (let i = 0; i < 10; i++) {
+        const choices = pickTowerBlessingChoices(() => (i * 0.17) % 1, [], maxedOwned);
+        expect(choices).toHaveLength(3);
+        expect(choices.every((c) => !cappedIds.has(c.id))).toBe(true);
+      }
+
+      // Even when rerolling excludes 3 uncapped choices, maxed blessings stay excluded
+      const state = new GameState();
+      state.gems = TOWER_BLESSING_REROLL_GEM_COST * 2;
+      expect(startTowerRunDomain(state, 1, 40_000, () => 0.1)).toBe(true);
+      state.towerRun!.blessings = [...maxedOwned];
+      state.towerRun!.pendingBlessings = pickTowerBlessingChoices(() => 0.2, [], state.towerRun!.blessings);
+      const reroll = rerollTowerBlessingsDomain(state, () => 0.7);
+      expect(reroll.ok).toBe(true);
+      expect(state.towerRun!.pendingBlessings).toHaveLength(3);
+      expect(state.towerRun!.pendingBlessings!.every((c) => !cappedIds.has(c.id))).toBe(true);
+
+      // Verify grouping, MAX flag, before->after preview, and run buff summary pills
+      const gemMagnet = TOWER_BLESSINGS.find((b) => b.id === 'gem-magnet')!;
+      const chainSpark = TOWER_BLESSINGS.find((b) => b.id === 'chain-spark')!;
+      const grouped = groupTowerBlessings([gemMagnet, chainSpark, gemMagnet, chainSpark, gemMagnet]);
+      expect(grouped[0]).toMatchObject({ def: gemMagnet, count: 3, maxed: false, totalLabel: '+90% Gems' });
+      expect(grouped[1]).toMatchObject({ def: chainSpark, count: 2, maxed: true, totalLabel: 'Chain 4 Ores' });
+
+      expect(formatBlessingPickPreview(gemMagnet, 6)).toBe('Gems +180% → +210%');
+      expect(formatBlessingPickPreview(chainSpark, 1)).toBe('Chain 2 → 4 Ores');
+
+      const pills = buildTowerRunBuffPills([gemMagnet, gemMagnet, chainSpark]);
+      expect(pills.map((p) => p.label)).toEqual(['+60% Gems', 'Chain 2']);
     });
   });
 
@@ -1073,9 +1125,9 @@ describe('Tahap C GameState Domain Modules', () => {
   });
 
   describe('Spire Coin Tower Drops & Save Persistence', () => {
-    it('drops 1 Spire Coin at 0.1% per broken wave ore rock, 5 Spire Coins at 5% on Boss defeat, and persists across save/load', () => {
+    it('drops 1 Spire Coin at 0.5% per broken wave ore rock, 5 Spire Coins at 5% on Boss defeat, and persists across save/load', () => {
       const state = new GameState();
-      expect(TOWER_ORE_COIN_CHANCE).toBeCloseTo(0.001, 6);
+      expect(TOWER_ORE_COIN_CHANCE).toBeCloseTo(0.005, 6);
       expect(TOWER_BOSS_COIN_CHANCE).toBeCloseTo(0.05, 6);
       expect(TOWER_BOSS_COIN_DROP).toBe(5);
 
@@ -1083,15 +1135,15 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(state.towerCoins).toBe(0);
       expect(state.towerRun?.coinsEarned).toBe(0);
 
-      // Break rock #0 with luck (< 0.001) -> +1 Spire Coin
-      const luckyOreRes = state.applyTowerTargetDamage(0, 999_999, () => 0.0005);
+      // Break rock #0 with luck (< 0.005) -> +1 Spire Coin
+      const luckyOreRes = state.applyTowerTargetDamage(0, 999_999, () => 0.004);
       expect(luckyOreRes.rockBroken).toBe(true);
       expect(luckyOreRes.coinsAwarded).toBe(1);
       expect(state.towerCoins).toBe(1);
       expect(state.towerRun?.coinsEarned).toBe(1);
 
-      // Break rock #1 without luck (>= 0.001) -> +0 Spire Coins
-      const unluckyOreRes = state.applyTowerTargetDamage(1, 999_999, () => 0.5);
+      // Break rock #1 without luck (>= 0.005) -> +0 Spire Coins
+      const unluckyOreRes = state.applyTowerTargetDamage(1, 999_999, () => 0.006);
       expect(unluckyOreRes.rockBroken).toBe(true);
       expect(unluckyOreRes.coinsAwarded).toBe(0);
       expect(state.towerCoins).toBe(1);

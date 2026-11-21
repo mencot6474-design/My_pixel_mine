@@ -6,10 +6,17 @@ import { ChibiSprite3D } from './ChibiSprite3D';
 import { ChibiFieldFxController } from './FieldMiner3D';
 import { OreVariantKey } from './MineWorldPalette';
 import { getGeodeGlowTexture, isSweetSpotWindowPure, OreBillboard2D } from './OrePit3D';
-import { getPedestalHoloRingTexture } from './PlotPedestal3D';
-import { createSeraphimBoss3D, SeraphimBossHandle } from './SeraphimBoss3D';
+import { SeraphimBossHandle } from './SeraphimBoss3D';
 import { createTowerCityEnvironment, TowerCityEnvironmentHandle } from './TowerCityEnvironment3D';
-
+import {
+  BossGravityRockSeed,
+  BossHaloArcHandle,
+  buildTowerArenaStage,
+  spawnTowerArenaShards,
+  stepTowerBossFeetFx,
+  stepTowerShardPool,
+  type TowerShardParticle,
+} from './TowerArenaStage3D';
 export interface TowerFighterConfig {
   slotIndex: number;
   def: ChibiDef;
@@ -42,24 +49,6 @@ export interface TowerOreBarScreen {
   hp: number;
   maxHp: number;
   variantKey: OreVariantKey;
-}
-
-interface BossGravityRockSeed {
-  radius: number;
-  angle: number;
-  speed: number;
-  baseY: number;
-  scale: [number, number, number];
-  rotSpeedX: number;
-  rotSpeedY: number;
-  phase: number;
-}
-
-interface BossHaloArcHandle {
-  mesh: THREE.Mesh;
-  mat: THREE.MeshBasicMaterial;
-  phase: number;
-  period: number;
 }
 
 interface TowerWaveRockSlot {
@@ -115,81 +104,6 @@ const WAVE_ORE_POSITIONS: ReadonlyArray<[number, number]> = [
   [0, ARENA_CENTER_Z - 2.35],
 ];
 
-function createBossLightningArcGeometry(
-  start: THREE.Vector3,
-  end: THREE.Vector3,
-  seed: number
-): THREE.BufferGeometry {
-  const segs = 5;
-  const pts: THREE.Vector3[] = [];
-  for (let i = 0; i <= segs; i++) {
-    const t = i / segs;
-    const p = new THREE.Vector3().lerpVectors(start, end, t);
-    if (i > 0 && i < segs) {
-      const env = Math.sin(t * Math.PI);
-      const jx = ((((seed * (i + 2) * 19) % 15) - 7) / 7) * 0.24 * env;
-      const jy = ((((seed * (i + 5) * 23) % 15) - 7) / 7) * 0.24 * env;
-      p.x += jx;
-      p.y += jy;
-    }
-    pts.push(p);
-  }
-
-  const verts: number[] = [];
-  const halfW = 0.032;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const a = pts[i];
-    const b = pts[i + 1];
-    const perp = new THREE.Vector3(-(b.y - a.y), b.x - a.x, 0).normalize().multiplyScalar(halfW * (1 - (i / pts.length) * 0.35));
-    verts.push(
-      a.x + perp.x, a.y + perp.y, a.z,
-      b.x + perp.x, b.y + perp.y, b.z,
-      a.x - perp.x, a.y - perp.y, a.z,
-
-      a.x - perp.x, a.y - perp.y, a.z,
-      b.x + perp.x, b.y + perp.y, b.z,
-      b.x - perp.x, b.y - perp.y, b.z
-    );
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-  geo.computeVertexNormals();
-  return geo;
-}
-
-function createEclipseCoronaGlowTexture(): THREE.Texture | null {
-  if (typeof document === 'undefined') return null;
-  const c = document.createElement('canvas');
-  c.width = 256;
-  c.height = 256;
-  const ctx = c.getContext('2d');
-  if (!ctx) return null;
-
-  const grad = ctx.createRadialGradient(128, 128, 28, 128, 128, 126);
-  grad.addColorStop(0.0, 'rgba(34, 211, 238, 0.92)');
-  grad.addColorStop(0.32, 'rgba(56, 189, 248, 0.55)');
-  grad.addColorStop(0.64, 'rgba(217, 70, 239, 0.24)');
-  grad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 256, 256);
-
-  // Segmented holographic HUD reticle ring
-  ctx.strokeStyle = 'rgba(165, 243, 252, 0.75)';
-  ctx.lineWidth = 3;
-  for (let i = 0; i < 12; i++) {
-    const a0 = (i / 12) * Math.PI * 2 + 0.06;
-    const a1 = ((i + 0.65) / 12) * Math.PI * 2;
-    ctx.beginPath();
-    ctx.arc(128, 128, 92, a0, a1);
-    ctx.stroke();
-  }
-
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.needsUpdate = true;
-  return tex;
-}
-
 export class TowerArena3D {
   public readonly group = new THREE.Group();
   public readonly clickables: THREE.Object3D[] = [];
@@ -209,7 +123,6 @@ export class TowerArena3D {
   private readonly waveOresGroup = new THREE.Group();
   private readonly waveRocks: TowerWaveRockSlot[] = [];
 
-  private readonly eclipseCoronaRing: THREE.Mesh;
   private readonly eclipseOuterHalo: THREE.Mesh;
   private readonly eclipseCoronaMat: THREE.MeshBasicMaterial;
   private readonly eclipseHaloMat: THREE.MeshBasicMaterial;
@@ -233,20 +146,7 @@ export class TowerArena3D {
     metalness: 0.18,
     flatShading: true,
   });
-  private readonly shardPool: Array<{
-    mesh: THREE.Mesh;
-    ownsMat: boolean;
-    vx: number;
-    vy: number;
-    vz: number;
-    rx: number;
-    ry: number;
-    rz: number;
-    baseScale: number;
-    bounces: number;
-    age: number;
-    dur: number;
-  }> = [];
+  private readonly shardPool: TowerShardParticle[] = [];
   private fighterConfigs: TowerFighterConfig[] = [];
 
   private bounceTimer = 0;
@@ -267,202 +167,27 @@ export class TowerArena3D {
     this.cityEnv = createTowerCityEnvironment();
     this.group.add(this.cityEnv.group);
 
-    // 2. Colossal Holographic AI Mainframe Core Hovering Above the Vanishing Cyber Highway
-    const eclipseGroup = new THREE.Group();
-    eclipseGroup.position.set(0, 7.6, -42);
-
-    const coronaGlowTex = createEclipseCoronaGlowTexture();
-    if (coronaGlowTex) this.ownedTextures.push(coronaGlowTex);
-    this.eclipseHaloMat = new THREE.MeshBasicMaterial({
-      ...(coronaGlowTex ? { map: coronaGlowTex } : {}),
-      color: 0x06b6d4,
-      transparent: true,
-      opacity: coronaGlowTex ? 0.85 : 0.32,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      fog: false,
+    const stage = buildTowerArenaStage({
+      group: this.group,
+      monolithGroup: this.monolithGroup,
+      bossFeetFxGroup: this.bossFeetFxGroup,
+      bossGravityRockSeeds: this.bossGravityRockSeeds,
+      bossArcs: this.bossArcs,
+      summonPads: this.summonPads,
+      ownedTextures: this.ownedTextures,
+      bossCenterZ: BOSS_CENTER_Z,
+      getSpawnPos: (i) => this.getSpawnPos(i),
     });
-    this.eclipseOuterHalo = new THREE.Mesh(
-      coronaGlowTex ? new THREE.PlaneGeometry(17.5, 17.5) : new THREE.RingGeometry(3.2, 6.4, 64),
-      this.eclipseHaloMat
-    );
-    this.eclipseOuterHalo.position.z = -0.1;
-
-    this.eclipseCoronaMat = new THREE.MeshBasicMaterial({
-      color: 0x22d3ee,
-      transparent: true,
-      opacity: 0.92,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      fog: false,
-    });
-    this.eclipseCoronaRing = new THREE.Mesh(new THREE.RingGeometry(3.15, 3.72, 48), this.eclipseCoronaMat);
-
-    // Dark obsidian inner AI kernel sphere
-    const aiCoreSphere = new THREE.Mesh(
-      new THREE.SphereGeometry(2.65, 32, 24),
-      new THREE.MeshBasicMaterial({ color: 0x020617, fog: false })
-    );
-
-    // Rotating 3D Geodesic Wireframe AI Hologram Shell
-    this.aiWireframeSphere = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(3.12, 2),
-      new THREE.MeshBasicMaterial({
-        color: 0x22d3ee,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.85,
-        fog: false,
-      })
-    );
-
-    // Counter-rotating cyber-gyroscope data rings around the AI Core
-    this.aiGyroRing1 = new THREE.Mesh(
-      new THREE.TorusGeometry(4.2, 0.065, 8, 64),
-      new THREE.MeshBasicMaterial({
-        color: 0xe879f9,
-        transparent: true,
-        opacity: 0.82,
-        blending: THREE.AdditiveBlending,
-        fog: false,
-      })
-    );
-    this.aiGyroRing1.rotation.x = 0.42;
-
-    this.aiGyroRing2 = new THREE.Mesh(
-      new THREE.TorusGeometry(4.75, 0.05, 8, 64),
-      new THREE.MeshBasicMaterial({
-        color: 0x38bdf8,
-        transparent: true,
-        opacity: 0.72,
-        blending: THREE.AdditiveBlending,
-        fog: false,
-      })
-    );
-    this.aiGyroRing2.rotation.y = 0.55;
-
-    eclipseGroup.add(
-      this.eclipseOuterHalo,
-      aiCoreSphere,
-      this.aiWireframeSphere,
-      this.eclipseCoronaRing,
-      this.aiGyroRing1,
-      this.aiGyroRing2
-    );
-    this.group.add(eclipseGroup);
-
-    // 3. Five Front-Arc Chibi Summoning Runes (Feathered Holo Rings Flush on Highway Crater Floor y = 0.08)
-    const summonHoloTex = getPedestalHoloRingTexture();
-    for (let i = 0; i < 5; i++) {
-      const sp = this.getSpawnPos(i);
-      const pad = new THREE.Mesh(
-        summonHoloTex ? new THREE.PlaneGeometry(1.48, 1.48) : new THREE.RingGeometry(0.46, 0.68, 20),
-        new THREE.MeshBasicMaterial({
-          ...(summonHoloTex ? { map: summonHoloTex } : {}),
-          color: 0x38bdf8,
-          side: THREE.DoubleSide,
-          transparent: true,
-          opacity: 0.16,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-        })
-      );
-      pad.rotation.x = -Math.PI / 2;
-      pad.position.set(sp.x, 0.095, sp.z);
-      this.group.add(pad);
-      this.summonPads.push(pad);
-    }
-
-    // 4. Central Full-3D Procedural "Corrupted Seraphim AI Overlord" Boss (Slightly behind Crater Center so chibis & damage numbers stay clear)
-    this.bossModel = createSeraphimBoss3D({ scale: 1.02 });
-    this.monolithGroup.add(this.bossModel.group);
-    this.monolithGroup.position.set(0, 0.08, BOSS_CENTER_Z);
-    this.group.add(this.monolithGroup);
-
-    // 4b. Crater Floor Boss Feet Aura: Contact Shadow, Dim Red-Orange Shockwave, Anti-Gravity Rocks & Ground-to-Body Sparks
-    this.bossFeetFxGroup.position.set(0, 0.08, BOSS_CENTER_Z);
-    this.group.add(this.bossFeetFxGroup);
-
-    const bossShadowMesh = new THREE.Mesh(
-      new THREE.CircleGeometry(1.18, 24),
-      new THREE.MeshBasicMaterial({
-        color: 0x020306,
-        transparent: true,
-        opacity: 0.72,
-        depthWrite: false,
-      })
-    );
-    bossShadowMesh.rotation.x = -Math.PI / 2;
-    bossShadowMesh.position.y = 0.008;
-    this.bossFeetFxGroup.add(bossShadowMesh);
-
-    this.bossFloorPulseMat = new THREE.MeshBasicMaterial({
-      color: 0xea580c,
-      transparent: true,
-      opacity: 0.34,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-    this.bossFloorPulseMesh = new THREE.Mesh(new THREE.RingGeometry(1.45, 1.82, 36), this.bossFloorPulseMat);
-    this.bossFloorPulseMesh.rotation.x = -Math.PI / 2;
-    this.bossFloorPulseMesh.position.y = 0.014;
-    this.bossFeetFxGroup.add(this.bossFloorPulseMesh);
-
-    const GRAVITY_ROCK_COUNT = 9;
-    const gravRockGeo = new THREE.DodecahedronGeometry(1.0, 0);
-    const gravRockMat = new THREE.MeshStandardMaterial({
-      color: 0x1a1e2a,
-      roughness: 0.92,
-      metalness: 0.08,
-      flatShading: true,
-    });
-    this.bossGravityRocksInst = new THREE.InstancedMesh(gravRockGeo, gravRockMat, GRAVITY_ROCK_COUNT);
-    this.bossGravityRocksInst.castShadow = true;
-    this.bossGravityRocksInst.receiveShadow = true;
-    for (let i = 0; i < GRAVITY_ROCK_COUNT; i++) {
-      this.bossGravityRockSeeds.push({
-        radius: 1.45 + (i % 3) * 0.34,
-        angle: (i / GRAVITY_ROCK_COUNT) * Math.PI * 2,
-        speed: 0.28 + (i % 3) * 0.07,
-        baseY: 0.2 + (i % 4) * 0.09,
-        scale: [0.15 + (i % 3) * 0.03, 0.11 + (i % 2) * 0.03, 0.13 + ((i + 1) % 3) * 0.03],
-        rotSpeedX: 0.7 + (i % 3) * 0.25,
-        rotSpeedY: 0.8 + (i % 2) * 0.35,
-        phase: i * 0.9,
-      });
-    }
-    this.bossFeetFxGroup.add(this.bossGravityRocksInst);
-
-    // Asymmetrical Short Lightning Arcs Crackling Between Crater Floor Fissures & Elevated Lower Boss Body
-    const groundArcSpecs: [THREE.Vector3, THREE.Vector3, number][] = [
-      [new THREE.Vector3(-1.35, 0.02, 0.25), new THREE.Vector3(-0.48, 1.08, 0.04), 13],
-      [new THREE.Vector3(1.42, 0.02, 0.18), new THREE.Vector3(0.52, 1.2, 0.04), 29],
-      [new THREE.Vector3(-0.88, 0.02, -0.55), new THREE.Vector3(-0.36, 1.46, -0.05), 41],
-      [new THREE.Vector3(1.05, 0.02, -0.48), new THREE.Vector3(0.42, 0.98, 0.02), 59],
-      [new THREE.Vector3(-0.22, 0.02, 0.85), new THREE.Vector3(0.16, 0.94, 0.08), 73],
-    ];
-    groundArcSpecs.forEach(([p0, p1, seed], idx) => {
-      const arcMat = new THREE.MeshBasicMaterial({
-        color: idx % 2 === 0 ? 0xfb923c : 0xfde68a,
-        transparent: true,
-        opacity: 0.78,
-        side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      });
-      const arcMesh = new THREE.Mesh(createBossLightningArcGeometry(p0, p1, seed), arcMat);
-      arcMesh.visible = false;
-      this.bossFeetFxGroup.add(arcMesh);
-      this.bossArcs.push({
-        mesh: arcMesh,
-        mat: arcMat,
-        phase: idx * 0.74,
-        period: 1.35 + (idx % 3) * 0.55,
-      });
-    });
+    this.bossModel = stage.bossModel;
+    this.bossGravityRocksInst = stage.bossGravityRocksInst;
+    this.bossFloorPulseMesh = stage.bossFloorPulseMesh;
+    this.bossFloorPulseMat = stage.bossFloorPulseMat;
+    this.eclipseOuterHalo = stage.eclipseOuterHalo;
+    this.eclipseCoronaMat = stage.eclipseCoronaMat;
+    this.eclipseHaloMat = stage.eclipseHaloMat;
+    this.aiWireframeSphere = stage.aiWireframeSphere;
+    this.aiGyroRing1 = stage.aiGyroRing1;
+    this.aiGyroRing2 = stage.aiGyroRing2;
 
     // 5. Five Wave Ore Rock Slots (active on Waves 1..9)
     this.group.add(this.waveOresGroup);
@@ -786,53 +511,13 @@ export class TowerArena3D {
     isShatter = false,
     isBoss = false
   ): void {
-    const maxCap = 64;
-    for (let i = 0; i < count; i++) {
-      if (this.shardPool.length >= maxCap) {
-        const oldest = this.shardPool.shift();
-        if (oldest) {
-          this.shardGroup.remove(oldest.mesh);
-          if (oldest.ownsMat) (oldest.mesh.material as THREE.Material).dispose();
-        }
-      }
-      const isCrystal = isBoss ? i % 4 !== 3 : isShatter ? i % 3 !== 2 : i % 2 === 0;
-      const mat = isCrystal
-        ? new THREE.MeshStandardMaterial({
-            color: colorHex,
-            emissive: colorHex,
-            emissiveIntensity: 0.82,
-            roughness: 0.22,
-            metalness: 0.35,
-            flatShading: true,
-          })
-        : this.rockChipMat;
-      const mesh = new THREE.Mesh(isCrystal ? this.sharedShardGeo : this.sharedRockGeo, mat);
-      mesh.position.set(
-        lx + (Math.random() - 0.5) * (isShatter ? 0.85 : 0.55),
-        ly + (Math.random() - 0.3) * (isShatter ? 0.75 : 0.45),
-        lz + (Math.random() - 0.5) * (isShatter ? 0.85 : 0.55)
-      );
-      const ang = Math.random() * Math.PI * 2;
-      const spd = (isShatter ? 3.0 : 2.0) + Math.random() * (isShatter ? 4.4 : 2.8);
-      const baseScale = (isShatter ? 0.9 : 0.68) + Math.random() * (isShatter ? 0.65 : 0.42);
-      mesh.scale.setScalar(baseScale);
-      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-      this.shardGroup.add(mesh);
-      this.shardPool.push({
-        mesh,
-        ownsMat: isCrystal,
-        vx: Math.cos(ang) * spd,
-        vy: (isShatter ? 3.6 : 2.5) + Math.random() * (isShatter ? 3.8 : 2.5),
-        vz: Math.sin(ang) * spd,
-        rx: (Math.random() - 0.5) * 16,
-        ry: (Math.random() - 0.5) * 14,
-        rz: (Math.random() - 0.5) * 16,
-        baseScale,
-        bounces: 0,
-        age: 0,
-        dur: (isShatter ? 0.68 : 0.48) + Math.random() * 0.28,
-      });
-    }
+    spawnTowerArenaShards(lx, ly, lz, colorHex, count, isShatter, isBoss, {
+      shardPool: this.shardPool,
+      shardGroup: this.shardGroup,
+      sharedShardGeo: this.sharedShardGeo,
+      sharedRockGeo: this.sharedRockGeo,
+      rockChipMat: this.rockChipMat,
+    });
   }
 
   public setBossShieldActive(active: boolean, resetCycle = false): void {
@@ -1056,42 +741,14 @@ export class TowerArena3D {
       this.monolithGroup.position.y = 0.08;
       this.bossModel.update(safeDt, elapsed, hitFactor);
 
-      // Brief asymmetrical lightning arcs crackling between crater cracks and Boss lower body
-      for (let i = 0; i < this.bossArcs.length; i++) {
-        const arc = this.bossArcs[i];
-        const cycle = (elapsed + arc.phase) % arc.period;
-        const on = cycle < 0.1 || (cycle > 0.18 && cycle < 0.24);
-        arc.mesh.visible = on;
-        if (on) {
-          arc.mat.opacity = 0.58 + Math.sin(elapsed * 45 + i) * 0.24;
-        }
-      }
-
-      // Low anti-gravity crater rock fragments hovering slowly around Boss's feet
-      for (let i = 0; i < this.bossGravityRockSeeds.length; i++) {
-        const rs = this.bossGravityRockSeeds[i];
-        const a = rs.angle + elapsed * rs.speed;
-        this.bossGravityDummy.position.set(
-          Math.cos(a) * rs.radius,
-          rs.baseY + Math.sin(elapsed * 1.8 + rs.phase) * 0.075,
-          Math.sin(a) * rs.radius
-        );
-        this.bossGravityDummy.rotation.set(
-          elapsed * rs.rotSpeedX + rs.phase,
-          elapsed * rs.rotSpeedY,
-          rs.phase
-        );
-        this.bossGravityDummy.scale.set(rs.scale[0], rs.scale[1], rs.scale[2]);
-        this.bossGravityDummy.updateMatrix();
-        this.bossGravityRocksInst.setMatrixAt(i, this.bossGravityDummy.matrix);
-      }
-      this.bossGravityRocksInst.instanceMatrix.needsUpdate = true;
-
-      // Subtle dim pulsing red-orange shockwave on crater floor beneath Boss's feet
-      const wavePhase = (elapsed * 0.62) % 1;
-      const waveScale = 0.85 + wavePhase * 0.45;
-      this.bossFloorPulseMesh.scale.setScalar(waveScale);
-      this.bossFloorPulseMat.opacity = Math.max(0, (1 - wavePhase) * 0.34);
+      stepTowerBossFeetFx(elapsed, {
+        bossArcs: this.bossArcs,
+        bossGravityRockSeeds: this.bossGravityRockSeeds,
+        bossGravityDummy: this.bossGravityDummy,
+        bossGravityRocksInst: this.bossGravityRocksInst,
+        bossFloorPulseMesh: this.bossFloorPulseMesh,
+        bossFloorPulseMat: this.bossFloorPulseMat,
+      });
     } else {
       for (const rock of this.waveRocks) {
         if (!rock.alive) continue;
@@ -1129,42 +786,7 @@ export class TowerArena3D {
 
     this.impactFx.update(safeDt, camera);
 
-    for (let i = this.shardPool.length - 1; i >= 0; i--) {
-      const p = this.shardPool[i];
-      p.age += safeDt;
-      if (p.age >= p.dur) {
-        this.shardGroup.remove(p.mesh);
-        if (p.ownsMat) (p.mesh.material as THREE.Material).dispose();
-        this.shardPool.splice(i, 1);
-        continue;
-      }
-      p.vy -= 15.5 * safeDt;
-      p.mesh.position.x += p.vx * safeDt;
-      let nextY = p.mesh.position.y + p.vy * safeDt;
-      if (nextY <= 0.14) {
-        nextY = 0.14;
-        if (p.vy < -0.6 && p.bounces < 2) {
-          p.vy = -p.vy * 0.42;
-          p.vx *= 0.72;
-          p.vz *= 0.72;
-          p.rx *= 0.65;
-          p.rz *= 0.65;
-          p.bounces++;
-        } else {
-          p.vy = 0;
-          p.vx *= Math.max(0.2, 1 - safeDt * 6);
-          p.vz *= Math.max(0.2, 1 - safeDt * 6);
-        }
-      }
-      p.mesh.position.y = nextY;
-      p.mesh.position.z += p.vz * safeDt;
-      p.mesh.rotation.x += p.rx * safeDt;
-      p.mesh.rotation.y += p.ry * safeDt;
-      p.mesh.rotation.z += p.rz * safeDt;
-      const lifeRatio = p.age / p.dur;
-      const shrink = lifeRatio < 0.62 ? 1 : Math.max(0.04, 1 - (lifeRatio - 0.62) / 0.38);
-      p.mesh.scale.setScalar(p.baseScale * shrink);
-    }
+    stepTowerShardPool(safeDt, { shardPool: this.shardPool, shardGroup: this.shardGroup });
 
     // Update Animated Chibi Fighters (dash to target -> attack -> deal damage ONLY on real swing)
     for (const f of this.fighters.values()) {

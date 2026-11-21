@@ -63,6 +63,9 @@ import {
 import { BountiesModalUi } from '../src/ui/BountiesModalUi';
 import { AchievementsModalUi } from '../src/ui/AchievementsModalUi';
 import { TowerUi } from '../src/ui/TowerUi';
+import { TowerArenaHudUi } from '../src/ui/TowerArenaHudUi';
+import { towerBlessingIconHtml } from '../src/ui/HudIcons';
+import { TOWER_BLESSINGS } from '../src/game/TowerData';
 import { buildHudCoordinatorActions } from '../src/ui/HudActionRouter';
 import { ShopModalsUi } from '../src/ui/ShopModalsUi';
 import { getTapComboTier, stepTapCombo, TAP_COMBO_WINDOW_MS } from '../src/game/TapComboHelper';
@@ -1189,6 +1192,86 @@ describe('Tahap B HUD Modules', () => {
 
       const goShopCard = buildTutorialCardHtml('go-shop');
       expect(goShopCard).toContain('Click Plaza at the top');
+    });
+  });
+
+  describe('Tower Arena Single-Row Blessing Dock, Popover & Pick Ownership Preview', () => {
+    it('keeps battle dock single-row with summary pill + run buff pills, toggles grouped popover, and shows Owned/NEW previews on pick cards', () => {
+      const state = new GameState();
+      state.startTowerRun(1);
+      const astral = TOWER_BLESSINGS.find((b) => b.id === 'astral-surge')!;
+      const gemMagnet = TOWER_BLESSINGS.find((b) => b.id === 'gem-magnet')!;
+      const chainSpark = TOWER_BLESSINGS.find((b) => b.id === 'chain-spark')!;
+      const bossSlayer = TOWER_BLESSINGS.find((b) => b.id === 'boss-slayer')!;
+
+      // Simulate a deep floor run with stacked blessings
+      state.towerRun!.blessings = [
+        ...Array.from({ length: 7 }, () => astral), // +245% DPS
+        ...Array.from({ length: 6 }, () => gemMagnet), // +180% Gems
+        chainSpark, // 1/2 Chain Spark
+      ];
+
+      const arenaUi = new TowerArenaHudUi(state, () => {}, () => {}, () => {}, () => {});
+      const closedHtml = arenaUi.renderTowerArenaHud('<div></div>', '');
+      expect(closedHtml).toContain('data-tower-blessing-bar="true"');
+      expect(closedHtml).toContain('flex-nowrap');
+      expect(closedHtml).toContain('data-action="tower-toggle-blessings"');
+      expect(closedHtml).toContain('✦ 14 Blessings');
+      expect(closedHtml).toContain('(3 Types)');
+      expect(closedHtml).toContain('+245% DPS');
+      expect(closedHtml).toContain('+180% Gems');
+      expect(closedHtml).toContain('Chain 2');
+      expect(closedHtml).not.toContain('data-tower-blessings-popover="true"');
+
+      // Open popover -> shows grouped stack rows with distinct icons without duplicating individual pills
+      arenaUi.setBlessingsPopoverOpen(true);
+      const openHtml = arenaUi.renderTowerArenaHud('<div></div>', '');
+      expect(openHtml).toContain('data-tower-blessings-popover="true"');
+      expect(openHtml).toContain('data-popover-blessing-row="astral-surge"');
+      expect(openHtml).toContain('data-blessing-icon="astral-surge"');
+      expect(openHtml).toContain('×7');
+      expect(openHtml).toContain('data-popover-blessing-row="gem-magnet"');
+      expect(openHtml).toContain('data-blessing-icon="gem-magnet"');
+      expect(openHtml).toContain('×6');
+      expect(openHtml).toContain('data-popover-blessing-row="chain-spark"');
+      expect(openHtml).toContain('data-blessing-icon="chain-spark"');
+      expect(openHtml).toContain('×1/2');
+
+      // Every single Spire Blessing has its own unique SVG artwork
+      const iconBodies = new Set(
+        TOWER_BLESSINGS.map((b) =>
+          towerBlessingIconHtml(b.id, 24).replace(/data-blessing-icon="[^"]+"/, '')
+        )
+      );
+      expect(iconBodies.size).toBe(TOWER_BLESSINGS.length);
+
+      // Pending blessing pick modal -> shows Owned ×6 → ×7, MAX on Chain Spark, NEW! on Seraphim Bane, plus before->after previews & unique icons
+      state.towerRun!.pendingBlessings = [gemMagnet, chainSpark, bossSlayer];
+      const pickHtml = arenaUi.renderTowerArenaHud('<div></div>', '');
+      expect(pickHtml).toContain('data-blessing-icon="gem-magnet"');
+      expect(pickHtml).toContain('data-blessing-icon="chain-spark"');
+      expect(pickHtml).toContain('data-blessing-icon="boss-slayer"');
+      expect(pickHtml).toContain('Owned ×6 → ×7');
+      expect(pickHtml).toContain('Gems +180% → +210%');
+      expect(pickHtml).toContain('Owned ×1 → ×2 MAX');
+      expect(pickHtml).toContain('Chain 2 → 4 Ores');
+      expect(pickHtml).toContain('NEW!');
+      expect(pickHtml).toContain('Boss DMG +0% → +55%');
+      // Overflow test: when > 5 distinct buff stats exist, inline bar caps at 5 + "+N more" button (zero edge clipping)
+      state.towerRun!.blessings = [...TOWER_BLESSINGS];
+      state.towerRun!.pendingBlessings = null;
+      arenaUi.setBlessingsPopoverOpen(false);
+      const overflowClosedHtml = arenaUi.renderTowerArenaHud('<div></div>', '');
+      const inlinePillMatches = overflowClosedHtml.match(/data-tower-buff-pill="/g) ?? [];
+      expect(inlinePillMatches).toHaveLength(5);
+      expect(overflowClosedHtml).toContain('data-tower-buffs-more="true"');
+      expect(overflowClosedHtml).toContain('+5 more');
+
+      arenaUi.setBlessingsPopoverOpen(true);
+      const overflowOpenHtml = arenaUi.renderTowerArenaHud('<div></div>', '');
+      expect(overflowOpenHtml).toContain('data-popover-all-buffs="true"');
+      expect(overflowOpenHtml).toContain('Echo 28%');
+      expect(overflowOpenHtml).toContain('+18% Dice');
     });
   });
 });

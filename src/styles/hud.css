@@ -1,4 +1,6 @@
 @import "./hud-base.css";
+@import "./hud-rarity.css";
+@import "./hud-fx.css";
 @import "./hud-modals.css";
 @import "./hud-hotbar.css";
 @import "./hud-widgets.css";

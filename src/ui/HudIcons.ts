@@ -320,3 +320,86 @@ export function spireCoinIconHtml(sizePx = 18): string {
     <path d="M12 6.2L13.7 10.3L17.8 12L13.7 13.7L12 17.8L10.3 13.7L6.2 12L10.3 10.3Z" fill="#fffbeb" stroke="#14111d" stroke-width="1.2" stroke-linejoin="round"/>
   </svg>`;
 }
+
+const TOWER_BLESSING_ICON_BODIES: Readonly<Record<string, string>> = {
+  // 1. Astral Surge: 4-point astral starburst + rising power core
+  'astral-surge': `
+    <path d="M12 2.2L14.8 9.2L21.8 12L14.8 14.8L12 21.8L9.2 14.8L2.2 12L9.2 9.2Z" fill="#38bdf8" stroke="#14111d" stroke-width="1.9" stroke-linejoin="round"/>
+    <path d="M12 6.8L13.5 10.5L17.2 12L13.5 13.5L12 17.2L10.5 13.5L6.8 12L10.5 10.5Z" fill="#e0f2fe"/>
+  `,
+  // 2. Crystal Greed: faceted pink gem crystal
+  'gem-magnet': `
+    <polygon points="7,4.2 17,4.2 21.2,9.8 12,20.8 2.8,9.8" fill="#f472b6" stroke="#14111d" stroke-width="1.9" stroke-linejoin="round"/>
+    <polygon points="7,4.2 17,4.2 15.2,9.8 8.8,9.8" fill="#fbcfe8" stroke="#14111d" stroke-width="1.3" stroke-linejoin="round"/>
+    <path d="M8.8 9.8L12 20.8L15.2 9.8" fill="#ec4899" stroke="#14111d" stroke-width="1.3" stroke-linejoin="round"/>
+  `,
+  // 3. Chrono Shard: golden hourglass
+  'chrono-shard': `
+    <path d="M6 3.5H18M6 20.5H18" stroke="#14111d" stroke-width="2.3" stroke-linecap="round"/>
+    <path d="M7.5 3.5H16.5V7.5L12 12L16.5 16.5V20.5H7.5V16.5L12 12L7.5 7.5Z" fill="#fef08a" stroke="#14111d" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M9.4 6.2H14.6L12 9.4Z" fill="#f59e0b"/>
+    <path d="M9.2 18.6H14.8L12 15.2Z" fill="#f59e0b"/>
+  `,
+  // 4. Core Breaker: emerald power pickaxe
+  'breaker-click': `
+    <path d="M14.2 9.8L4.5 19.5" stroke="#b45309" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M14.2 9.8L4.5 19.5" stroke="#14111d" stroke-width="1.3" stroke-linecap="round"/>
+    <path d="M7.2 4.2C11.8 3.1 16.8 5 20 8.5C20.9 9.5 21.4 10.7 21.5 12L17.4 12.6C16.7 11.1 15.6 9.8 14.3 8.9L11.4 11.8L9.6 10L12.5 7.1C11 6.4 9.2 6.2 7.6 6.6Z" fill="#4ade80" stroke="#14111d" stroke-width="1.8" stroke-linejoin="round"/>
+  `,
+  // 5. Overkill Splash: explosive fiery blast burst
+  'overkill-splash': `
+    <path d="M12 2.4L14.3 7.1L19.4 5.2L17.2 10.1L21.8 12.6L16.8 14.7L18.4 19.8L13.4 17.5L11.5 22L9.4 17.2L4.2 19L6.5 14L2.2 11.4L7.2 9.5L5.8 4.4L10.6 7Z" fill="#fb923c" stroke="#14111d" stroke-width="1.8" stroke-linejoin="round"/>
+    <circle cx="12" cy="12" r="3.4" fill="#fef08a" stroke="#14111d" stroke-width="1.4"/>
+  `,
+  // 6. Chain Spark: twin forked cyan lightning bolt
+  'chain-spark': `
+    <path d="M14 2.2L5.2 12.6H11.2L9.6 21.8L18.8 10.8H12.8Z" fill="#22d3ee" stroke="#14111d" stroke-width="1.9" stroke-linejoin="round"/>
+    <circle cx="5" cy="5.5" r="1.8" fill="#fde047" stroke="#14111d" stroke-width="1.2"/>
+    <circle cx="19" cy="18.5" r="1.8" fill="#fde047" stroke="#14111d" stroke-width="1.2"/>
+  `,
+  // 7. Crit Burst: golden sniper crosshair reticle
+  'crit-burst': `
+    <circle cx="12" cy="12" r="7.5" fill="#fef3c7" stroke="#14111d" stroke-width="2"/>
+    <circle cx="12" cy="12" r="3.2" fill="#f59e0b" stroke="#14111d" stroke-width="1.6"/>
+    <path d="M12 2.2V6.2M12 17.8V21.8M2.2 12H6.2M17.8 12H21.8" stroke="#14111d" stroke-width="2.1" stroke-linecap="round"/>
+  `,
+  // 8. Seraphim Bane: crimson boss-slayer crown + piercing blade
+  'boss-slayer': `
+    <path d="M3.5 17.5L5.5 7.5L10 11.5L12 6L14 11.5L18.5 7.5L20.5 17.5Z" fill="#f43f5e" stroke="#14111d" stroke-width="1.9" stroke-linejoin="round"/>
+    <path d="M4.5 19.8H19.5" stroke="#14111d" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="12" cy="14" r="1.8" fill="#fde047" stroke="#14111d" stroke-width="1.2"/>
+  `,
+  // 9. Fortune Seeker: violet lucky die
+  'dice-hunter': `
+    <rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="#c084fc" stroke="#14111d" stroke-width="2"/>
+    <circle cx="8.2" cy="8.2" r="1.5" fill="#14111d"/>
+    <circle cx="15.8" cy="8.2" r="1.5" fill="#14111d"/>
+    <circle cx="12" cy="12" r="1.6" fill="#fef08a" stroke="#14111d" stroke-width="1"/>
+    <circle cx="8.2" cy="15.8" r="1.5" fill="#14111d"/>
+    <circle cx="15.8" cy="15.8" r="1.5" fill="#14111d"/>
+  `,
+  // 10. Tempo Surge: teal double speed chevrons
+  'tempo-surge': `
+    <path d="M4.5 6.5L11 12L4.5 17.5H9.2L15.7 12L9.2 6.5Z" fill="#2dd4bf" stroke="#14111d" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M11.5 6.5L18 12L11.5 17.5H16.2L21.5 12L16.2 6.5Z" fill="#99f6e4" stroke="#14111d" stroke-width="1.8" stroke-linejoin="round"/>
+  `,
+  // 11. Prismatic Echo: twin overlapping prism diamonds
+  'prismatic-echo': `
+    <polygon points="9.5,3.5 15.5,12 9.5,20.5 3.5,12" fill="#38bdf8" stroke="#14111d" stroke-width="1.8" stroke-linejoin="round"/>
+    <polygon points="14.5,3.5 20.5,12 14.5,20.5 8.5,12" fill="#a855f7" fill-opacity="0.92" stroke="#14111d" stroke-width="1.8" stroke-linejoin="round"/>
+    <circle cx="14.5" cy="12" r="2.1" fill="#f5d0fe"/>
+  `,
+  // 12. Blood Pact: crimson cursed blood drop + gold fang ring
+  'cursed-greed': `
+    <path d="M12 2.8C12 2.8 5.2 10.2 5.2 14.8C5.2 18.6 8.2 21.4 12 21.4C15.8 21.4 18.8 18.6 18.8 14.8C18.8 10.2 12 2.8 12 2.8Z" fill="#e11d48" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M9.6 14.6C9.6 16.4 10.8 17.8 12.4 18.1" stroke="#fecdd3" stroke-width="1.9" stroke-linecap="round"/>
+    <circle cx="14.5" cy="11.2" r="1.4" fill="#fde047"/>
+  `,
+};
+
+export function towerBlessingIconHtml(blessingId: string, sizePx = 24): string {
+  const body =
+    TOWER_BLESSING_ICON_BODIES[blessingId] ??
+    `<path d="M12 3L14.5 9.5L21 12L14.5 14.5L12 21L9.5 14.5L3 12L9.5 9.5Z" fill="#fde047" stroke="#14111d" stroke-width="1.8" stroke-linejoin="round"/>`;
+  return `<svg viewBox="0 0 24 24" width="${sizePx}" height="${sizePx}" class="shrink-0" fill="none" data-blessing-icon="${blessingId}" aria-hidden="true">${body}</svg>`;
+}

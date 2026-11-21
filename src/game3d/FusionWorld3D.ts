@@ -26,6 +26,7 @@ import {
   getFusionPortalVortexTexture,
 } from './ProceduralTextures3D';
 import type { ShopChibiBubbleAnchor } from './ShopWorld3D';
+import { stepFusionWorldUpdate, type FusionSeqState } from './FusionSequence3D';
 interface MaterialPedestalSlot {
   podium: CyberShowcasePodiumHandle;
   holoGridRing: THREE.Mesh;
@@ -110,20 +111,22 @@ export class FusionWorld3D {
   private activeRecipeId: string | null = null;
   private readonly orbGeo = new THREE.SphereGeometry(0.18, 10, 10);
   private readonly energyOrbs: EnergyOrb[] = [];
-  private fusionAnimTimer = 0;
-  private readonly fusionAnimDur = 3.45;
-  private portalBurstFired = false;
-  private fusionBurstFired = false;
-  private landingEchoFired = false;
-  private revealHold = false;
+  private readonly seq: FusionSeqState = {
+    allRequirementsReady: false,
+    fusionAnimTimer: 0,
+    fusionAnimDur: 3.45,
+    portalFlashTimer: 0,
+    revealPopTimer: 0,
+    revealHold: false,
+    portalBurstFired: false,
+    fusionBurstFired: false,
+    landingEchoFired: false,
+    fusionAccentHex: '#22d3ee',
+    fusionGlowHex: '#d946ef',
+    onFusionAnimComplete: null,
+  };
   private readonly camFocusPos = new THREE.Vector3();
   private readonly camFocusLook = new THREE.Vector3();
-  private fusionAccentHex = '#22d3ee';
-  private fusionGlowHex = '#d946ef';
-  private allRequirementsReady = false;
-  private onFusionAnimComplete: (() => void) | null = null;
-  private revealPopTimer = 0;
-  private portalFlashTimer = 0;
   constructor() {
     this.group.visible = false;
     this.group.add(this.impactFx.group);
@@ -515,11 +518,11 @@ export class FusionWorld3D {
   }
   private buildFloatingCosmicIslands(darkBasaltMat: THREE.Material): void { buildFloatingCosmicIslands(this.arenaBuildCtx(), darkBasaltMat); }
   public isAnimating(): boolean {
-    return this.fusionAnimTimer > 0;
+    return this.seq.fusionAnimTimer > 0;
   }
   public setRevealHold(active: boolean): void {
-    this.revealHold = active;
-    if (!active && this.fusionAnimTimer <= 0) {
+    this.seq.revealHold = active;
+    if (!active && this.seq.fusionAnimTimer <= 0) {
       for (const slot of this.materialSlots) {
         if (slot.sprite) {
           slot.sprite.group.position.set(0, 0.285, 0);
@@ -529,15 +532,15 @@ export class FusionWorld3D {
     }
   }
   public isRevealHolding(): boolean {
-    return this.revealHold;
+    return this.seq.revealHold;
   }
   public getCameraFocusState(): {
     active: boolean;
     camPos: THREE.Vector3;
     lookAt: THREE.Vector3;
   } {
-    if (this.fusionAnimTimer > 0) {
-      const elapsedAnim = this.fusionAnimDur - this.fusionAnimTimer;
+    if (this.seq.fusionAnimTimer > 0) {
+      const elapsedAnim = this.seq.fusionAnimDur - this.seq.fusionAnimTimer;
       if (elapsedAnim < 1.72) {
         // Act 1 & 2: Glide closer to frame the levitating Material Chibis converging into the Synchro Gate
         const p = Math.min(1, elapsedAnim / 1.45);
@@ -550,7 +553,7 @@ export class FusionWorld3D {
       }
       return { active: true, camPos: this.camFocusPos, lookAt: this.camFocusLook };
     }
-    if (this.revealHold) {
+    if (this.seq.revealHold) {
       this.camFocusPos.set(0, 3.75, 4.35);
       this.camFocusLook.set(0, 3.05, STAGE_CENTER_Z - 0.3);
       return { active: true, camPos: this.camFocusPos, lookAt: this.camFocusLook };
@@ -558,15 +561,15 @@ export class FusionWorld3D {
     return { active: false, camPos: this.camFocusPos, lookAt: this.camFocusLook };
   }
   public cancelAnimation(): void {
-    this.fusionAnimTimer = 0;
-    this.portalBurstFired = false;
-    this.fusionBurstFired = false;
-    this.landingEchoFired = false;
-    this.revealHold = false;
-    this.portalFlashTimer = 0;
+    this.seq.fusionAnimTimer = 0;
+    this.seq.portalBurstFired = false;
+    this.seq.fusionBurstFired = false;
+    this.seq.landingEchoFired = false;
+    this.seq.revealHold = false;
+    this.seq.portalFlashTimer = 0;
     this.portalFlashMesh.visible = false;
     this.portalVortexMesh.scale.setScalar(1);
-    this.onFusionAnimComplete = null;
+    this.seq.onFusionAnimComplete = null;
     this.resultMount.visible = true;
     for (const slot of this.materialSlots) {
       if (slot.sprite) {
@@ -610,24 +613,24 @@ export class FusionWorld3D {
   ): void {
     const recipeChanged = this.activeRecipeId !== recipe.id;
     this.activeRecipeId = recipe.id;
-    this.fusionAccentHex = recipe.accentColor;
-    this.fusionGlowHex = recipe.glowColor;
+    this.seq.fusionAccentHex = recipe.accentColor;
+    this.seq.fusionGlowHex = recipe.glowColor;
     const minersAllReady =
       recipe.requiredMiners.length > 0 &&
       recipe.requiredMiners.every((_, idx) => Boolean(ingredientReadyFlags[idx]));
     const oresAllReady = oreReadyFlags
       ? recipe.requiredOres.every((_, idx) => Boolean(oreReadyFlags[idx]))
       : minersAllReady;
-    this.allRequirementsReady = canFuse ?? (minersAllReady && oresAllReady);
+    this.seq.allRequirementsReady = canFuse ?? (minersAllReady && oresAllReady);
     // Update Grand Apex Podium Aura, Stage Trims & Rear Synchro Portal
     this.applyPodiumTheme(
       this.apexPodium,
       recipe.accentColor,
       recipe.glowColor,
       true,
-      this.allRequirementsReady ? 1.45 : 0.95
+      this.seq.allRequirementsReady ? 1.45 : 0.95
     );
-    if (this.allRequirementsReady) {
+    if (this.seq.allRequirementsReady) {
       this.stageNeonMat.color.set(recipe.accentColor);
       this.stageNeonMat.emissive.set(recipe.accentColor);
       this.stageNeonMat.emissiveIntensity = 1.45;
@@ -681,7 +684,7 @@ export class FusionWorld3D {
       const oreHex = oreDef?.color ?? (node.oreSlotIndex === 0 ? '#38bdf8' : '#facc15');
       const isOreReady = oreReadyFlags
         ? Boolean(oreReadyFlags[node.oreSlotIndex])
-        : this.allRequirementsReady;
+        : this.seq.allRequirementsReady;
       node.ready = isOreReady;
       node.crystalMat.color.set(oreHex);
       node.crystalMat.emissive.set(oreHex);
@@ -736,7 +739,7 @@ export class FusionWorld3D {
       const def = getChibiById(ing.chibiId);
       const unitAccent = def?.accentColor ?? recipe.accentColor;
       const ringColor = ready
-        ? this.allRequirementsReady
+        ? this.seq.allRequirementsReady
           ? '#facc15'
           : unitAccent
         : '#be123c';
@@ -750,9 +753,9 @@ export class FusionWorld3D {
       slot.holoGridRing.visible = !ready;
       slot.holoGridMat.color.set('#38bdf8');
       slot.conduitMat.color.set(
-        this.allRequirementsReady ? '#facc15' : ready ? recipe.accentColor : '#991b1b'
+        this.seq.allRequirementsReady ? '#facc15' : ready ? recipe.accentColor : '#991b1b'
       );
-      slot.conduitMat.opacity = this.allRequirementsReady ? 0.92 : ready ? 0.72 : 0.34;
+      slot.conduitMat.opacity = this.seq.allRequirementsReady ? 0.92 : ready ? 0.72 : 0.34;
       if (slot.chibiId !== ing.chibiId || recipeChanged) {
         if (slot.sprite) {
           slot.podium.group.remove(slot.sprite.group);
@@ -791,13 +794,13 @@ export class FusionWorld3D {
   }
   public triggerFusionAnimation(recipe: FusionRecipeDef, onComplete: () => void): void {
     this.cancelAnimation();
-    this.fusionAccentHex = recipe.accentColor;
-    this.fusionGlowHex = recipe.glowColor;
-    this.fusionAnimTimer = this.fusionAnimDur;
-    this.portalBurstFired = false;
-    this.fusionBurstFired = false;
-    this.landingEchoFired = false;
-    this.onFusionAnimComplete = onComplete;
+    this.seq.fusionAccentHex = recipe.accentColor;
+    this.seq.fusionGlowHex = recipe.glowColor;
+    this.seq.fusionAnimTimer = this.seq.fusionAnimDur;
+    this.seq.portalBurstFired = false;
+    this.seq.fusionBurstFired = false;
+    this.seq.landingEchoFired = false;
+    this.seq.onFusionAnimComplete = onComplete;
     this.resultMount.visible = false;
     const count = recipe.requiredMiners.length;
     for (let s = 0; s < count; s++) {
@@ -842,240 +845,41 @@ export class FusionWorld3D {
   ): ShopChibiBubbleAnchor[] {
     return [];
   }
-  private stepPodiumAura(podium: CyberShowcasePodiumHandle, elapsed: number): void {
-    if (!podium.auraGroup.visible) return;
-    podium.sigilMesh.rotation.z = elapsed * 0.16;
-    podium.auraVeilMat.uniforms.uTime.value = elapsed;
-    podium.auraOuterVeilMat.uniforms.uTime.value = elapsed * 0.85;
-    podium.particleMat.uniforms.uTime.value = elapsed;
-  }
   public update(dtSec: number, elapsed: number, camera?: THREE.Camera): void {
-    if (!this.group.visible) return;
-    const dt = Math.min(0.1, Math.max(0, dtSec));
-    const isFusing = this.fusionAnimTimer > 0;
-    const readyPulse = this.allRequirementsReady ? 0.5 + 0.5 * Math.sin(elapsed * 4.6) : 0;
-    const spinBoost = isFusing ? 7.2 : this.allRequirementsReady ? 1.85 : 0.75;
-    // 1. Rotate Floor Magic Circle, Podium Auras & Triple Synchro Portal Rings
-    this.magicCircleMesh.rotation.z = elapsed * 0.14 * (this.allRequirementsReady ? 1.6 : 0.6);
-    this.innerRingMesh.rotation.z += dt * 0.78 * spinBoost;
-    this.outerRingMesh.rotation.z -= dt * 0.46 * spinBoost;
-    this.stepPodiumAura(this.apexPodium, elapsed);
-    this.portalOuterGroup.rotation.z += dt * 0.42 * spinBoost;
-    this.portalMidGroup.rotation.z -= dt * 0.68 * spinBoost;
-    this.portalInnerGroup.rotation.z += dt * 1.15 * spinBoost;
-    this.portalVortexMesh.rotation.z = -elapsed * 0.9 * spinBoost;
-    // 2. Dynamic Readiness Pulse on Portal, Floor Circuit & Central Skyward Light Beam
-    if (this.allRequirementsReady && !isFusing) {
-      const pulseIntensity = 1.2 + readyPulse * 0.65;
-      this.portalOuterMat.emissiveIntensity = pulseIntensity;
-      this.portalMidMat.emissiveIntensity = pulseIntensity * 0.95;
-      this.portalInnerMat.emissiveIntensity = pulseIntensity * 1.05;
-      this.apexPodium.ringMat.emissiveIntensity = pulseIntensity;
-      this.stageNeonMat.emissiveIntensity = pulseIntensity;
-      this.magicCircleMat.opacity = 0.52 + readyPulse * 0.26;
-      this.lightBeamOuterMat.opacity = 0.16 + readyPulse * 0.1;
-      this.lightBeamInnerMat.opacity = 0.22 + readyPulse * 0.14;
-    } else if (!isFusing) {
-      this.lightBeamOuterMat.opacity = 0.07 + Math.sin(elapsed * 2.2) * 0.02;
-      this.lightBeamInnerMat.opacity = 0.09 + Math.sin(elapsed * 2.2) * 0.025;
-    } else {
-      this.lightBeamOuterMat.opacity = 0.34;
-      this.lightBeamInnerMat.opacity = 0.48;
-    }
-    if (this.portalFlashTimer > 0) {
-      this.portalFlashTimer = Math.max(0, this.portalFlashTimer - dt);
-      const fp = this.portalFlashTimer / 0.55;
-      this.portalFlashMesh.visible = fp > 0;
-      this.portalFlashMesh.scale.setScalar(1.0 + (1 - fp) * 2.1);
-      this.portalFlashMat.opacity = fp * 0.96;
-    }
-    // 3. Animate Travelling Floor Conduit Pulses & ZZZ/HSR Material Podiums
-    const elapsedAnim = isFusing ? this.fusionAnimDur - this.fusionAnimTimer : 0;
-    if (isFusing && elapsedAnim >= 1.35 && elapsedAnim < 1.72) {
-      // Anime Singularity Implosion hold right before portal supernova
-      const imp = (elapsedAnim - 1.35) / 0.37;
-      this.portalVortexMesh.scale.setScalar(1 - Math.sin(imp * Math.PI * 0.5) * 0.46);
-    } else {
-      this.portalVortexMesh.scale.setScalar(1);
-    }
-    for (let i = 0; i < this.materialSlots.length; i++) {
-      const slot = this.materialSlots[i];
-      if (!slot.podium.group.visible) continue;
-      this.stepPodiumAura(slot.podium, elapsed + i * 0.65);
-      slot.holoGridRing.rotation.z = elapsed * 1.4;
-      const flowSpeed = isFusing ? 4.2 : this.allRequirementsReady ? 1.7 : slot.ready ? 1.0 : 0.35;
-      for (let p = 0; p < slot.conduitPulseMeshes.length; p++) {
-        const pulseMesh = slot.conduitPulseMeshes[p];
-        const phase = ((elapsed * flowSpeed + p * 0.5 + i * 0.25) % 1 + 1) % 1;
-        pulseMesh.position.z = 0.45 - phase * 0.9;
-        pulseMesh.visible = slot.ready || this.allRequirementsReady || isFusing;
-      }
-      if (slot.sprite) {
-        if (isFusing) {
-          if (elapsedAnim < 0.85) {
-            // Act 1: Dramatic levitation & overdrive charge
-            const lp = elapsedAnim / 0.85;
-            const ease = lp * (2 - lp);
-            slot.sprite.group.position.set(0, 0.285 + ease * 1.65, 0);
-            slot.sprite.group.scale.setScalar(1 + ease * 0.16);
-          } else if (elapsedAnim < 1.45) {
-            // Act 2: Morph into light streams & suction into the Synchro Gate
-            const sp = (elapsedAnim - 0.85) / 0.6;
-            slot.sprite.group.position.set(0, 1.93 + sp * 0.75, -sp * 1.45);
-            slot.sprite.group.scale.setScalar(Math.max(0.01, 1.16 * (1 - sp)));
-          } else {
-            slot.sprite.group.scale.setScalar(0.001);
-          }
-        } else if (this.revealHold) {
-          slot.sprite.group.scale.setScalar(0.001);
-        } else {
-          slot.sprite.group.position.set(0, 0.285, 0);
-          slot.sprite.group.scale.setScalar(1);
-        }
-        if (camera) {
-          slot.sprite.update(dt, elapsed, camera);
-        }
-      }
-    }
-    // 4. Animate Physical Ore Crystal Clusters & Floating Cosmic Islands
-    for (const node of this.oreClusters) {
-      const orePulse = node.ready ? 1.35 + Math.sin(elapsed * 4.2 + node.phase) * 0.4 : 0.26;
-      node.crystalMat.emissiveIntensity = orePulse;
-      node.accentMat.emissiveIntensity = node.ready ? orePulse * 1.2 : 0.32;
-      const orbitSpeed = node.ready ? 2.6 : 0.8;
-      for (let s = 0; s < node.floatingShards.length; s++) {
-        const shard = node.floatingShards[s];
-        const a = elapsed * orbitSpeed + node.phase + s * Math.PI;
-        shard.position.set(
-          Math.cos(a) * 0.38,
-          1.02 + s * 0.22 + Math.sin(elapsed * 3.0 + s) * 0.08,
-          Math.sin(a) * 0.38
-        );
-        shard.rotation.y = a;
-        shard.rotation.x = elapsed * 1.5;
-      }
-    }
-    for (const isl of this.floatingIslands) {
-      isl.group.position.y = isl.baseY + Math.sin(elapsed * isl.bobSpeed + isl.phase) * 0.28;
-      isl.group.rotation.y = Math.sin(elapsed * 0.25 + isl.phase) * 0.12;
-    }
-    // 5. Levitate or Descend Result Fusion Chibi on Grand Apex Podium
-    const popScale =
-      this.revealPopTimer > 0 ? 1 + Math.sin((this.revealPopTimer / 0.58) * Math.PI) * 0.28 : 1;
-    if (this.revealPopTimer > 0) this.revealPopTimer = Math.max(0, this.revealPopTimer - dt);
-    if (isFusing && elapsedAnim >= 1.98) {
-      const descendP = Math.min(1, (elapsedAnim - 1.98) / 0.42);
-      const easeOut = 1 - Math.pow(1 - descendP, 3);
-      this.resultMount.position.y = THREE.MathUtils.lerp(4.95, DAIS_TOP_Y + 0.04, easeOut);
-    } else {
-      this.resultMount.position.y = DAIS_TOP_Y + 0.04 + Math.sin(elapsed * 2.4) * 0.08;
-    }
-    this.resultMount.scale.setScalar(popScale);
-    if (camera && this.resultSprite) {
-      this.resultSprite.update(dt, elapsed, camera);
-    }
-    // 7. Step Converging Energy Orbs (Material Podiums -> Synchro Portal -> Grand Apex Podium)
-    for (let i = this.energyOrbs.length - 1; i >= 0; i--) {
-      const orb = this.energyOrbs[i];
-      orb.age += dt;
-      if (orb.age < 0) {
-        orb.mesh.visible = false;
-        continue;
-      }
-      orb.mesh.visible = true;
-      const p = orb.age / orb.dur;
-      if (p >= 1) {
-        this.group.remove(orb.mesh);
-        orb.mat.dispose();
-        this.energyOrbs.splice(i, 1);
-        continue;
-      }
-      const ease = p * p;
-      orb.mesh.position.set(
-        THREE.MathUtils.lerp(orb.from.x, orb.to.x, ease),
-        THREE.MathUtils.lerp(orb.from.y, orb.to.y, ease) + Math.sin(p * Math.PI) * orb.arcH,
-        THREE.MathUtils.lerp(orb.from.z, orb.to.z, ease)
-      );
-      orb.mesh.scale.setScalar(1.35 - p * 0.55);
-      orb.mat.opacity = 1 - p * 0.28;
-    }
-    // 8. Step 4-Act Fusion Climax Sequence
-    if (this.fusionAnimTimer > 0) {
-      this.fusionAnimTimer = Math.max(0, this.fusionAnimTimer - dt);
-      const curAnim = this.fusionAnimDur - this.fusionAnimTimer;
-      // Act 2 Climax (1.72s): Portal Supernova Eruption + discharge stream from Portal to Grand Apex Podium
-      if (!this.portalBurstFired && curAnim >= 1.72) {
-        this.portalBurstFired = true;
-        this.portalFlashTimer = 0.55;
-        this.portalFlashMesh.visible = true;
-        this.impactFx.spawnShatter({
-          targetX: PORTAL_CENTER.x,
-          targetY: PORTAL_CENTER.y,
-          targetZ: PORTAL_CENTER.z + 0.35,
-          oreColor: '#fef08a',
-          secondaryColor: this.fusionAccentHex,
-          isMeteor: true,
-          camera,
-        });
-        for (let k = 0; k < 8; k++) {
-          const mat = new THREE.MeshBasicMaterial({
-            color: k % 2 === 0 ? '#ffffff' : this.fusionAccentHex,
-            transparent: true,
-            opacity: 1,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-          });
-          const mesh = new THREE.Mesh(this.orbGeo, mat);
-          mesh.position.copy(PORTAL_CENTER);
-          this.group.add(mesh);
-          this.energyOrbs.push({
-            mesh,
-            mat,
-            from: PORTAL_CENTER.clone(),
-            to: new THREE.Vector3(0, DAIS_TOP_Y + 1.05, STAGE_CENTER_Z),
-            age: -k * 0.035,
-            dur: 0.32,
-            arcH: 0.75,
-          });
-        }
-      }
-      // Act 3 Climax (2.02s): Result unit descends into the skyward beam + initial Shatter Nova
-      if (!this.fusionBurstFired && curAnim >= 2.02) {
-        this.fusionBurstFired = true;
-        this.resultMount.visible = true;
-        this.revealPopTimer = 0.58;
-        this.impactFx.spawnShatter({
-          targetX: 0,
-          targetY: DAIS_TOP_Y + 1.15,
-          targetZ: STAGE_CENTER_Z,
-          oreColor: this.fusionAccentHex,
-          secondaryColor: this.fusionGlowHex,
-          isMeteor: true,
-          camera,
-        });
-      }
-      // Act 3 Hero Landing Impact (2.38s): Second 5-layer Shatter Nova as feet touch down on APEX podium
-      if (!this.landingEchoFired && curAnim >= 2.38) {
-        this.landingEchoFired = true;
-        this.impactFx.spawnShatter({
-          targetX: 0,
-          targetY: DAIS_TOP_Y + 0.65,
-          targetZ: STAGE_CENTER_Z,
-          oreColor: '#fef08a',
-          secondaryColor: this.fusionAccentHex,
-          isMeteor: true,
-          camera,
-        });
-      }
-      if (this.fusionAnimTimer <= 0) {
-        this.resultMount.visible = true;
-        this.revealHold = true;
-        const cb = this.onFusionAnimComplete;
-        this.onFusionAnimComplete = null;
-        cb?.();
-      }
-    }
-    this.impactFx.update(dt, camera);
+    stepFusionWorldUpdate(
+      {
+        seq: this.seq,
+        group: this.group,
+        impactFx: this.impactFx,
+        orbGeo: this.orbGeo,
+        energyOrbs: this.energyOrbs,
+        materialSlots: this.materialSlots,
+        oreClusters: this.oreClusters,
+        floatingIslands: this.floatingIslands,
+        apexPodium: this.apexPodium,
+        magicCircleMesh: this.magicCircleMesh,
+        magicCircleMat: this.magicCircleMat,
+        innerRingMesh: this.innerRingMesh,
+        outerRingMesh: this.outerRingMesh,
+        portalOuterGroup: this.portalOuterGroup,
+        portalMidGroup: this.portalMidGroup,
+        portalInnerGroup: this.portalInnerGroup,
+        portalOuterMat: this.portalOuterMat,
+        portalMidMat: this.portalMidMat,
+        portalInnerMat: this.portalInnerMat,
+        portalVortexMesh: this.portalVortexMesh,
+        portalFlashMesh: this.portalFlashMesh,
+        portalFlashMat: this.portalFlashMat,
+        stageNeonMat: this.stageNeonMat,
+        lightBeamOuterMat: this.lightBeamOuterMat,
+        lightBeamInnerMat: this.lightBeamInnerMat,
+        resultMount: this.resultMount,
+        resultSprite: this.resultSprite,
+      },
+      dtSec,
+      elapsed,
+      camera
+    );
   }
   public dispose(): void {
     this.cancelAnimation();

@@ -62,6 +62,7 @@ export interface TowerBlessingDef {
   color: string;
   rarity?: TowerBlessingRarity;
   tag?: string;
+  maxStacks?: number;
   dpsBonusPct?: number;
   tapBonusPct?: number;
   gemBonusPct?: number;
@@ -75,6 +76,36 @@ export interface TowerBlessingDef {
   diceChanceBonus?: number;
   extraStrikeChance?: number;
   extraStrikePct?: number;
+}
+
+export interface TowerBlessingAggregate {
+  dpsBonusPct: number;
+  tapBonusPct: number;
+  gemBonusPct: number;
+  extraTimerSec: number;
+  overkillPct: number;
+  chainTargets: number;
+  chainPct: number;
+  critChanceBonus: number;
+  critDmgBonus: number;
+  bossDmgPct: number;
+  diceChanceBonus: number;
+  extraStrikeChance: number;
+  extraStrikePct: number;
+}
+
+export interface GroupedTowerBlessing {
+  def: TowerBlessingDef;
+  count: number;
+  maxed: boolean;
+  totalLabel: string;
+}
+
+export interface TowerRunBuffPill {
+  id: string;
+  label: string;
+  bgClass: string;
+  textClass: string;
 }
 
 export interface TowerMilestoneDef {
@@ -103,9 +134,10 @@ export const TOWER_BOSS_SWEETSPOT_DURATION_SEC = 1.45;
 export const TOWER_DICE_PITY_MAX = 4;
 export const TOWER_STREAK_GEM_STEP = 0.25;
 export const TOWER_STREAK_MAX_BONUS = 2.0;
-export const TOWER_ORE_COIN_CHANCE = 0.001; // 0.1% per broken ore rock in waves 1-9
+export const TOWER_ORE_COIN_CHANCE = 0.005; // 0.5% per broken ore rock in waves 1-9
 export const TOWER_BOSS_COIN_CHANCE = 0.05; // 5% chance on Boss defeat
 export const TOWER_BOSS_COIN_DROP = 5; // +5 Spire Coins on Boss drop
+export const TOWER_GEM_DROP_MULT = 0.2; // -80% Tower wave/boss/sweep Gem drop balance scale
 
 export const TOWER_ANOMALIES: readonly TowerAnomalyDef[] = [
   {
@@ -196,6 +228,7 @@ export const TOWER_BLESSINGS: readonly TowerBlessingDef[] = [
     color: '#facc15',
     rarity: 'core',
     tag: 'TIME',
+    maxStacks: 5,
     extraTimerSec: 5,
   },
   {
@@ -214,6 +247,7 @@ export const TOWER_BLESSINGS: readonly TowerBlessingDef[] = [
     color: '#fb923c',
     rarity: 'tactical',
     tag: 'SPLASH',
+    maxStacks: 3,
     overkillPct: 0.8,
   },
   {
@@ -223,6 +257,7 @@ export const TOWER_BLESSINGS: readonly TowerBlessingDef[] = [
     color: '#22d3ee',
     rarity: 'tactical',
     tag: 'CHAIN',
+    maxStacks: 2,
     chainTargets: 2,
     chainPct: 0.35,
   },
@@ -233,6 +268,7 @@ export const TOWER_BLESSINGS: readonly TowerBlessingDef[] = [
     color: '#f59e0b',
     rarity: 'tactical',
     tag: 'CRIT',
+    maxStacks: 3,
     critChanceBonus: 0.25,
     critDmgBonus: 0.6,
   },
@@ -252,6 +288,7 @@ export const TOWER_BLESSINGS: readonly TowerBlessingDef[] = [
     color: '#c084fc',
     rarity: 'tactical',
     tag: 'DICE',
+    maxStacks: 5,
     diceChanceBonus: 0.18,
   },
   {
@@ -272,6 +309,7 @@ export const TOWER_BLESSINGS: readonly TowerBlessingDef[] = [
     color: '#a855f7',
     rarity: 'prismatic',
     tag: 'ECHO',
+    maxStacks: 3,
     extraStrikeChance: 0.28,
     extraStrikePct: 0.65,
   },
@@ -282,6 +320,7 @@ export const TOWER_BLESSINGS: readonly TowerBlessingDef[] = [
     color: '#e11d48',
     rarity: 'prismatic',
     tag: 'PACT',
+    maxStacks: 5,
     gemBonusPct: 0.85,
     extraTimerSec: -3,
   },
@@ -358,8 +397,8 @@ export function getTowerFloorDef(floor: number): TowerFloorDef {
   const baseDur = isFinalBoss ? 44 : isBoss ? 38 : 34;
   const durationSec = Math.max(16, baseDur + anomaly.timerDeltaSec);
   const gemReward = Math.max(
-    18,
-    Math.round((24 + f * 12) * (isBoss ? 1.85 : 1) * (isFinalBoss ? 1.5 : 1) * anomaly.gemMult)
+    4,
+    Math.round((24 + f * 12) * (isBoss ? 1.85 : 1) * (isFinalBoss ? 1.5 : 1) * anomaly.gemMult * TOWER_GEM_DROP_MULT)
   );
   const diceDropChance = isFinalBoss ? 1.0 : isBoss ? Math.min(0.85, 0.25 + f * 0.008) : 0.12;
   const title = isFinalBoss
@@ -396,7 +435,7 @@ export function getTowerWaveDef(floor: number, wave: number): TowerWaveDef {
   const baseDur = isBoss ? floorDef.durationSec : Math.max(14, 24 + floorDef.anomaly.timerDeltaSec);
   const waveGemReward = isBoss
     ? floorDef.gemReward
-    : Math.max(3, Math.round((3 + f * 1.6) * floorDef.anomaly.gemMult));
+    : Math.max(1, Math.round((3 + f * 1.6) * floorDef.anomaly.gemMult * TOWER_GEM_DROP_MULT));
 
   return {
     floor: f,
@@ -468,7 +507,7 @@ export function getTowerSweepGemReward(bestFloor: number): number {
   for (let f = start; f <= bestFloor; f++) {
     total += getTowerFloorDef(f).gemReward;
   }
-  return Math.max(9, Math.round(total * 0.4));
+  return Math.max(2, Math.round(total * 0.4));
 }
 
 export interface TowerSaveData {
@@ -523,20 +562,239 @@ export function getTowerStreakGemMult(floorsCleared: number): number {
   return 1 + Math.min(TOWER_STREAK_MAX_BONUS, Math.max(0, floorsCleared) * TOWER_STREAK_GEM_STEP);
 }
 
+export function summarizeTowerBlessings(blessings: readonly TowerBlessingDef[]): TowerBlessingAggregate {
+  const acc: TowerBlessingAggregate = {
+    dpsBonusPct: 0,
+    tapBonusPct: 0,
+    gemBonusPct: 0,
+    extraTimerSec: 0,
+    overkillPct: 0,
+    chainTargets: 0,
+    chainPct: 0,
+    critChanceBonus: 0,
+    critDmgBonus: 0,
+    bossDmgPct: 0,
+    diceChanceBonus: 0,
+    extraStrikeChance: 0,
+    extraStrikePct: 0,
+  };
+  for (const b of blessings) {
+    acc.dpsBonusPct += b.dpsBonusPct ?? 0;
+    acc.tapBonusPct += b.tapBonusPct ?? 0;
+    acc.gemBonusPct += b.gemBonusPct ?? 0;
+    acc.extraTimerSec += b.extraTimerSec ?? 0;
+    acc.overkillPct += b.overkillPct ?? 0;
+    acc.chainTargets += b.chainTargets ?? 0;
+    acc.chainPct = Math.max(acc.chainPct, b.chainPct ?? 0);
+    acc.critChanceBonus += b.critChanceBonus ?? 0;
+    acc.critDmgBonus += b.critDmgBonus ?? 0;
+    acc.bossDmgPct += b.bossDmgPct ?? 0;
+    acc.diceChanceBonus += b.diceChanceBonus ?? 0;
+    acc.extraStrikeChance += b.extraStrikeChance ?? 0;
+    acc.extraStrikePct = Math.max(acc.extraStrikePct, b.extraStrikePct ?? 0);
+  }
+  return acc;
+}
+
+export function countTowerBlessingStacks(blessings: readonly TowerBlessingDef[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const b of blessings) {
+    counts[b.id] = (counts[b.id] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function fmtSignedPct(val: number): string {
+  const pct = Math.round(val * 100);
+  return `${pct >= 0 ? '+' : ''}${pct}%`;
+}
+
+function fmtSignedSec(sec: number): string {
+  return `${sec >= 0 ? '+' : ''}${sec}s`;
+}
+
+export function formatBlessingTotalLabel(def: TowerBlessingDef, count: number): string {
+  const c = Math.max(0, count);
+  const parts: string[] = [];
+  if (def.dpsBonusPct) parts.push(`${fmtSignedPct(def.dpsBonusPct * c)} DPS`);
+  if (def.gemBonusPct) parts.push(`${fmtSignedPct(def.gemBonusPct * c)} Gems`);
+  if (def.bossDmgPct) parts.push(`${fmtSignedPct(def.bossDmgPct * c)} Boss`);
+  if (def.tapBonusPct) parts.push(`${fmtSignedPct(def.tapBonusPct * c)} Click`);
+  if (def.critChanceBonus || def.critDmgBonus) {
+    const cc = Math.round(Math.min(0.75, (def.critChanceBonus ?? 0) * c) * 100);
+    const cd = Math.round((def.critDmgBonus ?? 0) * c * 100);
+    parts.push(`+${cc}% Crit / +${cd}% DMG`);
+  }
+  if (def.chainTargets) {
+    const targets = Math.min(TOWER_ORE_ROCKS_PER_WAVE - 1, def.chainTargets * c);
+    parts.push(`Chain ${targets} Ores`);
+  }
+  if (def.overkillPct) parts.push(`${Math.round(def.overkillPct * c * 100)}% Splash`);
+  if (def.extraStrikeChance) {
+    const ec = Math.round(Math.min(0.75, def.extraStrikeChance * c) * 100);
+    parts.push(`${ec}% Echo`);
+  }
+  if (def.diceChanceBonus) parts.push(`${fmtSignedPct(def.diceChanceBonus * c)} Dice`);
+  if (def.extraTimerSec) parts.push(`${fmtSignedSec(def.extraTimerSec * c)} Time`);
+  return parts.length > 0 ? parts.join(' • ') : def.desc;
+}
+
+export function formatBlessingPickPreview(def: TowerBlessingDef, ownedCount: number): string {
+  const cur = Math.max(0, ownedCount);
+  const next = cur + 1;
+  if (def.dpsBonusPct && def.tapBonusPct && def.extraTimerSec) {
+    return `DPS ${fmtSignedPct(def.dpsBonusPct * cur)} → ${fmtSignedPct(def.dpsBonusPct * next)} • ${fmtSignedSec(def.extraTimerSec * cur)} → ${fmtSignedSec(def.extraTimerSec * next)}`;
+  }
+  if (def.gemBonusPct && def.extraTimerSec) {
+    return `Gems ${fmtSignedPct(def.gemBonusPct * cur)} → ${fmtSignedPct(def.gemBonusPct * next)} • ${fmtSignedSec(def.extraTimerSec * cur)} → ${fmtSignedSec(def.extraTimerSec * next)}`;
+  }
+  if (def.dpsBonusPct) {
+    return `DPS ${fmtSignedPct(def.dpsBonusPct * cur)} → ${fmtSignedPct(def.dpsBonusPct * next)}`;
+  }
+  if (def.gemBonusPct) {
+    return `Gems ${fmtSignedPct(def.gemBonusPct * cur)} → ${fmtSignedPct(def.gemBonusPct * next)}`;
+  }
+  if (def.bossDmgPct) {
+    return `Boss DMG ${fmtSignedPct(def.bossDmgPct * cur)} → ${fmtSignedPct(def.bossDmgPct * next)}`;
+  }
+  if (def.tapBonusPct) {
+    return `Click DMG ${fmtSignedPct(def.tapBonusPct * cur)} → ${fmtSignedPct(def.tapBonusPct * next)}`;
+  }
+  if (def.extraTimerSec) {
+    return `Wave Timer ${fmtSignedSec(def.extraTimerSec * cur)} → ${fmtSignedSec(def.extraTimerSec * next)}`;
+  }
+  if (def.overkillPct) {
+    return `Splash ${Math.round(def.overkillPct * cur * 100)}% → ${Math.round(def.overkillPct * next * 100)}%`;
+  }
+  if (def.chainTargets) {
+    const beforeT = Math.min(TOWER_ORE_ROCKS_PER_WAVE - 1, def.chainTargets * cur);
+    const afterT = Math.min(TOWER_ORE_ROCKS_PER_WAVE - 1, def.chainTargets * next);
+    return `Chain ${beforeT} → ${afterT} Ores`;
+  }
+  if (def.critChanceBonus || def.critDmgBonus) {
+    const beforeCc = Math.round(Math.min(0.75, (def.critChanceBonus ?? 0) * cur) * 100);
+    const afterCc = Math.round(Math.min(0.75, (def.critChanceBonus ?? 0) * next) * 100);
+    const afterCd = Math.round((def.critDmgBonus ?? 0) * next * 100);
+    return `Crit +${beforeCc}% → +${afterCc}% (+${afterCd}% DMG)`;
+  }
+  if (def.extraStrikeChance) {
+    const beforeEc = Math.round(Math.min(0.75, def.extraStrikeChance * cur) * 100);
+    const afterEc = Math.round(Math.min(0.75, def.extraStrikeChance * next) * 100);
+    return `Echo ${beforeEc}% → ${afterEc}%`;
+  }
+  if (def.diceChanceBonus) {
+    return `Dice Drop ${fmtSignedPct(def.diceChanceBonus * cur)} → ${fmtSignedPct(def.diceChanceBonus * next)}`;
+  }
+  return def.desc;
+}
+
+export function groupTowerBlessings(blessings: readonly TowerBlessingDef[]): GroupedTowerBlessing[] {
+  const byId = new Map<string, { def: TowerBlessingDef; count: number; order: number }>();
+  let order = 0;
+  for (const b of blessings) {
+    const existing = byId.get(b.id);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      byId.set(b.id, { def: b, count: 1, order: order++ });
+    }
+  }
+  return Array.from(byId.values())
+    .sort((a, b) => b.count - a.count || a.order - b.order)
+    .map(({ def, count }) => ({
+      def,
+      count,
+      maxed: def.maxStacks !== undefined && count >= def.maxStacks,
+      totalLabel: formatBlessingTotalLabel(def, count),
+    }));
+}
+
+export function buildTowerRunBuffPills(blessings: readonly TowerBlessingDef[]): TowerRunBuffPill[] {
+  const s = summarizeTowerBlessings(blessings);
+  const pills: TowerRunBuffPill[] = [];
+  if (s.dpsBonusPct > 0) {
+    pills.push({ id: 'dps', label: `+${Math.round(s.dpsBonusPct * 100)}% DPS`, bgClass: 'bg-[#e0f2fe]', textClass: 'text-[#0369a1]' });
+  }
+  if (s.gemBonusPct > 0) {
+    pills.push({ id: 'gems', label: `+${Math.round(s.gemBonusPct * 100)}% Gems`, bgClass: 'bg-[#fce7f3]', textClass: 'text-[#9d174d]' });
+  }
+  if (s.bossDmgPct > 0) {
+    pills.push({ id: 'boss', label: `+${Math.round(s.bossDmgPct * 100)}% Boss`, bgClass: 'bg-[#ffe4e6]', textClass: 'text-[#be123c]' });
+  }
+  if (s.extraTimerSec !== 0) {
+    const pos = s.extraTimerSec > 0;
+    pills.push({
+      id: 'time',
+      label: `${fmtSignedSec(s.extraTimerSec)} Time`,
+      bgClass: pos ? 'bg-[#fef9c3]' : 'bg-[#fecdd3]',
+      textClass: pos ? 'text-[#854d0e]' : 'text-[#9f1239]',
+    });
+  }
+  if (s.critChanceBonus > 0) {
+    pills.push({
+      id: 'crit',
+      label: `+${Math.round(Math.min(0.75, s.critChanceBonus) * 100)}% Crit`,
+      bgClass: 'bg-[#fef3c7]',
+      textClass: 'text-[#92400e]',
+    });
+  }
+  if (s.tapBonusPct > 0) {
+    pills.push({ id: 'tap', label: `+${Math.round(s.tapBonusPct * 100)}% Click`, bgClass: 'bg-[#dcfce7]', textClass: 'text-[#15803d]' });
+  }
+  if (s.chainTargets > 0) {
+    const t = Math.min(TOWER_ORE_ROCKS_PER_WAVE - 1, s.chainTargets);
+    pills.push({ id: 'chain', label: `Chain ${t}`, bgClass: 'bg-[#cffafe]', textClass: 'text-[#0e7490]' });
+  }
+  if (s.overkillPct > 0) {
+    pills.push({ id: 'splash', label: `Splash ${Math.round(s.overkillPct * 100)}%`, bgClass: 'bg-[#ffedd5]', textClass: 'text-[#9a3412]' });
+  }
+  if (s.extraStrikeChance > 0) {
+    pills.push({
+      id: 'echo',
+      label: `Echo ${Math.round(Math.min(0.75, s.extraStrikeChance) * 100)}%`,
+      bgClass: 'bg-[#f3e8ff]',
+      textClass: 'text-[#6b21a8]',
+    });
+  }
+  if (s.diceChanceBonus > 0) {
+    pills.push({ id: 'dice', label: `+${Math.round(s.diceChanceBonus * 100)}% Dice`, bgClass: 'bg-[#ede9fe]', textClass: 'text-[#5b21b6]' });
+  }
+  return pills;
+}
+
+function shuffleInPlace<T>(items: T[], rng: () => number): T[] {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = items[i];
+    items[i] = items[j];
+    items[j] = tmp;
+  }
+  return items;
+}
+
 export function pickTowerBlessingChoices(
   rng: () => number = Math.random,
-  excludeIds: readonly string[] = []
+  excludeIds: readonly string[] = [],
+  ownedBlessings: readonly TowerBlessingDef[] = []
 ): TowerBlessingDef[] {
   const excluded = new Set(excludeIds);
-  const preferred = TOWER_BLESSINGS.filter((b) => !excluded.has(b.id));
-  const pool = preferred.length >= 3 ? [...preferred] : [...TOWER_BLESSINGS];
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    const tmp = pool[i];
-    pool[i] = pool[j];
-    pool[j] = tmp;
+  const ownedCounts = countTowerBlessingStacks(ownedBlessings);
+  const notMaxed = TOWER_BLESSINGS.filter(
+    (b) => b.maxStacks === undefined || (ownedCounts[b.id] ?? 0) < b.maxStacks
+  );
+  const eligible = notMaxed.length >= 3 ? notMaxed : [...TOWER_BLESSINGS];
+  const preferred = shuffleInPlace(
+    eligible.filter((b) => !excluded.has(b.id)),
+    rng
+  );
+  if (preferred.length >= 3) {
+    return preferred.slice(0, 3);
   }
-  return pool.slice(0, 3);
+  const fallback = shuffleInPlace(
+    eligible.filter((b) => excluded.has(b.id)),
+    rng
+  );
+  return [...preferred, ...fallback].slice(0, 3);
 }
 
 export function getGlobalGemGainBonus(bestFloor: number): number {
