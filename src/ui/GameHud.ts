@@ -1,6 +1,7 @@
 import { audio } from '../audio/AudioManager';
 import { cgHappyTime, cgTryMidgameAd } from '../sdk/crazygames';
-import { OreHpScreen, PlotAnchorScreen, SceneMode } from '../game3d/MineScene3D';
+import { OreHpScreen, PlotAnchorScreen, SceneMode, SweetSpotScreen } from '../game3d/MineScene3D';
+import { type LootVacuumBreakKind, spawnLootVacuumParticles } from './LootVacuumFx';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
 import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId } from '../game3d/ShopWorld3D';
 import { getWorldById, getWorldIndex } from '../game/GameData';
@@ -76,6 +77,7 @@ export class GameHud {
   private nextToastId = 1;
   private modalOpenedAtMs = 0;
   private lastRegrowthActive = false;
+  private lastReturnRushActive = false;
   private lastOverclockActive = false;
   private lastOverclockTier: 0 | OverclockTier = 0;
 
@@ -353,6 +355,10 @@ export class GameHud {
         setLastRegrowthActive: (active) => {
           this.lastRegrowthActive = active;
         },
+        lastReturnRushActive: this.lastReturnRushActive,
+        setLastReturnRushActive: (active) => {
+          this.lastReturnRushActive = active;
+        },
         onSyncPlots: this.onSyncPlots,
         onWeatherChange: this.onWeatherChange,
         pushToast: (msg) => this.pushToast(msg),
@@ -391,6 +397,15 @@ export class GameHud {
     this.worldOverlayUi.updateOreBars(bars);
   }
 
+  public updateSweetSpot(spot: SweetSpotScreen | null): void {
+    this.worldOverlayUi.updateSweetSpot(spot);
+  }
+
+  public spawnLootVacuum(originX: number, originY: number, kind: LootVacuumBreakKind): void {
+    if (this.sceneMode !== 'mine' || this.activeModal !== 'none' || this.inspectedSlot !== null) return;
+    spawnLootVacuumParticles(this.root, originX, originY, kind);
+  }
+
   public updateTowerOreBars(bars: TowerOreBarScreen[]): void {
     this.worldOverlayUi.updateTowerOreBars(bars);
   }
@@ -400,9 +415,10 @@ export class GameHud {
     screenX: number,
     screenY: number,
     isClick = false,
-    isCrit = false
+    isCrit = false,
+    isPerfect = false
   ): void {
-    this.worldOverlayUi.spawnDamagePopup(dmg, screenX, screenY, isClick, isCrit);
+    this.worldOverlayUi.spawnDamagePopup(dmg, screenX, screenY, isClick, isCrit, isPerfect);
   }
 
   public openPlotInspector(slotIndex: number | null): void {

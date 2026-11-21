@@ -11,6 +11,7 @@ import {
 } from '../game/GameData';
 import { GameState } from '../game/GameState';
 import { fmtShort } from '../game/NumberFormat';
+import { RETURN_RUSH_BOOST_ID } from '../game/OfflineEarningsDomain';
 import {
   getOverclockTierBuffs,
   type OverclockSnapshot,
@@ -42,15 +43,30 @@ export function buildActivePotionsDockContent(
     const rem = state.getBoostRemainingSec(def.id, now);
     if (rem > 0) active.push({ def, rem });
   }
+  const rushRem = state.getReturnRushRemainingSec(now);
   const rows: Array<Array<{ def: GemShopItemDef; rem: number }>> = [];
   for (let i = 0; i < active.length; i += 2) {
     rows.push(active.slice(i, i + 2));
   }
   const ordered = rows.reverse().flat();
-  const key = ordered.map((x) => x.def.id).join(',');
-  const html = ordered
-    .map(({ def, rem }) => {
-      return `
+  const key = `${rushRem > 0 ? `${RETURN_RUSH_BOOST_ID}:` : ''}${ordered.map((x) => x.def.id).join(',')}`;
+  const rushPillHtml =
+    rushRem > 0
+      ? `
+          <div class="${TW_ACTIVE_POT_PILL} !bg-[#fef08a]" style="--pot-color:#f59e0b" data-hud-pot="${RETURN_RUSH_BOOST_ID}" title="Welcome-Back Return Rush • +50% Fever Charge & +25% Speed">
+            <div class="w-[28px] h-[28px] shrink-0 rounded-lg bg-[#ff4d2e] border-2 border-[#14111d] text-white flex items-center justify-center text-[15px] font-black @max-[720px]:w-[24px] @max-[720px]:h-[24px]" aria-hidden="true">⚡</div>
+            <div class="flex items-center justify-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#ea580c] shrink-0 animate-[mamPotDotPulse_1.4s_ease-in-out_infinite]"></span>
+              <span class="text-[11px] font-black text-[#b45309] tabular-nums leading-none" data-hud-pot-timer="${RETURN_RUSH_BOOST_ID}">${formatWeatherTimer(rushRem)}</span>
+            </div>
+          </div>
+        `
+      : '';
+  const html =
+    rushPillHtml +
+    ordered
+      .map(({ def, rem }) => {
+        return `
           <div class="${TW_ACTIVE_POT_PILL}" style="--pot-color:${def.color}" data-hud-pot="${def.id}" title="${def.name} • ${def.effectText}">
             <div class="w-[28px] h-[28px] shrink-0 flex items-center justify-center @max-[720px]:w-[24px] @max-[720px]:h-[24px]">${gemPotionIconHtml(def.id, 28, def.name, def.color)}</div>
             <div class="flex items-center justify-center gap-1">
@@ -59,11 +75,12 @@ export function buildActivePotionsDockContent(
             </div>
           </div>
         `;
-    })
-    .join('');
+      })
+      .join('');
+  const totalCount = ordered.length + (rushRem > 0 ? 1 : 0);
   return {
-    single: ordered.length === 1,
-    empty: ordered.length === 0,
+    single: totalCount === 1,
+    empty: totalCount === 0,
     key,
     html,
     active: ordered,
@@ -580,6 +597,14 @@ export class WeatherDpsHudUi {
       const timerEl = dock.querySelector<HTMLElement>(`[data-hud-pot-timer="${def.id}"]`);
       if (timerEl && timerEl.textContent !== nextText) {
         timerEl.textContent = nextText;
+      }
+    }
+    const rushRem = this.state.getReturnRushRemainingSec(now);
+    if (rushRem > 0) {
+      const nextText = formatWeatherTimer(rushRem);
+      const rushTimerEl = dock.querySelector<HTMLElement>(`[data-hud-pot-timer="${RETURN_RUSH_BOOST_ID}"]`);
+      if (rushTimerEl && rushTimerEl.textContent !== nextText) {
+        rushTimerEl.textContent = nextText;
       }
     }
   }

@@ -42,6 +42,15 @@ const BASE_ORE_HP = 180;
 /** Balanced 25% nerf from 500 -> 375 so Weather Meteors feel rewarding without dragging. */
 export const METEOR_HP_MULT = 375;
 export const BASE_ORE_RESPAWN_SEC = 4.0;
+export const SWEET_SPOT_MIN_PROGRESS = 0.56;
+export const SWEET_SPOT_MAX_PROGRESS = 0.90;
+export const SWEET_SPOT_DURATION_SEC = 2.25;
+export const SWEET_SPOT_DMG_MULT = 4.5;
+
+/** Returns true when a shrinking Sweet-Spot ring progress (0..1) sits inside the Perfect Strike window. */
+export function isSweetSpotWindowPure(progress: number): boolean {
+  return Number.isFinite(progress) && progress >= SWEET_SPOT_MIN_PROGRESS && progress <= SWEET_SPOT_MAX_PROGRESS;
+}
 
 /** Computes dynamic minimum Meteor HP from current team DPS & tap damage (25% nerfed). */
 export function computeMeteorDynamicHp(totalPlotDps: number, tapDamage: number): number {
@@ -86,6 +95,7 @@ export interface OreHitResult {
   isMeteor?: boolean;
   meteorWeatherId?: WeatherId;
   pitEventKind?: PitEventKind;
+  isPerfect?: boolean;
 }
 
 export interface OreAttackFxOptions {
@@ -93,6 +103,17 @@ export interface OreAttackFxOptions {
   attackerX?: number;
   attackerZ?: number;
   comboStep?: number;
+  isPerfect?: boolean;
+}
+
+export interface SweetSpotPitState {
+  nodeId: number;
+  progress: number;
+  inWindow: boolean;
+  worldX: number;
+  worldY: number;
+  worldZ: number;
+  isMeteor: boolean;
 }
 
 interface ShardParticle {
@@ -210,6 +231,10 @@ export class OrePit3D {
   private readonly meteorTargetShadowMat: THREE.MeshBasicMaterial;
   private readonly meteorTargetRing: THREE.Mesh;
   private readonly meteorTargetRingMat: THREE.MeshBasicMaterial;
+  private readonly sweetSpotFloorRing: THREE.Mesh;
+  private readonly sweetSpotFloorMat: THREE.MeshBasicMaterial;
+  private sweetSpot: { nodeId: number; age: number; duration: number } | null = null;
+  private sweetSpotCooldownSec = 4.5;
 
   constructor(palette: MineWorldPalette) {
     this.activePalette = palette;
@@ -483,6 +508,25 @@ export class OrePit3D {
     this.meteorTargetGroup.add(this.meteorTargetShadow, this.meteorTargetRing);
     this.group.add(this.meteorTargetGroup);
 
+    // Flat horizontal Weak-Spot / Sweet-Spot floor ring (never tilted/tumbling)
+    const sweetRingGeo = new THREE.PlaneGeometry(2.75, 2.75);
+    this.ownedGeos.push(sweetRingGeo);
+    this.sweetSpotFloorMat = new THREE.MeshBasicMaterial({
+      ...(ringTex ? { map: ringTex } : {}),
+      color: 0xfde047,
+      transparent: true,
+      opacity: 0.72,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    this.ownedMats.push(this.sweetSpotFloorMat);
+    this.sweetSpotFloorRing = new THREE.Mesh(sweetRingGeo, this.sweetSpotFloorMat);
+    this.sweetSpotFloorRing.rotation.x = -Math.PI / 2;
+    this.sweetSpotFloorRing.position.y = 0.042;
+    this.sweetSpotFloorRing.visible = false;
+    this.group.add(this.sweetSpotFloorRing);
+
     this.group.add(this.impactFx.group);
 
     this.setPalette(palette, true);
@@ -671,6 +715,9 @@ export class OrePit3D {
     n.hitMesh.visible = false;
     this.meteorEntryGroup.visible = false;
     this.meteorTargetGroup.visible = false;
+    if (this.sweetSpot?.nodeId === n.id) {
+      this.clearSweetSpot();
+    }
   }
 
   public hasAliveMeteor(): boolean {
@@ -791,30 +838,34 @@ export class OrePit3D {
       nodeId === this.meteorNode.id ? this.meteorNode : this.nodes.find((n) => n.id === nodeId);
     if (!node || !node.alive) return null;
 
+    const isPerfect = Boolean(attackFx?.isPerfect);
+    const meteorCap = isPerfect ? 0.08 : 0.03;
     const effectiveDmg = node.isMeteor
-      ? Math.min(dmg, Math.max(1, Math.ceil(node.maxHp * 0.03)))
+      ? Math.min(dmg, Math.max(1, Math.ceil(node.maxHp * meteorCap)))
       : dmg;
     const pure = applyNodeDamagePure(node, effectiveDmg);
     if (!pure) return null;
 
-    node.squashAmt = heavy ? 0.46 : 0.34;
+    node.squashAmt = isPerfect ? 0.56 : heavy ? 0.46 : 0.34;
     node.recoilDirX =
       attackFx?.attackerX !== undefined
         ? Math.sign(node.x - attackFx.attackerX) || 1
         : Math.random() < 0.5
           ? 1
           : -1;
-    node.recoilAmt = heavy ? 0.24 : 0.16;
-    node.flashTimer = 0.09;
+    node.recoilAmt = isPerfect ? 0.28 : heavy ? 0.24 : 0.16;
+    node.flashTimer = isPerfect ? 0.14 : 0.09;
     const pitEventKind = node.pitEventKind;
     if (this.group.visible) {
       const eventColor = pitEventKind ? PIT_EVENT_DEFS[pitEventKind].colorHex : undefined;
-      const fxAccent = eventColor ?? attackFx?.accentColor ?? (heavy ? '#fbbf24' : this.activePalette.crystalColor);
+      const fxAccent = isPerfect
+        ? '#fde047'
+        : eventColor ?? attackFx?.accentColor ?? (heavy ? '#fbbf24' : this.activePalette.crystalColor);
       this.spawnShardsAt(
         node.x,
         node.z,
-        pure.broken ? (node.isMeteor ? 16 : 9) : shardCount,
-        pure.broken,
+        pure.broken ? (node.isMeteor ? 16 : 9) : isPerfect ? 7 : shardCount,
+        pure.broken || isPerfect,
         node.isMeteor
       );
       if (pure.broken) {
@@ -850,6 +901,9 @@ export class OrePit3D {
       node.root.visible = false;
       node.hitMesh.visible = false;
       node.pitEventKind = undefined;
+      if (this.sweetSpot?.nodeId === node.id) {
+        this.clearSweetSpot();
+      }
       if (node.isMeteor) {
         node.respawnTimer = 0;
         node.meteorWeatherId = null;
@@ -867,6 +921,7 @@ export class OrePit3D {
       isMeteor: node.isMeteor,
       meteorWeatherId,
       pitEventKind,
+      isPerfect,
     };
   }
 
@@ -1156,6 +1211,99 @@ export class OrePit3D {
     }
 
     this.impactFx.update(dtSec, camera);
+    this.stepSweetSpot(dtSec, elapsed);
+  }
+
+  private findNodeById(nodeId: number): InternalOreNode | undefined {
+    return nodeId === this.meteorNode.id ? this.meteorNode : this.nodes.find((n) => n.id === nodeId);
+  }
+
+  public spawnSweetSpot(targetNodeId?: number, durationSec = SWEET_SPOT_DURATION_SEC): boolean {
+    if (this.sweetSpot) return false;
+    let picked: InternalOreNode | undefined;
+    if (targetNodeId !== undefined) {
+      const candidate = this.findNodeById(targetNodeId);
+      if (candidate && candidate.alive && (!candidate.isMeteor || (candidate.dropProgress ?? 1) >= 1)) {
+        picked = candidate;
+      }
+    } else if (this.meteorNode.alive && (this.meteorNode.dropProgress ?? 1) >= 1) {
+      picked = this.meteorNode;
+    } else {
+      const alive = this.nodes.filter((n) => n.id < this.activeNodeCount && n.alive);
+      if (alive.length > 0) {
+        picked = alive[Math.floor(Math.random() * alive.length)];
+      }
+    }
+    if (!picked) return false;
+    this.sweetSpot = { nodeId: picked.id, age: 0, duration: Math.max(0.8, durationSec) };
+    return true;
+  }
+
+  public clearSweetSpot(): void {
+    this.sweetSpot = null;
+    this.sweetSpotFloorRing.visible = false;
+    this.sweetSpotCooldownSec = 6.0 + Math.random() * 4.0;
+  }
+
+  public consumeSweetSpotTap(nodeId: number): boolean {
+    if (!this.sweetSpot || this.sweetSpot.nodeId !== nodeId) return false;
+    const progress = this.sweetSpot.age / this.sweetSpot.duration;
+    if (!isSweetSpotWindowPure(progress)) return false;
+    this.clearSweetSpot();
+    return true;
+  }
+
+  public getSweetSpotState(): SweetSpotPitState | null {
+    if (!this.sweetSpot) return null;
+    const node = this.findNodeById(this.sweetSpot.nodeId);
+    if (!node || !node.alive) {
+      this.clearSweetSpot();
+      return null;
+    }
+    const progress = Math.max(0, Math.min(1, this.sweetSpot.age / this.sweetSpot.duration));
+    return {
+      nodeId: node.id,
+      progress,
+      inWindow: isSweetSpotWindowPure(progress),
+      worldX: node.x,
+      worldY: PIT_FLOOR_Y + (node.dropY ?? 0),
+      worldZ: PIT_CENTER_Z + node.z,
+      isMeteor: Boolean(node.isMeteor),
+    };
+  }
+
+  private stepSweetSpot(dtSec: number, elapsed: number): void {
+    if (this.sweetSpot) {
+      const node = this.findNodeById(this.sweetSpot.nodeId);
+      if (!node || !node.alive) {
+        this.clearSweetSpot();
+        return;
+      }
+      this.sweetSpot.age += dtSec;
+      if (this.sweetSpot.age >= this.sweetSpot.duration) {
+        this.clearSweetSpot();
+        return;
+      }
+      const progress = this.sweetSpot.age / this.sweetSpot.duration;
+      const inWindow = isSweetSpotWindowPure(progress);
+      this.sweetSpotFloorRing.visible = true;
+      this.sweetSpotFloorRing.position.set(node.x, 0.042, node.z);
+      const scaleBase = node.isMeteor ? 1.55 : 1.0;
+      const contractScale = Math.max(0.32, 1.38 - progress * 0.96) * scaleBase;
+      this.sweetSpotFloorRing.scale.setScalar(contractScale);
+      this.sweetSpotFloorRing.rotation.z = -elapsed * 1.4;
+      this.sweetSpotFloorMat.color.setHex(inWindow ? 0x38bdf8 : 0xfde047);
+      this.sweetSpotFloorMat.opacity = inWindow ? 0.92 : 0.62;
+      return;
+    }
+
+    this.sweetSpotFloorRing.visible = false;
+    this.sweetSpotCooldownSec -= dtSec;
+    if (this.sweetSpotCooldownSec <= 0) {
+      if (!this.spawnSweetSpot()) {
+        this.sweetSpotCooldownSec = 2.0;
+      }
+    }
   }
 
   public dispose(): void {

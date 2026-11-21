@@ -5,7 +5,7 @@ import { FieldMiner3D } from './FieldMiner3D';
 import { preloadCommonMineModels } from './GlbAssets3D';
 import { MineEnvironment3D } from './MineEnvironment3D';
 import { DEFAULT_WORLD_PALETTE, MineWorldPalette, OreVariantKey, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
-import { OrePit3D } from './OrePit3D';
+import { OrePit3D, SWEET_SPOT_DMG_MULT } from './OrePit3D';
 import { PlotLabelInfo, PlotPedestal3D } from './PlotPedestal3D';
 import { FusionRecipeDef } from '../game/FusionData';
 import { FusionWorld3D } from './FusionWorld3D';
@@ -62,6 +62,15 @@ export interface OreHpScreen {
   pitEventKind?: PitEventKind;
 }
 
+export interface SweetSpotScreen {
+  nodeId: number;
+  x: number;
+  y: number;
+  progress: number;
+  inWindow: boolean;
+  isMeteor: boolean;
+}
+
 export const BASE_TAP_CRIT_CHANCE = 0.15;
 export const OVERCLOCK_TAP_CRIT_CHANCE = 0.3;
 export const TAP_CRIT_MULT = 2.5;
@@ -111,7 +120,12 @@ export function rollTapCriticalDamage(
 }
 
 export interface MineSceneCallbacks {
-  onOreBroken?: (variantKey: OreVariantKey, meteorWeatherId?: WeatherId, pitEventKind?: PitEventKind) => void;
+  onOreBroken?: (
+    variantKey: OreVariantKey,
+    meteorWeatherId?: WeatherId,
+    pitEventKind?: PitEventKind,
+    screenPos?: { x: number; y: number }
+  ) => void;
   onOreDamage?: (
     dmg: number,
     screenX: number,
@@ -119,8 +133,10 @@ export interface MineSceneCallbacks {
     isClick: boolean,
     isCrit?: boolean,
     pitEventKind?: PitEventKind,
-    isMeteor?: boolean
+    isMeteor?: boolean,
+    isPerfect?: boolean
   ) => void;
+  onSweetSpot?: (spot: SweetSpotScreen | null) => void;
   onHoldMineChange?: (active: boolean) => void;
   onChestClick?: () => void;
   onPedestalClick?: (slotIndex: number) => void;
@@ -765,6 +781,47 @@ export class MineScene3D {
     return visibleHit ? visibleHit.object : null;
   }
 
+  private executePitTapNode(
+    nodeId: number,
+    wx: number,
+    wy: number,
+    wz: number,
+    isHold: boolean
+  ): boolean {
+    const isPerfect = !isHold && this.pit.consumeSweetSpotTap(nodeId);
+    const rolled = rollTapCriticalDamage(
+      this.tapDamage,
+      this.overclockActive,
+      Math.random,
+      this.overclockTier
+    );
+    const damage = isPerfect ? Math.max(1, Math.round(rolled.damage * SWEET_SPOT_DMG_MULT)) : rolled.damage;
+    const fxOpts = isPerfect
+      ? { accentColor: '#fde047', isPerfect: true }
+      : isHold
+        ? { accentColor: '#38bdf8' }
+        : undefined;
+    const res = this.pit.hitNode(nodeId, damage, true, isHold ? 5 : 4, fxOpts);
+    if (!res) return false;
+
+    this.emitDamageScreen(
+      res.dmgDealt,
+      wx,
+      wy + 0.9,
+      wz,
+      true,
+      rolled.isCrit || isPerfect,
+      res.pitEventKind,
+      res.isMeteor,
+      isPerfect
+    );
+    if (res.broken) {
+      const screenPos = this.projectWorldToScreen(wx, wy + 0.85, wz) ?? undefined;
+      this.callbacks.onOreBroken?.(res.variantKey, res.meteorWeatherId, res.pitEventKind, screenPos);
+    }
+    return true;
+  }
+
   private performMineTapAt(
     clientX: number,
     clientY: number,
@@ -773,34 +830,10 @@ export class MineScene3D {
   ): boolean {
     if (this.mode !== 'mine' || this.adPaused) return false;
     const hit = preHit !== undefined ? preHit : this.raycastAt(clientX, clientY);
-    const holdFx = isHold ? { accentColor: '#38bdf8' } : undefined;
     if (hit && hit.userData.kind === 'ore-node') {
-      const { damage, isCrit } = rollTapCriticalDamage(
-        this.tapDamage,
-        this.overclockActive,
-        Math.random,
-        this.overclockTier
-      );
-      const res = this.pit.hitNode(Number(hit.userData.nodeId || 0), damage, true, isHold ? 5 : 4, holdFx);
-      if (res) {
-        const wp = new THREE.Vector3();
-        hit.getWorldPosition(wp);
-        this.emitDamageScreen(
-          res.dmgDealt,
-          wp.x,
-          wp.y + 0.9,
-          wp.z,
-          true,
-          isCrit,
-          res.pitEventKind,
-          res.isMeteor
-        );
-        if (res.broken) {
-          this.callbacks.onOreBroken?.(res.variantKey, res.meteorWeatherId, res.pitEventKind);
-        }
-        return true;
-      }
-      return false;
+      const wp = new THREE.Vector3();
+      hit.getWorldPosition(wp);
+      return this.executePitTapNode(Number(hit.userData.nodeId || 0), wp.x, wp.y, wp.z, isHold);
     }
     if (!hit) {
       const pitPt = this.getPitFloorHit(clientX, clientY);
@@ -813,29 +846,7 @@ export class MineScene3D {
           for (let i = 1; i < pool.length; i++) {
             if (pool[i].hp > best.hp) best = pool[i];
           }
-          const { damage, isCrit } = rollTapCriticalDamage(
-            this.tapDamage,
-            this.overclockActive,
-            Math.random,
-            this.overclockTier
-          );
-          const res = this.pit.hitNode(best.id, damage, true, isHold ? 5 : 4, holdFx);
-          if (res) {
-            this.emitDamageScreen(
-              res.dmgDealt,
-              best.worldX,
-              best.worldY + 0.9,
-              best.worldZ,
-              true,
-              isCrit,
-              res.pitEventKind,
-              res.isMeteor
-            );
-            if (res.broken) {
-              this.callbacks.onOreBroken?.(res.variantKey, res.meteorWeatherId, res.pitEventKind);
-            }
-            return true;
-          }
+          return this.executePitTapNode(best.id, best.worldX, best.worldY, best.worldZ, isHold);
         }
       }
     }
@@ -896,12 +907,22 @@ export class MineScene3D {
           this.emitDamageScreen(dmg, wx, wy, wz, false, false, undefined, isMeteor)
       : undefined;
 
+    const minerBreakCb = (
+      variantKey: OreVariantKey,
+      meteorWeatherId?: WeatherId,
+      pitEventKind?: PitEventKind,
+      worldPos?: { x: number; y: number; z: number }
+    ): void => {
+      const screenPos = worldPos ? (this.projectWorldToScreen(worldPos.x, worldPos.y, worldPos.z) ?? undefined) : undefined;
+      this.callbacks.onOreBroken?.(variantKey, meteorWeatherId, pitEventKind, screenPos);
+    };
+
     const minerDt =
       inMine && this.overclockActive
         ? dtSec * getOverclockTierBuffs(this.overclockTier || 1).speedMult
         : dtSec;
     for (const fm of this.fieldMiners.values()) {
-      fm.update(minerDt, this.elapsed, this.camera, this.pit, this.callbacks.onOreBroken, hitCb, inMine);
+      fm.update(minerDt, this.elapsed, this.camera, this.pit, minerBreakCb, hitCb, inMine);
     }
 
     // If the browser tab was backgrounded/throttled (rawDt > 0.12s), catch up missed mine ticks seamlessly
@@ -984,6 +1005,7 @@ export class MineScene3D {
     if (this.mode === 'mine') {
       this.emitPlotAnchors();
       this.emitOreBars();
+      this.emitSweetSpot();
       this.callbacks.onShopAnchors?.([]);
       this.callbacks.onShopChibiBubbles?.([]);
       this.callbacks.onAltarAnchors?.([]);
@@ -991,6 +1013,7 @@ export class MineScene3D {
     } else if (this.mode === 'shop') {
       this.callbacks.onPlotAnchors?.([]);
       this.callbacks.onOreBars?.([]);
+      this.callbacks.onSweetSpot?.(null);
       const w = this.mountEl.clientWidth || 1;
       const h = this.mountEl.clientHeight || 1;
       this.callbacks.onShopAnchors?.(this.shopWorld.getShopAnchors(this.camera, w, h, this.projVec));
@@ -1000,6 +1023,7 @@ export class MineScene3D {
     } else if (this.mode === 'altar') {
       this.callbacks.onPlotAnchors?.([]);
       this.callbacks.onOreBars?.([]);
+      this.callbacks.onSweetSpot?.(null);
       this.callbacks.onShopAnchors?.([]);
       this.callbacks.onShopChibiBubbles?.([]);
       const w = this.mountEl.clientWidth || 1;
@@ -1009,6 +1033,7 @@ export class MineScene3D {
     } else if (this.mode === 'tower') {
       this.callbacks.onPlotAnchors?.([]);
       this.callbacks.onOreBars?.([]);
+      this.callbacks.onSweetSpot?.(null);
       this.callbacks.onShopAnchors?.([]);
       this.callbacks.onShopChibiBubbles?.([]);
       this.callbacks.onAltarAnchors?.([]);
@@ -1018,6 +1043,7 @@ export class MineScene3D {
     } else if (this.mode === 'fusion') {
       this.callbacks.onPlotAnchors?.([]);
       this.callbacks.onOreBars?.([]);
+      this.callbacks.onSweetSpot?.(null);
       this.callbacks.onShopAnchors?.([]);
       this.callbacks.onAltarAnchors?.([]);
       this.callbacks.onTowerOreBars?.([]);
@@ -1031,6 +1057,7 @@ export class MineScene3D {
     } else {
       this.callbacks.onPlotAnchors?.([]);
       this.callbacks.onOreBars?.([]);
+      this.callbacks.onSweetSpot?.(null);
       this.callbacks.onShopAnchors?.([]);
       this.callbacks.onShopChibiBubbles?.([]);
       this.callbacks.onAltarAnchors?.([]);
@@ -1039,24 +1066,63 @@ export class MineScene3D {
     this.rafId = requestAnimationFrame(this.loop);
   };
 
+  private projectWorldToScreen(wx: number, wy: number, wz: number): { x: number; y: number } | null {
+    const w = this.mountEl.clientWidth || 1;
+    const h = this.mountEl.clientHeight || 1;
+    this.projVec.set(wx, wy, wz).project(this.camera);
+    if (this.projVec.z <= -1 || this.projVec.z >= 1) return null;
+    return {
+      x: (this.projVec.x * 0.5 + 0.5) * w,
+      y: (-this.projVec.y * 0.5 + 0.5) * h,
+    };
+  }
+
+  private emitSweetSpot(): void {
+    if (!this.callbacks.onSweetSpot) return;
+    if (this.focusedPlotIndex !== null) {
+      this.callbacks.onSweetSpot(null);
+      return;
+    }
+    const spot = this.pit.getSweetSpotState();
+    if (!spot) {
+      this.callbacks.onSweetSpot(null);
+      return;
+    }
+    const pt = this.projectWorldToScreen(
+      spot.worldX,
+      spot.worldY + (spot.isMeteor ? 1.15 : 0.72),
+      spot.worldZ
+    );
+    if (!pt) {
+      this.callbacks.onSweetSpot(null);
+      return;
+    }
+    this.callbacks.onSweetSpot({
+      nodeId: spot.nodeId,
+      x: pt.x,
+      y: pt.y,
+      progress: spot.progress,
+      inWindow: spot.inWindow,
+      isMeteor: spot.isMeteor,
+    });
+  }
+
   private emitOreBars(): void {
     if (!this.callbacks.onOreBars) return;
     if (this.focusedPlotIndex !== null) {
       this.callbacks.onOreBars([]);
       return;
     }
-    const w = this.mountEl.clientWidth || 1;
-    const h = this.mountEl.clientHeight || 1;
     const bars: OreHpScreen[] = [];
     for (const node of this.pit.getAliveNodesInfo()) {
       if (!node.isMeteor && !node.pitEventKind && node.hp >= node.maxHp) continue;
       const yOffset = node.isMeteor ? 2.22 : node.pitEventKind ? 1.56 : 1.32;
-      this.projVec.set(node.worldX, node.worldY + yOffset, node.worldZ).project(this.camera);
-      if (this.projVec.z <= -1 || this.projVec.z >= 1) continue;
+      const pt = this.projectWorldToScreen(node.worldX, node.worldY + yOffset, node.worldZ);
+      if (!pt) continue;
       bars.push({
         id: node.id,
-        x: (this.projVec.x * 0.5 + 0.5) * w,
-        y: (-this.projVec.y * 0.5 + 0.5) * h,
+        x: pt.x,
+        y: pt.y,
         hp: node.hp,
         maxHp: node.maxHp,
         variantKey: node.variantKey,
@@ -1076,16 +1142,13 @@ export class MineScene3D {
     isClick: boolean,
     isCrit = false,
     pitEventKind?: PitEventKind,
-    isMeteor?: boolean
+    isMeteor?: boolean,
+    isPerfect = false
   ): void {
     if (!this.callbacks.onOreDamage || dmg <= 0) return;
-    const w = this.mountEl.clientWidth || 1;
-    const h = this.mountEl.clientHeight || 1;
-    this.projVec.set(wx, wy, wz).project(this.camera);
-    if (this.projVec.z <= -1 || this.projVec.z >= 1) return;
-    const sx = (this.projVec.x * 0.5 + 0.5) * w;
-    const sy = (-this.projVec.y * 0.5 + 0.5) * h;
-    this.callbacks.onOreDamage(dmg, sx, sy, isClick, isCrit, pitEventKind, isMeteor);
+    const pt = this.projectWorldToScreen(wx, wy, wz);
+    if (!pt) return;
+    this.callbacks.onOreDamage(dmg, pt.x, pt.y, isClick, isCrit, pitEventKind, isMeteor, isPerfect);
   }
 
   private emitPlotAnchors(): void {

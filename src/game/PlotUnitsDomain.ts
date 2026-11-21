@@ -25,6 +25,7 @@ import { getFusionRecipeByResultChibiId } from './FusionData';
 import { getAchievementAllDmgBonusDomain } from './AchievementsDomain';
 import { getActiveFusionPassiveBonuses } from './FusionDomain';
 import { getActiveIndexPassiveBonusesDomain } from './IndexRewardsDomain';
+import { RETURN_RUSH_BOOST_ID, RETURN_RUSH_SPEED_BONUS } from './OfflineEarningsDomain';
 import { ResearchEffectType } from './ResearchData';
 import { WeatherId } from './WeatherData';
 
@@ -69,6 +70,7 @@ export interface PlotUnitsContext {
   chibiStars: Record<string, number>;
   ownedPickaxes: Record<string, number>;
   ownedEnchants: Record<string, number>;
+  activeBoosts?: Record<string, number>;
   claimedIndexRewards?: ReadonlySet<string>;
   claimedAchievements?: ReadonlySet<string>;
   getActiveResearchBonus(effectType: ResearchEffectType): number;
@@ -275,7 +277,8 @@ export function getActiveEnchantBonuses(
 /** Computes effective DPS, next level DPS, speed, mining multiplier, worth, and upgrade costs for a plot slot. */
 export function computePlotUnitStats(
   ctx: PlotUnitsContext,
-  slotIndex: number
+  slotIndex: number,
+  nowMs = Date.now()
 ): PlotUnitStatsResult | null {
   const unit = ctx.plotUnits[slotIndex];
   if (!unit) return null;
@@ -323,14 +326,17 @@ export function computePlotUnitStats(
       indexAllDmgMult *
       weatherDmgMult
   );
-  const speed = 10 + (unit.speedLevel - 1) * 2;
+  const returnRushSpeed =
+    (ctx.activeBoosts?.[RETURN_RUSH_BOOST_ID] ?? 0) > nowMs ? RETURN_RUSH_SPEED_BONUS : 0;
+  const speed = Math.round((10 + (unit.speedLevel - 1) * 2) * (1 + returnRushSpeed));
   const miningMult = Number(
     (
       1 +
       (unit.miningSpeedLevel - 1) * 0.1 +
       starTier.miningSpeedBonus +
       (enc ? enc.miningSpeedPct : 0) +
-      ctx.getRelicBonus('miningSpeedPct')
+      ctx.getRelicBonus('miningSpeedPct') +
+      returnRushSpeed
     ).toFixed(2)
   );
   const worth = Math.round(baseDmg * 12);

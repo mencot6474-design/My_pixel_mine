@@ -5,6 +5,7 @@ import { gameSettings } from '../game/GameSettings';
 import type { GameState } from '../game/GameState';
 import { fmtInt, fmtMoney } from '../game/NumberFormat';
 import type { WeatherId } from '../game/WeatherData';
+import { rollHudCurrencyValue } from './LootVacuumFx';
 import type { AchievementsModalUi } from './AchievementsModalUi';
 import type { BountiesModalUi } from './BountiesModalUi';
 import type { ChestModalUi } from './ChestModalUi';
@@ -62,6 +63,8 @@ export interface HudSlowTickContext {
   weatherDpsUi: WeatherDpsHudUi;
   lastRegrowthActive: boolean;
   setLastRegrowthActive: (active: boolean) => void;
+  lastReturnRushActive?: boolean;
+  setLastReturnRushActive?: (active: boolean) => void;
   onSyncPlots: (ids: (string | null)[]) => void;
   onWeatherChange?: (weatherId: WeatherId) => void;
   pushToast: (text: string) => void;
@@ -204,10 +207,10 @@ export function buildHudCoordinatorActions(ctx: HudActionRouterContext): Record<
 }
 
 export function updateHudCurrencyAndBadges(root: HTMLElement, state: GameState): void {
-  const gemsEl = root.querySelector('[data-hud-gems="true"]');
-  if (gemsEl) gemsEl.textContent = fmtInt(state.gems);
-  const cashEl = root.querySelector('[data-hud-cash="true"]');
-  if (cashEl) cashEl.textContent = fmtMoney(state.cash);
+  const gemsEl = root.querySelector<HTMLElement>('[data-hud-gems="true"]');
+  if (gemsEl) rollHudCurrencyValue(gemsEl, state.gems, 'gems');
+  const cashEl = root.querySelector<HTMLElement>('[data-hud-cash="true"]');
+  if (cashEl) rollHudCurrencyValue(cashEl, state.cash, 'cash');
   const bountiesBadge = root.querySelector<HTMLElement>('[data-bounties-badge="true"]');
   if (bountiesBadge) {
     const ready = state.getReadyBountyCount();
@@ -265,8 +268,17 @@ export function stepHudSlowTick(ctx: HudSlowTickContext): void {
   }
 
   const regrowthActive = ctx.state.getBoostRemainingSec('regrowth-potion') > 0;
+  const returnRushActive = ctx.state.isReturnRushActive();
+  let needPlotSync = false;
   if (regrowthActive !== ctx.lastRegrowthActive) {
     ctx.setLastRegrowthActive(regrowthActive);
+    needPlotSync = true;
+  }
+  if (ctx.lastReturnRushActive !== undefined && returnRushActive !== ctx.lastReturnRushActive) {
+    ctx.setLastReturnRushActive?.(returnRushActive);
+    needPlotSync = true;
+  }
+  if (needPlotSync) {
     ctx.onSyncPlots(ctx.state.getEquippedPlotMinerIds());
   }
   ctx.weatherDpsUi.syncDpsMeterWidget(ctx.root);
@@ -286,6 +298,7 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
     ctx.syncFeverScreenFx(ocActive, tierUp, ocTier);
     if (tierUp) {
       audio.playSfx('rare-fanfare', { volume: ocTier >= 2 ? 0.72 : 0.65 });
+      audio.playCrystalChord('fever');
       const orePct = Math.round((ocSnap.dropMult - 1) * 100);
       if (ocTier === 3) {
         ctx.pushToast(`⚡ HYPER OVERDRIVE LV.3! ${ocSnap.speedMult}x Speed • ${ocSnap.tapMult}x Tap • +${orePct}% Ore!`);

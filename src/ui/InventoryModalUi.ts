@@ -238,8 +238,15 @@ export class InventoryModalUi {
         const hotbarIdx = this.state.hotbar.indexOf(def.id);
         const isEquipped = hotbarIdx !== -1;
         const isInsp = selTarget?.kind === 'miner' && selTarget.id === def.id;
+        const isHolo = star >= 5 || rarity === 'fusion' || rarity === 'limited';
+        const extraCls = [
+          isHolo ? 'is-holo-foil' : '',
+          isInsp ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
         cards.push(`
-          <div class="${rarityCardClasses(rarity, isInsp ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '')}" style="${rarityVars(rarity)}" data-equip-miner="${def.id}" title="Click to Equip / Unequip">
+          <div class="${rarityCardClasses(rarity, extraCls)}" style="${rarityVars(rarity)}" data-equip-miner="${def.id}" title="Click to Equip / Unequip">
             ${star > 0 ? `<span class="absolute bottom-1 left-1 z-[4] px-1.5 py-px rounded-md bg-[#fde047] border-[1.5px] border-[#14111d] text-[#14111d] text-[9px] font-black leading-none">★${star}</span>` : ''}
             ${isEquipped ? `<span class="mam-equipped-tag">${hotbarIdx + 1}</span>` : ''}
             <div class="mam-card-art">

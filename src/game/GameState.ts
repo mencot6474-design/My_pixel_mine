@@ -198,6 +198,8 @@ import {
 import {
   claimOfflineEarningsDomain,
   computeOfflineEarningsDomain,
+  RETURN_RUSH_BOOST_ID,
+  RETURN_RUSH_FEVER_CHARGE_BONUS,
   type OfflineClaimResult,
   type OfflineEarningsSummary,
 } from './OfflineEarningsDomain';
@@ -430,8 +432,8 @@ export class GameState {
     return this.plotUnits[slotIndex] ?? null;
   }
 
-  public getPlotUnitStats(slotIndex: number) {
-    return computePlotUnitStats(this, slotIndex);
+  public getPlotUnitStats(slotIndex: number, nowMs = Date.now()) {
+    return computePlotUnitStats(this, slotIndex, nowMs);
   }
 
   public getTotalPlotDps(): number {
@@ -1019,11 +1021,20 @@ export class GameState {
     return summary;
   }
 
-  public claimOfflineEarnings(multiplier: 1 | 2 = 1): OfflineClaimResult | null {
+  public claimOfflineEarnings(multiplier: 1 | 2 = 1, nowMs = Date.now()): OfflineClaimResult | null {
     const summary = this.pendingOfflineEarnings;
     if (!summary) return null;
     this.pendingOfflineEarnings = null;
-    return claimOfflineEarningsDomain(this, summary, multiplier, () => this.emit());
+    return claimOfflineEarningsDomain(this, summary, multiplier, () => this.emit(), nowMs);
+  }
+
+  public isReturnRushActive(nowMs = Date.now()): boolean {
+    return (this.activeBoosts[RETURN_RUSH_BOOST_ID] ?? 0) > nowMs;
+  }
+
+  public getReturnRushRemainingSec(nowMs = Date.now()): number {
+    const exp = this.activeBoosts[RETURN_RUSH_BOOST_ID] ?? 0;
+    return Math.max(0, Math.ceil((exp - nowMs) / 1000));
   }
 
   public getReadyBountyCount(): number {
@@ -1048,7 +1059,8 @@ export class GameState {
 
   public chargeOverclock(amount: number, nowMs = Date.now()): boolean {
     const wasActive = this.isOverclockActive(nowMs);
-    const activated = chargeOverclockDomain(this.overclock, amount, nowMs);
+    const mult = this.isReturnRushActive(nowMs) ? 1 + RETURN_RUSH_FEVER_CHARGE_BONUS : 1;
+    const activated = chargeOverclockDomain(this.overclock, amount * mult, nowMs);
     if (!wasActive && activated) {
       this.careerStats.overclockTriggers += 1;
     }

@@ -57,6 +57,21 @@ export class OfflineModalUi {
       `
       : '';
 
+    const rushHtml = summary.returnRushEligible
+      ? `
+        <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#fef08a] border-2 border-[#14111d] text-left" data-offline-return-rush="true">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-7 h-7 rounded-lg bg-[#ff4d2e] border-2 border-[#14111d] text-white flex items-center justify-center text-[14px] font-black shrink-0" aria-hidden="true">⚡</span>
+            <div class="min-w-0 flex flex-col leading-tight">
+              <span class="text-[12px] font-black uppercase tracking-wide text-[#14111d]">Return Rush • 10m</span>
+              <span class="text-[11px] font-bold text-[#9a3412]">+50% Fever Charge &amp; +25% Speed on Claim!</span>
+            </div>
+          </div>
+          <span class="px-2 py-0.5 rounded-full bg-[#14111d] text-[#fde047] text-[10px] font-black uppercase shrink-0">Bonus</span>
+        </div>
+      `
+      : '';
+
     const bodyHtml = `
       <div class="w-full flex flex-col gap-3.5 text-center">
         <div class="mam-inspector-well p-3.5 rounded-2xl flex flex-col items-center gap-1.5">
@@ -85,6 +100,8 @@ export class OfflineModalUi {
           </div>
           ${oresRow}
         </div>
+
+        ${rushHtml}
 
         <div class="flex items-center gap-2.5 pt-1">
           <button
@@ -118,6 +135,7 @@ export class OfflineModalUi {
           `+${fmtMoney(res.cash)}`,
           res.gems > 0 ? `+${fmtInt(res.gems)} Gems` : null,
           res.totalOresAdded > 0 ? `+${fmtInt(res.totalOresAdded)} Ores` : null,
+          res.returnRushActivated ? '⚡ Return Rush 10m!' : null,
         ].filter(Boolean);
         this.pushToast(`${mult === 2 ? '2x ' : ''}Offline Reward: ${extras.join(' • ')}`);
       }

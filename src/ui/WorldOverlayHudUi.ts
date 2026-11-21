@@ -1,5 +1,5 @@
 import { getChibiById } from '../game3d/ChibiCatalog';
-import { OreHpScreen, PlotAnchorScreen, SceneMode } from '../game3d/MineScene3D';
+import { OreHpScreen, PlotAnchorScreen, SceneMode, SweetSpotScreen } from '../game3d/MineScene3D';
 import { STAGE_PEDESTAL_COUNT } from '../game3d/MineWorldPalette';
 import type { PlotLabelInfo } from '../game3d/PlotPedestal3D';
 import {
@@ -254,6 +254,10 @@ export class WorldOverlayHudUi {
     }
   >();
   private dmgLayerEl: HTMLElement | null = null;
+  private sweetSpotLayerEl: HTMLElement | null = null;
+  private sweetSpotWrapEl: HTMLElement | null = null;
+  private sweetSpotRingEl: HTMLElement | null = null;
+  private sweetSpotTagEl: HTMLElement | null = null;
   private shopLayerEl: HTMLElement | null = null;
   private shopBubbleLayerEl: HTMLElement | null = null;
   private readonly lastPlotLabelKeys = new Map<number, string>();
@@ -289,6 +293,12 @@ export class WorldOverlayHudUi {
       'fixed inset-0 pointer-events-none font-[var(--mam-font)] z-[15] overflow-hidden';
     document.body.appendChild(this.dmgLayerEl);
 
+    this.sweetSpotLayerEl = document.createElement('div');
+    this.sweetSpotLayerEl.id = 'sweetSpotLayer';
+    this.sweetSpotLayerEl.className =
+      'fixed inset-0 pointer-events-none font-[var(--mam-font)] z-[13] overflow-hidden';
+    document.body.appendChild(this.sweetSpotLayerEl);
+
     this.shopLayerEl = document.createElement('div');
     this.shopLayerEl.id = 'shopOverlayLayer';
     this.shopLayerEl.className = 'fixed inset-0 pointer-events-none z-[16]';
@@ -317,6 +327,7 @@ export class WorldOverlayHudUi {
     if (this.dmgLayerEl) {
       this.dmgLayerEl.innerHTML = '';
     }
+    this.updateSweetSpot(null);
   }
 
   public syncSlotLabelToScene(slotIndex: number): void {
@@ -508,12 +519,56 @@ export class WorldOverlayHudUi {
     }
   }
 
+  public updateSweetSpot(spot: SweetSpotScreen | null): void {
+    if (!this.sweetSpotLayerEl) return;
+    const { sceneMode, inspectedSlot, activeModal } = this.getUiContext();
+    if (!spot || sceneMode !== 'mine' || inspectedSlot !== null || activeModal !== 'none') {
+      if (this.sweetSpotWrapEl) {
+        this.sweetSpotWrapEl.style.display = 'none';
+      }
+      return;
+    }
+
+    if (!this.sweetSpotWrapEl) {
+      const wrap = document.createElement('div');
+      wrap.className = 'mam-sweet-spot-reticle';
+      wrap.dataset.sweetSpot = 'true';
+      wrap.innerHTML = `
+        <div class="mam-sweet-spot-zone"></div>
+        <div class="mam-sweet-spot-ring" data-sweet-ring="true"></div>
+        <div class="mam-sweet-spot-core"></div>
+        <span class="mam-sweet-spot-tag" data-sweet-tag="true">TAP!</span>
+      `;
+      this.sweetSpotLayerEl.appendChild(wrap);
+      this.sweetSpotWrapEl = wrap;
+      this.sweetSpotRingEl = wrap.querySelector<HTMLElement>('[data-sweet-ring="true"]');
+      this.sweetSpotTagEl = wrap.querySelector<HTMLElement>('[data-sweet-tag="true"]');
+    }
+
+    const baseScale = spot.isMeteor ? 1.28 : 1;
+    const rx = Math.round(spot.x * 2) * 0.5;
+    const ry = Math.round(spot.y * 2) * 0.5;
+    this.sweetSpotWrapEl.style.display = 'block';
+    this.sweetSpotWrapEl.style.transform = `translate3d(${rx}px, ${ry}px, 0) translate(-50%, -50%) scale(calc(var(--mam-float-scale, 1) * ${baseScale}))`;
+    this.sweetSpotWrapEl.classList.toggle('is-in-window', spot.inWindow);
+
+    if (this.sweetSpotRingEl) {
+      // Contracts smoothly from 2.2 down to 0.42 across progress 0..1 (hits target zone at 0.56..0.90)
+      const ringScale = Math.max(0.36, 2.2 - spot.progress * 1.78);
+      this.sweetSpotRingEl.style.transform = `scale(${ringScale.toFixed(3)})`;
+    }
+    if (this.sweetSpotTagEl) {
+      this.sweetSpotTagEl.textContent = spot.inWindow ? 'STRIKE!' : 'WAIT';
+    }
+  }
+
   public spawnDamagePopup(
     dmg: number,
     screenX: number,
     screenY: number,
     isClick = false,
-    isCrit = false
+    isCrit = false,
+    isPerfect = false
   ): void {
     if (!this.settings.get().showDamagePopups) return;
     if (!this.dmgLayerEl || this.getUiContext().inspectedSlot !== null) return;
@@ -526,7 +581,20 @@ export class WorldOverlayHudUi {
     el.style.left = `${screenX + jitterX}px`;
     el.style.top = `${screenY + jitterY}px`;
     const dmgText = fmtShort(Math.max(1, Math.round(dmg)));
-    if (isCrit) {
+    if (isPerfect) {
+      el.className =
+        'absolute inline-flex items-center gap-1.5 font-black tabular-nums whitespace-nowrap will-change-[transform,opacity] animate-[mamCritFloat_0.92s_cubic-bezier(0.22,1,0.36,1)_forwards] pointer-events-none';
+      el.innerHTML = `
+        <svg class="w-7 h-7 shrink-0 drop-shadow-[0_0_10px_rgba(56,189,248,0.95)]" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <path d="M14 1.5L17.2 9.4L25.5 7.5L19.6 13.8L26.5 18.5L17.6 18.6L14 26.5L10.4 18.6L1.5 18.5L8.4 13.8L2.5 7.5L10.8 9.4L14 1.5Z" fill="#38bdf8" stroke="#fde047" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M14 5.5L16.1 11.1L21.8 11.4L17.1 14.9L18.8 20.5L14 17.2L9.2 20.5L10.9 14.9L6.2 11.4L11.9 11.1L14 5.5Z" fill="#ffffff"/>
+        </svg>
+        <span class="inline-flex flex-col items-start leading-none">
+          <span class="px-2 py-[1.5px] rounded-md bg-[linear-gradient(90deg,#0284c7,#a855f7,#f59e0b)] border-2 border-[#14111d] text-[10px] tracking-[0.1em] text-white uppercase">PERFECT STRIKE!</span>
+          <span class="text-[31px] text-[#67e8f9] mam-outline">-${dmgText}!!</span>
+        </span>
+      `;
+    } else if (isCrit) {
       el.className =
         'absolute inline-flex items-center gap-1 font-black tabular-nums whitespace-nowrap will-change-[transform,opacity] animate-[mamCritFloat_0.82s_cubic-bezier(0.22,1,0.36,1)_forwards] pointer-events-none';
       el.innerHTML = `

@@ -2781,4 +2781,48 @@ describe('Pure 3D Mine World', () => {
     expect(pit.getAliveNodesInfo().some((n) => n.pitEventKind !== undefined)).toBe(false);
     pit.dispose();
   });
+
+  it('spawns, tracks, and evaluates Sweet-Spot / Weak-Spot Ring Perfect Strikes on OrePit3D', async () => {
+    const {
+      OrePit3D,
+      isSweetSpotWindowPure,
+      SWEET_SPOT_DMG_MULT,
+      SWEET_SPOT_DURATION_SEC,
+      SWEET_SPOT_MAX_PROGRESS,
+      SWEET_SPOT_MIN_PROGRESS,
+    } = await import('../src/game3d/OrePit3D');
+
+    expect(isSweetSpotWindowPure(SWEET_SPOT_MIN_PROGRESS - 0.05)).toBe(false);
+    expect(isSweetSpotWindowPure(SWEET_SPOT_MIN_PROGRESS)).toBe(true);
+    expect(isSweetSpotWindowPure(SWEET_SPOT_MAX_PROGRESS)).toBe(true);
+    expect(isSweetSpotWindowPure(SWEET_SPOT_MAX_PROGRESS + 0.05)).toBe(false);
+
+    const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    const aliveIds = pit.getAliveNodeIds();
+    expect(aliveIds.length).toBeGreaterThan(0);
+    const targetId = aliveIds[0];
+
+    expect(pit.spawnSweetSpot(targetId, SWEET_SPOT_DURATION_SEC)).toBe(true);
+    // Early tap before window does NOT consume or trigger Perfect Strike
+    expect(pit.consumeSweetSpotTap(targetId)).toBe(false);
+
+    // Advance into the Sweet-Spot window
+    pit.update(SWEET_SPOT_DURATION_SEC * 0.72, 1.0);
+    const spot = pit.getSweetSpotState();
+    expect(spot).not.toBeNull();
+    expect(spot!.nodeId).toBe(targetId);
+    expect(spot!.inWindow).toBe(true);
+
+    // Tapping inside the window consumes it and returns true for Perfect Strike (4.5x DMG)
+    expect(pit.consumeSweetSpotTap(targetId)).toBe(true);
+    expect(pit.getSweetSpotState()).toBeNull();
+
+    const hitRes = pit.hitNode(targetId, Math.round(50 * SWEET_SPOT_DMG_MULT), true, 4, {
+      isPerfect: true,
+    });
+    expect(hitRes?.isPerfect).toBe(true);
+    expect(hitRes?.dmgDealt).toBeGreaterThan(0);
+
+    pit.dispose();
+  });
 });

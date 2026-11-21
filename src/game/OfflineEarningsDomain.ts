@@ -8,12 +8,18 @@ export const OFFLINE_EFFICIENCY = 0.5;
 /** Physical rock-break ceiling per second (1 swing breaks at most 1 rock, bounded by walk + pit respawn intervals). */
 export const MAX_OFFLINE_ORES_PER_SEC = 3.5;
 export const MAX_OFFLINE_GEMS = 15_000;
+export const RETURN_RUSH_BOOST_ID = 'return-rush';
+export const RETURN_RUSH_MIN_OFFLINE_SEC = 3600; // 1 hour
+export const RETURN_RUSH_DURATION_SEC = 600; // 10 minutes
+export const RETURN_RUSH_FEVER_CHARGE_BONUS = 0.5; // +50% Fever Charge
+export const RETURN_RUSH_SPEED_BONUS = 0.25; // +25% Speed
 const BASE_AVG_ROCK_HP = 180 * 1.25;
 const MAX_OFFLINE_CHEST_ORES = 200;
 
 export interface OfflineEarningsSummary {
   elapsedSec: number;
   capped: boolean;
+  returnRushEligible: boolean;
   worldId: WorldId;
   worldName: string;
   oresBroken: number;
@@ -28,6 +34,7 @@ export interface OfflineClaimResult {
   gems: number;
   totalOresAdded: number;
   multiplier: 1 | 2;
+  returnRushActivated: boolean;
 }
 
 export interface OfflineEarningsContext {
@@ -36,6 +43,7 @@ export interface OfflineEarningsContext {
   activeWorldId: WorldId;
   lastSavedAt: number;
   chestOres: Record<string, number>;
+  activeBoosts?: Record<string, number>;
   discovered: Set<string>;
   towerBestFloor: number;
   getTotalPlotDps: () => number;
@@ -74,6 +82,7 @@ export function computeOfflineEarningsDomain(
 
   const capped = rawElapsedSec > OFFLINE_MAX_SEC;
   const elapsedSec = Math.min(rawElapsedSec, OFFLINE_MAX_SEC);
+  const returnRushEligible = elapsedSec >= RETURN_RUSH_MIN_OFFLINE_SEC;
 
   const world = getWorldById(ctx.activeWorldId);
   const denseActive = ctx.getActiveResearchBonus('denseOreScale') > 0;
@@ -123,6 +132,7 @@ export function computeOfflineEarningsDomain(
   return {
     elapsedSec,
     capped,
+    returnRushEligible,
     worldId: world.id,
     worldName: world.name,
     oresBroken,
@@ -137,7 +147,8 @@ export function claimOfflineEarningsDomain(
   ctx: OfflineEarningsContext,
   summary: OfflineEarningsSummary,
   multiplier: 1 | 2 = 1,
-  emit: () => void = () => {}
+  emit: () => void = () => {},
+  nowMs: number = Date.now()
 ): OfflineClaimResult {
   const mult: 1 | 2 = multiplier === 2 ? 2 : 1;
   const cashAwarded = Math.max(0, Math.round(summary.cash * mult));
@@ -159,11 +170,19 @@ export function claimOfflineEarningsDomain(
     }
   }
 
+  let returnRushActivated = false;
+  if (summary.returnRushEligible && ctx.activeBoosts) {
+    const cur = ctx.activeBoosts[RETURN_RUSH_BOOST_ID] ?? 0;
+    ctx.activeBoosts[RETURN_RUSH_BOOST_ID] = Math.max(nowMs, cur) + RETURN_RUSH_DURATION_SEC * 1000;
+    returnRushActivated = true;
+  }
+
   emit();
   return {
     cash: cashAwarded,
     gems: gemsAwarded,
     totalOresAdded,
     multiplier: mult,
+    returnRushActivated,
   };
 }

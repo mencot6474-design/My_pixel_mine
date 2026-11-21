@@ -82,6 +82,27 @@ const PRELOAD_SFX: readonly SfxKey[] = [
   'upgrade',
 ];
 
+export const MUSICAL_SCALE_SEMITONES = [0, 2, 4, 5, 7, 9, 11, 12] as const;
+export const MUSICAL_SCALE_NOTES_HZ = [
+  523.25, // C5 (do)
+  587.33, // D5 (re)
+  659.25, // E5 (mi)
+  698.46, // F5 (fa)
+  783.99, // G5 (sol)
+  880.0,  // A5 (la)
+  987.77, // B5 (si)
+  1046.5, // C6 (DO!)
+] as const;
+
+const BREAK_COMBO_WINDOW_MS = 2800;
+
+/** Maps a 0-based combo step onto an ascending C-major playback-rate multiplier (do -> DO!). */
+export function getMusicalScaleRate(comboStep: number): number {
+  const safe = Number.isFinite(comboStep) ? Math.max(0, Math.floor(comboStep)) : 0;
+  const semi = MUSICAL_SCALE_SEMITONES[safe % MUSICAL_SCALE_SEMITONES.length];
+  return Number(Math.pow(2, semi / 12).toFixed(4));
+}
+
 export class AudioManager {
   private ctx: AudioContext | null = null;
   private sfxGain: GainNode | null = null;
@@ -90,6 +111,8 @@ export class AudioManager {
   private readonly lastPlayedAt = new Map<string, number>();
   private noiseBuffer: AudioBuffer | null = null;
   private activeSpinGain: GainNode | null = null;
+  private breakComboStep = 0;
+  private lastBreakComboAtMs = 0;
 
   private bgmAudio: HTMLAudioElement | null = null;
   private desiredBgm: BgmKind = 'mine';
@@ -248,7 +271,19 @@ export class AudioManager {
     }
   }
 
-  public playOreHit(isClick: boolean, crystalTone = false): void {
+  public resetBreakCombo(): void {
+    this.breakComboStep = 0;
+    this.lastBreakComboAtMs = 0;
+  }
+
+  public getBreakComboStep(nowMs: number = typeof performance !== 'undefined' ? performance.now() : Date.now()): number {
+    if (this.lastBreakComboAtMs > 0 && nowMs - this.lastBreakComboAtMs > BREAK_COMBO_WINDOW_MS) {
+      return 0;
+    }
+    return this.breakComboStep;
+  }
+
+  public playOreHit(isClick: boolean, crystalTone = false, comboCount = 0): void {
     const key: SfxKey = crystalTone
       ? 'ore-hit-3'
       : Math.random() < 0.55
@@ -256,16 +291,33 @@ export class AudioManager {
         : Math.random() < 0.7
           ? 'ore-hit-2'
           : 'ore-hit-3';
+    const hasCombo = isClick && comboCount > 0;
+    const scaleRate = hasCombo ? getMusicalScaleRate(comboCount - 1) : 1;
     this.playSfx(key, {
       volume: isClick ? 0.62 : 0.22,
-      pitchMin: isClick ? 0.93 : 0.9,
-      pitchMax: isClick ? 1.12 : 1.08,
+      pitchMin: hasCombo ? scaleRate * 0.99 : isClick ? 0.93 : 0.9,
+      pitchMax: hasCombo ? scaleRate * 1.01 : isClick ? 1.12 : 1.08,
       cooldownMs: isClick ? 45 : 220,
       bucket: isClick ? 'ore-hit-tap' : 'ore-hit-auto',
     });
   }
 
-  public playOreBreak(variantKey: OreVariantKey | 'tower' = 'common'): void {
+  public playOreBreak(variantKey: OreVariantKey | 'tower' = 'common', comboStepOverride?: number): void {
+    const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    let step: number;
+    if (comboStepOverride !== undefined) {
+      step = Math.max(0, Math.floor(comboStepOverride));
+    } else {
+      if (this.lastBreakComboAtMs > 0 && nowMs - this.lastBreakComboAtMs <= BREAK_COMBO_WINDOW_MS) {
+        this.breakComboStep = (this.breakComboStep + 1) % MUSICAL_SCALE_SEMITONES.length;
+      } else {
+        this.breakComboStep = 0;
+      }
+      this.lastBreakComboAtMs = nowMs;
+      step = this.breakComboStep;
+    }
+
+    const scaleRate = getMusicalScaleRate(step);
     const key: SfxKey =
       variantKey === 'geode' || variantKey === 'tower'
         ? 'ore-break-gem'
@@ -274,11 +326,12 @@ export class AudioManager {
           : 'ore-break-2';
     this.playSfx(key, {
       volume: variantKey === 'geode' ? 0.72 : 0.56,
-      pitchMin: 0.94,
-      pitchMax: 1.08,
+      pitchMin: scaleRate * 0.985,
+      pitchMax: scaleRate * 1.015,
       cooldownMs: 85,
       bucket: 'ore-break',
     });
+    this.playCrystalScaleNote(step);
   }
 
   private prepareSynthCtx(cooldownMs: number, bucket: string): { ctx: AudioContext; gain: GainNode } | null {
@@ -509,6 +562,62 @@ export class AudioManager {
     const t0 = ctx.currentTime + 0.005;
     this.scheduleTone(ctx, gain, t0, { type: 'triangle', freqStart: 587.33, dur: 0.09, peakGain: 0.18 });
     this.scheduleTone(ctx, gain, t0 + 0.045, { type: 'sine', freqStart: 880.0, dur: 0.16, peakGain: 0.2 });
+  }
+
+  /**
+   * Layered crystalline bell note along the major scale (do -> re -> ... -> DO!) on ore breaks.
+   */
+  public playCrystalScaleNote(comboStep: number): void {
+    const audioCtx = this.prepareSynthCtx(65, 'crystal-scale-note');
+    if (!audioCtx) return;
+    const { ctx, gain } = audioCtx;
+    const safe = Number.isFinite(comboStep) ? Math.max(0, Math.floor(comboStep)) : 0;
+    const freq = MUSICAL_SCALE_NOTES_HZ[safe % MUSICAL_SCALE_NOTES_HZ.length];
+    const t0 = ctx.currentTime + 0.004;
+    this.scheduleTone(ctx, gain, t0, {
+      type: 'sine',
+      freqStart: freq,
+      dur: 0.16,
+      peakGain: 0.11,
+      attack: 0.004,
+    });
+    if (safe % MUSICAL_SCALE_SEMITONES.length === MUSICAL_SCALE_SEMITONES.length - 1) {
+      // Octave sparkle on DO!
+      this.scheduleTone(ctx, gain, t0 + 0.02, {
+        type: 'triangle',
+        freqStart: freq * 1.5,
+        dur: 0.24,
+        peakGain: 0.08,
+        attack: 0.005,
+      });
+    }
+  }
+
+  /**
+   * Satisfying shimmering crystal chord on Overclock Fever activation, Meteor shatter, or Perfect Strike.
+   */
+  public playCrystalChord(kind: 'fever' | 'meteor' | 'perfect' = 'fever'): void {
+    const audioCtx = this.prepareSynthCtx(75, `crystal-chord-${kind}`);
+    if (!audioCtx) return;
+    const { ctx, gain } = audioCtx;
+    const t0 = ctx.currentTime + 0.005;
+    const chord =
+      kind === 'perfect'
+        ? [783.99, 987.77, 1174.66, 1567.98]
+        : kind === 'meteor'
+          ? [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98]
+          : [523.25, 659.25, 783.99, 987.77, 1046.5, 1567.98];
+    const stepMs = kind === 'perfect' ? 0.018 : 0.028;
+    const dur = kind === 'perfect' ? 0.28 : 0.44;
+    chord.forEach((freq, i) => {
+      this.scheduleTone(ctx, gain, t0 + i * stepMs, {
+        type: i % 2 === 0 ? 'triangle' : 'sine',
+        freqStart: freq,
+        dur,
+        peakGain: kind === 'perfect' ? 0.15 : 0.16,
+        attack: 0.006,
+      });
+    });
   }
 
   private bindLifecycle(): void {

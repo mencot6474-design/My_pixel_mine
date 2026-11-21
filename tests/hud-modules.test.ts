@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { shouldStopAutoMutationRoll } from '../src/ui/PlotInspectUi';
-import { AudioManager } from '../src/audio/AudioManager';
+import { AudioManager, getMusicalScaleRate, MUSICAL_SCALE_SEMITONES } from '../src/audio/AudioManager';
+import { IndexModalUi } from '../src/ui/IndexModalUi';
+import { getIndexTabEntryIds } from '../src/game/IndexRewardsDomain';
+import { InventoryModalUi } from '../src/ui/InventoryModalUi';
+import { getLootVacuumBurstPlan } from '../src/ui/LootVacuumFx';
 import { ENCHANTS, GEM_SHOP_ITEMS, ORES } from '../src/game/GameData';
 import {
   DEFAULT_GAME_SETTINGS,
@@ -624,6 +628,7 @@ describe('Tahap B HUD Modules', () => {
       state.pendingOfflineEarnings = {
         elapsedSec: 7500,
         capped: false,
+        returnRushEligible: true,
         worldId: 'underground',
         worldName: 'Underground',
         oresBroken: 420,
@@ -636,6 +641,8 @@ describe('Tahap B HUD Modules', () => {
       const uiNoAds = new OfflineModalUi(state, vi.fn(), vi.fn(), false);
       const htmlNoAds = uiNoAds.renderModal();
       expect(htmlNoAds).toContain('data-modal-theme="offline"');
+      expect(htmlNoAds).toContain('data-offline-return-rush="true"');
+      expect(htmlNoAds).toContain('Return Rush');
       expect(htmlNoAds).toContain('2h 05m');
       expect(htmlNoAds).toContain('data-offline-claim="1"');
       expect(htmlNoAds).not.toContain('data-offline-claim="2"');
@@ -962,6 +969,57 @@ describe('Tahap B HUD Modules', () => {
       expect(html).toContain('content-start');
       expect(html).toContain('auto-rows-max');
       expect(html).toContain('min-h-max');
+    });
+  });
+
+  describe('Dopamine Polish Suite (Musical Scale, Holo Foil + MAXED, Return Rush Pill, Loot Vacuum)', () => {
+    it('maps combo steps along the ascending major scale (do -> DO!) and plans 3-6 vacuum orbs', () => {
+      expect(MUSICAL_SCALE_SEMITONES).toHaveLength(8);
+      expect(getMusicalScaleRate(0)).toBe(1);
+      expect(getMusicalScaleRate(7)).toBe(2);
+      for (let i = 1; i < 8; i++) {
+        expect(getMusicalScaleRate(i)).toBeGreaterThan(getMusicalScaleRate(i - 1));
+      }
+      expect(getMusicalScaleRate(8)).toBe(1);
+
+      expect(getLootVacuumBurstPlan('ore').length).toBeGreaterThanOrEqual(3);
+      expect(getLootVacuumBurstPlan('meteor').length).toBeLessThanOrEqual(6);
+      expect(getLootVacuumBurstPlan('crystal_surge')).toContain('gem');
+      expect(getLootVacuumBurstPlan('crystal_surge')).toContain('fever');
+    });
+
+    it('renders is-holo-foil on 5★ / Fusion / Limited cards and MAXED stamp when an Index tab reaches 100%', () => {
+      const state = new GameState();
+      state.miners['astral-recruit'] = 1;
+      state.chibiStars['astral-recruit'] = 5;
+      state.miners['cosmic-monarch'] = 1;
+      state.discovered.add('cosmic-monarch');
+
+      const invUi = new InventoryModalUi(state, () => {});
+      const invHtml = invUi.renderModal();
+      expect(invHtml).toContain('is-holo-foil');
+
+      // Unlock all Underground entries to trigger 100% MAXED stamp
+      for (const id of getIndexTabEntryIds('underground')) {
+        state.discovered.add(id);
+      }
+      const idxUi = new IndexModalUi(state, () => {});
+      const idxHtml = idxUi.renderModal();
+      expect(idxHtml).toContain('data-index-maxed-stamp="true"');
+      expect(idxHtml).toContain('MAXED 100%');
+      expect(idxHtml).toContain('is-holo-foil');
+      expect(idxHtml).toContain('★5');
+    });
+
+    it('renders active Return Rush pill with timer in Active Potions dock', () => {
+      const state = new GameState();
+      const now = 1_000_000;
+      state.activeBoosts['return-rush'] = now + 450_000;
+      const dock = buildActivePotionsDockContent(state, now);
+      expect(dock.empty).toBe(false);
+      expect(dock.single).toBe(true);
+      expect(dock.html).toContain('data-hud-pot="return-rush"');
+      expect(dock.html).toContain('7:30');
     });
   });
 });

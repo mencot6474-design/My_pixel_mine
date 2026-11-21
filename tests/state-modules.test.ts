@@ -36,6 +36,11 @@ import {
   MAX_OFFLINE_ORES_PER_SEC,
   OFFLINE_MAX_SEC,
   OFFLINE_MIN_SEC,
+  RETURN_RUSH_BOOST_ID,
+  RETURN_RUSH_DURATION_SEC,
+  RETURN_RUSH_FEVER_CHARGE_BONUS,
+  RETURN_RUSH_MIN_OFFLINE_SEC,
+  RETURN_RUSH_SPEED_BONUS,
 } from '../src/game/OfflineEarningsDomain';
 import {
   autoStarUpAllUnits,
@@ -904,6 +909,42 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(getPlotStatUpgradeCost('dmg', 1, 1)).toBe(50);
       expect(getPlotStatUpgradeCost('speed', 1, 1)).toBe(75);
       expect(getPlotStatUpgradeCost('mining', 1, 1)).toBe(90);
+    });
+  });
+
+  describe('Welcome-Back Return Rush (10m Boost >= 1h Offline)', () => {
+    it('grants 10m Return Rush (+50% Fever Charge & +25% Speed) when returning after >= 1h offline', () => {
+      const state = new GameState();
+      const baseNow = 2_000_000_000;
+
+      // Under 1h offline -> not eligible
+      state.lastSavedAt = baseNow - 1800 * 1000;
+      const shortSummary = computeOfflineEarningsDomain(state, baseNow, () => 0.5);
+      expect(shortSummary?.returnRushEligible).toBe(false);
+      if (shortSummary) {
+        const shortClaim = claimOfflineEarningsDomain(state, shortSummary, 1, () => {}, baseNow);
+        expect(shortClaim.returnRushActivated).toBe(false);
+        expect(state.isReturnRushActive(baseNow)).toBe(false);
+      }
+
+      // >= 1h offline -> eligible and activates 10m Return Rush
+      state.lastSavedAt = baseNow - RETURN_RUSH_MIN_OFFLINE_SEC * 1000;
+      const longSummary = computeOfflineEarningsDomain(state, baseNow, () => 0.5);
+      expect(longSummary?.returnRushEligible).toBe(true);
+      const speedBefore = state.getPlotUnitStats(0, baseNow)!.miningMult;
+      const longClaim = claimOfflineEarningsDomain(state, longSummary!, 1, () => {}, baseNow);
+      expect(longClaim.returnRushActivated).toBe(true);
+      expect(state.isReturnRushActive(baseNow)).toBe(true);
+      expect(state.getReturnRushRemainingSec(baseNow)).toBe(RETURN_RUSH_DURATION_SEC);
+      expect(state.activeBoosts[RETURN_RUSH_BOOST_ID]).toBe(baseNow + RETURN_RUSH_DURATION_SEC * 1000);
+
+      // +25% Speed reflected on Plot Unit miningMult
+      const speedAfter = state.getPlotUnitStats(0, baseNow)!.miningMult;
+      expect(speedAfter).toBeCloseTo(speedBefore + RETURN_RUSH_SPEED_BONUS, 2);
+
+      // +50% Fever Charge rate reflected on chargeOverclock
+      state.chargeOverclock(20, baseNow);
+      expect(state.overclock.charge).toBeCloseTo(20 * (1 + RETURN_RUSH_FEVER_CHARGE_BONUS), 4);
     });
   });
 });

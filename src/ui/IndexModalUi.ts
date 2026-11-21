@@ -67,6 +67,11 @@ export class IndexModalUi {
     return this.indexInspectId;
   }
 
+  private isHoloChibiCard(id: string, rarity: ItemRarity, unlocked: boolean): boolean {
+    if (!unlocked || !getChibiById(id)) return false;
+    return rarity === 'fusion' || rarity === 'limited' || this.state.getChibiStar(id) >= 5;
+  }
+
   private renderIndexCard(opts: {
     id: string;
     name: string;
@@ -76,12 +81,24 @@ export class IndexModalUi {
     bottomHtml: string;
     unlocked: boolean;
     selected: boolean;
+    isChibi?: boolean;
   }): string {
-    const extraCls = `${opts.unlocked ? '' : 'locked'} ${
-      opts.selected ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : ''
-    }`.trim();
+    const isHolo = opts.isChibi ? this.isHoloChibiCard(opts.id, opts.rarity, opts.unlocked) : false;
+    const star = opts.isChibi && opts.unlocked ? this.state.getChibiStar(opts.id) : 0;
+    const extraCls = [
+      opts.unlocked ? '' : 'locked',
+      isHolo ? 'is-holo-foil' : '',
+      opts.selected ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+    const starBadge =
+      star >= 5
+        ? `<span class="absolute top-1 left-1 z-[4] px-1 py-px rounded-md bg-[#fde047] border-[1.5px] border-[#14111d] text-[#14111d] text-[8.5px] font-black leading-none">★5</span>`
+        : '';
     return `
       <div class="${rarityCardClasses(opts.rarity, extraCls)}" style="${rarityVars(opts.rarity)}" data-index-id="${opts.id}" title="${opts.title}">
+        ${starBadge}
         <div class="mam-card-art">${opts.artHtml}</div>
         <div class="mam-card-name truncate px-1">${opts.name}</div>
         <div class="mam-card-bottom">${opts.bottomHtml}</div>
@@ -274,6 +291,7 @@ export class IndexModalUi {
             bottomHtml: `${renderRarityBadgeHtml(chibi.rarity, 'is-compact mb-0.5')}<span class="mam-card-pct">${fmtShort(chibi.baseDps)}/s</span>`,
             unlocked: this.state.discovered.has(chibi.id),
             selected: selectedId === chibi.id,
+            isChibi: true,
           });
         })
         .join('');
@@ -292,6 +310,7 @@ export class IndexModalUi {
           bottomHtml: `${renderRarityBadgeHtml(chibi.rarity, 'is-compact mb-0.5')}<span class="mam-card-pct">${fmtShort(chibi.baseDps)}/s</span>`,
           unlocked: this.state.discovered.has(chibi.id),
           selected: selectedId === chibi.id,
+          isChibi: true,
         });
       }).join('');
     }
@@ -323,6 +342,7 @@ export class IndexModalUi {
             bottomHtml: `<span class="mam-card-pct">${wDef.shortName}</span>`,
             unlocked: this.state.discovered.has(chibi.id),
             selected: selectedId === chibi.id,
+            isChibi: true,
           });
         })
         .join('');
@@ -355,6 +375,7 @@ export class IndexModalUi {
           bottomHtml: `<span class="mam-card-pct">${fmtPct(entry.chancePct)}</span>`,
           unlocked: this.state.discovered.has(chibi.id),
           selected: selectedId === chibi.id,
+          isChibi: true,
         })
       )
       .join('');
@@ -467,8 +488,14 @@ export class IndexModalUi {
         ? `<div class="col-span-2 @max-[640px]:col-span-1 flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#ffffff] border-2 border-[#14111d] text-[11px] font-black text-[#14111d]">${hudIconHtml('sparkle', 13, 'Bonus')}${activePassiveChips.join('')}</div>`
         : '';
 
+    const isTabMaxed = progress.total > 0 && progress.found >= progress.total;
+    const maxedStampHtml = isTabMaxed
+      ? `<div class="col-span-2 @max-[640px]:col-span-1 flex items-center justify-center gap-2 px-3 py-1 rounded-xl bg-[#fef08a] border-2 border-[#14111d]" data-index-maxed-stamp="true"><span class="mam-index-maxed-stamp">★ MAXED 100%</span><span class="text-[11px] font-black text-[#14111d]">All entries discovered in this collection!</span></div>`
+      : '';
+
     return `
       <div class="grid grid-cols-2 @max-[640px]:grid-cols-1 gap-2 shrink-0" data-index-milestones="true">
+        ${maxedStampHtml}
         ${cardsHtml}
         ${passiveSummaryHtml}
       </div>
@@ -500,29 +527,40 @@ export class IndexModalUi {
         <div class="flex flex-wrap items-center gap-1.5 py-0.5 shrink-0">
           ${WORLDS.map((w) => {
             const wp = this.state.getWorldIndexProgress(w.id);
+            const wMaxed = wp.total > 0 && wp.found >= wp.total;
             return `
             <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 ${this.indexWorldId === w.id ? 'active' : ''}" data-index-world="${w.id}">
               <span>${w.name}</span>
               <span class="text-[10.5px] font-bold opacity-85" data-index-world-count="${w.id}">(${wp.found}/${wp.total})</span>
+              ${wMaxed ? '<span class="px-1 py-px rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px] font-black leading-none" data-index-tab-maxed="true">MAXED</span>' : ''}
               ${this.buildTabReadyDotHtml(w.id)}
             </button>
           `;
           }).join('')}
+          ${(() => {
+            const wProg = this.state.getIndexTabProgress('weather');
+            const fProg = this.state.getIndexTabProgress('fusion');
+            const lProg = this.state.getIndexTabProgress('limited');
+            return `
           <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 ${this.indexWorldId === 'weather' ? 'active' : ''}" data-index-world="weather">
             <span class="inline-flex items-center gap-1">${meteorIconHtml('celestial', 14, 'Weather')} Weather</span>
-            <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="weather">(${WEATHER_ORES.filter((o) => this.state.discovered.has(o.id)).length + getWeatherLimitedMiners().filter((m) => this.state.discovered.has(m.chibi.id)).length}/${WEATHER_ORES.length + getWeatherLimitedMiners().length})</span>
+            <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="weather">(${wProg.found}/${wProg.total})</span>
+            ${wProg.total > 0 && wProg.found >= wProg.total ? '<span class="px-1 py-px rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px] font-black leading-none" data-index-tab-maxed="true">MAXED</span>' : ''}
             ${this.buildTabReadyDotHtml('weather')}
           </button>
           <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 ${this.indexWorldId === 'fusion' ? 'active' : ''}" data-index-world="fusion">
             <span class="inline-flex items-center gap-1">✦ Fusion</span>
-            <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="fusion">(${FUSION_RECIPES.filter((r) => this.state.discovered.has(r.resultChibiId)).length}/${FUSION_RECIPES.length})</span>
+            <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="fusion">(${fProg.found}/${fProg.total})</span>
+            ${fProg.total > 0 && fProg.found >= fProg.total ? '<span class="px-1 py-px rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px] font-black leading-none" data-index-tab-maxed="true">MAXED</span>' : ''}
             ${this.buildTabReadyDotHtml('fusion')}
           </button>
           <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 ${this.indexWorldId === 'limited' ? 'active' : ''}" data-index-world="limited">
             <span class="inline-flex items-center gap-1">★ Limited</span>
-            <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="limited">(${getDailyLoginLimitedChibiIds().filter((id) => this.state.discovered.has(id)).length}/${getDailyLoginLimitedChibiIds().length})</span>
+            <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="limited">(${lProg.found}/${lProg.total})</span>
+            ${lProg.total > 0 && lProg.found >= lProg.total ? '<span class="px-1 py-px rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px] font-black leading-none" data-index-tab-maxed="true">MAXED</span>' : ''}
             ${this.buildTabReadyDotHtml('limited')}
-          </button>
+          </button>`;
+          })()}
         </div>
 
         ${this.buildMilestoneRewardsStripHtml()}

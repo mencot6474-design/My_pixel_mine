@@ -7,6 +7,8 @@ import { GameState } from './game/GameState';
 import {
   OVERCLOCK_CHIBI_METEOR_CHARGE,
   OVERCLOCK_METEOR_TAP_MULT,
+  OVERCLOCK_PERFECT_EXTEND_SEC,
+  OVERCLOCK_SWEET_SPOT_CHARGE,
   OVERCLOCK_TAP_CHARGE,
 } from './game/OverclockDomain';
 import { WORLDS } from './game/GameData';
@@ -40,6 +42,7 @@ import {
   isAdPlaying,
 } from './sdk/crazygames';
 import { GameHud } from './ui/GameHud';
+import { triggerPerfectStrikeFlash } from './ui/LootVacuumFx';
 
 async function bootstrap(): Promise<void> {
   window.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -205,12 +208,16 @@ async function bootstrap(): Promise<void> {
   };
 
   const scene = new MineScene3D(threeRoot, {
-    onOreBroken: (variantKey, meteorWeatherId, pitEventKind) => {
+    onOreBroken: (variantKey, meteorWeatherId, pitEventKind, screenPos) => {
       if (meteorWeatherId) {
         const wasActive = gameState.isOverclockActive();
         const reward = gameState.onMeteorBroken(meteorWeatherId);
         audio.playOreBreak('geode');
+        audio.playCrystalChord('meteor');
         audio.playSfx('rare-fanfare', { volume: 0.55 });
+        if (screenPos) {
+          hud?.spawnLootVacuum(screenPos.x, screenPos.y, 'meteor');
+        }
         const chibiName = reward.chibiId ? (getChibiById(reward.chibiId)?.name ?? reward.chibiId) : null;
         const extras = [
           `+${reward.weatherOreQty} ${reward.weatherOre.name}`,
@@ -233,6 +240,9 @@ async function bootstrap(): Promise<void> {
         nextPitEventAt = Date.now() + rollNextPitEventCooldownSec() * 1000;
         audio.playOreBreak('geode');
         audio.playSfx('rare-fanfare', { volume: 0.5 });
+        if (screenPos) {
+          hud?.spawnLootVacuum(screenPos.x, screenPos.y, 'golden_vein');
+        }
         const feverTag = ocExt.extended ? ` • ⚡ +${Math.round(ocExt.addedSec)}s FEVER!` : '';
         hud?.pushToast(`★ GOLDEN VEIN shattered! ${drops}× Ore Drops${feverTag}`);
         hud?.notifyTutorialOreBroken();
@@ -248,6 +258,9 @@ async function bootstrap(): Promise<void> {
         nextPitEventAt = Date.now() + rollNextPitEventCooldownSec() * 1000;
         audio.playOreBreak('geode');
         audio.playSfx('rare-fanfare', { volume: 0.5 });
+        if (screenPos) {
+          hud?.spawnLootVacuum(screenPos.x, screenPos.y, 'crystal_surge');
+        }
         const feverTag = ocExt.extended ? ` • ⚡ +${Math.round(ocExt.addedSec)}s FEVER!` : '';
         hud?.pushToast(`⚡ CRYSTAL SURGE shattered! +${bonusGems} Gems${feverTag}`);
         hud?.notifyTutorialOreBroken();
@@ -255,25 +268,45 @@ async function bootstrap(): Promise<void> {
       }
       gameState.onOreBroken(variantKey);
       audio.playOreBreak(variantKey);
+      if (screenPos) {
+        hud?.spawnLootVacuum(screenPos.x, screenPos.y, variantKey === 'geode' ? 'geode' : 'ore');
+      }
       hud?.notifyTutorialOreBroken();
     },
-    onOreDamage: (dmg, sx, sy, isClick, isCrit, pitEventKind, isMeteor) => {
-      hud?.spawnDamagePopup(dmg, sx, sy, isClick, isCrit);
-      audio.playOreHit(isClick);
+    onOreDamage: (dmg, sx, sy, isClick, isCrit, pitEventKind, isMeteor, isPerfect) => {
+      hud?.spawnDamagePopup(dmg, sx, sy, isClick, isCrit, isPerfect);
       if (isClick) {
-        triggerTapCombo(Boolean(isCrit), sx, sy);
+        triggerTapCombo(Boolean(isCrit || isPerfect), sx, sy);
+        audio.playOreHit(true, Boolean(isPerfect), tapComboState.count);
         if (holdMiningVisualActive) {
           spawnElectricSpark(sx, sy);
         }
-        if (isCrit) gameState.recordCritTap(dmg);
-        const eventFeverMult = pitEventKind ? PIT_EVENT_DEFS[pitEventKind].feverChargeMult : 1;
-        const meteorFeverMult = isMeteor ? OVERCLOCK_METEOR_TAP_MULT : 1;
-        gameState.chargeOverclock(
-          (isCrit ? OVERCLOCK_TAP_CHARGE * 1.5 : OVERCLOCK_TAP_CHARGE) * eventFeverMult * meteorFeverMult
-        );
-      } else if (isMeteor) {
-        gameState.chargeOverclock(OVERCLOCK_CHIBI_METEOR_CHARGE);
+        if (isCrit || isPerfect) gameState.recordCritTap(dmg);
+        if (isPerfect) {
+          audio.playCrystalChord('perfect');
+          triggerPerfectStrikeFlash();
+          if (gameState.isOverclockActive()) {
+            gameState.extendOverclock(OVERCLOCK_PERFECT_EXTEND_SEC, false);
+          } else {
+            gameState.chargeOverclock(OVERCLOCK_SWEET_SPOT_CHARGE);
+          }
+          hud?.pushToast('⚡ PERFECT STRIKE! +15% Fever Gauge!');
+        } else {
+          const eventFeverMult = pitEventKind ? PIT_EVENT_DEFS[pitEventKind].feverChargeMult : 1;
+          const meteorFeverMult = isMeteor ? OVERCLOCK_METEOR_TAP_MULT : 1;
+          gameState.chargeOverclock(
+            (isCrit ? OVERCLOCK_TAP_CHARGE * 1.5 : OVERCLOCK_TAP_CHARGE) * eventFeverMult * meteorFeverMult
+          );
+        }
+      } else {
+        audio.playOreHit(false);
+        if (isMeteor) {
+          gameState.chargeOverclock(OVERCLOCK_CHIBI_METEOR_CHARGE);
+        }
       }
+    },
+    onSweetSpot: (spot) => {
+      hud?.updateSweetSpot(spot);
     },
     onHoldMineChange: (active) => {
       holdMiningVisualActive = active;
