@@ -1,4 +1,5 @@
-import { CHIBI_CATALOG, ChibiDef, ChibiRarity } from '../game3d/ChibiCatalog';
+import { CHIBI_CATALOG, ChibiDef, ChibiRarity, getChibiById } from '../game3d/ChibiCatalog';
+import { computeTwinScaledBaseDps, PREMIUM_SHOP_ITEMS } from './PremiumShopData';
 import { WeatherId } from './WeatherData';
 
 export type WorldId =
@@ -116,6 +117,85 @@ export const WORLDS: readonly WorldDef[] = [
   { id: 'abyssal', name: 'Abyssal Biolume', iconColor: '#2dd4bf', unlockCost: 1_000_000_000_000_000_000, oreHpMult: 72_000_000_000 },
   { id: 'chrono', name: 'Chrono Nexus', iconColor: '#fbbf24', unlockCost: 200_000_000_000_000_000_000, oreHpMult: 2_880_000_000_000 },
 ] as const;
+
+export const WORLD_UPGRADE_COST_SCALE: Record<string, number> = {
+  underground: 1,
+  crystal: 40,
+  magma: 1_000,
+  ruins: 25_000,
+  astral: 750_000,
+  starwell: 22_500_000,
+  abyssal: 675_000_000,
+  chrono: 20_000_000_000,
+};
+
+/** Returns upgrade cost scale for a world, extrapolating ×30 per world added beyond the explicit map. */
+export function getWorldUpgradeCostScale(
+  worldId: WorldId,
+  worlds: readonly WorldDef[] = WORLDS
+): number {
+  const explicit = WORLD_UPGRADE_COST_SCALE[worldId];
+  if (explicit !== undefined) return explicit;
+  let lastExplicitIdx = -1;
+  let lastExplicitScale = 1;
+  for (let i = 0; i < worlds.length; i++) {
+    const val = WORLD_UPGRADE_COST_SCALE[worlds[i].id];
+    if (val !== undefined) {
+      lastExplicitIdx = i;
+      lastExplicitScale = val;
+    }
+  }
+  const targetIdx = worlds.findIndex((w) => w.id === worldId);
+  if (targetIdx > lastExplicitIdx && lastExplicitIdx >= 0) {
+    return lastExplicitScale * Math.pow(30, targetIdx - lastExplicitIdx);
+  }
+  return 1;
+}
+
+export interface LatestWorldScaleAnchor {
+  worldId: WorldId;
+  secretBaseDps: number;
+  upgradeCostScale: number;
+}
+
+/** Finds the latest World's Secret-tier DPS anchor and upgrade cost scale for auto-balancing Twin units. */
+export function getLatestWorldScaleAnchor(
+  worlds: readonly WorldDef[] = WORLDS,
+  worldMiners: readonly WorldMinerEntry[] = WORLD_MINERS,
+  lookupChibi: (id: string) => { baseDps: number } | undefined = getChibiById
+): LatestWorldScaleAnchor {
+  const latestWorld = worlds[worlds.length - 1] ?? WORLDS[0];
+  let secretBaseDps = 0;
+  for (let i = worlds.length - 1; i >= 0; i--) {
+    const wId = worlds[i].id;
+    let maxDps = 0;
+    for (const entry of worldMiners) {
+      if (entry.worldId !== wId) continue;
+      const dps = lookupChibi(entry.chibiId)?.baseDps ?? 0;
+      if (dps > maxDps) maxDps = dps;
+    }
+    if (maxDps > 0) {
+      secretBaseDps = maxDps;
+      break;
+    }
+  }
+  return {
+    worldId: latestWorld.id,
+    secretBaseDps: Math.max(1, secretBaseDps),
+    upgradeCostScale: getWorldUpgradeCostScale(latestWorld.id, worlds),
+  };
+}
+
+/** Syncs all Twin Chibi baseDps values in CHIBI_CATALOG against the latest World anchor. */
+export function syncTwinCatalogDpsFromAnchor(
+  anchor: Pick<LatestWorldScaleAnchor, 'secretBaseDps'> = getLatestWorldScaleAnchor()
+): void {
+  for (const item of PREMIUM_SHOP_ITEMS) {
+    const chibi = getChibiById(item.chibiId);
+    if (!chibi) continue;
+    chibi.baseDps = computeTwinScaledBaseDps(anchor.secretBaseDps, item.dpsMult);
+  }
+}
 
 export function getWorldById(worldId: WorldId): WorldDef {
   return WORLDS.find((w) => w.id === worldId) ?? WORLDS[0];
@@ -345,6 +425,8 @@ export const WORLD_MINERS: readonly WorldMinerEntry[] = [
   { chibiId: 'crimson-king', worldId: 'chrono', chancePct: 0.045, rarity: 'exotic' },
   { chibiId: 'chrono-seraph', worldId: 'chrono', chancePct: 0.012, rarity: 'secret' },
 ] as const;
+
+syncTwinCatalogDpsFromAnchor();
 
 export const OTHER_ITEMS: readonly OtherItemDef[] = [] as const;
 

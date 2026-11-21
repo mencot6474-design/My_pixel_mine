@@ -6,11 +6,13 @@ import {
   ENCHANTS,
   getChibiStarTier,
   getEnchantById,
+  getLatestWorldScaleAnchor,
   getMinersByWorld,
   getMinerWorldId,
   getMutationById,
   getNextChibiStarTier,
   getPickaxeById,
+  getWorldUpgradeCostScale,
   ItemRarity,
   PICKAXES,
   rollMutation,
@@ -22,7 +24,11 @@ import { compactHotbarSlots, PlotUnitState } from './GameStateSave';
 import { getDailyLoginRewardByChibiId } from './DailyLoginData';
 import { RelicEffectStat } from './RelicData';
 import { getFusionRecipeByResultChibiId } from './FusionData';
-import { getActivePremiumPassiveBonuses, getPremiumShopItemByChibiId } from './PremiumShopData';
+import {
+  computeTwinUpgradeCostScale,
+  getActivePremiumPassiveBonuses,
+  getPremiumShopItemByChibiId,
+} from './PremiumShopData';
 import { getAchievementAllDmgBonusDomain } from './AchievementsDomain';
 import { getActiveFusionPassiveBonuses } from './FusionDomain';
 import { getActiveIndexPassiveBonusesDomain } from './IndexRewardsDomain';
@@ -81,17 +87,6 @@ export interface PlotUnitsContext {
   getMutationLuckMult(): number;
 }
 
-const WORLD_UPGRADE_COST_SCALE: Record<WorldId, number> = {
-  underground: 1,
-  crystal: 40,
-  magma: 1_000,
-  ruins: 25_000,
-  astral: 750_000,
-  starwell: 22_500_000,
-  abyssal: 675_000_000,
-  chrono: 20_000_000_000,
-};
-
 const WEATHER_UPGRADE_COST_SCALE: Record<WeatherId, number> = {
   light_rain: 1_200,
   snow_rain: 25_000,
@@ -116,7 +111,10 @@ export function getChibiUpgradeCostMult(chibiId: string): number {
     }
     const premiumItem = getPremiumShopItemByChibiId(chibiId);
     if (premiumItem) {
-      return premiumItem.upgradeCostScale;
+      return computeTwinUpgradeCostScale(
+        getLatestWorldScaleAnchor().upgradeCostScale,
+        premiumItem.upgradeCostMult
+      );
     }
     const dailyReward = getDailyLoginRewardByChibiId(chibiId);
     if (dailyReward?.upgradeCostScale !== undefined) {
@@ -132,7 +130,7 @@ export function getChibiUpgradeCostMult(chibiId: string): number {
     return 1;
   }
 
-  const worldScale = WORLD_UPGRADE_COST_SCALE[worldId] ?? 1;
+  const worldScale = getWorldUpgradeCostScale(worldId);
   const worldMiners = getMinersByWorld(worldId);
   let anchorBaseDps = chibi.baseDps;
   for (const m of worldMiners) {

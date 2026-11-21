@@ -8,9 +8,22 @@ import {
 import { computeBulkUpgradePlan, getPlotStatUpgradeCost } from '../src/game/UpgradeBulkHelper';
 import { getIndexTabEntryIds } from '../src/game/IndexRewardsDomain';
 import { rollTapCriticalDamage, TAP_CRIT_MULT } from '../src/game3d/MineScene3D';
-import { getOreById, ORES } from '../src/game/GameData';
+import {
+  getLatestWorldScaleAnchor,
+  getOreById,
+  getWorldUpgradeCostScale,
+  ORES,
+  syncTwinCatalogDpsFromAnchor,
+  WORLDS,
+  WORLD_MINERS,
+} from '../src/game/GameData';
+import {
+  computeTwinScaledBaseDps,
+  computeTwinUpgradeCostScale,
+  PREMIUM_SHOP_ITEMS,
+} from '../src/game/PremiumShopData';
 import { FUSION_RECIPES } from '../src/game/FusionData';
-import { getChibiById } from '../src/game3d/ChibiCatalog';
+import { CHIBI_CATALOG, getChibiById } from '../src/game3d/ChibiCatalog';
 import { GameState, getChibiUpgradeCostMult } from '../src/game/GameState';
 import {
   createEmptyResearchLevels,
@@ -1266,6 +1279,116 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(twinFull?.gemsGranted).toBe(20000);
       expect(twinFull?.milestone.passive?.label).toBe('+5% Ore Sell');
       expect(state.getActiveIndexPassiveBonuses().oreSellPct).toBeCloseTo(0.05, 5);
+    });
+  });
+
+  describe('Twin Tier Auto-Scaling by Latest World & Non-Sellable Protection', () => {
+    it('matches current W8 Twin baseDps and upgradeCostScale from latest world anchor', () => {
+      const anchor = getLatestWorldScaleAnchor();
+      expect(anchor.worldId).toBe('chrono');
+      expect(anchor.secretBaseDps).toBe(4_400_000);
+      expect(anchor.upgradeCostScale).toBe(20_000_000_000);
+
+      expect(getChibiById('yukikage-twins')?.baseDps).toBe(10_000_000);
+      expect(getChibiById('halcyon-twins')?.baseDps).toBe(12_000_000);
+      expect(getChibiById('nocturne-twins')?.baseDps).toBe(14_000_000);
+      expect(getChibiById('lullaby-twins')?.baseDps).toBe(16_000_000);
+      expect(getChibiById('clockwork-twins')?.baseDps).toBe(18_000_000);
+
+      expect(getChibiUpgradeCostMult('yukikage-twins')).toBe(220_000_000_000);
+      expect(getChibiUpgradeCostMult('halcyon-twins')).toBe(280_000_000_000);
+      expect(getChibiUpgradeCostMult('nocturne-twins')).toBe(350_000_000_000);
+      expect(getChibiUpgradeCostMult('lullaby-twins')).toBe(420_000_000_000);
+      expect(getChibiUpgradeCostMult('clockwork-twins')).toBe(500_000_000_000);
+    });
+
+    it('computes clean scaled Twin DPS and upgrade costs for boundaries and simulated W9+', () => {
+      expect(computeTwinScaledBaseDps(4_400_000, 2.3)).toBe(10_000_000);
+      expect(computeTwinScaledBaseDps(25_000_000, 2.3)).toBe(58_000_000);
+      expect(computeTwinScaledBaseDps(25_000_000, 4.1)).toBe(100_000_000);
+      expect(computeTwinScaledBaseDps(1_000, 1)).toBe(1_000);
+      expect(computeTwinScaledBaseDps(0, 2.3)).toBe(1);
+      expect(computeTwinScaledBaseDps(-100, 2.3)).toBe(1);
+
+      const simW9Id = 'aetherial_w9' as unknown as (typeof WORLDS)[number]['id'];
+      const simW10Id = 'celestia_w10' as unknown as (typeof WORLDS)[number]['id'];
+      const simWorlds = [
+        ...WORLDS,
+        { id: simW9Id, name: 'W9', iconColor: '#fff', unlockCost: 1e23, oreHpMult: 1e14 },
+        { id: simW10Id, name: 'W10', iconColor: '#fff', unlockCost: 1e26, oreHpMult: 1e16 },
+      ];
+      expect(getWorldUpgradeCostScale(simW9Id, simWorlds)).toBe(600_000_000_000);
+      expect(getWorldUpgradeCostScale(simW10Id, simWorlds)).toBe(18_000_000_000_000);
+
+      // W9 added to WORLDS without miners yet falls back to latest populated world (chrono 4.4M)
+      const noMinerAnchor = getLatestWorldScaleAnchor(simWorlds, WORLD_MINERS);
+      expect(noMinerAnchor.secretBaseDps).toBe(4_400_000);
+      expect(noMinerAnchor.upgradeCostScale).toBe(18_000_000_000_000);
+
+      // W9 with a 25M Secret miner scales anchor and Twin catalog while leaving Fusion untouched
+      const simCatalogLookup = (id: string) =>
+        id === 'w9-secret' ? { baseDps: 25_000_000 } : getChibiById(id);
+      const simMiners = [
+        ...WORLD_MINERS,
+        { chibiId: 'w9-secret', worldId: simW9Id, chancePct: 0.01, rarity: 'secret' as const },
+      ];
+      const w9Anchor = getLatestWorldScaleAnchor(
+        simWorlds.slice(0, WORLDS.length + 1),
+        simMiners,
+        simCatalogLookup
+      );
+      expect(w9Anchor.worldId).toBe(simW9Id);
+      expect(w9Anchor.secretBaseDps).toBe(25_000_000);
+      expect(w9Anchor.upgradeCostScale).toBe(600_000_000_000);
+      expect(computeTwinUpgradeCostScale(w9Anchor.upgradeCostScale, PREMIUM_SHOP_ITEMS[0].upgradeCostMult)).toBe(
+        6_600_000_000_000
+      );
+
+      const aetherBefore = getChibiById('aether-monarch')?.baseDps;
+      try {
+        syncTwinCatalogDpsFromAnchor(w9Anchor);
+        expect(getChibiById('yukikage-twins')?.baseDps).toBe(58_000_000);
+        expect(getChibiById('clockwork-twins')?.baseDps).toBe(100_000_000);
+        expect(getChibiById('aether-monarch')?.baseDps).toBe(aetherBefore);
+      } finally {
+        syncTwinCatalogDpsFromAnchor();
+      }
+      expect(getChibiById('yukikage-twins')?.baseDps).toBe(10_000_000);
+    });
+
+    it('blocks all Twin chibis from selling even with unplaced excess duplicates or custom twin rarity entries', () => {
+      const state = new GameState();
+      state.cash = 0;
+
+      for (const item of PREMIUM_SHOP_ITEMS) {
+        state.miners[item.chibiId] = 5;
+        expect(isNonSellableChibi(item.chibiId)).toBe(true);
+        expect(state.getSellableMinerCount(item.chibiId)).toBe(0);
+        expect(state.sellMiner(item.chibiId, false)).toBe(0);
+        expect(state.sellMiner(item.chibiId, true)).toBe(0);
+        expect(state.sellBatch([`miner:${item.chibiId}`])).toBe(0);
+        expect(state.miners[item.chibiId]).toBe(5);
+      }
+      expect(state.cash).toBe(0);
+
+      // Even a hypothetical rarity:'twin' entry outside PREMIUM_SHOP_ITEMS is blocked
+      const mutableCatalog = CHIBI_CATALOG as unknown as Array<(typeof CHIBI_CATALOG)[number]>;
+      const fakeTwin = {
+        ...CHIBI_CATALOG[0],
+        id: 'test-custom-twin',
+        name: 'Test Custom Twin',
+        rarity: 'twin' as const,
+      };
+      mutableCatalog.push(fakeTwin);
+      try {
+        expect(isNonSellableChibi('test-custom-twin')).toBe(true);
+        state.miners['test-custom-twin'] = 3;
+        expect(state.getSellableMinerCount('test-custom-twin')).toBe(0);
+        expect(state.sellMiner('test-custom-twin', true)).toBe(0);
+        expect(state.miners['test-custom-twin']).toBe(3);
+      } finally {
+        mutableCatalog.pop();
+      }
     });
   });
 });

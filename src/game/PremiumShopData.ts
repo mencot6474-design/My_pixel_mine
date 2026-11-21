@@ -5,7 +5,8 @@ export interface PremiumShopItemDef {
   chibiId: string;
   rarity: 'twin';
   coinCost: number;
-  upgradeCostScale: number;
+  dpsMult: number;
+  upgradeCostMult: number;
   titleTag: string;
   passiveSummary: string;
   teamDmgPct: number;
@@ -20,7 +21,8 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     chibiId: 'yukikage-twins',
     rarity: 'twin',
     coinCost: 50,
-    upgradeCostScale: 220_000_000_000,
+    dpsMult: 2.3,
+    upgradeCostMult: 11,
     titleTag: 'Snow-Shadow Shrine Duo',
     passiveSummary: '+100% Team DMG • +40% Ore Drop',
     teamDmgPct: 1.0,
@@ -33,7 +35,8 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     chibiId: 'halcyon-twins',
     rarity: 'twin',
     coinCost: 65,
-    upgradeCostScale: 280_000_000_000,
+    dpsMult: 2.75,
+    upgradeCostMult: 14,
     titleTag: 'Winged Academy Vanguard',
     passiveSummary: '+120% Tap DMG • +60% Ore Sell',
     teamDmgPct: 0,
@@ -46,7 +49,8 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     chibiId: 'nocturne-twins',
     rarity: 'twin',
     coinCost: 80,
-    upgradeCostScale: 350_000_000_000,
+    dpsMult: 3.2,
+    upgradeCostMult: 17.5,
     titleTag: 'Gothic Shadow Covenant',
     passiveSummary: '+125% Team DMG • +75% Ore Sell',
     teamDmgPct: 1.25,
@@ -59,7 +63,8 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     chibiId: 'lullaby-twins',
     rarity: 'twin',
     coinCost: 100,
-    upgradeCostScale: 420_000_000_000,
+    dpsMult: 3.65,
+    upgradeCostMult: 21,
     titleTag: 'Fallen Plush Pact',
     passiveSummary: '+150% Tap DMG • +65% Ore Drop',
     teamDmgPct: 0,
@@ -72,7 +77,8 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     chibiId: 'clockwork-twins',
     rarity: 'twin',
     coinCost: 120,
-    upgradeCostScale: 500_000_000_000,
+    dpsMult: 4.1,
+    upgradeCostMult: 25,
     titleTag: 'Chrono-Gear Sovereign Duo',
     passiveSummary: '+150% Team DMG • +150% Tap DMG',
     teamDmgPct: 1.5,
@@ -81,6 +87,22 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     tapDmgPct: 1.5,
   },
 ] as const;
+
+/** Scales a TWIN Chibi base DPS from the latest World's Secret DPS with 2-sig-fig nice rounding. */
+export function computeTwinScaledBaseDps(secretBaseDps: number, dpsMult: number): number {
+  const raw = secretBaseDps * dpsMult;
+  if (!Number.isFinite(raw) || raw <= 0) return 1;
+  if (raw < 100) return Math.max(1, Math.round(Number(raw.toPrecision(12))));
+  const step = Math.pow(10, Math.floor(Math.log10(raw) + 1e-12) - 1);
+  return Math.round(Number((raw / step).toPrecision(12))) * step;
+}
+
+/** Scales a TWIN Chibi plot upgrade cost multiplier from the latest World's upgrade cost scale. */
+export function computeTwinUpgradeCostScale(worldCostScale: number, upgradeCostMult: number): number {
+  const raw = worldCostScale * upgradeCostMult;
+  if (!Number.isFinite(raw) || raw <= 0) return 1;
+  return Math.round(raw);
+}
 
 export function getPremiumShopItemByChibiId(chibiId: string): PremiumShopItemDef | undefined {
   return PREMIUM_SHOP_ITEMS.find((item) => item.chibiId === chibiId);
