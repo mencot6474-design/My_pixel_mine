@@ -1,6 +1,5 @@
 import { audio } from '../audio/AudioManager';
 import { GameState } from '../game/GameState';
-import { fmtInt } from '../game/NumberFormat';
 import type { OmegaBossId } from '../game/OmegaData';
 import type { OmegaTargetObject } from '../game/OmegaBossDomain';
 import type { SceneMode } from '../game3d/MineScene3D';
@@ -40,7 +39,10 @@ export class HudOmegaBridge {
 
   public syncOmegaSceneVisual(): void {
     const b = this.state.omegaBattle;
-    if (!b) return;
+    if (!b) {
+      this.omegaOps?.syncBattleVisuals([], false, false);
+      return;
+    }
     this.omegaOps?.syncBattleVisuals(b.targets, b.breakRemainingSec > 0, b.parryWindow.active);
   }
 
@@ -107,11 +109,11 @@ export class HudOmegaBridge {
 
   private finishOmegaFromCombat(): void {
     const summary = this.state.omegaLastSummary;
+    this.omegaOps?.syncBattleVisuals([], false, false);
     if (summary?.victory) {
       audio.playSfx('rare-fanfare', { volume: 0.78 });
-      this.pushToast(
-        `VICTORY!${summary.coresAwarded > 0 ? ` +${summary.coresAwarded} Omega Core!` : ''} +${fmtInt(summary.gemsAwarded)} Gems`
-      );
+      this.render();
+      return;
     }
     this.setSceneMode('shop');
     this.openModal('omega-boss');

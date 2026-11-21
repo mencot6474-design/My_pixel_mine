@@ -72,6 +72,11 @@
     zoom: var(--mam-float-scale, 1);
   }
 
+  #plotOverlayLayer .mam-rarity-badge.is-crest {
+    height: 36px;
+    margin-bottom: -7px;
+  }
+
   #shopOverlayLayer > [data-altar-lbl],
   #shopOverlayLayer > [data-shop-station] {
     transform: scale(var(--mam-float-scale, 1));

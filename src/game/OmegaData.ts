@@ -40,7 +40,7 @@ export interface OmegaBossDef {
 
 export const OMEGA_MAX_KEYS = 5;
 export const OMEGA_KEY_REGEN_MS = 15 * 60 * 1000;
-export const OMEGA_KEY_GEM_COST = 150;
+export const OMEGA_KEY_GEM_COST = 25_000;
 export const OMEGA_BATTLE_DURATION_SEC = 45;
 export const OMEGA_BREAK_DURATION_SEC = 7;
 export const OMEGA_BREAK_DMG_MULT = 2.5;
@@ -129,11 +129,11 @@ export const OMEGA_BOSS_DEFS: readonly OmegaBossDef[] = [
     oreDropPct: 1.2,
     oreSellPct: 0.8,
     tiers: buildTiers([
-      1_000_000_000_000_000,
-      12_000_000_000_000_000,
-      85_000_000_000_000_000,
-      500_000_000_000_000_000,
-      3_000_000_000_000_000_000,
+      20_000_000_000_000_000,
+      240_000_000_000_000_000,
+      1_700_000_000_000_000_000,
+      10_000_000_000_000_000_000,
+      60_000_000_000_000_000_000,
     ]),
   },
   {
@@ -159,11 +159,11 @@ export const OMEGA_BOSS_DEFS: readonly OmegaBossDef[] = [
     oreDropPct: 0.9,
     oreSellPct: 1.4,
     tiers: buildTiers([
-      1_500_000_000_000_000,
-      18_000_000_000_000_000,
-      120_000_000_000_000_000,
-      700_000_000_000_000_000,
-      4_000_000_000_000_000_000,
+      30_000_000_000_000_000,
+      360_000_000_000_000_000,
+      2_400_000_000_000_000_000,
+      14_000_000_000_000_000_000,
+      80_000_000_000_000_000_000,
     ]),
   },
 ] as const;

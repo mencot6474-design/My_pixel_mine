@@ -155,6 +155,8 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     [-10.2, 3.4, 1.8, 0x4ade80, 1.9, 14],
     [11.4, 4.6, -7.8, 0xf472b6, 2.1, 14],
     [10.2, 3.4, 1.8, 0xf97316, 2.3, 14],
+    [-17.6, 4.2, -9.6, 0xef4444, 1.8, 12],
+    [17.6, 4.2, -9.6, 0xc084fc, 1.8, 12],
   ];
   for (const [lx, ly, lz, col, intensity, dist] of zoneLights) {
     const pt = new THREE.PointLight(col, intensity, dist, 1.45);
@@ -423,8 +425,8 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
 
   // 4 Corner Modern Cyber Holo-Tree Planters (Clean strictly stacked geometry, non-intersecting holo crystals!)
   for (const [px, pz, baseY, isCyan] of [
-    [-17.2, -14.2, 0.18, true],
-    [17.2, -14.2, 0.18, false],
+    [-16.4, -14.9, 0.18, true],
+    [16.4, -14.9, 0.18, false],
     [-17.4, 10.6, 0.14, false],
     [17.4, 10.6, 0.14, true],
   ] as Array<[number, number, number, boolean]>) {
@@ -476,8 +478,8 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
   for (const [rx, rz, baseY, h, isCyan] of [
     [-18.8, -15.4, 0.18, 2.4, true],
     [18.8, -15.4, 0.18, 2.4, false],
-    [-18.8, -7.8, 0.18, 2.8, false],
-    [18.8, -7.8, 0.18, 2.8, true],
+    [-18.8, -4.2, 0.18, 2.8, false],
+    [18.8, -4.2, 0.18, 2.8, true],
     [-18.8, 3.6, 0.14, 2.2, true],
     [18.8, 3.6, 0.14, 2.2, false],
   ] as Array<[number, number, number, number, boolean]>) {
@@ -509,51 +511,39 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     group.add(pylon);
   }
 
-  // Two Cyber Sky-Bridges & Hovering Helipad Relay Outposts (Left & Right)
+  // Two Omega Boss Arena Pads aligned inline with Pickaxe Armory & Gem Shop (x = ±17.6, z = -9.6)
   for (const side of [-1, 1] as const) {
-    const bx = side * 22.8;
-    const bridgeGroup = new THREE.Group();
-    bridgeGroup.position.set(bx, 0.0, -2.2);
+    const padX = side * 17.6;
+    const bossPadGroup = new THREE.Group();
+    bossPadGroup.position.set(padX, 0.18, -9.6);
 
-    const deck = new THREE.Mesh(createChamferSlabGeometry(4.4, 0.26, 2.5, 0.12, 0.02), gunmetalMat);
-    for (const rz of [-1.12, 1.12]) {
-      const sideRail = new THREE.Mesh(
-        createChamferSlabGeometry(4.2, 0.1, 0.12, 0.03, 0.008),
-        side < 0 ? cyanNeonMat : violetNeonMat
-      );
-      sideRail.position.set(0, 0.45, rz);
-      bridgeGroup.add(sideRail);
-    }
-    enableShadows(deck);
-    bridgeGroup.add(deck);
-    group.add(bridgeGroup);
-
-    const isletX = side * 28.4;
-    const isletGroup = new THREE.Group();
-    isletGroup.position.set(isletX, 0.0, -2.2);
-
-    const turbineUnder = new THREE.Mesh(
-      createLatheProfileGeometry(
-        [
-          [1.6, -2.1],
-          [3.6, -1.0],
-          [4.6, -0.1],
-        ],
-        8
-      ),
+    const padBase = new THREE.Mesh(
+      createChamferSlabGeometry(4.8, 0.22, 4.8, 0.55, 0.025),
+      slateConcreteMat
+    );
+    const padInner = new THREE.Mesh(
+      createChamferSlabGeometry(4.15, 0.05, 4.15, 0.42, 0.01),
       darkHullMat
     );
-    const padTop = new THREE.Mesh(createChamferSlabGeometry(7.8, 0.28, 7.8, 1.8, 0.03), slateConcreteMat);
-    const helipadRing = new THREE.Mesh(
-      new THREE.RingGeometry(2.55, 2.95, 28),
-      new THREE.MeshBasicMaterial({ color: side < 0 ? 0x22d3ee : 0xe879f9, side: THREE.DoubleSide })
-    );
-    helipadRing.rotation.x = -Math.PI / 2;
-    helipadRing.position.y = 0.3;
+    padInner.position.y = 0.22;
 
-    enableShadows(padTop);
-    isletGroup.add(turbineUnder, padTop, helipadRing);
-    group.add(isletGroup);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: side < 0 ? 0xef4444 : 0xe879f9,
+      side: THREE.DoubleSide,
+    });
+    const arenaRing = new THREE.Mesh(new THREE.RingGeometry(1.62, 1.94, 28), ringMat);
+    arenaRing.rotation.x = -Math.PI / 2;
+    arenaRing.position.y = 0.29;
+
+    const padTrim = new THREE.Mesh(
+      createChamferSlabGeometry(4.6, 0.04, 0.12, 0.03, 0.008),
+      side < 0 ? amberNeonMat : violetNeonMat
+    );
+    padTrim.position.set(0, 0.21, 2.38);
+
+    enableShadows(padBase);
+    bossPadGroup.add(padBase, padInner, arenaRing, padTrim);
+    group.add(bossPadGroup);
   }
 
   // Front-Right Cyber Maglev Cargo Dock (x = 10.4, z = 9.0)

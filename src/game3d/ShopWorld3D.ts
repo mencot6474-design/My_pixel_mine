@@ -186,8 +186,8 @@ export class ShopWorld3D {
     { id: 'altar', title: 'Enchant Altar', subtitle: 'Spin Enchants', pos: new THREE.Vector3(0, 4.65, -0.5) },
     { id: 'tower', title: 'Gem Tower', subtitle: 'Grind Gems & Dice', pos: new THREE.Vector3(0, 9.75, -11.4) },
     { id: 'forge', title: 'Relic Forge', subtitle: 'Craft & Equip Relics', pos: new THREE.Vector3(10.2, 5.9, 0.8) },
-    { id: 'omega-left', title: 'Crimson Ronin', subtitle: 'Omega Boss • Left Pad', pos: new THREE.Vector3(-28.4, 6.3, -2.2) },
-    { id: 'omega-right', title: 'Obsidian Sovereign', subtitle: 'Omega Boss • Right Pad', pos: new THREE.Vector3(28.4, 6.3, -2.2) },
+    { id: 'omega-left', title: 'Crimson Ronin', subtitle: 'Omega Boss • Left Pad', pos: new THREE.Vector3(-17.6, 6.8, -9.6) },
+    { id: 'omega-right', title: 'Obsidian Sovereign', subtitle: 'Omega Boss • Right Pad', pos: new THREE.Vector3(17.6, 6.8, -9.6) },
   ];
 
   constructor() {
@@ -232,22 +232,22 @@ export class ShopWorld3D {
     this.shopGroup.add(towerHit);
     this.shopClickables.push(towerHit);
 
-    // Two Floating Wing Pads: Left = Crimson Ronin Boss, Right = Obsidian Sovereign Boss
+    // Two Omega Boss Pads aligned inline with Pickaxe & Gem Shop: Left = Crimson Ronin, Right = Obsidian Sovereign
     const wingDefs: Array<{ chibiId: string; x: number; kind: string; facing: 1 | -1 }> = [
-      { chibiId: 'crimson-ronin', x: -28.4, kind: 'shop-omega-left', facing: 1 },
-      { chibiId: 'obsidian-sovereign', x: 28.4, kind: 'shop-omega-right', facing: -1 },
+      { chibiId: 'crimson-ronin', x: -17.6, kind: 'shop-omega-left', facing: 1 },
+      { chibiId: 'obsidian-sovereign', x: 17.6, kind: 'shop-omega-right', facing: -1 },
     ];
     for (const w of wingDefs) {
       const bossDef = getChibiById(w.chibiId);
       if (bossDef) {
         const sprite = new ChibiSprite3D(bossDef);
-        sprite.group.position.set(w.x, 0.31, -2.2);
-        sprite.group.scale.setScalar(4.1);
+        sprite.group.position.set(w.x, 0.45, -9.6);
+        sprite.group.scale.setScalar(3.15);
         sprite.setFacing(w.facing);
         this.shopGroup.add(sprite.group);
         this.omegaPadBosses.push(sprite);
       }
-      const hit = this.createHitbox(w.x, 3.0, -2.2, 8.0, 6.2, 8.0, w.kind);
+      const hit = this.createHitbox(w.x, 2.8, -9.6, 5.2, 5.6, 5.2, w.kind);
       this.shopGroup.add(hit);
       this.shopClickables.push(hit);
     }

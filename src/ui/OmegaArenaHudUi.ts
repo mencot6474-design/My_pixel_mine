@@ -1,8 +1,17 @@
 import { assetUrl } from '../game/AssetUrl';
 import { GameState } from '../game/GameState';
 import { fmtInt, fmtPct, fmtShort } from '../game/NumberFormat';
-import { getOmegaBossById, OMEGA_BREAK_DMG_MULT } from '../game/OmegaData';
+import type { OmegaBattleSummary } from '../game/OmegaBossDomain';
+import {
+  getOmegaBossById,
+  getOmegaTierDef,
+  OMEGA_BREAK_DMG_MULT,
+  OMEGA_MAX_KEYS,
+  type OmegaBossId,
+} from '../game/OmegaData';
 import { getChibiById } from '../game3d/ChibiCatalog';
+import { bossKeyIconHtml, enchantDiceIconHtml, hudIconHtml, omegaCrestIconHtml } from './HudIcons';
+import { TW_CLOSE_BTN } from './HudShared';
 
 const SVG_RETREAT = `<svg viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><path d="M8.5 4.5L3 10l5.5 5.5M4 10h11.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const SVG_TIMER = `<svg viewBox="0 0 18 18" width="14" height="14" fill="none" aria-hidden="true"><circle cx="9" cy="10" r="6" stroke="currentColor" stroke-width="2"/><path d="M7 2.5h4M9 7v3.2l2 1.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
@@ -16,12 +25,17 @@ export class OmegaArenaHudUi {
   constructor(
     private readonly state: GameState,
     private readonly onExitOmega: () => void,
-    private readonly onTriggerParry: () => void
+    private readonly onTriggerParry: () => void,
+    private readonly onVictoryToHub?: () => void,
+    private readonly onVictoryRetry?: (bossId: OmegaBossId, tier: number) => void
   ) {}
 
   public renderOmegaArenaHud(): string {
     const battle = this.state.omegaBattle;
-    if (!battle) return '';
+    if (!battle) {
+      const summary = this.state.omegaLastSummary;
+      return summary?.victory ? this.renderOmegaVictoryPopup(summary) : '';
+    }
     const boss = getOmegaBossById(battle.bossId);
     const chibi = boss ? getChibiById(boss.chibiId) : undefined;
     const hpPct = Math.max(0, Math.min(100, (battle.hp / Math.max(1, battle.maxHp)) * 100));
@@ -204,5 +218,143 @@ export class OmegaArenaHudUi {
     root.querySelector<HTMLElement>('[data-omega-parry-btn]')?.addEventListener('click', () => {
       this.onTriggerParry();
     });
+    root.querySelectorAll<HTMLElement>('[data-omega-victory-hub]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.onVictoryToHub?.();
+      });
+    });
+    root.querySelector<HTMLElement>('[data-omega-victory-retry]')?.addEventListener('click', (e) => {
+      const el = e.currentTarget as HTMLElement;
+      const bossId = el.dataset.omegaVictoryBoss as OmegaBossId | undefined;
+      const tier = Number(el.dataset.omegaVictoryRetry || 1);
+      if (bossId && this.state.omegaKeys > 0) {
+        this.onVictoryRetry?.(bossId, tier);
+      }
+    });
+  }
+
+  private renderOmegaVictoryPopup(summary: OmegaBattleSummary): string {
+    const boss = getOmegaBossById(summary.bossId);
+    const tierDef = getOmegaTierDef(summary.bossId, summary.tier);
+    const chibi = boss ? getChibiById(boss.chibiId) : undefined;
+    const dropped = summary.coresAwarded > 0;
+    const coreName = boss?.coreName ?? 'Omega Core';
+    const coresOwned = this.state.omegaCores[summary.bossId] || 0;
+    const unlockCost = boss?.unlockCoreCost ?? 5;
+    const dropPct = Math.round(tierDef.coreDropChance * 100);
+    const hasKeys = this.state.omegaKeys > 0;
+
+    const portraitHtml = chibi
+      ? `<img src="${assetUrl(chibi.poses.pose)}" alt="${boss?.name ?? 'Boss'}" class="w-full h-full object-contain" />`
+      : omegaCrestIconHtml(34);
+
+    const dropSectionHtml = dropped
+      ? `
+        <div class="rounded-2xl border-[2.5px] border-[#14111d] bg-[linear-gradient(135deg,#dcfce7_0%,#fef08a_100%)] p-3 flex items-center gap-3" data-omega-drop-status="dropped">
+          <div class="w-14 h-14 rounded-2xl border-[2.5px] border-[#14111d] bg-white flex items-center justify-center shrink-0">
+            ${omegaCrestIconHtml(36)}
+          </div>
+          <div class="flex flex-col gap-0.5 min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="px-2 py-0.5 rounded-full bg-[#16a34a] text-white border border-[#14111d] text-[10px] font-black uppercase tracking-wider">ITEM DROPPED!</span>
+              <span class="text-[10.5px] font-black text-[#15803d] tabular-nums">${dropPct}% Drop Rate</span>
+            </div>
+            <div class="text-[17px] font-black text-[#14111d] leading-tight truncate">+${fmtInt(summary.coresAwarded)} ${coreName}</div>
+            <div class="text-[11px] font-extrabold text-[#334155] tabular-nums">
+              Owned: ${fmtInt(coresOwned)} / ${unlockCost} ${coresOwned >= unlockCost ? '• Ready to Forge!' : 'for Unlock'}
+            </div>
+          </div>
+        </div>
+      `
+      : `
+        <div class="rounded-2xl border-[2.5px] border-[#14111d] bg-[#f1f5f9] p-3 flex items-center gap-3" data-omega-drop-status="none">
+          <div class="w-14 h-14 rounded-2xl border-[2.5px] border-[#94a3b8] bg-white/80 flex items-center justify-center shrink-0 opacity-60 grayscale">
+            ${omegaCrestIconHtml(36)}
+          </div>
+          <div class="flex flex-col gap-0.5 min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="px-2 py-0.5 rounded-full bg-[#e2e8f0] text-[#475569] border border-[#14111d] text-[10px] font-black uppercase tracking-wider">NO ITEM DROP</span>
+              <span class="text-[10.5px] font-black text-[#64748b] tabular-nums">${dropPct}% Chance (Tier ${summary.tier})</span>
+            </div>
+            <div class="text-[15px] font-black text-[#334155] leading-tight truncate">0 ${coreName} Dropped</div>
+            <div class="text-[11px] font-bold text-[#64748b] tabular-nums">
+              Owned: ${fmtInt(coresOwned)} / ${unlockCost} • Fight higher tiers for better drop odds!
+            </div>
+          </div>
+        </div>
+      `;
+
+    return `
+      <div class="pointer-events-auto fixed inset-0 z-40 bg-[rgba(12,10,18,0.68)] flex items-center justify-center p-3 mam-backdrop-enter" data-omega-victory-popup="true">
+        <div class="mam-modal mam-modal-enter w-[min(460px,calc(100%-12px))] max-h-[calc(100%-12px)] overflow-y-auto p-4 flex flex-col gap-3" data-modal-theme="omega-boss">
+          <div class="rounded-2xl border-[2.5px] border-[#14111d] px-3.5 py-2.5 flex items-center justify-between gap-2.5" style="background:linear-gradient(135deg,#fde047 0%,#fef08a 45%,#bbf7d0 100%)">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-13 h-13 rounded-2xl border-[2.5px] border-[#14111d] bg-[#fff8e7] p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                ${portraitHtml}
+              </div>
+              <div class="flex flex-col gap-0.5 min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="mam-pill-xs bg-[#16a34a] text-white">VICTORY!</span>
+                  <span class="mam-pill-xs bg-[#14111d] text-[#fde047]">TIER ${summary.tier}</span>
+                  ${summary.firstClear ? `<span class="mam-pill-xs bg-[#fb923c] text-[#14111d]">1ST CLEAR!</span>` : ''}
+                </div>
+                <div class="text-[17px] font-black uppercase leading-tight text-[#14111d] truncate">${boss?.name ?? summary.bossId} Defeated!</div>
+                <div class="text-[11px] font-extrabold text-[#334155] tabular-nums">
+                  Cleared in ${summary.timeUsedSec}s • ${fmtShort(summary.damageDealt)} Total DMG
+                </div>
+              </div>
+            </div>
+            <button class="${TW_CLOSE_BTN}" data-omega-victory-hub="true" aria-label="Return to Sanctum">✕</button>
+          </div>
+
+          ${dropSectionHtml}
+
+          <div class="grid ${summary.diceAwarded > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-2">
+            <div class="rounded-xl border-2 border-[#14111d] bg-white px-2.5 py-2 flex items-center gap-2">
+              <span class="shrink-0">${hudIconHtml('gem', 24, 'Gems')}</span>
+              <div class="flex flex-col min-w-0">
+                <span class="text-[9.5px] font-black uppercase text-[#64748b]">Gems</span>
+                <span class="text-[14px] font-black text-[#14111d] tabular-nums">+${fmtInt(summary.gemsAwarded)}</span>
+              </div>
+            </div>
+            ${
+              summary.diceAwarded > 0
+                ? `<div class="rounded-xl border-2 border-[#14111d] bg-white px-2.5 py-2 flex items-center gap-2">
+                    <span class="shrink-0">${enchantDiceIconHtml(24)}</span>
+                    <div class="flex flex-col min-w-0">
+                      <span class="text-[9.5px] font-black uppercase text-[#64748b]">1st Clear Dice</span>
+                      <span class="text-[14px] font-black text-[#0369a1] tabular-nums">+${fmtInt(summary.diceAwarded)}</span>
+                    </div>
+                  </div>`
+                : ''
+            }
+            <div class="rounded-xl border-2 border-[#14111d] bg-white px-2.5 py-2 flex flex-col justify-center">
+              <span class="text-[9.5px] font-black uppercase text-[#64748b]">Raid Style</span>
+              <span class="text-[12px] font-black text-[#14111d] tabular-nums">${summary.parriesLanded} Parry • ${summary.targetsShattered} Hit</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 pt-0.5">
+            <button
+              class="flex-1 h-11 rounded-2xl border-[2.5px] border-[#14111d] bg-[#2ee59d] hover:brightness-105 active:scale-95 text-[#14111d] text-[14px] font-black cursor-pointer transition-transform"
+              data-omega-victory-hub="true"
+            >Back to Sanctum</button>
+            <button
+              class="flex-1 h-11 rounded-2xl border-[2.5px] border-[#14111d] inline-flex items-center justify-center gap-1.5 text-[13.5px] font-black transition-transform ${
+                hasKeys
+                  ? 'bg-[#fde047] hover:bg-[#fef08a] active:scale-95 text-[#14111d] cursor-pointer'
+                  : 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed'
+              }"
+              data-omega-victory-retry="${summary.tier}"
+              data-omega-victory-boss="${summary.bossId}"
+              ${hasKeys ? '' : 'disabled'}
+            >
+              ${bossKeyIconHtml(16)}
+              <span>${hasKeys ? `Fight Again (${this.state.omegaKeys}/${OMEGA_MAX_KEYS})` : `No Keys (0/${OMEGA_MAX_KEYS})`}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
   }
 }

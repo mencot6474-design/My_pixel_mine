@@ -13,6 +13,7 @@ import {
 import {
   applyCameraOrbitDrag,
   clampCameraZoomRadius,
+  getDefaultOrbitPitchForMode,
   HOLD_MINE_INITIAL_DELAY_SEC,
   HOLD_MINE_INTERVAL_SEC,
   stepHoldMineTimer,
@@ -2282,6 +2283,26 @@ describe('Pure 3D Mine World', () => {
         'shop-omega-right',
       ])
     );
+
+    const pickHit = shop.shopClickables.find((c) => c.userData?.kind === 'shop-pickaxe')!;
+    const gemsHit = shop.shopClickables.find((c) => c.userData?.kind === 'shop-gems')!;
+    const omegaLHit = shop.shopClickables.find((c) => c.userData?.kind === 'shop-omega-left')!;
+    const omegaRHit = shop.shopClickables.find((c) => c.userData?.kind === 'shop-omega-right')!;
+    expect(omegaLHit.position.z).toBeCloseTo(pickHit.position.z, 2);
+    expect(omegaRHit.position.z).toBeCloseTo(gemsHit.position.z, 2);
+
+    const shopCam = new THREE.PerspectiveCamera(42, 16 / 9, 1.0, 220);
+    shopCam.position.set(0, 11.7 * (30.4 / 16.5), -2.9 + 30.4);
+    shopCam.lookAt(0, 2.95, -2.9);
+    shopCam.updateMatrixWorld(true);
+    const shopAnchors = shop.getShopAnchors(shopCam, 1280, 720, new THREE.Vector3());
+    for (const id of ['omega-left', 'omega-right']) {
+      const a = shopAnchors.find((item) => item.id === id);
+      expect(a?.visible).toBe(true);
+      expect(a!.x).toBeGreaterThan(0);
+      expect(a!.x).toBeLessThan(1280);
+    }
+
     expect(() => shop.dispose()).not.toThrow();
 
     const wx = new WeatherFx3D();
@@ -2714,6 +2735,16 @@ describe('Pure 3D Mine World', () => {
       dy: -120,
     });
     expect(locked).toEqual({ yaw: 0, pitch: 0 });
+    expect(
+      applyCameraOrbitDrag({
+        cameraLocked: true,
+        yaw: 0.4,
+        pitch: 0.2,
+        dx: 50,
+        dy: 50,
+        defaultPitch: getDefaultOrbitPitchForMode('omega'),
+      })
+    ).toEqual({ yaw: 0, pitch: -0.26 });
 
     expect(clampCameraZoomRadius(5, 'mine')).toBe(9);
     expect(clampCameraZoomRadius(22, 'mine')).toBe(22);
@@ -2879,6 +2910,18 @@ describe('Pure 3D Mine World', () => {
       arena.update(0.1, 1.0 + f * 0.1, cam, (ev) => strikes.push(ev.slotIndex));
     }
     expect(strikes.length).toBeGreaterThan(0);
+    const bossHead = arena.getBossHeadScreenAnchor(cam, 1280, 720);
+    expect(bossHead).not.toBeNull();
+    expect(bossHead!.y).toBeGreaterThan(0);
+    expect(bossHead!.y).toBeLessThan(720);
+
+    let torusCollars = 0;
+    arena.group.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.geometry instanceof THREE.TorusGeometry && obj.position.y > 0.28) {
+        torusCollars++;
+      }
+    });
+    expect(torusCollars).toBe(6); // 1 Boss Podium + 5 Player Chibi Podiums
 
     arena.setBossId('obsidian-sovereign');
     arena.syncBattleTargets([
@@ -2886,5 +2929,32 @@ describe('Pure 3D Mine World', () => {
     ]);
     expect(arena.clickables.some((c) => c.userData?.targetId === 'pillar-1')).toBe(true);
     expect(() => arena.dispose()).not.toThrow();
+  });
+
+  it('computes uniform PlotPedestal3D tier badge anchors right above the tilted chibi sprite top without overlapping', () => {
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1.0, 220);
+    cam.position.set(0, 11.7, 15.6);
+    cam.lookAt(0, 0.55, -0.55);
+    cam.updateMatrixWorld(true);
+
+    const defs = [CHIBI_CATALOG[0], getChibiById('yukikage-twins')!, getChibiById('crimson-ronin')!];
+    const anchors: THREE.Vector3[] = [];
+    for (let i = 0; i < defs.length; i++) {
+      const ped = new PlotPedestal3D(i, (i - 1) * 3.22, -4.58);
+      ped.group.position.y = 0.27;
+      ped.setChibi(defs[i]);
+      ped.update(0.016, 0.5, cam);
+
+      const anchorWorld = ped.getLabelAnchorWorldPosition(new THREE.Vector3());
+      const spriteTopWorld = ped.getLabelAnchorWorldPosition(new THREE.Vector3(), 0);
+      expect(anchorWorld.y).toBeGreaterThan(spriteTopWorld.y);
+      expect(anchorWorld.z).toBeLessThan(ped.group.position.z);
+      anchors.push(anchorWorld);
+      ped.dispose();
+    }
+
+    // All pedestals at the same Z/camera pitch keep nearly identical world Y height above chibi heads
+    expect(Math.abs(anchors[0].y - anchors[1].y)).toBeLessThan(0.05);
+    expect(Math.abs(anchors[1].y - anchors[2].y)).toBeLessThan(0.05);
   });
 });

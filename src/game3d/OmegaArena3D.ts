@@ -5,7 +5,13 @@ import { AttackImpactFxController } from './AttackImpactFx3D';
 import { ChibiDef, getChibiById } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
 import { ChibiFieldFxController } from './FieldMiner3D';
+import {
+  createCyberShowcasePodium,
+  type CyberShowcasePodiumHandle,
+  type FusionPodiumBuildCtx,
+} from './FusionWorldPodium3D';
 import { createChamferSlabGeometry, createLatheProfileGeometry, disposeObject3D, enableShadows } from './MeshHelpers3D';
+import { getFusionMagicCircuitTexture } from './ProceduralTextures3D';
 import type { TowerFighterConfig } from './TowerArena3D';
 
 export interface OmegaStrikeEvent {
@@ -148,8 +154,25 @@ export class OmegaArena3D {
   private readonly breakFloorRing: THREE.Mesh;
   private readonly breakFloorMat: THREE.MeshBasicMaterial;
   private readonly daisSigilMesh: THREE.Mesh;
+  private readonly daisOuterRingMesh: THREE.Mesh;
   private readonly outerSealRingMesh: THREE.Mesh;
+  private readonly outerFloorSealMat: THREE.MeshBasicMaterial;
   private readonly shrineCrownCrystal: THREE.Mesh;
+  private readonly bossPodium: CyberShowcasePodiumHandle;
+  private readonly bossStageY: number;
+  private readonly playerPodiums: CyberShowcasePodiumHandle[] = [];
+  private readonly conduitFlows: Array<{
+    slotIndex: number;
+    startX: number;
+    startZ: number;
+    endX: number;
+    endZ: number;
+    coreMat: THREE.MeshBasicMaterial;
+    pulses: THREE.Mesh[];
+  }> = [];
+  private readonly podiumGeos: THREE.BufferGeometry[] = [];
+  private readonly podiumMats: THREE.Material[] = [];
+  private readonly podiumTextures: THREE.Texture[] = [];
   private readonly floatingIslets: Array<{ group: THREE.Group; baseY: number; phase: number }> = [];
   private readonly emberPoints: THREE.Points;
   private readonly emberPositions: Float32Array;
@@ -174,11 +197,30 @@ export class OmegaArena3D {
     this.secondaryNeonMat = new THREE.MeshBasicMaterial({
       color: 0xfde047,
     });
+    const circuitTex = getFusionMagicCircuitTexture();
     this.bossDaisRingMat = new THREE.MeshBasicMaterial({
       color: 0xef4444,
+      ...(circuitTex ? { map: circuitTex } : {}),
       transparent: true,
-      opacity: 0.86,
+      opacity: 0.84,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
       side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    });
+    this.outerFloorSealMat = new THREE.MeshBasicMaterial({
+      color: 0xfde047,
+      ...(circuitTex ? { map: circuitTex } : {}),
+      transparent: true,
+      opacity: 0.42,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
     });
     this.breakFloorMat = new THREE.MeshBasicMaterial({
       color: 0xfacc15,
@@ -209,8 +251,11 @@ export class OmegaArena3D {
 
     const stageHandles = this.buildArenaStage();
     this.daisSigilMesh = stageHandles.daisSigil;
+    this.daisOuterRingMesh = stageHandles.daisOuterRing;
     this.outerSealRingMesh = stageHandles.outerSealRing;
     this.shrineCrownCrystal = stageHandles.shrineCrownCrystal;
+    this.bossPodium = stageHandles.bossPodium;
+    this.bossStageY = BOSS_DAIS_Y + 0.04 + this.bossPodium.topY;
 
     // Rising atmospheric Sanctum embers
     const emberGeo = new THREE.BufferGeometry();
@@ -238,14 +283,14 @@ export class OmegaArena3D {
       new THREE.CylinderGeometry(2.15, 2.15, 4.4, 12),
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
     );
-    this.bossHitMesh.position.set(0, BOSS_DAIS_Y + 2.2, BOSS_POS_Z);
+    this.bossHitMesh.position.set(0, this.bossStageY + 2.2, BOSS_POS_Z);
     this.bossHitMesh.userData = { kind: 'omega-boss' };
     this.group.add(this.bossHitMesh);
     this.clickables.push(this.bossHitMesh);
 
-    this.breakFloorRing = new THREE.Mesh(new THREE.RingGeometry(2.75, 3.65, 36), this.breakFloorMat);
+    this.breakFloorRing = new THREE.Mesh(new THREE.RingGeometry(2.42, 2.74, 48), this.breakFloorMat);
     this.breakFloorRing.rotation.x = -Math.PI / 2;
-    this.breakFloorRing.position.set(0, BOSS_DAIS_Y + 0.05, BOSS_POS_Z);
+    this.breakFloorRing.position.set(0, BOSS_DAIS_Y + 0.036, BOSS_POS_Z);
     this.group.add(this.breakFloorRing);
 
     this.group.add(this.targetsGroup, this.impactFx.group);
@@ -268,55 +313,109 @@ export class OmegaArena3D {
     return new THREE.CanvasTexture(c);
   }
 
+  private applyPodiumColors(
+    podium: CyberShowcasePodiumHandle,
+    primaryHex: string,
+    secondaryHex: string,
+    activeAura: boolean,
+    intensity = 1.15
+  ): void {
+    podium.ringMat.color.set(primaryHex);
+    podium.ringMat.emissive.set(primaryHex);
+    podium.ringMat.emissiveIntensity = intensity;
+    podium.holoDiscMat.color.set(primaryHex);
+    podium.sigilMat.color.set(primaryHex);
+    podium.auraGroup.visible = activeAura;
+    if (activeAura) {
+      podium.auraVeilMat.uniforms.uColorA.value.set(primaryHex);
+      podium.auraVeilMat.uniforms.uColorB.value.set(secondaryHex);
+      podium.auraOuterVeilMat.uniforms.uColorA.value.set(secondaryHex);
+      podium.auraOuterVeilMat.uniforms.uColorB.value.set(primaryHex);
+      podium.particleMat.uniforms.uColorA.value.set(primaryHex);
+      podium.particleMat.uniforms.uColorB.value.set(secondaryHex);
+    }
+  }
+
   private buildArenaStage(): {
     daisSigil: THREE.Mesh;
+    daisOuterRing: THREE.Mesh;
     outerSealRing: THREE.Mesh;
     shrineCrownCrystal: THREE.Mesh;
+    bossPodium: CyberShowcasePodiumHandle;
   } {
     const darkDeckMat = new THREE.MeshStandardMaterial({ color: 0x2a3754, roughness: 0.68, metalness: 0.22, flatShading: true });
     const rimMetalMat = new THREE.MeshStandardMaterial({ color: 0x1d2942, roughness: 0.42, metalness: 0.55, flatShading: true });
-    const stonePadMat = new THREE.MeshStandardMaterial({ color: 0x3b4d74, roughness: 0.62, metalness: 0.2, flatShading: true });
+    const podiumSteelMat = new THREE.MeshStandardMaterial({ color: 0x3b4d74, roughness: 0.4, metalness: 0.42, flatShading: true });
+    const podiumBrightMat = new THREE.MeshStandardMaterial({ color: 0x7c90ad, roughness: 0.34, metalness: 0.48, flatShading: true });
+    this.podiumMats.push(darkDeckMat, rimMetalMat, podiumSteelMat, podiumBrightMat);
 
-    // Main octagonal floating sanctum deck
+    const podiumCtx: FusionPodiumBuildCtx = {
+      armorDarkMat: rimMetalMat,
+      armorSteelMat: podiumSteelMat,
+      brightSteelMat: podiumBrightMat,
+      ownedGeos: this.podiumGeos,
+      ownedMats: this.podiumMats,
+      ownedTextures: this.podiumTextures,
+    };
+
+    // Main octagonal floating sanctum deck (top surface strictly at y = 0.0)
     const underHull = new THREE.Mesh(
       createLatheProfileGeometry(
         [
           [3.6, -2.8],
           [7.4, -1.4],
-          [10.2, -0.25],
+          [10.2, -0.44],
         ],
         8
       ),
       rimMetalMat
     );
     const mainSlab = new THREE.Mesh(createChamferSlabGeometry(19.6, 0.44, 16.2, 3.8, 0.06), darkDeckMat);
-    mainSlab.position.set(0, -0.22, 0.2);
+    mainSlab.position.set(0, -0.44, 0.2);
     enableShadows(mainSlab);
 
     const trimRing = new THREE.Mesh(createChamferSlabGeometry(19.9, 0.14, 16.5, 3.9, 0.02), this.trimNeonMat);
-    trimRing.position.set(0, -0.08, 0.2);
+    trimRing.position.set(0, -0.18, 0.2);
 
-    // Dual-stepped Boss Shrine Dais + flat horizontal rotating seal rings
-    const daisBase = new THREE.Mesh(createChamferSlabGeometry(7.6, 0.28, 6.0, 1.5, 0.04), rimMetalMat);
-    daisBase.position.set(0, 0.14, BOSS_POS_Z);
+    // Dual-stepped Boss Shrine Dais (top strictly at y = BOSS_DAIS_Y) + Grand Cyber-Showcase Boss Podium
+    const daisBase = new THREE.Mesh(createChamferSlabGeometry(7.6, 0.26, 6.0, 1.5, 0.04), rimMetalMat);
+    daisBase.position.set(0, 0, BOSS_POS_Z);
     enableShadows(daisBase);
 
     const daisStep = new THREE.Mesh(createChamferSlabGeometry(6.2, BOSS_DAIS_Y - 0.26, 4.8, 1.2, 0.03), darkDeckMat);
-    daisStep.position.set(0, 0.26 + (BOSS_DAIS_Y - 0.26) * 0.5, BOSS_POS_Z);
+    daisStep.position.set(0, 0.26, BOSS_POS_Z);
     enableShadows(daisStep);
 
-    const daisSigil = new THREE.Mesh(new THREE.RingGeometry(2.05, 2.48, 32), this.bossDaisRingMat);
+    const hasCircuitTex = Boolean(this.bossDaisRingMat.map);
+    const daisSigil = new THREE.Mesh(
+      hasCircuitTex ? new THREE.PlaneGeometry(5.1, 5.1) : new THREE.RingGeometry(2.1, 2.48, 32),
+      this.bossDaisRingMat
+    );
     daisSigil.rotation.x = -Math.PI / 2;
-    daisSigil.position.set(0, BOSS_DAIS_Y + 0.03, BOSS_POS_Z);
+    daisSigil.position.set(0, BOSS_DAIS_Y + 0.015, BOSS_POS_Z);
+    daisSigil.renderOrder = 2;
+
+    const daisOuterRing = new THREE.Mesh(
+      new THREE.RingGeometry(2.38, 2.5, 8),
+      this.secondaryNeonMat
+    );
+    daisOuterRing.rotation.x = -Math.PI / 2;
+    daisOuterRing.rotation.z = Math.PI / 8;
+    daisOuterRing.position.set(0, BOSS_DAIS_Y + 0.03, BOSS_POS_Z);
+
+    const bossPodium = createCyberShowcasePodium(podiumCtx, 'OMEGA', 1.85, true);
+    bossPodium.group.position.set(0, BOSS_DAIS_Y + 0.04, BOSS_POS_Z);
+    this.group.add(bossPodium.group);
 
     const outerSealRing = new THREE.Mesh(
-      new THREE.RingGeometry(4.45, 4.75, 36),
-      new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.48, side: THREE.DoubleSide })
+      hasCircuitTex ? new THREE.PlaneGeometry(8.6, 8.6) : new THREE.RingGeometry(3.98, 4.18, 48),
+      this.outerFloorSealMat
     );
     outerSealRing.rotation.x = -Math.PI / 2;
-    outerSealRing.position.set(0, 0.04, 0.1);
+    outerSealRing.position.set(0, 0.012, BOSS_POS_Z);
+    outerSealRing.renderOrder = 1;
 
-    this.group.add(underHull, mainSlab, trimRing, daisBase, daisStep, daisSigil, outerSealRing);
+    this.group.add(underHull, mainSlab, trimRing, daisBase, daisStep, daisSigil, daisOuterRing, outerSealRing);
 
     // Sculpted Rear Torii / Sanctum Portal Gate framing Boss dais cleanly below top HUD bar
     const gateZ = -5.9;
@@ -380,29 +479,72 @@ export class OmegaArena3D {
       this.floatingIslets.push({ group: islet, baseY: iy, phase: i * 1.15 });
     }
 
-    // 5 Player Chibi Summon Pads + glowing Ley-Line Conduits toward Boss dais
-    for (const [sx, sz] of PLAYER_PAD_POSITIONS) {
-      const pad = new THREE.Mesh(createChamferSlabGeometry(1.46, 0.16, 1.46, 0.32, 0.02), stonePadMat);
-      pad.position.set(sx, 0.08, sz);
-      enableShadows(pad);
-      const rim = new THREE.Mesh(new THREE.RingGeometry(0.58, 0.72, 20), this.bossDaisRingMat);
-      rim.rotation.x = -Math.PI / 2;
-      rim.position.set(sx, 0.17, sz);
+    // 5 Player Chibi Cyber-Showcase Podiums + multi-layer glowing Ley-Line Conduits toward Boss Dais
+    const pulseGeo = new THREE.OctahedronGeometry(0.085, 0);
+    pulseGeo.scale(0.85, 0.55, 2.2);
+    this.podiumGeos.push(pulseGeo);
 
-      // Subtle glowing conduit line connecting Player Pad to Boss Dais
+    for (let i = 0; i < PLAYER_PAD_POSITIONS.length; i++) {
+      const [sx, sz] = PLAYER_PAD_POSITIONS[i];
+      const podium = createCyberShowcasePodium(podiumCtx, `0${i + 1}`, 0.92, false);
+      podium.group.position.set(sx, 0, sz);
+      this.applyPodiumColors(podium, '#38bdf8', '#a855f7', false, 0.65);
+      this.group.add(podium.group);
+      this.playerPodiums.push(podium);
+
       const dx = -sx;
       const dz = BOSS_POS_Z - sz;
-      const dist = Math.hypot(dx, dz) - 2.6;
-      if (dist > 0.4) {
-        const conduit = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.04, dist), this.secondaryNeonMat);
-        conduit.position.set(sx * 0.5, 0.035, (sz + BOSS_POS_Z) * 0.5 + 0.55);
-        conduit.rotation.y = Math.atan2(dx, dz);
-        this.group.add(conduit);
+      const totalDist = Math.hypot(dx, dz);
+      const startOff = 0.92;
+      const endOff = 2.95;
+      const segLen = totalDist - startOff - endOff;
+      if (segLen > 0.4) {
+        const nx = dx / totalDist;
+        const nz = dz / totalDist;
+        const startX = sx + nx * startOff;
+        const startZ = sz + nz * startOff;
+        const endX = sx + nx * (totalDist - endOff);
+        const endZ = sz + nz * (totalDist - endOff);
+        const yaw = Math.atan2(dx, dz);
+
+        const conduitGroup = new THREE.Group();
+        conduitGroup.position.set((startX + endX) * 0.5, 0, (startZ + endZ) * 0.5);
+        conduitGroup.rotation.y = yaw;
+
+        const channelGeo = new THREE.BoxGeometry(0.28, 0.026, segLen);
+        const coreGeo = new THREE.BoxGeometry(0.095, 0.02, Math.max(0.2, segLen - 0.06));
+        const railGeo = new THREE.BoxGeometry(0.024, 0.016, Math.max(0.2, segLen - 0.02));
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45 });
+        this.podiumGeos.push(channelGeo, coreGeo, railGeo);
+        this.podiumMats.push(coreMat);
+
+        const channel = new THREE.Mesh(channelGeo, rimMetalMat);
+        channel.position.y = 0.013;
+        const coreVein = new THREE.Mesh(coreGeo, coreMat);
+        coreVein.position.y = 0.032;
+        conduitGroup.add(channel, coreVein);
+
+        for (const rx of [-0.125, 0.125]) {
+          const rail = new THREE.Mesh(railGeo, this.secondaryNeonMat);
+          rail.position.set(rx, 0.033, 0);
+          conduitGroup.add(rail);
+        }
+        this.group.add(conduitGroup);
+
+        const pulses: THREE.Mesh[] = [];
+        for (let p = 0; p < 2; p++) {
+          const pulse = new THREE.Mesh(pulseGeo, coreMat);
+          pulse.rotation.y = yaw;
+          pulse.position.set(startX, 0.056, startZ);
+          pulse.visible = false;
+          this.group.add(pulse);
+          pulses.push(pulse);
+        }
+        this.conduitFlows.push({ slotIndex: i, startX, startZ, endX, endZ, coreMat, pulses });
       }
-      this.group.add(pad, rim);
     }
 
-    return { daisSigil, outerSealRing, shrineCrownCrystal };
+    return { daisSigil, daisOuterRing, outerSealRing, shrineCrownCrystal, bossPodium };
   }
 
   public setBossId(bossId: OmegaBossId): void {
@@ -414,8 +556,10 @@ export class OmegaArena3D {
     this.trimNeonMat.color.set(accentHex);
     this.secondaryNeonMat.color.set(secHex);
     this.bossDaisRingMat.color.set(accentHex);
+    this.outerFloorSealMat.color.set(secHex);
     this.shrineLight.color.set(accentHex);
     this.squadFillLight.color.set(secHex);
+    this.applyPodiumColors(this.bossPodium, accentHex, secHex, true, 1.35);
 
     if (this.bossSprite) {
       this.group.remove(this.bossSprite.group);
@@ -426,7 +570,7 @@ export class OmegaArena3D {
     const chibiDef: ChibiDef | undefined = getChibiById(bossId);
     if (chibiDef) {
       this.bossSprite = new ChibiSprite3D(chibiDef);
-      this.bossSprite.group.position.set(0, BOSS_DAIS_Y, BOSS_POS_Z);
+      this.bossSprite.group.position.set(0, this.bossStageY, BOSS_POS_Z);
       this.bossSprite.group.scale.setScalar(3.15);
       this.bossSprite.setFacing(-1);
       this.group.add(this.bossSprite.group);
@@ -449,16 +593,40 @@ export class OmegaArena3D {
         entry.fx.dispose();
         entry.sprite.dispose();
         this.fighters.delete(slot);
+        const pod = this.playerPodiums[slot % this.playerPodiums.length];
+        if (pod) this.applyPodiumColors(pod, '#38bdf8', '#a855f7', false, 0.55);
+        const flow = this.conduitFlows.find((cf) => cf.slotIndex === slot % PLAYER_PAD_POSITIONS.length);
+        if (flow) {
+          flow.coreMat.color.set('#38bdf8');
+          flow.coreMat.opacity = 0.35;
+          flow.pulses.forEach((p) => {
+            p.visible = false;
+          });
+        }
       }
     }
 
     for (const cfg of configs) {
+      const podIdx = cfg.slotIndex % this.playerPodiums.length;
+      const playerPod = this.playerPodiums[podIdx];
+      if (playerPod) {
+        this.applyPodiumColors(playerPod, cfg.def.accentColor, '#38bdf8', true, 1.15);
+      }
+      const flow = this.conduitFlows.find((cf) => cf.slotIndex === podIdx);
+      if (flow) {
+        flow.coreMat.color.set(cfg.def.accentColor);
+        flow.coreMat.opacity = 0.92;
+        flow.pulses.forEach((p) => {
+          p.visible = true;
+        });
+      }
       const existing = this.fighters.get(cfg.slotIndex);
       if (existing && existing.chibiId === cfg.def.id) {
         existing.dmg = cfg.dmg;
         existing.attackInterval = Math.max(0.32, 0.9 / Math.max(0.4, cfg.miningMult));
         existing.fx.setEnchant(cfg.enchantId);
         existing.sprite.setAccentColor(cfg.def.accentColor);
+        existing.sprite.setAnimState('attack');
         continue;
       }
       if (existing) {
@@ -468,21 +636,23 @@ export class OmegaArena3D {
         this.fighters.delete(cfg.slotIndex);
       }
       const [sx, sz] = PLAYER_PAD_POSITIONS[cfg.slotIndex % PLAYER_PAD_POSITIONS.length];
+      const standY = playerPod ? playerPod.topY : 0.26;
       const sprite = new ChibiSprite3D(cfg.def);
-      sprite.group.position.set(sx, 0.14, sz);
+      sprite.group.position.set(sx, standY, sz);
+      sprite.setAnimState('attack');
       sprite.setFacing(sx <= 0 ? 1 : -1);
       const fx = new ChibiFieldFxController(sprite.group, cfg.def.accentColor, cfg.slotIndex);
       fx.setEnchant(cfg.enchantId);
       this.group.add(sprite.group);
 
       const angleToBoss = Math.atan2(sz - BOSS_POS_Z, sx);
-      const attackPos = new THREE.Vector3(Math.cos(angleToBoss) * 1.9, 0.25, BOSS_POS_Z + Math.sin(angleToBoss) * 1.7);
+      const attackPos = new THREE.Vector3(Math.cos(angleToBoss) * 1.9, standY + 0.14, BOSS_POS_Z + Math.sin(angleToBoss) * 1.7);
       this.fighters.set(cfg.slotIndex, {
         slotIndex: cfg.slotIndex,
         chibiId: cfg.def.id,
         sprite,
         fx,
-        spawnPos: new THREE.Vector3(sx, 0.14, sz),
+        spawnPos: new THREE.Vector3(sx, standY, sz),
         attackPos,
         dmg: cfg.dmg,
         attackInterval: Math.max(0.32, 0.9 / Math.max(0.4, cfg.miningMult)),
@@ -534,7 +704,7 @@ export class OmegaArena3D {
     this.bossHitBounce = 0.24;
     this.impactFx.spawnImpact({
       targetX: (Math.random() - 0.5) * 0.5,
-      targetY: BOSS_DAIS_Y + 1.45,
+      targetY: this.bossStageY + 1.45,
       targetZ: BOSS_POS_Z + 0.35,
       accentColor: accentColor ?? (this.bossId === 'crimson-ronin' ? '#ef4444' : '#e879f9'),
       heavy: isCrit,
@@ -553,7 +723,7 @@ export class OmegaArena3D {
   }
 
   public getBossHeadScreenAnchor(camera: THREE.Camera, width: number, height: number): { x: number; y: number } | null {
-    this.projVec.set(0, BOSS_DAIS_Y + 3.45, BOSS_POS_Z).project(camera);
+    this.projVec.set(0, this.bossStageY + 3.45, BOSS_POS_Z).project(camera);
     if (this.projVec.z <= -1 || this.projVec.z >= 1) return null;
     return {
       x: (this.projVec.x * 0.5 + 0.5) * width,
@@ -564,7 +734,9 @@ export class OmegaArena3D {
   public getTargetScreenAnchors(camera: THREE.Camera, width: number, height: number): OmegaTargetScreenAnchor[] {
     const out: OmegaTargetScreenAnchor[] = [];
     for (const entry of this.targetEntries.values()) {
-      this.projVec.set(entry.x, 1.85, entry.z).project(camera);
+      const anchorY =
+        entry.kind === 'obsidian_pillar' ? 3.24 : entry.kind === 'phantom_blade' ? 2.74 : 2.38;
+      this.projVec.set(entry.x, anchorY, entry.z).project(camera);
       if (this.projVec.z <= -1 || this.projVec.z >= 1) continue;
       out.push({
         id: entry.id,
@@ -589,16 +761,33 @@ export class OmegaArena3D {
       this.bossHitBounce = Math.max(0, this.bossHitBounce - safeDt);
     }
     if (this.bossSprite) {
-      const bob = this.breakActive ? -0.18 : Math.sin(elapsed * 2.4) * 0.08;
+      const bob = this.breakActive ? -0.14 : Math.sin(elapsed * 2.4) * 0.08;
       const bounceZ = this.bossHitBounce > 0 ? -Math.sin((this.bossHitBounce / 0.24) * Math.PI) * 0.16 : 0;
-      this.bossSprite.group.position.set(0, BOSS_DAIS_Y + bob, BOSS_POS_Z + bounceZ);
+      this.bossSprite.group.position.set(0, this.bossStageY + bob, BOSS_POS_Z + bounceZ);
       this.bossSprite.update(safeDt, elapsed, camera);
     }
 
+    const animatePodium = (pod: CyberShowcasePodiumHandle, phaseOffset: number): void => {
+      const pTime = elapsed + phaseOffset;
+      pod.sigilMesh.rotation.z = pTime * 0.28;
+      if (pod.auraGroup.visible) {
+        pod.auraVeilMat.uniforms.uTime.value = pTime;
+        pod.auraVeilMat.uniforms.uOpacity.value = 0.65 + Math.sin(pTime * 1.8) * 0.12;
+        pod.auraOuterVeilMat.uniforms.uTime.value = pTime + 0.6;
+        pod.auraOuterVeilMat.uniforms.uOpacity.value = 0.36 + Math.sin(pTime * 1.8) * 0.08;
+        pod.particleMat.uniforms.uTime.value = pTime;
+      }
+    };
+    animatePodium(this.bossPodium, 0);
+    for (let i = 0; i < this.playerPodiums.length; i++) {
+      animatePodium(this.playerPodiums[i], i * 0.55);
+    }
+
     this.breakFloorMat.opacity = this.breakActive ? 0.55 + Math.sin(elapsed * 12) * 0.25 : 0;
-    this.bossDaisRingMat.opacity = this.parryActive ? 0.95 : 0.55 + Math.sin(elapsed * 3) * 0.18;
-    this.daisSigilMesh.rotation.z = elapsed * 0.45;
-    this.outerSealRingMesh.rotation.z = -elapsed * 0.22;
+    this.bossDaisRingMat.opacity = this.parryActive ? 0.96 : 0.7 + Math.sin(elapsed * 3) * 0.14;
+    this.daisSigilMesh.rotation.z = elapsed * 0.35;
+    this.daisOuterRingMesh.rotation.z = Math.PI / 8 - elapsed * 0.16;
+    this.outerSealRingMesh.rotation.z = -elapsed * 0.18;
     this.shrineCrownCrystal.rotation.y = elapsed * 1.3;
     this.shrineCrownCrystal.position.y = 4.98 + Math.sin(elapsed * 2.2) * 0.14;
 
@@ -618,7 +807,18 @@ export class OmegaArena3D {
       entry.root.rotation.y = elapsed * (entry.kind === 'obsidian_pillar' ? 0.8 : 2.2);
     }
 
+    for (const flow of this.conduitFlows) {
+      if (!flow.pulses[0]?.visible) continue;
+      for (let pIdx = 0; pIdx < flow.pulses.length; pIdx++) {
+        const frac = (elapsed * 0.85 + flow.slotIndex * 0.19 + pIdx * 0.5) % 1;
+        const pulse = flow.pulses[pIdx];
+        pulse.position.x = flow.startX + (flow.endX - flow.startX) * frac;
+        pulse.position.z = flow.startZ + (flow.endZ - flow.startZ) * frac;
+      }
+    }
+
     for (const f of this.fighters.values()) {
+      f.sprite.setAnimState('attack');
       f.attackCooldown -= safeDt;
       if (f.lungeTimer > 0) f.lungeTimer = Math.max(0, f.lungeTimer - safeDt);
 
@@ -632,13 +832,13 @@ export class OmegaArena3D {
           attackInterval: f.attackInterval,
           dmg: f.dmg,
           wx: (Math.random() - 0.5) * 0.9,
-          wy: BOSS_DAIS_Y + 1.85,
+          wy: this.bossStageY + 1.85,
           wz: BOSS_POS_Z,
           accentColor: f.colorHex,
         });
       }
 
-      const t = f.lungeTimer > 0 ? Math.sin((f.lungeTimer / 0.24) * Math.PI) * 0.65 : 0;
+      const t = f.lungeTimer > 0 ? Math.sin((f.lungeTimer / 0.24) * Math.PI) * 0.24 : 0;
       f.sprite.group.position.lerpVectors(f.spawnPos, f.attackPos, t);
       f.fx.update(elapsed);
       f.sprite.update(safeDt, elapsed, camera);
@@ -660,6 +860,14 @@ export class OmegaArena3D {
     this.targetEntries.clear();
     this.impactFx.dispose();
     this.emberTexture?.dispose();
+    for (const g of this.podiumGeos) g.dispose();
+    for (const m of this.podiumMats) m.dispose();
+    for (const t of this.podiumTextures) t.dispose();
+    this.podiumGeos.length = 0;
+    this.podiumMats.length = 0;
+    this.podiumTextures.length = 0;
+    this.playerPodiums.length = 0;
+    this.conduitFlows.length = 0;
     disposeObject3D(this.group);
   }
 }

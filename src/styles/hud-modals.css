@@ -583,7 +583,9 @@
     .mam-omega-flash-veil,
     .mam-omega-banner-sweep,
     .mam-omega-confirm-rise,
-    .mam-omega-parry-ring-shrink {
+    .mam-omega-parry-ring-shrink,
+    .mam-omega-tap-bounce,
+    .mam-omega-tap-pulse {
       animation: none !important;
       opacity: 1 !important;
     }
@@ -591,6 +593,14 @@
 
   .mam-omega-parry-ring-shrink {
     animation: mamOmegaParryShrink 1.1s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+
+  .mam-omega-tap-bounce {
+    animation: mamOmegaTapBounce 0.88s cubic-bezier(0.36, 0, 0.64, 1) infinite;
+  }
+
+  .mam-omega-tap-pulse {
+    animation: mamOmegaTapPulse 1.05s cubic-bezier(0.22, 1, 0.36, 1) infinite;
   }
 
   @keyframes mamOmegaParryShrink {
@@ -605,6 +615,27 @@
     100% {
       opacity: 0.2;
       transform: scale(0.84);
+    }
+  }
+
+  @keyframes mamOmegaTapBounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+
+  @keyframes mamOmegaTapPulse {
+    0% {
+      opacity: 0.95;
+      transform: scale(0.85);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.85);
     }
   }
 

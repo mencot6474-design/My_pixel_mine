@@ -11,7 +11,7 @@ import {
 } from '../game/OmegaData';
 import { CG_ADS_ENABLED, cgRequestRewardedAd } from '../sdk/crazygames';
 import { getChibiById } from '../game3d/ChibiCatalog';
-import { omegaCrestIconHtml } from './HudIcons';
+import { bossKeyIconHtml, hudIconHtml, omegaCrestIconHtml } from './HudIcons';
 import {
   buildFullscreenRevealDomHtml,
   OmegaForgeCutsceneController,
@@ -215,7 +215,7 @@ export class OmegaBossModalUi {
                   cleared
                     ? `<span class="mam-pill-xs bg-[#86efac] text-[#14111d]">Cleared</span>`
                     : unlocked
-                      ? `<span class="mam-pill-xs bg-[#fde047] text-[#14111d]">1st: +${fmtInt(t.firstClearGems)}💎</span>`
+                      ? `<span class="mam-pill-xs bg-[#fde047] text-[#14111d] inline-flex items-center gap-1">1st: +${fmtInt(t.firstClearGems)}${hudIconHtml('gem', 12, 'Gems')}</span>`
                       : `<span class="mam-pill-xs bg-[#cbd5e1] text-[#475569]">Locked</span>`
                 }
               </div>
@@ -289,13 +289,18 @@ export class OmegaBossModalUi {
       <div class="w-full flex items-center justify-between gap-2 flex-wrap">
         <div class="flex items-center gap-1.5 flex-wrap">${bossTabsHtml}</div>
         <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="mam-pill bg-[#fff8e7] text-[#14111d]" data-omega-keys-pill>
-            🔑 ${this.state.omegaKeys}/${OMEGA_MAX_KEYS} Keys${regenSec > 0 ? ` (${formatCountdownTimer(regenSec)})` : ''}
+          <span class="mam-pill bg-[#fff8e7] text-[#14111d] inline-flex items-center gap-1" data-omega-keys-pill>
+            ${bossKeyIconHtml(14)}
+            <span data-omega-keys-text>${this.state.omegaKeys}/${OMEGA_MAX_KEYS} Keys${regenSec > 0 ? ` (${formatCountdownTimer(regenSec)})` : ''}</span>
           </span>
           <button
-            class="px-2.5 py-1 rounded-xl border-2 border-[#14111d] bg-[#bae6fd] hover:bg-[#7dd3fc] text-[#14111d] text-[11px] font-black cursor-pointer"
+            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border-2 border-[#14111d] bg-[#bae6fd] hover:bg-[#7dd3fc] text-[#14111d] text-[11px] font-black cursor-pointer"
             data-omega-buy-key="true"
-          >+1 Key (${OMEGA_KEY_GEM_COST}💎)</button>
+          ><span>+1 Key</span>${hudIconHtml('gem', 13, 'Gems')}<span>${fmtShort(OMEGA_KEY_GEM_COST)}</span></button>
+          <span class="mam-pill bg-[#fce7f3] text-[#14111d] inline-flex items-center gap-1" data-omega-gems-pill>
+            ${hudIconHtml('gem', 13, 'Gems')}
+            <span>${fmtShort(this.state.gems)}</span>
+          </span>
           ${
             CG_ADS_ENABLED
               ? `<button class="px-2.5 py-1 rounded-xl border-2 border-[#14111d] bg-[#fde047] hover:bg-[#fef08a] text-[#14111d] text-[11px] font-black cursor-pointer" data-omega-ad-key="true">+1 Free (Ad)</button>`
@@ -447,7 +452,7 @@ export class OmegaBossModalUi {
       } else if (res === 'full') {
         this.onToast?.('Boss Keys already full!');
       } else {
-        this.onToast?.(`Need ${OMEGA_KEY_GEM_COST} Gems!`);
+        this.onToast?.(`Need ${fmtShort(OMEGA_KEY_GEM_COST)} Gems!`);
       }
       this.onRequestRender();
     });

@@ -655,6 +655,13 @@ export class PlotPedestal3D {
     return this.enchantId;
   }
 
+  public getLabelAnchorWorldPosition(out: THREE.Vector3, extraLocalClearance = 0.13): THREE.Vector3 {
+    if (this.chibiSprite) {
+      return this.chibiSprite.getLabelAnchorWorldPosition(out, extraLocalClearance);
+    }
+    return out.set(this.group.position.x, this.group.position.y + 3.85, this.group.position.z);
+  }
+
   public setChibiAnimState(state: ChibiAnimState): void {
     this.chibiSprite?.setAnimState(state);
   }

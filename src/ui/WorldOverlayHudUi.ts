@@ -386,7 +386,7 @@ export class WorldOverlayHudUi {
           this.plotLayerEl.innerHTML = items
             .map(
               (item) =>
-                `<div class="absolute top-0 left-0 pointer-events-none select-none will-change-transform origin-bottom" data-label-slot="${item.slotIndex}">${renderRarityBadgeHtml(item.rarity, '!ml-0')}</div>`
+                `<div class="absolute top-0 left-0 flex items-end justify-center leading-none pointer-events-none select-none will-change-transform origin-bottom" data-label-slot="${item.slotIndex}">${renderRarityBadgeHtml(item.rarity, '!ml-0')}</div>`
             )
             .join('');
         }
@@ -742,21 +742,42 @@ export class WorldOverlayHudUi {
           : '';
       const targetsHtml = data.targets
         .map((t) => {
-          const iconSvg =
+          const cfg =
             t.kind === 'phantom_blade'
-              ? `<svg viewBox="0 0 18 18" width="15" height="15" fill="none" aria-hidden="true"><path d="M14.5 2.5L6 11l-2.5 3.5L7 12l8.5-8.5-1-1Z" fill="#ef4444" stroke="#14111d" stroke-width="1.5" stroke-linejoin="round"/><path d="M5 10l3 3" stroke="#14111d" stroke-width="2" stroke-linecap="round"/></svg>`
+              ? {
+                  label: 'SHATTER BLADE',
+                  bg: 'bg-[#fff1f2] text-[#9f1239] group-hover:bg-[#ffe4e6]',
+                  arrowFill: '#fb7185',
+                  dotBg: 'bg-[#fb7185]',
+                }
               : t.kind === 'obsidian_pillar'
-                ? `<svg viewBox="0 0 18 18" width="15" height="15" fill="none" aria-hidden="true"><polygon points="9,2 14,5.5 13,15 5,15 4,5.5" fill="#c084fc" stroke="#14111d" stroke-width="1.6" stroke-linejoin="round"/><path d="M6.5 9h5" stroke="#fde047" stroke-width="1.8" stroke-linecap="round"/></svg>`
-                : `<svg viewBox="0 0 18 18" width="15" height="15" fill="none" aria-hidden="true"><polygon points="9,2 15.5,9 9,16 2.5,9" fill="#38bdf8" stroke="#14111d" stroke-width="1.6" stroke-linejoin="round"/><circle cx="9" cy="9" r="2.2" fill="#fde047"/></svg>`;
-          const label =
-            t.kind === 'phantom_blade' ? 'SHATTER BLADE' : t.kind === 'obsidian_pillar' ? 'BREAK PILLAR' : 'DETONATE SEAL';
-          const bg =
-            t.kind === 'phantom_blade'
-              ? 'bg-[#ffe4e6] text-[#9f1239] hover:bg-[#fecdd3]'
-              : t.kind === 'obsidian_pillar'
-                ? 'bg-[#f5d0fe] text-[#701a75] hover:bg-[#f0abfc]'
-                : 'bg-[#bae6fd] text-[#0369a1] hover:bg-[#7dd3fc]';
-          return `<button class="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border-[2.5px] border-[#14111d] ${bg} text-[10.5px] font-black tracking-wide cursor-pointer transition-transform hover:scale-95 active:scale-90" data-omega-hit-target="${t.id}" style="left:${Math.round(t.x)}px;top:${Math.round(t.y)}px">${iconSvg}<span>${label}</span></button>`;
+                ? {
+                    label: 'BREAK PILLAR',
+                    bg: 'bg-[#fae8ff] text-[#701a75] group-hover:bg-[#f5d0fe]',
+                    arrowFill: '#e879f9',
+                    dotBg: 'bg-[#e879f9]',
+                  }
+                : {
+                    label: 'DETONATE SEAL',
+                    bg: 'bg-[#e0f2fe] text-[#0369a1] group-hover:bg-[#bae6fd]',
+                    arrowFill: '#38bdf8',
+                    dotBg: 'bg-[#38bdf8]',
+                  };
+          return `<button class="pointer-events-auto absolute -translate-x-1/2 -translate-y-full flex flex-col items-center cursor-pointer group active:scale-90 transition-transform" data-omega-hit-target="${t.id}" style="left:${Math.round(t.x)}px;top:${Math.round(t.y)}px" aria-label="Tap ${cfg.label}">
+            <span class="mam-omega-tap-bounce flex flex-col items-center">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border-[2.5px] border-[#14111d] ${cfg.bg} text-[10.5px] font-black tracking-wide leading-none uppercase whitespace-nowrap">
+                <span class="px-1.5 py-0.5 rounded-full bg-[#fde047] text-[#14111d] border-[1.5px] border-[#14111d] text-[9px] font-black tracking-wider leading-none">TAP!</span>
+                <span>${cfg.label}</span>
+              </span>
+              <svg viewBox="0 0 20 13" width="18" height="12" fill="none" class="-mt-[2px]" aria-hidden="true">
+                <path d="M2.5 1.5L10 10.5L17.5 1.5Z" fill="${cfg.arrowFill}" stroke="#14111d" stroke-width="2.4" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="relative mt-0.5 flex items-center justify-center w-4 h-4 pointer-events-none">
+              <span class="mam-omega-tap-pulse absolute inset-0 rounded-full border-[2px] border-[#fde047]"></span>
+              <span class="w-2.5 h-2.5 rounded-full ${cfg.dotBg} border-[1.5px] border-[#14111d]"></span>
+            </span>
+          </button>`;
         })
         .join('');
       this.omegaLayerEl.innerHTML = `${parryHtml}${targetsHtml}`;

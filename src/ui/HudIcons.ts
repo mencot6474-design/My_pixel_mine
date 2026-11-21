@@ -215,6 +215,16 @@ export function omegaCrestIconHtml(sizePx = 22): string {
   </svg>`;
 }
 
+/** Crisp Sticker-Pop Boss Key SVG icon for Omega Duel Sanctum and Tower key pills. */
+export function bossKeyIconHtml(sizePx = 15): string {
+  return `<svg viewBox="0 0 24 24" width="${sizePx}" height="${sizePx}" fill="none" aria-hidden="true" class="shrink-0">
+    <circle cx="8" cy="12" r="4.8" fill="#fde047" stroke="#14111d" stroke-width="2.2"/>
+    <circle cx="8" cy="12" r="1.6" fill="#14111d"/>
+    <path d="M12.5 12H21.5M18 12V16M21 12V15" stroke="#14111d" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12.5 12H21.5M18 12V16M21 12V15" stroke="#fde047" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
 export function hudIconHtml(key: keyof typeof HUD_ICONS & Hud3dIconKey, sizePx: number, alt = ''): string {
   if (key === 'pickaxe') {
     return pickaxeIconHtml('sunwheel', sizePx, alt || 'Pickaxe');

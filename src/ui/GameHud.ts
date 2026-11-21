@@ -224,7 +224,14 @@ export class GameHud {
         this.setSceneMode('shop');
         this.openModal('omega-boss');
       },
-      () => this.omegaBridge.handleOmegaParryClick()
+      () => this.omegaBridge.handleOmegaParryClick(),
+      () => {
+        const summary = this.state.omegaLastSummary;
+        if (summary) this.omegaBossUi.openForBoss(summary.bossId);
+        this.setSceneMode('shop');
+        this.openModal('omega-boss');
+      },
+      (bossId, tier) => this.omegaBridge.startOmegaBattle(bossId, tier)
     );
     this.omegaBridge = new HudOmegaBridge(
       this.root,
@@ -370,7 +377,11 @@ export class GameHud {
         if (this.inspectedSlot === null) this.toggleModal('inventory');
       } else if (e.key === 'Escape') {
         if (this.inspectedSlot !== null) this.openPlotInspector(null);
-        else if (this.activeModal !== 'none') this.openModal('none');
+        else if (this.sceneMode === 'omega' && !this.state.omegaBattle && this.state.omegaLastSummary?.victory) {
+          this.omegaBossUi.openForBoss(this.state.omegaLastSummary.bossId);
+          this.setSceneMode('shop');
+          this.openModal('omega-boss');
+        } else if (this.activeModal !== 'none') this.openModal('none');
       } else if (e.key >= '1' && e.key <= '9' && this.inspectedSlot === null) {
         this.state.selectHotbarSlot(Number(e.key) - 1);
       }

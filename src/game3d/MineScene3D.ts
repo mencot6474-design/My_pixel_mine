@@ -26,15 +26,34 @@ import { bindMineSceneEvents, getPedestalAtClientPosInScene, performMineTapAtInS
 
 export type SceneMode = 'mine' | 'shop' | 'altar' | 'fusion' | 'tower' | 'omega';
 
+export function getDefaultOrbitPitchForMode(mode: SceneMode): number {
+  switch (mode) {
+    case 'shop':
+      return 0.02;
+    case 'altar':
+      return -0.18;
+    case 'fusion':
+      return -0.04;
+    case 'tower':
+      return -0.34;
+    case 'omega':
+      return -0.26;
+    default:
+      return 0;
+  }
+}
+
 export function applyCameraOrbitDrag(opts: {
   cameraLocked: boolean;
   yaw: number;
   pitch: number;
   dx: number;
   dy: number;
+  defaultYaw?: number;
+  defaultPitch?: number;
 }): { yaw: number; pitch: number } {
   if (opts.cameraLocked) {
-    return { yaw: 0, pitch: 0 };
+    return { yaw: opts.defaultYaw ?? 0, pitch: opts.defaultPitch ?? 0 };
   }
   return {
     yaw: Math.max(-1.35, Math.min(1.35, opts.yaw - opts.dx * 0.005)),
@@ -434,6 +453,35 @@ export class MineScene3D {
     this.lastTime = now;
     this.elapsed += dtSec;
 
+    const camState = {
+      orbitYaw: this.orbitYaw,
+      orbitPitch: this.orbitPitch,
+      camRadius: this.camRadius,
+      tapShakeIntensity: this.tapShakeIntensity,
+    };
+    stepMineSceneCamera({
+      dtSec,
+      elapsed: this.elapsed,
+      mode: this.mode,
+      camera: this.camera,
+      currentLookAt: this.currentLookAt,
+      baseCamPos: this.baseCamPos,
+      lookAtPos: this.lookAtPos,
+      focusedPlotIndex: this.focusedPlotIndex,
+      pedestals: this.pedestals,
+      crateGroup: this.crateGroup,
+      tutorialFocusChest: this.tutorialFocusChest,
+      tutorialFocusSellShop: this.tutorialFocusSellShop,
+      fusionWorld: this.fusionWorld,
+      inputState: this.inputState,
+      state: camState,
+    });
+    this.orbitYaw = camState.orbitYaw;
+    this.orbitPitch = camState.orbitPitch;
+    this.camRadius = camState.camRadius;
+    this.tapShakeIntensity = camState.tapShakeIntensity;
+    this.camera.updateMatrixWorld();
+
     this.env.update(dtSec, this.elapsed, this.inputState.crateHovered, this.inputState.crateBounce);
     this.pedestals.forEach((p) => p.update(dtSec, this.elapsed, this.camera));
     this.pit.update(dtSec, this.elapsed, this.camera);
@@ -524,33 +572,6 @@ export class MineScene3D {
     this.crateGroup.scale.set(crateScale, Math.max(0.84, crateScale - this.inputState.crateBounce * 0.25), crateScale);
     this.chestVisual.setInteraction(this.inputState.crateHovered, this.inputState.crateBounce, this.elapsed);
 
-    const camState = {
-      orbitYaw: this.orbitYaw,
-      orbitPitch: this.orbitPitch,
-      camRadius: this.camRadius,
-      tapShakeIntensity: this.tapShakeIntensity,
-    };
-    stepMineSceneCamera({
-      dtSec,
-      elapsed: this.elapsed,
-      mode: this.mode,
-      camera: this.camera,
-      currentLookAt: this.currentLookAt,
-      baseCamPos: this.baseCamPos,
-      lookAtPos: this.lookAtPos,
-      focusedPlotIndex: this.focusedPlotIndex,
-      pedestals: this.pedestals,
-      crateGroup: this.crateGroup,
-      tutorialFocusChest: this.tutorialFocusChest,
-      tutorialFocusSellShop: this.tutorialFocusSellShop,
-      fusionWorld: this.fusionWorld,
-      inputState: this.inputState,
-      state: camState,
-    });
-    this.orbitYaw = camState.orbitYaw;
-    this.orbitPitch = camState.orbitPitch;
-    this.camRadius = camState.camRadius;
-    this.tapShakeIntensity = camState.tapShakeIntensity;
     this.env.updateSky(this.elapsed, this.camera.position);
     this.renderer.render(this.scene, this.camera);
     this.projector.emitModeOverlays(this.mode, this.shopWorld, this.fusionWorld);
@@ -564,7 +585,9 @@ export class MineScene3D {
     this.projector.emitDamageScreen(dmg, wx, wy, wz, isClick, isCrit, pitEventKind, isMeteor, isPerfect);
   }
   public setMode(mode: SceneMode): void {
+    const modeChanged = this.mode !== mode;
     this.mode = mode;
+    this.tapShakeIntensity = 0;
     this.weatherFx.setShopMode(mode === 'shop' || mode === 'fusion');
     this.weatherFx.setFeverTier(mode === 'mine' ? this.overclockTier : 0);
     if (mode !== 'mine' && mode !== 'tower') {
@@ -596,12 +619,12 @@ export class MineScene3D {
       this.scene.fog = new THREE.Fog(0x040312, 34, 86);
       this.applyWeatherAtmosphere();
       this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = -0.18;
+      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('altar');
       this.inputState.targetCamRadius = 12.2;
       this.lookAtPos.set(0, 1.05, -2.4);
     } else if (mode === 'fusion') {
       this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = -0.04;
+      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('fusion');
       this.inputState.targetCamRadius = 18.2;
       this.lookAtPos.set(0, 1.85, -1.15);
       this.applyWeatherAtmosphere();
@@ -610,7 +633,7 @@ export class MineScene3D {
       this.scene.fog = new THREE.Fog(0x182338, 26, 76);
       this.applyWeatherAtmosphere();
       this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = -0.34;
+      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('tower');
       this.inputState.targetCamRadius = 16.4;
       this.lookAtPos.set(0, 2.25, -1.6);
       this.syncTowerFighters();
@@ -620,23 +643,38 @@ export class MineScene3D {
       this.scene.fog = new THREE.Fog(0x141122, 24, 72);
       this.applyWeatherAtmosphere();
       this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = -0.26;
+      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('omega');
       this.inputState.targetCamRadius = 15.8;
       this.lookAtPos.set(0, 1.8, -1.2);
       this.syncTowerFighters();
     } else if (mode === 'shop') {
       const aspect = this.camera.aspect || 1;
       this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = 0.02;
+      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('shop');
       this.inputState.targetCamRadius = aspect < 0.85 ? 37.6 : aspect < 1.15 ? 33.2 : 30.4;
       this.lookAtPos.set(0, 2.95, -2.9);
       this.applyWeatherAtmosphere();
     } else {
       this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = 0;
+      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('mine');
       this.inputState.targetCamRadius = 16.5;
       this.lookAtPos.set(0, 0.55, -0.55);
       this.applyWeatherAtmosphere();
+    }
+
+    if (modeChanged) {
+      this.orbitYaw = this.inputState.targetOrbitYaw;
+      this.orbitPitch = this.inputState.targetOrbitPitch;
+      this.camRadius = this.inputState.targetCamRadius;
+      this.currentLookAt.copy(this.lookAtPos);
+      const camY = (this.baseCamPos.y + this.orbitPitch * 7) * (this.camRadius / 16.5);
+      this.camera.position.set(
+        this.lookAtPos.x + Math.sin(this.orbitYaw) * this.camRadius,
+        camY,
+        this.lookAtPos.z + Math.cos(this.orbitYaw) * this.camRadius
+      );
+      this.camera.lookAt(this.currentLookAt);
+      this.camera.updateMatrixWorld();
     }
   }
 
@@ -699,7 +737,7 @@ export class MineScene3D {
     this.inputState.cameraLocked = locked;
     if (locked) {
       this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = 0;
+      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode(this.mode);
     }
   }
 

@@ -10,7 +10,7 @@ import type { PlotPedestal3D } from './PlotPedestal3D';
 import type { ShopWorld3D } from './ShopWorld3D';
 import type { TowerArena3D } from './TowerArena3D';
 import type { OmegaArena3D } from './OmegaArena3D';
-import { applyCameraOrbitDrag, clampCameraZoomRadius } from './MineScene3D';
+import { applyCameraOrbitDrag, clampCameraZoomRadius, getDefaultOrbitPitchForMode } from './MineScene3D';
 
 export interface MineInputState {
   isDragging: boolean;
@@ -202,6 +202,9 @@ export function bindMineSceneEvents(ctx: MineInputCtx): ResizeObserver | null {
           ctx.state.holdMineActive = false;
           ctx.state.holdMineElapsed = 0;
           ctx.callbacks.onHoldMineChange?.(false);
+          ctx.state.lastDragX = e.clientX;
+          ctx.state.lastDragY = e.clientY;
+          return;
         }
         if (ctx.state.holdMineActive) {
           ctx.state.holdMineClientX = e.clientX;
@@ -209,12 +212,14 @@ export function bindMineSceneEvents(ctx: MineInputCtx): ResizeObserver | null {
         }
         ctx.state.lastDragX = e.clientX;
         ctx.state.lastDragY = e.clientY;
+        if (!ctx.state.dragMoved) return;
         const nextOrbit = applyCameraOrbitDrag({
           cameraLocked: ctx.state.cameraLocked,
           yaw: ctx.state.targetOrbitYaw,
           pitch: ctx.state.targetOrbitPitch,
           dx,
           dy,
+          defaultPitch: getDefaultOrbitPitchForMode(ctx.getMode()),
         });
         ctx.state.targetOrbitYaw = nextOrbit.yaw;
         ctx.state.targetOrbitPitch = nextOrbit.pitch;

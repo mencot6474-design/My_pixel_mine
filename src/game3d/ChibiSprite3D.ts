@@ -12,6 +12,7 @@ interface LoadedPoseMeta {
   texture: THREE.Texture;
   pixelWidth: number;
   pixelHeight: number;
+  topTrimRatio: number;
 }
 
 const BASE_CHIBI_PIXEL_HEIGHT = 350;
@@ -50,6 +51,32 @@ function getSoftContactShadowTexture(): THREE.CanvasTexture | null {
   return tex;
 }
 
+function measureTopTrimRatio(img: HTMLImageElement): number {
+  if (typeof document === 'undefined' || !img.width || !img.height) return 0;
+  try {
+    const sw = Math.min(64, img.width);
+    const sh = Math.min(64, img.height);
+    const canvas = document.createElement('canvas');
+    canvas.width = sw;
+    canvas.height = sh;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return 0;
+    ctx.drawImage(img, 0, 0, sw, sh);
+    const data = ctx.getImageData(0, 0, sw, sh).data;
+    for (let y = 0; y < sh; y++) {
+      const rowOffset = y * sw * 4;
+      for (let x = 0; x < sw; x++) {
+        if (data[rowOffset + x * 4 + 3] > 20) {
+          return Math.min(0.45, Math.max(0, y / sh));
+        }
+      }
+    }
+  } catch {
+    // Fallback cleanly when canvas pixel readback is unavailable
+  }
+  return 0;
+}
+
 function loadPoseMeta(url: string, smoothFilter = false): Promise<LoadedPoseMeta> {
   const resolved = assetUrl(url);
   const cacheKey = `${resolved}|${smoothFilter ? 'smooth' : 'pixel'}`;
@@ -75,7 +102,12 @@ function loadPoseMeta(url: string, smoothFilter = false): Promise<LoadedPoseMeta
         tex.needsUpdate = true;
 
         const img = tex.image as HTMLImageElement;
-        resolve({ texture: tex, pixelWidth: img.width, pixelHeight: img.height });
+        resolve({
+          texture: tex,
+          pixelWidth: img.width,
+          pixelHeight: img.height,
+          topTrimRatio: measureTopTrimRatio(img),
+        });
       },
       undefined,
       (err) => reject(err)
@@ -122,6 +154,8 @@ export class ChibiSprite3D {
   private attackComboStep = 0;
   private nextComboStep = 0;
   private idlePixelHeight: number | null = null;
+  private currentSpriteHeight: number;
+  private topTrimRatio = 0;
   private hologramMode = false;
   private hologramTintHex = '#38bdf8';
   private disposed = false;
@@ -129,6 +163,7 @@ export class ChibiSprite3D {
   constructor(def: ChibiDef, spriteHeight = 1.24, phaseOffset = 0) {
     this.def = def;
     this.spriteHeight = spriteHeight;
+    this.currentSpriteHeight = spriteHeight;
     this.phaseOffset = phaseOffset;
     this.accentColorHex = def.accentColor;
 
@@ -247,6 +282,8 @@ export class ChibiSprite3D {
           ? Math.min(Math.max(rawH, this.spriteHeight * 1.02), this.spriteHeight * 1.18)
           : Math.min(Math.max(rawH, this.spriteHeight * 0.96), this.spriteHeight * 1.14);
       const width = h * (meta.pixelWidth / Math.max(1, meta.pixelHeight));
+      this.currentSpriteHeight = h;
+      this.topTrimRatio = meta.topTrimRatio;
 
       this.mesh.geometry.dispose();
       this.mesh.geometry = new THREE.PlaneGeometry(width, h);
@@ -326,6 +363,17 @@ export class ChibiSprite3D {
 
   public isHologramMode(): boolean {
     return this.hologramMode;
+  }
+
+  /** Computes steady world-space anchor just above the tilted chibi sprite top. */
+  public getLabelAnchorWorldPosition(out: THREE.Vector3, extraLocalClearance = 0.13): THREE.Vector3 {
+    this.spritePivot.updateWorldMatrix(true, false);
+    const peakPosY = this.animState === 'aura' ? 0.19 : 0.035;
+    const peakScaleY = this.animState === 'aura' ? 1.04 : 1.032;
+    const visibleRatio = Math.max(0.55, 1 - this.topTrimRatio);
+    const localTopY = peakPosY + this.currentSpriteHeight * peakScaleY * visibleRatio + extraLocalClearance;
+    out.set(0, localTopY, 0);
+    return this.spritePivot.localToWorld(out);
   }
 
   public getComboStep(): number {

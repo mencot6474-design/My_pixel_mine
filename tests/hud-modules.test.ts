@@ -65,6 +65,7 @@ import { AchievementsModalUi } from '../src/ui/AchievementsModalUi';
 import { TowerUi } from '../src/ui/TowerUi';
 import { OmegaBossModalUi } from '../src/ui/OmegaBossModalUi';
 import { OmegaArenaHudUi } from '../src/ui/OmegaArenaHudUi';
+import { HudOmegaBridge } from '../src/ui/HudOmegaBridge';
 import { TowerArenaHudUi } from '../src/ui/TowerArenaHudUi';
 import { towerBlessingIconHtml } from '../src/ui/HudIcons';
 import { TOWER_BLESSINGS } from '../src/game/TowerData';
@@ -1296,9 +1297,13 @@ describe('Tahap B HUD Modules', () => {
       expect(hubHtml).toContain('data-modal-theme="omega-boss"');
       expect(hubHtml).toContain('Crimson Ronin');
       expect(hubHtml).toContain('Obsidian Sovereign');
-      expect(hubHtml).toContain('HP 1Qa');
+      expect(hubHtml).toContain('HP 20Qa');
       expect(hubHtml).toContain('20% • 1 Core');
       expect(hubHtml).toContain('100% • 2–3 Cores');
+      expect(hubHtml).toContain('/hud/gem.webp');
+      expect(hubHtml).toContain('25K');
+      expect(hubHtml).not.toContain('💎');
+      expect(hubHtml).not.toContain('🔑');
       expect(hubHtml).toContain('Team DMG');
       expect(hubHtml).toContain('+200%');
       expect(hubHtml).toContain('Drop Ore');
@@ -1342,6 +1347,115 @@ describe('Tahap B HUD Modules', () => {
       expect(hudHtml).toContain('data-omega-shatter-count');
       expect(hudHtml).toContain('STAGGER 0%');
       expect(hudHtml).toContain('Retreat (0 Key Lost)');
+    });
+
+    it('renders Sticker-Pop TAP pointer above Omega target props without legacy target icons', () => {
+      const state = new GameState();
+      state.omegaKeys = 1;
+      state.startOmegaBoss('crimson-ronin', 1);
+      const overlay = new WorldOverlayHudUi(
+        state,
+        () => ({ sceneMode: 'omega', activeModal: 'none', inspectedSlot: null }),
+        vi.fn()
+      );
+      const fakeOmegaLayer = {
+        dataset: {} as Record<string, string>,
+        innerHTML: '',
+        querySelector: () => null,
+        querySelectorAll: () => [],
+      };
+      (overlay as unknown as { omegaLayerEl: unknown }).omegaLayerEl = fakeOmegaLayer;
+
+      overlay.updateOmegaArenaOverlay(
+        {
+          bossHead: { x: 400, y: 120 },
+          targets: [{ id: 'blade-1', kind: 'phantom_blade', x: 320, y: 180 }],
+        },
+        vi.fn(),
+        vi.fn()
+      );
+
+      expect(fakeOmegaLayer.innerHTML).toContain('data-omega-hit-target="blade-1"');
+      expect(fakeOmegaLayer.innerHTML).toContain('-translate-y-full');
+      expect(fakeOmegaLayer.innerHTML).toContain('TAP!');
+      expect(fakeOmegaLayer.innerHTML).toContain('SHATTER BLADE');
+      expect(fakeOmegaLayer.innerHTML).toContain('M2.5 1.5L10 10.5L17.5 1.5Z');
+      expect(fakeOmegaLayer.innerHTML).not.toContain('M14.5 2.5L6 11');
+    });
+
+    it('renders Omega Victory popup on battle win showing item drop status instead of jumping straight back to Sanctum', () => {
+      const state = new GameState();
+      state.omegaKeys = 2;
+      state.omegaCores['crimson-ronin'] = 2;
+      state.omegaLastSummary = {
+        victory: true,
+        bossId: 'crimson-ronin',
+        tier: 2,
+        reason: 'victory',
+        damageDealt: 150000,
+        timeUsedSec: 18,
+        coresAwarded: 2,
+        gemsAwarded: 1200,
+        diceAwarded: 3,
+        firstClear: true,
+        parriesLanded: 2,
+        targetsShattered: 1,
+        breaksTriggered: 1,
+      };
+      const arenaHud = new OmegaArenaHudUi(state, vi.fn(), vi.fn());
+      const dropHtml = arenaHud.renderOmegaArenaHud();
+      expect(dropHtml).toContain('data-omega-victory-popup="true"');
+      expect(dropHtml).toContain('data-omega-drop-status="dropped"');
+      expect(dropHtml).toContain('ITEM DROPPED!');
+      expect(dropHtml).toContain('+2 Ronin Core');
+      expect(dropHtml).toContain('+1,200');
+      expect(dropHtml).toContain('Back to Sanctum');
+      expect(dropHtml).toContain('Fight Again (2/5)');
+
+      state.omegaLastSummary = {
+        ...state.omegaLastSummary,
+        coresAwarded: 0,
+        diceAwarded: 0,
+        firstClear: false,
+      };
+      const noDropHtml = arenaHud.renderOmegaArenaHud();
+      expect(noDropHtml).toContain('data-omega-drop-status="none"');
+      expect(noDropHtml).toContain('NO ITEM DROP');
+      expect(noDropHtml).toContain('0 Ronin Core Dropped');
+
+      const state2 = new GameState();
+      state2.omegaKeys = 1;
+      state2.startOmegaBoss('crimson-ronin', 1);
+      state2.omegaBattle!.hp = 5;
+      state2.omegaBattle!.parryWindow = { active: true, remainingSec: 2, durationSec: 2.3, consumed: false };
+      let sceneMode: 'omega' | 'shop' = 'omega';
+      const openModal = vi.fn();
+      const render = vi.fn();
+      const syncBattleVisuals = vi.fn();
+      const bridge = new HudOmegaBridge(
+        {} as HTMLElement,
+        state2,
+        new OmegaArenaHudUi(state2, vi.fn(), vi.fn()),
+        () => sceneMode,
+        (m) => {
+          sceneMode = m === 'shop' ? 'shop' : 'omega';
+        },
+        openModal,
+        vi.fn(),
+        render,
+        {
+          setBossConfig: vi.fn(),
+          syncBattleVisuals,
+          triggerBossHit: vi.fn(),
+          triggerTargetShatter: vi.fn(),
+        }
+      );
+      bridge.handleOmegaParryClick();
+      expect(state2.omegaLastSummary?.victory).toBe(true);
+      expect(sceneMode).toBe('omega');
+      expect(openModal).not.toHaveBeenCalled();
+      expect(render).toHaveBeenCalled();
+      expect(syncBattleVisuals).toHaveBeenCalledWith([], false, false);
     });
   });
 });

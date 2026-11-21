@@ -4,9 +4,12 @@ import type { MineEnvironment3D } from './MineEnvironment3D';
 import { type MineWorldPalette, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
 import { PlotPedestal3D } from './PlotPedestal3D';
 import { getWeatherById, type WeatherId } from '../game/WeatherData';
-import type { SceneMode } from './MineScene3D';
+import { getDefaultOrbitPitchForMode, type SceneMode } from './MineScene3D';
 import type { FusionWorld3D } from './FusionWorld3D';
 import type { MineInputState } from './MineSceneInput';
+
+const tmpCamPos = new THREE.Vector3();
+const tmpLookTarget = new THREE.Vector3();
 
 export function buildMineStageAndChest(ctx: {
   palette: MineWorldPalette;
@@ -250,40 +253,40 @@ export function stepMineSceneCamera(ctx: {
       ctx.camera.lookAt(ctx.currentLookAt);
     } else if (ctx.focusedPlotIndex !== null && ctx.pedestals[ctx.focusedPlotIndex]) {
       const pPos = ctx.pedestals[ctx.focusedPlotIndex].group.position;
-      const targetCam = new THREE.Vector3(pPos.x, pPos.y + 2.15, pPos.z + 5.35);
-      const targetLook = new THREE.Vector3(pPos.x, pPos.y + 1.55, pPos.z);
-      ctx.camera.position.lerp(targetCam, damp);
-      ctx.currentLookAt.lerp(targetLook, damp);
+      tmpCamPos.set(pPos.x, pPos.y + 2.15, pPos.z + 5.35);
+      tmpLookTarget.set(pPos.x, pPos.y + 1.55, pPos.z);
+      ctx.camera.position.lerp(tmpCamPos, damp);
+      ctx.currentLookAt.lerp(tmpLookTarget, damp);
       ctx.camera.lookAt(ctx.currentLookAt);
     } else if (ctx.tutorialFocusChest && ctx.mode === 'mine') {
       const cPos = ctx.crateGroup.position;
-      const targetCam = new THREE.Vector3(cPos.x + 0.8, cPos.y + 4.3, cPos.z + 7.2);
-      const targetLook = new THREE.Vector3(cPos.x, cPos.y + 0.65, cPos.z);
-      ctx.camera.position.lerp(targetCam, damp);
-      ctx.currentLookAt.lerp(targetLook, damp);
+      tmpCamPos.set(cPos.x + 0.8, cPos.y + 4.3, cPos.z + 7.2);
+      tmpLookTarget.set(cPos.x, cPos.y + 0.65, cPos.z);
+      ctx.camera.position.lerp(tmpCamPos, damp);
+      ctx.currentLookAt.lerp(tmpLookTarget, damp);
       ctx.camera.lookAt(ctx.currentLookAt);
     } else if (ctx.tutorialFocusSellShop && ctx.mode === 'shop') {
-      const targetCam = new THREE.Vector3(-4.6, 5.2, 11.4);
-      const targetLook = new THREE.Vector3(-6.95, 2.3, 2.8);
-      ctx.camera.position.lerp(targetCam, damp);
-      ctx.currentLookAt.lerp(targetLook, damp);
+      tmpCamPos.set(-4.6, 5.2, 11.4);
+      tmpLookTarget.set(-6.95, 2.3, 2.8);
+      ctx.camera.position.lerp(tmpCamPos, damp);
+      ctx.currentLookAt.lerp(tmpLookTarget, damp);
       ctx.camera.lookAt(ctx.currentLookAt);
     } else {
       if (ctx.inputState.cameraLocked) {
         ctx.inputState.targetOrbitYaw = 0;
-        ctx.inputState.targetOrbitPitch = 0;
+        ctx.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode(ctx.mode);
       }
       ctx.state.orbitYaw += (ctx.inputState.targetOrbitYaw - ctx.state.orbitYaw) * damp;
       ctx.state.orbitPitch += (ctx.inputState.targetOrbitPitch - ctx.state.orbitPitch) * damp;
       ctx.state.camRadius += (ctx.inputState.targetCamRadius - ctx.state.camRadius) * damp;
       const camY = (ctx.baseCamPos.y + ctx.state.orbitPitch * 7) * (ctx.state.camRadius / 16.5);
 
-      const targetCam = new THREE.Vector3(
-        ctx.lookAtPos.x + Math.sin(ctx.state.orbitYaw) * ctx.state.camRadius,
+      ctx.currentLookAt.lerp(ctx.lookAtPos, damp);
+      ctx.camera.position.set(
+        ctx.currentLookAt.x + Math.sin(ctx.state.orbitYaw) * ctx.state.camRadius,
         camY,
-        ctx.lookAtPos.z + Math.cos(ctx.state.orbitYaw) * ctx.state.camRadius
+        ctx.currentLookAt.z + Math.cos(ctx.state.orbitYaw) * ctx.state.camRadius
       );
-      ctx.camera.position.lerp(targetCam, damp);
       if (ctx.mode === 'mine' && ctx.state.tapShakeIntensity > 0.001) {
         const sx = (Math.sin(ctx.elapsed * 95) * 0.7 + Math.cos(ctx.elapsed * 143) * 0.3) * ctx.state.tapShakeIntensity;
         const sy = Math.cos(ctx.elapsed * 117) * ctx.state.tapShakeIntensity * 0.75;
@@ -291,7 +294,6 @@ export function stepMineSceneCamera(ctx: {
         ctx.camera.position.y += sy;
         ctx.state.tapShakeIntensity = Math.max(0, ctx.state.tapShakeIntensity - dtSec * 1.4);
       }
-      ctx.currentLookAt.lerp(ctx.lookAtPos, damp);
       ctx.camera.lookAt(ctx.currentLookAt);
     }
 

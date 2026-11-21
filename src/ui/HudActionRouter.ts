@@ -267,10 +267,10 @@ export function stepHudSlowTick(ctx: HudSlowTickContext): void {
     if (ctx.state.omegaKeys !== prevKeys) {
       ctx.render();
     } else {
-      const pill = ctx.root.querySelector('[data-omega-keys-pill]');
+      const pill = ctx.root.querySelector('[data-omega-keys-text]') ?? ctx.root.querySelector('[data-omega-keys-pill]');
       if (pill) {
         const sec = ctx.state.getOmegaNextKeyRegenSec();
-        pill.textContent = `🔑 ${ctx.state.omegaKeys}/5 Keys${sec > 0 ? ` (${formatCountdownTimer(sec)})` : ''}`;
+        pill.textContent = `${ctx.state.omegaKeys}/5 Keys${sec > 0 ? ` (${formatCountdownTimer(sec)})` : ''}`;
       }
     }
   }
@@ -340,7 +340,13 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
     const prevTargetCount = ctx.state.omegaBattle.targets.length;
     const summary = ctx.state.stepOmegaBossTick(0.1);
     if (summary) {
-      ctx.pushToast(summary.victory ? 'OMEGA BOSS DEFEATED!' : 'Time up! 0 Boss Keys lost.');
+      if (summary.victory) {
+        audio.playSfx('rare-fanfare', { volume: 0.78 });
+        ctx.syncOmegaSceneVisual?.();
+        ctx.render();
+        return;
+      }
+      ctx.pushToast('Time up! 0 Boss Keys lost.');
       ctx.setSceneMode('shop');
       ctx.openModal('omega-boss');
       return;

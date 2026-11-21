@@ -23,7 +23,7 @@ import {
   PREMIUM_SHOP_ITEMS,
 } from '../src/game/PremiumShopData';
 import { FUSION_RECIPES } from '../src/game/FusionData';
-import { OMEGA_BOSS_DEFS, OMEGA_MAX_KEYS } from '../src/game/OmegaData';
+import { OMEGA_BOSS_DEFS, OMEGA_KEY_GEM_COST, OMEGA_MAX_KEYS } from '../src/game/OmegaData';
 import { CHIBI_CATALOG, getChibiById } from '../src/game3d/ChibiCatalog';
 import { GameState, getChibiUpgradeCostMult } from '../src/game/GameState';
 import {
@@ -1400,6 +1400,11 @@ describe('Tahap C GameState Domain Modules', () => {
     it('runs 5-tier Boss Battle with Parry, Obsidian Pillars, OMEGA BREAK!, escalating Core drop %, 0-key-loss on retreat, Unlock & Awaken, and Save/Load', () => {
       const state = new GameState();
       expect(state.omegaKeys).toBe(OMEGA_MAX_KEYS);
+      expect(OMEGA_KEY_GEM_COST).toBe(25_000);
+      expect(OMEGA_BOSS_DEFS.map((b) => b.tiers.map((t) => t.bossHp))).toEqual([
+        [20_000_000_000_000_000, 240_000_000_000_000_000, 1_700_000_000_000_000_000, 10_000_000_000_000_000_000, 60_000_000_000_000_000_000],
+        [30_000_000_000_000_000, 360_000_000_000_000_000, 2_400_000_000_000_000_000, 14_000_000_000_000_000_000, 80_000_000_000_000_000_000],
+      ]);
       expect(OMEGA_BOSS_DEFS.map((b) => b.tiers.map((t) => t.coreDropChance))).toEqual([
         [0.2, 0.4, 0.65, 0.85, 1.0],
         [0.2, 0.4, 0.65, 0.85, 1.0],
