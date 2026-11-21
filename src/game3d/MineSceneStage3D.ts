@@ -202,33 +202,39 @@ export function applyMineWeatherAtmosphere(ctx: {
     const isFusion = ctx.mode === 'fusion';
     const isTowerScene = ctx.mode === 'tower';
     const isOmegaScene = ctx.mode === 'omega';
-    ctx.hemiLight.color.set(isTowerScene ? 0xe0f2fe : isOmegaScene ? 0xffedd5 : weather.hemiTintHex);
+    ctx.hemiLight.color.set(
+      isTowerScene ? 0xe0f2fe : isOmegaScene ? 0xffedd5 : isFusion ? 0xf8fafc : weather.hemiTintHex
+    );
     ctx.hemiLight.intensity = isTowerScene
       ? 1.68
       : isOmegaScene
         ? 1.74
-        : isShop || isFusion
-          ? Math.max(weather.hemiIntensity, 1.24)
-          : Math.max(weather.hemiIntensity, 1.18);
+        : isFusion
+          ? 1.88
+          : isShop
+            ? Math.max(weather.hemiIntensity, 1.24)
+            : Math.max(weather.hemiIntensity, 1.18);
     ctx.sunLight.intensity = isTowerScene
       ? 2.18
       : isOmegaScene
         ? 2.28
-        : isShop || isFusion
-          ? Math.max(weather.sunIntensity, 1.62)
-          : Math.max(weather.sunIntensity, 1.55);
-    ctx.rimLight.color.set(isTowerScene ? 0xbae6fd : isOmegaScene ? 0xfb923c : isShop ? 0x38bdf8 : weather.rimTintHex);
+        : isFusion
+          ? 2.24
+          : isShop
+            ? Math.max(weather.sunIntensity, 1.62)
+            : Math.max(weather.sunIntensity, 1.55);
+    ctx.rimLight.color.set(
+      isTowerScene ? 0xbae6fd : isOmegaScene ? 0xfb923c : isShop || isFusion ? 0x38bdf8 : weather.rimTintHex
+    );
 
-    if (ctx.mode !== 'mine' && !isShop && !isFusion) return;
+    if (ctx.mode !== 'mine' && !isShop) return;
     const fogColor = new THREE.Color(weather.fogTintHex);
-    fogColor.lerp(new THREE.Color(0x0b162b), isShop ? 0.56 : isFusion ? 0.42 : 0.28);
+    fogColor.lerp(new THREE.Color(0x0b162b), isShop ? 0.56 : 0.28);
     ctx.scene.background = fogColor;
     // Softly blend distant terrain border into the sky shader's horizon mist band
     ctx.scene.fog = isShop
       ? new THREE.Fog(fogColor, 50, 108)
-      : isFusion
-        ? new THREE.Fog(fogColor, 42, 98)
-        : new THREE.Fog(fogColor, 30, 78);
+      : new THREE.Fog(fogColor, 30, 78);
 }
 
 export function stepMineSceneCamera(ctx: {

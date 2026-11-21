@@ -33,7 +33,7 @@ export function getDefaultOrbitPitchForMode(mode: SceneMode): number {
     case 'altar':
       return -0.18;
     case 'fusion':
-      return -0.04;
+      return -0.18;
     case 'tower':
       return -0.34;
     case 'omega':
@@ -519,7 +519,7 @@ export class MineScene3D {
         this.callbacks.onOmegaEntranceSlam?.();
       }
     );
-    this.weatherFx.update(dtSec, this.elapsed, this.mode === 'mine' || this.mode === 'shop' || this.mode === 'fusion');
+    this.weatherFx.update(dtSec, this.elapsed, this.mode === 'mine' || this.mode === 'shop');
 
     const inMine = this.mode === 'mine';
     const wasHoldFired = this.inputState.holdMineFiredInitial;
@@ -598,7 +598,7 @@ export class MineScene3D {
     const modeChanged = this.mode !== mode;
     this.mode = mode;
     this.tapShakeIntensity = 0;
-    this.weatherFx.setShopMode(mode === 'shop' || mode === 'fusion');
+    this.weatherFx.setShopMode(mode === 'shop');
     this.weatherFx.setFeverTier(mode === 'mine' ? this.overclockTier : 0);
     if (mode !== 'mine' && mode !== 'tower') {
       this.renderer.domElement.classList.remove('mam-mining-cursor');
@@ -614,7 +614,7 @@ export class MineScene3D {
     this.towerArena.group.visible = mode === 'tower';
     this.omegaArena.group.visible = mode === 'omega';
     this.env.group.visible = isMine;
-    this.env.skyDome.visible = mode === 'mine' || mode === 'shop' || mode === 'fusion';
+    this.env.skyDome.visible = mode === 'mine' || mode === 'shop';
     this.pit.group.visible = isMine;
     this.crateGroup.visible = isMine;
     this.pedestals.forEach((p) => {
@@ -633,10 +633,12 @@ export class MineScene3D {
       this.inputState.targetCamRadius = 12.2;
       this.lookAtPos.set(0, 1.05, -2.4);
     } else if (mode === 'fusion') {
+      this.scene.background = new THREE.Color(0x0c1422);
+      this.scene.fog = new THREE.Fog(0x0c1422, 46, 112);
       this.inputState.targetOrbitYaw = 0;
       this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('fusion');
-      this.inputState.targetCamRadius = 18.2;
-      this.lookAtPos.set(0, 1.85, -1.15);
+      this.inputState.targetCamRadius = 23.4;
+      this.lookAtPos.set(0, 2.85, -2.5);
       this.applyWeatherAtmosphere();
     } else if (mode === 'tower') {
       this.scene.background = new THREE.Color(0x7dd3fc);

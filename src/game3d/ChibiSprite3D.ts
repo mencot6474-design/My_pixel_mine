@@ -365,6 +365,14 @@ export class ChibiSprite3D {
     return this.hologramMode;
   }
 
+  public getPoseDisplayMeta(): { texture: THREE.Texture | null; width: number; height: number } {
+    const tex = this.material.map ?? null;
+    const h = this.currentSpriteHeight;
+    const img = tex?.image as { width?: number; height?: number } | undefined;
+    const w = img?.width && img?.height ? h * (img.width / img.height) : h * 0.85;
+    return { texture: tex, width: w, height: h };
+  }
+
   /** Computes steady world-space anchor just above the tilted chibi sprite top. */
   public getLabelAnchorWorldPosition(out: THREE.Vector3, extraLocalClearance = 0.13): THREE.Vector3 {
     this.spritePivot.updateWorldMatrix(true, false);

@@ -407,17 +407,37 @@ export class FusionHudUi {
       audio.playSfx('teleport', { volume: 0.65 });
       this.onRequestRender();
 
-      // Multi-beat audio choreography matching Act 2 Portal Supernova (1.72s) & Act 3 Apex Landing (2.05s)
+      // Multi-beat audio choreography matching Glass Shatter (520ms) -> 1-by-1 Prism Snap (1120..2545ms) -> Shatter Reveal (2780ms) -> Hero Landing (3160ms)
       this.sfxTimers.push(
         window.setTimeout(() => {
           if (!this.fusing) return;
           audio.playOreBreak('geode');
-        }, 1720),
+        }, 520)
+      );
+      for (let s = 0; s < 16; s++) {
+        const snapMs = 1120 + s * 95;
+        this.sfxTimers.push(
+          window.setTimeout(() => {
+            if (!this.fusing) return;
+            audio.playCrystalScaleNote(s);
+          }, snapMs)
+        );
+      }
+      this.sfxTimers.push(
+        window.setTimeout(() => {
+          if (!this.fusing) return;
+          audio.playCrystalChord('perfect');
+        }, 2560),
+        window.setTimeout(() => {
+          if (!this.fusing) return;
+          audio.playOreBreak('geode');
+          audio.playCrystalChord('meteor');
+        }, 2780),
         window.setTimeout(() => {
           if (!this.fusing) return;
           audio.playEnchantSpinLand(true);
           audio.playSfx('rare-fanfare', { volume: 0.85 });
-        }, 2050)
+        }, 3160)
       );
 
       const finish = (): void => {

@@ -10,23 +10,33 @@ import {
 } from './CyberProps3D';
 import {
   buildElevatedShowcaseStage,
-  buildExpandedOctagonalArenaDeck,
-  buildFloatingCosmicIslands,
   buildPerimeterTechPylons,
-  buildSynchroPortal,
   type FloatingIslandNode,
   type FusionArenaBuildCtx,
 } from './FusionWorldArena3D';
 import {
-  createCyberShowcasePodium,
+  buildLabBunkerFloorDeck,
+  buildLabBunkerWallsAndCryoBays,
+  buildLabCeilingCanopyAndArms,
+  buildLabOperatorConsoles,
+  buildOreContainmentVat,
+  type LabBunkerAnimHandles,
+  type LabBunkerBuildCtx,
+} from './FusionLabBunker3D';
+import {
+  createLabTubePodium,
   type CyberShowcasePodiumHandle,
 } from './FusionWorldPodium3D';
-import {
-  getFusionMagicCircuitTexture,
-  getFusionPortalVortexTexture,
-} from './ProceduralTextures3D';
+import { getFusionMagicCircuitTexture } from './ProceduralTextures3D';
 import type { ShopChibiBubbleAnchor } from './ShopWorld3D';
-import { stepFusionWorldUpdate, type FusionSeqState } from './FusionSequence3D';
+import {
+  buildFusionGlassShards,
+  hideFusionGlassShards,
+  initFusionGlassShards,
+  stepFusionWorldUpdate,
+  type FusionGlassShard,
+  type FusionSeqState,
+} from './FusionSequence3D';
 interface MaterialPedestalSlot {
   podium: CyberShowcasePodiumHandle;
   holoGridRing: THREE.Mesh;
@@ -49,20 +59,10 @@ interface OreCrystalNode {
   baseY: number;
   phase: number;
 }
-interface EnergyOrb {
-  mesh: THREE.Mesh;
-  mat: THREE.MeshBasicMaterial;
-  from: THREE.Vector3;
-  to: THREE.Vector3;
-  age: number;
-  dur: number;
-  arcH: number;
-}
 const MAX_MAT_SLOTS = 3;
-const PORTAL_CENTER = new THREE.Vector3(0, 5.45, -7.15);
-const STAGE_CENTER_Z = -2.85;
+const STAGE_CENTER_Z = -6.45;
 const STAGE_DECK_Y = 0.76;
-const APEX_PODIUM_SCALE = 1.68;
+const APEX_PODIUM_SCALE = 2.8;
 const MAT_PODIUM_SCALE = 1.48;
 const DAIS_TOP_Y = STAGE_DECK_Y + 0.285 * APEX_PODIUM_SCALE;
 export class FusionWorld3D {
@@ -84,40 +84,31 @@ export class FusionWorld3D {
   private readonly outerRingMesh: THREE.Mesh;
   private readonly innerRingMat: THREE.MeshBasicMaterial;
   private readonly outerRingMat: THREE.MeshBasicMaterial;
-  // Grand Apex ZZZ/HSR Cyber-Showcase Podium on the Elevated Rear Stage
+  // Grand 2x Apex Cylindrical Stasis Tube Podium on the Rear Circular Containment Dais
   private readonly apexPodium: CyberShowcasePodiumHandle;
-  // Triple Synchro Portal behind Rear Apex Stage
-  private readonly portalOuterGroup = new THREE.Group();
-  private readonly portalMidGroup = new THREE.Group();
-  private readonly portalInnerGroup = new THREE.Group();
-  private readonly portalOuterMat: THREE.MeshStandardMaterial;
-  private readonly portalMidMat: THREE.MeshStandardMaterial;
-  private readonly portalInnerMat: THREE.MeshStandardMaterial;
-  private readonly portalVortexMesh: THREE.Mesh;
-  private readonly portalVortexMat: THREE.MeshBasicMaterial;
-  private readonly portalFlashMesh: THREE.Mesh;
-  private readonly portalFlashMat: THREE.MeshBasicMaterial;
-  // Skyward Light Beam
-  private readonly lightBeamOuterMesh: THREE.Mesh;
-  private readonly lightBeamInnerMesh: THREE.Mesh;
-  private readonly lightBeamOuterMat: THREE.MeshBasicMaterial;
-  private readonly lightBeamInnerMat: THREE.MeshBasicMaterial;
   private readonly floatingIslands: FloatingIslandNode[] = [];
+  private readonly labDarkFrameMat: THREE.MeshStandardMaterial;
+  private readonly labAnim: LabBunkerAnimHandles = {
+    irisRotorGroup: null,
+    cryoBubbleGroups: [],
+    cryoMistMats: [],
+    emitterTipMats: [],
+  };
   private readonly oreClusters: OreCrystalNode[] = [];
   private readonly materialSlots: MaterialPedestalSlot[] = [];
+  private readonly glassShards: FusionGlassShard[];
   private readonly resultMount = new THREE.Group();
   private resultSprite: ChibiSprite3D | null = null;
   private resultChibiId: string | null = null;
   private activeRecipeId: string | null = null;
-  private readonly orbGeo = new THREE.SphereGeometry(0.18, 10, 10);
-  private readonly energyOrbs: EnergyOrb[] = [];
   private readonly seq: FusionSeqState = {
     allRequirementsReady: false,
     fusionAnimTimer: 0,
-    fusionAnimDur: 3.45,
+    fusionAnimDur: 3.65,
     portalFlashTimer: 0,
     revealPopTimer: 0,
     revealHold: false,
+    materialShattered: false,
     portalBurstFired: false,
     fusionBurstFired: false,
     landingEchoFired: false,
@@ -130,29 +121,29 @@ export class FusionWorld3D {
   constructor() {
     this.group.visible = false;
     this.group.add(this.impactFx.group);
-    // Shared structural materials
-    const darkBasaltMat = new THREE.MeshStandardMaterial({
-      color: '#0b1121',
-      roughness: 0.78,
-      metalness: 0.25,
+    // Shared Clean-Tech White Lab Bunker materials (Rhine Lab × Herta Space Station)
+    this.labDarkFrameMat = new THREE.MeshStandardMaterial({
+      color: '#253348',
+      roughness: 0.48,
+      metalness: 0.4,
       flatShading: true,
     });
     this.armorDarkMat = new THREE.MeshStandardMaterial({
-      color: '#131b2b',
-      roughness: 0.52,
-      metalness: 0.44,
+      color: '#1e293b',
+      roughness: 0.48,
+      metalness: 0.46,
       flatShading: true,
     });
     this.armorSteelMat = new THREE.MeshStandardMaterial({
-      color: '#1e2c44',
-      roughness: 0.42,
-      metalness: 0.52,
+      color: '#eaf1f9',
+      roughness: 0.5,
+      metalness: 0.14,
       flatShading: true,
     });
     this.brightSteelMat = new THREE.MeshStandardMaterial({
-      color: '#354764',
+      color: '#cbd5e1',
       roughness: 0.3,
-      metalness: 0.62,
+      metalness: 0.5,
       flatShading: true,
     });
     this.deckTrimCyanMat = new THREE.MeshStandardMaterial({
@@ -180,7 +171,7 @@ export class FusionWorld3D {
       flatShading: true,
     });
     this.ownedMats.push(
-      darkBasaltMat,
+      this.labDarkFrameMat,
       this.armorDarkMat,
       this.armorSteelMat,
       this.brightSteelMat,
@@ -188,8 +179,9 @@ export class FusionWorld3D {
       this.deckTrimMagentaMat,
       this.stageNeonMat
     );
-    // 1. Expanded 23m-Wide Multi-Layered Octagonal Arena Deck + Dual Neon Trims + 17.2m Circuit Grid
-    this.buildExpandedOctagonalArenaDeck(darkBasaltMat);
+    // 1. Clean-Tech White Octagonal Bunker Floor Deck + Grating Vents + 17.2m Circuit Grid
+    const bunkerCtx = this.bunkerBuildCtx();
+    buildLabBunkerFloorDeck(bunkerCtx);
     this.magicCircleMat = new THREE.MeshBasicMaterial({
       map: getFusionMagicCircuitTexture(),
       color: '#22d3ee',
@@ -244,103 +236,24 @@ export class FusionWorld3D {
     this.group.add(this.outerRingMesh);
     this.ownedGeos.push(magicCircleGeo, innerRingGeo, outerRingGeo);
     this.ownedMats.push(this.magicCircleMat, this.innerRingMat, this.outerRingMat);
-    // 3. Elevated Cyber-Holographic Rear Showcase Stage + Grand Apex ZZZ/HSR Podium + 6 Tech Towers
+    // 3. Elevated Clean-Tech Circular Containment Dais + Grand 2x Apex Tube Podium
     this.buildElevatedShowcaseStage();
-    this.apexPodium = this.createCyberShowcasePodium('APEX', APEX_PODIUM_SCALE, true);
-    this.apexPodium.group.position.set(0, STAGE_DECK_Y, STAGE_CENTER_Z);
+    this.apexPodium = this.createLabTubePodium('APEX', APEX_PODIUM_SCALE, true);
+    this.apexPodium.group.position.set(0, STAGE_DECK_Y + 0.016, STAGE_CENTER_Z);
     this.group.add(this.apexPodium.group);
-    this.buildPerimeterTechPylons(darkBasaltMat);
-    // 4. Giant Rear Triple-Ring "Synchro Portal" Centerpiece
-    this.portalOuterMat = new THREE.MeshStandardMaterial({
-      color: '#22d3ee',
-      emissive: '#22d3ee',
-      emissiveIntensity: 1.15,
-      roughness: 0.25,
-      metalness: 0.55,
-      flatShading: true,
-    });
-    this.portalMidMat = new THREE.MeshStandardMaterial({
-      color: '#d946ef',
-      emissive: '#d946ef',
-      emissiveIntensity: 1.0,
-      roughness: 0.28,
-      metalness: 0.5,
-      flatShading: true,
-    });
-    this.portalInnerMat = new THREE.MeshStandardMaterial({
-      color: '#facc15',
-      emissive: '#facc15',
-      emissiveIntensity: 1.2,
-      roughness: 0.22,
-      metalness: 0.45,
-      flatShading: true,
-    });
-    this.portalVortexMat = new THREE.MeshBasicMaterial({
-      map: getFusionPortalVortexTexture(),
-      color: '#38bdf8',
-      transparent: true,
-      opacity: 0.48,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    });
-    this.portalFlashMat = new THREE.MeshBasicMaterial({
-      color: '#ffffff',
-      transparent: true,
-      opacity: 0,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    });
-    this.ownedMats.push(
-      this.portalOuterMat,
-      this.portalMidMat,
-      this.portalInnerMat,
-      this.portalVortexMat,
-      this.portalFlashMat
-    );
-    const vortexGeo = new THREE.CircleGeometry(1.88, 36);
-    const flashGeo = new THREE.CircleGeometry(2.85, 36);
-    this.ownedGeos.push(vortexGeo, flashGeo);
-    this.portalVortexMesh = new THREE.Mesh(vortexGeo, this.portalVortexMat);
-    this.portalFlashMesh = new THREE.Mesh(flashGeo, this.portalFlashMat);
-    this.portalFlashMesh.position.z = 0.08;
-    this.portalFlashMesh.visible = false;
-    this.buildSynchroPortal();
-    // 5. Skyward Central Light Beam Pillar
-    const beamOuterGeo = new THREE.CylinderGeometry(1.15, 1.85, 13.5, 24, 1, true);
-    const beamInnerGeo = new THREE.CylinderGeometry(0.42, 0.85, 13.5, 18, 1, true);
-    this.lightBeamOuterMat = new THREE.MeshBasicMaterial({
-      color: '#22d3ee',
-      transparent: true,
-      opacity: 0.14,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    });
-    this.lightBeamInnerMat = new THREE.MeshBasicMaterial({
-      color: '#ffffff',
-      transparent: true,
-      opacity: 0.18,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    });
-    this.ownedGeos.push(beamOuterGeo, beamInnerGeo);
-    this.ownedMats.push(this.lightBeamOuterMat, this.lightBeamInnerMat);
-    this.lightBeamOuterMesh = new THREE.Mesh(beamOuterGeo, this.lightBeamOuterMat);
-    this.lightBeamOuterMesh.position.set(0, DAIS_TOP_Y + 6.75, STAGE_CENTER_Z);
-    this.lightBeamInnerMesh = new THREE.Mesh(beamInnerGeo, this.lightBeamInnerMat);
-    this.lightBeamInnerMesh.position.set(0, DAIS_TOP_Y + 6.75, STAGE_CENTER_Z);
-    this.group.add(this.lightBeamOuterMesh, this.lightBeamInnerMesh);
+    this.buildPerimeterTechPylons();
+    // 4. Reusable 16-piece interlocking Chibi-art prism glass shard pool for Fusion assembly
+    this.glassShards = buildFusionGlassShards(this.group, this.ownedGeos, this.ownedMats);
     // Result Chibi mount above Grand Apex Podium
     this.resultMount.position.set(0, DAIS_TOP_Y + 0.04, STAGE_CENTER_Z);
     this.group.add(this.resultMount);
     // 6. Outer Material ZZZ/HSR Cyber-Showcase Podiums + Grooved Floor Energy Conduits
     this.buildMaterialPedestals();
-    // 7. Physical Recipe Ore Crystal Clusters + 8 Large Floating Cosmic Islands
+    // 7. Mineral Ore Containment Vats + Cutaway Lab Bunker Walls, Cryo Bays, Ceiling Iris & Consoles
     this.buildRecipeOreClusters();
-    this.buildFloatingCosmicIslands(darkBasaltMat);
+    buildLabBunkerWallsAndCryoBays(bunkerCtx);
+    buildLabCeilingCanopyAndArms(bunkerCtx);
+    buildLabOperatorConsoles(bunkerCtx);
     // Default initial preview
     if (FUSION_RECIPES[0]) {
       this.syncRecipe(FUSION_RECIPES[0], [false, false], [false, false], false);
@@ -353,8 +266,8 @@ export class FusionWorld3D {
    * waist-high rear holographic display stanchions & power manifold, frosted emitter lens,
    * 4 corner claws + diodes, ground sigil, dual-shell Fresnel aura, and GPU star-ember particles.
    */
-  private createCyberShowcasePodium(plaqueLabel: string, scale = 1, withDualAuraShells = false): CyberShowcasePodiumHandle {
-    return createCyberShowcasePodium(
+  private createLabTubePodium(plaqueLabel: string, scale = 1, withDualAuraShells = false): CyberShowcasePodiumHandle {
+    return createLabTubePodium(
       {
         armorDarkMat: this.armorDarkMat,
         armorSteelMat: this.armorSteelMat,
@@ -372,24 +285,35 @@ export class FusionWorld3D {
     return {
       group: this.group, armorDarkMat: this.armorDarkMat, armorSteelMat: this.armorSteelMat, brightSteelMat: this.brightSteelMat,
       deckTrimCyanMat: this.deckTrimCyanMat, deckTrimMagentaMat: this.deckTrimMagentaMat, stageNeonMat: this.stageNeonMat,
-      portalOuterMat: this.portalOuterMat, portalMidMat: this.portalMidMat, portalInnerMat: this.portalInnerMat,
-      portalOuterGroup: this.portalOuterGroup, portalMidGroup: this.portalMidGroup, portalInnerGroup: this.portalInnerGroup,
-      portalVortexMesh: this.portalVortexMesh, portalFlashMesh: this.portalFlashMesh, floatingIslands: this.floatingIslands,
       ownedGeos: this.ownedGeos, ownedMats: this.ownedMats, customDisposers: this.customDisposers,
     };
   }
-  private buildExpandedOctagonalArenaDeck(darkBasaltMat: THREE.Material): void { buildExpandedOctagonalArenaDeck(this.arenaBuildCtx(), darkBasaltMat); }
+  private bunkerBuildCtx(): LabBunkerBuildCtx {
+    return {
+      group: this.group,
+      labWhiteMat: this.armorSteelMat,
+      labSilverMat: this.brightSteelMat,
+      labSlateMat: this.armorDarkMat,
+      labDarkFrameMat: this.labDarkFrameMat,
+      stageNeonMat: this.stageNeonMat,
+      deckTrimCyanMat: this.deckTrimCyanMat,
+      deckTrimMagentaMat: this.deckTrimMagentaMat,
+      ownedGeos: this.ownedGeos,
+      ownedMats: this.ownedMats,
+      ownedTextures: this.ownedTextures,
+      animHandles: this.labAnim,
+    };
+  }
   private buildElevatedShowcaseStage(): void { buildElevatedShowcaseStage(this.arenaBuildCtx()); }
-  private buildPerimeterTechPylons(darkBasaltMat: THREE.Material): void { buildPerimeterTechPylons(this.arenaBuildCtx(), darkBasaltMat); }
-  private buildSynchroPortal(): void { buildSynchroPortal(this.arenaBuildCtx()); }
+  private buildPerimeterTechPylons(): void { buildPerimeterTechPylons(this.arenaBuildCtx()); }
   private buildMaterialPedestals(): void {
     const holoGridGeo = new THREE.RingGeometry(0.55, 0.92, 24);
-    const trayGeo = new THREE.BoxGeometry(0.36, 0.055, 1.0);
-    const conduitGeo = new THREE.PlaneGeometry(0.2, 1.0);
-    const pulseGeo = new THREE.BoxGeometry(0.24, 0.075, 0.32);
+    const trayGeo = new THREE.BoxGeometry(0.42, 0.06, 1.0);
+    const conduitGeo = new THREE.PlaneGeometry(0.24, 1.0);
+    const pulseGeo = new THREE.BoxGeometry(0.28, 0.085, 0.36);
     this.ownedGeos.push(holoGridGeo, trayGeo, conduitGeo, pulseGeo);
     for (let i = 0; i < MAX_MAT_SLOTS; i++) {
-      const podium = this.createCyberShowcasePodium(`0${i + 1}`, MAT_PODIUM_SCALE, false);
+      const podium = this.createLabTubePodium(`0${i + 1}`, MAT_PODIUM_SCALE, false);
       const holoGridMat = new THREE.MeshBasicMaterial({
         color: '#38bdf8',
         transparent: true,
@@ -404,21 +328,21 @@ export class FusionWorld3D {
       this.ownedMats.push(holoGridMat);
       const holoGridRing = new THREE.Mesh(holoGridGeo, holoGridMat);
       holoGridRing.rotation.x = -Math.PI / 2;
-      holoGridRing.position.y = 0.302;
+      holoGridRing.position.y = 0.306;
       holoGridRing.renderOrder = 3;
       podium.group.add(holoGridRing);
-      // Grooved floor energy conduit channel + 2 travelling energy pulse nodes
+      // Dark slate floor cable trough + vivid high-contrast energy conduit & travelling pulse nodes
       const conduitGroup = new THREE.Group();
-      const trayMesh = new THREE.Mesh(trayGeo, this.armorSteelMat);
+      const trayMesh = new THREE.Mesh(trayGeo, this.armorDarkMat);
       trayMesh.position.y = 0.04;
       conduitGroup.add(trayMesh);
       const conduitMat = new THREE.MeshBasicMaterial({
-        color: '#38bdf8',
+        color: '#ef4444',
         transparent: true,
-        opacity: 0.65,
-        blending: THREE.AdditiveBlending,
+        opacity: 0.98,
         side: THREE.DoubleSide,
         depthWrite: false,
+        toneMapped: false,
         polygonOffset: true,
         polygonOffsetFactor: -2,
         polygonOffsetUnits: -2,
@@ -469,6 +393,7 @@ export class FusionWorld3D {
     ];
     const shardGeo = new THREE.OctahedronGeometry(0.16, 0);
     this.ownedGeos.push(shardGeo);
+    const bunkerCtx = this.bunkerBuildCtx();
     for (const sp of specs) {
       const crystalMat = new THREE.MeshStandardMaterial({
         color: sp.defaultHex,
@@ -487,23 +412,25 @@ export class FusionWorld3D {
         flatShading: true,
       });
       this.ownedMats.push(crystalMat, accentMat);
+      const vatGroup = buildOreContainmentVat(bunkerCtx, sp.x, sp.z, sp.scale * 0.92);
       const clusterGroup = createCyberCrystalCluster({
-        frameMat: this.armorSteelMat,
+        frameMat: this.armorDarkMat,
         crystalMat,
         accentMat,
-        scale: sp.scale,
+        scale: 0.92,
         shardCount: 6,
       });
-      clusterGroup.position.set(sp.x, 0.04, sp.z);
+      clusterGroup.position.set(0, 0.3, 0);
       this.customDisposers.push(() => disposeCyberProp(clusterGroup));
       const floatingShards: THREE.Mesh[] = [];
       for (let s = 0; s < 2; s++) {
         const shard = new THREE.Mesh(shardGeo, s === 0 ? crystalMat : accentMat);
-        shard.position.set(s === 0 ? -0.35 : 0.35, 1.08 + s * 0.26, 0);
+        shard.position.set(s === 0 ? -0.35 : 0.35, 0.95 + s * 0.22, 0);
         clusterGroup.add(shard);
         floatingShards.push(shard);
       }
-      this.group.add(clusterGroup);
+      vatGroup.add(clusterGroup);
+      this.group.add(vatGroup);
       this.oreClusters.push({
         group: clusterGroup,
         crystalMat,
@@ -511,12 +438,11 @@ export class FusionWorld3D {
         floatingShards,
         oreSlotIndex: sp.oreSlotIndex,
         ready: false,
-        baseY: 0.04,
+        baseY: 0.3,
         phase: sp.phase,
       });
     }
   }
-  private buildFloatingCosmicIslands(darkBasaltMat: THREE.Material): void { buildFloatingCosmicIslands(this.arenaBuildCtx(), darkBasaltMat); }
   public isAnimating(): boolean {
     return this.seq.fusionAnimTimer > 0;
   }
@@ -541,47 +467,42 @@ export class FusionWorld3D {
   } {
     if (this.seq.fusionAnimTimer > 0) {
       const elapsedAnim = this.seq.fusionAnimDur - this.seq.fusionAnimTimer;
-      if (elapsedAnim < 1.72) {
-        // Act 1 & 2: Glide closer to frame the levitating Material Chibis converging into the Synchro Gate
-        const p = Math.min(1, elapsedAnim / 1.45);
-        this.camFocusPos.set(0, 7.8 - p * 1.1, 14.2 - p * 2.4);
-        this.camFocusLook.set(0, 2.1 + p * 1.1, -1.8 - p * 2.1);
+      if (elapsedAnim < 0.85) {
+        // Phase 1: Frame the Material Chibis shattering into floating prism glass shards
+        const p = Math.min(1, elapsedAnim / 0.85);
+        this.camFocusPos.set(0, 7.8 - p * 3.55, 13.8 - p * 13.75);
+        this.camFocusLook.set(0, 2.0 + p * 1.45, -0.4 - p * 6.05);
       } else {
-        // Act 3: Heroic low-angle close-up on the Grand APEX Podium & spinning Synchro Gate Halo
-        this.camFocusPos.set(0, 3.75, 4.35);
-        this.camFocusLook.set(0, 3.05, STAGE_CENTER_Z - 0.3);
+        // Phase 2-4: Positioned cleanly forward of the front-center Material Tube (z = 2.45) to frame the 2x APEX Tube unobstructed
+        this.camFocusPos.set(0, 4.25, 0.05);
+        this.camFocusLook.set(0, 3.45, STAGE_CENTER_Z);
       }
       return { active: true, camPos: this.camFocusPos, lookAt: this.camFocusLook };
     }
     if (this.seq.revealHold) {
-      this.camFocusPos.set(0, 3.75, 4.35);
-      this.camFocusLook.set(0, 3.05, STAGE_CENTER_Z - 0.3);
+      this.camFocusPos.set(0, 4.25, 0.05);
+      this.camFocusLook.set(0, 3.45, STAGE_CENTER_Z);
       return { active: true, camPos: this.camFocusPos, lookAt: this.camFocusLook };
     }
     return { active: false, camPos: this.camFocusPos, lookAt: this.camFocusLook };
   }
   public cancelAnimation(): void {
     this.seq.fusionAnimTimer = 0;
+    this.seq.materialShattered = false;
     this.seq.portalBurstFired = false;
     this.seq.fusionBurstFired = false;
     this.seq.landingEchoFired = false;
     this.seq.revealHold = false;
     this.seq.portalFlashTimer = 0;
-    this.portalFlashMesh.visible = false;
-    this.portalVortexMesh.scale.setScalar(1);
     this.seq.onFusionAnimComplete = null;
     this.resultMount.visible = true;
+    hideFusionGlassShards(this.glassShards);
     for (const slot of this.materialSlots) {
       if (slot.sprite) {
         slot.sprite.group.position.set(0, 0.285, 0);
         slot.sprite.group.scale.setScalar(1);
       }
     }
-    for (const orb of this.energyOrbs) {
-      this.group.remove(orb.mesh);
-      orb.mat.dispose();
-    }
-    this.energyOrbs.length = 0;
   }
   private applyPodiumTheme(
     podium: CyberShowcasePodiumHandle,
@@ -640,19 +561,6 @@ export class FusionWorld3D {
       this.innerRingMat.opacity = 0.85;
       this.outerRingMat.color.set(recipe.accentColor);
       this.outerRingMat.opacity = 0.72;
-      this.portalOuterMat.color.set(recipe.accentColor);
-      this.portalOuterMat.emissive.set(recipe.accentColor);
-      this.portalOuterMat.emissiveIntensity = 1.45;
-      this.portalMidMat.color.set('#facc15');
-      this.portalMidMat.emissive.set('#facc15');
-      this.portalMidMat.emissiveIntensity = 1.35;
-      this.portalInnerMat.color.set(recipe.glowColor);
-      this.portalInnerMat.emissive.set(recipe.glowColor);
-      this.portalInnerMat.emissiveIntensity = 1.4;
-      this.portalVortexMat.color.set(recipe.accentColor);
-      this.portalVortexMat.opacity = 0.34;
-      this.lightBeamOuterMat.color.set(recipe.accentColor);
-      this.lightBeamInnerMat.color.set('#fef08a');
     } else {
       this.stageNeonMat.color.set('#be123c');
       this.stageNeonMat.emissive.set('#dc2626');
@@ -663,19 +571,6 @@ export class FusionWorld3D {
       this.innerRingMat.opacity = 0.38;
       this.outerRingMat.color.set('#64748b');
       this.outerRingMat.opacity = 0.32;
-      this.portalOuterMat.color.set('#7f1d1d');
-      this.portalOuterMat.emissive.set('#be123c');
-      this.portalOuterMat.emissiveIntensity = 0.48;
-      this.portalMidMat.color.set('#475569');
-      this.portalMidMat.emissive.set('#64748b');
-      this.portalMidMat.emissiveIntensity = 0.35;
-      this.portalInnerMat.color.set('#991b1b');
-      this.portalInnerMat.emissive.set('#ef4444');
-      this.portalInnerMat.emissiveIntensity = 0.52;
-      this.portalVortexMat.color.set('#be123c');
-      this.portalVortexMat.opacity = 0.14;
-      this.lightBeamOuterMat.color.set(recipe.accentColor);
-      this.lightBeamInnerMat.color.set('#bae6fd');
     }
     // Sync Physical Recipe Ore Crystal Clusters around the Arena
     for (const node of this.oreClusters) {
@@ -692,18 +587,18 @@ export class FusionWorld3D {
       node.accentMat.emissive.set(oreHex);
       node.accentMat.emissiveIntensity = isOreReady ? 1.85 : 0.32;
     }
-    // Position 2 or 3 ZZZ/HSR Cyber-Showcase Material Podiums in a Spacious Front Crescent Arc
+    // Position 2 or 3 Cylindrical Stasis Tube Material Podiums in a Spacious Front Crescent Arc
     const count = recipe.requiredMiners.length;
     const coords: Array<[number, number]> =
       count === 2
         ? [
-            [-4.65, 0.95],
-            [4.65, 0.95],
+            [-4.65, 0.65],
+            [4.65, 0.65],
           ]
         : [
-            [-4.95, 0.55],
-            [4.95, 0.55],
-            [0, 2.35],
+            [-4.95, 0.25],
+            [4.95, 0.25],
+            [0, 2.45],
           ];
     for (let i = 0; i < MAX_MAT_SLOTS; i++) {
       const slot = this.materialSlots[i];
@@ -719,21 +614,18 @@ export class FusionWorld3D {
       slot.pos.set(px, slot.podium.topY, pz);
       slot.podium.group.position.set(px, 0, pz);
       slot.podium.group.visible = true;
-      // Orient floor energy conduit cleanly from podium rim into the stage/stair threshold without clipping treads
-      const isCenterFront = count === 3 && i === 2;
-      const targetX = isCenterFront ? 0 : px * 0.38;
-      const targetZ = isCenterFront ? STAGE_CENTER_Z + 3.05 : STAGE_CENTER_Z + 1.65;
-      const dx = px - targetX;
-      const dz = pz - targetZ;
+      // Orient floor energy conduit radially from Circular Dais outer rim (r = 4.12m) to Material Podium rim
+      const dx = px;
+      const dz = pz - STAGE_CENTER_Z;
       const dist = Math.hypot(dx, dz);
-      const startPad = 1.28;
-      const endPad = 0.08;
-      const conduitLen = Math.max(0.55, dist - startPad - endPad);
       const nx = dist > 0.001 ? dx / dist : 0;
       const nz = dist > 0.001 ? dz / dist : 1;
-      const midDist = endPad + conduitLen * 0.5;
+      const daisRimDist = 4.12;
+      const podRimOffset = 1.38;
+      const conduitLen = Math.max(0.4, dist - daisRimDist - podRimOffset);
+      const midDist = daisRimDist + conduitLen * 0.5;
       slot.conduitGroup.visible = true;
-      slot.conduitGroup.position.set(targetX + nx * midDist, 0, targetZ + nz * midDist);
+      slot.conduitGroup.position.set(nx * midDist, 0, STAGE_CENTER_Z + nz * midDist);
       slot.conduitGroup.scale.set(1, 1, conduitLen);
       slot.conduitGroup.rotation.set(0, Math.atan2(dx, dz), 0);
       const def = getChibiById(ing.chibiId);
@@ -752,10 +644,15 @@ export class FusionWorld3D {
       );
       slot.holoGridRing.visible = !ready;
       slot.holoGridMat.color.set('#38bdf8');
-      slot.conduitMat.color.set(
-        this.seq.allRequirementsReady ? '#facc15' : ready ? recipe.accentColor : '#991b1b'
-      );
-      slot.conduitMat.opacity = this.seq.allRequirementsReady ? 0.92 : ready ? 0.72 : 0.34;
+      const conduitColor = this.seq.allRequirementsReady
+        ? '#eab308'
+        : ready
+          ? recipe.accentColor.toLowerCase() === '#e2e8f0'
+            ? '#0284c7'
+            : recipe.accentColor
+          : '#ef4444';
+      slot.conduitMat.color.set(conduitColor);
+      slot.conduitMat.opacity = this.seq.allRequirementsReady ? 1 : ready ? 0.96 : 0.92;
       if (slot.chibiId !== ing.chibiId || recipeChanged) {
         if (slot.sprite) {
           slot.podium.group.remove(slot.sprite.group);
@@ -785,7 +682,7 @@ export class FusionWorld3D {
       this.resultChibiId = recipe.resultChibiId;
       const resDef = getChibiById(recipe.resultChibiId);
       if (resDef) {
-        const sp = new ChibiSprite3D(resDef, 3.85);
+        const sp = new ChibiSprite3D(resDef, 3.95);
         sp.setAccentColor(recipe.accentColor);
         this.resultMount.add(sp.group);
         this.resultSprite = sp;
@@ -797,46 +694,20 @@ export class FusionWorld3D {
     this.seq.fusionAccentHex = recipe.accentColor;
     this.seq.fusionGlowHex = recipe.glowColor;
     this.seq.fusionAnimTimer = this.seq.fusionAnimDur;
+    this.seq.materialShattered = false;
     this.seq.portalBurstFired = false;
     this.seq.fusionBurstFired = false;
     this.seq.landingEchoFired = false;
     this.seq.onFusionAnimComplete = onComplete;
     this.resultMount.visible = false;
-    const count = recipe.requiredMiners.length;
-    for (let s = 0; s < count; s++) {
-      const slot = this.materialSlots[s];
-      for (let k = 0; k < 8; k++) {
-        const mat = new THREE.MeshBasicMaterial({
-          color: k % 2 === 0 ? recipe.accentColor : '#fef08a',
-          transparent: true,
-          opacity: 0.96,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-        });
-        const mesh = new THREE.Mesh(this.orbGeo, mat);
-        const startPos = slot.pos
-          .clone()
-          .add(
-            new THREE.Vector3(
-              (Math.random() - 0.5) * 0.55,
-              1.65 + Math.random() * 0.45,
-              (Math.random() - 0.5) * 0.55
-            )
-          );
-        mesh.position.copy(startPos);
-        mesh.visible = false;
-        this.group.add(mesh);
-        this.energyOrbs.push({
-          mesh,
-          mat,
-          from: startPos,
-          to: PORTAL_CENTER.clone(),
-          age: -(0.78 + k * 0.08),
-          dur: 0.68,
-          arcH: 1.35 + Math.random() * 0.95,
-        });
-      }
-    }
+    initFusionGlassShards(
+      this.glassShards,
+      this.materialSlots,
+      recipe.requiredMiners.length,
+      this.resultSprite,
+      recipe.accentColor,
+      recipe.glowColor
+    );
   }
   public getNpcBubbleAnchors(
     _camera: THREE.Camera,
@@ -851,8 +722,7 @@ export class FusionWorld3D {
         seq: this.seq,
         group: this.group,
         impactFx: this.impactFx,
-        orbGeo: this.orbGeo,
-        energyOrbs: this.energyOrbs,
+        glassShards: this.glassShards,
         materialSlots: this.materialSlots,
         oreClusters: this.oreClusters,
         floatingIslands: this.floatingIslands,
@@ -861,18 +731,8 @@ export class FusionWorld3D {
         magicCircleMat: this.magicCircleMat,
         innerRingMesh: this.innerRingMesh,
         outerRingMesh: this.outerRingMesh,
-        portalOuterGroup: this.portalOuterGroup,
-        portalMidGroup: this.portalMidGroup,
-        portalInnerGroup: this.portalInnerGroup,
-        portalOuterMat: this.portalOuterMat,
-        portalMidMat: this.portalMidMat,
-        portalInnerMat: this.portalInnerMat,
-        portalVortexMesh: this.portalVortexMesh,
-        portalFlashMesh: this.portalFlashMesh,
-        portalFlashMat: this.portalFlashMat,
         stageNeonMat: this.stageNeonMat,
-        lightBeamOuterMat: this.lightBeamOuterMat,
-        lightBeamInnerMat: this.lightBeamInnerMat,
+        labAnim: this.labAnim,
         resultMount: this.resultMount,
         resultSprite: this.resultSprite,
       },
@@ -900,7 +760,6 @@ export class FusionWorld3D {
       disposeFn();
     }
     this.customDisposers.length = 0;
-    this.orbGeo.dispose();
     for (const t of this.ownedTextures) t.dispose();
     for (const g of this.ownedGeos) g.dispose();
     for (const m of this.ownedMats) m.dispose();

@@ -2687,11 +2687,16 @@ describe('Pure 3D Mine World', () => {
     fx.dispose();
   });
 
-  it('builds FusionWorld3D with Synchro Portal triple rings, ore crystal clusters, floating islands, hologram preview, NPC bubbles, and 3-phase fusion animation', () => {
+  it('builds FusionWorld3D Clean-Tech White Secret Lab Bunker with single 2x rear APEX tube podium, hazard steel deck, ore containment vats, instanced server/grating/LED meshes, hologram preview, and Chibi-art glass shard fusion animation', () => {
     expect(getFusionMagicCircuitTexture()).toBeInstanceOf(THREE.Texture);
 
     const fusionWorld = new FusionWorld3D();
     fusionWorld.group.visible = true;
+    let instancedMeshCount = 0;
+    fusionWorld.group.traverse((child) => {
+      if (child instanceof THREE.InstancedMesh) instancedMeshCount++;
+    });
+    expect(instancedMeshCount).toBeGreaterThanOrEqual(4);
     const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
     cam.position.set(0, 6.2, 11.4);
     cam.lookAt(0, 1.3, -0.35);
@@ -2717,9 +2722,24 @@ describe('Pure 3D Mine World', () => {
     expect(fusionWorld.isAnimating()).toBe(true);
     expect(fusionWorld.getCameraFocusState().active).toBe(true);
 
+    let midAnimVisibleShardCount = 0;
     for (let i = 0; i < 80; i++) {
       fusionWorld.update(0.05, 1.1 + i * 0.05, cam);
+      if (i === 30) {
+        expect(fusionWorld.getCameraFocusState().camPos.z).toBeLessThan(1.0);
+        fusionWorld.group.traverse((child) => {
+          if (
+            child instanceof THREE.Mesh &&
+            child.visible &&
+            child.material instanceof THREE.ShaderMaterial &&
+            'tTexB' in child.material.uniforms
+          ) {
+            midAnimVisibleShardCount++;
+          }
+        });
+      }
     }
+    expect(midAnimVisibleShardCount).toBe(16);
     expect(completed).toBe(true);
     expect(fusionWorld.isAnimating()).toBe(false);
     expect(fusionWorld.isRevealHolding()).toBe(true);
