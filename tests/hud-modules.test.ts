@@ -1016,10 +1016,23 @@ describe('Tahap B HUD Modules', () => {
       }
       const idxUi = new IndexModalUi(state, () => {});
       const idxHtml = idxUi.renderModal();
+      expect(idxHtml).toContain('data-index-sidebar="true"');
+      expect(idxHtml).toContain('Worlds (W1–W8)');
+      expect(idxHtml).toContain('Special Tiers');
+      expect(idxHtml).toContain('data-index-world="twin"');
       expect(idxHtml).toContain('data-index-maxed-stamp="true"');
       expect(idxHtml).toContain('MAXED 100%');
       expect(idxHtml).toContain('is-holo-foil');
       expect(idxHtml).toContain('★5');
+
+      // Switch to Twin Index tab & verify Twin Duo cards + inspector
+      state.discovered.add('yukikage-twins');
+      (idxUi as unknown as { indexWorldId: string }).indexWorldId = 'twin';
+      const twinIdxHtml = idxUi.renderModal();
+      expect(twinIdxHtml).toContain('Yukikage Twins');
+      expect(twinIdxHtml).toContain('Halcyon Twins');
+      expect(twinIdxHtml).toContain('Spire Shop Duo');
+      expect(twinIdxHtml).toContain('is-holo-foil');
     });
 
     it('renders active Return Rush pill with timer in Active Potions dock', () => {

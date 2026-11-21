@@ -8,8 +8,9 @@ import {
   WorldId,
   WORLDS,
 } from './GameData';
+import { PREMIUM_SHOP_ITEMS } from './PremiumShopData';
 
-export type IndexTabId = WorldId | 'weather' | 'fusion' | 'limited';
+export type IndexTabId = WorldId | 'weather' | 'fusion' | 'limited' | 'twin';
 
 export type IndexPassiveKind = 'oreSellPct' | 'oreDropPct' | 'allDmgPct';
 
@@ -58,6 +59,7 @@ export const ALL_INDEX_TABS: readonly IndexTabId[] = [
   'weather',
   'fusion',
   'limited',
+  'twin',
 ];
 
 const TAB_MILESTONE_CONFIG: Record<
@@ -155,6 +157,14 @@ const TAB_MILESTONE_CONFIG: Record<
       passive: { kind: 'oreDropPct', value: 0.05, label: '+5% Ore Drop' },
     },
   },
+  twin: {
+    half: { gems: 6000, enchantDice: 1 },
+    full: {
+      gems: 20000,
+      enchantDice: 3,
+      passive: { kind: 'oreSellPct', value: 0.05, label: '+5% Ore Sell' },
+    },
+  },
 };
 
 export const INDEX_MILESTONES: readonly IndexMilestoneDef[] = ALL_INDEX_TABS.flatMap((tabId) => {
@@ -195,6 +205,9 @@ export function getIndexMilestonesForTab(tabId: IndexTabId): IndexMilestoneDef[]
 }
 
 export function getIndexTabEntryIds(tabId: IndexTabId): string[] {
+  if (tabId === 'twin') {
+    return PREMIUM_SHOP_ITEMS.map((item) => item.chibiId);
+  }
   if (tabId === 'limited') {
     return getDailyLoginLimitedChibiIds();
   }

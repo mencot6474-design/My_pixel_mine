@@ -19,6 +19,7 @@ import {
 import { GameState } from '../game/GameState';
 import { IndexTabId, isIndexMilestoneUnlocked } from '../game/IndexRewardsDomain';
 import { fmtInt, fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
+import { getPremiumShopItemByChibiId, PREMIUM_SHOP_ITEMS } from '../game/PremiumShopData';
 import { getWeatherById } from '../game/WeatherData';
 import { enchantDiceIconHtml, hudIconHtml, meteorIconHtml, oreIconSvg } from './HudIcons';
 import {
@@ -33,7 +34,6 @@ import {
   TW_CLOSE_BTN,
   TW_MODAL_GRID_BASE,
   TW_SHOP_MODAL_RESP,
-  TW_TAB_BTN,
 } from './HudShared';
 
 export class IndexModalUi {
@@ -49,7 +49,9 @@ export class IndexModalUi {
 
   private getResolvedIndexInspectId(): string | null {
     let allIds: string[];
-    if (this.indexWorldId === 'limited') {
+    if (this.indexWorldId === 'twin') {
+      allIds = PREMIUM_SHOP_ITEMS.map((item) => item.chibiId);
+    } else if (this.indexWorldId === 'limited') {
       allIds = getDailyLoginLimitedChibiIds();
     } else if (this.indexWorldId === 'fusion') {
       allIds = FUSION_RECIPES.map((r) => r.resultChibiId);
@@ -69,7 +71,7 @@ export class IndexModalUi {
 
   private isHoloChibiCard(id: string, rarity: ItemRarity, unlocked: boolean): boolean {
     if (!unlocked || !getChibiById(id)) return false;
-    return rarity === 'fusion' || rarity === 'limited' || this.state.getChibiStar(id) >= 5;
+    return rarity === 'fusion' || rarity === 'limited' || rarity === 'twin' || this.state.getChibiStar(id) >= 5;
   }
 
   private renderIndexCard(opts: {
@@ -129,6 +131,31 @@ export class IndexModalUi {
 
     const unlocked = this.state.discovered.has(targetId);
     const statusBadge = `<span class="mam-pill rounded-full text-[10px] font-black border-2 border-[#14111d] ${unlocked ? 'bg-[#6ee7b7] text-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e]'}">${unlocked ? 'Discovered' : 'Locked'}</span>`;
+
+    if (this.indexWorldId === 'twin') {
+      const item = getPremiumShopItemByChibiId(targetId);
+      const chibi = item ? getChibiById(item.chibiId) : undefined;
+      if (item && chibi) {
+        const owned = this.state.miners[chibi.id] || 0;
+        const onPlot = this.state.plotMiners.filter((id) => id === chibi.id).length;
+        return renderInspectorPanel({
+          rarity: chibi.rarity,
+          title: chibi.name,
+          subtitle: `${item.titleTag} • Spire Shop Duo`,
+          badgesHtml: statusBadge,
+          artHtml: chibiPortraitHtml(chibi, { usePose: true }),
+          stats: [
+            ['Base DPS', `${fmtShort(chibi.baseDps)}/s`, 'text-[#b45309]'],
+            ['Passive', item.passiveSummary, 'text-[#0369a1]'],
+            ['Shop Cost', `${fmtInt(item.coinCost)} Coins`, 'text-[#be123c]'],
+            ['Owned', `${fmtInt(owned)} (${onPlot}/5)`, 'text-[#14111d]'],
+          ],
+          actionHtml: this.renderReviewActionButton(chibi.id, 'Review 4 Poses', 'special'),
+          dimmed: !unlocked,
+        });
+      }
+      return renderEmptyInspectorPanel('Select any Twin Duo Chibi to inspect details.');
+    }
 
     if (this.indexWorldId === 'limited') {
       const reward = DAILY_LOGIN_REWARDS.find((r) => r.chibiId === targetId);
@@ -276,6 +303,24 @@ export class IndexModalUi {
 
   private buildIndexCardsHtml(): string {
     const selectedId = this.getResolvedIndexInspectId();
+
+    if (this.indexWorldId === 'twin') {
+      return PREMIUM_SHOP_ITEMS.map((item) => {
+        const chibi = getChibiById(item.chibiId);
+        if (!chibi) return '';
+        return this.renderIndexCard({
+          id: chibi.id,
+          name: chibi.name,
+          rarity: chibi.rarity,
+          title: `${chibi.name} (${item.titleTag})`,
+          artHtml: chibiPortraitHtml(chibi, { usePose: true }),
+          bottomHtml: `${renderRarityBadgeHtml(chibi.rarity, 'is-compact mb-0.5')}<span class="mam-card-pct">${fmtShort(chibi.baseDps)}/s</span>`,
+          unlocked: this.state.discovered.has(chibi.id),
+          selected: selectedId === chibi.id,
+          isChibi: true,
+        });
+      }).join('');
+    }
 
     if (this.indexWorldId === 'limited') {
       return DAILY_LOGIN_REWARDS.filter((r) => Boolean(r.chibiId))
@@ -502,6 +547,109 @@ export class IndexModalUi {
     `;
   }
 
+  private renderSidebarTabButton(opts: {
+    tabId: IndexTabId;
+    labelHtml: string;
+    found: number;
+    total: number;
+    accentColor: string;
+    countAttrName: 'data-index-world-count' | 'data-index-tab-count';
+  }): string {
+    const active = this.indexWorldId === opts.tabId;
+    const maxed = opts.total > 0 && opts.found >= opts.total;
+    const pct = opts.total > 0 ? Math.min(100, Math.round((opts.found / opts.total) * 100)) : 0;
+    const readyDot = this.buildTabReadyDotHtml(opts.tabId);
+    const btnBg = active
+      ? 'bg-[#fef08a] ring-[2px] ring-inset ring-[#38bdf8]'
+      : 'bg-[#ffffff] hover:bg-[#fcecc8]';
+    const barColor = maxed ? '#2ee59d' : opts.accentColor;
+
+    return `
+      <button
+        type="button"
+        class="group relative w-full @max-[920px]:w-auto shrink-0 rounded-xl border-2 border-[#14111d] ${btnBg} px-2.5 py-1.5 @max-[920px]:py-1 flex flex-col gap-1 text-left cursor-pointer transition-[transform,background-color] duration-150 ease-out active:scale-[0.97] ${active ? 'active' : ''}"
+        data-index-world="${opts.tabId}"
+      >
+        <div class="flex items-center justify-between gap-1.5 w-full whitespace-nowrap">
+          <span class="inline-flex items-center gap-1.5 min-w-0 text-[12px] font-black text-[#14111d] truncate">${opts.labelHtml}</span>
+          <span class="inline-flex items-center gap-1 shrink-0">
+            <span class="text-[10.5px] font-extrabold text-[#5b526e] tabular-nums" ${opts.countAttrName}="${opts.tabId}">(${opts.found}/${opts.total})</span>
+            ${maxed ? '<span class="mam-pill-xs !px-1 rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px]" data-index-tab-maxed="true">MAX</span>' : ''}
+            ${readyDot}
+          </span>
+        </div>
+        <div class="w-full h-[4px] rounded-full bg-[#fcecc8] border border-[#14111d]/35 overflow-hidden @max-[920px]:hidden">
+          <div class="h-full rounded-full transition-[width] duration-250" data-index-tab-bar="${opts.tabId}" style="width:${pct}%;background:${barColor}"></div>
+        </div>
+      </button>
+    `;
+  }
+
+  private buildCollectionSidebarHtml(): string {
+    const worldButtons = WORLDS.map((w) => {
+      const wp = this.state.getWorldIndexProgress(w.id);
+      return this.renderSidebarTabButton({
+        tabId: w.id,
+        labelHtml: `<span class="w-2.5 h-2.5 rounded-full shrink-0 border border-[#14111d]" style="background:${w.iconColor}"></span><span class="truncate">${w.name}</span>`,
+        found: wp.found,
+        total: wp.total,
+        accentColor: w.iconColor,
+        countAttrName: 'data-index-world-count',
+      });
+    }).join('');
+
+    const specialSpecs: Array<{
+      tabId: Extract<IndexTabId, 'weather' | 'fusion' | 'limited' | 'twin'>;
+      labelHtml: string;
+      accentColor: string;
+    }> = [
+      {
+        tabId: 'weather',
+        labelHtml: `${meteorIconHtml('celestial', 14, 'Weather')}<span>Weather</span>`,
+        accentColor: '#38bdf8',
+      },
+      {
+        tabId: 'fusion',
+        labelHtml: `<span class="text-[#a855f7]">✦</span><span>Fusion</span>`,
+        accentColor: '#c084fc',
+      },
+      {
+        tabId: 'limited',
+        labelHtml: `<span class="text-[#d97706]">★</span><span>Limited</span>`,
+        accentColor: '#f59e0b',
+      },
+      {
+        tabId: 'twin',
+        labelHtml: `<img class="w-4 h-4 object-contain shrink-0" src="${assetUrl('/badges/twin.svg')}" alt="" aria-hidden="true" /><span>Twin</span>`,
+        accentColor: '#ec4899',
+      },
+    ];
+
+    const specialButtons = specialSpecs
+      .map((spec) => {
+        const prog = this.state.getIndexTabProgress(spec.tabId);
+        return this.renderSidebarTabButton({
+          tabId: spec.tabId,
+          labelHtml: spec.labelHtml,
+          found: prog.found,
+          total: prog.total,
+          accentColor: spec.accentColor,
+          countAttrName: 'data-index-tab-count',
+        });
+      })
+      .join('');
+
+    return `
+      <aside class="mam-inspector-well mam-no-scrollbar w-[212px] @max-[920px]:w-full shrink-0 rounded-xl p-2 flex flex-col @max-[920px]:flex-row @max-[920px]:items-center gap-1.5 overflow-y-auto @max-[920px]:overflow-y-hidden @max-[920px]:overflow-x-auto" data-index-sidebar="true">
+        <div class="px-1.5 pt-0.5 text-[10px] font-black tracking-[0.08em] uppercase text-[#5b526e] @max-[920px]:hidden">Worlds (W1–W8)</div>
+        ${worldButtons}
+        <div class="px-1.5 pt-1.5 mt-0.5 border-t border-[#14111d]/15 text-[10px] font-black tracking-[0.08em] uppercase text-[#5b526e] @max-[920px]:hidden">Special Tiers</div>
+        <span class="hidden @max-[920px]:inline-block w-[2px] h-6 bg-[#14111d]/20 shrink-0 mx-0.5" aria-hidden="true"></span>
+        ${specialButtons}
+      </aside>
+    `;
+  }
+
   public renderModal(): string {
     const found = this.state.getDiscoveredCount();
     const total = this.state.getTotalIndexCount();
@@ -513,7 +661,7 @@ export class IndexModalUi {
       title: 'Index',
       theme: 'index',
       iconHtml: hudIconHtml('indexBook', 26, 'Index'),
-      boxClass: `w-[980px] ${TW_SHOP_MODAL_RESP}`,
+      boxClass: `w-[1060px] ${TW_SHOP_MODAL_RESP}`,
       headerExtraHtml: `
         <div class="relative w-full max-w-[640px] mx-auto h-7 rounded-full bg-[#fcecc8] border-[2.5px] border-[#14111d] overflow-hidden flex items-center justify-center">
           <div class="absolute left-0 top-0 bottom-0 bg-[linear-gradient(90deg,#a855f7,#ec4899,#38bdf8)] rounded-full transition-[width] duration-250 ease-out" data-index-fill="true" style="width:${pct}%"></div>
@@ -524,53 +672,20 @@ export class IndexModalUi {
         </div>
       `,
       bodyHtml: `
-        <div class="flex flex-wrap items-center gap-1.5 py-0.5 shrink-0">
-          ${WORLDS.map((w) => {
-            const wp = this.state.getWorldIndexProgress(w.id);
-            const wMaxed = wp.total > 0 && wp.found >= wp.total;
-            return `
-            <button class="${TW_TAB_BTN} !px-2.5 !text-[12px] shrink-0 ${this.indexWorldId === w.id ? 'active' : ''}" data-index-world="${w.id}">
-              <span>${w.name}</span>
-              <span class="text-[10.5px] font-bold opacity-85" data-index-world-count="${w.id}">(${wp.found}/${wp.total})</span>
-              ${wMaxed ? '<span class="mam-pill-xs !px-1.5 rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px]" data-index-tab-maxed="true">MAXED</span>' : ''}
-              ${this.buildTabReadyDotHtml(w.id)}
-            </button>
-          `;
-          }).join('')}
-          ${(() => {
-            const wProg = this.state.getIndexTabProgress('weather');
-            const fProg = this.state.getIndexTabProgress('fusion');
-            const lProg = this.state.getIndexTabProgress('limited');
-            return `
-          <button class="${TW_TAB_BTN} !px-2.5 !text-[12px] shrink-0 ${this.indexWorldId === 'weather' ? 'active' : ''}" data-index-world="weather">
-            <span class="inline-flex items-center gap-1">${meteorIconHtml('celestial', 14, 'Weather')} Weather</span>
-            <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="weather">(${wProg.found}/${wProg.total})</span>
-            ${wProg.total > 0 && wProg.found >= wProg.total ? '<span class="mam-pill-xs !px-1.5 rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px]" data-index-tab-maxed="true">MAXED</span>' : ''}
-            ${this.buildTabReadyDotHtml('weather')}
-          </button>
-          <button class="${TW_TAB_BTN} !px-2.5 !text-[12px] shrink-0 ${this.indexWorldId === 'fusion' ? 'active' : ''}" data-index-world="fusion">
-            <span class="inline-flex items-center gap-1">✦ Fusion</span>
-            <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="fusion">(${fProg.found}/${fProg.total})</span>
-            ${fProg.total > 0 && fProg.found >= fProg.total ? '<span class="mam-pill-xs !px-1.5 rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px]" data-index-tab-maxed="true">MAXED</span>' : ''}
-            ${this.buildTabReadyDotHtml('fusion')}
-          </button>
-          <button class="${TW_TAB_BTN} !px-2.5 !text-[12px] shrink-0 ${this.indexWorldId === 'limited' ? 'active' : ''}" data-index-world="limited">
-            <span class="inline-flex items-center gap-1">★ Limited</span>
-            <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="limited">(${lProg.found}/${lProg.total})</span>
-            ${lProg.total > 0 && lProg.found >= lProg.total ? '<span class="mam-pill-xs !px-1.5 rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px]" data-index-tab-maxed="true">MAXED</span>' : ''}
-            ${this.buildTabReadyDotHtml('limited')}
-          </button>`;
-          })()}
-        </div>
+        <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col">
+          ${this.buildCollectionSidebarHtml()}
 
-        ${this.buildMilestoneRewardsStripHtml()}
+          <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-2.5">
+            ${this.buildMilestoneRewardsStripHtml()}
 
-        <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto mam-no-scrollbar">
-          <div class="${TW_MODAL_GRID_BASE} grid-cols-5 @max-[720px]:grid-cols-3 gap-2 flex-1 min-h-0 @max-[920px]:min-h-[200px] @max-[920px]:flex-none @max-[920px]:max-h-[340px]" data-index-grid="true">
-            ${this.buildIndexCardsHtml()}
-          </div>
-          <div class="mam-inspector-well mam-no-scrollbar w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-index-inspector="true">
-            ${inspHtml}
+            <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto mam-no-scrollbar">
+              <div class="${TW_MODAL_GRID_BASE} grid-cols-5 @max-[720px]:grid-cols-3 gap-2 flex-1 min-h-0 @max-[920px]:min-h-[200px] @max-[920px]:flex-none @max-[920px]:max-h-[340px]" data-index-grid="true">
+                ${this.buildIndexCardsHtml()}
+              </div>
+              <div class="mam-inspector-well mam-no-scrollbar w-[262px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-index-inspector="true">
+                ${inspHtml}
+              </div>
+            </div>
           </div>
         </div>
       `,
@@ -637,7 +752,10 @@ export class IndexModalUi {
     const unlocked = this.state.discovered.has(chibi.id);
     const worldDef = getWorldById(
       getMinerWorldId(chibi.id) ??
-        (this.indexWorldId === 'weather' || this.indexWorldId === 'fusion' || this.indexWorldId === 'limited'
+        (this.indexWorldId === 'weather' ||
+        this.indexWorldId === 'fusion' ||
+        this.indexWorldId === 'limited' ||
+        this.indexWorldId === 'twin'
           ? 'underground'
           : this.indexWorldId)
     );
@@ -764,17 +882,21 @@ export class IndexModalUi {
     if (pctLabel) pctLabel.textContent = `${pct}%`;
 
     for (const w of WORLDS) {
+      const wp = this.state.getWorldIndexProgress(w.id);
       const wBadge = root.querySelector<HTMLElement>(`[data-index-world-count="${w.id}"]`);
-      if (wBadge) {
-        const wp = this.state.getWorldIndexProgress(w.id);
-        wBadge.textContent = `(${wp.found}/${wp.total})`;
+      if (wBadge) wBadge.textContent = `(${wp.found}/${wp.total})`;
+      const wBar = root.querySelector<HTMLElement>(`[data-index-tab-bar="${w.id}"]`);
+      if (wBar) {
+        wBar.style.width = `${wp.total > 0 ? Math.min(100, Math.round((wp.found / wp.total) * 100)) : 0}%`;
       }
     }
-    for (const tabId of ['weather', 'fusion', 'limited'] as const) {
+    for (const tabId of ['weather', 'fusion', 'limited', 'twin'] as const) {
+      const tp = this.state.getIndexTabProgress(tabId);
       const badge = root.querySelector<HTMLElement>(`[data-index-tab-count="${tabId}"]`);
-      if (badge) {
-        const tp = this.state.getIndexTabProgress(tabId);
-        badge.textContent = `(${tp.found}/${tp.total})`;
+      if (badge) badge.textContent = `(${tp.found}/${tp.total})`;
+      const bar = root.querySelector<HTMLElement>(`[data-index-tab-bar="${tabId}"]`);
+      if (bar) {
+        bar.style.width = `${tp.total > 0 ? Math.min(100, Math.round((tp.found / tp.total) * 100)) : 0}%`;
       }
     }
 

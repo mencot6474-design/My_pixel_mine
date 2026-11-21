@@ -176,7 +176,7 @@ export function migrateOreId(id: string): string {
   return LEGACY_ORE_ID_MAP[id] ?? id;
 }
 
-/** Returns true when an ID represents any catalog ore (world or weather) or chibi (world, weather, or fusion) registered in the Index. */
+/** Returns true when an ID represents any catalog ore (world or weather) or chibi (world, weather, fusion, limited, or twin) registered in the Index. */
 export function isValidIndexId(id: string): boolean {
   return Boolean(getOreById(id) || getChibiById(id));
 }

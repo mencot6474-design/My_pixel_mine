@@ -1159,6 +1159,17 @@ describe('Tahap C GameState Domain Modules', () => {
       });
       expect(state.getPlotUnitStats(0)!.dmg).toBeCloseTo(basePlot0Dmg * 2, -1);
       expect(state.getOreOutputMult()).toBeCloseTo(baseOreDrop + 0.4, 4);
+
+      // Verify Twin Index tab progress & 50%/100% milestones
+      expect(getIndexTabEntryIds('twin')).toEqual(['yukikage-twins', 'halcyon-twins']);
+      expect(state.getIndexTabProgress('twin')).toEqual({ found: 2, total: 2, pct: 100 });
+      expect(state.getTabReadyIndexRewardCount('twin')).toBe(2);
+      const twinHalf = state.claimIndexReward('twin:50');
+      const twinFull = state.claimIndexReward('twin:100');
+      expect(twinHalf?.gemsGranted).toBe(6000);
+      expect(twinFull?.gemsGranted).toBe(20000);
+      expect(twinFull?.milestone.passive?.label).toBe('+5% Ore Sell');
+      expect(state.getActiveIndexPassiveBonuses().oreSellPct).toBeCloseTo(0.05, 5);
     });
   });
 });

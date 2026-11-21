@@ -289,11 +289,12 @@ describe('Pure 3D Mine World', () => {
     expect(getMinersByWorld('chrono').length).toBe(5);
 
     const gs = new GameState();
-    expect(gs.getTotalIndexCount()).toBe(120);
+    expect(gs.getTotalIndexCount()).toBe(122);
     gs.discovered.add('stormwater-opal');
     gs.discovered.add('glitch-cheshire');
     gs.discovered.add('cosmic-monarch');
-    expect(gs.getDiscoveredCount()).toBe(4);
+    gs.discovered.add('yukikage-twins');
+    expect(gs.getDiscoveredCount()).toBe(5);
     expect(gs.getWorldIndexProgress('astral')).toEqual({ found: 0, total: 13, pct: 0 });
     expect(gs.getWorldIndexProgress('starwell')).toEqual({ found: 0, total: 13, pct: 0 });
     expect(gs.getWorldIndexProgress('abyssal')).toEqual({ found: 0, total: 10, pct: 0 });
