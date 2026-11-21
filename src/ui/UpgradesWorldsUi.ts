@@ -108,11 +108,11 @@ export class UpgradesWorldsUi {
 
       let footerHtml = '';
       if (isActiveWorld) {
-        footerHtml = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#2ee59d] border border-[#14111d] text-[10px] font-black text-[#14111d]">ACTIVE WORLD${complete ? ' • FULL' : ''}</span>`;
+        footerHtml = `<span class="mam-pill-xs rounded bg-[#2ee59d] border border-[#14111d] text-[10px] text-[#14111d]">ACTIVE WORLD${complete ? ' • FULL' : ''}</span>`;
       } else if (unlocked) {
-        footerHtml = `<span class="inline-flex items-center px-2 py-0.5 rounded bg-[#e2e8f0] border border-[#14111d] text-[10px] font-black text-[#14111d]">UNLOCKED${complete ? ' • FULL' : ''}</span>`;
+        footerHtml = `<span class="mam-pill-xs rounded bg-[#e2e8f0] border border-[#14111d] text-[10px] text-[#14111d]">UNLOCKED${complete ? ' • FULL' : ''}</span>`;
       } else if (unlockStatus === 'ok' || unlockStatus === 'no-cash') {
-        footerHtml = `<span class="inline-flex items-center px-2 py-0.5 rounded bg-[#fde047] border border-[#14111d] text-[10px] font-black text-[#14111d]">Ready in Teleport</span>`;
+        footerHtml = `<span class="mam-pill-xs rounded bg-[#fde047] border border-[#14111d] text-[10px] text-[#14111d]">Ready in Teleport</span>`;
       } else {
         footerHtml = `<span class="text-[10px] font-bold text-[#5b526e]">Need ${prevWorld?.name ?? ''} (${prevMax}/${prevMax})</span>`;
       }
@@ -206,7 +206,7 @@ export class UpgradesWorldsUi {
             ${animUpgradeId === n.id ? '<span class="mam-upgrade-ring"></span>' : ''}
             ${status === 'ok' ? '<span class="absolute -top-1.5 -right-1.5 z-[3] w-3.5 h-3.5 rounded-full bg-[#2ee59d] border-2 border-[#14111d]"></span>' : ''}
             <div class="pointer-events-none flex items-center justify-center ${isLocked ? 'opacity-40 saturate-50' : ''}">${researchIconHtml(n.icon, 40, tabColor)}</div>
-            <span class="absolute -bottom-2 z-[3] px-1.5 py-[1px] rounded border ${badgeCls} text-[10px] font-black leading-tight">${lvl}/${n.maxLevel}</span>
+            <span class="absolute -bottom-2 z-[3] mam-pill-xs rounded border ${badgeCls} text-[10px] tabular-nums">${lvl}/${n.maxLevel}</span>
           </button>
         `;
       })
@@ -231,10 +231,10 @@ export class UpgradesWorldsUi {
       const isWorldInactive = Boolean(worldIdIfWorld && worldIdIfWorld !== this.state.activeWorldId);
 
       const scopePill = isCore
-        ? `<span class="px-2.5 py-0.5 rounded-full bg-[#bae6fd] border-2 border-[#14111d] text-[11px] font-black text-[#14111d]">Global • Active in All Worlds</span>`
+        ? `<span class="mam-pill rounded-full bg-[#bae6fd] border-2 border-[#14111d] text-[10.5px] text-[#14111d]">Global • Active in All Worlds</span>`
         : isWorldInactive
-          ? `<span class="px-2.5 py-0.5 rounded-full bg-[#fda4af] border-2 border-[#14111d] text-[11px] font-black text-[#14111d]">Isolated • Only Active in ${tabMeta.title}</span>`
-          : `<span class="px-2.5 py-0.5 rounded-full bg-[#6ee7b7] border-2 border-[#14111d] text-[11px] font-black text-[#14111d]">Isolated • Active in ${tabMeta.title}</span>`;
+          ? `<span class="mam-pill rounded-full bg-[#fda4af] border-2 border-[#14111d] text-[10.5px] text-[#14111d]">Isolated • Only Active in ${tabMeta.title}</span>`
+          : `<span class="mam-pill rounded-full bg-[#6ee7b7] border-2 border-[#14111d] text-[10.5px] text-[#14111d]">Isolated • Active in ${tabMeta.title}</span>`;
 
       let actionBtnHtml = '';
       if (status === 'maxed') {
@@ -328,7 +328,7 @@ export class UpgradesWorldsUi {
             <button class="${TW_CLOSE_BTN} mam-close-rail-btn" data-action="close-modal" aria-label="Close Upgrades">✕</button>
           </div>
           <div class="flex items-center justify-end gap-3 flex-wrap w-full">
-            <div class="px-3 py-0.5 rounded-full bg-[#14111d] text-[18px] font-black tabular-nums text-[#fde047]" data-upgrades-cash="true">${fmtMoney(this.state.cash)}</div>
+            <div class="mam-pill-lg rounded-full bg-[#14111d] text-[16px] tabular-nums text-[#fde047]" data-upgrades-cash="true">${fmtMoney(this.state.cash)}</div>
             ${nextWorldCta}
           </div>
           <div class="flex-1 min-h-0 flex items-stretch gap-3 @max-[920px]:flex-col @max-[920px]:overflow-x-hidden @max-[920px]:overflow-y-auto mam-no-scrollbar">
@@ -339,7 +339,7 @@ export class UpgradesWorldsUi {
                   <span>Core</span>
                 </div>
                 <div class="text-[12px] font-bold text-[#5b526e]">Research ${coreSpent}/${coreMax}</div>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-[#bae6fd] border border-[#14111d] text-[10px] font-black text-[#14111d]">Global • All Worlds</span>
+                <span class="mam-pill-xs rounded-full bg-[#bae6fd] border border-[#14111d] text-[10px] text-[#14111d]">Global • All Worlds</span>
               </div>
               ${worldSidebarCards}
             </div>
@@ -404,16 +404,16 @@ export class UpgradesWorldsUi {
           <img src="${assetUrl(`/worlds/${w.id}.webp`)}" alt="${w.name}" class="${imgClass}" />
           <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,17,29,0.88)_0%,rgba(20,17,29,0.58)_52%,rgba(20,17,29,0.28)_100%)] pointer-events-none"></div>
           <div class="relative z-[2] min-w-0 flex-1">
-            <div class="flex items-baseline gap-2 flex-wrap">
-              <span class="px-2 py-0.5 rounded-md bg-[#fde047] border-[1.5px] border-[#14111d] text-[10px] font-black uppercase tracking-wider text-[#14111d]">World ${idx + 1}</span>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="mam-pill-xs rounded-md bg-[#fde047] border-[1.5px] border-[#14111d] text-[10px] uppercase tracking-wider text-[#14111d]">World ${idx + 1}</span>
               <span class="text-[20px] font-black text-white leading-tight mam-outline">${w.name}</span>
             </div>
             <div class="mt-2 flex items-center gap-2.5 flex-wrap">
               <div class="relative flex-1 min-w-[160px] max-w-[220px] h-5 rounded-full bg-[#fff8e7] border-2 border-[#14111d] overflow-hidden flex items-center justify-center">
                 <div class="absolute left-0 top-0 bottom-0 bg-[#38bdf8] transition-[width] duration-200" style="width:${pct}%"></div>
-                <span class="relative z-[2] text-[10px] font-black text-[#14111d]">Research ${spent}/${maxPts}</span>
+                <span class="relative z-[2] text-[10px] font-black text-[#14111d] leading-none">Research ${spent}/${maxPts}</span>
               </div>
-              ${!unlocked && w.unlockCost > 0 ? `<span class="px-2 py-0.5 rounded-md bg-[#fff8e7] border-[1.5px] border-[#14111d] text-[11px] font-black text-[#14111d]">Cost: ${fmtMoney(w.unlockCost)}</span>` : ''}
+              ${!unlocked && w.unlockCost > 0 ? `<span class="mam-pill-xs rounded-md bg-[#fff8e7] border-[1.5px] border-[#14111d] text-[10.5px] text-[#14111d] tabular-nums">Cost: ${fmtMoney(w.unlockCost)}</span>` : ''}
             </div>
           </div>
           ${ctaHtml}
@@ -450,13 +450,13 @@ export class UpgradesWorldsUi {
                   <div class="flex items-center gap-2 min-w-0">
                     <span class="w-3 h-3 rounded-full border-[1.5px] border-[#14111d] shrink-0" style="background:${wDef.iconColor}"></span>
                     <span class="text-[12.5px] font-black text-[#14111d] truncate">${r.worldName}</span>
-                    <span class="px-1.5 py-[1px] rounded-md bg-[#14111d] text-[#fde047] text-[10px] font-black tabular-nums">${r.count}/5 • ${r.worldScale}×</span>
+                    <span class="mam-pill-xs rounded-md bg-[#14111d] text-[#fde047] text-[10px] tabular-nums">${r.count}/5 • ${r.worldScale}×</span>
                   </div>
                   <div class="flex items-center gap-1 text-[10px] font-black tabular-nums flex-wrap">
-                    <span class="px-1.5 py-[1px] rounded bg-[#fee2e2] border border-[#14111d] text-[#dc2626]">+${dmgPct}% DMG</span>
-                    <span class="px-1.5 py-[1px] rounded bg-[#fef08a] border border-[#14111d] text-[#b45309]">+${orePct}% Ore</span>
-                    <span class="px-1.5 py-[1px] rounded bg-[#dcfce7] border border-[#14111d] text-[#15803d]">+${sellPct}% Sell</span>
-                    ${gemPct > 0 ? `<span class="px-1.5 py-[1px] rounded bg-[#f3e8ff] border border-[#14111d] text-[#7e22ce]">+${gemPct}% Gem</span>` : ''}
+                    <span class="mam-pill-xs rounded bg-[#fee2e2] border border-[#14111d] text-[#dc2626]">+${dmgPct}% DMG</span>
+                    <span class="mam-pill-xs rounded bg-[#fef08a] border border-[#14111d] text-[#b45309]">+${orePct}% Ore</span>
+                    <span class="mam-pill-xs rounded bg-[#dcfce7] border border-[#14111d] text-[#15803d]">+${sellPct}% Sell</span>
+                    ${gemPct > 0 ? `<span class="mam-pill-xs rounded bg-[#f3e8ff] border border-[#14111d] text-[#7e22ce]">+${gemPct}% Gem</span>` : ''}
                   </div>
                 </div>
               `;
@@ -484,13 +484,13 @@ export class UpgradesWorldsUi {
         <div class="px-2.5 py-2 rounded-xl bg-white border-2 border-[#14111d] flex flex-col gap-1">
           <div class="flex items-center justify-between gap-1.5">
             <span class="text-[12px] font-black text-[#14111d]">${t.label}</span>
-            <span class="px-1.5 py-[1px] rounded-md bg-[#ede9fe] border border-[#14111d] text-[#6d28d9] text-[10px] font-black tabular-nums">${t.minCount}/5 Same World</span>
+            <span class="mam-pill-xs rounded-md bg-[#ede9fe] border border-[#14111d] text-[#6d28d9] text-[10px] tabular-nums">${t.minCount}/5 Same World</span>
           </div>
           <div class="flex items-center gap-1 flex-wrap text-[10px] font-black tabular-nums">
-            <span class="px-1.5 py-[1px] rounded bg-[#fee2e2] border border-[#14111d] text-[#dc2626]">+${dmg}% DMG</span>
-            <span class="px-1.5 py-[1px] rounded bg-[#fef08a] border border-[#14111d] text-[#b45309]">+${ore}% Ore</span>
-            <span class="px-1.5 py-[1px] rounded bg-[#dcfce7] border border-[#14111d] text-[#15803d]">+${sell}% Sell</span>
-            ${gem > 0 ? `<span class="px-1.5 py-[1px] rounded bg-[#f3e8ff] border border-[#14111d] text-[#7e22ce]">+${gem}% Gem</span>` : ''}
+            <span class="mam-pill-xs rounded bg-[#fee2e2] border border-[#14111d] text-[#dc2626]">+${dmg}% DMG</span>
+            <span class="mam-pill-xs rounded bg-[#fef08a] border border-[#14111d] text-[#b45309]">+${ore}% Ore</span>
+            <span class="mam-pill-xs rounded bg-[#dcfce7] border border-[#14111d] text-[#15803d]">+${sell}% Sell</span>
+            ${gem > 0 ? `<span class="mam-pill-xs rounded bg-[#f3e8ff] border border-[#14111d] text-[#7e22ce]">+${gem}% Gem</span>` : ''}
           </div>
         </div>
       `;
@@ -506,9 +506,9 @@ export class UpgradesWorldsUi {
       return `
         <div class="px-2.5 py-1.5 rounded-xl bg-white border-2 border-[#14111d] flex items-center justify-between gap-2 flex-wrap">
           <div class="flex items-center gap-1.5 min-w-0">
-            <span class="px-1.5 py-[1px] rounded bg-[#fde047] border border-[#14111d] text-[9.5px] font-black text-[#14111d] tabular-nums">W${idx + 1}</span>
+            <span class="mam-pill-xs rounded bg-[#fde047] border border-[#14111d] text-[9.5px] text-[#14111d] tabular-nums">W${idx + 1}</span>
             <span class="text-[12px] font-black text-[#14111d] truncate">${w.name}</span>
-            <span class="px-1.5 py-[1px] rounded bg-[#e0f2fe] border border-[#14111d] text-[#0369a1] text-[10px] font-black tabular-nums">${scale.toFixed(1)}×</span>
+            <span class="mam-pill-xs rounded bg-[#e0f2fe] border border-[#14111d] text-[#0369a1] text-[10px] tabular-nums">${scale.toFixed(1)}×</span>
           </div>
           <div class="text-[10.5px] font-black tabular-nums text-[#334155]">
             5/5 Max: <span class="text-[#dc2626]">+${fullDmg}% DMG</span> • <span class="text-[#b45309]">+${fullOre}% Ore</span> • <span class="text-[#15803d]">+${fullSell}% Sell</span> • <span class="text-[#7e22ce]">+${fullGem}% Gem</span>
@@ -596,9 +596,9 @@ export class UpgradesWorldsUi {
           <div class="w-full flex items-center justify-between gap-2 flex-wrap">
             <div class="inline-flex items-center gap-1.5">
               <button type="button" class="w-7 h-7 rounded-full border-2 border-[#14111d] bg-[#e0f2fe] hover:bg-[#bae6fd] text-[#14111d] text-[14px] font-black italic font-serif inline-flex items-center justify-center cursor-pointer transition-transform duration-150 hover:scale-105 active:scale-95" data-action="worlds-synergy-info" title="World Synergy Combo Info" aria-label="World Synergy Combo Info">i</button>
-              <span class="text-[12px] font-black text-[#5b526e]">Combo Synergy${activeCount > 0 ? ` <span class="px-1.5 py-[1px] rounded-full bg-[#ede9fe] border border-[#14111d] text-[#6d28d9] text-[10.5px] font-black tabular-nums">${activeCount} Active</span>` : ''}</span>
+              <span class="inline-flex items-center gap-1.5 text-[12px] font-black text-[#5b526e]">Combo Synergy${activeCount > 0 ? `<span class="mam-pill-xs rounded-full bg-[#ede9fe] border border-[#14111d] text-[#6d28d9] text-[10px] tabular-nums">${activeCount} Active</span>` : ''}</span>
             </div>
-            <div class="px-3 py-1 rounded-full bg-[#fef08a] border-2 border-[#14111d] text-[15px] font-black text-[#14111d] tabular-nums mr-1" data-worlds-cash="true">${fmtMoney(this.state.cash)}</div>
+            <div class="mam-pill-lg rounded-full bg-[#fef08a] border-2 border-[#14111d] text-[14.5px] text-[#14111d] tabular-nums mr-1" data-worlds-cash="true">${fmtMoney(this.state.cash)}</div>
           </div>
         `,
         bodyHtml: `

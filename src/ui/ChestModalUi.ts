@@ -92,7 +92,7 @@ export class ChestModalUi {
       .map((r) => {
         const active = allOn || this.state.isAutoSellRarity(r.id);
         const border = RARITY_BORDER[r.id];
-        return `<button type="button" class="px-2.5 py-1 rounded-lg text-[11px] font-black border-2 border-[#14111d] cursor-pointer transition-all ${
+        return `<button type="button" class="mam-pill cursor-pointer transition-all ${
           active
             ? 'text-[#14111d]'
             : 'bg-[#fcecc8] text-[#5b526e] hover:bg-[#fde047] hover:text-[#14111d]'
@@ -104,7 +104,7 @@ export class ChestModalUi {
         <div class="flex items-center gap-1.5 flex-wrap">
           <span class="text-[11px] font-black uppercase tracking-wider text-[#14111d] mr-1">Auto-Sell:</span>
           ${pills}
-          <button type="button" class="px-2.5 py-1 rounded-lg text-[11px] font-black border-2 border-[#14111d] cursor-pointer transition-all ${
+          <button type="button" class="mam-pill cursor-pointer transition-all ${
             allOn
               ? 'bg-[#2ee59d] text-[#14111d]'
               : 'bg-[#fcecc8] text-[#5b526e] hover:bg-[#fde047] hover:text-[#14111d]'

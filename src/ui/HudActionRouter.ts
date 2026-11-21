@@ -314,9 +314,12 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
   }
 
   if (ctx.sceneMode !== 'tower' || !ctx.state.towerRun) return;
+  const wasShielded = Boolean(ctx.state.towerRun.isBossWave && (ctx.state.towerRun.bossInvulLeft ?? 0) > 0);
   const tick = ctx.state.stepTowerTick(0.1);
   if (tick.status === 'timeout') {
-    ctx.pushToast('Tower timer ended!');
+    const rem = tick.summary?.remainingHpPct ?? 0;
+    const nearMsg = rem > 0 && rem <= 25 ? ` So close (${rem}% HP left)!` : '';
+    ctx.pushToast(`Tower timer ended!${nearMsg}`);
     ctx.setSceneMode('shop');
     ctx.openModal('tower');
   } else if (tick.status === 'blessing-auto-picked') {
@@ -325,6 +328,10 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
     ctx.syncTowerSceneVisual();
     ctx.render();
   } else if (tick.status === 'active' || tick.status === 'paused') {
+    const isShielded = Boolean(ctx.state.towerRun?.isBossWave && (ctx.state.towerRun.bossInvulLeft ?? 0) > 0);
+    if (wasShielded !== isShielded) {
+      ctx.syncTowerSceneVisual();
+    }
     ctx.towerUi.updateLiveValues(ctx.root);
   }
 }

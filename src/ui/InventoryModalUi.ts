@@ -165,7 +165,7 @@ export class InventoryModalUi {
         rarity: def.rarity,
         title: def.name,
         subtitle: `Backpack • ${worldName} Ore`,
-        badgesHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] font-black border-2 border-[#14111d] ${isEq ? 'bg-[#bbf7d0] text-[#14532d]' : 'bg-[#fcecc8] text-[#14111d]'}">${isEq ? `Hotbar #${hotbarIdx + 1}` : 'In Bag'}</span>`,
+        badgesHtml: `<span class="mam-pill rounded-full text-[10px] font-black border-2 border-[#14111d] ${isEq ? 'bg-[#bbf7d0] text-[#14532d]' : 'bg-[#fcecc8] text-[#14111d]'}">${isEq ? `Hotbar #${hotbarIdx + 1}` : 'In Bag'}</span>`,
         artHtml: oreIconSvg(def.color, def.secondaryColor, def.rarity, `inv_${def.id}`),
         stats: [
           ['Quantity', `x${fmtInt(qty)}`, 'text-[#14111d]'],
@@ -199,8 +199,8 @@ export class InventoryModalUi {
       title: pot.name,
       subtitle: 'Backpack • Boost Potion',
       badgesHtml: isActive
-        ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#bbf7d0] border-2 border-[#14111d] text-[#14532d] tabular-nums">Active ${mm}:${ss}</span>`
-        : `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#fcecc8] border-2 border-[#14111d] text-[#14111d]">Ready</span>`,
+        ? `<span class="mam-pill rounded-full text-[10px] font-black bg-[#bbf7d0] border-2 border-[#14111d] text-[#14532d] tabular-nums">Active ${mm}:${ss}</span>`
+        : `<span class="mam-pill rounded-full text-[10px] font-black bg-[#fcecc8] border-2 border-[#14111d] text-[#14111d]">Ready</span>`,
       artHtml: gemPotionIconHtml(pot.id, 84, pot.name, pot.color),
       stats: [
         ['In Bag', `x${fmtInt(qty)}`, 'text-[#14111d]'],
@@ -247,7 +247,7 @@ export class InventoryModalUi {
           .join(' ');
         cards.push(`
           <div class="${rarityCardClasses(rarity, extraCls)}" style="${rarityVars(rarity)}" data-equip-miner="${def.id}" title="Click to Equip / Unequip">
-            ${star > 0 ? `<span class="absolute bottom-1 left-1 z-[4] px-1.5 py-px rounded-md bg-[#fde047] border-[1.5px] border-[#14111d] text-[#14111d] text-[9px] font-black leading-none">★${star}</span>` : ''}
+            ${star > 0 ? `<span class="mam-pill-xs absolute bottom-1 left-1 z-[4] bg-[#fde047] text-[#14111d]">★${star}</span>` : ''}
             ${isEquipped ? `<span class="mam-equipped-tag">${hotbarIdx + 1}</span>` : ''}
             <div class="mam-card-art">
               ${chibiPortraitHtml(def)}
@@ -270,7 +270,7 @@ export class InventoryModalUi {
         const isInsp = selTarget?.kind === 'gem-item' && selTarget.id === pot.id;
         cards.push(`
           <div class="${rarityCardClasses(pot.rarity, `${isInsp ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : ''} [&.is-boost-active]:ring-[3px] [&.is-boost-active]:ring-inset [&.is-boost-active]:ring-[#22c55e]`.trim())}" style="${rarityVars(pot.rarity)}" data-inv-potion-card="true" data-inspect-inv-only="gem-item:${pot.id}" title="${pot.name} • ${pot.effectText} ${pot.durationLabel} — Click to Inspect, USE to Activate">
-            <button type="button" class="absolute top-1 right-1 z-[4] px-1.5 py-0.5 rounded-md bg-[#38bdf8] border-[1.5px] border-[#14111d] text-[9px] font-black text-[#14111d] cursor-pointer hover:bg-[#7dd3fc] hover:scale-95 transition-transform" data-use-potion="${pot.id}">USE</button>
+            <button type="button" class="mam-pill-xs absolute top-1 right-1 z-[4] bg-[#38bdf8] text-[#14111d] cursor-pointer hover:bg-[#7dd3fc] hover:scale-95 transition-transform" data-use-potion="${pot.id}">USE</button>
             <div class="mam-card-art">${gemPotionIconHtml(pot.id, 54, pot.name, pot.color)}</div>
             <div class="mam-card-name truncate !text-left pl-1 pr-[34px]">${pot.name}</div>
             <div class="mam-card-bottom">
@@ -359,7 +359,7 @@ export class InventoryModalUi {
             data-team-preset-load="${idx}"
             title="${populated ? `Equip Team ${idx + 1}` : `Save current plot team to Team ${idx + 1}`}"
           >
-            <span class="px-1.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border-[1.5px] border-[#14111d] shrink-0 ${tBadgeCls}">T${idx + 1}</span>
+            <span class="mam-pill-xs !px-1.5 rounded-md text-[10px] uppercase tracking-wide border-[1.5px] border-[#14111d] shrink-0 ${tBadgeCls}">T${idx + 1}</span>
             <span class="inline-flex items-center gap-1 min-w-0 overflow-hidden">${thumbsHtml}</span>
           </button>
           <button
@@ -399,11 +399,11 @@ export class InventoryModalUi {
       boxClass: `w-[980px] ${TW_SHOP_MODAL_RESP}`,
       headerExtraHtml: `
         <div class="flex items-center gap-1.5">
-          <button class="mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border-2 border-[#14111d] bg-[#fde047] text-[#14111d] text-[13px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-1 active:scale-[0.94]" data-action="auto-star-up" title="Merge all spare Chibi duplicates into Stars">
+          <button class="mam-sheen-hover mam-pill-lg relative overflow-hidden gap-1 rounded-xl border-2 border-[#14111d] bg-[#fde047] text-[#14111d] text-[13px] cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-1 active:scale-[0.94]" data-action="auto-star-up" title="Merge all spare Chibi duplicates into Stars">
             <span>★ Auto Star-Up</span>
           </button>
-          <button class="mam-equip-best-btn mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border-2 border-[#14111d] bg-[#2ee59d] text-[#14111d] text-[14px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:rotate-1 active:scale-[0.94]" data-action="equip-best">
-            ${hudIconHtml('sparkle', 18, 'Equip Best')}
+          <button class="mam-equip-best-btn mam-sheen-hover mam-pill-lg relative overflow-hidden gap-1.5 rounded-xl border-2 border-[#14111d] bg-[#2ee59d] text-[#14111d] text-[13.5px] cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:rotate-1 active:scale-[0.94]" data-action="equip-best">
+            ${hudIconHtml('sparkle', 17, 'Equip Best')}
             <span>Equip Best</span>
           </button>
         </div>

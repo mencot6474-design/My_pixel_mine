@@ -1,7 +1,7 @@
 import { audio } from '../audio/AudioManager';
 import { cgHappyTime, cgTryMidgameAd } from '../sdk/crazygames';
 import { OreHpScreen, PlotAnchorScreen, SceneMode, SweetSpotScreen } from '../game3d/MineScene3D';
-import { type LootVacuumBreakKind, spawnLootVacuumParticles } from './LootVacuumFx';
+import { type LootVacuumBreakKind, spawnLootVacuumParticles, triggerPerfectStrikeFlash } from './LootVacuumFx';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
 import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId } from '../game3d/ShopWorld3D';
 import { getWorldById, getWorldIndex } from '../game/GameData';
@@ -117,6 +117,7 @@ export class GameHud {
       anomalyColorHex: string;
       equippedMinerCount: number;
       paused: boolean;
+      bossShieldActive?: boolean;
     }) => void,
     private readonly plotDropOps?: PlotDropOps,
     private readonly onWeatherChange?: (weatherId: WeatherId) => void,
@@ -535,6 +536,7 @@ export class GameHud {
       anomalyColorHex: def.anomaly.color,
       equippedMinerCount: placedCount,
       paused,
+      bossShieldActive: Boolean(run?.isBossWave && (run.bossInvulLeft ?? 0) > 0),
     });
   }
 
@@ -543,17 +545,35 @@ export class GameHud {
     rockBroken: boolean;
     waveCleared: boolean;
     floorCleared: boolean;
+    towerCompleted?: boolean;
     clearedFloor: number | null;
     clearedWave: number | null;
     gemsAwarded: number;
     diceAwarded: number;
     milestoneUnlocked: number | null;
-  }): { dmg: number; broken: boolean } | undefined {
+    isCrit?: boolean;
+    pityTriggered?: boolean;
+  }): { dmg: number; broken: boolean; isCrit?: boolean } | undefined {
     if (res.dmgDealt <= 0 && !res.waveCleared && !res.floorCleared) return undefined;
+    if (res.towerCompleted) {
+      audio.playSfx('rare-fanfare', { volume: 0.85 });
+      const diceTxt = res.diceAwarded > 0 ? ` +${res.diceAwarded} Dice` : '';
+      this.pushToast(`🏆 TOWER CONQUERED! Floor 80 Final Boss Defeated! +${fmtInt(res.gemsAwarded)} Gems${diceTxt}`);
+      if (res.milestoneUnlocked) {
+        this.pushToast(`Tower Milestone Floor ${res.milestoneUnlocked} Unlocked!`);
+      }
+      cgHappyTime();
+      this.setSceneMode('shop');
+      this.openModal('tower');
+      return { dmg: res.dmgDealt, broken: res.rockBroken, isCrit: res.isCrit };
+    }
     if (res.floorCleared) {
       audio.playSfx('rare-fanfare', { volume: 0.72 });
       const diceTxt = res.diceAwarded > 0 ? ` +${res.diceAwarded} Dice` : '';
       this.pushToast(`Floor ${res.clearedFloor} Cleared! +${fmtInt(res.gemsAwarded)} Gems${diceTxt}`);
+      if (res.pityTriggered) {
+        this.pushToast('🎲 Boss Pity Triggered! Guaranteed Enchant Dice!');
+      }
       if (res.milestoneUnlocked) {
         this.pushToast(`Tower Milestone Floor ${res.milestoneUnlocked} Unlocked!`);
       }
@@ -574,13 +594,36 @@ export class GameHud {
       }
       this.towerUi.updateLiveValues(this.root);
     }
-    return { dmg: res.dmgDealt, broken: res.rockBroken };
+    return { dmg: res.dmgDealt, broken: res.rockBroken, isCrit: res.isCrit };
   }
 
-  public handleTowerTargetClick(targetOreIndex: number | null): { dmg: number; broken?: boolean } | undefined {
+  public handleTowerTargetClick(
+    targetOreIndex: number | null,
+    opts?: { isShieldBreak?: boolean }
+  ): { dmg: number; broken?: boolean; isCrit?: boolean; shieldBroken?: boolean; shieldShaved?: boolean } | undefined {
     if (this.sceneMode !== 'tower' || !this.state.towerRun) return undefined;
+    const run = this.state.towerRun;
+    if (targetOreIndex === null && opts?.isShieldBreak && run.isBossWave && (run.bossInvulLeft ?? 0) > 0) {
+      const shieldRes = this.state.hitTowerBossShieldSweetSpot();
+      if (shieldRes.hit) {
+        audio.playCrystalChord('perfect');
+        triggerPerfectStrikeFlash();
+        if (shieldRes.shieldBroken) {
+          this.pushToast('⚡ SHIELD SHATTERED! Boss EXPOSED (+50% DMG for 4s)!');
+        } else {
+          this.pushToast('⚡ SHIELD CRACKED! -2.5s Boss Shield!');
+        }
+        this.syncTowerSceneVisual();
+        this.towerUi.updateLiveValues(this.root);
+        return { dmg: 0, shieldBroken: shieldRes.shieldBroken, shieldShaved: true };
+      }
+    }
     const res = this.state.tapTowerTarget(targetOreIndex);
-    if (res.dmgDealt > 0) audio.playOreHit(true, true);
+    if (res.dmgDealt > 0) {
+      audio.playOreHit(true, Boolean(res.isCrit));
+    } else if (run.isBossWave && (run.bossInvulLeft ?? 0) > 0 && !run.pendingBlessings) {
+      audio.playSfx('ui-error', { volume: 0.25, cooldownMs: 320, bucket: 'shield-block' });
+    }
     return this.handleTowerHitResolution(res);
   }
 
@@ -588,7 +631,7 @@ export class GameHud {
     slotIndex: number,
     targetOreIndex: number | null,
     attackInterval: number
-  ): { dmg: number; broken?: boolean } | undefined {
+  ): { dmg: number; broken?: boolean; isCrit?: boolean } | undefined {
     if (this.sceneMode !== 'tower' || !this.state.towerRun) return undefined;
     const res = this.state.applyTowerChibiStrike(slotIndex, targetOreIndex, attackInterval);
     if (res.dmgDealt > 0) {

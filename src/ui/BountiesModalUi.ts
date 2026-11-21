@@ -32,12 +32,12 @@ export class BountiesModalUi {
         const actionBtn = ready
           ? `<button
               type="button"
-              class="min-w-[92px] px-3.5 py-2 rounded-xl border-2 border-[#14111d] bg-[#2ee59d] text-[#14111d] text-[13px] font-black uppercase tracking-wide cursor-pointer transition-[transform,filter] duration-150 hover:scale-[0.96] active:scale-[0.94]"
+              class="mam-pill-lg min-w-[96px] h-[34px] bg-[#2ee59d] text-[#14111d] uppercase tracking-wide cursor-pointer transition-[transform,filter] duration-150 hover:scale-[0.96] active:scale-[0.94]"
               data-bounty-claim="${b.id}"
             >
               Claim
             </button>`
-          : `<span class="min-w-[92px] text-center px-3 py-2 rounded-xl border-2 border-[#14111d] bg-[#fcecc8] text-[#5b526e] text-[12px] font-black uppercase tracking-wide">
+          : `<span class="mam-pill-lg min-w-[96px] h-[34px] bg-[#fcecc8] text-[#5b526e] text-[11.5px] uppercase tracking-wide">
               In Progress
             </span>`;
 
@@ -49,7 +49,7 @@ export class BountiesModalUi {
             <div class="flex-1 min-w-0 flex flex-col gap-1.5 text-left">
               <div class="flex items-center justify-between gap-2 flex-wrap">
                 <span class="text-[14px] font-black text-[#14111d] leading-tight">${b.title}</span>
-                <span class="text-[12px] font-black tabular-nums px-2 py-0.5 rounded-lg bg-[#fcecc8] border-2 border-[#14111d]">${rewardHtml}</span>
+                <span class="mam-pill bg-[#fcecc8] text-[11.5px]">${rewardHtml}</span>
               </div>
               <div class="relative w-full h-3 rounded-full bg-[#fcecc8] border-2 border-[#14111d] overflow-hidden">
                 <div class="h-full ${barFill} transition-[width] duration-200 ease-out" style="width:${pct}%"></div>
@@ -66,7 +66,7 @@ export class BountiesModalUi {
       .join('');
 
     const headerExtraHtml = `
-      <span class="px-3 py-1 rounded-xl bg-[#6ee7b7] border-2 border-[#14111d] text-[12px] font-black text-[#14111d] tabular-nums">
+      <span class="mam-pill-lg bg-[#6ee7b7] text-[#14111d]">
         Completed: ${fmtInt(this.state.bountiesCompleted)}
       </span>
     `;

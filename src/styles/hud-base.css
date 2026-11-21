@@ -617,18 +617,24 @@
     position: relative;
     z-index: 1;
     display: inline-block;
+    line-height: 1;
   }
 
   .mam-rarity-badge {
     position: relative;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    height: 22px;
     gap: 5px;
-    padding: 3.5px 10px;
+    padding: 0 9px;
     font-size: 10px;
     font-weight: 900;
+    line-height: 1;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
     border: 2px solid #14111d;
     border-radius: 9px;
     box-shadow: none;
@@ -816,7 +822,8 @@
     color: #fef08a !important;
     border-color: #14111d;
     border-radius: 999px;
-    padding: 4px 12px 4px 11px;
+    height: 22px;
+    padding: 0 11px 0 10px;
     animation: mam-tier-text-flow 2.8s linear infinite;
     --mam-ring-c1: #fef08a;
     --mam-ring-c2: #c084fc;
@@ -829,7 +836,8 @@
     color: #7dd3fc !important;
     border-width: 2px;
     border-radius: 999px;
-    padding: 4px 12px 4px 11px;
+    height: 22px;
+    padding: 0 11px 0 10px;
     animation: mam-tier-text-flow 2.4s linear infinite;
     --mam-ring-c1: #67e8f9;
     --mam-ring-c2: #e879f9;
@@ -842,7 +850,8 @@
     color: #fde047 !important;
     border-width: 2px;
     border-radius: 999px;
-    padding: 4px 12px 4px 11px;
+    height: 22px;
+    padding: 0 11px 0 10px;
     animation: mam-tier-text-flow 2.5s linear infinite;
     --mam-ring-c1: #fffbeb;
     --mam-ring-c2: #f59e0b;
@@ -853,6 +862,7 @@
     position: relative;
     z-index: 1;
     display: inline-block;
+    line-height: 1;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent !important;
@@ -1026,8 +1036,10 @@
   }
 
   .mam-rarity-badge.is-compact {
-    padding: 2px 9px 2px 8px;
+    height: 18px;
+    padding: 0 8px;
     font-size: 8.5px;
+    line-height: 1;
     letter-spacing: 0.04em;
     margin-left: 4px;
     gap: 3px;
@@ -1049,18 +1061,79 @@
   }
 
   /* ============================================================
+   * Global Uniform Sticker-Pop Pill System
+   * ============================================================ */
+  .mam-pill-xs {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 6px;
+    border: 1.5px solid #14111d;
+    font-size: 9.5px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .mam-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 9px;
+    border-radius: 8px;
+    border: 2px solid #14111d;
+    font-size: 10.5px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .mam-pill-lg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 11px;
+    border-radius: 11px;
+    border: 2px solid #14111d;
+    font-size: 12.5px;
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ============================================================
    * Sticker-Pop Mutation Tier Badges & Mutation Strip Cards
    * ============================================================ */
   .mam-mut-badge {
     position: relative;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    height: 22px;
     gap: 4px;
-    padding: 3px 9px;
-    font-size: 10.5px;
+    padding: 0 9px;
+    font-size: 10px;
     font-weight: 900;
+    line-height: 1;
     letter-spacing: 0.06em;
     text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
     border: 2px solid #14111d;
     border-radius: 8px;
     color: #14111d;

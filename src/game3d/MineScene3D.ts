@@ -69,6 +69,7 @@ export interface SweetSpotScreen {
   progress: number;
   inWindow: boolean;
   isMeteor: boolean;
+  isTowerShield?: boolean;
 }
 
 export const BASE_TAP_CRIT_CHANCE = 0.15;
@@ -148,12 +149,15 @@ export interface MineSceneCallbacks {
   onShopChibiBubbles?: (bubbles: ShopChibiBubbleAnchor[]) => void;
   onAltarAnchors?: (anchors: AltarPedestalAnchor[]) => void;
   onTowerMonolithClick?: () => { dmg: number } | void;
-  onTowerTargetClick?: (targetOreIndex: number | null) => { dmg: number; broken?: boolean } | void;
+  onTowerTargetClick?: (
+    targetOreIndex: number | null,
+    opts?: { isShieldBreak?: boolean }
+  ) => { dmg: number; broken?: boolean; isCrit?: boolean; shieldBroken?: boolean; shieldShaved?: boolean } | void;
   onTowerFighterStrike?: (
     slotIndex: number,
     targetOreIndex: number | null,
     attackInterval: number
-  ) => { dmg: number; broken?: boolean } | void;
+  ) => { dmg: number; broken?: boolean; isCrit?: boolean } | void;
   onTowerOreBars?: (bars: TowerOreBarScreen[]) => void;
 }
 
@@ -687,15 +691,31 @@ export class MineScene3D {
           if (res && res.dmg > 0) {
             this.towerArena.triggerOreHitBounce(oreIndex, Boolean(res.broken));
             const wp = this.towerArena.getOreWorldPos(oreIndex);
-            this.emitDamageScreen(res.dmg, wp.x, wp.y + 0.35, wp.z, true);
+            this.emitDamageScreen(res.dmg, wp.x, wp.y + 0.35, wp.z, true, Boolean(res.isCrit));
           }
         }
       } else if (hit.userData.kind === 'tower-core') {
-        this.towerArena.triggerHitBounce();
-        const res = this.callbacks.onTowerTargetClick?.(null) ?? this.callbacks.onTowerMonolithClick?.();
+        const isShieldBreak = this.towerArena.consumeBossSweetSpotTap();
+        const res =
+          this.callbacks.onTowerTargetClick?.(null, { isShieldBreak }) ??
+          this.callbacks.onTowerMonolithClick?.();
+        const shieldHit =
+          res && (('shieldShaved' in res && res.shieldShaved) || ('shieldBroken' in res && res.shieldBroken));
+        if (shieldHit) {
+          this.towerArena.triggerBossShieldBreakFx();
+        } else {
+          this.towerArena.triggerHitBounce();
+        }
         if (res && res.dmg > 0) {
           const wp = this.towerArena.getMonolithWorldPos();
-          this.emitDamageScreen(res.dmg, wp.x, wp.y + 0.8, wp.z, true);
+          this.emitDamageScreen(
+            res.dmg,
+            wp.x,
+            wp.y + 0.8,
+            wp.z,
+            true,
+            'isCrit' in res ? Boolean(res.isCrit) : false
+          );
         }
       }
     });
@@ -880,7 +900,7 @@ export class MineScene3D {
         this.towerArena.triggerOreHitBounce(strike.targetOreIndex, Boolean(res.broken), strike);
       }
       if (shownDmg > 0) {
-        this.emitDamageScreen(shownDmg, strike.wx, strike.wy, strike.wz, false);
+        this.emitDamageScreen(shownDmg, strike.wx, strike.wy, strike.wz, false, Boolean(res?.isCrit));
       }
     });
     this.weatherFx.update(dtSec, this.elapsed, this.mode === 'mine' || this.mode === 'shop' || this.mode === 'fusion');
@@ -1033,7 +1053,7 @@ export class MineScene3D {
     } else if (this.mode === 'tower') {
       this.callbacks.onPlotAnchors?.([]);
       this.callbacks.onOreBars?.([]);
-      this.callbacks.onSweetSpot?.(null);
+      this.emitTowerSweetSpot();
       this.callbacks.onShopAnchors?.([]);
       this.callbacks.onShopChibiBubbles?.([]);
       this.callbacks.onAltarAnchors?.([]);
@@ -1104,6 +1124,29 @@ export class MineScene3D {
       progress: spot.progress,
       inWindow: spot.inWindow,
       isMeteor: spot.isMeteor,
+    });
+  }
+
+  private emitTowerSweetSpot(): void {
+    if (!this.callbacks.onSweetSpot) return;
+    const spot = this.towerArena.getBossSweetSpotState();
+    if (!spot) {
+      this.callbacks.onSweetSpot(null);
+      return;
+    }
+    const pt = this.projectWorldToScreen(spot.worldX, spot.worldY, spot.worldZ);
+    if (!pt) {
+      this.callbacks.onSweetSpot(null);
+      return;
+    }
+    this.callbacks.onSweetSpot({
+      nodeId: -1,
+      x: pt.x,
+      y: pt.y,
+      progress: spot.progress,
+      inWindow: spot.inWindow,
+      isMeteor: true,
+      isTowerShield: true,
     });
   }
 
@@ -1386,8 +1429,13 @@ export class MineScene3D {
     anomalyColorHex: string;
     equippedMinerCount: number;
     paused: boolean;
+    bossShieldActive?: boolean;
   }): void {
     this.towerArena.syncWaveState(opts);
+  }
+
+  public setTowerBossShieldActive(active: boolean): void {
+    this.towerArena.setBossShieldActive(active);
   }
 
   private syncTowerFighters(): void {

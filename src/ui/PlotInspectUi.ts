@@ -151,7 +151,7 @@ export class PlotInspectUi {
       <div class="absolute left-7 @max-[920px]:left-3 top-[38%] @max-[920px]:top-14 -translate-y-1/2 @max-[920px]:translate-y-0 w-[252px] @max-[920px]:w-[214px] px-3.5 py-3 rounded-2xl bg-[#fff8e7] border-[3px] border-[#14111d] flex flex-col gap-1">
         <div class="flex items-center justify-between gap-1.5">
           <div class="text-[20px] font-black leading-[1.1] text-[#14111d] truncate">${chibi.name}</div>
-          ${star > 0 ? `<span class="px-1.5 py-0.5 rounded-md bg-[#fde047] border-2 border-[#14111d] text-[#14111d] text-[11px] font-black tabular-nums shrink-0">★${star}</span>` : ''}
+          ${star > 0 ? `<span class="mam-pill bg-[#fde047] text-[#14111d]">★${star}</span>` : ''}
         </div>
         <div class="text-[14px] font-black flex items-center gap-1.5 flex-wrap mt-0.5">
           ${renderRarityBadgeHtml(rarity, '!ml-0')}
@@ -159,8 +159,8 @@ export class PlotInspectUi {
           ${renderMutationBadgeHtml(mut.id, mut.name)}
         </div>
         ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black tabular-nums text-[#7c3aed]">✦ ${worldName} Synergy (+${Math.round(resBonusPct * 100)}% DMG${resOrePct > 0 ? ` • +${resOrePct}% Ore` : ''}${resSellPct > 0 ? ` • +${resSellPct}% Sell` : ''})</div>` : ''}
-        ${fusionDef ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#cffafe] border-2 border-[#14111d] text-[11px] font-black text-[#14111d] self-start leading-snug">★ Passive: ${fusionDef.passive.label}</div>` : ''}
-        ${eqEnchant ? `<div class="mt-0.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border-2 border-[#14111d] text-[10.5px] font-black text-[#14111d] self-start leading-snug">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}
+        ${fusionDef ? `<div class="mt-0.5 mam-pill bg-[#cffafe] text-[#14111d] self-start max-w-full truncate">★ Passive: ${fusionDef.passive.label}</div>` : ''}
+        ${eqEnchant ? `<div class="mt-0.5 mam-pill rounded-lg bg-white border-2 border-[#14111d] text-[10.5px] font-black text-[#14111d] self-start max-w-full truncate">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}
         <div class="text-[12.5px] font-bold tabular-nums text-[#475569] mt-0.5">
           Lv. ${unit.damageLevel} • Speed ${stats.speed} • Mining x${stats.miningMult}
         </div>

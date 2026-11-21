@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { TowerWaveOreState } from '../game/TowerData';
+import { TOWER_BOSS_SWEETSPOT_DURATION_SEC, TowerWaveOreState } from '../game/TowerData';
 import { AttackImpactFxController } from './AttackImpactFx3D';
 import { ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
 import { ChibiFieldFxController } from './FieldMiner3D';
 import { OreVariantKey } from './MineWorldPalette';
-import { getGeodeGlowTexture, OreBillboard2D } from './OrePit3D';
+import { getGeodeGlowTexture, isSweetSpotWindowPure, OreBillboard2D } from './OrePit3D';
 import { getPedestalHoloRingTexture } from './PlotPedestal3D';
 import { createSeraphimBoss3D, SeraphimBossHandle } from './SeraphimBoss3D';
 import { createTowerCityEnvironment, TowerCityEnvironmentHandle } from './TowerCityEnvironment3D';
@@ -252,6 +252,8 @@ export class TowerArena3D {
   private bounceTimer = 0;
   private bossMode = true;
   private bossWave = true;
+  private bossShieldActive = false;
+  private bossSweetSpot = { elapsed: 0, cooldown: 0.15, active: false };
   private paused = false;
   private anomalyColorHex = '#38bdf8';
   private lastFloor = 0;
@@ -676,6 +678,7 @@ export class TowerArena3D {
     anomalyColorHex: string;
     equippedMinerCount: number;
     paused: boolean;
+    bossShieldActive?: boolean;
   }): void {
     const floorChanged = opts.floor !== this.lastFloor;
     const waveChanged = opts.wave !== this.lastWave;
@@ -685,6 +688,7 @@ export class TowerArena3D {
     this.anomalyColorHex = opts.anomalyColorHex;
     this.paused = opts.paused;
     this.activeMiners = Math.max(0, Math.min(5, opts.equippedMinerCount));
+    this.setBossShieldActive(Boolean(opts.bossShieldActive && opts.isBossWave && !opts.paused), floorChanged || waveChanged);
 
     if (floorChanged || waveChanged) {
       this.lastFloor = opts.floor;
@@ -831,6 +835,62 @@ export class TowerArena3D {
     }
   }
 
+  public setBossShieldActive(active: boolean, resetCycle = false): void {
+    const next = Boolean(active && this.bossWave && !this.paused);
+    if (resetCycle || (!this.bossShieldActive && next)) {
+      this.bossSweetSpot.active = next;
+      this.bossSweetSpot.elapsed = 0;
+      this.bossSweetSpot.cooldown = 0.12;
+    } else if (!next) {
+      this.bossSweetSpot.active = false;
+    }
+    this.bossShieldActive = next;
+  }
+
+  public getBossSweetSpotState(): {
+    worldX: number;
+    worldY: number;
+    worldZ: number;
+    progress: number;
+    inWindow: boolean;
+  } | null {
+    if (!this.bossWave || !this.bossShieldActive || !this.bossSweetSpot.active || this.paused) {
+      return null;
+    }
+    const progress = Math.min(1, Math.max(0, this.bossSweetSpot.elapsed / TOWER_BOSS_SWEETSPOT_DURATION_SEC));
+    return {
+      worldX: 0,
+      worldY: 2.55,
+      worldZ: BOSS_CENTER_Z + 0.85,
+      progress,
+      inWindow: isSweetSpotWindowPure(progress),
+    };
+  }
+
+  public consumeBossSweetSpotTap(): boolean {
+    const state = this.getBossSweetSpotState();
+    if (!state || !state.inWindow) return false;
+    this.bossSweetSpot.active = false;
+    this.bossSweetSpot.elapsed = 0;
+    this.bossSweetSpot.cooldown = 0.25;
+    return true;
+  }
+
+  public triggerBossShieldBreakFx(): void {
+    this.bounceTimer = Math.max(this.bounceTimer, 0.34);
+    const tz = BOSS_CENTER_Z + 1.05;
+    this.impactFx.spawnImpact({
+      targetX: 0,
+      targetY: 2.65,
+      targetZ: tz,
+      accentColor: '#22d3ee',
+      heavy: true,
+      comboStep: 2,
+      shockwaveScale: 2.35,
+    });
+    this.spawnTowerShardsAt(0, 2.45, tz, '#38bdf8', 14, true, true);
+  }
+
   public triggerHitBounce(intensity = 0.24, spawnSlash = true): void {
     this.bounceTimer = Math.max(this.bounceTimer, intensity);
     if (spawnSlash) {
@@ -970,6 +1030,25 @@ export class TowerArena3D {
     }
 
     if (this.bossWave) {
+      if (this.bossShieldActive && !this.paused) {
+        if (this.bossSweetSpot.active) {
+          this.bossSweetSpot.elapsed += safeDt;
+          if (this.bossSweetSpot.elapsed >= TOWER_BOSS_SWEETSPOT_DURATION_SEC) {
+            this.bossSweetSpot.active = false;
+            this.bossSweetSpot.elapsed = 0;
+            this.bossSweetSpot.cooldown = 0.2;
+          }
+        } else {
+          this.bossSweetSpot.cooldown -= safeDt;
+          if (this.bossSweetSpot.cooldown <= 0) {
+            this.bossSweetSpot.active = true;
+            this.bossSweetSpot.elapsed = 0;
+          }
+        }
+      } else {
+        this.bossSweetSpot.active = false;
+      }
+
       const hitFactor = this.bounceTimer > 0 ? this.bounceTimer / 0.24 : 0;
       const pulse = 1 + hitFactor * 0.08;
       const bossScale = this.bossMode ? 1.08 : 1.0;

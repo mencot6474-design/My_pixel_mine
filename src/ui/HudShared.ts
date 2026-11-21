@@ -131,7 +131,7 @@ export function refreshPotionTimersInDom(root: ParentNode, state: GameState): vo
 }
 
 export const TW_TOP_CENTER =
-  'absolute top-4 @max-[720px]:top-2.5 left-1/2 -translate-x-1/2 max-w-[calc(100%-16px)] pointer-events-auto';
+  'absolute top-4 @max-[720px]:top-2.5 [[data-hud-compact=true]_&]:top-[98px] [[data-hud-compact=true]_&]:w-[calc(100%-20px)] left-1/2 -translate-x-1/2 max-w-[calc(100%-16px)] pointer-events-auto';
 export const TW_SHOPS_PILL =
   'inline-flex items-center justify-center gap-2 @max-[720px]:gap-1.5 min-w-[152px] @max-[720px]:min-w-[122px] px-6 @max-[720px]:px-4 py-2 @max-[720px]:py-1.5 rounded-2xl border-[3px] border-[#14111d] bg-[#2ee59d] shadow-none text-[#14111d] text-[19px] @max-[720px]:text-[15px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.97] hover:-rotate-1 hover:brightness-105 active:scale-[0.94]';
 export const TW_TELEPORT_PILL =
@@ -161,7 +161,7 @@ export const TW_HOTBAR_SLOT =
   'mam-hotbar-slot relative w-[74px] h-[76px] @max-[860px]:w-[60px] @max-[860px]:h-[62px] overflow-hidden cursor-pointer flex flex-col items-center justify-between p-0.5';
 export const TW_HOTBAR_NUM = 'mam-hotbar-keycap';
 export const TW_TOAST_STACK =
-  'absolute bottom-[102px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none z-50';
+  'absolute bottom-[118px] @max-[640px]:bottom-[158px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none z-50';
 export const TW_TOAST_ITEM =
   'px-4 py-1.5 rounded-xl bg-[#fff8e7] border-[2.5px] border-[#14111d] shadow-none text-[14px] font-black text-[#14111d]';
 export const TW_ACTIVE_POT_PILL =
@@ -176,7 +176,7 @@ export const TW_SHOP_MODAL_RESP =
 export const TW_CLOSE_BTN =
   'w-9 h-9 @max-[720px]:w-8 @max-[720px]:h-8 shrink-0 rounded-xl border-[2.5px] border-[#14111d] bg-[#ff3b5c] shadow-none text-white text-[17px] font-black cursor-pointer flex items-center justify-center transition-[transform,filter] duration-150 ease-out hover:scale-105 hover:rotate-3 hover:brightness-105 active:scale-95';
 export const TW_TAB_BTN =
-  'mam-tab-btn inline-flex items-center gap-[7px] px-3.5 py-[7px] @max-[720px]:px-2.5 @max-[720px]:py-1 @max-[720px]:text-[13px] rounded-xl text-[14px] font-black cursor-pointer';
+  'mam-tab-btn inline-flex items-center justify-center gap-[7px] h-[34px] px-3.5 @max-[720px]:h-[30px] @max-[720px]:px-2.5 @max-[720px]:text-[12.5px] rounded-xl text-[13.5px] font-black leading-none whitespace-nowrap cursor-pointer';
 export const TW_MODAL_GRID_BASE = 'mam-grid flex-1 min-h-0 content-start overflow-y-auto pr-0 grid';
 export const TW_SHOP_DOCK_BTN_BASE =
   'relative overflow-hidden shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 @max-[760px]:px-2.5 @max-[760px]:py-1.5 @max-[760px]:gap-1 @max-[760px]:text-[11.5px] [&>img]:shrink-0 [&>svg]:shrink-0 @max-[760px]:[&>img]:w-[22px] @max-[760px]:[&>img]:h-[22px] @max-[760px]:[&>svg]:w-[20px] @max-[760px]:[&>svg]:h-[20px] rounded-xl border-[2.5px] border-[#14111d] shadow-none text-[#14111d] text-[13px] font-black whitespace-nowrap cursor-pointer transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] hover:-rotate-1 even:hover:rotate-1 hover:brightness-105 active:scale-95';

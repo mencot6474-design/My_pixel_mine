@@ -53,11 +53,25 @@ import {
   toggleUnitEnchant,
 } from '../src/game/PlotUnitsDomain';
 import { RELICS } from '../src/game/RelicData';
-import { TOWER_BOSS_INVUL_SEC, TOWER_KEY_REGEN_MS, TOWER_MAX_KEYS } from '../src/game/TowerData';
+import {
+  getTowerFloorDef,
+  getTowerStreakGemMult,
+  TOWER_BLESSINGS,
+  TOWER_BLESSING_REROLL_GEM_COST,
+  TOWER_BOSS_EXPOSE_DMG_MULT,
+  TOWER_BOSS_EXPOSE_SEC,
+  TOWER_BOSS_INVUL_SEC,
+  TOWER_DICE_PITY_MAX,
+  TOWER_KEY_REGEN_MS,
+  TOWER_MAX_FLOOR,
+  TOWER_MAX_KEYS,
+} from '../src/game/TowerData';
 import {
   applyTowerTargetDamageDomain,
   getTowerEffectiveDpsDomain,
+  hitTowerBossShieldSweetSpotDomain,
   quickSweepTowerDomain,
+  rerollTowerBlessingsDomain,
   startTowerRunDomain,
   stepTowerTickDomain,
   syncTowerKeysDomain,
@@ -307,6 +321,110 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(autoRes.status).toBe('blessing-auto-picked');
       expect(state.towerRun?.floor).toBe(2);
       expect(state.towerRun?.wave).toBe(1);
+    });
+
+    it('supports Boss Shield-Break Sweet-Spot (+50% Exposed DMG), 12 Blessings (Overkill/Chain/Reroll), Streak Mult, Dice Pity & Near-Miss Summary', () => {
+      expect(TOWER_BLESSINGS.length).toBeGreaterThanOrEqual(12);
+      expect(getTowerStreakGemMult(0)).toBe(1);
+      expect(getTowerStreakGemMult(2)).toBe(1.5);
+      expect(getTowerStreakGemMult(10)).toBe(3);
+
+      const state = new GameState();
+      state.gems = TOWER_BLESSING_REROLL_GEM_COST;
+      expect(startTowerRunDomain(state, 1, 20_000, () => 0.1)).toBe(true);
+
+      // Jump to Boss Wave -> 2 Sweet-Spot hits shatter 5s shield and trigger 4s EXPOSED (+50% DMG)
+      if (state.towerRun) {
+        state.towerRun.wave = 10;
+        state.towerRun.isBossWave = true;
+        state.towerRun.hp = 10_000;
+        state.towerRun.maxHp = 10_000;
+        state.towerRun.bossInvulLeft = TOWER_BOSS_INVUL_SEC;
+      }
+      const firstCrack = hitTowerBossShieldSweetSpotDomain(state);
+      expect(firstCrack.hit).toBe(true);
+      expect(firstCrack.shieldBroken).toBe(false);
+      expect(firstCrack.remainingShieldSec).toBeCloseTo(2.5, 5);
+
+      const shatter = hitTowerBossShieldSweetSpotDomain(state);
+      expect(shatter.hit).toBe(true);
+      expect(shatter.shieldBroken).toBe(true);
+      expect(shatter.bossExposeLeft).toBe(TOWER_BOSS_EXPOSE_SEC);
+
+      const exposedHit = applyTowerTargetDamageDomain(state, null, 1000, () => 0.99);
+      expect(exposedHit.dmgDealt).toBe(Math.round(1000 * TOWER_BOSS_EXPOSE_DMG_MULT));
+
+      // Kill Boss -> test free reroll + paid gem reroll
+      const bossKill = applyTowerTargetDamageDomain(state, null, 50_000, () => 0.99);
+      expect(bossKill.floorCleared).toBe(true);
+      expect(state.towerDicePity).toBe(1); // missed dice drop increments pity
+
+      const firstSet = state.towerRun!.pendingBlessings!.map((b) => b.id);
+      const freeReroll = rerollTowerBlessingsDomain(state, () => 0.25);
+      expect(freeReroll).toEqual({ ok: true, usedFree: true, costGems: 0 });
+      const secondSet = state.towerRun!.pendingBlessings!.map((b) => b.id);
+      expect(secondSet.some((id) => !firstSet.includes(id))).toBe(true);
+
+      const gemsBeforePaid = state.gems;
+      const paidReroll = rerollTowerBlessingsDomain(state, () => 0.5);
+      expect(paidReroll).toEqual({ ok: true, usedFree: false, costGems: TOWER_BLESSING_REROLL_GEM_COST });
+      expect(state.gems).toBe(gemsBeforePaid - TOWER_BLESSING_REROLL_GEM_COST);
+
+      // Test Overkill Splash & Chain Spark on normal wave
+      stepTowerTickDomain(state, 5.5, () => 0); // enter Floor 2 Wave 1
+      const splashDef = TOWER_BLESSINGS.find((b) => b.id === 'overkill-splash')!;
+      const chainDef = TOWER_BLESSINGS.find((b) => b.id === 'chain-spark')!;
+      state.towerRun!.blessings = [splashDef, chainDef];
+      for (const ore of state.towerRun!.waveOres) {
+        ore.hp = 100;
+        ore.maxHp = 100;
+        ore.alive = true;
+      }
+      applyTowerTargetDamageDomain(state, 0, 200, () => 0.99);
+      // Ore 0 breaks (excess 100 * 0.8 = 80 splashed to Ore 1), plus Chain Spark hits 2 other alive ores for 70
+      expect(state.towerRun!.waveOres[0].alive).toBe(false);
+      expect(state.towerRun!.waveOres[1].hp).toBeLessThan(100);
+      expect(state.towerRun!.waveOres[2].hp).toBeLessThan(100);
+
+      // Verify Dice Pity guarantees dice on the 4th Boss miss and resets to 0
+      state.towerDicePity = TOWER_DICE_PITY_MAX - 1;
+      const diceBeforePity = state.enchantDice;
+      state.towerRun!.wave = 10;
+      state.towerRun!.isBossWave = true;
+      state.towerRun!.bossInvulLeft = 0;
+      state.towerRun!.hp = 100;
+      state.towerRun!.maxHp = 100;
+      const pityKill = applyTowerTargetDamageDomain(state, null, 500, () => 0.99); // rng=0.99 fails normal roll
+      expect(pityKill.pityTriggered).toBe(true);
+      expect(pityKill.diceAwarded).toBeGreaterThanOrEqual(1);
+      expect(state.enchantDice).toBeGreaterThan(diceBeforePity);
+      expect(state.towerDicePity).toBe(0);
+
+      // Verify Near-Miss Summary when timer expires
+      stepTowerTickDomain(state, 5.5, () => 0); // enter Floor 3 Wave 1
+      state.towerRun!.hp = 20;
+      state.towerRun!.maxHp = 200;
+      const timeoutRes = stepTowerTickDomain(state, state.towerRun!.timeLeft + 1);
+      expect(timeoutRes.status).toBe('timeout');
+      expect(timeoutRes.summary?.remainingHpPct).toBe(10);
+      expect(timeoutRes.summary?.bestStreakMult).toBe(getTowerStreakGemMult(2));
+
+      // Verify Floor 80 Final Boss victory completes the Tower ("tamat") without advancing to Floor 81
+      state.towerBestFloor = TOWER_MAX_FLOOR;
+      state.towerKeys = 3;
+      expect(startTowerRunDomain(state, TOWER_MAX_FLOOR, 30_000, () => 0.1)).toBe(true);
+      state.towerRun!.wave = 10;
+      state.towerRun!.isBossWave = true;
+      state.towerRun!.bossInvulLeft = 0;
+      state.towerRun!.hp = 1000;
+      state.towerRun!.maxHp = 1000;
+      const finalWin = applyTowerTargetDamageDomain(state, null, 5000, () => 0.5);
+      expect(finalWin.floorCleared).toBe(true);
+      expect(finalWin.towerCompleted).toBe(true);
+      expect(state.towerRun).toBeNull();
+      expect(state.towerLastSummary?.reason).toBe('victory');
+      expect(state.towerLastSummary?.highestReached).toBe(TOWER_MAX_FLOOR);
+      expect(getTowerFloorDef(99).floor).toBe(TOWER_MAX_FLOOR);
     });
   });
 

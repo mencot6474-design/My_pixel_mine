@@ -89,7 +89,7 @@ export class FusionHudUi {
             <div class="text-[12px] font-bold text-[#475569] leading-snug">
               Spin the Cosmic Clock to roll rare Auras &amp; Enchants for your Chibis.
             </div>
-            <span class="px-2.5 py-0.5 rounded-lg bg-[#f3e8ff] border-2 border-[#14111d] text-[11px] font-black tabular-nums text-[#6b21a8]">
+            <span class="mam-pill rounded-lg bg-[#f3e8ff] border-2 border-[#14111d] text-[11px] font-black tabular-nums text-[#6b21a8]">
               Owned: ${fmtInt(this.state.enchantDice)} Dice
             </span>
             <button
@@ -109,7 +109,7 @@ export class FusionHudUi {
             <div class="text-[12px] font-bold text-[#475569] leading-snug">
               Fuse 2–3 Chibis + Ores &amp; Gems in the 3D Synchro Chamber into Apex Units.
             </div>
-            <span class="px-2.5 py-0.5 rounded-lg border-2 border-[#14111d] text-[11px] font-black tabular-nums ${
+            <span class="mam-pill rounded-lg border-2 border-[#14111d] text-[11px] font-black tabular-nums ${
               readyFusions > 0
                 ? 'bg-[#bbf7d0] text-[#14532d]'
                 : 'bg-[#e0f2fe] text-[#0369a1]'
@@ -184,7 +184,7 @@ export class FusionHudUi {
               <span class="text-[12px] font-black text-[#14111d] truncate leading-tight">${r.title}</span>
               ${
                 isReady
-                  ? `<span class="px-1 py-[1px] rounded bg-[#4ade80] border border-[#14111d] text-[8.5px] font-black text-[#14111d] uppercase shrink-0 leading-none">Ready</span>`
+                  ? `<span class="mam-pill-xs bg-[#4ade80] text-[#14111d] uppercase">Ready</span>`
                   : ''
               }
             </div>
@@ -263,7 +263,7 @@ export class FusionHudUi {
       bottomSectionHtml = `
         <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-[min(560px,calc(100%-24px))] pointer-events-auto" data-fusion-reveal="true">
           <div class="rarity-fusion rounded-2xl border-[3px] border-[#14111d] p-4 bg-[#fff8e7] flex flex-col items-center text-center gap-2.5">
-            <div class="px-3.5 py-1 rounded-full bg-[#fde047] border-2 border-[#14111d] text-[11.5px] font-black tracking-widest uppercase text-[#14111d]">
+            <div class="mam-pill rounded-full bg-[#fde047] text-[#14111d] tracking-widest uppercase">
               ✦ Synchro Fusion Complete! ✦
             </div>
             <div class="flex items-center gap-3.5 w-full bg-white border-[2.5px] border-[#14111d] rounded-2xl p-3 text-left">
@@ -277,8 +277,8 @@ export class FusionHudUi {
                 </div>
                 <div class="text-[11.5px] font-bold text-[#475569]">${rev.subtitle}</div>
                 <div class="flex items-center gap-2 flex-wrap mt-0.5">
-                  ${revChibi ? `<span class="px-2.5 py-0.5 rounded-lg bg-[#fef08a] border-[1.5px] border-[#14111d] text-[12px] font-black tabular-nums text-[#14111d]">⚡ ${fmtShort(revChibi.baseDps)}/s Base DPS</span>` : ''}
-                  <span class="px-2.5 py-0.5 rounded-lg bg-[#e0f2fe] border-[1.5px] border-[#14111d] text-[12px] font-black text-[#0369a1]">★ Passive: ${rev.passive.label}</span>
+                  ${revChibi ? `<span class="mam-pill bg-[#fef08a] text-[#14111d]">⚡ ${fmtShort(revChibi.baseDps)}/s Base DPS</span>` : ''}
+                  <span class="mam-pill bg-[#e0f2fe] text-[#0369a1]">★ Passive: ${rev.passive.label}</span>
                 </div>
               </div>
             </div>

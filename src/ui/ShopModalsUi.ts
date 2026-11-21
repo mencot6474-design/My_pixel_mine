@@ -66,7 +66,7 @@ export class ShopModalsUi {
       rarity: p.rarity,
       title: p.name,
       subtitle: 'Pickaxe Upgrade',
-      badgesHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] font-black border-2 border-[#14111d] ${soldOut ? 'bg-[#fda4af] text-[#14111d]' : 'bg-[#6ee7b7] text-[#14111d]'}">${soldOut ? 'Sold Out' : `${fmtInt(stock)} Left`}</span>`,
+      badgesHtml: `<span class="mam-pill rounded-full border-2 border-[#14111d] text-[10px] font-black ${soldOut ? 'bg-[#fda4af] text-[#14111d]' : 'bg-[#6ee7b7] text-[#14111d]'}">${soldOut ? 'Sold Out' : `${fmtInt(stock)} Left`}</span>`,
       artHtml: pickaxeIconHtml(p.id, 84, p.name),
       stats: [
         ['Power', `${p.dmgMult}x DMG`, 'text-[#0284c7]'],
@@ -97,7 +97,7 @@ export class ShopModalsUi {
       title: item.name,
       subtitle: 'Gem Shop Boost',
       badgesHtml: isActive
-        ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#6ee7b7] border-2 border-[#14111d] text-[#14111d] tabular-nums">Active ${mm}:${ss}</span>`
+        ? `<span class="mam-pill rounded-full bg-[#6ee7b7] border-2 border-[#14111d] text-[10px] font-black text-[#14111d] tabular-nums">Active ${mm}:${ss}</span>`
         : '',
       artHtml: gemPotionIconHtml(item.id, 84, item.name, item.color),
       stats: [
@@ -135,7 +135,7 @@ export class ShopModalsUi {
       rarity: entry.rarity,
       title: entry.name,
       subtitle: kindLabel,
-      badgesHtml: `<span class="px-2 py-0.5 rounded-full text-[10px] font-black border-2 border-[#14111d] ${isSel ? 'bg-[#6ee7b7] text-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e]'}">${isSel ? 'Selected' : 'Not Selected'}</span>`,
+      badgesHtml: `<span class="mam-pill rounded-full border-2 border-[#14111d] text-[10px] font-black ${isSel ? 'bg-[#6ee7b7] text-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e]'}">${isSel ? 'Selected' : 'Not Selected'}</span>`,
       artHtml: entry.artHtml,
       stats: [
         ['Unit Value', fmtMoney(unitVal), 'text-[#059669]'],
@@ -187,7 +187,7 @@ export class ShopModalsUi {
       theme: 'pickaxe-shop',
       iconHtml: hudIconHtml('pickaxe', 26, 'Pickaxes'),
       boxClass: `w-[980px] ${TW_SHOP_MODAL_RESP}`,
-      headerExtraHtml: `<div class="ml-auto mr-1 px-3 py-1 rounded-full bg-[#fde047] border-2 border-[#14111d] text-[14px] font-black tabular-nums text-[#14111d] whitespace-nowrap @max-[720px]:text-[12px]" data-restock-timer="true">Restock in ${mm}:${ss}</div>`,
+      headerExtraHtml: `<div class="ml-auto mr-1 mam-pill-lg rounded-full bg-[#fde047] border-2 border-[#14111d] text-[13.5px] font-black tabular-nums text-[#14111d] @max-[720px]:text-[12px]" data-restock-timer="true">Restock in ${mm}:${ss}</div>`,
       bodyHtml: `
         <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto mam-no-scrollbar">
           <div class="${TW_MODAL_GRID_BASE} grid-cols-4 gap-2.5 flex-1 min-h-[220px] @max-[920px]:flex-none @max-[920px]:max-h-[340px] p-0.5 @max-[720px]:grid-cols-2" data-shop-grid="true">

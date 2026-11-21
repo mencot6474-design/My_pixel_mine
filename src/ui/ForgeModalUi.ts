@@ -92,7 +92,7 @@ export class ForgeModalUi {
             <span class="text-[11px] font-black text-[#14111d] truncate">${def.name}</span>
             <span class="text-[10px] font-bold text-[#b45309] truncate">${formatRelicEffects(def)[0] ?? ''}</span>
           </div>
-          <span class="text-[10px] font-black text-white px-1.5 py-0.5 rounded bg-[#ff3b5c] border border-[#14111d] shrink-0">✕</span>
+          <span class="mam-pill-xs bg-[#ff3b5c] text-white">✕</span>
         </button>
       `;
     }).join('');
@@ -106,12 +106,12 @@ export class ForgeModalUi {
         const inspected = this.inspectedRelicId === relic.id;
         const primaryEffect = formatRelicEffects(relic)[0] ?? '';
         const statusPill = equipped
-          ? `<div class="w-full mt-auto py-1 rounded-lg bg-[#2ee59d] border-2 border-[#14111d] text-[#14111d] text-[10.5px] font-black text-center uppercase tracking-wide">Equipped</div>`
+          ? `<div class="w-full mt-auto mam-pill bg-[#2ee59d] text-[#14111d] uppercase tracking-wide">Equipped</div>`
           : crafted
-            ? `<div class="w-full mt-auto py-1 rounded-lg bg-[#bae6fd] border-2 border-[#14111d] text-[#14111d] text-[10.5px] font-black text-center uppercase tracking-wide">Owned</div>`
+            ? `<div class="w-full mt-auto mam-pill bg-[#bae6fd] text-[#14111d] uppercase tracking-wide">Owned</div>`
             : craftable
-              ? `<div class="w-full mt-auto py-1 rounded-lg bg-[#fde047] border-2 border-[#14111d] text-[#14111d] text-[10.5px] font-black text-center uppercase tracking-wide">⚒️ Ready</div>`
-              : `<div class="w-full mt-auto py-1 rounded-lg bg-[#fcecc8] border-2 border-[#14111d] text-[#5b526e] text-[10.5px] font-black text-center uppercase tracking-wide">Locked</div>`;
+              ? `<div class="w-full mt-auto mam-pill bg-[#fde047] text-[#14111d] uppercase tracking-wide">⚒️ Ready</div>`
+              : `<div class="w-full mt-auto mam-pill bg-[#fcecc8] text-[#5b526e] uppercase tracking-wide">Locked</div>`;
         return `
           <div
             class="${rarityCardClasses(
@@ -326,7 +326,7 @@ export class ForgeModalUi {
             <span class="text-[10px] font-black uppercase tracking-wider text-[#64748b]">Mine Location</span>
             <span class="text-[12px] font-black text-[#14111d] leading-tight mt-0.5">World ${worldNum} · ${worldDef.name}</span>
           </div>
-          <span class="px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase shrink-0 border-2 border-[#14111d] ${unlocked ? 'bg-[#bbf7d0] text-[#14532d]' : 'bg-[#fecdd3] text-[#881337]'}">
+          <span class="mam-pill uppercase ${unlocked ? 'bg-[#bbf7d0] text-[#14532d]' : 'bg-[#fecdd3] text-[#881337]'}">
             ${unlocked ? 'Unlocked' : 'Locked'}
           </span>
         </div>

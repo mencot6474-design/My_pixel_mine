@@ -115,13 +115,13 @@ export function buildWorldSynergyBadgesHtml(state: GameState): string {
             <div class="flex items-center gap-1.5">
               <span class="text-[9px] font-black uppercase tracking-wider text-[#6d28d9]">Synergy</span>
               <span class="text-[11.5px] @max-[720px]:text-[10.5px] font-black text-[#14111d] truncate">${r.worldName}</span>
-              <span class="px-1.5 py-[1px] rounded-md bg-[#14111d] text-[#fff8e7] text-[9.5px] font-black tabular-nums">${r.count}/5</span>
+              <span class="mam-pill-xs bg-[#14111d] text-[#fff8e7]">${r.count}/5</span>
             </div>
-            <div class="flex items-center gap-1 text-[9.5px] font-black tabular-nums whitespace-nowrap flex-wrap">
-              <span class="px-1.5 py-[1px] rounded bg-[#fee2e2] border border-[#14111d] text-[#dc2626]">+${dmgPct}% DMG</span>
-              ${orePct > 0 ? `<span class="px-1.5 py-[1px] rounded bg-[#fef08a] border border-[#14111d] text-[#b45309]">+${orePct}% Ore</span>` : ''}
-              ${sellPct > 0 ? `<span class="px-1.5 py-[1px] rounded bg-[#dcfce7] border border-[#14111d] text-[#15803d]">+${sellPct}% Sell</span>` : ''}
-              ${gemPct > 0 ? `<span class="px-1.5 py-[1px] rounded bg-[#f3e8ff] border border-[#14111d] text-[#7e22ce]">+${gemPct}% Gem</span>` : ''}
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="mam-pill-xs bg-[#fee2e2] text-[#dc2626]">+${dmgPct}% DMG</span>
+              ${orePct > 0 ? `<span class="mam-pill-xs bg-[#fef08a] text-[#b45309]">+${orePct}% Ore</span>` : ''}
+              ${sellPct > 0 ? `<span class="mam-pill-xs bg-[#dcfce7] text-[#15803d]">+${sellPct}% Sell</span>` : ''}
+              ${gemPct > 0 ? `<span class="mam-pill-xs bg-[#f3e8ff] text-[#7e22ce]">+${gemPct}% Gem</span>` : ''}
             </div>
           </div>
         </div>
@@ -162,7 +162,7 @@ export function buildWeatherWidgetInnerHtml(
             <span class="w-3 h-3 rounded-full shrink-0 border-2 border-[#14111d]" style="background:${inspected.accentColor}"></span>
             <span class="text-[12px] font-black uppercase tracking-wider text-[#14111d]">Weather Forecast</span>
           </div>
-          <span class="px-2 py-0.5 rounded-full bg-[#bae6fd] border-2 border-[#14111d] text-[10px] font-black text-[#14111d] tabular-nums">Rolls every 3:00</span>
+          <span class="mam-pill bg-[#bae6fd] text-[#14111d]">Rolls every 3:00</span>
         </div>
 
         <div class="grid grid-cols-[276px_minmax(0,1fr)] @max-[640px]:grid-cols-1 gap-2.5 p-2.5 items-stretch">
@@ -191,7 +191,7 @@ export function buildWeatherWidgetInnerHtml(
                   <div class="flex-1 min-w-0 flex flex-col">
                     <div class="flex items-center justify-between gap-1">
                       <span class="text-[12px] font-black leading-tight truncate text-[#14111d]">${item.name}${isActive ? ' • Now' : ''}</span>
-                      <span class="text-[10px] font-black tabular-nums px-1.5 py-0.5 rounded-md bg-[#14111d] text-[#fff8e7]">${item.chancePct}%</span>
+                      <span class="mam-pill-xs bg-[#14111d] text-[#fff8e7]">${item.chancePct}%</span>
                     </div>
                     <div class="flex items-center gap-1 text-[10px] font-black leading-tight mt-0.5 whitespace-nowrap">
                       <span class="text-[#b45309]">${item.oreDropMult}x Ore</span>
@@ -220,7 +220,7 @@ export function buildWeatherWidgetInnerHtml(
               <div class="flex-1 min-w-0 flex flex-col">
                 <span class="text-[13px] font-black leading-tight truncate text-[#14111d]">${inspOre.meteorName} Drops</span>
                 <div class="flex items-center gap-1.5 mt-1">
-                  <span class="px-1.5 py-0.5 rounded-md bg-[#fcecc8] border border-[#14111d] text-[9.5px] font-black text-[#14111d] uppercase tracking-wide">500x Pit HP</span>
+                  <span class="mam-pill-xs bg-[#fcecc8] text-[#14111d] uppercase tracking-wide">500x Pit HP</span>
                   <span class="text-[10px] font-extrabold text-[#5b526e]">Meteor Loot</span>
                 </div>
               </div>
@@ -237,7 +237,7 @@ export function buildWeatherWidgetInnerHtml(
                     <span class="text-[10px] font-bold text-[#5b526e]">${inspOreQtyRange} per meteor</span>
                   </div>
                 </div>
-                <span class="text-[10.5px] font-black tabular-nums px-2 py-0.5 rounded-lg bg-[#2ee59d] text-[#14111d] border-2 border-[#14111d] shrink-0">100%</span>
+                <span class="mam-pill min-w-[52px] bg-[#2ee59d] text-[#14111d]">100%</span>
               </div>
 
               <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-[#fff8e7] border-2 border-[#14111d]">
@@ -258,9 +258,9 @@ export function buildWeatherWidgetInnerHtml(
                     }</span>
                   </div>
                 </div>
-                <span class="text-[10.5px] font-black tabular-nums px-2 py-0.5 rounded-lg ${
-                  inspChibi ? 'bg-[#f472b6] text-white border-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e] border-[#14111d]'
-                } border-2 shrink-0">${inspChibi && inspChibiEntries[0] ? `${inspChibiEntries[0].chancePct}%` : 'Soon'}</span>
+                <span class="mam-pill min-w-[52px] ${
+                  inspChibi ? 'bg-[#f472b6] text-white' : 'bg-[#e2e8f0] text-[#5b526e]'
+                }">${inspChibi && inspChibiEntries[0] ? `${inspChibiEntries[0].chancePct}%` : 'Soon'}</span>
               </div>
 
               <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-[#fff8e7] border-2 border-[#14111d]">
@@ -271,7 +271,7 @@ export function buildWeatherWidgetInnerHtml(
                     <span class="text-[10px] font-bold text-[#5b526e]">Bonus meteor reward</span>
                   </div>
                 </div>
-                <span class="text-[10.5px] font-black tabular-nums px-2 py-0.5 rounded-lg bg-[#7dd3fc] text-[#14111d] border-2 border-[#14111d] shrink-0">${inspDicePct}%</span>
+                <span class="mam-pill min-w-[52px] bg-[#7dd3fc] text-[#14111d]">${inspDicePct}%</span>
               </div>
             </div>
           </div>
@@ -295,7 +295,7 @@ export function buildWeatherWidgetInnerHtml(
         <div class="flex flex-col items-start min-w-0 leading-none">
           <div class="flex items-center gap-1.5">
             <span class="text-[14px] @max-[720px]:text-[13px] font-black tracking-tight text-[#14111d]">${w.name}</span>
-            <span class="px-1.5 py-[2px] rounded-md bg-[#14111d] text-[10px] font-black text-[#fff8e7] tabular-nums" data-hud-weather-timer="true">${timerTxt}</span>
+            <span class="mam-pill-xs bg-[#14111d] text-[#fff8e7]" data-hud-weather-timer="true">${timerTxt}</span>
           </div>
           <div class="flex items-center gap-1.5 mt-1 text-[11px] @max-[720px]:text-[10px] font-black whitespace-nowrap">
             <span class="text-[#b45309]">${w.oreDropMult}x Ore</span>
@@ -358,8 +358,8 @@ export function buildDpsMeterInnerHtml(state: GameState, dpsMeterOpen: boolean):
               <span>Damage Breakdown</span>
             </span>
             <div class="flex items-center gap-1 shrink-0">
-              <span class="px-1.5 py-0.5 rounded-md bg-[#bae6fd] border border-[#14111d] text-[10.5px] font-black text-[#0369a1] tabular-nums">${fmtShort(total)}/s</span>
-              <span class="px-1.5 py-0.5 rounded-md bg-[#fde047] border border-[#14111d] text-[10.5px] font-black text-[#14111d] tabular-nums">Tap ${fmtShort(bd.tapDamage)}</span>
+              <span class="mam-pill bg-[#bae6fd] text-[#0369a1]">${fmtShort(total)}/s</span>
+              <span class="mam-pill bg-[#fde047] text-[#14111d]">Tap ${fmtShort(bd.tapDamage)}</span>
             </div>
           </div>
           ${
@@ -371,7 +371,7 @@ export function buildDpsMeterInnerHtml(state: GameState, dpsMeterOpen: boolean):
                       const pctStr = `${u.pct >= 10 ? Math.round(u.pct) : u.pct.toFixed(1)}%`;
                       const starTag =
                         u.stars > 0
-                          ? `<span class="px-1 py-[1px] rounded bg-[#fef08a] border border-[#d97706] text-[#92400e] text-[9.5px] font-black leading-none shrink-0">★${u.stars}</span>`
+                          ? `<span class="mam-pill-xs bg-[#fef08a] border-[#d97706] text-[#92400e]">★${u.stars}</span>`
                           : '';
                       const borderHex = RARITY_BORDER[u.rarity] ?? '#94a3b8';
                       return `
@@ -382,13 +382,13 @@ export function buildDpsMeterInnerHtml(state: GameState, dpsMeterOpen: boolean):
                           <div class="flex-1 min-w-0 flex flex-col gap-1">
                             <div class="flex items-center justify-between gap-2">
                               <span class="inline-flex items-center gap-1 min-w-0">
-                                <span class="px-1.5 py-[1px] rounded bg-[#14111d] text-white text-[9.5px] font-black leading-tight shrink-0">#${u.slotIndex + 1}</span>
+                                <span class="mam-pill-xs bg-[#14111d] text-white">#${u.slotIndex + 1}</span>
                                 <span class="text-[12px] font-black text-[#14111d] truncate">${u.name}</span>
                                 ${starTag}
                               </span>
                               <span class="shrink-0 inline-flex items-center gap-1 tabular-nums">
                                 <span class="text-[12px] font-black text-[#0284c7]">${fmtShort(u.dps)}/s</span>
-                                <span class="px-1.5 py-[1px] rounded-md bg-[#e0f2fe] border border-[#0284c7]/40 text-[#0369a1] font-black text-[9.5px]">${pctStr}</span>
+                                <span class="mam-pill-xs bg-[#e0f2fe] border-[#0284c7]/40 text-[#0369a1]">${pctStr}</span>
                               </span>
                             </div>
                             <div class="h-2 w-full rounded-full bg-[#fcecc8] border border-[#14111d] overflow-hidden">
@@ -667,14 +667,14 @@ const OVERCLOCK_TITLE_CLASS =
 
 function getOverclockValueClass(active: boolean, tier: 0 | OverclockTier = active ? 1 : 0): string {
   if (!active) {
-    return 'px-1.5 py-[1px] rounded bg-[#bae6fd] border border-[#14111d] text-[10px] font-black tabular-nums text-[#14111d] leading-none shrink-0 transition-all duration-300';
+    return 'mam-pill-xs bg-[#bae6fd] text-[#14111d] transition-all duration-300';
   }
   const bgCls = tier === 3 ? 'bg-[#0284c7]' : tier === 2 ? 'bg-[#e11d48]' : 'bg-[#ff4d2e]';
-  return `px-1.5 py-[1px] rounded ${bgCls} border border-[#14111d] text-[10px] font-black tabular-nums text-white leading-none shrink-0 transition-all duration-300`;
+  return `mam-pill-xs ${bgCls} text-white transition-all duration-300`;
 }
 
 function getOverclockBadgesClass(active: boolean): string {
-  return `flex items-center justify-center gap-1 mt-[2px] text-[8.5px] font-black uppercase tracking-wide leading-none whitespace-nowrap transition-opacity duration-300 ${
+  return `flex items-center justify-center gap-1 mt-[2px] whitespace-nowrap transition-opacity duration-300 ${
     active ? 'opacity-100' : 'opacity-75'
   }`;
 }
@@ -683,9 +683,9 @@ function buildOverclockBadgesInnerHtml(tier: 0 | OverclockTier): string {
   const buffs = getOverclockTierBuffs(tier === 0 ? 1 : tier);
   const orePct = Math.round((buffs.dropMult - 1) * 100);
   return `
-    <span class="px-1 py-[1px] rounded bg-[#fde047] border border-[#14111d] text-[#14111d]">${buffs.speedMult}x SPD</span>
-    <span class="px-1 py-[1px] rounded bg-[#f9a8d4] border border-[#14111d] text-[#14111d]">${buffs.tapMult}x TAP</span>
-    <span class="px-1 py-[1px] rounded bg-[#7dd3fc] border border-[#14111d] text-[#14111d]">+${orePct}% ORE</span>
+    <span class="mam-pill-xs bg-[#fde047] text-[#14111d] uppercase">${buffs.speedMult}x SPD</span>
+    <span class="mam-pill-xs bg-[#f9a8d4] text-[#14111d] uppercase">${buffs.tapMult}x TAP</span>
+    <span class="mam-pill-xs bg-[#7dd3fc] text-[#14111d] uppercase">+${orePct}% ORE</span>
   `;
 }
 

@@ -94,7 +94,7 @@ export class IndexModalUi {
       .join(' ');
     const starBadge =
       star >= 5
-        ? `<span class="absolute top-1 left-1 z-[4] px-1 py-px rounded-md bg-[#fde047] border-[1.5px] border-[#14111d] text-[#14111d] text-[8.5px] font-black leading-none">★5</span>`
+        ? `<span class="absolute top-1 left-1 z-[4] mam-pill-xs !px-1.5 rounded-md bg-[#fde047] border-[1.5px] border-[#14111d] text-[#14111d] text-[9px]">★5</span>`
         : '';
     return `
       <div class="${rarityCardClasses(opts.rarity, extraCls)}" style="${rarityVars(opts.rarity)}" data-index-id="${opts.id}" title="${opts.title}">
@@ -128,7 +128,7 @@ export class IndexModalUi {
     if (!targetId) return renderEmptyInspectorPanel('Select any Ore or Miner to inspect details.');
 
     const unlocked = this.state.discovered.has(targetId);
-    const statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-black border-2 border-[#14111d] ${unlocked ? 'bg-[#6ee7b7] text-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e]'}">${unlocked ? 'Discovered' : 'Locked'}</span>`;
+    const statusBadge = `<span class="mam-pill rounded-full text-[10px] font-black border-2 border-[#14111d] ${unlocked ? 'bg-[#6ee7b7] text-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e]'}">${unlocked ? 'Discovered' : 'Locked'}</span>`;
 
     if (this.indexWorldId === 'limited') {
       const reward = DAILY_LOGIN_REWARDS.find((r) => r.chibiId === targetId);
@@ -406,17 +406,17 @@ export class IndexModalUi {
     const activePassiveChips: string[] = [];
     if (passives.oreSellPct > 0) {
       activePassiveChips.push(
-        `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#6ee7b7] border-2 border-[#14111d] text-[#14111d]">${this.buildPassiveBadgeIconSvg('oreSellPct')}+${Math.round(passives.oreSellPct * 100)}%</span>`
+        `<span class="mam-pill bg-[#6ee7b7] text-[#14111d]">${this.buildPassiveBadgeIconSvg('oreSellPct')}+${Math.round(passives.oreSellPct * 100)}%</span>`
       );
     }
     if (passives.oreDropPct > 0) {
       activePassiveChips.push(
-        `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#bae6fd] border-2 border-[#14111d] text-[#14111d]">${this.buildPassiveBadgeIconSvg('oreDropPct')}+${Math.round(passives.oreDropPct * 100)}%</span>`
+        `<span class="mam-pill bg-[#bae6fd] text-[#14111d]">${this.buildPassiveBadgeIconSvg('oreDropPct')}+${Math.round(passives.oreDropPct * 100)}%</span>`
       );
     }
     if (passives.allDmgPct > 0) {
       activePassiveChips.push(
-        `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#fed7aa] border-2 border-[#14111d] text-[#14111d]">${this.buildPassiveBadgeIconSvg('allDmgPct')}+${Math.round(passives.allDmgPct * 100)}%</span>`
+        `<span class="mam-pill bg-[#fed7aa] text-[#14111d]">${this.buildPassiveBadgeIconSvg('allDmgPct')}+${Math.round(passives.allDmgPct * 100)}%</span>`
       );
     }
 
@@ -429,16 +429,16 @@ export class IndexModalUi {
         const fillPct = needed > 0 ? Math.min(100, Math.round((progress.found / needed) * 100)) : 0;
 
         const rewardChips: string[] = [
-          `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#bae6fd] border border-[#14111d] text-[#14111d] text-[11px] font-black tabular-nums">${hudIconHtml('gem', 14, 'Gems')}+${fmtShort(m.gems)}</span>`,
+          `<span class="mam-pill bg-[#bae6fd] text-[#14111d]">${hudIconHtml('gem', 13, 'Gems')}+${fmtShort(m.gems)}</span>`,
         ];
         if (m.enchantDice > 0) {
           rewardChips.push(
-            `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#e9d5ff] border border-[#14111d] text-[#14111d] text-[11px] font-black tabular-nums">${enchantDiceIconHtml(15)}+${m.enchantDice}</span>`
+            `<span class="mam-pill bg-[#e9d5ff] text-[#14111d]">${enchantDiceIconHtml(14)}+${m.enchantDice}</span>`
           );
         }
         if (m.passive) {
           rewardChips.push(
-            `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#fef08a] border border-[#14111d] text-[#14111d] text-[11px] font-black">${this.buildPassiveBadgeIconSvg(m.passive.kind)}${m.passive.label}</span>`
+            `<span class="mam-pill bg-[#fef08a] text-[#14111d]">${this.buildPassiveBadgeIconSvg(m.passive.kind)}${m.passive.label}</span>`
           );
         }
 
@@ -457,10 +457,10 @@ export class IndexModalUi {
             : 'border-2 border-[#14111d] bg-[#ffffff]';
 
         const actionHtml = claimed
-          ? `<span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#2ee59d] border-2 border-[#14111d] text-[#14111d] text-[11px] font-black shrink-0"><svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none"><path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Claimed</span>`
+          ? `<span class="mam-pill min-w-[78px] h-[28px] bg-[#2ee59d] text-[#14111d]"><svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none"><path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Claimed</span>`
           : ready
-            ? `<button type="button" class="mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 border-[#14111d] bg-[#ff4d2e] text-white text-[11px] font-black cursor-pointer shrink-0 hover:brightness-105 active:scale-95 transition-[transform,filter]" data-claim-index-milestone="${m.id}">${hudIconHtml('sparkle', 13, 'Claim')}Claim</button>`
-            : `<span class="px-2.5 py-1 rounded-lg bg-[#fcecc8] border-2 border-[#14111d] text-[#5b526e] text-[11px] font-black shrink-0 tabular-nums">${progress.found}/${needed}</span>`;
+            ? `<button type="button" class="mam-sheen-hover relative overflow-hidden mam-pill min-w-[78px] h-[28px] bg-[#ff4d2e] text-white cursor-pointer hover:brightness-105 active:scale-95 transition-[transform,filter]" data-claim-index-milestone="${m.id}">${hudIconHtml('sparkle', 13, 'Claim')}Claim</button>`
+            : `<span class="mam-pill min-w-[78px] h-[28px] bg-[#fcecc8] text-[#5b526e]">${progress.found}/${needed}</span>`;
 
         return `
           <div class="relative overflow-hidden rounded-xl ${cardBorder} px-2.5 py-1.5 flex items-center justify-between gap-2">
@@ -519,7 +519,7 @@ export class IndexModalUi {
           <div class="absolute left-0 top-0 bottom-0 bg-[linear-gradient(90deg,#a855f7,#ec4899,#38bdf8)] rounded-full transition-[width] duration-250 ease-out" data-index-fill="true" style="width:${pct}%"></div>
           <div class="relative z-[2] w-full px-1.5 flex items-center justify-center text-[13px] font-black" data-index-progress-text="true">
             <span class="text-white mam-outline-sm tabular-nums leading-none tracking-wide" data-index-found-label="true">${found}/${total} Found</span>
-            <span class="absolute right-1.5 px-2 py-px rounded-full bg-[#14111d] text-[#fff8e7] tabular-nums leading-tight" data-index-pct-label="true">${pct}%</span>
+            <span class="absolute right-1 mam-pill-xs rounded-full bg-[#14111d] text-[#fff8e7] text-[11px] tabular-nums" data-index-pct-label="true">${pct}%</span>
           </div>
         </div>
       `,
@@ -529,10 +529,10 @@ export class IndexModalUi {
             const wp = this.state.getWorldIndexProgress(w.id);
             const wMaxed = wp.total > 0 && wp.found >= wp.total;
             return `
-            <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 ${this.indexWorldId === w.id ? 'active' : ''}" data-index-world="${w.id}">
+            <button class="${TW_TAB_BTN} !px-2.5 !text-[12px] shrink-0 ${this.indexWorldId === w.id ? 'active' : ''}" data-index-world="${w.id}">
               <span>${w.name}</span>
               <span class="text-[10.5px] font-bold opacity-85" data-index-world-count="${w.id}">(${wp.found}/${wp.total})</span>
-              ${wMaxed ? '<span class="px-1 py-px rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px] font-black leading-none" data-index-tab-maxed="true">MAXED</span>' : ''}
+              ${wMaxed ? '<span class="mam-pill-xs !px-1.5 rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px]" data-index-tab-maxed="true">MAXED</span>' : ''}
               ${this.buildTabReadyDotHtml(w.id)}
             </button>
           `;
@@ -542,22 +542,22 @@ export class IndexModalUi {
             const fProg = this.state.getIndexTabProgress('fusion');
             const lProg = this.state.getIndexTabProgress('limited');
             return `
-          <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 ${this.indexWorldId === 'weather' ? 'active' : ''}" data-index-world="weather">
+          <button class="${TW_TAB_BTN} !px-2.5 !text-[12px] shrink-0 ${this.indexWorldId === 'weather' ? 'active' : ''}" data-index-world="weather">
             <span class="inline-flex items-center gap-1">${meteorIconHtml('celestial', 14, 'Weather')} Weather</span>
             <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="weather">(${wProg.found}/${wProg.total})</span>
-            ${wProg.total > 0 && wProg.found >= wProg.total ? '<span class="px-1 py-px rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px] font-black leading-none" data-index-tab-maxed="true">MAXED</span>' : ''}
+            ${wProg.total > 0 && wProg.found >= wProg.total ? '<span class="mam-pill-xs !px-1.5 rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px]" data-index-tab-maxed="true">MAXED</span>' : ''}
             ${this.buildTabReadyDotHtml('weather')}
           </button>
-          <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 ${this.indexWorldId === 'fusion' ? 'active' : ''}" data-index-world="fusion">
+          <button class="${TW_TAB_BTN} !px-2.5 !text-[12px] shrink-0 ${this.indexWorldId === 'fusion' ? 'active' : ''}" data-index-world="fusion">
             <span class="inline-flex items-center gap-1">✦ Fusion</span>
             <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="fusion">(${fProg.found}/${fProg.total})</span>
-            ${fProg.total > 0 && fProg.found >= fProg.total ? '<span class="px-1 py-px rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px] font-black leading-none" data-index-tab-maxed="true">MAXED</span>' : ''}
+            ${fProg.total > 0 && fProg.found >= fProg.total ? '<span class="mam-pill-xs !px-1.5 rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px]" data-index-tab-maxed="true">MAXED</span>' : ''}
             ${this.buildTabReadyDotHtml('fusion')}
           </button>
-          <button class="${TW_TAB_BTN} !px-2.5 !py-1.5 !text-[12px] whitespace-nowrap shrink-0 ${this.indexWorldId === 'limited' ? 'active' : ''}" data-index-world="limited">
+          <button class="${TW_TAB_BTN} !px-2.5 !text-[12px] shrink-0 ${this.indexWorldId === 'limited' ? 'active' : ''}" data-index-world="limited">
             <span class="inline-flex items-center gap-1">★ Limited</span>
             <span class="text-[10.5px] font-bold opacity-85" data-index-tab-count="limited">(${lProg.found}/${lProg.total})</span>
-            ${lProg.total > 0 && lProg.found >= lProg.total ? '<span class="px-1 py-px rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px] font-black leading-none" data-index-tab-maxed="true">MAXED</span>' : ''}
+            ${lProg.total > 0 && lProg.found >= lProg.total ? '<span class="mam-pill-xs !px-1.5 rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px]" data-index-tab-maxed="true">MAXED</span>' : ''}
             ${this.buildTabReadyDotHtml('limited')}
           </button>`;
           })()}

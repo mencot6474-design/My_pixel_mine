@@ -43,12 +43,12 @@ export class DailyLoginModalUi {
         const cardStyle = chibi ? `style="${rarityVars(chibi.rarity)}"` : '';
 
         const statusBadge = isClaimed
-          ? `<span class="px-2 py-0.5 rounded-md bg-[#2ee59d] border border-[#14111d] text-[#14111d] text-[10px] font-black uppercase">Claimed</span>`
+          ? `<span class="mam-pill-xs bg-[#2ee59d] text-[#14111d] uppercase">Claimed</span>`
           : isClaimable
-            ? `<span class="px-2 py-0.5 rounded-md bg-[#ff4d2e] border border-[#14111d] text-white text-[10px] font-black uppercase animate-pulse">Ready!</span>`
+            ? `<span class="mam-pill-xs bg-[#ff4d2e] text-white uppercase animate-pulse">Ready!</span>`
             : chibi
-              ? `<span class="px-2 py-0.5 rounded-md bg-[#e9d5ff] border border-[#14111d] text-[#14111d] text-[10px] font-black uppercase">Tomorrow</span>`
-              : `<span class="px-2 py-0.5 rounded-md bg-[#e2e8f0] border border-[#14111d] text-[#5b526e] text-[10px] font-black uppercase">Soon</span>`;
+              ? `<span class="mam-pill-xs bg-[#e9d5ff] text-[#14111d] uppercase">Tomorrow</span>`
+              : `<span class="mam-pill-xs bg-[#e2e8f0] text-[#5b526e] uppercase">Soon</span>`;
 
         const rarityHtml = chibi ? renderRarityBadgeHtml(chibi.rarity) : '';
 
@@ -58,7 +58,7 @@ export class DailyLoginModalUi {
               ${portraitHtml}
               <div class="flex-1 min-w-0 flex flex-col gap-1">
                 <div class="flex items-center justify-between gap-2">
-                  <span class="px-2 py-0.5 rounded-md bg-[#14111d] text-[11px] font-black text-[#fde047] tabular-nums">DAY ${r.day} • APEX FINALE</span>
+                  <span class="mam-pill-xs bg-[#14111d] text-[#fde047]">DAY ${r.day} • APEX FINALE</span>
                   ${statusBadge}
                 </div>
                 <div class="flex items-baseline justify-between gap-2 min-w-0">
@@ -66,7 +66,7 @@ export class DailyLoginModalUi {
                   <div class="text-[10px] font-bold text-[#5b526e] leading-tight shrink-0">${r.nonSellable ? 'Non-Sellable' : r.subtitle}</div>
                 </div>
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="inline-flex items-center px-2 py-[2px] rounded-full bg-[#14111d] text-[#fde047] text-[10px] font-black tracking-[0.12em]">★★★★★</span>
+                  <span class="mam-pill-xs rounded-full bg-[#14111d] text-[#fde047] tracking-[0.12em]">★★★★★</span>
                   ${rarityHtml}
                 </div>
               </div>
@@ -77,13 +77,13 @@ export class DailyLoginModalUi {
         return `
           <div class="${cardCls}" ${cardStyle}>
             <div class="w-full flex items-center justify-between gap-1">
-              <span class="px-2 py-0.5 rounded-md bg-[#14111d] text-[11px] font-black text-[#fff8e7] tabular-nums">DAY ${r.day}</span>
+              <span class="mam-pill-xs bg-[#14111d] text-[#fff8e7]">DAY ${r.day}</span>
               ${statusBadge}
             </div>
             ${portraitHtml}
             <div class="text-[12px] font-black text-[#14111d] leading-tight truncate w-full">${r.label}</div>
             <div class="flex flex-col items-center justify-center gap-1">
-              <span class="inline-flex items-center px-2 py-[1px] rounded-full bg-[#14111d] text-[#fde047] text-[9.5px] font-black tracking-[0.12em]">★★★★★</span>
+              <span class="mam-pill-xs rounded-full bg-[#14111d] text-[#fde047] tracking-[0.12em]">★★★★★</span>
               ${rarityHtml}
             </div>
             <div class="text-[10px] font-bold text-[#5b526e] leading-tight">${r.nonSellable ? 'Non-Sellable' : r.subtitle}</div>
@@ -106,7 +106,7 @@ export class DailyLoginModalUi {
         </div>`;
 
     const headerExtraHtml = `
-      <span class="px-3 py-1 rounded-xl bg-[#e9d5ff] border-2 border-[#14111d] text-[12px] font-black text-[#14111d] tabular-nums">
+      <span class="mam-pill-lg bg-[#e9d5ff] text-[#14111d]">
         Claimed: ${snap.claimedDays.length} / 7
       </span>
     `;

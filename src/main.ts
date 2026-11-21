@@ -354,7 +354,7 @@ async function bootstrap(): Promise<void> {
     onAltarAnchors: (anchors) => {
       hud?.updateAltarAnchors(anchors);
     },
-    onTowerTargetClick: (targetOreIndex) => hud?.handleTowerTargetClick(targetOreIndex),
+    onTowerTargetClick: (targetOreIndex, opts) => hud?.handleTowerTargetClick(targetOreIndex, opts),
     onTowerFighterStrike: (slotIndex, targetOreIndex, attackInterval) =>
       hud?.handleTowerFighterStrike(slotIndex, targetOreIndex, attackInterval),
     onTowerOreBars: (bars) => {

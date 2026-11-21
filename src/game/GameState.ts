@@ -139,7 +139,9 @@ import {
   getTowerSlotStrikeDamageDomain,
   getTowerUnitEffectiveDpsDomain,
   grantFreeTowerKeyDomain,
+  hitTowerBossShieldSweetSpotDomain,
   quickSweepTowerDomain,
+  rerollTowerBlessingsDomain,
   startTowerRunDomain,
   stepTowerTickDomain,
   syncTowerKeysDomain,
@@ -294,6 +296,7 @@ export class GameState {
   public towerKeys = TOWER_MAX_KEYS;
   public towerLastKeyRegenAt = Date.now();
   public towerClaimedMilestones: number[] = [];
+  public towerDicePity = 0;
   public towerRun: TowerRunState | null = null;
   public towerLastSummary: TowerRunSummary | null = null;
   public readonly towerRunMeta: TowerRunMeta = { startFloor: 1, newRecord: false };
@@ -965,6 +968,17 @@ export class GameState {
 
   public chooseTowerBlessing(blessingId: string, rng: () => number = Math.random): boolean {
     return chooseTowerBlessingDomain(this, blessingId, rng, () => this.emit());
+  }
+
+  public rerollTowerBlessings(rng: () => number = Math.random): { ok: boolean; usedFree: boolean; costGems: number } {
+    return rerollTowerBlessingsDomain(this, rng, {
+      save: () => this.save(),
+      emit: () => this.emit(),
+    });
+  }
+
+  public hitTowerBossShieldSweetSpot() {
+    return hitTowerBossShieldSweetSpotDomain(this, () => this.emit());
   }
 
   public abandonTowerRun(): TowerRunSummary | null {

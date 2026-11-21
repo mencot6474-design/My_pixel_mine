@@ -62,6 +62,7 @@ import {
 } from '../src/ui/WorldOverlayHudUi';
 import { BountiesModalUi } from '../src/ui/BountiesModalUi';
 import { AchievementsModalUi } from '../src/ui/AchievementsModalUi';
+import { TowerUi } from '../src/ui/TowerUi';
 import { getTapComboTier, stepTapCombo, TAP_COMBO_WINDOW_MS } from '../src/game/TapComboHelper';
 import { OfflineModalUi } from '../src/ui/OfflineModalUi';
 import { SettingsModalUi } from '../src/ui/SettingsModalUi';
@@ -1020,6 +1021,78 @@ describe('Tahap B HUD Modules', () => {
       expect(dock.single).toBe(true);
       expect(dock.html).toContain('data-hud-pot="return-rush"');
       expect(dock.html).toContain('7:30');
+    });
+
+    it('renders Tower Hub Near-Miss summary + Retry button, Dice Pity bar, and Arena Streak/Reroll HUD', () => {
+      const state = new GameState();
+      state.towerDicePity = 3;
+      state.towerLastSummary = {
+        startFloor: 5,
+        highestReached: 6,
+        highestWave: 10,
+        floorsCleared: 1,
+        wavesCleared: 19,
+        gemsEarned: 240,
+        diceEarned: 1,
+        newRecord: true,
+        reason: 'timeout',
+        remainingHpPct: 8,
+        wasBossWave: true,
+        bestStreakMult: 1.25,
+      };
+
+      const towerUi = new TowerUi(
+        state,
+        () => {},
+        () => {},
+        () => {},
+        () => {},
+        () => {}
+      );
+      const hubHtml = towerUi.renderTowerHubModal();
+      expect(hubHtml).toContain('SO CLOSE!');
+      expect(hubHtml).toContain('8% HP left');
+      expect(hubHtml).toContain('data-action="tower-retry-run"');
+      expect(hubHtml).toContain('Retry Floor 5');
+      expect(hubHtml).toContain('GUARANTEED!');
+      expect(hubHtml).toContain('Spire Campaign (W1–W8)');
+      expect(hubHtml).toContain('F71-80');
+
+      state.startTowerRun(1);
+      state.towerRun!.isBossWave = true;
+      state.towerRun!.bossInvulLeft = 3.5;
+      state.towerRun!.pendingBlessings = null;
+      const arenaHtml = towerUi.renderTowerArenaHud('<div></div>', '');
+      expect(arenaHtml).toContain('TAP RING!');
+      expect(arenaHtml).toContain('data-tower-streak="true"');
+      expect(arenaHtml).toContain('data-tower-pity="true"');
+      expect(arenaHtml).toContain('FL 1/80');
+      expect(arenaHtml).toContain('W1 THE UNDERGROUND');
+
+      // Show Reroll button when pendingBlessings active
+      state.towerRun!.pendingBlessings = [
+        { id: 'astral-surge', name: 'Astral Surge', desc: '+35% DPS', color: '#38bdf8', tag: 'DPS', rarity: 'core' },
+      ];
+      const blessingHtml = towerUi.renderTowerArenaHud('<div></div>', '');
+      expect(blessingHtml).toContain('data-action="tower-reroll-blessings"');
+      expect(blessingHtml).toContain('FREE • 1');
+
+      // Victory Tamat banner at Floor 80
+      state.towerBestFloor = 80;
+      state.towerLastSummary = {
+        startFloor: 80,
+        highestReached: 80,
+        highestWave: 10,
+        floorsCleared: 1,
+        wavesCleared: 10,
+        gemsEarned: 15000,
+        diceEarned: 15,
+        newRecord: true,
+        reason: 'victory',
+      };
+      const victoryHtml = towerUi.renderTowerHubModal();
+      expect(victoryHtml).toContain('SPIRE CONQUERED');
+      expect(victoryHtml).toContain('80/80 TAMAT!');
     });
   });
 });

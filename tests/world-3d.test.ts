@@ -726,11 +726,23 @@ describe('Pure 3D Mine World', () => {
     expect(w1Ores.every((o) => o.alive && o.hp > 0)).toBe(true);
     expect(rollTowerWaveOres(1, TOWER_WAVES_PER_FLOOR, f1.anomaly)).toHaveLength(0);
 
-    // Checkpoints and Milestones every 5 floors
+    // Checkpoints and Milestones every 5 floors up to Floor 80 (W1..W8)
     expect(getTowerCheckpoints(0)).toEqual([1]);
     expect(getTowerCheckpoints(5)).toEqual([1, 5]);
     expect(getTowerCheckpoints(12)).toEqual([1, 5, 10]);
-    expect(TOWER_MILESTONES.map((m) => m.floor)).toEqual([5, 10, 15, 20, 25, 30, 35, 40, 45, 50]);
+    expect(getTowerCheckpoints(99)).toContain(80);
+    expect(getTowerCheckpoints(99).at(-1)).toBe(80);
+    expect(TOWER_MILESTONES.map((m) => m.floor)).toEqual([
+      5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80,
+    ]);
+
+    // World-tiered difficulty scaling (Floors 1-10 W1 -> Floors 71-80 W8)
+    expect(getTowerFloorDef(1).world.id).toBe('underground');
+    expect(getTowerFloorDef(10).world.id).toBe('underground');
+    expect(getTowerFloorDef(11).world.id).toBe('crystal');
+    expect(getTowerFloorDef(80).world.id).toBe('chrono');
+    expect(getTowerFloorDef(80).isFinalBoss).toBe(true);
+    expect(getTowerFloorDef(80).hp).toBeGreaterThan(getTowerFloorDef(70).hp);
 
     expect(getGlobalGemGainBonus(0)).toBe(0);
     expect(getGlobalGemGainBonus(5)).toBeCloseTo(0.1);

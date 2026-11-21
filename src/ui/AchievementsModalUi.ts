@@ -106,17 +106,17 @@ export class AchievementsModalUi {
               : 'border-2 border-[#14111d] bg-[#ffffff]';
 
           const actionHtml = allDone
-            ? `<span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#2ee59d] border-2 border-[#14111d] text-[#14111d] text-[11px] font-black shrink-0">✓ Maxed</span>`
+            ? `<span class="mam-pill min-w-[82px] h-[28px] bg-[#2ee59d] text-[#14111d]">✓ Maxed</span>`
             : ready
-              ? `<button type="button" class="mam-sheen-hover relative overflow-hidden inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 border-[#14111d] bg-[#ff4d2e] text-white text-[12px] font-black cursor-pointer shrink-0 hover:brightness-105 active:scale-95 transition-[transform,filter]" data-claim-achievement="${activeTier.id}">${hudIconHtml('sparkle', 13, 'Claim')}Claim</button>`
-              : `<span class="px-2.5 py-1 rounded-lg bg-[#fcecc8] border-2 border-[#14111d] text-[#5b526e] text-[11px] font-black shrink-0 tabular-nums">${fmtShort(Math.min(val, activeTier.target))}/${fmtShort(activeTier.target)}</span>`;
+              ? `<button type="button" class="mam-sheen-hover relative overflow-hidden mam-pill min-w-[82px] h-[28px] bg-[#ff4d2e] text-white text-[11.5px] cursor-pointer hover:brightness-105 active:scale-95 transition-[transform,filter]" data-claim-achievement="${activeTier.id}">${hudIconHtml('sparkle', 13, 'Claim')}Claim</button>`
+              : `<span class="mam-pill min-w-[82px] h-[28px] bg-[#fcecc8] text-[#5b526e]">${fmtShort(Math.min(val, activeTier.target))}/${fmtShort(activeTier.target)}</span>`;
 
           return `
             <div class="relative overflow-hidden rounded-2xl ${cardBorder} px-3 py-3.5 flex items-center gap-3 min-h-max">
               <div class="absolute top-0 left-0 right-0 h-[3px] ${allDone ? 'bg-[#2ee59d]' : style.rail}" aria-hidden="true"></div>
               <div class="relative w-14 h-14 rounded-2xl border-2 ${style.ring} ${style.bg} flex items-center justify-center shrink-0">
                 ${this.renderCategoryArt(cat.iconKind)}
-                <span class="absolute -bottom-1.5 -right-1.5 px-1.5 py-[1px] rounded-md border text-[10px] font-black leading-tight ${style.badge}">${TIER_ROMAN[activeTier.tier]}</span>
+                <span class="mam-pill-xs absolute -bottom-1.5 -right-1.5 min-w-[22px] ${style.badge}">${TIER_ROMAN[activeTier.tier]}</span>
               </div>
 
               <div class="min-w-0 flex-1 flex flex-col gap-1.5 text-left">
@@ -133,13 +133,13 @@ export class AchievementsModalUi {
                 </div>
 
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#bae6fd] border border-[#14111d] text-[#14111d] text-[10px] font-black tabular-nums">${hudIconHtml('gem', 12, 'Gems')}+${fmtShort(activeTier.gems)}</span>
+                  <span class="mam-pill-xs bg-[#bae6fd] text-[#14111d]">${hudIconHtml('gem', 11, 'Gems')}+${fmtShort(activeTier.gems)}</span>
                   ${
                     activeTier.enchantDice > 0
-                      ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#e9d5ff] border border-[#14111d] text-[#14111d] text-[10px] font-black tabular-nums">${enchantDiceIconHtml(13)}+${activeTier.enchantDice}</span>`
+                      ? `<span class="mam-pill-xs bg-[#e9d5ff] text-[#14111d]">${enchantDiceIconHtml(12)}+${activeTier.enchantDice}</span>`
                       : ''
                   }
-                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#fed7aa] border border-[#14111d] text-[#14111d] text-[10px] font-black">+1% All DMG</span>
+                  <span class="mam-pill-xs bg-[#fed7aa] text-[#14111d]">+1% All DMG</span>
                 </div>
               </div>
             </div>
@@ -193,7 +193,7 @@ export class AchievementsModalUi {
       iconHtml: trophySvg,
       boxClass: 'w-[860px] max-w-[96vw]',
       headerExtraHtml: `
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border-2 border-[#14111d] text-[12px] font-black text-[#14111d] tabular-nums">
+        <div class="mam-pill-lg rounded-full bg-white text-[#14111d]">
           <span>${claimedCount}/${TOTAL_ACHIEVEMENT_TIERS} Claimed</span>
           <span class="opacity-45">•</span>
           <span class="text-[#15803d]">+${bonusPct}% All DMG</span>

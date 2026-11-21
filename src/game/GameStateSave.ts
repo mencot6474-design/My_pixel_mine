@@ -17,7 +17,7 @@ import { BountyEntry, isValidBountyEntry } from './BountiesDomain';
 import { isValidIndexMilestoneId } from './IndexRewardsDomain';
 import { ResearchTreeId } from './ResearchData';
 import { createEmptyTeamPresets, TEAM_PRESET_COUNT, TeamPresetSlots } from './TeamPresetsDomain';
-import { TOWER_MAX_KEYS, TowerSaveData } from './TowerData';
+import { TOWER_DICE_PITY_MAX, TOWER_MAX_FLOOR, TOWER_MAX_KEYS, TowerSaveData } from './TowerData';
 import { isValidWeatherId, WeatherId } from './WeatherData';
 
 export const SAVE_KEY = 'my_anime_mine_v2_save_v1';
@@ -156,6 +156,7 @@ export interface SaveableGameState {
   towerKeys: number;
   towerLastKeyRegenAt: number;
   towerClaimedMilestones: number[];
+  towerDicePity: number;
   weatherId: WeatherId;
   weatherExpiresAt: number;
   lastSavedAt: number;
@@ -249,6 +250,7 @@ export function serializeSavePayload(state: SaveableGameState): SavePayload {
       keys: state.towerKeys,
       lastKeyRegenAt: state.towerLastKeyRegenAt,
       claimedMilestones: state.towerClaimedMilestones,
+      dicePity: state.towerDicePity,
     },
     weather: {
       id: state.weatherId,
@@ -465,7 +467,7 @@ export function deserializeSaveJson(
     if (data.activeBoosts) state.activeBoosts = data.activeBoosts;
     if (data.tower && typeof data.tower === 'object') {
       if (typeof data.tower.bestFloor === 'number') {
-        state.towerBestFloor = Math.max(0, Math.floor(data.tower.bestFloor));
+        state.towerBestFloor = Math.max(0, Math.min(TOWER_MAX_FLOOR, Math.floor(data.tower.bestFloor)));
       }
       if (typeof data.tower.keys === 'number') {
         state.towerKeys = Math.max(0, Math.min(TOWER_MAX_KEYS, Math.floor(data.tower.keys)));
@@ -477,6 +479,9 @@ export function deserializeSaveJson(
         state.towerClaimedMilestones = data.tower.claimedMilestones.filter(
           (v): v is number => typeof v === 'number'
         );
+      }
+      if (typeof data.tower.dicePity === 'number' && Number.isFinite(data.tower.dicePity)) {
+        state.towerDicePity = Math.max(0, Math.min(TOWER_DICE_PITY_MAX - 1, Math.floor(data.tower.dicePity)));
       }
     }
     if (data.weather && typeof data.weather === 'object') {

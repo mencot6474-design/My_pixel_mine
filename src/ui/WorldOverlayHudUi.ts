@@ -96,10 +96,10 @@ export function buildMineOreBarsHtml(bars: OreHpScreen[]): string {
         const wDef = getWeatherById(b.meteorWeatherId ?? 'light_rain');
         return `
               <div class="absolute flex flex-col items-center gap-1 pointer-events-none select-none" data-ore-bar="${b.id}">
-                <div class="inline-flex items-center gap-1.5 px-2.5 py-[3px] rounded-lg bg-[#fff8e7] border-2 border-[#14111d] whitespace-nowrap">
+                <div class="mam-pill rounded-lg bg-[#fff8e7] border-2 border-[#14111d] gap-1.5">
                   ${meteorIconHtml(wDef.id, 15, wDef.name)}
                   <span class="text-[10.5px] font-black uppercase tracking-[0.06em] leading-none text-[#14111d]">${wDef.name}</span>
-                  <span class="px-1 py-[1px] rounded text-[8.5px] font-black uppercase tracking-wider leading-none bg-[#fde047] text-[#14111d] border border-[#14111d]">Meteor</span>
+                  <span class="mam-pill-xs rounded text-[8.5px] uppercase tracking-wider bg-[#fde047] text-[#14111d] border border-[#14111d]">Meteor</span>
                 </div>
                 <div class="relative w-[184px] @max-[720px]:w-[156px] h-[22px] rounded-lg border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center">
                   <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${wDef.glowColor},${wDef.accentColor})" data-ore-fill="true"></div>
@@ -118,7 +118,7 @@ export function buildMineOreBarsHtml(bars: OreHpScreen[]): string {
         const ev = PIT_EVENT_DEFS[b.pitEventKind];
         return `
           <div class="absolute flex flex-col items-center gap-1 pointer-events-none select-none" data-ore-bar="${b.id}">
-            <div class="inline-flex items-center gap-1 px-2 py-[2px] rounded-md bg-[#fff8e7] border-2 border-[#14111d] whitespace-nowrap">
+            <div class="mam-pill-xs rounded-md bg-[#fff8e7] border-2 border-[#14111d]">
               <span class="text-[9.5px] font-black uppercase tracking-[0.06em] leading-none text-[#14111d]">${ev.badgeText}</span>
             </div>
             <div class="relative w-28 h-[17px] rounded-md border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center">
@@ -144,7 +144,7 @@ export function buildTowerOreBarsHtml(bars: TowerOreBarScreen[]): string {
     .map(
       (b) => `
           <div class="absolute flex flex-col items-center gap-1 pointer-events-none" data-tower-ore-bar="${b.index}">
-            <div class="px-2 py-0.5 rounded-md bg-[#fff8e7] border-[1.5px] border-[#14111d] text-[10.5px] font-black leading-none whitespace-nowrap text-[#14111d]">${b.name}</div>
+            <div class="mam-pill-xs rounded-md bg-[#fff8e7] border-[1.5px] border-[#14111d] text-[10.5px] text-[#14111d]">${b.name}</div>
             <div class="w-[104px] h-[18px] rounded-md border-2 border-[#14111d] bg-[#1e293b] overflow-hidden relative flex items-center justify-center">
               <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[60ms] ease-linear" style="background:linear-gradient(180deg,${b.color},${b.color}cc)" data-ore-fill="true"></div>
               <div class="absolute inset-x-0 top-0 h-[42%] bg-gradient-to-b from-white/30 to-transparent pointer-events-none z-[1]"></div>
@@ -522,7 +522,7 @@ export class WorldOverlayHudUi {
   public updateSweetSpot(spot: SweetSpotScreen | null): void {
     if (!this.sweetSpotLayerEl) return;
     const { sceneMode, inspectedSlot, activeModal } = this.getUiContext();
-    if (!spot || sceneMode !== 'mine' || inspectedSlot !== null || activeModal !== 'none') {
+    if (!spot || (sceneMode !== 'mine' && sceneMode !== 'tower') || inspectedSlot !== null || activeModal !== 'none') {
       if (this.sweetSpotWrapEl) {
         this.sweetSpotWrapEl.style.display = 'none';
       }
@@ -545,7 +545,7 @@ export class WorldOverlayHudUi {
       this.sweetSpotTagEl = wrap.querySelector<HTMLElement>('[data-sweet-tag="true"]');
     }
 
-    const baseScale = spot.isMeteor ? 1.28 : 1;
+    const baseScale = spot.isTowerShield ? 1.32 : spot.isMeteor ? 1.28 : 1;
     const rx = Math.round(spot.x * 2) * 0.5;
     const ry = Math.round(spot.y * 2) * 0.5;
     this.sweetSpotWrapEl.style.display = 'block';
@@ -558,7 +558,11 @@ export class WorldOverlayHudUi {
       this.sweetSpotRingEl.style.transform = `scale(${ringScale.toFixed(3)})`;
     }
     if (this.sweetSpotTagEl) {
-      this.sweetSpotTagEl.textContent = spot.inWindow ? 'STRIKE!' : 'WAIT';
+      if (spot.isTowerShield) {
+        this.sweetSpotTagEl.textContent = spot.inWindow ? 'BREAK!' : 'SHIELD';
+      } else {
+        this.sweetSpotTagEl.textContent = spot.inWindow ? 'STRIKE!' : 'WAIT';
+      }
     }
   }
 
@@ -590,7 +594,7 @@ export class WorldOverlayHudUi {
           <path d="M14 5.5L16.1 11.1L21.8 11.4L17.1 14.9L18.8 20.5L14 17.2L9.2 20.5L10.9 14.9L6.2 11.4L11.9 11.1L14 5.5Z" fill="#ffffff"/>
         </svg>
         <span class="inline-flex flex-col items-start leading-none">
-          <span class="px-2 py-[1.5px] rounded-md bg-[linear-gradient(90deg,#0284c7,#a855f7,#f59e0b)] border-2 border-[#14111d] text-[10px] tracking-[0.1em] text-white uppercase">PERFECT STRIKE!</span>
+          <span class="mam-pill-xs rounded-md bg-[linear-gradient(90deg,#0284c7,#a855f7,#f59e0b)] border-2 border-[#14111d] text-[10px] tracking-[0.1em] text-white uppercase">PERFECT STRIKE!</span>
           <span class="text-[31px] text-[#67e8f9] mam-outline">-${dmgText}!!</span>
         </span>
       `;
@@ -603,7 +607,7 @@ export class WorldOverlayHudUi {
           <path d="M14 5.5L16.1 11.1L21.8 11.4L17.1 14.9L18.8 20.5L14 17.2L9.2 20.5L10.9 14.9L6.2 11.4L11.9 11.1L14 5.5Z" fill="#fffbeb"/>
         </svg>
         <span class="inline-flex flex-col items-start leading-none">
-          <span class="px-1.5 py-[1px] rounded bg-[linear-gradient(90deg,#f59e0b,#ef4444)] border border-[#fef08a]/85 text-[9px] tracking-[0.12em] text-white uppercase shadow-[0_0_10px_rgba(245,158,11,0.75)]">CRIT</span>
+          <span class="mam-pill-xs rounded bg-[linear-gradient(90deg,#f59e0b,#ef4444)] border border-[#fef08a]/85 text-[9px] tracking-[0.12em] text-white uppercase shadow-[0_0_10px_rgba(245,158,11,0.75)]">CRIT</span>
           <span class="text-[28px] text-[#fef08a] mam-outline drop-shadow-[0_0_12px_rgba(245,158,11,0.9)]">-${dmgText}!</span>
         </span>
       `;

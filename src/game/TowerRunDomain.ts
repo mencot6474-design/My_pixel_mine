@@ -6,14 +6,21 @@ import {
   getGlobalGemGainBonus,
   getTowerCheckpoints,
   getTowerFloorDef,
+  getTowerStreakGemMult,
   getTowerSweepGemReward,
   getTowerWaveDef,
   pickTowerBlessingChoices,
   rollTowerWaveOres,
   TOWER_BLESSING_AUTO_PICK_SEC,
+  TOWER_BLESSING_REROLL_GEM_COST,
+  TOWER_BOSS_EXPOSE_DMG_MULT,
+  TOWER_BOSS_EXPOSE_SEC,
   TOWER_BOSS_INVUL_SEC,
+  TOWER_BOSS_SHIELD_SHAVE_SEC,
+  TOWER_DICE_PITY_MAX,
   TOWER_KEY_GEM_COST,
   TOWER_KEY_REGEN_MS,
+  TOWER_MAX_FLOOR,
   TOWER_MAX_KEYS,
   TOWER_MILESTONES,
   TOWER_WAVES_PER_FLOOR,
@@ -35,6 +42,7 @@ export interface TowerRunContext {
   towerKeys: number;
   towerLastKeyRegenAt: number;
   towerClaimedMilestones: number[];
+  towerDicePity: number;
   towerRun: TowerRunState | null;
   towerLastSummary: TowerRunSummary | null;
   towerRunMeta: TowerRunMeta;
@@ -47,11 +55,13 @@ export interface TowerRunContext {
 export interface TowerWaveClearResult {
   waveCleared: boolean;
   floorCleared: boolean;
+  towerCompleted?: boolean;
   clearedFloor: number;
   clearedWave: number;
   gemsAwarded: number;
   diceAwarded: number;
   milestoneUnlocked: number | null;
+  pityTriggered?: boolean;
 }
 
 export interface TowerTargetDamageResult {
@@ -60,11 +70,14 @@ export interface TowerTargetDamageResult {
   targetOreIndex: number | null;
   waveCleared: boolean;
   floorCleared: boolean;
+  towerCompleted?: boolean;
   clearedFloor: number | null;
   clearedWave: number | null;
   gemsAwarded: number;
   diceAwarded: number;
   milestoneUnlocked: number | null;
+  isCrit?: boolean;
+  pityTriggered?: boolean;
 }
 
 /** Regenerates Tower keys based on elapsed intervals since `towerLastKeyRegenAt`. */
@@ -143,8 +156,58 @@ export function getTowerEffectiveTapDamageDomain(ctx: TowerRunContext): number {
   return Math.max(1, Math.round(ctx.getTapDamage() * def.anomaly.tapMult * (1 + blessingPct) * towerRelicMult));
 }
 
+interface TowerBlessingAggregate {
+  dpsBonusPct: number;
+  tapBonusPct: number;
+  gemBonusPct: number;
+  extraTimerSec: number;
+  overkillPct: number;
+  chainTargets: number;
+  chainPct: number;
+  critChanceBonus: number;
+  critDmgBonus: number;
+  bossDmgPct: number;
+  diceChanceBonus: number;
+  extraStrikeChance: number;
+  extraStrikePct: number;
+}
+
+function summarizeTowerBlessings(blessings: readonly TowerBlessingDef[]): TowerBlessingAggregate {
+  const acc: TowerBlessingAggregate = {
+    dpsBonusPct: 0,
+    tapBonusPct: 0,
+    gemBonusPct: 0,
+    extraTimerSec: 0,
+    overkillPct: 0,
+    chainTargets: 0,
+    chainPct: 0,
+    critChanceBonus: 0,
+    critDmgBonus: 0,
+    bossDmgPct: 0,
+    diceChanceBonus: 0,
+    extraStrikeChance: 0,
+    extraStrikePct: 0,
+  };
+  for (const b of blessings) {
+    acc.dpsBonusPct += b.dpsBonusPct ?? 0;
+    acc.tapBonusPct += b.tapBonusPct ?? 0;
+    acc.gemBonusPct += b.gemBonusPct ?? 0;
+    acc.extraTimerSec += b.extraTimerSec ?? 0;
+    acc.overkillPct += b.overkillPct ?? 0;
+    acc.chainTargets += b.chainTargets ?? 0;
+    acc.chainPct = Math.max(acc.chainPct, b.chainPct ?? 0);
+    acc.critChanceBonus += b.critChanceBonus ?? 0;
+    acc.critDmgBonus += b.critDmgBonus ?? 0;
+    acc.bossDmgPct += b.bossDmgPct ?? 0;
+    acc.diceChanceBonus += b.diceChanceBonus ?? 0;
+    acc.extraStrikeChance += b.extraStrikeChance ?? 0;
+    acc.extraStrikePct = Math.max(acc.extraStrikePct, b.extraStrikePct ?? 0);
+  }
+  return acc;
+}
+
 function getTowerExtraTimerSec(ctx: Pick<TowerRunContext, 'towerRun'>): number {
-  return (ctx.towerRun?.blessings ?? []).reduce((s, b) => s + (b.extraTimerSec ?? 0), 0);
+  return summarizeTowerBlessings(ctx.towerRun?.blessings ?? []).extraTimerSec;
 }
 
 function setupTowerWave(
@@ -156,7 +219,7 @@ function setupTowerWave(
   if (!ctx.towerRun) return;
   const floorDef = getTowerFloorDef(floor);
   const waveDef = getTowerWaveDef(floor, wave);
-  const maxTime = waveDef.durationSec + getTowerExtraTimerSec(ctx);
+  const maxTime = Math.max(10, waveDef.durationSec + getTowerExtraTimerSec(ctx));
   const waveOres = waveDef.isBoss ? [] : rollTowerWaveOres(floorDef.floor, waveDef.wave, floorDef.anomaly, rng);
   const totalHp = waveDef.isBoss
     ? waveDef.bossHp
@@ -172,6 +235,7 @@ function setupTowerWave(
   ctx.towerRun.timeLeft = maxTime;
   ctx.towerRun.maxTime = maxTime;
   ctx.towerRun.bossInvulLeft = waveDef.isBoss ? TOWER_BOSS_INVUL_SEC : 0;
+  ctx.towerRun.bossExposeLeft = 0;
 }
 
 export function startTowerRunDomain(
@@ -208,6 +272,8 @@ export function startTowerRunDomain(
     wavesCleared: 0,
     blessings: [],
     pendingBlessings: null,
+    bossExposeLeft: 0,
+    freeBlessingRerolls: 1,
   };
   setupTowerWave(ctx, validStart, 1, rng);
   hooks.emit?.();
@@ -224,9 +290,10 @@ function completeCurrentTowerWaveOrFloor(
   const currentWave = run.wave;
   const floorDef = getTowerFloorDef(currentFloor);
   const waveDef = getTowerWaveDef(currentFloor, currentWave);
-  const runGemPct = run.blessings.reduce((s, b) => s + (b.gemBonusPct ?? 0), 0);
+  const bSummary = summarizeTowerBlessings(run.blessings);
+  const streakMult = getTowerStreakGemMult(run.floorsCleared);
   const globalGemPct = getGlobalGemGainBonus(Math.max(ctx.towerBestFloor, currentFloor)) + ctx.getRelicBonus('gemGainPct');
-  const gemMult = (1 + runGemPct + globalGemPct) * ctx.getWeatherGemDropMult();
+  const gemMult = (1 + bSummary.gemBonusPct + globalGemPct) * streakMult * ctx.getWeatherGemDropMult();
 
   run.wavesCleared += 1;
 
@@ -249,7 +316,18 @@ function completeCurrentTowerWaveOrFloor(
 
   // Wave 10 Boss defeated -> Floor Cleared!
   const gemsAwarded = Math.max(1, Math.round(floorDef.gemReward * gemMult));
-  let diceAwarded = floorDef.diceDropChance > 0 && rng() < floorDef.diceDropChance ? 1 : 0;
+  const diceChance = Math.min(0.95, floorDef.diceDropChance + bSummary.diceChanceBonus);
+  const rolledDice = diceChance > 0 && rng() < diceChance;
+  const pityReady = (ctx.towerDicePity ?? 0) + 1 >= TOWER_DICE_PITY_MAX;
+  let diceAwarded = 0;
+  let pityTriggered = false;
+  if (rolledDice || pityReady) {
+    diceAwarded = 1;
+    pityTriggered = !rolledDice && pityReady;
+    ctx.towerDicePity = 0;
+  } else {
+    ctx.towerDicePity = Math.min(TOWER_DICE_PITY_MAX - 1, (ctx.towerDicePity ?? 0) + 1);
+  }
 
   ctx.gems += gemsAwarded;
   run.gemsEarned += gemsAwarded;
@@ -277,27 +355,50 @@ function completeCurrentTowerWaveOrFloor(
   }
 
   run.hp = 0;
+  run.bossExposeLeft = 0;
+
+  if (currentFloor >= TOWER_MAX_FLOOR) {
+    finishTowerRunDomain(ctx, 'victory', emit);
+    return {
+      waveCleared: true,
+      floorCleared: true,
+      towerCompleted: true,
+      clearedFloor: currentFloor,
+      clearedWave: currentWave,
+      gemsAwarded,
+      diceAwarded,
+      milestoneUnlocked,
+      pityTriggered,
+    };
+  }
+
   run.pendingBlessings = pickTowerBlessingChoices(rng);
   run.blessingTimerLeft = TOWER_BLESSING_AUTO_PICK_SEC;
   emit();
   return {
     waveCleared: true,
     floorCleared: true,
+    towerCompleted: false,
     clearedFloor: currentFloor,
     clearedWave: currentWave,
     gemsAwarded,
     diceAwarded,
     milestoneUnlocked,
+    pityTriggered,
   };
 }
 
 export function finishTowerRunDomain(
   ctx: TowerRunContext,
-  reason: 'timeout' | 'exit',
+  reason: 'timeout' | 'exit' | 'victory',
   emit: () => void = () => {}
 ): TowerRunSummary | null {
   if (!ctx.towerRun) return null;
   const run = ctx.towerRun;
+  const remainingHpPct =
+    reason === 'timeout' && run.maxHp > 0 && run.hp > 0
+      ? Math.max(1, Math.min(100, Math.round((run.hp / run.maxHp) * 100)))
+      : 0;
   const summary: TowerRunSummary = {
     startFloor: ctx.towerRunMeta.startFloor,
     highestReached: run.floor,
@@ -308,12 +409,82 @@ export function finishTowerRunDomain(
     diceEarned: run.diceEarned,
     newRecord: ctx.towerRunMeta.newRecord,
     reason,
+    remainingHpPct,
+    wasBossWave: run.isBossWave,
+    bestStreakMult: getTowerStreakGemMult(run.floorsCleared),
   };
   ctx.towerRun = null;
   ctx.towerRunMeta.newRecord = false;
   ctx.towerLastSummary = summary;
   emit();
   return summary;
+}
+
+export function rerollTowerBlessingsDomain(
+  ctx: TowerRunContext,
+  rng: () => number = Math.random,
+  hooks: { save?: () => void; emit?: () => void } = {}
+): { ok: boolean; usedFree: boolean; costGems: number } {
+  const run = ctx.towerRun;
+  if (!run || !run.pendingBlessings) {
+    return { ok: false, usedFree: false, costGems: 0 };
+  }
+  const freeLeft = run.freeBlessingRerolls ?? 0;
+  if (freeLeft > 0) {
+    run.freeBlessingRerolls = freeLeft - 1;
+    run.pendingBlessings = pickTowerBlessingChoices(
+      rng,
+      run.pendingBlessings.map((b) => b.id)
+    );
+    run.blessingTimerLeft = TOWER_BLESSING_AUTO_PICK_SEC;
+    hooks.emit?.();
+    return { ok: true, usedFree: true, costGems: 0 };
+  }
+  if (ctx.gems < TOWER_BLESSING_REROLL_GEM_COST) {
+    return { ok: false, usedFree: false, costGems: TOWER_BLESSING_REROLL_GEM_COST };
+  }
+  ctx.gems -= TOWER_BLESSING_REROLL_GEM_COST;
+  run.pendingBlessings = pickTowerBlessingChoices(
+    rng,
+    run.pendingBlessings.map((b) => b.id)
+  );
+  run.blessingTimerLeft = TOWER_BLESSING_AUTO_PICK_SEC;
+  hooks.save?.();
+  hooks.emit?.();
+  return { ok: true, usedFree: false, costGems: TOWER_BLESSING_REROLL_GEM_COST };
+}
+
+export function hitTowerBossShieldSweetSpotDomain(
+  ctx: Pick<TowerRunContext, 'towerRun'>,
+  emit: () => void = () => {}
+): {
+  hit: boolean;
+  shieldBroken: boolean;
+  remainingShieldSec: number;
+  bossExposeLeft: number;
+} {
+  const run = ctx.towerRun;
+  if (!run || !run.isBossWave || run.pendingBlessings || (run.bossInvulLeft ?? 0) <= 0) {
+    return {
+      hit: false,
+      shieldBroken: false,
+      remainingShieldSec: run?.bossInvulLeft ?? 0,
+      bossExposeLeft: run?.bossExposeLeft ?? 0,
+    };
+  }
+  const nextShield = Math.max(0, (run.bossInvulLeft ?? 0) - TOWER_BOSS_SHIELD_SHAVE_SEC);
+  run.bossInvulLeft = nextShield;
+  const shieldBroken = nextShield <= 0;
+  if (shieldBroken) {
+    run.bossExposeLeft = TOWER_BOSS_EXPOSE_SEC;
+  }
+  emit();
+  return {
+    hit: true,
+    shieldBroken,
+    remainingShieldSec: nextShield,
+    bossExposeLeft: run.bossExposeLeft ?? 0,
+  };
 }
 
 export function chooseTowerBlessingDomain(
@@ -363,6 +534,10 @@ export function stepTowerTickDomain(
     return { status: 'active' };
   }
 
+  if ((ctx.towerRun.bossExposeLeft ?? 0) > 0) {
+    ctx.towerRun.bossExposeLeft = Math.max(0, (ctx.towerRun.bossExposeLeft ?? 0) - dtSec);
+  }
+
   // Only advance the wave countdown timer; HP drops exclusively from real chibi strikes or player taps.
   ctx.towerRun.timeLeft = Math.max(0, ctx.towerRun.timeLeft - dtSec);
   if (ctx.towerRun.timeLeft <= 0) {
@@ -394,12 +569,28 @@ export function applyTowerTargetDamageDomain(
   const run = ctx.towerRun;
   if (!run || run.pendingBlessings || rawDmg <= 0) return emptyRes;
 
-  const dmg = Math.max(1, Math.round(rawDmg));
+  const bSummary = summarizeTowerBlessings(run.blessings);
+  let effectiveDmg = Math.max(1, Math.round(rawDmg));
+  let isCrit = false;
+  if (bSummary.critChanceBonus > 0 && rng() < Math.min(0.75, bSummary.critChanceBonus)) {
+    isCrit = true;
+    effectiveDmg = Math.max(1, Math.round(effectiveDmg * (1.75 + bSummary.critDmgBonus)));
+  }
+  if (bSummary.extraStrikeChance > 0 && rng() < Math.min(0.75, bSummary.extraStrikeChance)) {
+    effectiveDmg += Math.max(1, Math.round(effectiveDmg * bSummary.extraStrikePct));
+  }
+
   if (run.isBossWave) {
     if ((run.bossInvulLeft ?? 0) > 0) {
       return emptyRes;
     }
-    const dmgDealt = Math.min(run.hp, dmg);
+    if (bSummary.bossDmgPct > 0) {
+      effectiveDmg = Math.max(1, Math.round(effectiveDmg * (1 + bSummary.bossDmgPct)));
+    }
+    if ((run.bossExposeLeft ?? 0) > 0) {
+      effectiveDmg = Math.max(1, Math.round(effectiveDmg * TOWER_BOSS_EXPOSE_DMG_MULT));
+    }
+    const dmgDealt = Math.min(run.hp, effectiveDmg);
     run.hp = Math.max(0, run.hp - dmgDealt);
     if (run.hp <= 0) {
       const res = completeCurrentTowerWaveOrFloor(ctx, rng, emit);
@@ -407,6 +598,7 @@ export function applyTowerTargetDamageDomain(
         dmgDealt,
         rockBroken: true,
         targetOreIndex: null,
+        isCrit,
         ...res,
       };
     }
@@ -414,6 +606,7 @@ export function applyTowerTargetDamageDomain(
     return {
       ...emptyRes,
       dmgDealt,
+      isCrit,
     };
   }
 
@@ -431,12 +624,37 @@ export function applyTowerTargetDamageDomain(
     };
   }
 
-  const dmgDealt = Math.min(target.hp, dmg);
+  const dmgDealt = Math.min(target.hp, effectiveDmg);
   target.hp = Math.max(0, target.hp - dmgDealt);
   const rockBroken = target.hp <= 0;
   if (rockBroken) {
     target.alive = false;
   }
+
+  // Overkill Splash: excess damage on ore break carries into the next alive ore
+  if (rockBroken && bSummary.overkillPct > 0) {
+    let splashPool = Math.round(Math.max(0, effectiveDmg - dmgDealt) * bSummary.overkillPct);
+    while (splashPool > 0) {
+      const nextOre = run.waveOres.find((o) => o.alive);
+      if (!nextOre) break;
+      const splashHit = Math.min(nextOre.hp, splashPool);
+      nextOre.hp = Math.max(0, nextOre.hp - splashHit);
+      if (nextOre.hp <= 0) nextOre.alive = false;
+      splashPool -= splashHit;
+    }
+  }
+
+  // Chain Spark: arcs % of hit damage to other alive ores in the same wave
+  if (bSummary.chainTargets > 0 && bSummary.chainPct > 0) {
+    const arcDmg = Math.max(1, Math.round(effectiveDmg * bSummary.chainPct));
+    const others = run.waveOres.filter((o) => o.alive && o.index !== target.index);
+    for (let i = 0; i < Math.min(bSummary.chainTargets, others.length); i++) {
+      const other = others[i];
+      other.hp = Math.max(0, other.hp - arcDmg);
+      if (other.hp <= 0) other.alive = false;
+    }
+  }
+
   run.hp = run.waveOres.reduce((sum, o) => sum + (o.alive ? o.hp : 0), 0);
 
   const allBroken = run.waveOres.every((o) => !o.alive);
@@ -446,6 +664,7 @@ export function applyTowerTargetDamageDomain(
       dmgDealt,
       rockBroken,
       targetOreIndex: target.index,
+      isCrit,
       ...res,
     };
   }
@@ -456,6 +675,7 @@ export function applyTowerTargetDamageDomain(
     dmgDealt,
     rockBroken,
     targetOreIndex: target.index,
+    isCrit,
   };
 }
 
