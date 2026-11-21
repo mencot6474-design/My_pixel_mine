@@ -129,17 +129,25 @@ export function createCyberCitySkyTexture(): THREE.CanvasTexture | null {
   if (!ctx) return null;
 
   const grad = ctx.createLinearGradient(0, 0, 0, 512);
-  grad.addColorStop(0.0, '#02040b');
-  grad.addColorStop(0.32, '#050b1c');
-  grad.addColorStop(0.58, '#0c1633');
-  grad.addColorStop(0.76, '#131d3d');
-  grad.addColorStop(0.9, '#080e20');
-  grad.addColorStop(1.0, '#03060f');
+  grad.addColorStop(0.0, '#0284c7');
+  grad.addColorStop(0.32, '#38bdf8');
+  grad.addColorStop(0.58, '#7dd3fc');
+  grad.addColorStop(0.78, '#bae6fd');
+  grad.addColorStop(0.92, '#e0f2fe');
+  grad.addColorStop(1.0, '#cbd5e1');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 1024, 512);
 
-  // Faint upper cyber sky grid
-  ctx.strokeStyle = 'rgba(34, 211, 238, 0.1)';
+  // Warm daytime sun bloom
+  const sunGrad = ctx.createRadialGradient(780, 118, 12, 780, 118, 190);
+  sunGrad.addColorStop(0.0, 'rgba(255, 255, 240, 0.92)');
+  sunGrad.addColorStop(0.28, 'rgba(254, 249, 195, 0.45)');
+  sunGrad.addColorStop(1.0, 'rgba(224, 242, 254, 0)');
+  ctx.fillStyle = sunGrad;
+  ctx.fillRect(580, 0, 400, 320);
+
+  // Subtle upper cyber sky grid
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
   ctx.lineWidth = 1;
   for (let x = 0; x <= 1024; x += 32) {
     ctx.beginPath();
@@ -154,20 +162,20 @@ export function createCyberCitySkyTexture(): THREE.CanvasTexture | null {
     ctx.stroke();
   }
 
-  // Distant dark city horizon silhouette
-  ctx.fillStyle = '#040814';
+  // Distant daytime city horizon silhouette
+  ctx.fillStyle = '#64748b';
   for (let i = 0; i < 42; i++) {
     const bx = i * 25;
     const bw = 18 + ((i * 7) % 14);
     const bh = 38 + ((i * 37) % 86);
     ctx.fillRect(bx, 392 - bh, bw, bh + 120);
-    ctx.fillStyle = i % 3 === 0 ? 'rgba(245, 158, 11, 0.28)' : 'rgba(56, 189, 248, 0.28)';
+    ctx.fillStyle = i % 3 === 0 ? 'rgba(255, 255, 255, 0.35)' : 'rgba(186, 230, 253, 0.42)';
     for (let wy = 398 - bh; wy < 380; wy += 12) {
       if ((wy + i) % 4 === 0) {
         ctx.fillRect(bx + 4, wy, 3, 4);
       }
     }
-    ctx.fillStyle = '#040814';
+    ctx.fillStyle = '#64748b';
   }
 
   const tex = new THREE.CanvasTexture(c);
@@ -184,15 +192,15 @@ export function createAsphaltHighwayTexture(): THREE.CanvasTexture | null {
   const ctx = c.getContext('2d');
   if (!ctx) return null;
 
-  ctx.fillStyle = '#111827';
+  ctx.fillStyle = '#475569';
   ctx.fillRect(0, 0, 512, 512);
 
   // Subtle tire wear lanes (4-lane highway)
   for (const lx of [76, 188, 324, 436]) {
     const laneGrad = ctx.createLinearGradient(lx - 40, 0, lx + 40, 0);
-    laneGrad.addColorStop(0, 'rgba(15, 23, 42, 0)');
-    laneGrad.addColorStop(0.5, 'rgba(3, 7, 18, 0.45)');
-    laneGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+    laneGrad.addColorStop(0, 'rgba(51, 65, 85, 0)');
+    laneGrad.addColorStop(0.5, 'rgba(30, 41, 59, 0.38)');
+    laneGrad.addColorStop(1, 'rgba(51, 65, 85, 0)');
     ctx.fillStyle = laneGrad;
     ctx.fillRect(lx - 40, 0, 80, 512);
   }
@@ -201,8 +209,8 @@ export function createAsphaltHighwayTexture(): THREE.CanvasTexture | null {
   for (let i = 0; i < 2400; i++) {
     const gx = (i * 197 + 31) % 512;
     const gy = (i * 353 + 17) % 512;
-    const shade = (i % 3) * 12 + 24;
-    ctx.fillStyle = `rgba(${shade + 10}, ${shade + 16}, ${shade + 26}, 0.35)`;
+    const shade = (i % 3) * 14 + 78;
+    ctx.fillStyle = `rgba(${shade + 10}, ${shade + 16}, ${shade + 26}, 0.32)`;
     ctx.fillRect(gx, gy, (i % 2) + 1, (i % 3) + 1);
   }
 
@@ -266,10 +274,10 @@ export function createCraterBedTexture(): THREE.CanvasTexture | null {
   const cx = 256;
   const cy = 256;
   const bg = ctx.createRadialGradient(cx, cy, 18, cx, cy, 256);
-  bg.addColorStop(0.0, '#07080c');
-  bg.addColorStop(0.38, '#10131b');
-  bg.addColorStop(0.76, '#161922');
-  bg.addColorStop(1.0, '#0c0e14');
+  bg.addColorStop(0.0, '#334155');
+  bg.addColorStop(0.38, '#475569');
+  bg.addColorStop(0.76, '#64748b');
+  bg.addColorStop(1.0, '#475569');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, 512, 512);
 

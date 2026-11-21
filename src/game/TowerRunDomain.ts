@@ -8,7 +8,9 @@ import {
   getTowerStreakGemMult,
   getTowerSweepGemReward,
   getTowerWaveDef,
+  pickRandomTowerBossChibiId,
   pickTowerBlessingChoices,
+  rollTowerTwinDropChibiId,
   rollTowerWaveOres,
   summarizeTowerBlessings,
   TOWER_BLESSING_AUTO_PICK_SEC,
@@ -26,6 +28,7 @@ import {
   TOWER_MAX_KEYS,
   TOWER_MILESTONES,
   TOWER_ORE_COIN_CHANCE,
+  TOWER_ORE_TWIN_CHANCE,
   TOWER_WAVES_PER_FLOOR,
   TowerBlessingDef,
   TowerRunState,
@@ -47,6 +50,9 @@ export interface TowerRunContext {
   towerClaimedMilestones: number[];
   towerDicePity: number;
   towerCoins: number;
+  miners?: Record<string, number>;
+  hotbar?: (string | null)[];
+  discovered?: Set<string>;
   towerRun: TowerRunState | null;
   towerLastSummary: TowerRunSummary | null;
   towerRunMeta: TowerRunMeta;
@@ -80,6 +86,7 @@ export interface TowerTargetDamageResult {
   gemsAwarded: number;
   diceAwarded: number;
   coinsAwarded: number;
+  twinsAwarded?: string[];
   milestoneUnlocked: number | null;
   isCrit?: boolean;
   pityTriggered?: boolean;
@@ -182,6 +189,9 @@ function setupTowerWave(
   ctx.towerRun.wave = waveDef.wave;
   ctx.towerRun.maxWaves = TOWER_WAVES_PER_FLOOR;
   ctx.towerRun.isBossWave = waveDef.isBoss;
+  if (waveDef.wave === 1 || !ctx.towerRun.bossChibiId) {
+    ctx.towerRun.bossChibiId = pickRandomTowerBossChibiId(rng, ctx.towerRun.bossChibiId);
+  }
   ctx.towerRun.waveOres = waveOres;
   ctx.towerRun.hp = totalHp;
   ctx.towerRun.maxHp = totalHp;
@@ -222,6 +232,7 @@ export function startTowerRunDomain(
     gemsEarned: 0,
     diceEarned: 0,
     coinsEarned: 0,
+    twinsEarned: [],
     floorsCleared: 0,
     wavesCleared: 0,
     blessings: [],
@@ -371,6 +382,7 @@ export function finishTowerRunDomain(
     gemsEarned: run.gemsEarned,
     diceEarned: run.diceEarned,
     coinsEarned: run.coinsEarned,
+    twinsEarned: [...(run.twinsEarned ?? [])],
     newRecord: ctx.towerRunMeta.newRecord,
     reason,
     remainingHpPct,
@@ -531,6 +543,7 @@ export function applyTowerTargetDamageDomain(
     gemsAwarded: 0,
     diceAwarded: 0,
     coinsAwarded: 0,
+    twinsAwarded: [],
     milestoneUnlocked: null,
   };
   const run = ctx.towerRun;
@@ -631,14 +644,30 @@ export function applyTowerTargetDamageDomain(
   }
 
   let oreCoinsAwarded = 0;
+  const oreTwinsAwarded: string[] = [];
   for (let i = 0; i < brokenRocksThisHit; i++) {
     if (rng() < TOWER_ORE_COIN_CHANCE) {
       oreCoinsAwarded += 1;
+    }
+    if (rng() < TOWER_ORE_TWIN_CHANCE) {
+      const twinId = rollTowerTwinDropChibiId(ctx.miners ?? {}, rng);
+      oreTwinsAwarded.push(twinId);
+      if (ctx.miners) {
+        ctx.miners[twinId] = (ctx.miners[twinId] || 0) + 1;
+      }
+      ctx.discovered?.add(twinId);
+      if (ctx.hotbar && !ctx.hotbar.includes(twinId)) {
+        const emptyIdx = ctx.hotbar.indexOf(null);
+        if (emptyIdx !== -1) ctx.hotbar[emptyIdx] = twinId;
+      }
     }
   }
   if (oreCoinsAwarded > 0) {
     ctx.towerCoins = (ctx.towerCoins ?? 0) + oreCoinsAwarded;
     run.coinsEarned += oreCoinsAwarded;
+  }
+  if (oreTwinsAwarded.length > 0) {
+    run.twinsEarned = [...(run.twinsEarned ?? []), ...oreTwinsAwarded];
   }
 
   run.hp = run.waveOres.reduce((sum, o) => sum + (o.alive ? o.hp : 0), 0);
@@ -653,6 +682,7 @@ export function applyTowerTargetDamageDomain(
       isCrit,
       ...res,
       coinsAwarded: res.coinsAwarded + oreCoinsAwarded,
+      twinsAwarded: oreTwinsAwarded,
     };
   }
 
@@ -663,6 +693,7 @@ export function applyTowerTargetDamageDomain(
     rockBroken,
     targetOreIndex: target.index,
     coinsAwarded: oreCoinsAwarded,
+    twinsAwarded: oreTwinsAwarded,
     isCrit,
   };
 }

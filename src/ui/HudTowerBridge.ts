@@ -1,4 +1,5 @@
 import { audio } from '../audio/AudioManager';
+import { getChibiById } from '../game3d/ChibiCatalog';
 import { SceneMode } from '../game3d/MineScene3D';
 import { GameState } from '../game/GameState';
 import { fmtInt } from '../game/NumberFormat';
@@ -18,6 +19,7 @@ export type TowerVisualSyncCallback = (opts: {
   equippedMinerCount: number;
   paused: boolean;
   bossShieldActive?: boolean;
+  bossChibiId?: string;
 }) => void;
 
 export class HudTowerBridge {
@@ -52,6 +54,7 @@ export class HudTowerBridge {
       equippedMinerCount: placedCount,
       paused,
       bossShieldActive: Boolean(run?.isBossWave && (run.bossInvulLeft ?? 0) > 0),
+      bossChibiId: run?.bossChibiId,
     });
   }
 
@@ -66,12 +69,24 @@ export class HudTowerBridge {
     gemsAwarded: number;
     diceAwarded: number;
     coinsAwarded?: number;
+    twinsAwarded?: string[];
     milestoneUnlocked: number | null;
     isCrit?: boolean;
     pityTriggered?: boolean;
   }): { dmg: number; broken: boolean; isCrit?: boolean } | undefined {
     if (res.dmgDealt <= 0 && !res.waveCleared && !res.floorCleared) return undefined;
     const coins = res.coinsAwarded ?? 0;
+    const twins = res.twinsAwarded ?? [];
+    if (twins.length > 0) {
+      audio.playSfx('rare-fanfare', { volume: 0.92 });
+      audio.playCrystalChord('perfect');
+      triggerPerfectStrikeFlash();
+      cgHappyTime();
+      for (const twinId of twins) {
+        const twinName = getChibiById(twinId)?.name ?? twinId;
+        this.pushToast(`✦ JACKPOT 0.01% DROP! ${twinName} (TWIN) joined your roster!`);
+      }
+    }
     if (res.towerCompleted) {
       audio.playSfx('rare-fanfare', { volume: 0.85 });
       const diceTxt = res.diceAwarded > 0 ? ` +${res.diceAwarded} Dice` : '';
@@ -122,7 +137,11 @@ export class HudTowerBridge {
         }
         this.syncTowerSceneVisual();
       }
-      this.towerUi.updateLiveValues(this.root);
+      if (twins.length > 0) {
+        this.render();
+      } else {
+        this.towerUi.updateLiveValues(this.root);
+      }
     }
     return { dmg: res.dmgDealt, broken: res.rockBroken, isCrit: res.isCrit };
   }

@@ -161,6 +161,12 @@ export function buildPlazaCyberKiosks(ctx: PlazaCyberKiosksCtx): void {
     const cg = new THREE.Group();
 
     const mainHull = new THREE.Mesh(createChamferSlabGeometry(w, h, d, 0.18, 0.03), containerDarkMat);
+    const foundationPlinth = new THREE.Mesh(
+      createChamferSlabGeometry(w + 0.16, 0.16, d + 0.16, 0.2, 0.015),
+      gunmetalMat
+    );
+    foundationPlinth.position.y = -0.02;
+    enableShadows(foundationPlinth);
     const roofCap = new THREE.Mesh(createChamferSlabGeometry(w + 0.2, 0.22, d + 0.2, 0.18, 0.02), gunmetalMat);
     roofCap.position.y = h;
 
@@ -183,10 +189,10 @@ export function buildPlazaCyberKiosks(ctx: PlazaCyberKiosksCtx): void {
     frontTrim.position.set(0, h * 0.86 - 0.34, d * 0.5 + 0.68);
 
     // Side structural armor ribs on outer left/right walls (cleanly clear of front storefront!)
-    const ribGeo = createChamferSlabGeometry(0.14, h * 0.9, d + 0.1, 0.04, 0.01);
+    const ribGeo = createChamferSlabGeometry(0.14, h * 0.95, d + 0.1, 0.04, 0.01);
     for (const rx of [-w * 0.5 + 0.04, w * 0.5 - 0.04]) {
       const rib = new THREE.Mesh(ribGeo, towerRibMat);
-      rib.position.set(rx, h * 0.05, 0);
+      rib.position.set(rx, -0.01, 0);
       enableShadows(rib);
       cg.add(rib);
     }
@@ -199,10 +205,10 @@ export function buildPlazaCyberKiosks(ctx: PlazaCyberKiosksCtx): void {
     windowPanel.position.set(w * 0.18, h * 0.3, d * 0.5 + 0.06);
 
     const doorPanel = new THREE.Mesh(
-      createChamferSlabGeometry(w * 0.28, h * 0.68, 0.12, 0.04, 0.012),
+      createChamferSlabGeometry(w * 0.28, h * 0.72, 0.12, 0.04, 0.012),
       slateConcreteMat
     );
-    doorPanel.position.set(-w * 0.24, 0.04, d * 0.5 + 0.06);
+    doorPanel.position.set(-w * 0.24, -0.01, d * 0.5 + 0.06);
 
     // Rooftop HVAC & Sculpted Antenna Mast Finial
     const hvac = new THREE.Mesh(createChamferSlabGeometry(w * 0.34, 0.38, d * 0.44, 0.06, 0.015), towerRibMat);
@@ -220,7 +226,7 @@ export function buildPlazaCyberKiosks(ctx: PlazaCyberKiosksCtx): void {
     enableShadows(mainHull);
     enableShadows(roofCap);
     enableShadows(awning);
-    cg.add(mainHull, roofCap, awning, frontTrim, windowPanel, doorPanel, hvac, mast, beacon);
+    cg.add(mainHull, foundationPlinth, roofCap, awning, frontTrim, windowPanel, doorPanel, hvac, mast, beacon);
     return cg;
   };
 

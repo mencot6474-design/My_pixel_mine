@@ -3,7 +3,9 @@ import { isNonSellableChibi } from '../src/game/DailyLoginData';
 import {
   TOWER_BOSS_COIN_CHANCE,
   TOWER_BOSS_COIN_DROP,
+  TOWER_KEY_GEM_COST,
   TOWER_ORE_COIN_CHANCE,
+  TOWER_ORE_TWIN_CHANCE,
 } from '../src/game/TowerData';
 import { computeBulkUpgradePlan, getPlotStatUpgradeCost } from '../src/game/UpgradeBulkHelper';
 import { getIndexTabEntryIds } from '../src/game/IndexRewardsDomain';
@@ -23,7 +25,7 @@ import {
   PREMIUM_SHOP_ITEMS,
 } from '../src/game/PremiumShopData';
 import { FUSION_RECIPES } from '../src/game/FusionData';
-import { OMEGA_BOSS_DEFS, OMEGA_KEY_GEM_COST, OMEGA_MAX_KEYS } from '../src/game/OmegaData';
+import { OMEGA_BOSS_DEFS, OMEGA_KEY_GEM_COST, OMEGA_KEY_REGEN_MS, OMEGA_MAX_KEYS } from '../src/game/OmegaData';
 import { CHIBI_CATALOG, getChibiById } from '../src/game3d/ChibiCatalog';
 import { GameState, getChibiUpgradeCostMult } from '../src/game/GameState';
 import {
@@ -1188,6 +1190,37 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(reloaded.spendTowerCoins(4)).toBe(true);
       expect(reloaded.towerCoins).toBe(2);
       expect(reloaded.spendTowerCoins(10)).toBe(false);
+
+      // 0.01% TWIN chibi jackpot drop from broken wave 1-9 ore rock
+      expect(TOWER_ORE_TWIN_CHANCE).toBeCloseTo(0.0001, 6);
+      const twinState = new GameState();
+      twinState.startTowerRun(1);
+      const noTwinRes = twinState.applyTowerTargetDamage(0, 999_999, () => 0.001);
+      expect(noTwinRes.twinsAwarded ?? []).toHaveLength(0);
+      const twinRes = twinState.applyTowerTargetDamage(1, 999_999, () => 0.00005);
+      expect(twinRes.twinsAwarded).toHaveLength(1);
+      const droppedId = twinRes.twinsAwarded![0];
+      expect(twinState.miners[droppedId]).toBe(1);
+      expect(twinState.discovered.has(droppedId)).toBe(true);
+      expect(twinState.hotbar).toContain(droppedId);
+      const twinSummary = twinState.abandonTowerRun();
+      expect(twinSummary?.twinsEarned).toEqual([droppedId]);
+
+      // Tower Key Gem price = 5,000 & cooldown = 15 minutes
+      expect(TOWER_KEY_GEM_COST).toBe(5_000);
+      expect(TOWER_KEY_REGEN_MS).toBe(15 * 60 * 1000);
+      twinState.towerKeys = 0;
+      twinState.gems = 4_999;
+      expect(twinState.buyTowerKeyWithGems()).toBe('no_gems');
+      twinState.gems = 6_000;
+      expect(twinState.buyTowerKeyWithGems()).toBe('bought');
+      expect(twinState.towerKeys).toBe(1);
+      expect(twinState.gems).toBe(1_000);
+      const tRegenStart = 1_000_000;
+      twinState.towerLastKeyRegenAt = tRegenStart;
+      expect(twinState.getTowerNextKeyRegenSec(tRegenStart)).toBe(900);
+      twinState.syncTowerKeys(tRegenStart + TOWER_KEY_REGEN_MS);
+      expect(twinState.towerKeys).toBe(2);
     });
 
     it('purchases Yukikage, Halcyon, Nocturne, Lullaby & Clockwork Twins (TWIN tier) with Spire Coins, protects from selling, and stacks Dual Passives', () => {
@@ -1400,14 +1433,28 @@ describe('Tahap C GameState Domain Modules', () => {
     it('runs 5-tier Boss Battle with Parry, Obsidian Pillars, OMEGA BREAK!, escalating Core drop %, 0-key-loss on retreat, Unlock & Awaken, and Save/Load', () => {
       const state = new GameState();
       expect(state.omegaKeys).toBe(OMEGA_MAX_KEYS);
-      expect(OMEGA_KEY_GEM_COST).toBe(25_000);
+      expect(OMEGA_KEY_GEM_COST).toBe(50_000);
+      expect(OMEGA_KEY_REGEN_MS).toBe(60 * 60 * 1000);
+      state.omegaKeys = 0;
+      state.gems = 49_999;
+      expect(state.buyOmegaKeyWithGems()).toBe('no_gems');
+      state.gems = 55_000;
+      expect(state.buyOmegaKeyWithGems()).toBe('bought');
+      expect(state.omegaKeys).toBe(1);
+      expect(state.gems).toBe(5_000);
+      const oRegenStart = 2_000_000;
+      state.omegaLastKeyRegenAt = oRegenStart;
+      expect(state.getOmegaNextKeyRegenSec(oRegenStart)).toBe(3600);
+      state.syncOmegaKeys(oRegenStart + OMEGA_KEY_REGEN_MS);
+      expect(state.omegaKeys).toBe(2);
+      state.omegaKeys = OMEGA_MAX_KEYS;
       expect(OMEGA_BOSS_DEFS.map((b) => b.tiers.map((t) => t.bossHp))).toEqual([
-        [20_000_000_000_000_000, 240_000_000_000_000_000, 1_700_000_000_000_000_000, 10_000_000_000_000_000_000, 60_000_000_000_000_000_000],
-        [30_000_000_000_000_000, 360_000_000_000_000_000, 2_400_000_000_000_000_000, 14_000_000_000_000_000_000, 80_000_000_000_000_000_000],
+        [100_000_000_000_000_000, 10_000_000_000_000_000_000, 1_000_000_000_000_000_000_000, 100_000_000_000_000_000_000_000, 10_000_000_000_000_000_000_000_000],
+        [150_000_000_000_000_000, 15_000_000_000_000_000_000, 1_500_000_000_000_000_000_000, 150_000_000_000_000_000_000_000, 15_000_000_000_000_000_000_000_000],
       ]);
       expect(OMEGA_BOSS_DEFS.map((b) => b.tiers.map((t) => t.coreDropChance))).toEqual([
-        [0.2, 0.4, 0.65, 0.85, 1.0],
-        [0.2, 0.4, 0.65, 0.85, 1.0],
+        [0.1, 0.2, 0.325, 0.425, 0.5],
+        [0.1, 0.2, 0.325, 0.425, 0.5],
       ]);
 
       // Retreat / Timeout never spends a Boss Key

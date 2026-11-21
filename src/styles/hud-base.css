@@ -73,8 +73,8 @@
   }
 
   #plotOverlayLayer .mam-rarity-badge.is-crest {
-    height: 36px;
-    margin-bottom: -7px;
+    height: 64px;
+    margin-bottom: -20px;
   }
 
   #shopOverlayLayer > [data-altar-lbl],

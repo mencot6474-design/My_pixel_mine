@@ -11,8 +11,10 @@ import {
   disposeObject3D,
   enableShadows,
 } from './MeshHelpers3D';
+import type { CyberShowcasePodiumHandle, FusionPodiumBuildCtx } from './FusionWorldPodium3D';
 import {
   buildPlazaGemTowerSkyscraper,
+  buildPlazaOmegaBossPad,
   createCyberPlazaFloorTexture,
   createRoundaboutShadowTexture,
 } from './ShopCyberPlazaAssets3D';
@@ -22,6 +24,7 @@ export interface ShopCyberPlazaHandle {
   group: THREE.Group;
   animatedCrystals: THREE.Object3D[];
   animatedRings: THREE.Object3D[];
+  omegaPadTopY: number;
   update: (dtSec: number, elapsed: number) => void;
   dispose: () => void;
 }
@@ -42,8 +45,11 @@ interface PulseMaterialSpec {
 export function createShopCyberPlaza(): ShopCyberPlazaHandle {
   const group = new THREE.Group();
   const ownedTextures: THREE.Texture[] = [];
+  const ownedGeos: THREE.BufferGeometry[] = [];
+  const ownedMats: THREE.Material[] = [];
   const animatedCrystals: THREE.Object3D[] = [];
   const animatedRings: THREE.Object3D[] = [];
+  const omegaPodiums: CyberShowcasePodiumHandle[] = [];
   const pulseMaterials: PulseMaterialSpec[] = [];
 
   const darkHullMat = new THREE.MeshStandardMaterial({
@@ -512,38 +518,31 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
   }
 
   // Two Omega Boss Arena Pads aligned inline with Pickaxe Armory & Gem Shop (x = ±17.6, z = -9.6)
+  const omegaPodiumCtx: FusionPodiumBuildCtx = {
+    armorDarkMat: darkHullMat,
+    armorSteelMat: gunmetalMat,
+    brightSteelMat: brushedSteelMat,
+    ownedGeos,
+    ownedMats,
+    ownedTextures,
+  };
+  let omegaPadTopY = 0.45;
   for (const side of [-1, 1] as const) {
-    const padX = side * 17.6;
-    const bossPadGroup = new THREE.Group();
-    bossPadGroup.position.set(padX, 0.18, -9.6);
-
-    const padBase = new THREE.Mesh(
-      createChamferSlabGeometry(4.8, 0.22, 4.8, 0.55, 0.025),
-      slateConcreteMat
-    );
-    const padInner = new THREE.Mesh(
-      createChamferSlabGeometry(4.15, 0.05, 4.15, 0.42, 0.01),
-      darkHullMat
-    );
-    padInner.position.y = 0.22;
-
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: side < 0 ? 0xef4444 : 0xe879f9,
-      side: THREE.DoubleSide,
+    const padResult = buildPlazaOmegaBossPad({
+      side,
+      padX: side * 17.6,
+      padZ: -9.6,
+      slateConcreteMat,
+      darkHullMat,
+      gunmetalMat,
+      brushedSteelMat,
+      animatedRings,
+      podiumCtx: omegaPodiumCtx,
+      makeNeonMat,
     });
-    const arenaRing = new THREE.Mesh(new THREE.RingGeometry(1.62, 1.94, 28), ringMat);
-    arenaRing.rotation.x = -Math.PI / 2;
-    arenaRing.position.y = 0.29;
-
-    const padTrim = new THREE.Mesh(
-      createChamferSlabGeometry(4.6, 0.04, 0.12, 0.03, 0.008),
-      side < 0 ? amberNeonMat : violetNeonMat
-    );
-    padTrim.position.set(0, 0.21, 2.38);
-
-    enableShadows(padBase);
-    bossPadGroup.add(padBase, padInner, arenaRing, padTrim);
-    group.add(bossPadGroup);
+    group.add(padResult.group);
+    omegaPodiums.push(padResult.podium);
+    omegaPadTopY = padResult.topY;
   }
 
   // Front-Right Cyber Maglev Cargo Dock (x = 10.4, z = 9.0)
@@ -831,21 +830,39 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
       const pm = pulseMaterials[i];
       pm.mat.emissiveIntensity = pm.base + Math.sin(t * pm.speed + pm.phase) * pm.amp;
     }
+
+    for (let i = 0; i < omegaPodiums.length; i++) {
+      const pod = omegaPodiums[i];
+      const pTime = t + i * 0.85;
+      pod.sigilMesh.rotation.z = pTime * 0.28;
+      if (pod.auraGroup.visible) {
+        pod.auraVeilMat.uniforms.uTime.value = pTime;
+        pod.auraVeilMat.uniforms.uOpacity.value = 0.62 + Math.sin(pTime * 1.8) * 0.12;
+        pod.auraOuterVeilMat.uniforms.uTime.value = pTime + 0.6;
+        pod.auraOuterVeilMat.uniforms.uOpacity.value = 0.34 + Math.sin(pTime * 1.8) * 0.08;
+        pod.particleMat.uniforms.uTime.value = pTime;
+      }
+    }
   };
 
   const dispose = (): void => {
     disposeObject3D(group);
-
+    for (const geo of ownedGeos) geo.dispose();
+    for (const mat of ownedMats) mat.dispose();
     for (const tex of ownedTextures) {
       tex.dispose();
     }
+    ownedGeos.length = 0;
+    ownedMats.length = 0;
     ownedTextures.length = 0;
+    omegaPodiums.length = 0;
   };
 
   return {
     group,
     animatedCrystals,
     animatedRings,
+    omegaPadTopY,
     update,
     dispose,
   };

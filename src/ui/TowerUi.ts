@@ -1,6 +1,9 @@
 import { audio } from '../audio/AudioManager';
+import { getChibiById } from '../game3d/ChibiCatalog';
+import { assetUrl } from '../game/AssetUrl';
 import { WORLDS } from '../game/GameData';
 import { GameState } from '../game/GameState';
+import { PREMIUM_SHOP_ITEMS } from '../game/PremiumShopData';
 import { CG_ADS_ENABLED, cgRequestRewardedAd } from '../sdk/crazygames';
 import { fmtInt, fmtShort } from '../game/NumberFormat';
 import {
@@ -19,11 +22,12 @@ import {
   TOWER_WAVES_PER_FLOOR,
 } from '../game/TowerData';
 import { hudIconHtml, spireCoinIconHtml, towerIconHtml } from './HudIcons';
-import { ModalKind, renderModalShell } from './HudShared';
+import { chibiPortraitHtml, ModalKind, renderModalShell, TW_TAB_BTN } from './HudShared';
 import { TowerArenaHudUi } from './TowerArenaHudUi';
 
 export class TowerUi {
   private selectedCheckpoint = 1;
+  private rightTab: 'drops' | 'milestones' = 'drops';
   private readonly arenaHudUi: TowerArenaHudUi;
 
   constructor(
@@ -104,6 +108,10 @@ export class TowerUi {
           ${spireCoinIconHtml(15)}
           <span>${fmtInt(this.state.towerCoins)}</span>
         </div>
+        <button class="mam-tower-hub-chip bg-[linear-gradient(135deg,#e0f2fe,#fce7f3)] hover:bg-[#fef08a] text-[#14111d] cursor-pointer hover:scale-[0.97] active:scale-95 transition-transform" data-action="tower-open-twin-shop" title="Open Twin Shop (Spire Coin Exchange)">
+          <img class="w-4 h-4 object-contain shrink-0" src="${assetUrl('/badges/twin.svg')}" alt="" aria-hidden="true" draggable="false" />
+          <span>Twin Shop →</span>
+        </button>
         <div class="mam-tower-hub-chip bg-[#fce7f3] text-[#14111d]" data-tower-gems-pill="true">
           ${hudIconHtml('gem', 15, 'Gems')}
           <span>${fmtInt(this.state.gems)}</span>
@@ -124,25 +132,61 @@ export class TowerUi {
         : '';
 
     const isVictory = summary?.reason === 'victory';
-    const summaryBg = isVictory ? 'bg-[#fef3c7]' : 'bg-[#e0f2fe]';
-    const summaryTitle = isVictory ? '🏆 SPIRE CONQUERED • FLOOR 80 TAMAT!' : 'Last Run Summary';
-    const summaryTitleColor = isVictory ? 'text-[#b45309]' : 'text-[#0369a1]';
+    const summaryTwins = summary?.twinsEarned ?? [];
+    const hasTwinJackpot = summaryTwins.length > 0;
+    const summaryBg = hasTwinJackpot
+      ? 'is-holo-foil bg-[linear-gradient(125deg,#e0f2fe,#fef9c3_48%,#fce7f3)]'
+      : isVictory
+        ? 'bg-[#fef3c7]'
+        : 'bg-[#e0f2fe]';
+    const summaryTitle = isVictory
+      ? '🏆 SPIRE CONQUERED • FLOOR 80 TAMAT!'
+      : hasTwinJackpot
+        ? '✦ JACKPOT 0.01% TWIN DROP!'
+        : 'Last Run Summary';
+    const summaryTitleColor = hasTwinJackpot
+      ? 'text-[#9d174d]'
+      : isVictory
+        ? 'text-[#b45309]'
+        : 'text-[#0369a1]';
+
+    const summaryTwinCounts = new Map<string, number>();
+    for (const tid of summaryTwins) {
+      summaryTwinCounts.set(tid, (summaryTwinCounts.get(tid) ?? 0) + 1);
+    }
+    const summaryTwinChipsHtml =
+      summaryTwinCounts.size > 0
+        ? `<div class="flex items-center gap-1.5 flex-wrap mt-1.5">
+            ${Array.from(summaryTwinCounts.entries())
+              .map(([tid, qty]) => {
+                const def = getChibiById(tid);
+                if (!def) return '';
+                return `<span class="inline-flex items-center gap-1.5 rounded-lg border-2 border-[#14111d] bg-[#fff8e7] px-2 py-0.5 text-[11px] font-black text-[#14111d]">
+                  <span class="w-5 h-5 shrink-0 inline-flex items-center justify-center [&_.mam-chibi-portrait]:w-full [&_.mam-chibi-portrait]:h-full [&_img]:w-full [&_img]:h-full [&_img]:object-contain">${chibiPortraitHtml(def, { draggable: false })}</span>
+                  <span>${def.name}${qty > 1 ? ` ×${qty}` : ''}</span>
+                </span>`;
+              })
+              .join('')}
+          </div>`
+        : '';
 
     const summaryBannerHtml = summary
       ? `
-        <div class="rounded-xl border-[2.5px] border-[#14111d] ${summaryBg} px-3.5 py-2.5 flex items-center justify-between gap-2.5 flex-wrap">
+        <div class="relative overflow-hidden rounded-xl border-[2.5px] border-[#14111d] ${summaryBg} px-3.5 py-2.5 flex items-center justify-between gap-2.5 flex-wrap shrink-0">
           <div class="flex flex-col min-w-0">
             <div class="flex items-center gap-1.5 flex-wrap">
               <span class="text-[12px] font-black uppercase tracking-wider ${summaryTitleColor}">${summaryTitle}</span>
+              ${hasTwinJackpot ? '<span class="mam-tower-pill bg-[#ec4899] text-white">0.01% TWIN</span>' : ''}
               ${summary.newRecord ? '<span class="mam-tower-pill bg-[#fde047] text-[#14111d]">NEW RECORD</span>' : ''}
               ${(summary.bestStreakMult ?? 1) > 1 ? `<span class="mam-tower-pill bg-[#ffedd5] text-[#9a3412]">🔥 ${(summary.bestStreakMult ?? 1).toFixed(2).replace(/\.00$/, '')}× STREAK</span>` : ''}
             </div>
             <div class="text-[13px] font-bold text-[#334155] mt-0.5">
               Cleared <span class="text-[#14111d] font-black">${summary.floorsCleared}</span> floor(s) (${summary.wavesCleared} waves) • Reached <span class="text-[#0369a1] font-black">Floor ${summary.highestReached}/${TOWER_MAX_FLOOR} • Wave ${summary.highestWave}/${TOWER_WAVES_PER_FLOOR}</span>
             </div>
+            ${summaryTwinChipsHtml}
             ${nearMissHtml}
           </div>
-          <div class="flex items-center gap-1.5 flex-wrap shrink-0">
+          <div class="flex items-center gap-1.5 flex-wrap max-w-full shrink-0">
             <span class="mam-tower-hub-chip bg-[#fce7f3] text-[#9d174d]">+${fmtInt(summary.gemsEarned)} Gems</span>
             ${summary.diceEarned > 0 ? `<span class="mam-tower-hub-chip bg-[#f3e8ff] text-[#6b21a8]">+${summary.diceEarned} Dice</span>` : ''}
             ${(summary.coinsEarned ?? 0) > 0 ? `<span class="mam-tower-hub-chip bg-[#fef08a] text-[#14111d]">+${fmtInt(summary.coinsEarned ?? 0)} Spire Coins</span>` : ''}
@@ -208,11 +252,11 @@ export class TowerUi {
     }).join('');
 
     const bodyHtml = `
-      <div class="flex-1 min-h-0 flex items-stretch gap-3 @max-[860px]:flex-col overflow-x-hidden overflow-y-auto mam-no-scrollbar">
-        <div class="flex-1 min-w-0 flex flex-col gap-3">
+      <div class="flex-1 min-h-0 flex items-stretch gap-3 @max-[860px]:flex-col overflow-hidden @max-[860px]:overflow-y-auto mam-no-scrollbar">
+        <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-3 overflow-x-hidden overflow-y-auto mam-no-scrollbar pr-0.5 @max-[860px]:flex-none @max-[860px]:overflow-visible">
           ${summaryBannerHtml}
 
-          <div class="mam-inspector-well rounded-xl p-3 flex flex-col gap-2">
+          <div class="mam-inspector-well rounded-xl p-3 flex flex-col gap-2 shrink-0">
             <div class="flex items-center justify-between gap-2 flex-wrap">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-[11px] font-black uppercase tracking-wider text-[#0284c7]">Spire Campaign (W1–W8)</span>
@@ -225,27 +269,35 @@ export class TowerUi {
             <div class="flex items-center gap-1.5 flex-wrap">${checkpointChips}</div>
           </div>
 
-          <div class="mam-inspector-well rounded-xl p-4 flex flex-col gap-3">
-            <div class="flex items-start justify-between gap-2 flex-wrap">
-              <div>
-                <div class="flex items-center gap-1.5 flex-wrap mb-1.5">
-                  <span class="mam-tower-pill bg-[#fff8e7] text-[#14111d]">
-                    <span class="w-2 h-2 rounded-full border border-[#14111d] shrink-0" style="background:${previewDef.world.iconColor}"></span>
-                    <span>W${previewDef.worldIndex + 1} • ${previewDef.world.name.toUpperCase()}</span>
-                  </span>
-                  <span class="mam-tower-pill bg-[#fcecc8] text-[#475569]">Stage ${previewDef.floorInWorld}/10</span>
+          <div class="mam-inspector-well rounded-xl p-3.5 flex flex-col gap-3 shrink-0">
+            <div class="relative overflow-hidden rounded-xl border-2 border-[#14111d] bg-[#0f172a] p-3.5 bg-cover bg-center" style="background-image: linear-gradient(102deg, rgba(15, 23, 42, 0.92) 0%, rgba(20, 17, 29, 0.74) 58%, rgba(15, 23, 42, 0.88) 100%), url('${assetUrl(`/worlds/${previewDef.world.id}.webp`)}')">
+              <div class="relative z-[1] flex items-center justify-between gap-3">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-1.5 flex-wrap mb-1.5">
+                    <span class="mam-tower-pill bg-[#fff8e7] text-[#14111d]">
+                      <span class="w-2 h-2 rounded-full border border-[#14111d] shrink-0" style="background:${previewDef.world.iconColor}"></span>
+                      <span>W${previewDef.worldIndex + 1} • ${previewDef.world.name.toUpperCase()}</span>
+                    </span>
+                    <span class="mam-tower-pill bg-[#fcecc8] text-[#14111d]">Stage ${previewDef.floorInWorld}/10</span>
+                    <span class="mam-tower-pill ${
+                      previewDef.isFinalBoss
+                        ? 'bg-[#f43f5e] text-white'
+                        : previewDef.isBoss
+                          ? 'bg-[#fde047] text-[#14111d]'
+                          : 'bg-[#bae6fd] text-[#14111d]'
+                    }">${previewDef.isFinalBoss ? 'FINAL BOSS 80' : previewDef.isBoss ? 'CHECKPOINT BOSS' : '9 WAVES + BOSS'}</span>
+                  </div>
+                  <div class="text-[19px] font-black !text-white leading-tight drop-shadow-[0_2px_0_rgba(20,17,29,0.9)]">${previewDef.title} • 10 Waves</div>
+                  <div class="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-white/25 bg-black/45 px-2 py-0.5 text-[11.5px] font-black text-[#e9d5ff]">
+                    <span>⚡ Anomaly: ${previewDef.anomaly.name}</span>
+                    <span class="!text-white/85 font-bold">— ${previewDef.anomaly.desc}</span>
+                  </div>
+                  <div class="text-[11px] font-bold !text-[#cbd5e1] mt-1">Waves 1–9: Break ${TOWER_ORE_ROCKS_PER_WAVE} ${previewDef.world.name} Ores/Wave • Wave 10: ${previewDef.isFinalBoss ? 'FINAL SPIRE OVERLORD' : 'Floor Boss'}</div>
                 </div>
-                <div class="text-[18px] font-black text-[#14111d]">${previewDef.title} • 10 Waves</div>
-                <div class="text-[12px] font-black text-[#7c3aed]">Anomaly: ${previewDef.anomaly.name} — ${previewDef.anomaly.desc}</div>
-                <div class="text-[11px] font-bold text-[#475569] mt-0.5">Waves 1–9: Break ${TOWER_ORE_ROCKS_PER_WAVE} ${previewDef.world.name} Ores/Wave • Wave 10: ${previewDef.isFinalBoss ? 'FINAL SPIRE OVERLORD' : 'Floor Boss'}</div>
+                <div class="shrink-0 w-16 h-16 rounded-xl border-2 border-[#14111d] bg-[#1e1b2e]/90 p-1.5 flex items-center justify-center @max-[560px]:hidden">
+                  <img class="w-full h-full object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.65)]" src="${assetUrl('/hud/tower_boss.webp')}" alt="Spire Boss" draggable="false" />
+                </div>
               </div>
-              <span class="mam-tower-pill ${
-                previewDef.isFinalBoss
-                  ? 'bg-[#f43f5e] text-white'
-                  : previewDef.isBoss
-                    ? 'bg-[#fde047] text-[#14111d]'
-                    : 'bg-[#bae6fd] text-[#14111d]'
-              }">${previewDef.isFinalBoss ? 'FINAL BOSS 80' : previewDef.isBoss ? 'CHECKPOINT BOSS' : '9 WAVES + BOSS'}</span>
             </div>
 
             <div class="grid grid-cols-3 @max-[560px]:grid-cols-1 gap-2">
@@ -308,29 +360,26 @@ export class TowerUi {
           </div>
         </div>
 
-        <div class="mam-inspector-well w-[300px] @max-[860px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col gap-2.5 overflow-x-hidden overflow-y-auto mam-no-scrollbar">
-          <div class="text-[12px] font-black uppercase tracking-wider text-[#7c3aed]">Combat Readiness</div>
-          <div class="grid grid-cols-2 gap-2">
-            <div class="rounded-xl border-2 border-[#14111d] bg-[#fcecc8] px-2.5 py-2">
-              <div class="text-[10px] font-black text-[#64748b]">ACTIVE MINERS</div>
-              <div class="text-[14px] font-black text-[#14111d]">${placedCount}/5</div>
-            </div>
-            <div class="rounded-xl border-2 border-[#14111d] bg-[#fcecc8] px-2.5 py-2">
-              <div class="text-[10px] font-black text-[#64748b]">TEAM DPS</div>
-              <div class="text-[14px] font-black text-[#0284c7]">${fmtShort(teamDps)}/s</div>
-            </div>
-            <div class="rounded-xl border-2 border-[#14111d] bg-[#fcecc8] px-2.5 py-2">
-              <div class="text-[10px] font-black text-[#64748b]">TAP DAMAGE</div>
-              <div class="text-[14px] font-black text-[#15803d]">${fmtShort(tapDmg)}</div>
-            </div>
-            <div class="rounded-xl border-2 border-[#14111d] bg-[#fcecc8] px-2.5 py-2">
-              <div class="text-[10px] font-black text-[#64748b]">GLOBAL GEM BONUS</div>
-              <div class="text-[14px] font-black text-[#db2777]">+${globalBonusPct}%</div>
-            </div>
+        <div class="mam-inspector-well w-[324px] @max-[860px]:w-full shrink-0 min-h-0 rounded-xl p-3 flex flex-col gap-2.5 overflow-x-hidden overflow-y-auto @max-[860px]:overflow-visible mam-no-scrollbar">
+          <div class="grid grid-cols-2 gap-1.5 shrink-0">
+            <button
+              class="${TW_TAB_BTN} h-8 text-[11px] ${
+                this.rightTab === 'drops'
+                  ? 'bg-[#38bdf8] text-[#14111d]'
+                  : 'bg-[#fcecc8] text-[#475569] hover:bg-[#fde047]'
+              }"
+              data-tower-right-tab="drops"
+            >Drops &amp; Stats</button>
+            <button
+              class="${TW_TAB_BTN} h-8 text-[11px] ${
+                this.rightTab === 'milestones'
+                  ? 'bg-[#38bdf8] text-[#14111d]'
+                  : 'bg-[#fcecc8] text-[#475569] hover:bg-[#fde047]'
+              }"
+              data-tower-right-tab="milestones"
+            >Milestones (${TOWER_MILESTONES.filter((m) => this.state.towerBestFloor >= m.floor).length}/${TOWER_MILESTONES.length})</button>
           </div>
-
-          <div class="text-[12px] font-black uppercase tracking-wider text-[#7c3aed] pt-1">Milestones (Every 5 Floors)</div>
-          <div class="flex flex-col gap-1.5">${milestonesHtml}</div>
+          ${this.renderRightSidebarBody(placedCount, teamDps, tapDmg, globalBonusPct, milestonesHtml)}
         </div>
       </div>
     `;
@@ -339,10 +388,121 @@ export class TowerUi {
       title: 'Gem Tower',
       theme: 'tower',
       iconHtml: towerIconHtml(22),
-      boxClass: 'w-[960px] h-[min(640px,calc(100%-16px))] @max-[920px]:w-full @max-[920px]:h-full',
+      boxClass: 'w-[980px] h-[min(650px,calc(100%-16px))] @max-[920px]:w-full @max-[920px]:h-full',
       headerExtraHtml,
       bodyHtml,
     });
+  }
+
+  private renderRightSidebarBody(
+    placedCount: number,
+    teamDps: number,
+    tapDmg: number,
+    globalBonusPct: number,
+    milestonesHtml: string
+  ): string {
+    if (this.rightTab === 'milestones') {
+      return `<div class="flex flex-col gap-1.5 overflow-y-auto mam-no-scrollbar pr-0.5">${milestonesHtml}</div>`;
+    }
+
+    const twinRosterHtml = PREMIUM_SHOP_ITEMS.map((item) => {
+      const def = getChibiById(item.chibiId);
+      if (!def) return '';
+      const count = this.state.miners[item.chibiId] ?? 0;
+      const owned = count > 0;
+      return `
+        <div
+          class="relative rounded-lg border-2 border-[#14111d] ${
+            owned ? 'bg-[#fff8e7]' : 'bg-[#e2e8f0]/80 opacity-80'
+          } p-1 flex flex-col items-center justify-center"
+          title="${def.name} (${item.passiveSummary})${owned ? ` — Owned ×${count}` : ' — Not Owned'}"
+        >
+          <div class="w-9 h-9 flex items-center justify-center [&_.mam-chibi-portrait]:w-full [&_.mam-chibi-portrait]:h-full [&_img]:w-full [&_img]:h-full [&_img]:object-contain ${
+            owned ? '' : 'grayscale contrast-125'
+          }">${chibiPortraitHtml(def, { draggable: false })}</div>
+          <span class="mt-0.5 text-[9px] font-black leading-none px-1 py-0.5 rounded border border-[#14111d] ${
+            owned ? 'bg-[#4ade80] text-[#14111d]' : 'bg-white text-[#64748b]'
+          }">${owned ? `×${count}` : '0.01%'}</span>
+        </div>
+      `;
+    }).join('');
+
+    const nextMilestone = TOWER_MILESTONES.find((m) => this.state.towerBestFloor < m.floor) ?? null;
+    const nextMilestoneHtml = nextMilestone
+      ? (() => {
+          const pct = Math.max(0, Math.min(100, Math.round((this.state.towerBestFloor / nextMilestone.floor) * 100)));
+          return `
+            <div class="rounded-xl border-2 border-[#14111d] bg-[#fff8e7] p-2.5 flex flex-col gap-1.5">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-[10.5px] font-black uppercase tracking-wider text-[#7c3aed]">Next Milestone</span>
+                <span class="text-[10.5px] font-black text-[#14111d] tabular-nums">${this.state.towerBestFloor}/${nextMilestone.floor}</span>
+              </div>
+              <div class="text-[12px] font-black text-[#14111d] truncate">Floor ${nextMilestone.floor} • ${nextMilestone.title}</div>
+              <div class="h-2 w-full rounded-full border-[1.5px] border-[#14111d] bg-[#e2e8f0] overflow-hidden">
+                <div class="h-full bg-[#38bdf8]" style="width:${pct}%"></div>
+              </div>
+              <div class="text-[10.5px] font-bold text-[#475569]">+${fmtShort(nextMilestone.gemBonus)} Gems • +${nextMilestone.diceBonus} Dice • +${Math.round(nextMilestone.globalGemPct * 100)}% Global</div>
+            </div>
+          `;
+        })()
+      : `
+        <div class="rounded-xl border-2 border-[#14111d] bg-[#dcfce7] p-2.5 flex items-center justify-between gap-2">
+          <div class="text-[11.5px] font-black text-[#14532d]">🏆 All 16/16 Milestones Cleared!</div>
+          <span class="mam-tower-pill bg-[#4ade80] text-[#14111d]">MAXED</span>
+        </div>
+      `;
+
+    return `
+      <div class="flex flex-col gap-2.5">
+        <div class="text-[11px] font-black uppercase tracking-wider text-[#7c3aed]">Combat Readiness</div>
+        <div class="grid grid-cols-2 gap-1.5">
+          <div class="rounded-xl border-2 border-[#14111d] bg-[#fcecc8] px-2.5 py-1.5">
+            <div class="text-[9.5px] font-black text-[#64748b]">ACTIVE MINERS</div>
+            <div class="text-[13.5px] font-black text-[#14111d]">${placedCount}/5</div>
+          </div>
+          <div class="rounded-xl border-2 border-[#14111d] bg-[#fcecc8] px-2.5 py-1.5">
+            <div class="text-[9.5px] font-black text-[#64748b]">TEAM DPS</div>
+            <div class="text-[13.5px] font-black text-[#0284c7]">${fmtShort(teamDps)}/s</div>
+          </div>
+          <div class="rounded-xl border-2 border-[#14111d] bg-[#fcecc8] px-2.5 py-1.5">
+            <div class="text-[9.5px] font-black text-[#64748b]">TAP DAMAGE</div>
+            <div class="text-[13.5px] font-black text-[#15803d]">${fmtShort(tapDmg)}</div>
+          </div>
+          <div class="rounded-xl border-2 border-[#14111d] bg-[#fcecc8] px-2.5 py-1.5">
+            <div class="text-[9.5px] font-black text-[#64748b]">GLOBAL GEM BONUS</div>
+            <div class="text-[13.5px] font-black text-[#db2777]">+${globalBonusPct}%</div>
+          </div>
+        </div>
+
+        <div class="text-[11px] font-black uppercase tracking-wider text-[#7c3aed]">Spire Loot &amp; Jackpot Drops</div>
+        <div class="rounded-xl border-2 border-[#14111d] bg-[#fef9c3] px-2.5 py-2 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            ${spireCoinIconHtml(20)}
+            <div class="min-w-0">
+              <div class="text-[11.5px] font-black text-[#14111d] leading-tight">Spire Coins</div>
+              <div class="text-[10px] font-bold text-[#475569]">0.5% / Wave Ore • 5% (+5) / Boss</div>
+            </div>
+          </div>
+          <button class="mam-tower-pill bg-[#fff8e7] hover:bg-[#fde047] text-[#14111d] cursor-pointer shrink-0" data-action="tower-open-twin-shop">Exchange →</button>
+        </div>
+
+        <div class="relative overflow-hidden is-holo-foil rounded-xl border-2 border-[#14111d] bg-[linear-gradient(135deg,#e0f2fe,#fef3c7_50%,#fce7f3)] p-2.5 flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <img class="h-6 w-auto object-contain shrink-0" src="${assetUrl('/badges/twin.svg')}" alt="TWIN" draggable="false" />
+              <div class="min-w-0">
+                <div class="text-[11.5px] font-black text-[#14111d] leading-tight">Jackpot TWIN Chibi</div>
+                <div class="text-[10px] font-bold text-[#9d174d]">0.01% / Broken Wave 1–9 Ore</div>
+              </div>
+            </div>
+            <span class="mam-tower-pill bg-[#ec4899] text-white shrink-0">0.01%</span>
+          </div>
+          <div class="grid grid-cols-5 gap-1">${twinRosterHtml}</div>
+        </div>
+
+        ${nextMilestoneHtml}
+      </div>
+    `;
   }
 
 
@@ -356,6 +516,24 @@ export class TowerUi {
 
 
   public bindHubEvents(root: HTMLElement): void {
+    root.querySelectorAll('[data-action="tower-open-twin-shop"]').forEach((el) => {
+      el.addEventListener('click', () => {
+        audio.playSfx('ui-open');
+        this.onOpenModal('premium-shop');
+      });
+    });
+
+    root.querySelectorAll('[data-tower-right-tab]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const tab = (el as HTMLElement).dataset.towerRightTab === 'milestones' ? 'milestones' : 'drops';
+        if (this.rightTab !== tab) {
+          audio.playSfx('ui-tab');
+          this.rightTab = tab;
+          this.onRequestRender();
+        }
+      });
+    });
+
     root.querySelectorAll('[data-tower-cp]').forEach((el) => {
       el.addEventListener('click', () => {
         const cp = Number((el as HTMLElement).dataset.towerCp || 1);

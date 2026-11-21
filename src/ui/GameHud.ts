@@ -139,7 +139,11 @@ export class GameHud {
     },
     omegaOps?: OmegaSceneOps
   ) {
-    this.shopUi = new ShopModalsUi(this.state, (msg) => this.pushToast(msg));
+    this.shopUi = new ShopModalsUi(
+      this.state,
+      (msg) => this.pushToast(msg),
+      () => this.render()
+    );
     this.settingsUi = new SettingsModalUi(
       undefined,
       (msg) => this.pushToast(msg),
@@ -523,6 +527,9 @@ export class GameHud {
     if (kind !== 'omega-boss') {
       this.omegaBossUi.clearForgeCutscene();
     }
+    if (kind !== 'premium-shop') {
+      this.shopUi.clearPremiumCutscene();
+    }
     if (kind !== prev) {
       audio.playSfx(kind === 'none' ? 'ui-close' : 'ui-open');
     }
@@ -543,6 +550,9 @@ export class GameHud {
     }
     if (next !== 'omega-boss') {
       this.omegaBossUi.clearForgeCutscene();
+    }
+    if (next !== 'premium-shop') {
+      this.shopUi.clearPremiumCutscene();
     }
     audio.playSfx(next === 'none' ? 'ui-close' : 'ui-open');
     this.render();
@@ -568,6 +578,7 @@ export class GameHud {
     this.activeModal = 'none';
     this.indexUi.closeReviewDialog();
     this.omegaBossUi.clearForgeCutscene();
+    this.shopUi.clearPremiumCutscene();
     this.inspectedSlot = null;
     this.worldOverlayUi.clearTransientOverlays();
     this.onSetSceneMode?.(mode);

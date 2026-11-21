@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import { TOWER_BOSS_SWEETSPOT_DURATION_SEC, TowerWaveOreState } from '../game/TowerData';
 import { AttackImpactFxController } from './AttackImpactFx3D';
-import { ChibiDef } from './ChibiCatalog';
+import { CHIBI_CATALOG, ChibiDef, getChibiById } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
 import { ChibiFieldFxController } from './FieldMiner3D';
 import { OreVariantKey } from './MineWorldPalette';
 import { getGeodeGlowTexture, isSweetSpotWindowPure, OreBillboard2D } from './OrePit3D';
-import { SeraphimBossHandle } from './SeraphimBoss3D';
 import { createTowerCityEnvironment, TowerCityEnvironmentHandle } from './TowerCityEnvironment3D';
+import type { CyberShowcasePodiumHandle } from './FusionWorldPodium3D';
 import {
   BossGravityRockSeed,
   BossHaloArcHandle,
@@ -15,6 +15,7 @@ import {
   spawnTowerArenaShards,
   stepTowerBossFeetFx,
   stepTowerShardPool,
+  stepTowerSpawnPodiums,
   type TowerShardParticle,
 } from './TowerArenaStage3D';
 export interface TowerFighterConfig {
@@ -92,8 +93,8 @@ interface TowerChibiFighter {
 }
 
 const ARENA_CENTER_Z = -1.6;
-const BOSS_CENTER_Z = ARENA_CENTER_Z - 1.35;
-const SUMMON_RADIUS = 6.3;
+const BOSS_CENTER_Z = ARENA_CENTER_Z - 3.25;
+const SUMMON_RADIUS = 5.55;
 const ATTACK_RADIUS = 2.65;
 
 const WAVE_ORE_POSITIONS: ReadonlyArray<[number, number]> = [
@@ -110,7 +111,9 @@ export class TowerArena3D {
 
   private readonly cityEnv: TowerCityEnvironmentHandle;
   private readonly monolithGroup = new THREE.Group();
-  private readonly bossModel: SeraphimBossHandle;
+  private bossChibiDef!: ChibiDef;
+  private bossSprite!: ChibiSprite3D;
+  private lastBossFloor = 0;
   private readonly bossArcs: BossHaloArcHandle[] = [];
   private readonly bossFeetFxGroup = new THREE.Group();
   private readonly bossGravityRocksInst: THREE.InstancedMesh;
@@ -130,6 +133,9 @@ export class TowerArena3D {
   private readonly aiGyroRing1: THREE.Mesh;
   private readonly aiGyroRing2: THREE.Mesh;
   private readonly summonPads: THREE.Mesh[] = [];
+  private readonly spawnPodiums: CyberShowcasePodiumHandle[] = [];
+  private readonly ownedGeos: THREE.BufferGeometry[] = [];
+  private readonly ownedMats: THREE.Material[] = [];
   private readonly ownedTextures: THREE.Texture[] = [];
 
   private readonly fightersGroup = new THREE.Group();
@@ -174,14 +180,20 @@ export class TowerArena3D {
       bossGravityRockSeeds: this.bossGravityRockSeeds,
       bossArcs: this.bossArcs,
       summonPads: this.summonPads,
+      ownedGeos: this.ownedGeos,
+      ownedMats: this.ownedMats,
       ownedTextures: this.ownedTextures,
       bossCenterZ: BOSS_CENTER_Z,
       getSpawnPos: (i) => this.getSpawnPos(i),
     });
-    this.bossModel = stage.bossModel;
+    this.spawnPodiums.push(...stage.spawnPodiums);
+    for (const f of this.fighters.values()) {
+      f.spawnPos.copy(this.getSpawnPos(f.slotIndex));
+    }
     this.bossGravityRocksInst = stage.bossGravityRocksInst;
     this.bossFloorPulseMesh = stage.bossFloorPulseMesh;
     this.bossFloorPulseMat = stage.bossFloorPulseMat;
+    this.setBossChibi();
     this.eclipseOuterHalo = stage.eclipseOuterHalo;
     this.eclipseCoronaMat = stage.eclipseCoronaMat;
     this.eclipseHaloMat = stage.eclipseHaloMat;
@@ -290,9 +302,10 @@ export class TowerArena3D {
 
   private getSpawnPos(slotIndex: number): THREE.Vector3 {
     const ang = (0.17 + (slotIndex / 4) * 0.66) * Math.PI;
+    const topY = this.spawnPodiums[slotIndex]?.topY ?? 0.22;
     return new THREE.Vector3(
       Math.cos(ang) * SUMMON_RADIUS,
-      0.08,
+      0.08 + topY,
       ARENA_CENTER_Z + Math.sin(ang) * SUMMON_RADIUS
     );
   }
@@ -369,8 +382,26 @@ export class TowerArena3D {
 
     for (let i = 0; i < this.summonPads.length; i++) {
       const mat = this.summonPads[i].material as THREE.MeshBasicMaterial;
-      const active = this.fighters.has(i);
+      const fighter = this.fighters.get(i);
+      const active = Boolean(fighter);
       mat.opacity = active ? 0.34 : 0.12;
+      if (fighter) mat.color.set(fighter.colorHex);
+
+      const pod = this.spawnPodiums[i];
+      if (pod) {
+        const accent = fighter?.colorHex ?? '#38bdf8';
+        pod.ringMat.color.set(accent);
+        pod.ringMat.emissive.set(accent);
+        pod.ringMat.emissiveIntensity = active ? 1.15 : 0.55;
+        pod.holoDiscMat.color.set(accent);
+        pod.sigilMat.color.set(accent);
+        pod.auraGroup.visible = active;
+        if (active) {
+          pod.auraVeilMat.uniforms.uColorA.value.set(accent);
+          pod.auraOuterVeilMat.uniforms.uColorB.value.set(accent);
+          pod.particleMat.uniforms.uColorA.value.set(accent);
+        }
+      }
     }
   }
 
@@ -394,6 +425,45 @@ export class TowerArena3D {
     }
   }
 
+  private pickRandomTwinBossDef(excludeId?: string): ChibiDef {
+    const twins = CHIBI_CATALOG.filter((c) => c.rarity === 'twin');
+    const pool = excludeId && twins.length > 1 ? twins.filter((c) => c.id !== excludeId) : twins;
+    const list = pool.length > 0 ? pool : CHIBI_CATALOG;
+    return list[Math.floor(Math.random() * list.length)] ?? CHIBI_CATALOG[0];
+  }
+
+  public setBossChibi(bossChibiId?: string): void {
+    const requested = bossChibiId ? getChibiById(bossChibiId) : undefined;
+    const nextDef =
+      requested && requested.rarity === 'twin'
+        ? requested
+        : this.pickRandomTwinBossDef(this.bossChibiDef?.id);
+    if (this.bossSprite && this.bossChibiDef?.id === nextDef.id) return;
+
+    if (this.bossSprite) {
+      this.monolithGroup.remove(this.bossSprite.group);
+      this.bossSprite.dispose();
+    }
+    this.bossChibiDef = nextDef;
+    const sprite = new ChibiSprite3D(nextDef, 1.24, 0);
+    sprite.group.position.set(0, 0.04, 0);
+    sprite.group.scale.setScalar(3.35);
+    sprite.setFacing(-1);
+    sprite.setAnimState('aura');
+    sprite.setAccentColor(nextDef.accentColor);
+    this.monolithGroup.add(sprite.group);
+    this.bossSprite = sprite;
+
+    this.bossFloorPulseMat.color.set(nextDef.accentColor);
+    for (let i = 0; i < this.bossArcs.length; i++) {
+      this.bossArcs[i].mat.color.set(i % 2 === 0 ? nextDef.accentColor : '#fde68a');
+    }
+  }
+
+  public getCurrentBossChibi(): ChibiDef {
+    return this.bossChibiDef;
+  }
+
   public syncWaveState(opts: {
     floor: number;
     wave: number;
@@ -404,9 +474,18 @@ export class TowerArena3D {
     equippedMinerCount: number;
     paused: boolean;
     bossShieldActive?: boolean;
+    bossChibiId?: string;
   }): void {
     const floorChanged = opts.floor !== this.lastFloor;
     const waveChanged = opts.wave !== this.lastWave;
+    if (opts.bossChibiId) {
+      this.setBossChibi(opts.bossChibiId);
+    } else if (opts.isBossWave && opts.floor !== this.lastBossFloor) {
+      this.setBossChibi();
+    }
+    if (opts.isBossWave) {
+      this.lastBossFloor = opts.floor;
+    }
 
     this.bossWave = opts.isBossWave;
     this.bossMode = opts.isBossWave || opts.isCheckpointFloor;
@@ -739,7 +818,9 @@ export class TowerArena3D {
       const bossScale = this.bossMode ? 1.08 : 1.0;
       this.monolithGroup.scale.setScalar(bossScale * pulse);
       this.monolithGroup.position.y = 0.08;
-      this.bossModel.update(safeDt, elapsed, hitFactor);
+      if (camera) {
+        this.bossSprite.update(safeDt, elapsed, camera);
+      }
 
       stepTowerBossFeetFx(elapsed, {
         bossArcs: this.bossArcs,
@@ -787,6 +868,7 @@ export class TowerArena3D {
     this.impactFx.update(safeDt, camera);
 
     stepTowerShardPool(safeDt, { shardPool: this.shardPool, shardGroup: this.shardGroup });
+    stepTowerSpawnPodiums(elapsed, this.spawnPodiums);
 
     // Update Animated Chibi Fighters (dash to target -> attack -> deal damage ONLY on real swing)
     for (const f of this.fighters.values()) {
@@ -824,7 +906,8 @@ export class TowerArena3D {
             const step = Math.min(dist, f.walkSpeed * safeDt);
             pos.x += (dx / dist) * step;
             pos.z += (dz / dist) * step;
-            pos.y = 0.08;
+            const stepDist = Math.hypot(pos.x - f.spawnPos.x, pos.z - f.spawnPos.z);
+            pos.y = stepDist < 0.75 ? THREE.MathUtils.lerp(f.spawnPos.y, 0.08, stepDist / 0.75) : 0.08;
             f.sprite.setAnimState('dash');
           } else {
             f.sprite.setAnimState('attack');
@@ -877,7 +960,8 @@ export class TowerArena3D {
           const step = Math.min(dist, f.walkSpeed * safeDt);
           pos.x += (dx / dist) * step;
           pos.z += (dz / dist) * step;
-          pos.y = 0.08;
+          const stepDist = Math.hypot(pos.x - f.spawnPos.x, pos.z - f.spawnPos.z);
+          pos.y = stepDist < 0.75 ? THREE.MathUtils.lerp(f.spawnPos.y, 0.08, stepDist / 0.75) : 0.08;
           f.sprite.setAnimState('dash');
         } else {
           f.sprite.setAnimState('attack');
@@ -946,7 +1030,7 @@ export class TowerArena3D {
     this.sharedShardGeo.dispose();
     this.sharedRockGeo.dispose();
     this.rockChipMat.dispose();
-    this.bossModel.dispose();
+    this.bossSprite.dispose();
     this.cityEnv.dispose();
     for (const f of this.fighters.values()) {
       f.fx.dispose();
@@ -970,9 +1054,14 @@ export class TowerArena3D {
       }
     });
 
+    for (const geo of this.ownedGeos) geo.dispose();
+    for (const mat of this.ownedMats) mat.dispose();
     for (const tex of this.ownedTextures) {
       tex.dispose();
     }
+    this.ownedGeos.length = 0;
+    this.ownedMats.length = 0;
     this.ownedTextures.length = 0;
+    this.spawnPodiums.length = 0;
   }
 }

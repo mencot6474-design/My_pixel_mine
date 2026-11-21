@@ -184,10 +184,10 @@ export class ShopWorld3D {
     { id: 'sell', title: 'Sell Items!', subtitle: 'Sell Ores & Chibi', pos: new THREE.Vector3(-10.2, 5.9, 0.8) },
     { id: 'gems', title: 'Gem Shop!', subtitle: 'Elixirs & Potions', pos: new THREE.Vector3(11.4, 8.55, -9.6) },
     { id: 'altar', title: 'Enchant Altar', subtitle: 'Spin Enchants', pos: new THREE.Vector3(0, 4.65, -0.5) },
-    { id: 'tower', title: 'Gem Tower', subtitle: 'Grind Gems & Dice', pos: new THREE.Vector3(0, 9.75, -11.4) },
+    { id: 'tower', title: 'Gem Tower', subtitle: 'Grind Gems & Dice', pos: new THREE.Vector3(0, 10.6, -11.4) },
     { id: 'forge', title: 'Relic Forge', subtitle: 'Craft & Equip Relics', pos: new THREE.Vector3(10.2, 5.9, 0.8) },
-    { id: 'omega-left', title: 'Crimson Ronin', subtitle: 'Omega Boss • Left Pad', pos: new THREE.Vector3(-17.6, 6.8, -9.6) },
-    { id: 'omega-right', title: 'Obsidian Sovereign', subtitle: 'Omega Boss • Right Pad', pos: new THREE.Vector3(17.6, 6.8, -9.6) },
+    { id: 'omega-left', title: 'Crimson Ronin', subtitle: 'Omega Boss • Left Pad', pos: new THREE.Vector3(-17.6, 13.0, -9.6) },
+    { id: 'omega-right', title: 'Obsidian Sovereign', subtitle: 'Omega Boss • Right Pad', pos: new THREE.Vector3(17.6, 13.0, -9.6) },
   ];
 
   constructor() {
@@ -227,8 +227,8 @@ export class ShopWorld3D {
     this.shopGroup.add(gemHit);
     this.shopClickables.push(gemHit);
 
-    this.addShopEmblem('/hud/tower.webp', '#38bdf8', 0, 8.85, -11.4, 1.78, 0.8);
-    const towerHit = this.createHitbox(0, 4.5, -11.4, 8.2, 7.8, 7.2, 'shop-tower');
+    this.addShopEmblem('/hud/tower.webp', '#38bdf8', 0, 9.45, -9.75, 1.78, 0.8);
+    const towerHit = this.createHitbox(0, 7.4, -11.4, 8.4, 14.0, 7.4, 'shop-tower');
     this.shopGroup.add(towerHit);
     this.shopClickables.push(towerHit);
 
@@ -241,13 +241,13 @@ export class ShopWorld3D {
       const bossDef = getChibiById(w.chibiId);
       if (bossDef) {
         const sprite = new ChibiSprite3D(bossDef);
-        sprite.group.position.set(w.x, 0.45, -9.6);
-        sprite.group.scale.setScalar(3.15);
+        sprite.group.position.set(w.x, this.cyberPlaza.omegaPadTopY, -9.6);
+        sprite.group.scale.setScalar(9.45);
         sprite.setFacing(w.facing);
         this.shopGroup.add(sprite.group);
         this.omegaPadBosses.push(sprite);
       }
-      const hit = this.createHitbox(w.x, 2.8, -9.6, 5.2, 5.6, 5.2, w.kind);
+      const hit = this.createHitbox(w.x, 6.7, -9.6, 8.5, 11.8, 7.0, w.kind);
       this.shopGroup.add(hit);
       this.shopClickables.push(hit);
     }

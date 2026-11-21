@@ -194,7 +194,7 @@ export class OmegaBossModalUi {
         const unlocked = t.tier <= maxTier;
         const selected = t.tier === this.selectedTier;
         const cleared = this.state.omegaClaimedFirstClears.includes(`${boss.id}:${t.tier}`);
-        const dropPct = Math.round(t.coreDropChance * 100);
+        const dropPct = Number((t.coreDropChance * 100).toFixed(1));
         const coreRange = t.minCores === t.maxCores ? `${t.minCores} Core` : `${t.minCores}–${t.maxCores} Cores`;
         return `
           <button

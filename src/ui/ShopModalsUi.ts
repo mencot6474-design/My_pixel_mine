@@ -18,6 +18,11 @@ import {
   getPremiumShopItemByChibiId,
   PREMIUM_SHOP_ITEMS,
 } from '../game/PremiumShopData';
+import {
+  buildTwinFullscreenRevealDomHtml,
+  TwinSummonCutsceneController,
+  TwinSummonCutsceneState,
+} from './TwinSummonCutscene';
 import { gemPotionIconHtml, hudIconHtml, oreIconSvg, pickaxeIconHtml, spireCoinIconHtml } from './HudIcons';
 import {
   applyInspectRing,
@@ -53,11 +58,34 @@ export class ShopModalsUi {
   private sellInspectKey: string | null = null;
   private lastSellCardsHtml = '';
   private lastShopInspectorHtml = '';
+  private readonly twinCutscene = new TwinSummonCutsceneController();
 
   constructor(
     private readonly state: GameState,
-    private readonly pushToast: (text: string) => void
+    private readonly pushToast: (text: string) => void,
+    private readonly onRequestRender?: () => void
   ) {}
+
+  public getPremiumCutsceneState(): TwinSummonCutsceneState | null {
+    return this.twinCutscene.getState();
+  }
+
+  public clearPremiumCutscene(): void {
+    this.twinCutscene.clear();
+  }
+
+  public finishPremiumCutsceneToConfirm(): void {
+    this.twinCutscene.skipToConfirm();
+  }
+
+  /** Renders fullscreen TWIN cutscene/confirm DOM markup for diagnostics and unit tests. */
+  public renderFullscreenCutsceneHtml(): string {
+    const cs = this.twinCutscene.getState();
+    if (!cs) return '';
+    const item = getPremiumShopItemByChibiId(cs.chibiId) ?? PREMIUM_SHOP_ITEMS[0];
+    if (!item) return '';
+    return buildTwinFullscreenRevealDomHtml(cs, item, getChibiById(item.chibiId));
+  }
 
   private buildPickaxeInspectorHtml(): string {
     const p = getPickaxeById(this.shopInspectPickaxeId) ?? PICKAXES[0];
@@ -610,10 +638,16 @@ export class ShopModalsUi {
         const chibi = getChibiById(chibiId);
         const res = this.state.buyPremiumShopItem(chibiId);
         if (res === 'bought') {
-          audio.playSfx('rare-fanfare', { volume: 0.72 });
-          audio.playCrystalChord('perfect');
-          this.pushToast(`✨ ${chibi?.name ?? 'Premium Chibi'} unlocked!`);
-        } else if (res === 'no_coins') {
+          const ownedCount = this.state.miners[chibiId] || 1;
+          this.updatePremiumShopLive(root);
+          this.twinCutscene.start(chibiId, ownedCount, () => {
+            audio.playSfx('ui-click');
+            this.pushToast(`✨ ${chibi?.name ?? 'Twin Chibi'} unlocked!`);
+            this.onRequestRender?.();
+          });
+          return;
+        }
+        if (res === 'no_coins') {
           audio.playSfx('ui-error');
           this.pushToast('Not enough Spire Coins!');
         }

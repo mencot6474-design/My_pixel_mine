@@ -200,19 +200,24 @@ export function applyMineWeatherAtmosphere(ctx: {
     ctx.env.setWeatherSky(weather.id, weather.cloudHex);
     const isShop = ctx.mode === 'shop';
     const isFusion = ctx.mode === 'fusion';
-    const isTower = ctx.mode === 'tower' || ctx.mode === 'omega';
-    ctx.hemiLight.color.set(weather.hemiTintHex);
-    ctx.hemiLight.intensity = isTower
-      ? Math.max(weather.hemiIntensity, 1.32)
-      : isShop || isFusion
-        ? Math.max(weather.hemiIntensity, 1.24)
-        : Math.max(weather.hemiIntensity, 1.18);
-    ctx.sunLight.intensity = isTower
-      ? Math.max(weather.sunIntensity, 1.75)
-      : isShop || isFusion
-        ? Math.max(weather.sunIntensity, 1.62)
-        : Math.max(weather.sunIntensity, 1.55);
-    ctx.rimLight.color.set(isShop ? 0x38bdf8 : weather.rimTintHex);
+    const isTowerScene = ctx.mode === 'tower';
+    const isTower = isTowerScene || ctx.mode === 'omega';
+    ctx.hemiLight.color.set(isTowerScene ? 0xe0f2fe : weather.hemiTintHex);
+    ctx.hemiLight.intensity = isTowerScene
+      ? 1.68
+      : isTower
+        ? Math.max(weather.hemiIntensity, 1.32)
+        : isShop || isFusion
+          ? Math.max(weather.hemiIntensity, 1.24)
+          : Math.max(weather.hemiIntensity, 1.18);
+    ctx.sunLight.intensity = isTowerScene
+      ? 2.18
+      : isTower
+        ? Math.max(weather.sunIntensity, 1.75)
+        : isShop || isFusion
+          ? Math.max(weather.sunIntensity, 1.62)
+          : Math.max(weather.sunIntensity, 1.55);
+    ctx.rimLight.color.set(isTowerScene ? 0xbae6fd : isShop ? 0x38bdf8 : weather.rimTintHex);
 
     if (ctx.mode !== 'mine' && !isShop && !isFusion) return;
     const fogColor = new THREE.Color(weather.fogTintHex);

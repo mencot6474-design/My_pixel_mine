@@ -1,6 +1,10 @@
 import * as THREE from 'three';
+import {
+  createCyberShowcasePodium,
+  type CyberShowcasePodiumHandle,
+  type FusionPodiumBuildCtx,
+} from './FusionWorldPodium3D';
 import { getPedestalHoloRingTexture } from './PlotAuraFx3D';
-import { createSeraphimBoss3D, SeraphimBossHandle } from './SeraphimBoss3D';
 
 export interface BossGravityRockSeed {
   radius: number;
@@ -27,13 +31,15 @@ export interface TowerArenaStageCtx {
   bossGravityRockSeeds: BossGravityRockSeed[];
   bossArcs: BossHaloArcHandle[];
   summonPads: THREE.Mesh[];
+  ownedGeos: THREE.BufferGeometry[];
+  ownedMats: THREE.Material[];
   ownedTextures: THREE.Texture[];
   bossCenterZ: number;
   getSpawnPos: (slotIndex: number) => THREE.Vector3;
 }
 
 export interface TowerArenaStageParts {
-  bossModel: SeraphimBossHandle;
+  spawnPodiums: CyberShowcasePodiumHandle[];
   bossGravityRocksInst: THREE.InstancedMesh;
   bossFloorPulseMesh: THREE.Mesh;
   bossFloorPulseMat: THREE.MeshBasicMaterial;
@@ -209,12 +215,48 @@ export function buildTowerArenaStage(ctx: TowerArenaStageCtx): TowerArenaStagePa
     );
     ctx.group.add(eclipseGroup);
 
-    // 3. Five Front-Arc Chibi Summoning Runes (Feathered Holo Rings Flush on Highway Crater Floor y = 0.08)
+    // 3. Five Front-Arc Chibi Spawn Cyber-Showcase Podiums & Ground Halo Rings (Crater Floor y = 0.08)
+    const armorDarkMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      roughness: 0.48,
+      metalness: 0.34,
+      flatShading: true,
+    });
+    const armorSteelMat = new THREE.MeshStandardMaterial({
+      color: 0x475569,
+      roughness: 0.38,
+      metalness: 0.42,
+      flatShading: true,
+    });
+    const brightSteelMat = new THREE.MeshStandardMaterial({
+      color: 0x94a3b8,
+      roughness: 0.3,
+      metalness: 0.48,
+      flatShading: true,
+    });
+    ctx.ownedMats.push(armorDarkMat, armorSteelMat, brightSteelMat);
+    const podiumCtx: FusionPodiumBuildCtx = {
+      armorDarkMat,
+      armorSteelMat,
+      brightSteelMat,
+      ownedGeos: ctx.ownedGeos,
+      ownedMats: ctx.ownedMats,
+      ownedTextures: ctx.ownedTextures,
+    };
+
+    const spawnPodiums: CyberShowcasePodiumHandle[] = [];
     const summonHoloTex = getPedestalHoloRingTexture();
     for (let i = 0; i < 5; i++) {
       const sp = getSpawnPos(i);
+      const podium = createCyberShowcasePodium(podiumCtx, `0${i + 1}`, 0.78, false);
+      podium.group.position.set(sp.x, 0.08, sp.z);
+      podium.group.rotation.y = Math.atan2(-sp.x, BOSS_CENTER_Z - sp.z);
+      podium.auraGroup.visible = false;
+      ctx.group.add(podium.group);
+      spawnPodiums.push(podium);
+
       const pad = new THREE.Mesh(
-        summonHoloTex ? new THREE.PlaneGeometry(1.48, 1.48) : new THREE.RingGeometry(0.46, 0.68, 20),
+        summonHoloTex ? new THREE.PlaneGeometry(1.75, 1.75) : new THREE.RingGeometry(0.58, 0.82, 20),
         new THREE.MeshBasicMaterial({
           ...(summonHoloTex ? { map: summonHoloTex } : {}),
           color: 0x38bdf8,
@@ -231,9 +273,7 @@ export function buildTowerArenaStage(ctx: TowerArenaStageCtx): TowerArenaStagePa
       ctx.summonPads.push(pad);
     }
 
-    // 4. Central Full-3D Procedural "Corrupted Seraphim AI Overlord" Boss (Slightly behind Crater Center so chibis & damage numbers stay clear)
-    const bossModel = createSeraphimBoss3D({ scale: 1.02 });
-    ctx.monolithGroup.add(bossModel.group);
+    // 4. Central Boss Anchor Group (Populated with 2D Twin Chibi Boss Sprite in TowerArena3D)
     ctx.monolithGroup.position.set(0, 0.08, BOSS_CENTER_Z);
     ctx.group.add(ctx.monolithGroup);
 
@@ -320,7 +360,7 @@ export function buildTowerArenaStage(ctx: TowerArenaStageCtx): TowerArenaStagePa
       });
     });
   return {
-    bossModel,
+    spawnPodiums,
     bossGravityRocksInst,
     bossFloorPulseMesh,
     bossFloorPulseMat,
@@ -504,5 +544,22 @@ export function stepTowerShardPool(
       const shrink = lifeRatio < 0.62 ? 1 : Math.max(0.04, 1 - (lifeRatio - 0.62) / 0.38);
       p.mesh.scale.setScalar(p.baseScale * shrink);
     }
+}
 
+export function stepTowerSpawnPodiums(
+  elapsed: number,
+  podiums: readonly CyberShowcasePodiumHandle[]
+): void {
+  for (let i = 0; i < podiums.length; i++) {
+    const pod = podiums[i];
+    const pTime = elapsed + i * 0.55;
+    pod.sigilMesh.rotation.z = pTime * 0.28;
+    if (pod.auraGroup.visible) {
+      pod.auraVeilMat.uniforms.uTime.value = pTime;
+      pod.auraVeilMat.uniforms.uOpacity.value = 0.42 + Math.sin(pTime * 1.8) * 0.08;
+      pod.auraOuterVeilMat.uniforms.uTime.value = pTime + 0.6;
+      pod.auraOuterVeilMat.uniforms.uOpacity.value = 0.22 + Math.sin(pTime * 1.8) * 0.05;
+      pod.particleMat.uniforms.uTime.value = pTime;
+    }
+  }
 }

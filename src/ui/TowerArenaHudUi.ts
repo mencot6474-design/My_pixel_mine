@@ -1,4 +1,5 @@
 import { audio } from '../audio/AudioManager';
+import { getChibiById } from '../game3d/ChibiCatalog';
 import { GameState } from '../game/GameState';
 import { fmtInt, fmtShort } from '../game/NumberFormat';
 import {
@@ -14,7 +15,7 @@ import {
   TOWER_ORE_ROCKS_PER_WAVE,
 } from '../game/TowerData';
 import { towerBlessingIconHtml, towerIconHtml } from './HudIcons';
-import { ModalKind } from './HudShared';
+import { chibiPortraitHtml, ModalKind } from './HudShared';
 
 const BATTLE_SHIELD_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" class="shrink-0 drop-shadow-[0_0_5px_rgba(34,211,238,0.85)]" fill="none" aria-hidden="true">
   <defs>
@@ -297,8 +298,11 @@ export class TowerArenaHudUi {
           ? `<span class="mam-tower-status-pill bg-[#fde047] text-[#14111d]" data-tower-boss-shield="true" data-shield-mode="exposed">${BATTLE_BOLT_SVG}<span data-tower-shield-label="true">EXPOSED +50% ${exposeLeft.toFixed(1)}s</span></span>`
           : `<span class="mam-tower-status-pill bg-[#fecdd3] text-[#881337]" data-tower-boss-shield="true" data-shield-mode="vuln">${BATTLE_BOLT_SVG}<span data-tower-shield-label="true">VULNERABLE</span></span>`
       : `<span class="mam-tower-status-pill bg-[#bae6fd] text-[#14111d]" data-tower-wave-rocks="true">${BATTLE_PICKAXE_SVG}<span data-tower-rocks-label="true">${aliveOres}/${TOWER_ORE_ROCKS_PER_WAVE} ROCKS LEFT</span></span>`;
+    const bossDef = run.isBossWave && run.bossChibiId ? getChibiById(run.bossChibiId) : undefined;
     const emblemSvg = run.isBossWave
-      ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M4 17L6 7L12 11L18 7L20 17H4Z" fill="#fde047" stroke="#14111d" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="14" r="1.6" fill="#be123c"/></svg>`
+      ? bossDef
+        ? `<span class="w-full h-full inline-flex items-center justify-center [&_.mam-chibi-portrait]:w-full [&_.mam-chibi-portrait]:h-full [&_img]:w-full [&_img]:h-full [&_img]:object-contain">${chibiPortraitHtml(bossDef, { draggable: false })}</span>`
+        : `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><path d="M4 17L6 7L12 11L18 7L20 17H4Z" fill="#fde047" stroke="#14111d" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="14" r="1.6" fill="#be123c"/></svg>`
       : `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true"><polygon points="12,3 20,7.5 20,16.5 12,21 4,16.5 4,7.5" fill="#38bdf8" stroke="#14111d" stroke-width="1.8"/><circle cx="12" cy="12" r="2.6" fill="#ffffff"/></svg>`;
     const stripeOverlay =
       'linear-gradient(-45deg,rgba(255,255,255,0.2) 25%,transparent 25%,transparent 50%,rgba(255,255,255,0.2) 50%,rgba(255,255,255,0.2) 75%,transparent 75%,transparent 100%)';
@@ -355,8 +359,8 @@ export class TowerArenaHudUi {
                   }">${
                     run.isBossWave
                       ? floorDef.isFinalBoss
-                        ? 'FINAL BOSS • CHRONO SERAPHIM OVERLORD'
-                        : 'SERAPHIM AI OVERLORD'
+                        ? `FINAL BOSS • ${(bossDef?.name ?? 'Twin Overlord').toUpperCase()}`
+                        : `${(bossDef?.name ?? 'Twin Overlord').toUpperCase()} • TWIN BOSS`
                       : `WAVE ${run.wave}/9 • ${floorDef.world.name.toUpperCase()} ORES`
                   }</span>
                 </div>

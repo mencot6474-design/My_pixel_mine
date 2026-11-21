@@ -122,6 +122,7 @@ import {
   getTowerSweepGemReward,
   getTowerWaveDef,
   rollTowerWaveOres,
+  TOWER_HP_MULT,
   TOWER_KEY_GEM_COST,
   TOWER_MAX_KEYS,
   TOWER_MILESTONES,
@@ -713,7 +714,9 @@ describe('Pure 3D Mine World', () => {
     const f4 = getTowerFloorDef(4);
     const f5 = getTowerFloorDef(5);
 
+    expect(TOWER_HP_MULT).toBe(4050);
     expect(f1.isBoss).toBe(false);
+    expect(f1.hp).toBe(520 * 4050);
     expect(f4.anomaly.id).not.toBe('none');
     expect(f5.isBoss).toBe(true);
     expect(f5.hp).toBeGreaterThan(f4.hp);
@@ -723,10 +726,11 @@ describe('Pure 3D Mine World', () => {
     const w1 = getTowerWaveDef(1, 1);
     const w10 = getTowerWaveDef(1, TOWER_WAVES_PER_FLOOR);
     expect(w1.isBoss).toBe(false);
+    expect(w1.rockBaseHp).toBe(45 * 4050);
     expect(w10.isBoss).toBe(true);
     const w1Ores = rollTowerWaveOres(1, 1, f1.anomaly);
     expect(w1Ores).toHaveLength(TOWER_ORE_ROCKS_PER_WAVE);
-    expect(w1Ores.every((o) => o.alive && o.hp > 0)).toBe(true);
+    expect(w1Ores.every((o) => o.alive && o.hp >= 100_000)).toBe(true);
     expect(rollTowerWaveOres(1, TOWER_WAVES_PER_FLOOR, f1.anomaly)).toHaveLength(0);
 
     // Checkpoints and Milestones every 5 floors up to Floor 80 (W1..W8)
@@ -760,11 +764,18 @@ describe('Pure 3D Mine World', () => {
     const startNow = 1_700_000_000_000;
     expect(gs.towerKeys).toBe(TOWER_MAX_KEYS);
 
-    // Put a real miner onto Plot 1 so chibi strike damage is non-zero
+    // Put a real miner onto Plot 1 and unlock Core tap research so 50x-buffed Floor 1-5 loop finishes cleanly
     gs.miners['solar-striker'] = 1;
     gs.hotbar[0] = 'solar-striker';
     gs.selectHotbarSlot(0);
     expect(gs.placeSelectedOnPlot(0)).toBe('placed');
+    // Starter player (low tap dmg) vs 4050x-buffed Floor 1 ore (100K+ HP) cannot blitz early waves;
+    // equip Core Strike III+ research so this 5-floor integration loop clears cleanly within test bounds.
+    expect(gs.getTapDamage()).toBeLessThan(100);
+    gs.researchLevels.core['core-strike-1'] = 5;
+    gs.researchLevels.core['core-strike-2'] = 5;
+    gs.researchLevels.core['core-strike-3'] = 5;
+    gs.researchLevels.core['core-strike-4'] = 1;
 
     // Start run from Floor 1 Wave 1 with 5 random ore rocks
     expect(gs.startTowerRun(1, startNow)).toBe(true);
@@ -872,8 +883,8 @@ describe('Pure 3D Mine World', () => {
     expect(sweep.gemsAwarded).toBeGreaterThan(0);
     expect(gs.gems).toBe(gemsBeforeSweep + sweep.gemsAwarded);
 
-    // Buy +1 Key with 1000 Gems
-    expect(TOWER_KEY_GEM_COST).toBe(1000);
+    // Buy +1 Key with 5000 Gems
+    expect(TOWER_KEY_GEM_COST).toBe(5000);
     gs.gems = TOWER_KEY_GEM_COST - 1;
     expect(gs.buyTowerKeyWithGems()).toBe('no_gems');
     gs.gems = TOWER_KEY_GEM_COST;
@@ -2213,6 +2224,9 @@ describe('Pure 3D Mine World', () => {
 
     const arena = new TowerArena3D();
     expect(arena.getMonolithWorldPos().z).toBeLessThan(-1.6);
+    expect(arena.getCurrentBossChibi().rarity).toBe('twin');
+    arena.setBossChibi('nocturne-twins');
+    expect(arena.getCurrentBossChibi().id).toBe('nocturne-twins');
     arena.dispose();
 
     const prevOuterRot = boss.reactorRingOuter.rotation.z;

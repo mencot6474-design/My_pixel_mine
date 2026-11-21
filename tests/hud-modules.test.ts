@@ -1093,10 +1093,13 @@ describe('Tahap B HUD Modules', () => {
 
       state.startTowerRun(1);
       state.towerRun!.isBossWave = true;
+      state.towerRun!.bossChibiId = 'clockwork-twins';
       state.towerRun!.bossInvulLeft = 3.5;
       state.towerRun!.pendingBlessings = null;
       const arenaHtml = towerUi.renderTowerArenaHud('<div></div>', '');
       expect(arenaHtml).toContain('TAP RING!');
+      expect(arenaHtml).toContain('CLOCKWORK TWINS • TWIN BOSS');
+      expect(arenaHtml).toContain('/chibi/clockwork-twins/');
       expect(arenaHtml).toContain('data-tower-streak="true"');
       expect(arenaHtml).toContain('data-tower-pity="true"');
       expect(arenaHtml).toContain('FL 1/80');
@@ -1182,12 +1185,21 @@ describe('Tahap B HUD Modules', () => {
         gemsEarned: 150,
         diceEarned: 1,
         coinsEarned: 6,
+        twinsEarned: ['yukikage-twins'],
         newRecord: true,
         reason: 'exit',
       };
       const hubHtml = towerUi.renderTowerHubModal();
       expect(hubHtml).toContain('data-tower-coins-pill="true"');
       expect(hubHtml).toContain('+6 Spire Coins');
+      expect(hubHtml).toContain('Twin Shop →');
+      expect(hubHtml).toContain('data-action="tower-open-twin-shop"');
+      expect(hubHtml).toContain('JACKPOT 0.01% TWIN DROP!');
+      expect(hubHtml).toContain('Yukikage Twins');
+      expect(hubHtml).toContain('/worlds/underground.webp');
+      expect(hubHtml).toContain('Jackpot TWIN Chibi');
+      expect(hubHtml).toContain('data-tower-right-tab="drops"');
+      expect(hubHtml).toContain('data-tower-right-tab="milestones"');
 
       state.startTowerRun(1);
       state.towerRun!.coinsEarned = 5;
@@ -1297,11 +1309,14 @@ describe('Tahap B HUD Modules', () => {
       expect(hubHtml).toContain('data-modal-theme="omega-boss"');
       expect(hubHtml).toContain('Crimson Ronin');
       expect(hubHtml).toContain('Obsidian Sovereign');
-      expect(hubHtml).toContain('HP 20Qa');
-      expect(hubHtml).toContain('20% • 1 Core');
-      expect(hubHtml).toContain('100% • 2–3 Cores');
+      expect(hubHtml).toContain('HP 100Qa');
+      expect(hubHtml).toContain('HP 10Qi');
+      expect(hubHtml).toContain('HP 10Sp');
+      expect(hubHtml).toContain('10% • 1 Core');
+      expect(hubHtml).toContain('32.5% • 1–2 Cores');
+      expect(hubHtml).toContain('50% • 2–3 Cores');
       expect(hubHtml).toContain('/hud/gem.webp');
-      expect(hubHtml).toContain('25K');
+      expect(hubHtml).toContain('50K');
       expect(hubHtml).not.toContain('💎');
       expect(hubHtml).not.toContain('🔑');
       expect(hubHtml).toContain('Team DMG');
@@ -1456,6 +1471,62 @@ describe('Tahap B HUD Modules', () => {
       expect(openModal).not.toHaveBeenCalled();
       expect(render).toHaveBeenCalled();
       expect(syncBattleVisuals).toHaveBeenCalledWith([], false, false);
+    });
+  });
+
+  describe('Premium Shop TWIN Summon Cutscene', () => {
+    it('triggers a Cyber-Prism Binary-Star fullscreen cutscene when buying a TWIN duo in ShopModalsUi', () => {
+      const state = new GameState();
+      state.towerCoins = 120;
+      const onToast = vi.fn();
+      const onRender = vi.fn();
+      const shopUi = new ShopModalsUi(state, onToast, onRender);
+
+      let clickHandler: ((e: { stopPropagation: () => void }) => void) | null = null;
+      const buyBtn = {
+        dataset: { buyPremiumItem: 'yukikage-twins' },
+        addEventListener: (_evt: string, fn: (e: { stopPropagation: () => void }) => void) => {
+          clickHandler = fn;
+        },
+        classList: { toggle: vi.fn() },
+      };
+      const fakeRoot = {
+        querySelector: () => null,
+        querySelectorAll: (sel: string) => (sel === '[data-buy-premium-item]' ? [buyBtn] : []),
+      } as unknown as HTMLElement;
+
+      shopUi.bindEvents(fakeRoot);
+      expect(clickHandler).not.toBeNull();
+      clickHandler!({ stopPropagation: vi.fn() });
+
+      expect(state.towerCoins).toBe(70);
+      expect(state.miners['yukikage-twins']).toBe(1);
+      expect(shopUi.getPremiumCutsceneState()).toEqual({
+        chibiId: 'yukikage-twins',
+        ownedCount: 1,
+        phase: 'animating',
+      });
+
+      const animatingHtml = shopUi.renderFullscreenCutsceneHtml();
+      expect(animatingHtml).toContain('TWIN RESONANCE // PREMIUM SUMMON');
+      expect(animatingHtml).toContain('data-twin-cutscene-skip="true"');
+      expect(animatingHtml).toContain('Yukikage Twins');
+      expect(animatingHtml).toContain('NEW DUO!');
+      expect(animatingHtml).toContain('TEAM DMG');
+      expect(animatingHtml).toContain('+100%');
+      expect(animatingHtml).toContain('DROP ORE');
+      expect(animatingHtml).toContain('+40%');
+
+      shopUi.finishPremiumCutsceneToConfirm();
+      expect(shopUi.getPremiumCutsceneState()?.phase).toBe('confirm');
+      const confirmHtml = shopUi.renderFullscreenCutsceneHtml();
+      expect(confirmHtml).toContain('data-twin-confirm="true"');
+      expect(confirmHtml).toContain('Confirm &amp; Collect');
+      expect(confirmHtml).toContain('Yukikage Twins Ready for Deployment');
+
+      shopUi.clearPremiumCutscene();
+      expect(shopUi.getPremiumCutsceneState()).toBeNull();
+      expect(shopUi.renderFullscreenCutsceneHtml()).toBe('');
     });
   });
 });

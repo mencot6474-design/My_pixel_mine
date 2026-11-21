@@ -39,8 +39,8 @@ export interface OmegaBossDef {
 }
 
 export const OMEGA_MAX_KEYS = 5;
-export const OMEGA_KEY_REGEN_MS = 15 * 60 * 1000;
-export const OMEGA_KEY_GEM_COST = 25_000;
+export const OMEGA_KEY_REGEN_MS = 60 * 60 * 1000; // 1 hour per key
+export const OMEGA_KEY_GEM_COST = 50_000;
 export const OMEGA_BATTLE_DURATION_SEC = 45;
 export const OMEGA_BREAK_DURATION_SEC = 7;
 export const OMEGA_BREAK_DMG_MULT = 2.5;
@@ -49,7 +49,7 @@ const SHARED_TIER_DROPS: readonly Omit<OmegaTierDef, 'bossHp'>[] = [
   {
     tier: 1,
     label: 'Tier I • Initiate',
-    coreDropChance: 0.2,
+    coreDropChance: 0.1,
     minCores: 1,
     maxCores: 1,
     firstClearGems: 400,
@@ -59,7 +59,7 @@ const SHARED_TIER_DROPS: readonly Omit<OmegaTierDef, 'bossHp'>[] = [
   {
     tier: 2,
     label: 'Tier II • Challenger',
-    coreDropChance: 0.4,
+    coreDropChance: 0.2,
     minCores: 1,
     maxCores: 1,
     firstClearGems: 900,
@@ -69,7 +69,7 @@ const SHARED_TIER_DROPS: readonly Omit<OmegaTierDef, 'bossHp'>[] = [
   {
     tier: 3,
     label: 'Tier III • Master',
-    coreDropChance: 0.65,
+    coreDropChance: 0.325,
     minCores: 1,
     maxCores: 2,
     firstClearGems: 1800,
@@ -79,7 +79,7 @@ const SHARED_TIER_DROPS: readonly Omit<OmegaTierDef, 'bossHp'>[] = [
   {
     tier: 4,
     label: 'Tier IV • Nightmare',
-    coreDropChance: 0.85,
+    coreDropChance: 0.425,
     minCores: 2,
     maxCores: 2,
     firstClearGems: 3500,
@@ -89,7 +89,7 @@ const SHARED_TIER_DROPS: readonly Omit<OmegaTierDef, 'bossHp'>[] = [
   {
     tier: 5,
     label: 'Tier V • Omega Apex',
-    coreDropChance: 1.0,
+    coreDropChance: 0.5,
     minCores: 2,
     maxCores: 3,
     firstClearGems: 7500,
@@ -129,11 +129,11 @@ export const OMEGA_BOSS_DEFS: readonly OmegaBossDef[] = [
     oreDropPct: 1.2,
     oreSellPct: 0.8,
     tiers: buildTiers([
-      20_000_000_000_000_000,
-      240_000_000_000_000_000,
-      1_700_000_000_000_000_000,
+      100_000_000_000_000_000,
       10_000_000_000_000_000_000,
-      60_000_000_000_000_000_000,
+      1_000_000_000_000_000_000_000,
+      100_000_000_000_000_000_000_000,
+      10_000_000_000_000_000_000_000_000,
     ]),
   },
   {
@@ -159,11 +159,11 @@ export const OMEGA_BOSS_DEFS: readonly OmegaBossDef[] = [
     oreDropPct: 0.9,
     oreSellPct: 1.4,
     tiers: buildTiers([
-      30_000_000_000_000_000,
-      360_000_000_000_000_000,
-      2_400_000_000_000_000_000,
-      14_000_000_000_000_000_000,
-      80_000_000_000_000_000_000,
+      150_000_000_000_000_000,
+      15_000_000_000_000_000_000,
+      1_500_000_000_000_000_000_000,
+      150_000_000_000_000_000_000_000,
+      15_000_000_000_000_000_000_000_000,
     ]),
   },
 ] as const;

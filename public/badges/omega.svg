@@ -64,10 +64,17 @@
       @keyframes wingR { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(-2.6deg); } }
       @keyframes haloSpin { 0%,100% { transform: translateY(0px); opacity: 0.94; } 50% { transform: translateY(-4px); opacity: 1; } }
       @keyframes glintMove { 0%,45% { transform: translateX(-340px) skewX(-24deg); } 100% { transform: translateX(520px) skewX(-24deg); } }
+      @keyframes sparkTwinkle { 0%,100% { transform: scale(0.65) rotate(0deg); opacity: 0.45; } 50% { transform: scale(1.25) rotate(22deg); opacity: 1; } }
       .wing-l { transform-origin: 225px 226px; animation: wingL 2.2s ease-in-out infinite; }
       .wing-r { transform-origin: 575px 226px; animation: wingR 2.2s ease-in-out infinite; }
       .halo { animation: haloSpin 2.1s ease-in-out infinite; }
       .glint-bar { animation: glintMove 2.6s ease-in-out infinite; }
+      .spark-l { transform-origin: 150px 114px; animation: sparkTwinkle 1.8s ease-in-out infinite; }
+      .spark-r { transform-origin: 650px 114px; animation: sparkTwinkle 1.8s ease-in-out 0.9s infinite; }
+      .spark-tl { transform-origin: 258px 72px; animation: sparkTwinkle 2.1s ease-in-out 0.45s infinite; }
+      .spark-tr { transform-origin: 542px 72px; animation: sparkTwinkle 2.1s ease-in-out 1.35s infinite; }
+      .spark-bl { transform-origin: 126px 274px; animation: sparkTwinkle 1.9s ease-in-out 0.65s infinite; }
+      .spark-br { transform-origin: 674px 274px; animation: sparkTwinkle 1.9s ease-in-out 1.55s infinite; }
     </style>
   </defs>
 
@@ -131,4 +138,12 @@
     <polygon points="0,-22 24,0 0,22 -24,0" fill="url(#omegaGold)" stroke="#14111d" stroke-width="3"/>
     <polygon points="0,-13 13,0 0,13 -13,0" fill="#fde047" stroke="#14111d" stroke-width="1.6"/>
   </g>
+
+  <!-- Animated Star Sparkles -->
+  <path class="spark-l" d="M 150 97 L 154 110 L 167 114 L 154 118 L 150 131 L 146 118 L 133 114 L 146 110 Z" fill="#fb7185" stroke="#14111d" stroke-width="1.5" filter="url(#omegaGlow)"/>
+  <path class="spark-r" d="M 650 97 L 654 110 L 667 114 L 654 118 L 650 131 L 646 118 L 633 114 L 646 110 Z" fill="#f1f5f9" stroke="#14111d" stroke-width="1.5" filter="url(#omegaGlow)"/>
+  <path class="spark-tl" d="M 258 61 L 261 69 L 269 72 L 261 75 L 258 83 L 255 75 L 247 72 L 255 69 Z" fill="#fde047" stroke="#14111d" stroke-width="1.3" filter="url(#omegaGlow)"/>
+  <path class="spark-tr" d="M 542 61 L 545 69 L 553 72 L 545 75 L 542 83 L 539 75 L 531 72 L 539 69 Z" fill="#fde047" stroke="#14111d" stroke-width="1.3" filter="url(#omegaGlow)"/>
+  <path class="spark-bl" d="M 126 264 L 128.5 271.5 L 136 274 L 128.5 276.5 L 126 284 L 123.5 276.5 L 116 274 L 123.5 271.5 Z" fill="#fda4af" stroke="#14111d" stroke-width="1.3" filter="url(#omegaGlow)"/>
+  <path class="spark-br" d="M 674 264 L 676.5 271.5 L 684 274 L 676.5 276.5 L 674 284 L 671.5 276.5 L 664 274 L 671.5 271.5 Z" fill="#cbd5e1" stroke="#14111d" stroke-width="1.3" filter="url(#omegaGlow)"/>
 </svg>

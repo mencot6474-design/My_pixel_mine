@@ -1,5 +1,6 @@
 import { ItemRarity, ORES, WorldDef, WORLDS } from './GameData';
 import { OreVariantKey, rollOreVariant } from '../game3d/MineWorldPalette';
+import { PREMIUM_SHOP_ITEMS } from './PremiumShopData';
 
 export interface TowerAnomalyDef {
   id: 'none' | 'gem-surge' | 'overclock' | 'enchant-res' | 'weakpoint';
@@ -118,8 +119,8 @@ export interface TowerMilestoneDef {
 
 export const TOWER_MAX_FLOOR = 80;
 export const TOWER_MAX_KEYS = 5;
-export const TOWER_KEY_REGEN_MS = 10 * 60 * 1000; // 10 minutes per key
-export const TOWER_KEY_GEM_COST = 1000;
+export const TOWER_KEY_REGEN_MS = 15 * 60 * 1000; // 15 minutes per key
+export const TOWER_KEY_GEM_COST = 5000;
 export const TOWER_CHECKPOINT_STEP = 5;
 export const TOWER_WAVES_PER_FLOOR = 10;
 export const TOWER_ORE_ROCKS_PER_WAVE = 5;
@@ -135,9 +136,11 @@ export const TOWER_DICE_PITY_MAX = 4;
 export const TOWER_STREAK_GEM_STEP = 0.25;
 export const TOWER_STREAK_MAX_BONUS = 2.0;
 export const TOWER_ORE_COIN_CHANCE = 0.005; // 0.5% per broken ore rock in waves 1-9
+export const TOWER_ORE_TWIN_CHANCE = 0.0001; // 0.01% per broken ore rock in waves 1-9
 export const TOWER_BOSS_COIN_CHANCE = 0.05; // 5% chance on Boss defeat
 export const TOWER_BOSS_COIN_DROP = 5; // +5 Spire Coins on Boss drop
 export const TOWER_GEM_DROP_MULT = 0.2; // -80% Tower wave/boss/sweep Gem drop balance scale
+export const TOWER_HP_MULT = 4050; // 4050x Tower ore & boss HP buff (>= 100K HP even on smallest Floor 1 common stone)
 
 export const TOWER_ANOMALIES: readonly TowerAnomalyDef[] = [
   {
@@ -392,8 +395,8 @@ export function getTowerFloorDef(floor: number): TowerFloorDef {
   const anomaly = getAnomalyForFloor(f);
   const tier = getTowerWorldTier(f);
   const worldScale = getTowerWorldScale(f);
-  const rawBossHp = 520 * worldScale * (isBoss ? 1.35 : 1) * (isFinalBoss ? 1.25 : 1) * anomaly.hpMult;
-  const hp = Math.max(150, Math.round(rawBossHp));
+  const rawBossHp = 520 * TOWER_HP_MULT * worldScale * (isBoss ? 1.35 : 1) * (isFinalBoss ? 1.25 : 1) * anomaly.hpMult;
+  const hp = Math.max(150 * TOWER_HP_MULT, Math.round(rawBossHp));
   const baseDur = isFinalBoss ? 44 : isBoss ? 38 : 34;
   const durationSec = Math.max(16, baseDur + anomaly.timerDeltaSec);
   const gemReward = Math.max(
@@ -430,7 +433,7 @@ export function getTowerWaveDef(floor: number, wave: number): TowerWaveDef {
   const isBoss = w === TOWER_BOSS_WAVE;
   const worldScale = getTowerWorldScale(f);
   const waveScale = 1 + (w - 1) * 0.14;
-  const rockBaseHp = Math.max(18, Math.round(45 * worldScale * waveScale));
+  const rockBaseHp = Math.max(18 * TOWER_HP_MULT, Math.round(45 * TOWER_HP_MULT * worldScale * waveScale));
   const bossHp = floorDef.hp;
   const baseDur = isBoss ? floorDef.durationSec : Math.max(14, 24 + floorDef.anomaly.timerDeltaSec);
   const waveGemReward = isBoss
@@ -465,7 +468,7 @@ export function rollTowerWaveOres(
     const oreIdx = Math.min(orePool.length - 1, Math.max(0, Math.floor(rng() * orePool.length)));
     const oreDef = orePool[oreIdx];
     const variant = rollOreVariant(rng);
-    const maxHp = Math.max(12, Math.round(waveDef.rockBaseHp * variant.hpMult * anomaly.hpMult));
+    const maxHp = Math.max(12 * TOWER_HP_MULT, Math.round(waveDef.rockBaseHp * variant.hpMult * anomaly.hpMult));
     ores.push({
       index: i,
       oreId: oreDef.id,
@@ -532,6 +535,8 @@ export interface TowerRunState {
   gemsEarned: number;
   diceEarned: number;
   coinsEarned: number;
+  twinsEarned?: string[];
+  bossChibiId?: string;
   floorsCleared: number;
   wavesCleared: number;
   blessings: TowerBlessingDef[];
@@ -551,11 +556,41 @@ export interface TowerRunSummary {
   gemsEarned: number;
   diceEarned: number;
   coinsEarned?: number;
+  twinsEarned?: string[];
   newRecord: boolean;
   reason: 'timeout' | 'exit' | 'victory';
   remainingHpPct?: number;
   wasBossWave?: boolean;
   bestStreakMult?: number;
+}
+
+/**
+ * Picks one of the 5 TWIN Chibis for a 0.01% wave-ore drop, favoring unowned Twins (65%)
+ * while still allowing duplicates for Star-Up progression.
+ */
+export function rollTowerTwinDropChibiId(
+  ownedMiners: Record<string, number>,
+  rng: () => number = Math.random
+): string {
+  const allIds = PREMIUM_SHOP_ITEMS.map((item) => item.chibiId);
+  const unowned = allIds.filter((id) => (ownedMiners[id] ?? 0) <= 0);
+  const pool = unowned.length > 0 && rng() < 0.65 ? unowned : allIds;
+  const idx = Math.min(pool.length - 1, Math.floor(rng() * pool.length));
+  return pool[idx] ?? allIds[0];
+}
+
+/**
+ * Picks a random 2D TWIN Chibi to spawn as the Tower floor's Wave 10 Boss,
+ * avoiding repeating the previous floor's boss when possible.
+ */
+export function pickRandomTowerBossChibiId(
+  rng: () => number = Math.random,
+  excludeId?: string
+): string {
+  const allIds = PREMIUM_SHOP_ITEMS.map((item) => item.chibiId);
+  const pool = excludeId && allIds.length > 1 ? allIds.filter((id) => id !== excludeId) : allIds;
+  const idx = Math.min(pool.length - 1, Math.floor(rng() * pool.length));
+  return pool[idx] ?? allIds[0];
 }
 
 export function getTowerStreakGemMult(floorsCleared: number): number {

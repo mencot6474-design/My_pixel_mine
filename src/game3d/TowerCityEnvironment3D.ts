@@ -54,9 +54,9 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
   const ownedTextures: THREE.Texture[] = [];
   const flickers: FlickerLightRef[] = [];
 
-  // Shared Materials
+  // Shared Materials (bright sunlit daytime ruined city palette)
   const roadFoundationMat = new THREE.MeshStandardMaterial({
-    color: 0x0b101b,
+    color: 0x334155,
     roughness: 0.9,
     metalness: 0.12,
     flatShading: true,
@@ -71,59 +71,59 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
     asphaltMat.map = asphaltTex;
     ownedTextures.push(asphaltTex);
   } else {
-    asphaltMat.color.setHex(0x131a29);
+    asphaltMat.color.setHex(0x475569);
   }
 
   const concreteMat = new THREE.MeshStandardMaterial({
-    color: 0x2b3447,
+    color: 0x64748b,
     roughness: 0.86,
     metalness: 0.08,
     flatShading: true,
   });
   const concreteDarkMat = new THREE.MeshStandardMaterial({
-    color: 0x1a2130,
+    color: 0x475569,
     roughness: 0.9,
     metalness: 0.1,
     flatShading: true,
   });
   const rebarMat = new THREE.MeshStandardMaterial({
-    color: 0x7c2d12,
+    color: 0x9a3412,
     roughness: 0.64,
     metalness: 0.74,
     flatShading: true,
   });
   const steelMat = new THREE.MeshStandardMaterial({
-    color: 0x475569,
+    color: 0x64748b,
     roughness: 0.36,
     metalness: 0.82,
     flatShading: true,
   });
   const guardrailMat = new THREE.MeshStandardMaterial({
-    color: 0x64748b,
+    color: 0x94a3b8,
     roughness: 0.32,
     metalness: 0.85,
     flatShading: true,
   });
   const skyscraperMat = new THREE.MeshStandardMaterial({
-    color: 0x0b1222,
+    color: 0x475569,
     roughness: 0.62,
-    metalness: 0.42,
+    metalness: 0.34,
     flatShading: true,
   });
   const skyscraperAltMat = new THREE.MeshStandardMaterial({
-    color: 0x141d31,
+    color: 0x64748b,
     roughness: 0.68,
-    metalness: 0.36,
+    metalness: 0.28,
     flatShading: true,
   });
   const scorchedRockMat = new THREE.MeshStandardMaterial({
-    color: 0x151822,
+    color: 0x3f495a,
     roughness: 0.94,
     metalness: 0.06,
     flatShading: true,
   });
   const basaltStepMat = new THREE.MeshStandardMaterial({
-    color: 0x1d2332,
+    color: 0x525e72,
     roughness: 0.9,
     metalness: 0.1,
     flatShading: true,
@@ -157,7 +157,7 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
     new THREE.SphereGeometry(96, 32, 20),
     new THREE.MeshBasicMaterial({
       ...(skyTex ? { map: skyTex } : {}),
-      color: skyTex ? 0xffffff : 0x040918,
+      color: skyTex ? 0xffffff : 0x7dd3fc,
       side: THREE.BackSide,
       fog: false,
     })
@@ -166,7 +166,7 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
 
   const cityGroundSkirt = new THREE.Mesh(
     new THREE.PlaneGeometry(140, 120),
-    new THREE.MeshStandardMaterial({ color: 0x040711, roughness: 0.96, metalness: 0.05 })
+    new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.96, metalness: 0.05 })
   );
   cityGroundSkirt.rotation.x = -Math.PI / 2;
   cityGroundSkirt.position.set(0, -0.55, -16);
@@ -234,11 +234,11 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
 
   for (let i = 0; i < wallSegments; i++) {
     const ang = (i / wallSegments) * Math.PI * 2;
-    const isFrontCameraArc = Math.sin(ang) > 0.35; // Keep front camera edge lower & cleaner
+    const isFrontCameraArc = Math.sin(ang) > 0.22; // Keep entire front podium arc clean & unobstructed
     const jag = Math.sin(i * 2.7) * 0.18;
 
-    // Lower inner rock step (r ≈ 6.95, height 0.24 from y=0.08 up to 0.32)
-    const rStep1 = CRATER_FLOOR_R + 0.24 + jag;
+    // Lower inner rock step (pushed back on front arc so spawn podiums stay 100% clear)
+    const rStep1 = CRATER_FLOOR_R + (isFrontCameraArc ? 0.48 : 0.24) + jag;
     rimBlockData.push({
       pos: new THREE.Vector3(Math.cos(ang) * rStep1, 0.1, Math.sin(ang) * rStep1),
       scale: new THREE.Vector3(0.95, 0.22, 0.82),
@@ -247,8 +247,8 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
     });
 
     // Upper rim rock wall rising to road lip (y = 0.32 .. 0.62, higher on rear & sides!)
-    const rStep2 = CRATER_HOLE_R + 0.15 + jag;
-    const rimH = isFrontCameraArc ? 0.26 : 0.44 + (i % 3) * 0.14;
+    const rStep2 = CRATER_HOLE_R + (isFrontCameraArc ? 0.32 : 0.15) + jag;
+    const rimH = isFrontCameraArc ? 0.24 : 0.44 + (i % 3) * 0.14;
     rimBlockData.push({
       pos: new THREE.Vector3(Math.cos(ang) * rStep2, 0.26 + rimH * 0.45, Math.sin(ang) * rStep2),
       scale: new THREE.Vector3(1.08, rimH, 0.92),
@@ -256,8 +256,8 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
       dark: i % 3 === 0,
     });
 
-    // Tilted Upturned Broken Asphalt Slabs Around Crater Lip (skip camera center front so sightline is pristine)
-    if (!isFrontCameraArc || Math.abs(Math.cos(ang)) > 0.62) {
+    // Tilted Upturned Broken Asphalt Slabs Around Rear & Side Crater Lip (never over front spawn podiums)
+    if (!isFrontCameraArc) {
       const rSlab = CRATER_HOLE_R + 0.32 + (i % 2) * 0.18;
       const slab = new THREE.Mesh(
         createExtrudedChamferSlab(1.65 + (i % 2) * 0.35, 0.15, 1.15, 0.14, 0.018),

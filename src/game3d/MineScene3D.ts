@@ -629,8 +629,8 @@ export class MineScene3D {
       this.lookAtPos.set(0, 1.85, -1.15);
       this.applyWeatherAtmosphere();
     } else if (mode === 'tower') {
-      this.scene.background = new THREE.Color(0x101a30);
-      this.scene.fog = new THREE.Fog(0x182338, 26, 76);
+      this.scene.background = new THREE.Color(0x7dd3fc);
+      this.scene.fog = new THREE.Fog(0xbae6fd, 34, 96);
       this.applyWeatherAtmosphere();
       this.inputState.targetOrbitYaw = 0;
       this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('tower');
@@ -782,6 +782,7 @@ export class MineScene3D {
     equippedMinerCount: number;
     paused: boolean;
     bossShieldActive?: boolean;
+    bossChibiId?: string;
   }): void {
     this.towerArena.syncWaveState(opts);
   }

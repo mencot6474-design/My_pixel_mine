@@ -92,7 +92,7 @@ export interface OmegaBossContext {
   getPlotUnitStats(slotIndex: number): { dmg: number } | null;
 }
 
-/** Regenerates Omega Boss Keys based on elapsed 15-minute intervals. */
+/** Regenerates Omega Boss Keys based on elapsed 60-minute (1-hour) intervals. */
 export function syncOmegaKeysDomain(
   ctx: Pick<OmegaBossContext, 'omegaKeys' | 'omegaLastKeyRegenAt'>,
   now = Date.now(),
