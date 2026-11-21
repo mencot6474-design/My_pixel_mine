@@ -17,7 +17,6 @@ export function getActiveFusionPassiveBonuses(plotMiners: readonly (string | nul
     teamDmgPct: 0,
     oreSellPct: 0,
     oreDropPct: 0,
-    tapDmgPct: 0,
   };
   const seen = new Set<string>();
   for (const chibiId of plotMiners) {

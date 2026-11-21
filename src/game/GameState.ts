@@ -32,6 +32,9 @@ import * as DailyLoginDom from './DailyLoginDomain';
 import type { DailyLoginSnapshot } from './DailyLoginDomain';
 import type { DailyLoginRewardDef } from './DailyLoginData';
 import { type ActivePremiumPassives, buyPremiumShopChibiDomain, getActivePremiumPassiveBonuses } from './PremiumShopData';
+import { type ActiveOmegaPassives, getActiveOmegaPassiveBonuses, OMEGA_MAX_KEYS, type OmegaBossId } from './OmegaData';
+import * as OmegaDom from './OmegaBossDomain';
+import type { OmegaBattleState, OmegaBattleSummary, OmegaStrikeResult, OmegaTargetObject } from './OmegaBossDomain';
 
 export type {
   PlotUnitState,
@@ -41,6 +44,10 @@ export type {
   OfflineEarningsSummary,
   BountyClaimResult,
   BountyEntry,
+  OmegaBattleState,
+  OmegaBattleSummary,
+  OmegaStrikeResult,
+  OmegaTargetObject,
 };
 export const getChibiUpgradeCostMult = PlotUnits.getChibiUpgradeCostMult;
 
@@ -95,6 +102,14 @@ export class GameState {
   public towerRun: TowerRunState | null = null;
   public towerLastSummary: TowerRunSummary | null = null;
   public readonly towerRunMeta: TowerRunMeta = { startFloor: 1, newRecord: false };
+  public omegaKeys = OMEGA_MAX_KEYS;
+  public omegaLastKeyRegenAt = Date.now();
+  public omegaCores: Record<string, number> = {};
+  public omegaBestTier: Record<string, number> = {};
+  public omegaKills: Record<string, number> = {};
+  public omegaClaimedFirstClears: string[] = [];
+  public omegaBattle: OmegaBattleState | null = null;
+  public omegaLastSummary: OmegaBattleSummary | null = null;
   public weatherId: WeatherId = rollWeatherDef().id;
   public weatherExpiresAt = Date.now() + WEATHER_DURATION_MS;
   public lastSavedAt = 0;
@@ -111,12 +126,14 @@ export class GameState {
   private loadedLastSavedAt = 0;
 
   private readonly listeners = new Set<StateListener>();
+  private readonly saveHooks = { save: () => this.save(), emit: () => this.emit() };
 
   constructor() {
     this.load();
     this.loadedLastSavedAt = this.lastSavedAt;
     BountiesDom.ensureBountiesPopulatedDomain(this);
     this.syncTowerKeys();
+    this.syncOmegaKeys();
     this.syncWeather(Date.now(), Math.random, false);
   }
 
@@ -582,21 +599,20 @@ export class GameState {
     return getActivePremiumPassiveBonuses(this.plotMiners);
   }
 
+  public getActiveOmegaPassives(): ActiveOmegaPassives {
+    return getActiveOmegaPassiveBonuses(this.plotMiners, this.chibiStars);
+  }
+
   public buyPremiumShopItem(chibiId: string): 'bought' | 'no_coins' | 'invalid' {
     const self = this;
     return buyPremiumShopChibiDomain(
       {
-        get towerCoins() {
-          return self.towerCoins;
-        },
-        set towerCoins(v: number) {
-          self.towerCoins = v;
-        },
+        get towerCoins() { return self.towerCoins; },
+        set towerCoins(v: number) { self.towerCoins = v; },
         miners: this.miners,
         hotbar: this.hotbar,
         discovered: this.discovered,
-        save: () => this.save(),
-        emit: () => this.emit(),
+        ...this.saveHooks,
       },
       chibiId
     );
@@ -727,10 +743,7 @@ export class GameState {
   }
 
   public startTowerRun(startFloor = 1, now = Date.now(), rng: () => number = Math.random): boolean {
-    return TowerRun.startTowerRunDomain(this, startFloor, now, rng, {
-      save: () => this.save(),
-      emit: () => this.emit(),
-    });
+    return TowerRun.startTowerRunDomain(this, startFloor, now, rng, this.saveHooks);
   }
 
   public stepTowerTick(dtSec: number, rng: () => number = Math.random) {
@@ -790,10 +803,7 @@ export class GameState {
   }
 
   public rerollTowerBlessings(rng: () => number = Math.random): { ok: boolean; usedFree: boolean; costGems: number } {
-    return TowerRun.rerollTowerBlessingsDomain(this, rng, {
-      save: () => this.save(),
-      emit: () => this.emit(),
-    });
+    return TowerRun.rerollTowerBlessingsDomain(this, rng, this.saveHooks);
   }
 
   public hitTowerBossShieldSweetSpot() {
@@ -805,25 +815,32 @@ export class GameState {
   }
 
   public quickSweepTower(now = Date.now()): { ok: boolean; gemsAwarded: number } {
-    return TowerRun.quickSweepTowerDomain(this, now, {
-      save: () => this.save(),
-      emit: () => this.emit(),
-    });
+    return TowerRun.quickSweepTowerDomain(this, now, this.saveHooks);
   }
 
   public buyTowerKeyWithGems(): 'bought' | 'full' | 'no_gems' {
-    return TowerRun.buyTowerKeyWithGemsDomain(this, {
-      save: () => this.save(),
-      emit: () => this.emit(),
-    });
+    return TowerRun.buyTowerKeyWithGemsDomain(this, this.saveHooks);
   }
 
   public grantFreeTowerKey(): boolean {
-    return TowerRun.grantFreeTowerKeyDomain(this, {
-      save: () => this.save(),
-      emit: () => this.emit(),
-    });
+    return TowerRun.grantFreeTowerKeyDomain(this, this.saveHooks);
   }
+
+  // === OMEGA BOSS SANCTUM ===
+  public syncOmegaKeys(now = Date.now()): void { OmegaDom.syncOmegaKeysDomain(this, now, () => this.save()); }
+  public getOmegaNextKeyRegenSec(now = Date.now()): number { return OmegaDom.getOmegaNextKeyRegenSecDomain(this, now, () => this.save()); }
+  public getOmegaUnlockedMaxTier(bossId: OmegaBossId): 1 | 2 | 3 | 4 | 5 { return OmegaDom.getOmegaUnlockedMaxTierDomain(this, bossId); }
+  public getOmegaSquadEffectiveDps(): number { return OmegaDom.getOmegaSquadEffectiveDpsDomain(this); }
+  public buyOmegaKeyWithGems(): 'bought' | 'full' | 'no_gems' { return OmegaDom.buyOmegaKeyWithGemsDomain(this, this.saveHooks); }
+  public grantFreeOmegaKey(): boolean { return OmegaDom.grantFreeOmegaKeyDomain(this, this.saveHooks); }
+  public startOmegaBoss(bossId: OmegaBossId, tier: number, now = Date.now()): boolean { return OmegaDom.startOmegaBossDomain(this, bossId, tier, now, this.saveHooks); }
+  public stepOmegaBossTick(dtSec: number, rng: () => number = Math.random) { return OmegaDom.stepOmegaBossTickDomain(this, dtSec, rng, () => this.emit()); }
+  public applyOmegaSquadStrike(slotIndex: number, attackIntervalSec = 0.85, rng: () => number = Math.random): OmegaStrikeResult { return OmegaDom.applyOmegaSquadStrikeDomain(this, slotIndex, attackIntervalSec, rng, () => this.emit()); }
+  public triggerOmegaParry(rng: () => number = Math.random) { return OmegaDom.triggerOmegaParryDomain(this, rng, () => this.emit()); }
+  public hitOmegaTargetObject(targetId: string, rng: () => number = Math.random) { return OmegaDom.hitOmegaTargetObjectDomain(this, targetId, rng, () => this.emit()); }
+  public abandonOmegaBoss(): OmegaBattleSummary | null { return OmegaDom.finishOmegaBossDomain(this, 'retreat', Math.random, () => this.emit()); }
+  public unlockOmegaChibi(bossId: OmegaBossId) { return OmegaDom.unlockOmegaChibiDomain(this, bossId, this.saveHooks); }
+  public awakenOmegaChibi(bossId: OmegaBossId) { return OmegaDom.awakenOmegaChibiDomain(this, bossId, this.saveHooks); }
 
   public spendTowerCoins(amount: number): boolean {
     const safeCost = Math.max(0, Math.floor(amount));
@@ -878,25 +895,11 @@ export class GameState {
     return Math.max(0, Math.ceil((exp - nowMs) / 1000));
   }
 
-  public getReadyBountyCount(): number {
-    return BountiesDom.getReadyBountyCountDomain(this.bounties);
-  }
-
-  public claimBounty(bountyId: string, rng: () => number = Math.random): BountyClaimResult | null {
-    return BountiesDom.claimBountyDomain(this, bountyId, rng, () => this.emit());
-  }
-
-  public canClaimDailyLogin(now = Date.now()): boolean {
-    return DailyLoginDom.canClaimDailyLoginDomain(this, now);
-  }
-
-  public getDailyLoginSnapshot(now = Date.now()): DailyLoginSnapshot {
-    return DailyLoginDom.getDailyLoginSnapshotDomain(this, now);
-  }
-
-  public claimDailyLogin(now = Date.now()): DailyLoginRewardDef | null {
-    return DailyLoginDom.claimDailyLoginDomain(this, now, () => this.emit());
-  }
+  public getReadyBountyCount(): number { return BountiesDom.getReadyBountyCountDomain(this.bounties); }
+  public claimBounty(bountyId: string, rng: () => number = Math.random): BountyClaimResult | null { return BountiesDom.claimBountyDomain(this, bountyId, rng, () => this.emit()); }
+  public canClaimDailyLogin(now = Date.now()): boolean { return DailyLoginDom.canClaimDailyLoginDomain(this, now); }
+  public getDailyLoginSnapshot(now = Date.now()): DailyLoginSnapshot { return DailyLoginDom.getDailyLoginSnapshotDomain(this, now); }
+  public claimDailyLogin(now = Date.now()): DailyLoginRewardDef | null { return DailyLoginDom.claimDailyLoginDomain(this, now, () => this.emit()); }
 
   public chargeOverclock(amount: number, nowMs = Date.now()): boolean {
     const wasActive = this.isOverclockActive(nowMs);
@@ -920,33 +923,13 @@ export class GameState {
     return OverclockDom.stepOverclockDomain(this.overclock, nowMs);
   }
 
-  public isOverclockActive(nowMs = Date.now()): boolean {
-    return OverclockDom.isOverclockActiveDomain(this.overclock, nowMs);
-  }
-
-  public getOverclockTier(nowMs = Date.now()): 0 | OverclockTier {
-    return OverclockDom.getOverclockSnapshotDomain(this.overclock, nowMs).tier;
-  }
-
-  public getOverclockSnapshot(nowMs = Date.now()): OverclockSnapshot {
-    return OverclockDom.getOverclockSnapshotDomain(this.overclock, nowMs);
-  }
-
-  public getAvailableFusionMinerCount(chibiId: string): number {
-    return FusionDom.getAvailableFusionMinerCount(this.fusionCtx(), chibiId);
-  }
-
-  public getFusionOreCount(oreId: string): number {
-    return FusionDom.getFusionOreCount(this.fusionCtx(), oreId);
-  }
-
-  public canFuseRecipe(recipeId: string): boolean {
-    return FusionDom.canFuseRecipeDomain(this.fusionCtx(), recipeId);
-  }
-
-  public getReadyFusionCount(): number {
-    return FusionDom.getReadyFusionCountDomain(this.fusionCtx());
-  }
+  public isOverclockActive(nowMs = Date.now()): boolean { return OverclockDom.isOverclockActiveDomain(this.overclock, nowMs); }
+  public getOverclockTier(nowMs = Date.now()): 0 | OverclockTier { return OverclockDom.getOverclockSnapshotDomain(this.overclock, nowMs).tier; }
+  public getOverclockSnapshot(nowMs = Date.now()): OverclockSnapshot { return OverclockDom.getOverclockSnapshotDomain(this.overclock, nowMs); }
+  public getAvailableFusionMinerCount(chibiId: string): number { return FusionDom.getAvailableFusionMinerCount(this.fusionCtx(), chibiId); }
+  public getFusionOreCount(oreId: string): number { return FusionDom.getFusionOreCount(this.fusionCtx(), oreId); }
+  public canFuseRecipe(recipeId: string): boolean { return FusionDom.canFuseRecipeDomain(this.fusionCtx(), recipeId); }
+  public getReadyFusionCount(): number { return FusionDom.getReadyFusionCountDomain(this.fusionCtx()); }
 
   public fuseChibiRecipe(recipeId: string): FusionRecipeDef | null {
     const res = FusionDom.fuseChibiRecipeDomain(this.fusionCtx(), recipeId);
@@ -959,12 +942,8 @@ export class GameState {
   private fusionCtx(): FusionDomainContext {
     const self = this;
     return {
-      get gems() {
-        return self.gems;
-      },
-      set gems(v: number) {
-        self.gems = v;
-      },
+      get gems() { return self.gems; },
+      set gems(v: number) { self.gems = v; },
       miners: self.miners,
       chestMiners: self.chestMiners,
       ores: self.ores,
@@ -973,8 +952,7 @@ export class GameState {
       hotbar: self.hotbar,
       discovered: self.discovered,
       trimStashedUnitsFor: (id: string) => PlotUnits.trimStashedUnits(self, id),
-      save: () => self.save(),
-      emit: () => self.emit(),
+      ...this.saveHooks,
     };
   }
 

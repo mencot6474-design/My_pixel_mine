@@ -12,7 +12,8 @@ export type ChibiRarity =
   | 'secret'
   | 'fusion'
   | 'limited'
-  | 'twin';
+  | 'twin'
+  | 'omega';
 
 export interface ChibiPoseUrls {
   idle: string;
@@ -763,6 +764,30 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     accentColor: '#eab308',
     baseDps: 18_000_000,
     poseScale: 1.24,
+    smoothFilter: true,
+  },
+  {
+    id: 'crimson-ronin',
+    name: 'Crimson Ronin',
+    spriteUrl: '/chibi/crimson-ronin/idle.webp',
+    poses: makePoses('crimson-ronin'),
+    frames: 4,
+    rarity: 'omega',
+    accentColor: '#ef4444',
+    baseDps: 24_000_000,
+    poseScale: 1.28,
+    smoothFilter: true,
+  },
+  {
+    id: 'obsidian-sovereign',
+    name: 'Obsidian Sovereign',
+    spriteUrl: '/chibi/obsidian-sovereign/idle.webp',
+    poses: makePoses('obsidian-sovereign'),
+    frames: 4,
+    rarity: 'omega',
+    accentColor: '#cbd5e1',
+    baseDps: 29_000_000,
+    poseScale: 1.3,
     smoothFilter: true,
   },
 ] as const;

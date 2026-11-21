@@ -324,68 +324,71 @@ export function renderMineChromeHtml(opts: {
   modalHtml: string;
   toastStackHtml: string;
 }): string {
+  const modalOpen = opts.modalHtml.trim().length > 0;
   return `
-    ${opts.weatherHtml}
-    <div class="${TW_TOP_CENTER} flex flex-wrap items-center justify-center gap-2.5 @max-[720px]:gap-1.5">
-      <button class="${TW_SHOPS_PILL} whitespace-nowrap" data-action="shops-pill" title="Go to Shop Plaza">
-        ${hudIconHtml('shops', 28, 'Plaza')}
-        <span>Plaza</span>
-      </button>
-      <div class="w-[224px] @max-[720px]:w-[202px] shrink-0">
-        ${opts.overclockHtml}
+    <div class="${modalOpen ? 'hidden pointer-events-none' : 'contents'}">
+      ${opts.weatherHtml}
+      <div class="${TW_TOP_CENTER} flex flex-wrap items-center justify-center gap-2.5 @max-[720px]:gap-1.5">
+        <button class="${TW_SHOPS_PILL} whitespace-nowrap" data-action="shops-pill" title="Go to Shop Plaza">
+          ${hudIconHtml('shops', 28, 'Plaza')}
+          <span>Plaza</span>
+        </button>
+        <div class="w-[224px] @max-[720px]:w-[202px] shrink-0">
+          ${opts.overclockHtml}
+        </div>
+        <button class="${TW_TELEPORT_PILL} whitespace-nowrap" data-action="open-worlds" title="Teleport • World ${opts.activeWorldNum}: ${opts.activeWorldName}">
+          <svg viewBox="0 0 32 32" width="28" height="28" class="shrink-0" aria-hidden="true">
+            <defs>
+              <radialGradient id="mam-tp-core" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="32%" stop-color="#67e8f9"/>
+                <stop offset="68%" stop-color="#6366f1"/>
+                <stop offset="100%" stop-color="#1e1b4b"/>
+              </radialGradient>
+              <linearGradient id="mam-tp-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#e0f2fe"/>
+                <stop offset="50%" stop-color="#38bdf8"/>
+                <stop offset="100%" stop-color="#c084fc"/>
+              </linearGradient>
+            </defs>
+            <circle cx="16" cy="16" r="13" fill="url(#mam-tp-core)" stroke="#14111d" stroke-width="2.4"/>
+            <ellipse cx="16" cy="16" rx="12" ry="5.4" transform="rotate(-26 16 16)" fill="none" stroke="#bae6fd" stroke-width="1.8"/>
+            <ellipse cx="16" cy="16" rx="11" ry="4.4" transform="rotate(34 16 16)" fill="none" stroke="#e879f9" stroke-width="1.4" opacity="0.9"/>
+            <path d="M16 7.5L17.9 14.1L24.5 16L17.9 17.9L16 24.5L14.1 17.9L7.5 16L14.1 14.1Z" fill="#ffffff"/>
+            <circle cx="25.5" cy="7.5" r="1.7" fill="#fde047"/>
+            <circle cx="6.5" cy="24.5" r="1.3" fill="#67e8f9"/>
+          </svg>
+          <span>Teleport</span>
+          <span
+            class="absolute -top-2 -right-2 min-w-[23px] h-[23px] px-1 rounded-full border-2 border-[#14111d] text-[12px] font-black tabular-nums leading-none text-[#14111d] flex items-center justify-center"
+            style="background:${opts.activeWorldColor}"
+            data-teleport-world-badge="true"
+          >${opts.activeWorldNum}</span>
+        </button>
       </div>
-      <button class="${TW_TELEPORT_PILL} whitespace-nowrap" data-action="open-worlds" title="Teleport • World ${opts.activeWorldNum}: ${opts.activeWorldName}">
-        <svg viewBox="0 0 32 32" width="28" height="28" class="shrink-0" aria-hidden="true">
-          <defs>
-            <radialGradient id="mam-tp-core" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#ffffff"/>
-              <stop offset="32%" stop-color="#67e8f9"/>
-              <stop offset="68%" stop-color="#6366f1"/>
-              <stop offset="100%" stop-color="#1e1b4b"/>
-            </radialGradient>
-            <linearGradient id="mam-tp-ring" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#e0f2fe"/>
-              <stop offset="50%" stop-color="#38bdf8"/>
-              <stop offset="100%" stop-color="#c084fc"/>
-            </linearGradient>
-          </defs>
-          <circle cx="16" cy="16" r="13" fill="url(#mam-tp-core)" stroke="#14111d" stroke-width="2.4"/>
-          <ellipse cx="16" cy="16" rx="12" ry="5.4" transform="rotate(-26 16 16)" fill="none" stroke="#bae6fd" stroke-width="1.8"/>
-          <ellipse cx="16" cy="16" rx="11" ry="4.4" transform="rotate(34 16 16)" fill="none" stroke="#e879f9" stroke-width="1.4" opacity="0.9"/>
-          <path d="M16 7.5L17.9 14.1L24.5 16L17.9 17.9L16 24.5L14.1 17.9L7.5 16L14.1 14.1Z" fill="#ffffff"/>
-          <circle cx="25.5" cy="7.5" r="1.7" fill="#fde047"/>
-          <circle cx="6.5" cy="24.5" r="1.3" fill="#67e8f9"/>
-        </svg>
-        <span>Teleport</span>
-        <span
-          class="absolute -top-2 -right-2 min-w-[23px] h-[23px] px-1 rounded-full border-2 border-[#14111d] text-[12px] font-black tabular-nums leading-none text-[#14111d] flex items-center justify-center"
-          style="background:${opts.activeWorldColor}"
-          data-teleport-world-badge="true"
-        >${opts.activeWorldNum}</span>
-      </button>
-    </div>
 
-    <div class="absolute left-4 @max-[720px]:left-2.5 top-1/2 -translate-y-1/2 flex flex-col gap-2.5 @max-[720px]:gap-2">
-      <button class="${TW_SIDE_BTN_RAINBOW}" data-action="open-shop" title="Premium Shop">
-        ${hudIconHtml('shopBasket', 44, 'Shop')}
-        <span class="text-[14px] font-black leading-none text-[#14111d]">Shop</span>
-      </button>
-      <button class="${TW_SIDE_BTN_UPGRADES}" data-action="open-upgrades">
-        <span class="${TW_BADGE_BASE} min-w-[24px] h-6 px-1.5 text-[13px] ${opts.upgradeCount > 0 ? '' : 'hidden'}" data-upgrades-badge="true">${opts.upgradeCount}</span>
-        ${hudIconHtml('hourglass', 44, 'Upgrades')}
-        <span class="text-[14px] font-black leading-none text-[#14111d]">Upgrades</span>
-      </button>
-      <button class="${TW_SIDE_BTN_INDEX}" data-action="open-index">
-        <span class="${TW_BADGE_BASE} min-w-[24px] h-6 px-1.5 text-[13px] ${opts.readyIndexCount > 0 ? '' : 'hidden'}" data-index-badge="true">${opts.readyIndexCount}</span>
-        ${hudIconHtml('indexBook', 44, 'Index')}
-        <span class="text-[14px] font-black leading-none text-[#14111d]">Index</span>
-      </button>
-    </div>
+      <div class="absolute left-4 @max-[720px]:left-2.5 top-1/2 -translate-y-1/2 flex flex-col gap-2.5 @max-[720px]:gap-2">
+        <button class="${TW_SIDE_BTN_RAINBOW}" data-action="open-shop" title="Premium Shop">
+          ${hudIconHtml('shopBasket', 44, 'Shop')}
+          <span class="text-[14px] font-black leading-none text-[#14111d]">Shop</span>
+        </button>
+        <button class="${TW_SIDE_BTN_UPGRADES}" data-action="open-upgrades">
+          <span class="${TW_BADGE_BASE} min-w-[24px] h-6 px-1.5 text-[13px] ${opts.upgradeCount > 0 ? '' : 'hidden'}" data-upgrades-badge="true">${opts.upgradeCount}</span>
+          ${hudIconHtml('hourglass', 44, 'Upgrades')}
+          <span class="text-[14px] font-black leading-none text-[#14111d]">Upgrades</span>
+        </button>
+        <button class="${TW_SIDE_BTN_INDEX}" data-action="open-index">
+          <span class="${TW_BADGE_BASE} min-w-[24px] h-6 px-1.5 text-[13px] ${opts.readyIndexCount > 0 ? '' : 'hidden'}" data-index-badge="true">${opts.readyIndexCount}</span>
+          ${hudIconHtml('indexBook', 44, 'Index')}
+          <span class="text-[14px] font-black leading-none text-[#14111d]">Index</span>
+        </button>
+      </div>
 
-    ${opts.audioHtml}
-    ${opts.currencyRailHtml}
-    ${opts.hotbarHtml}
-    ${opts.potionsHtml}
+      ${opts.audioHtml}
+      ${opts.currencyRailHtml}
+      ${opts.hotbarHtml}
+      ${opts.potionsHtml}
+    </div>
     ${opts.feverFxHtml}
     ${opts.modalHtml}
     ${opts.toastStackHtml}

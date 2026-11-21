@@ -5,7 +5,7 @@ import { GameState } from '../game/GameState';
 import { fmtInt } from '../game/NumberFormat';
 import { SceneMode } from '../game3d/MineScene3D';
 import { ShopStationId } from '../game3d/ShopWorld3D';
-import { enchantAuraIconHtml, enchantDiceIconHtml, hudIconHtml, towerIconHtml } from './HudIcons';
+import { enchantAuraIconHtml, enchantDiceIconHtml, hudIconHtml, omegaCrestIconHtml, towerIconHtml } from './HudIcons';
 import {
   bindEnchantHoverInspector,
   TW_ALTAR_AUTO_BTN,
@@ -78,46 +78,54 @@ export function renderShopWorldHudHtml(opts: {
   const dockBtnGem = `${TW_SHOP_DOCK_BTN_BASE} border-[2.5px] border-[#14111d] bg-[#38bdf8] hover:bg-[#7dd3fc] text-[#14111d]`;
   const dockBtnRainbow = `${TW_SHOP_DOCK_BTN_BASE} border-[2.5px] border-[#14111d] bg-[linear-gradient(135deg,#fda4af,#fde047,#86efac,#7dd3fc,#d8b4fe)] text-[#14111d]`;
   const dockBtnTower = `${TW_SHOP_DOCK_BTN_BASE} border-[2.5px] border-[#14111d] bg-[#c084fc] hover:bg-[#d8b4fe] text-[#14111d]`;
+  const dockBtnOmega = `${TW_SHOP_DOCK_BTN_BASE} border-[2.5px] border-[#14111d] bg-[#ef4444] hover:bg-[#f87171] text-white`;
+  const modalOpen = opts.modalHtml.trim().length > 0;
 
   return `
-      ${opts.weatherHtml}
-      <div class="${TW_TOP_CENTER}">
-        <button class="${TW_SHOPS_PILL}" data-action="back-to-mine">
-          ${hudIconHtml('shops', 28, 'Mine')}
-          <span>Back to Mine</span>
-        </button>
+      <div class="${modalOpen ? 'hidden pointer-events-none' : 'contents'}">
+        ${opts.weatherHtml}
+        <div class="${TW_TOP_CENTER}">
+          <button class="${TW_SHOPS_PILL}" data-action="back-to-mine">
+            ${hudIconHtml('shops', 28, 'Mine')}
+            <span>Back to Mine</span>
+          </button>
+        </div>
+
+        <div class="mam-no-scrollbar absolute left-1/2 bottom-[14px] -translate-x-1/2 flex flex-wrap justify-center items-center gap-2 @max-[760px]:gap-1.5 px-3 py-2 @max-[760px]:px-2 @max-[760px]:py-1.5 rounded-2xl bg-[#fff8e7] border-[3px] border-[#14111d] w-max max-w-[calc(100%-24px)]">
+          <button class="${dockBtnPickaxe}" data-action="open-pickaxe-shop">
+            ${hudIconHtml('pickaxe', 28, 'Pickaxe')}
+            <span>Pickaxes</span>
+          </button>
+          <button class="${dockBtnSell}" data-action="open-sell-shop">
+            ${hudIconHtml('trade', 28, 'Sell')}
+            <span>Sell</span>
+          </button>
+          <button class="${dockBtnForge}" data-action="open-relic-forge">
+            <img src="${assetUrl('/relics/ember_gauntlet.webp')}" alt="Relic Forge" class="w-[28px] h-[28px] object-contain" />
+            <span>Forge</span>
+          </button>
+          <button class="${dockBtnGem}" data-action="open-gem-shop">
+            ${hudIconHtml('gem', 28, 'Gem Shop')}
+            <span>Gem Shop</span>
+          </button>
+          <button class="${dockBtnRainbow}" data-action="open-enchant-altar">
+            ${hudIconHtml('enchant', 28, 'Enchant')}
+            <span>Enhance</span>
+          </button>
+          <button class="${dockBtnTower}" data-action="open-gem-tower">
+            ${towerIconHtml(26)}
+            <span>Tower</span>
+          </button>
+          <button class="${dockBtnOmega}" data-action="open-omega-boss">
+            ${omegaCrestIconHtml(24)}
+            <span>Omega</span>
+          </button>
+        </div>
+
+        ${opts.currencyRailHtml}
+
+        ${opts.activePotionsHtml}
       </div>
-
-      <div class="mam-no-scrollbar absolute left-1/2 bottom-[14px] -translate-x-1/2 flex flex-wrap justify-center items-center gap-2 @max-[760px]:gap-1.5 px-3 py-2 @max-[760px]:px-2 @max-[760px]:py-1.5 rounded-2xl bg-[#fff8e7] border-[3px] border-[#14111d] w-max max-w-[calc(100%-24px)]">
-        <button class="${dockBtnPickaxe}" data-action="open-pickaxe-shop">
-          ${hudIconHtml('pickaxe', 28, 'Pickaxe')}
-          <span>Pickaxes</span>
-        </button>
-        <button class="${dockBtnSell}" data-action="open-sell-shop">
-          ${hudIconHtml('trade', 28, 'Sell')}
-          <span>Sell</span>
-        </button>
-        <button class="${dockBtnForge}" data-action="open-relic-forge">
-          <img src="${assetUrl('/relics/ember_gauntlet.webp')}" alt="Relic Forge" class="w-[28px] h-[28px] object-contain" />
-          <span>Forge</span>
-        </button>
-        <button class="${dockBtnGem}" data-action="open-gem-shop">
-          ${hudIconHtml('gem', 28, 'Gem Shop')}
-          <span>Gem Shop</span>
-        </button>
-        <button class="${dockBtnRainbow}" data-action="open-enchant-altar">
-          ${hudIconHtml('enchant', 28, 'Enchant')}
-          <span>Enhance</span>
-        </button>
-        <button class="${dockBtnTower}" data-action="open-gem-tower">
-          ${towerIconHtml(26)}
-          <span>Tower</span>
-        </button>
-      </div>
-
-      ${opts.currencyRailHtml}
-
-      ${opts.activePotionsHtml}
       ${opts.modalHtml}
       ${opts.toastStackHtml}
     `;
@@ -260,6 +268,13 @@ export class AltarShopHudUi {
       {
         selector: '[data-action="open-gem-tower"]',
         onClick: () => this.onOpenShopStation('tower'),
+      },
+      {
+        selector: '[data-action="open-omega-boss"]',
+        onClick: () => {
+          audio.playSfx('ui-open');
+          this.onOpenShopStation('omega-left');
+        },
       },
       {
         selector: '[data-action="open-relic-forge"]',

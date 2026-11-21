@@ -13,7 +13,6 @@ import {
   WorldId,
 } from './GameData';
 import { compactHotbarSlots } from './GameStateSave';
-import { RelicEffectStat } from './RelicData';
 import { getGlobalGemGainBonus } from './TowerData';
 import { getWeatherById, WeatherDef, WeatherId } from './WeatherData';
 
@@ -42,7 +41,6 @@ export interface LootChestContext {
   getFindChanceBonus(): number;
   getEffectiveOreSellValue(oreId: string): number;
   getActiveStarDropAndGemBonus(): { oreDropBonusPct: number; gemBonusPct: number };
-  getRelicBonus(stat: RelicEffectStat): number;
   getWeatherGemDropMult(): number;
 }
 
@@ -265,9 +263,7 @@ export function onOreBrokenDomain(
   if (variantKey === 'geode' || rng() < 0.18 + findBonus * 0.5) {
     const baseGem = variantKey === 'geode' ? 3 : 1;
     const { gemBonusPct } = ctx.getActiveStarDropAndGemBonus();
-    const mult =
-      (1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct + ctx.getRelicBonus('gemGainPct')) *
-      ctx.getWeatherGemDropMult();
+    const mult = (1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct) * ctx.getWeatherGemDropMult();
     ctx.gems += Math.max(baseGem, Math.round(baseGem * mult));
   }
 
@@ -282,13 +278,9 @@ export function onMeteorBrokenDomain(
 ): MeteorBreakReward {
   const weatherDef = getWeatherById(weatherId);
   const weatherOre = getWeatherOreByWeatherId(weatherId);
-  const meteorBonusMult = 1 + ctx.getRelicBonus('meteorDropPct');
   const qtyBonus =
     weatherId === 'celestial' ? 3 : weatherId === 'void' || weatherId === 'bloodmoon' ? 2 : 1;
-  const weatherOreQty = Math.max(
-    1,
-    Math.round((qtyBonus + (rng() < 0.35 ? 1 : 0)) * meteorBonusMult)
-  );
+  const weatherOreQty = Math.max(1, qtyBonus + (rng() < 0.35 ? 1 : 0));
 
   const capLeft = Math.max(0, ctx.getMaxChestCapacity() - ctx.getChestItemCount());
   let added = 0;
@@ -346,15 +338,7 @@ export function onMeteorBrokenDomain(
   const worldIdx = Math.max(0, getWorldIndex(ctx.activeWorldId));
   const baseGems = 20 + worldIdx * 12;
   const { gemBonusPct } = ctx.getActiveStarDropAndGemBonus();
-  const weatherRelic = ctx.getRelicBonus('weatherBuffPct');
-  const scaledWeatherGemMult =
-    weatherDef.gemDropMult > 1 && weatherRelic > 0
-      ? 1 + (weatherDef.gemDropMult - 1) * (1 + weatherRelic)
-      : weatherDef.gemDropMult;
-  const gemMult =
-    (1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct + ctx.getRelicBonus('gemGainPct')) *
-    scaledWeatherGemMult *
-    meteorBonusMult;
+  const gemMult = (1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct) * weatherDef.gemDropMult;
   const gemsAwarded = Math.max(10, Math.round(baseGems * gemMult));
   ctx.gems += gemsAwarded;
 

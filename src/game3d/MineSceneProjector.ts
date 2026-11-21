@@ -6,6 +6,7 @@ import type { ShopWorld3D } from './ShopWorld3D';
 import type { OrePit3D } from './OrePit3D';
 import type { PlotPedestal3D } from './PlotPedestal3D';
 import type { TowerArena3D } from './TowerArena3D';
+import type { OmegaArena3D } from './OmegaArena3D';
 
 export interface MineProjectorCtx {
   mountEl: HTMLElement;
@@ -13,6 +14,7 @@ export interface MineProjectorCtx {
   projVec: THREE.Vector3;
   pit: OrePit3D;
   towerArena: TowerArena3D;
+  omegaArena?: OmegaArena3D;
   pedestals: PlotPedestal3D[];
   crateGroup: THREE.Group;
   callbacks: MineSceneCallbacks;
@@ -185,7 +187,9 @@ export class MineSceneProjector {
       this.ctx.callbacks.onShopChibiBubbles?.([]);
       this.ctx.callbacks.onAltarAnchors?.([]);
       this.ctx.callbacks.onTowerOreBars?.([]);
+      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
     } else if (mode === 'shop') {
+      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
       this.ctx.callbacks.onPlotAnchors?.([]);
       this.ctx.callbacks.onOreBars?.([]);
       this.ctx.callbacks.onSweetSpot?.(null);
@@ -196,6 +200,7 @@ export class MineSceneProjector {
       this.ctx.callbacks.onAltarAnchors?.([]);
       this.ctx.callbacks.onTowerOreBars?.([]);
     } else if (mode === 'altar') {
+      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
       this.ctx.callbacks.onPlotAnchors?.([]);
       this.ctx.callbacks.onOreBars?.([]);
       this.ctx.callbacks.onSweetSpot?.(null);
@@ -215,7 +220,25 @@ export class MineSceneProjector {
       const w = this.ctx.mountEl.clientWidth || 1;
       const h = this.ctx.mountEl.clientHeight || 1;
       this.ctx.callbacks.onTowerOreBars?.(this.ctx.towerArena.getAliveOreScreenBars(this.ctx.camera, w, h, this.ctx.projVec));
+      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
+    } else if (mode === 'omega') {
+      this.ctx.callbacks.onPlotAnchors?.([]);
+      this.ctx.callbacks.onOreBars?.([]);
+      this.ctx.callbacks.onSweetSpot?.(null);
+      this.ctx.callbacks.onShopAnchors?.([]);
+      this.ctx.callbacks.onShopChibiBubbles?.([]);
+      this.ctx.callbacks.onAltarAnchors?.([]);
+      this.ctx.callbacks.onTowerOreBars?.([]);
+      if (this.ctx.omegaArena && this.ctx.callbacks.onOmegaArenaOverlay) {
+        const w = this.ctx.mountEl.clientWidth || 1;
+        const h = this.ctx.mountEl.clientHeight || 1;
+        this.ctx.callbacks.onOmegaArenaOverlay({
+          bossHead: this.ctx.omegaArena.getBossHeadScreenAnchor(this.ctx.camera, w, h),
+          targets: this.ctx.omegaArena.getTargetScreenAnchors(this.ctx.camera, w, h),
+        });
+      }
     } else if (mode === 'fusion') {
+      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
       this.ctx.callbacks.onPlotAnchors?.([]);
       this.ctx.callbacks.onOreBars?.([]);
       this.ctx.callbacks.onSweetSpot?.(null);
@@ -225,11 +248,13 @@ export class MineSceneProjector {
       if (fusionWorld.isAnimating() || fusionWorld.isRevealHolding()) {
         this.ctx.callbacks.onShopChibiBubbles?.([]);
       } else {
+      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
         const w = this.ctx.mountEl.clientWidth || 1;
         const h = this.ctx.mountEl.clientHeight || 1;
         this.ctx.callbacks.onShopChibiBubbles?.(fusionWorld.getNpcBubbleAnchors(this.ctx.camera, w, h));
       }
     } else {
+      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
       this.ctx.callbacks.onPlotAnchors?.([]);
       this.ctx.callbacks.onOreBars?.([]);
       this.ctx.callbacks.onSweetSpot?.(null);

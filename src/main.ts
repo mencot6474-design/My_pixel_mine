@@ -360,6 +360,13 @@ async function bootstrap(): Promise<void> {
     onTowerOreBars: (bars) => {
       hud?.updateTowerOreBars(bars);
     },
+    onOmegaTargetClick: (targetId) => hud?.handleOmegaTargetClick(targetId),
+    onOmegaBossClick: () => hud?.handleOmegaBossClick(),
+    onOmegaFighterStrike: (slotIndex, attackInterval) =>
+      hud?.handleOmegaFighterStrike(slotIndex, attackInterval),
+    onOmegaArenaOverlay: (data) => {
+      hud?.updateOmegaArenaOverlay(data);
+    },
   });
   scene.setWeather(gameState.weatherId);
 
@@ -455,6 +462,13 @@ async function bootstrap(): Promise<void> {
         scene.syncFusionRecipe(recipe, readyFlags, oreReadyFlags, canFuse),
       triggerFusionAnimation: (recipe, onComplete) => scene.triggerFusionAnimation(recipe, onComplete),
       setFusionRevealHold: (active) => scene.setFusionRevealHold(active),
+    },
+    {
+      setBossConfig: (bossId) => scene.setOmegaBossConfig(bossId),
+      syncBattleVisuals: (targets, breakActive, parryActive) =>
+        scene.syncOmegaBattleVisuals(targets, breakActive, parryActive),
+      triggerBossHit: (color, isCrit) => scene.triggerOmegaBossHit(color, isCrit),
+      triggerTargetShatter: (wx, wz, color) => scene.triggerOmegaTargetShatter(wx, wz, color),
     }
   );
 

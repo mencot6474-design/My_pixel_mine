@@ -18,6 +18,7 @@ import { isValidIndexMilestoneId } from './IndexRewardsDomain';
 import { ResearchTreeId } from './ResearchData';
 import { createEmptyTeamPresets, TEAM_PRESET_COUNT, TeamPresetSlots } from './TeamPresetsDomain';
 import { TOWER_DICE_PITY_MAX, TOWER_MAX_FLOOR, TOWER_MAX_KEYS, TowerSaveData } from './TowerData';
+import { getOmegaBossById, OMEGA_MAX_KEYS } from './OmegaData';
 import { isValidWeatherId, WeatherId } from './WeatherData';
 
 export const SAVE_KEY = 'my_anime_mine_v2_save_v1';
@@ -78,6 +79,15 @@ export interface PlotUnitState {
   enchantId: string | null;
 }
 
+export interface OmegaSaveData {
+  keys: number;
+  lastKeyRegenAt: number;
+  cores: Record<string, number>;
+  bestTier: Record<string, number>;
+  kills: Record<string, number>;
+  claimedFirstClears: string[];
+}
+
 export interface SavePayload {
   cash: number;
   gems: number;
@@ -108,6 +118,7 @@ export interface SavePayload {
   craftedRelics?: string[];
   equippedRelics?: string[];
   tower?: TowerSaveData;
+  omega?: OmegaSaveData;
   weather?: {
     id: WeatherId;
     expiresAt: number;
@@ -158,6 +169,12 @@ export interface SaveableGameState {
   towerClaimedMilestones: number[];
   towerDicePity: number;
   towerCoins: number;
+  omegaKeys: number;
+  omegaLastKeyRegenAt: number;
+  omegaCores: Record<string, number>;
+  omegaBestTier: Record<string, number>;
+  omegaKills: Record<string, number>;
+  omegaClaimedFirstClears: string[];
   weatherId: WeatherId;
   weatherExpiresAt: number;
   lastSavedAt: number;
@@ -253,6 +270,14 @@ export function serializeSavePayload(state: SaveableGameState): SavePayload {
       claimedMilestones: state.towerClaimedMilestones,
       dicePity: state.towerDicePity,
       coins: state.towerCoins,
+    },
+    omega: {
+      keys: state.omegaKeys,
+      lastKeyRegenAt: state.omegaLastKeyRegenAt,
+      cores: state.omegaCores,
+      bestTier: state.omegaBestTier,
+      kills: state.omegaKills,
+      claimedFirstClears: state.omegaClaimedFirstClears,
     },
     weather: {
       id: state.weatherId,
@@ -487,6 +512,46 @@ export function deserializeSaveJson(
       }
       if (typeof data.tower.coins === 'number' && Number.isFinite(data.tower.coins)) {
         state.towerCoins = Math.max(0, Math.min(1_000_000_000, Math.floor(data.tower.coins)));
+      }
+    }
+    if (data.omega && typeof data.omega === 'object') {
+      if (typeof data.omega.keys === 'number' && Number.isFinite(data.omega.keys)) {
+        state.omegaKeys = Math.max(0, Math.min(OMEGA_MAX_KEYS, Math.floor(data.omega.keys)));
+      }
+      if (typeof data.omega.lastKeyRegenAt === 'number' && Number.isFinite(data.omega.lastKeyRegenAt)) {
+        state.omegaLastKeyRegenAt = data.omega.lastKeyRegenAt;
+      }
+      if (data.omega.cores && typeof data.omega.cores === 'object') {
+        const clean: Record<string, number> = {};
+        for (const [id, qty] of Object.entries(data.omega.cores)) {
+          if (getOmegaBossById(id) && typeof qty === 'number' && Number.isFinite(qty) && qty > 0) {
+            clean[id] = Math.floor(qty);
+          }
+        }
+        state.omegaCores = clean;
+      }
+      if (data.omega.bestTier && typeof data.omega.bestTier === 'object') {
+        const clean: Record<string, number> = {};
+        for (const [id, t] of Object.entries(data.omega.bestTier)) {
+          if (getOmegaBossById(id) && typeof t === 'number' && Number.isFinite(t) && t > 0) {
+            clean[id] = Math.max(0, Math.min(5, Math.floor(t)));
+          }
+        }
+        state.omegaBestTier = clean;
+      }
+      if (data.omega.kills && typeof data.omega.kills === 'object') {
+        const clean: Record<string, number> = {};
+        for (const [id, k] of Object.entries(data.omega.kills)) {
+          if (getOmegaBossById(id) && typeof k === 'number' && Number.isFinite(k) && k > 0) {
+            clean[id] = Math.floor(k);
+          }
+        }
+        state.omegaKills = clean;
+      }
+      if (Array.isArray(data.omega.claimedFirstClears)) {
+        state.omegaClaimedFirstClears = data.omega.claimedFirstClears.filter(
+          (v): v is string => typeof v === 'string' && v.includes(':')
+        );
       }
     }
     if (data.weather && typeof data.weather === 'object') {

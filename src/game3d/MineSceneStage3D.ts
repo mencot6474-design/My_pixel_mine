@@ -197,7 +197,7 @@ export function applyMineWeatherAtmosphere(ctx: {
     ctx.env.setWeatherSky(weather.id, weather.cloudHex);
     const isShop = ctx.mode === 'shop';
     const isFusion = ctx.mode === 'fusion';
-    const isTower = ctx.mode === 'tower';
+    const isTower = ctx.mode === 'tower' || ctx.mode === 'omega';
     ctx.hemiLight.color.set(weather.hemiTintHex);
     ctx.hemiLight.intensity = isTower
       ? Math.max(weather.hemiIntensity, 1.32)

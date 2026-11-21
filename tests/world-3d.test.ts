@@ -87,6 +87,7 @@ import {
 import { ChibiSprite3D } from '../src/game3d/ChibiSprite3D';
 import { ChibiFieldFxController, FieldMiner3D } from '../src/game3d/FieldMiner3D';
 import { FusionWorld3D } from '../src/game3d/FusionWorld3D';
+import { OmegaArena3D } from '../src/game3d/OmegaArena3D';
 import { MineEnvironment3D } from '../src/game3d/MineEnvironment3D';
 import { DEFAULT_WORLD_PALETTE, rollOreVariant, STAGE_PEDESTAL_COUNT } from '../src/game3d/MineWorldPalette';
 import {
@@ -163,8 +164,8 @@ describe('Pure 3D Mine World', () => {
     expect(applyNodeDamagePure(node, 20)).toBeNull();
   });
 
-  it('registers all 62 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
-    expect(CHIBI_CATALOG.length).toBe(62);
+  it('registers all 64 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
+    expect(CHIBI_CATALOG.length).toBe(64);
     expect(getChibiById('solar-striker')?.spriteUrl).toBe('/chibi/solar-striker/idle.webp');
     expect(getChibiById('solar-striker')?.poses.attack).toBe('/chibi/solar-striker/attack.webp');
     expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.idle, 4)).toBe(0);
@@ -289,7 +290,7 @@ describe('Pure 3D Mine World', () => {
     expect(getMinersByWorld('chrono').length).toBe(5);
 
     const gs = new GameState();
-    expect(gs.getTotalIndexCount()).toBe(125);
+    expect(gs.getTotalIndexCount()).toBe(127);
     gs.discovered.add('stormwater-opal');
     gs.discovered.add('glitch-cheshire');
     gs.discovered.add('cosmic-monarch');
@@ -1656,7 +1657,7 @@ describe('Pure 3D Mine World', () => {
 
     shop.update(0.05, 1.0, 'shop', cam);
     const shopAnchors = shop.getShopAnchors(cam, 1280, 720, new THREE.Vector3());
-    expect(shopAnchors).toHaveLength(6);
+    expect(shopAnchors).toHaveLength(8);
     expect(existsSync(resolve(process.cwd(), 'public', 'pickaxes', 'sunwheel.webp'))).toBe(true);
   });
 
@@ -1958,8 +1959,7 @@ describe('Pure 3D Mine World', () => {
     }
 
     const gs = new GameState();
-    const baseTap = gs.getTapDamage();
-    const baseCap = gs.getMaxChestCapacity();
+    const baseOutput = gs.getOreOutputMult();
     const baseValue = gs.getOreValueMult();
 
     // Provide materials split across bag (ores) and chest (chestOres)
@@ -1971,14 +1971,15 @@ describe('Pure 3D Mine World', () => {
     expect(gs.craftRelic('miner_lantern')).toBe(true);
     expect(gs.hasCraftedRelic('miner_lantern')).toBe(true);
     expect(gs.isRelicEquipped('miner_lantern')).toBe(true);
-    expect(gs.getTapDamage()).toBeGreaterThan(baseTap);
+    expect(gs.getOreOutputMult()).toBeGreaterThan(baseOutput);
+    expect(gs.getOreValueMult()).toBeGreaterThan(baseValue);
 
     // Craft 2nd & 3rd relics (auto-equipped into slots 2 & 3)
     expect(gs.craftRelic('prism_heart')).toBe(true);
     expect(gs.craftRelic('chrono_compass')).toBe(true);
     expect(gs.equippedRelics.length).toBe(MAX_EQUIPPED_RELICS);
-    expect(gs.getMaxChestCapacity()).toBe(baseCap + 3000);
-    expect(gs.getOreValueMult()).toBeGreaterThan(baseValue);
+    expect(gs.getRelicBonus('minerDmgPct')).toBeCloseTo(0.55, 5);
+    expect(gs.getOreValueMult()).toBeGreaterThan(baseValue + 0.8);
 
     // 4th relic crafts but cannot equip until a slot is freed
     expect(gs.craftRelic('ember_gauntlet')).toBe(true);
@@ -2270,7 +2271,16 @@ describe('Pure 3D Mine World', () => {
     const shop = new ShopWorld3D();
     const kinds = new Set(shop.shopClickables.map((c) => String(c.userData?.kind)));
     expect(kinds).toEqual(
-      new Set(['shop-altar', 'shop-pickaxe', 'shop-sell', 'shop-forge', 'shop-gems', 'shop-tower'])
+      new Set([
+        'shop-altar',
+        'shop-pickaxe',
+        'shop-sell',
+        'shop-forge',
+        'shop-gems',
+        'shop-tower',
+        'shop-omega-left',
+        'shop-omega-right',
+      ])
     );
     expect(() => shop.dispose()).not.toThrow();
 
@@ -2837,5 +2847,44 @@ describe('Pure 3D Mine World', () => {
     expect(hitRes?.dmgDealt).toBeGreaterThan(0);
 
     pit.dispose();
+  });
+
+  it('builds OmegaArena3D Duel Sanctum, swaps Crimson/Obsidian Bosses, syncs fighters & clickable targets, and disposes cleanly', () => {
+    for (const id of ['crimson-ronin', 'obsidian-sovereign']) {
+      for (const pose of ['idle', 'walk', 'attack', 'pose']) {
+        expect(existsSync(resolve(process.cwd(), 'public', 'chibi', id, `${pose}.webp`))).toBe(true);
+      }
+    }
+    expect(existsSync(resolve(process.cwd(), 'public', 'badges', 'omega.svg'))).toBe(true);
+
+    const arena = new OmegaArena3D();
+    arena.group.visible = true;
+    arena.setBossId('crimson-ronin');
+    const roninDef = getChibiById('crimson-ronin')!;
+    arena.syncFighters([
+      { slotIndex: 0, def: roninDef, enchantId: null, dmg: 1000, speed: 10, miningMult: 1 },
+    ]);
+    arena.syncBattleTargets([
+      { id: 'phantom-1', kind: 'phantom_blade', hp: 1, maxHp: 1, xOffset: -2.9, zOffset: -0.6 },
+    ]);
+    expect(arena.clickables.some((c) => c.userData?.kind === 'omega-boss')).toBe(true);
+    expect(arena.clickables.some((c) => c.userData?.targetId === 'phantom-1')).toBe(true);
+
+    const cam = new THREE.PerspectiveCamera(45, 16 / 9, 0.1, 100);
+    cam.position.set(0, 9, 14);
+    cam.lookAt(0, 1.8, -1.2);
+    cam.updateMatrixWorld(true);
+    const strikes: number[] = [];
+    for (let f = 0; f < 4; f++) {
+      arena.update(0.1, 1.0 + f * 0.1, cam, (ev) => strikes.push(ev.slotIndex));
+    }
+    expect(strikes.length).toBeGreaterThan(0);
+
+    arena.setBossId('obsidian-sovereign');
+    arena.syncBattleTargets([
+      { id: 'pillar-1', kind: 'obsidian_pillar', hp: 1, maxHp: 1, xOffset: -3.2, zOffset: -0.2 },
+    ]);
+    expect(arena.clickables.some((c) => c.userData?.targetId === 'pillar-1')).toBe(true);
+    expect(() => arena.dispose()).not.toThrow();
   });
 });

@@ -204,6 +204,17 @@ export function towerIconHtml(sizePx = 22): string {
   return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="Gem Tower" />`;
 }
 
+/** Crisp crimson-gold Omega crest SVG for the Duel Sanctum modal plaque and Plaza dock button. */
+export function omegaCrestIconHtml(sizePx = 22): string {
+  return `<svg viewBox="0 0 28 28" width="${sizePx}" height="${sizePx}" fill="none" aria-hidden="true" class="shrink-0">
+    <path d="M5 21.5L21 5.5M23 21.5L7 5.5" stroke="#14111d" stroke-width="4.2" stroke-linecap="round"/>
+    <path d="M5 21.5L21 5.5M23 21.5L7 5.5" stroke="#fde047" stroke-width="2" stroke-linecap="round"/>
+    <polygon points="14,3.5 23,11 20,23.5 14,25.5 8,23.5 5,11" fill="#ef4444" stroke="#14111d" stroke-width="2.2" stroke-linejoin="round"/>
+    <circle cx="14" cy="14" r="4.6" fill="#fde047" stroke="#14111d" stroke-width="1.8"/>
+    <path d="M11.6 15.8C10.9 14.5 11.7 12.1 14 12.1C16.3 12.1 17.1 14.5 16.4 15.8" fill="none" stroke="#991b1b" stroke-width="1.9" stroke-linecap="round"/>
+  </svg>`;
+}
+
 export function hudIconHtml(key: keyof typeof HUD_ICONS & Hud3dIconKey, sizePx: number, alt = ''): string {
   if (key === 'pickaxe') {
     return pickaxeIconHtml('sunwheel', sizePx, alt || 'Pickaxe');

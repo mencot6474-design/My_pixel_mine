@@ -1,7 +1,6 @@
 import { STAGE_PEDESTAL_COUNT } from '../game3d/MineWorldPalette';
 import { getEnchantById } from './GameData';
 import type { PlotUnitState } from './GameStateSave';
-import { RelicEffectStat } from './RelicData';
 import {
   getGlobalGemGainBonus,
   getTowerCheckpoints,
@@ -52,7 +51,6 @@ export interface TowerRunContext {
   towerLastSummary: TowerRunSummary | null;
   towerRunMeta: TowerRunMeta;
   getPlotUnitStats(slotIndex: number): { dmg: number } | null;
-  getRelicBonus(stat: RelicEffectStat): number;
   getTapDamage(): number;
   getWeatherGemDropMult(): number;
 }
@@ -133,8 +131,7 @@ export function getTowerUnitEffectiveDpsDomain(ctx: TowerRunContext, slotIndex: 
     }
   }
   const blessingPct = (ctx.towerRun?.blessings ?? []).reduce((s, b) => s + (b.dpsBonusPct ?? 0), 0);
-  const towerRelicMult = 1 + ctx.getRelicBonus('towerDmgPct');
-  return Math.max(1, Math.round(unitDps * def.anomaly.dpsMult * (1 + blessingPct) * towerRelicMult));
+  return Math.max(1, Math.round(unitDps * def.anomaly.dpsMult * (1 + blessingPct)));
 }
 
 export function getTowerSlotStrikeDamageDomain(
@@ -159,8 +156,7 @@ export function getTowerEffectiveTapDamageDomain(ctx: TowerRunContext): number {
   const floor = ctx.towerRun?.floor ?? 1;
   const def = getTowerFloorDef(floor);
   const blessingPct = (ctx.towerRun?.blessings ?? []).reduce((s, b) => s + (b.tapBonusPct ?? 0), 0);
-  const towerRelicMult = 1 + ctx.getRelicBonus('towerDmgPct');
-  return Math.max(1, Math.round(ctx.getTapDamage() * def.anomaly.tapMult * (1 + blessingPct) * towerRelicMult));
+  return Math.max(1, Math.round(ctx.getTapDamage() * def.anomaly.tapMult * (1 + blessingPct)));
 }
 
 function getTowerExtraTimerSec(ctx: Pick<TowerRunContext, 'towerRun'>): number {
@@ -250,7 +246,7 @@ function completeCurrentTowerWaveOrFloor(
   const waveDef = getTowerWaveDef(currentFloor, currentWave);
   const bSummary = summarizeTowerBlessings(run.blessings);
   const streakMult = getTowerStreakGemMult(run.floorsCleared);
-  const globalGemPct = getGlobalGemGainBonus(Math.max(ctx.towerBestFloor, currentFloor)) + ctx.getRelicBonus('gemGainPct');
+  const globalGemPct = getGlobalGemGainBonus(Math.max(ctx.towerBestFloor, currentFloor));
   const gemMult = (1 + bSummary.gemBonusPct + globalGemPct) * streakMult * ctx.getWeatherGemDropMult();
 
   run.wavesCleared += 1;
@@ -687,7 +683,7 @@ export function quickSweepTowerDomain(
   const baseGems = getTowerSweepGemReward(ctx.towerBestFloor);
   const gemsAwarded = Math.max(
     1,
-    Math.round(baseGems * (1 + getGlobalGemGainBonus(ctx.towerBestFloor) + ctx.getRelicBonus('gemGainPct')))
+    Math.round(baseGems * (1 + getGlobalGemGainBonus(ctx.towerBestFloor)))
   );
   ctx.gems += gemsAwarded;
   hooks.emit?.();

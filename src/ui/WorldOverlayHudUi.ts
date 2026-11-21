@@ -9,6 +9,7 @@ import {
   ShopStationId,
 } from '../game3d/ShopWorld3D';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
+import type { OmegaTargetScreenAnchor } from '../game3d/OmegaArena3D';
 import { getEnchantById, getMinerRarity, getMutationById, RARITY_BORDER } from '../game/GameData';
 import { GameSettings, gameSettings } from '../game/GameSettings';
 import { GameState } from '../game/GameState';
@@ -260,6 +261,7 @@ export class WorldOverlayHudUi {
   private sweetSpotTagEl: HTMLElement | null = null;
   private shopLayerEl: HTMLElement | null = null;
   private shopBubbleLayerEl: HTMLElement | null = null;
+  private omegaLayerEl: HTMLElement | null = null;
   private readonly lastPlotLabelKeys = new Map<number, string>();
 
   constructor(
@@ -309,6 +311,11 @@ export class WorldOverlayHudUi {
     this.shopBubbleLayerEl.className =
       'fixed inset-0 pointer-events-none z-[14] overflow-hidden';
     document.body.appendChild(this.shopBubbleLayerEl);
+
+    this.omegaLayerEl = document.createElement('div');
+    this.omegaLayerEl.id = 'omegaOverlayLayer';
+    this.omegaLayerEl.className = 'fixed inset-0 pointer-events-none z-[18] overflow-hidden';
+    document.body.appendChild(this.omegaLayerEl);
   }
 
   public resetPlotLayerKeysIfMineIdle(): void {
@@ -326,6 +333,10 @@ export class WorldOverlayHudUi {
     }
     if (this.dmgLayerEl) {
       this.dmgLayerEl.innerHTML = '';
+    }
+    if (this.omegaLayerEl) {
+      this.omegaLayerEl.innerHTML = '';
+      this.omegaLayerEl.dataset.key = '';
     }
     this.updateSweetSpot(null);
   }
@@ -698,5 +709,77 @@ export class WorldOverlayHudUi {
       el.style.top = `${a.y}px`;
     }
     this.onTutorialDomArrowSync?.();
+  }
+
+  public updateOmegaArenaOverlay(
+    data: { bossHead: { x: number; y: number } | null; targets: OmegaTargetScreenAnchor[] } | null,
+    onParry: () => void,
+    onHitTarget: (targetId: string) => void
+  ): void {
+    if (!this.omegaLayerEl) return;
+    const battle = this.state.omegaBattle;
+    if (!data || !battle || this.getUiContext().sceneMode !== 'omega') {
+      if (this.omegaLayerEl.innerHTML !== '') {
+        this.omegaLayerEl.innerHTML = '';
+        this.omegaLayerEl.dataset.key = '';
+      }
+      return;
+    }
+
+    const parryActive = battle.parryWindow.active && !battle.parryWindow.consumed;
+    const key = `${parryActive ? 1 : 0}:${data.targets.map((t) => t.id).join(',')}`;
+    if (this.omegaLayerEl.dataset.key !== key) {
+      this.omegaLayerEl.dataset.key = key;
+      const parryHtml =
+        parryActive && data.bossHead
+          ? `<button class="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 w-[108px] h-[108px] flex items-center justify-center cursor-pointer group" data-omega-ring-parry style="left:${Math.round(data.bossHead.x)}px;top:${Math.round(data.bossHead.y)}px" aria-label="Parry Boss Attack">
+              <span class="mam-omega-parry-ring-shrink absolute inset-0 rounded-full border-[3.5px] border-[#fde047] pointer-events-none"></span>
+              <span class="relative w-[72px] h-[72px] rounded-full border-[3px] border-[#14111d] bg-[#ef4444]/85 group-hover:bg-[#fde047] group-hover:text-[#14111d] text-white flex flex-col items-center justify-center gap-0.5 transition-transform group-hover:scale-105 active:scale-95">
+                <svg viewBox="0 0 22 22" width="22" height="22" fill="none" aria-hidden="true"><path d="M4 17L16.5 4.5M18 17L5.5 4.5" stroke="#14111d" stroke-width="3.8" stroke-linecap="round"/><path d="M4 17L16.5 4.5M18 17L5.5 4.5" stroke="#fde047" stroke-width="2" stroke-linecap="round"/></svg>
+                <span class="text-[11px] font-black tracking-wider leading-none uppercase">PARRY!</span>
+              </span>
+            </button>`
+          : '';
+      const targetsHtml = data.targets
+        .map((t) => {
+          const iconSvg =
+            t.kind === 'phantom_blade'
+              ? `<svg viewBox="0 0 18 18" width="15" height="15" fill="none" aria-hidden="true"><path d="M14.5 2.5L6 11l-2.5 3.5L7 12l8.5-8.5-1-1Z" fill="#ef4444" stroke="#14111d" stroke-width="1.5" stroke-linejoin="round"/><path d="M5 10l3 3" stroke="#14111d" stroke-width="2" stroke-linecap="round"/></svg>`
+              : t.kind === 'obsidian_pillar'
+                ? `<svg viewBox="0 0 18 18" width="15" height="15" fill="none" aria-hidden="true"><polygon points="9,2 14,5.5 13,15 5,15 4,5.5" fill="#c084fc" stroke="#14111d" stroke-width="1.6" stroke-linejoin="round"/><path d="M6.5 9h5" stroke="#fde047" stroke-width="1.8" stroke-linecap="round"/></svg>`
+                : `<svg viewBox="0 0 18 18" width="15" height="15" fill="none" aria-hidden="true"><polygon points="9,2 15.5,9 9,16 2.5,9" fill="#38bdf8" stroke="#14111d" stroke-width="1.6" stroke-linejoin="round"/><circle cx="9" cy="9" r="2.2" fill="#fde047"/></svg>`;
+          const label =
+            t.kind === 'phantom_blade' ? 'SHATTER BLADE' : t.kind === 'obsidian_pillar' ? 'BREAK PILLAR' : 'DETONATE SEAL';
+          const bg =
+            t.kind === 'phantom_blade'
+              ? 'bg-[#ffe4e6] text-[#9f1239] hover:bg-[#fecdd3]'
+              : t.kind === 'obsidian_pillar'
+                ? 'bg-[#f5d0fe] text-[#701a75] hover:bg-[#f0abfc]'
+                : 'bg-[#bae6fd] text-[#0369a1] hover:bg-[#7dd3fc]';
+          return `<button class="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border-[2.5px] border-[#14111d] ${bg} text-[10.5px] font-black tracking-wide cursor-pointer transition-transform hover:scale-95 active:scale-90" data-omega-hit-target="${t.id}" style="left:${Math.round(t.x)}px;top:${Math.round(t.y)}px">${iconSvg}<span>${label}</span></button>`;
+        })
+        .join('');
+      this.omegaLayerEl.innerHTML = `${parryHtml}${targetsHtml}`;
+      this.omegaLayerEl.querySelector<HTMLElement>('[data-omega-ring-parry]')?.addEventListener('click', onParry);
+      this.omegaLayerEl.querySelectorAll<HTMLElement>('[data-omega-hit-target]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.omegaHitTarget;
+          if (id) onHitTarget(id);
+        });
+      });
+    } else {
+      const ringEl = this.omegaLayerEl.querySelector<HTMLElement>('[data-omega-ring-parry]');
+      if (ringEl && data.bossHead) {
+        ringEl.style.left = `${Math.round(data.bossHead.x)}px`;
+        ringEl.style.top = `${Math.round(data.bossHead.y)}px`;
+      }
+      for (const t of data.targets) {
+        const el = this.omegaLayerEl.querySelector<HTMLElement>(`[data-omega-hit-target="${t.id}"]`);
+        if (el) {
+          el.style.left = `${Math.round(t.x)}px`;
+          el.style.top = `${Math.round(t.y)}px`;
+        }
+      }
+    }
   }
 }

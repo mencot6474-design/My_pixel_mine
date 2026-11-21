@@ -7,6 +7,7 @@ import {
   WorldId,
 } from './GameData';
 import type { FusionPassiveBonuses } from './FusionDomain';
+import type { ActiveOmegaPassives } from './OmegaData';
 import type { ActivePremiumPassives } from './PremiumShopData';
 import {
   ALL_INDEX_TABS,
@@ -33,6 +34,7 @@ export interface GameMultipliersContext {
   getRelicBonus: (stat: RelicEffectStat) => number;
   getActiveFusionPassives: () => FusionPassiveBonuses;
   getActivePremiumPassives?: () => ActivePremiumPassives;
+  getActiveOmegaPassives?: () => ActiveOmegaPassives;
   getActiveIndexPassiveBonuses: () => IndexPassiveBonuses;
   getAchievementAllDmgBonus: () => number;
   getActiveResearchBonus: (effectType: ResearchEffectType) => number;
@@ -81,12 +83,8 @@ export function getWorldIndexProgressDomain(
 }
 
 export function getTapDamageDomain(ctx: GameMultipliersContext, nowMs = Date.now()): number {
-  const premTap = ctx.getActivePremiumPassives?.().tapDmgPct ?? 0;
   const tapMult =
     1 +
-    ctx.getRelicBonus('tapDmgPct') +
-    ctx.getActiveFusionPassives().tapDmgPct +
-    premTap +
     ctx.getActiveIndexPassiveBonuses().allDmgPct +
     ctx.getAchievementAllDmgBonus();
   const tier: 0 | OverclockTier = ctx.getOverclockTier
@@ -102,10 +100,7 @@ export function getTapDamageDomain(ctx: GameMultipliersContext, nowMs = Date.now
 }
 
 export function getMaxChestCapacityDomain(ctx: GameMultipliersContext): number {
-  return (
-    ctx.chestCapacity +
-    Math.round(ctx.getActiveResearchBonus('chestCapacityFlat') + ctx.getRelicBonus('chestCapacityFlat'))
-  );
+  return ctx.chestCapacity + Math.round(ctx.getActiveResearchBonus('chestCapacityFlat'));
 }
 
 export function getActiveOreNodeCountDomain(ctx: GameMultipliersContext): number {
@@ -123,6 +118,7 @@ export function getOreHpScaleDomain(ctx: GameMultipliersContext): number {
 export function getOreValueMultDomain(ctx: GameMultipliersContext): number {
   const { sellBonusPct } = ctx.getActiveStarDropAndGemBonus();
   const premSell = ctx.getActivePremiumPassives?.().oreSellPct ?? 0;
+  const omegaSell = ctx.getActiveOmegaPassives?.().oreSellPct ?? 0;
   return (
     1 +
     ctx.getActiveResearchBonus('oreValuePct') +
@@ -130,6 +126,7 @@ export function getOreValueMultDomain(ctx: GameMultipliersContext): number {
     ctx.getRelicBonus('oreValuePct') +
     ctx.getActiveFusionPassives().oreSellPct +
     premSell +
+    omegaSell +
     ctx.getActiveEnchantBonuses().sellValuePct +
     ctx.getActiveIndexPassiveBonuses().oreSellPct
   );
@@ -144,6 +141,7 @@ export function getEffectiveOreSellValueDomain(ctx: GameMultipliersContext, oreI
 export function getOreOutputMultDomain(ctx: GameMultipliersContext): number {
   const { oreDropBonusPct } = ctx.getActiveStarDropAndGemBonus();
   const premDrop = ctx.getActivePremiumPassives?.().oreDropPct ?? 0;
+  const omegaDrop = ctx.getActiveOmegaPassives?.().oreDropPct ?? 0;
   let mult =
     1 +
     ctx.getActiveResearchBonus('oreOutputPct') +
@@ -151,6 +149,7 @@ export function getOreOutputMultDomain(ctx: GameMultipliersContext): number {
     ctx.getRelicBonus('oreDropPct') +
     ctx.getActiveFusionPassives().oreDropPct +
     premDrop +
+    omegaDrop +
     ctx.getActiveEnchantBonuses().oreDropPct +
     ctx.getActiveIndexPassiveBonuses().oreDropPct;
   if (isBoostActiveDomain(ctx, 'ore-elixir-1')) mult += 0.1;
@@ -187,10 +186,9 @@ export function getCharacterLuckMultDomain(ctx: GameMultipliersContext): number 
 
 export function getOreLuckMultDomain(ctx: GameMultipliersContext): number {
   const base = isBoostActiveDomain(ctx, 'ore-luck-potion') ? 2.0 : 1.0;
-  return base + ctx.getActiveResearchBonus('oreLuckPct') + ctx.getRelicBonus('oreLuckPct');
+  return base + ctx.getActiveResearchBonus('oreLuckPct');
 }
 
 export function getMutationLuckMultDomain(ctx: GameMultipliersContext): number {
-  const base = isBoostActiveDomain(ctx, 'mutation-luck-1') ? 2.0 : 1.0;
-  return base + ctx.getRelicBonus('mutationLuckPct');
+  return isBoostActiveDomain(ctx, 'mutation-luck-1') ? 2.0 : 1.0;
 }

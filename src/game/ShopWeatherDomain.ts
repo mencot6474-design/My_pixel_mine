@@ -11,7 +11,6 @@ import { isNonSellableChibi } from './DailyLoginData';
 import type { PlotUnitState } from './GameStateSave';
 import { removeFromHotbarDomain } from './LootChestDomain';
 import { trimStashedUnits } from './PlotUnitsDomain';
-import { RelicEffectStat } from './RelicData';
 import {
   getWeatherById,
   rollWeatherDef,
@@ -38,7 +37,6 @@ export interface ShopWeatherContext {
   weatherId: WeatherId;
   weatherExpiresAt: number;
   getEffectiveOreSellValue(oreId: string): number;
-  getRelicBonus(stat: RelicEffectStat): number;
 }
 
 export interface WeatherPersistCallbacks {
@@ -324,29 +322,28 @@ export function getWeatherRemainingSecDomain(
   return Math.max(0, Math.ceil((ctx.weatherExpiresAt - now) / 1000));
 }
 
-/** Amplifies positive weather multipliers (> 1) with equipped `weatherBuffPct` relics. */
+/** Returns the weather multiplier directly (relics focus solely on Team DMG, Sell Ore, and Drop Ore). */
 export function scaleWeatherMultDomain(
-  ctx: Pick<ShopWeatherContext, 'getRelicBonus'>,
+  _ctx: Pick<ShopWeatherContext, 'weatherId'>,
   base: number
 ): number {
-  const weatherRelic = ctx.getRelicBonus('weatherBuffPct');
-  return base > 1 && weatherRelic > 0 ? 1 + (base - 1) * (1 + weatherRelic) : base;
+  return base;
 }
 
 export function getWeatherDamageMultDomain(
-  ctx: Pick<ShopWeatherContext, 'weatherId' | 'getRelicBonus'>
+  ctx: Pick<ShopWeatherContext, 'weatherId'>
 ): number {
   return scaleWeatherMultDomain(ctx, getActiveWeatherDomain(ctx).damageMult);
 }
 
 export function getWeatherOreDropMultDomain(
-  ctx: Pick<ShopWeatherContext, 'weatherId' | 'getRelicBonus'>
+  ctx: Pick<ShopWeatherContext, 'weatherId'>
 ): number {
   return scaleWeatherMultDomain(ctx, getActiveWeatherDomain(ctx).oreDropMult);
 }
 
 export function getWeatherGemDropMultDomain(
-  ctx: Pick<ShopWeatherContext, 'weatherId' | 'getRelicBonus'>
+  ctx: Pick<ShopWeatherContext, 'weatherId'>
 ): number {
   return scaleWeatherMultDomain(ctx, getActiveWeatherDomain(ctx).gemDropMult);
 }

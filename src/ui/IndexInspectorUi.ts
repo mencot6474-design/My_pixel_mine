@@ -17,6 +17,7 @@ import {
 import { GameState } from '../game/GameState';
 import { IndexTabId } from '../game/IndexRewardsDomain';
 import { fmtInt, fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
+import { getOmegaBossByChibiId } from '../game/OmegaData';
 import { getPremiumShopItemByChibiId } from '../game/PremiumShopData';
 import { getWeatherById } from '../game/WeatherData';
 import { hudIconHtml, oreIconSvg } from './HudIcons';
@@ -53,6 +54,32 @@ export class IndexInspectorUi {
 
     const unlocked = this.state.discovered.has(targetId);
     const statusBadge = `<span class="mam-pill rounded-full text-[10px] font-black border-2 border-[#14111d] ${unlocked ? 'bg-[#6ee7b7] text-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e]'}">${unlocked ? 'Discovered' : 'Locked'}</span>`;
+
+    if (indexWorldId === 'omega') {
+      const boss = getOmegaBossByChibiId(targetId);
+      const chibi = boss ? getChibiById(boss.chibiId) : undefined;
+      if (boss && chibi) {
+        const owned = this.state.miners[chibi.id] || 0;
+        const onPlot = this.state.plotMiners.filter((id) => id === chibi.id).length;
+        const cores = this.state.omegaCores[boss.id] || 0;
+        return renderInspectorPanel({
+          rarity: chibi.rarity,
+          title: chibi.name,
+          subtitle: `${boss.bossTitle} • Omega Boss`,
+          badgesHtml: statusBadge,
+          artHtml: chibiPortraitHtml(chibi, { usePose: true }),
+          stats: [
+            ['Base DPS', `${fmtShort(chibi.baseDps)}/s`, 'text-[#b45309]'],
+            ['Triple Passive', boss.passiveSummary, 'text-[#dc2626]'],
+            ['Unlock Cost', `${boss.unlockCoreCost} ${boss.coreName}s (Have ${cores})`, 'text-[#0369a1]'],
+            ['Owned', `${fmtInt(owned)} (${onPlot}/5)`, 'text-[#14111d]'],
+          ],
+          actionHtml: this.renderReviewActionButton(chibi.id, 'Review 4 Poses', 'special'),
+          dimmed: !unlocked,
+        });
+      }
+      return renderEmptyInspectorPanel('Select any Omega Boss Chibi to inspect details.');
+    }
 
     if (indexWorldId === 'twin') {
       const item = getPremiumShopItemByChibiId(targetId);
@@ -246,7 +273,8 @@ export class IndexInspectorUi {
         (indexWorldId === 'weather' ||
         indexWorldId === 'fusion' ||
         indexWorldId === 'limited' ||
-        indexWorldId === 'twin'
+        indexWorldId === 'twin' ||
+        indexWorldId === 'omega'
           ? 'underground'
           : indexWorldId)
     );

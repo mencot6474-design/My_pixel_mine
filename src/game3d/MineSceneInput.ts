@@ -9,6 +9,7 @@ import type { OrePit3D } from './OrePit3D';
 import type { PlotPedestal3D } from './PlotPedestal3D';
 import type { ShopWorld3D } from './ShopWorld3D';
 import type { TowerArena3D } from './TowerArena3D';
+import type { OmegaArena3D } from './OmegaArena3D';
 import { applyCameraOrbitDrag, clampCameraZoomRadius } from './MineScene3D';
 
 export interface MineInputState {
@@ -47,6 +48,7 @@ export interface MineInputCtx {
   pit: OrePit3D;
   shopWorld: ShopWorld3D;
   towerArena: TowerArena3D;
+  omegaArena?: OmegaArena3D;
   clickableMeshes: THREE.Object3D[];
   callbacks: MineSceneCallbacks;
   getMode: () => SceneMode;
@@ -89,7 +91,9 @@ export function raycastAtInScene(ctx: MineInputCtx, clientX: number, clientY: nu
           ? ctx.shopWorld.shopClickables
           : ctx.getMode() === 'tower'
             ? ctx.towerArena.getActiveClickables()
-            : [];
+            : ctx.getMode() === 'omega'
+              ? (ctx.omegaArena?.clickables ?? [])
+              : [];
     if (!targets.length) return null;
     const hits = ctx.raycaster.intersectObjects(targets, false);
     const visibleHit = hits.find((h) => h.object.visible);
@@ -315,6 +319,15 @@ export function bindMineSceneEvents(ctx: MineInputCtx): ResizeObserver | null {
         ctx.callbacks.onShopStationClick?.('tower');
       } else if (hit.userData.kind === 'shop-forge') {
         ctx.callbacks.onShopStationClick?.('forge');
+      } else if (hit.userData.kind === 'shop-omega-left') {
+        ctx.callbacks.onShopStationClick?.('omega-left');
+      } else if (hit.userData.kind === 'shop-omega-right') {
+        ctx.callbacks.onShopStationClick?.('omega-right');
+      } else if (hit.userData.kind === 'omega-target') {
+        const targetId = String(hit.userData.targetId ?? '');
+        if (targetId) ctx.callbacks.onOmegaTargetClick?.(targetId);
+      } else if (hit.userData.kind === 'omega-boss') {
+        ctx.callbacks.onOmegaBossClick?.();
       } else if (hit.userData.kind === 'tower-ore') {
         const oreIndex = Number(hit.userData.oreIndex ?? -1);
         if (oreIndex >= 0) {

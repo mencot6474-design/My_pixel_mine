@@ -52,7 +52,6 @@ export interface OfflineEarningsContext {
   getOreLuckMult: () => number;
   getActiveResearchBonus: (key: 'denseOreScale') => number;
   getActiveStarDropAndGemBonus: () => { oreDropBonusPct: number; gemBonusPct: number };
-  getRelicBonus: (key: 'gemGainPct') => number;
   getChestItemCount: () => number;
   getMaxChestCapacity: () => number;
 }
@@ -108,7 +107,7 @@ export function computeOfflineEarningsDomain(
   const cash = Math.max(1, Math.round(oresBroken * dropMult * avgOreSellValue));
 
   const { gemBonusPct } = ctx.getActiveStarDropAndGemBonus();
-  const gemMult = 1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct + ctx.getRelicBonus('gemGainPct');
+  const gemMult = 1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct;
   const gems = Math.min(MAX_OFFLINE_GEMS, Math.max(0, Math.round(oresBroken * 0.18 * gemMult)));
 
   const capLeft = Math.max(0, ctx.getMaxChestCapacity() - ctx.getChestItemCount());

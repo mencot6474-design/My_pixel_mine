@@ -4,19 +4,7 @@ export const MAX_EQUIPPED_RELICS = 3;
 
 export type RelicCategory = 'world' | 'weather' | 'tower';
 
-export type RelicEffectStat =
-  | 'tapDmgPct'
-  | 'minerDmgPct'
-  | 'miningSpeedPct'
-  | 'oreValuePct'
-  | 'oreDropPct'
-  | 'oreLuckPct'
-  | 'mutationLuckPct'
-  | 'chestCapacityFlat'
-  | 'gemGainPct'
-  | 'towerDmgPct'
-  | 'weatherBuffPct'
-  | 'meteorDropPct';
+export type RelicEffectStat = 'minerDmgPct' | 'oreValuePct' | 'oreDropPct';
 
 export interface RelicRecipeIngredient {
   oreId: string;
@@ -43,9 +31,9 @@ export const RELICS: readonly RelicDef[] = [
     category: 'world',
     rarity: 'rare',
     iconPath: '/relics/miner_lantern.webp',
-    tagline: 'W1 Underground — Illuminates rich seams and empowers manual strikes.',
+    tagline: 'W1 Underground — Illuminates rich seams to boost ore drops and sell value.',
     effects: {
-      tapDmgPct: 0.35,
+      oreValuePct: 0.2,
       oreDropPct: 0.15,
     },
     ingredients: [
@@ -61,10 +49,10 @@ export const RELICS: readonly RelicDef[] = [
     category: 'world',
     rarity: 'rare',
     iconPath: '/relics/prism_heart.webp',
-    tagline: 'W2 Crystal Caves — Refracts ore light into higher mutations and value.',
+    tagline: 'W2 Crystal Caves — Refracts ore light into higher team power and sell value.',
     effects: {
-      mutationLuckPct: 0.3,
-      oreValuePct: 0.25,
+      oreValuePct: 0.3,
+      minerDmgPct: 0.2,
     },
     ingredients: [
       { oreId: 'glowquartz', amount: 100 },
@@ -79,10 +67,10 @@ export const RELICS: readonly RelicDef[] = [
     category: 'world',
     rarity: 'epic',
     iconPath: '/relics/ember_gauntlet.webp',
-    tagline: 'W3 Magma Hollows — Infuses every chibi swing with volcanic force.',
+    tagline: 'W3 Magma Hollows — Infuses every chibi swing with volcanic team force and drops.',
     effects: {
-      minerDmgPct: 0.35,
-      tapDmgPct: 0.2,
+      minerDmgPct: 0.4,
+      oreDropPct: 0.2,
     },
     ingredients: [
       { oreId: 'emberstone', amount: 90 },
@@ -97,10 +85,10 @@ export const RELICS: readonly RelicDef[] = [
     category: 'world',
     rarity: 'epic',
     iconPath: '/relics/chrono_compass.webp',
-    tagline: 'W4 Ancient Ruins — Accelerates chibi cadence and expands vault storage.',
+    tagline: 'W4 Ancient Ruins — Channels relic precision into stronger team DPS and ore worth.',
     effects: {
-      miningSpeedPct: 0.25,
-      chestCapacityFlat: 3000,
+      minerDmgPct: 0.35,
+      oreValuePct: 0.35,
     },
     ingredients: [
       { oreId: 'runestone', amount: 80 },
@@ -115,10 +103,10 @@ export const RELICS: readonly RelicDef[] = [
     category: 'world',
     rarity: 'legendary',
     iconPath: '/relics/astral_orrery.webp',
-    tagline: 'W5 Voidreach — Aligns cosmic orbits for massive DPS and rare ore luck.',
+    tagline: 'W5 Voidreach — Aligns cosmic orbits for massive squad DPS and ore drop hauls.',
     effects: {
-      minerDmgPct: 0.45,
-      oreLuckPct: 0.35,
+      minerDmgPct: 0.55,
+      oreDropPct: 0.35,
     },
     ingredients: [
       { oreId: 'voidshard', amount: 75 },
@@ -133,11 +121,11 @@ export const RELICS: readonly RelicDef[] = [
     category: 'world',
     rarity: 'mythic',
     iconPath: '/relics/starwell_crown.webp',
-    tagline: 'W6 Starwell — Sovereign relic amplifying ore worth, drop output, and squad DPS.',
+    tagline: 'W6 Starwell — Sovereign relic amplifying team DMG, ore sell worth, and drop output.',
     effects: {
-      oreValuePct: 0.5,
-      minerDmgPct: 0.4,
-      oreDropPct: 0.25,
+      minerDmgPct: 0.7,
+      oreValuePct: 0.65,
+      oreDropPct: 0.45,
     },
     ingredients: [
       { oreId: 'cloudgrit', amount: 70 },
@@ -154,10 +142,10 @@ export const RELICS: readonly RelicDef[] = [
     category: 'weather',
     rarity: 'epic',
     iconPath: '/relics/storm_bell.webp',
-    tagline: 'Resonates with falling meteors to multiply meteor ore and gem hauls.',
+    tagline: 'Resonates with tempest winds to multiply ore drops and market sell value.',
     effects: {
-      meteorDropPct: 0.5,
-      oreDropPct: 0.2,
+      oreDropPct: 0.3,
+      oreValuePct: 0.25,
     },
     ingredients: [
       { oreId: 'stormwater-opal', amount: 3 },
@@ -172,10 +160,10 @@ export const RELICS: readonly RelicDef[] = [
     category: 'weather',
     rarity: 'legendary',
     iconPath: '/relics/frostmoon_chalice.webp',
-    tagline: 'Distills glacial and eclipse essence to surge Frozen+ mutation odds.',
+    tagline: 'Distills glacial and eclipse essence to surge ore sell value and drop yields.',
     effects: {
-      mutationLuckPct: 0.75,
-      oreLuckPct: 0.25,
+      oreValuePct: 0.5,
+      oreDropPct: 0.35,
     },
     ingredients: [
       { oreId: 'permafrost-core', amount: 3 },
@@ -190,10 +178,11 @@ export const RELICS: readonly RelicDef[] = [
     category: 'weather',
     rarity: 'secret',
     iconPath: '/relics/celestial_hourglass.webp',
-    tagline: 'Bends atmospheric time to amplify all active Weather bonuses and ore luck.',
+    tagline: 'Bends starlight into surging team DMG, boosted ore worth, and abundant ore drops.',
     effects: {
-      weatherBuffPct: 0.35,
-      oreLuckPct: 0.4,
+      minerDmgPct: 0.6,
+      oreValuePct: 0.55,
+      oreDropPct: 0.4,
     },
     ingredients: [
       { oreId: 'abyssal-singularity-ore', amount: 2 },
@@ -210,10 +199,10 @@ export const RELICS: readonly RelicDef[] = [
     category: 'tower',
     rarity: 'legendary',
     iconPath: '/relics/overlord_sigil.webp',
-    tagline: 'Pierces mainframe shields inside the Gem Tower for crushing wave & boss damage.',
+    tagline: 'Channels mainframe power into crushing team damage and higher ore sell returns.',
     effects: {
-      towerDmgPct: 0.6,
-      tapDmgPct: 0.25,
+      minerDmgPct: 0.6,
+      oreValuePct: 0.4,
     },
     ingredients: [
       { oreId: 'pyroclast', amount: 20 },
@@ -228,10 +217,10 @@ export const RELICS: readonly RelicDef[] = [
     category: 'tower',
     rarity: 'epic',
     iconPath: '/relics/gem_magnet.webp',
-    tagline: 'Draws extra gems from ore breaks, meteors, and Tower clears.',
+    tagline: 'Draws richer ore payouts and bonus ore drops across every vein.',
     effects: {
-      gemGainPct: 0.45,
-      chestCapacityFlat: 2000,
+      oreValuePct: 0.4,
+      oreDropPct: 0.25,
     },
     ingredients: [
       { oreId: 'silverdrop', amount: 35 },
@@ -246,10 +235,10 @@ export const RELICS: readonly RelicDef[] = [
     category: 'tower',
     rarity: 'mythic',
     iconPath: '/relics/commander_banner.webp',
-    tagline: 'Rallies every deployed chibi with massive squad damage and swing tempo.',
+    tagline: 'Rallies every deployed chibi with massive team damage and overflowing ore drops.',
     effects: {
-      minerDmgPct: 0.55,
-      miningSpeedPct: 0.2,
+      minerDmgPct: 0.75,
+      oreDropPct: 0.4,
     },
     ingredients: [
       { oreId: 'bullionite', amount: 10 },
@@ -265,18 +254,9 @@ export function getRelicById(id: string): RelicDef | undefined {
 }
 
 const EFFECT_LABELS: Record<RelicEffectStat, (val: number) => string> = {
-  tapDmgPct: (v) => `+${Math.round(v * 100)}% Tap DMG`,
-  minerDmgPct: (v) => `+${Math.round(v * 100)}% Chibi DPS`,
-  miningSpeedPct: (v) => `+${Math.round(v * 100)}% Mining Speed`,
-  oreValuePct: (v) => `+${Math.round(v * 100)}% Ore Value`,
-  oreDropPct: (v) => `+${Math.round(v * 100)}% Ore Drop`,
-  oreLuckPct: (v) => `+${Math.round(v * 100)}% Ore Luck`,
-  mutationLuckPct: (v) => `+${Math.round(v * 100)}% Mutation Luck`,
-  chestCapacityFlat: (v) => `+${v.toLocaleString('en-US')} Chest Cap`,
-  gemGainPct: (v) => `+${Math.round(v * 100)}% Gem Gain`,
-  towerDmgPct: (v) => `+${Math.round(v * 100)}% Tower DMG`,
-  weatherBuffPct: (v) => `+${Math.round(v * 100)}% Weather Buffs`,
-  meteorDropPct: (v) => `+${Math.round(v * 100)}% Meteor Drops`,
+  minerDmgPct: (v) => `+${Math.round(v * 100)}% Team DMG`,
+  oreValuePct: (v) => `+${Math.round(v * 100)}% Sell Ore`,
+  oreDropPct: (v) => `+${Math.round(v * 100)}% Drop Ore`,
 };
 
 export function formatRelicEffects(def: RelicDef): string[] {

@@ -20,6 +20,8 @@ import {
 import type { IndexModalUi } from './IndexModalUi';
 import type { InventoryModalUi } from './InventoryModalUi';
 import type { OfflineModalUi } from './OfflineModalUi';
+import type { OmegaArenaHudUi } from './OmegaArenaHudUi';
+import type { OmegaBossModalUi } from './OmegaBossModalUi';
 import type { SettingsModalUi } from './SettingsModalUi';
 import type { ShopModalsUi } from './ShopModalsUi';
 import type { TowerUi } from './TowerUi';
@@ -40,6 +42,7 @@ export interface HudModalRenderers {
   achievementsUi: AchievementsModalUi;
   dailyLoginUi: DailyLoginModalUi;
   fusionUi: FusionHudUi;
+  omegaBossUi: OmegaBossModalUi;
 }
 
 export interface HudActionRouterContext {
@@ -77,6 +80,7 @@ export interface HudFastTickContext {
   sceneMode: SceneMode;
   weatherDpsUi: WeatherDpsHudUi;
   towerUi: TowerUi;
+  omegaArenaUi?: OmegaArenaHudUi;
   lastOverclockActive: boolean;
   setLastOverclockActive: (active: boolean) => void;
   lastOverclockTier: 0 | OverclockTier;
@@ -84,6 +88,7 @@ export interface HudFastTickContext {
   onOverclockChange?: (active: boolean, tier: 0 | OverclockTier) => void;
   syncFeverScreenFx: (active: boolean, triggerBurst: boolean, tier: 0 | OverclockTier) => void;
   syncTowerSceneVisual: () => void;
+  syncOmegaSceneVisual?: () => void;
   setSceneMode: (mode: SceneMode) => void;
   openModal: (kind: ModalKind) => void;
   pushToast: (text: string) => void;
@@ -126,6 +131,8 @@ export function renderActiveModalHtml(activeModal: ModalKind, ui: HudModalRender
       return ui.dailyLoginUi.renderModal();
     case 'altar-hub':
       return ui.fusionUi.renderAltarChoiceModal();
+    case 'omega-boss':
+      return ui.omegaBossUi.renderOmegaModal();
     default:
       return '';
   }
@@ -254,6 +261,18 @@ export function stepHudSlowTick(ctx: HudSlowTickContext): void {
         regenEl.textContent = sec > 0 ? `(+1 in ${formatCountdownTimer(sec)})` : '(Full)';
       }
     }
+  } else if (ctx.activeModal === 'omega-boss') {
+    const prevKeys = ctx.state.omegaKeys;
+    ctx.state.syncOmegaKeys();
+    if (ctx.state.omegaKeys !== prevKeys) {
+      ctx.render();
+    } else {
+      const pill = ctx.root.querySelector('[data-omega-keys-pill]');
+      if (pill) {
+        const sec = ctx.state.getOmegaNextKeyRegenSec();
+        pill.textContent = `🔑 ${ctx.state.omegaKeys}/5 Keys${sec > 0 ? ` (${formatCountdownTimer(sec)})` : ''}`;
+      }
+    }
   }
 
   ctx.weatherDpsUi.syncActivePotionsHud(ctx.root);
@@ -313,6 +332,32 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
   }
   if (ctx.sceneMode === 'mine') {
     ctx.weatherDpsUi.syncOverclockWidget(ctx.root);
+  }
+
+  if (ctx.sceneMode === 'omega' && ctx.state.omegaBattle) {
+    const prevParry = ctx.state.omegaBattle.parryWindow.active;
+    const prevBreak = ctx.state.omegaBattle.breakRemainingSec > 0;
+    const prevTargetCount = ctx.state.omegaBattle.targets.length;
+    const summary = ctx.state.stepOmegaBossTick(0.1);
+    if (summary) {
+      ctx.pushToast(summary.victory ? 'OMEGA BOSS DEFEATED!' : 'Time up! 0 Boss Keys lost.');
+      ctx.setSceneMode('shop');
+      ctx.openModal('omega-boss');
+      return;
+    }
+    ctx.syncOmegaSceneVisual?.();
+    const b = ctx.state.omegaBattle;
+    if (
+      b &&
+      (b.parryWindow.active !== prevParry ||
+        (b.breakRemainingSec > 0) !== prevBreak ||
+        b.targets.length !== prevTargetCount)
+    ) {
+      ctx.render();
+    } else {
+      ctx.omegaArenaUi?.updateLiveValues(ctx.root);
+    }
+    return;
   }
 
   if (ctx.sceneMode !== 'tower' || !ctx.state.towerRun) return;

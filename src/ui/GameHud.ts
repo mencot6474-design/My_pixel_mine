@@ -3,6 +3,7 @@ import { cgTryMidgameAd } from '../sdk/crazygames';
 import { OreHpScreen, PlotAnchorScreen, SceneMode, SweetSpotScreen } from '../game3d/MineScene3D';
 import { type LootVacuumBreakKind, spawnLootVacuumParticles } from './LootVacuumFx';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
+import type { OmegaTargetScreenAnchor } from '../game3d/OmegaArena3D';
 import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId } from '../game3d/ShopWorld3D';
 import { getWorldById, getWorldIndex } from '../game/GameData';
 import { gameSettings } from '../game/GameSettings';
@@ -31,6 +32,7 @@ import {
   syncFeverScreenFxDom,
 } from './HudChromeRenderer';
 import { HudTowerBridge } from './HudTowerBridge';
+import { HudOmegaBridge, type OmegaSceneOps } from './HudOmegaBridge';
 import {
   buildHudCoordinatorActions,
   renderActiveModalHtml,
@@ -49,6 +51,8 @@ import {
   TW_TOAST_STACK,
 } from './HudShared';
 import { OfflineModalUi } from './OfflineModalUi';
+import { OmegaArenaHudUi } from './OmegaArenaHudUi';
+import { OmegaBossModalUi } from './OmegaBossModalUi';
 import { PlotInspectUi } from './PlotInspectUi';
 import { SettingsModalUi } from './SettingsModalUi';
 import { ShopModalsUi } from './ShopModalsUi';
@@ -93,6 +97,9 @@ export class GameHud {
   private readonly achievementsUi: AchievementsModalUi;
   private readonly dailyLoginUi: DailyLoginModalUi;
   private readonly towerBridge: HudTowerBridge;
+  private readonly omegaBridge: HudOmegaBridge;
+  private readonly omegaBossUi: OmegaBossModalUi;
+  private readonly omegaArenaUi: OmegaArenaHudUi;
 
   constructor(
     private readonly root: HTMLElement,
@@ -129,7 +136,8 @@ export class GameHud {
       ) => void;
       triggerFusionAnimation: (recipe: FusionRecipeDef, onComplete: () => void) => void;
       setFusionRevealHold?: (active: boolean) => void;
-    }
+    },
+    omegaOps?: OmegaSceneOps
   ) {
     this.shopUi = new ShopModalsUi(this.state, (msg) => this.pushToast(msg));
     this.settingsUi = new SettingsModalUi(
@@ -201,6 +209,33 @@ export class GameHud {
       (msg) => this.pushToast(msg),
       () => this.render(),
       this.onSyncTowerVisual
+    );
+    this.omegaBossUi = new OmegaBossModalUi(
+      this.state,
+      () => this.render(),
+      (bossId, tier) => this.omegaBridge.startOmegaBattle(bossId, tier),
+      () => this.openModal('none'),
+      (msg) => this.pushToast(msg)
+    );
+    this.omegaArenaUi = new OmegaArenaHudUi(
+      this.state,
+      () => {
+        this.state.abandonOmegaBoss();
+        this.setSceneMode('shop');
+        this.openModal('omega-boss');
+      },
+      () => this.omegaBridge.handleOmegaParryClick()
+    );
+    this.omegaBridge = new HudOmegaBridge(
+      this.root,
+      this.state,
+      this.omegaArenaUi,
+      () => this.sceneMode,
+      (mode) => this.setSceneMode(mode),
+      (kind) => this.openModal(kind),
+      (msg) => this.pushToast(msg),
+      () => this.render(),
+      omegaOps
     );
     this.tutorialUi = new TutorialUi(
       (zoomed) => this.onSetTutorialPitZoom?.(zoomed),
@@ -392,6 +427,8 @@ export class GameHud {
         onOverclockChange: this.onOverclockChange,
         syncFeverScreenFx: (active, burst, tier) => this.syncFeverScreenFx(active, burst, tier),
         syncTowerSceneVisual: () => this.syncTowerSceneVisual(),
+        omegaArenaUi: this.omegaArenaUi,
+        syncOmegaSceneVisual: () => this.omegaBridge.syncOmegaSceneVisual(),
         setSceneMode: (mode) => this.setSceneMode(mode),
         openModal: (kind) => this.openModal(kind),
         pushToast: (msg) => this.pushToast(msg),
@@ -472,6 +509,9 @@ export class GameHud {
     if (kind !== 'worlds') {
       this.upgradesUi.closeSynergyInfoModal();
     }
+    if (kind !== 'omega-boss') {
+      this.omegaBossUi.clearForgeCutscene();
+    }
     if (kind !== prev) {
       audio.playSfx(kind === 'none' ? 'ui-close' : 'ui-open');
     }
@@ -490,6 +530,9 @@ export class GameHud {
     if (next !== 'worlds') {
       this.upgradesUi.closeSynergyInfoModal();
     }
+    if (next !== 'omega-boss') {
+      this.omegaBossUi.clearForgeCutscene();
+    }
     audio.playSfx(next === 'none' ? 'ui-close' : 'ui-open');
     this.render();
   }
@@ -498,6 +541,9 @@ export class GameHud {
     const leavingTower = this.sceneMode === 'tower' && mode !== 'tower';
     if (leavingTower && this.state.towerRun) {
       this.state.abandonTowerRun();
+    }
+    if (this.sceneMode === 'omega' && mode !== 'omega' && this.state.omegaBattle) {
+      this.state.abandonOmegaBoss();
     }
     if (mode !== 'altar') {
       this.altarShopUi.cancelSpinOnSceneExit();
@@ -510,6 +556,7 @@ export class GameHud {
     this.sceneMode = mode;
     this.activeModal = 'none';
     this.indexUi.closeReviewDialog();
+    this.omegaBossUi.clearForgeCutscene();
     this.inspectedSlot = null;
     this.worldOverlayUi.clearTransientOverlays();
     this.onSetSceneMode?.(mode);
@@ -564,6 +611,14 @@ export class GameHud {
     } else if (station === 'forge') {
       this.forgeUi.resetInspect();
       this.activeModal = 'forge';
+      this.render();
+    } else if (station === 'omega-left') {
+      this.omegaBossUi.openForBoss('crimson-ronin');
+      this.activeModal = 'omega-boss';
+      this.render();
+    } else if (station === 'omega-right') {
+      this.omegaBossUi.openForBoss('obsidian-sovereign');
+      this.activeModal = 'omega-boss';
       this.render();
     } else {
       this.activeModal = 'sell-shop';
@@ -693,6 +748,11 @@ export class GameHud {
         return;
       }
 
+      if (this.sceneMode === 'omega') {
+        this.renderOmegaArenaHud();
+        return;
+      }
+
       if (this.sceneMode === 'shop') {
         this.renderShopWorldHud();
         return;
@@ -767,7 +827,35 @@ export class GameHud {
       achievementsUi: this.achievementsUi,
       dailyLoginUi: this.dailyLoginUi,
       fusionUi: this.fusionUi,
+      omegaBossUi: this.omegaBossUi,
     });
+  }
+
+  public handleOmegaFighterStrike(slotIndex: number, attackInterval: number) {
+    return this.omegaBridge.handleOmegaFighterStrike(slotIndex, attackInterval);
+  }
+
+  public handleOmegaTargetClick(targetId: string): void {
+    this.omegaBridge.handleOmegaTargetClick(targetId);
+  }
+
+  public handleOmegaBossClick(): void {
+    this.omegaBridge.handleOmegaBossClick();
+  }
+
+  public updateOmegaArenaOverlay(data: { bossHead: { x: number; y: number } | null; targets: OmegaTargetScreenAnchor[] } | null): void {
+    this.worldOverlayUi.updateOmegaArenaOverlay(
+      data,
+      () => this.omegaBridge.handleOmegaParryClick(),
+      (id) => this.omegaBridge.handleOmegaTargetClick(id)
+    );
+  }
+
+  private renderOmegaArenaHud(): void {
+    this.omegaBridge.syncOmegaSceneVisual();
+    this.root.innerHTML = this.omegaArenaUi.renderOmegaArenaHud() + this.renderToastStack();
+    this.bindEvents();
+    this.renderToasts();
   }
 
   private renderTowerHud(): void {
@@ -883,6 +971,8 @@ export class GameHud {
     this.dailyLoginUi.bindEvents(this.root);
     this.fusionUi.bindAltarChoiceEvents(this.root);
     this.fusionUi.bindFusionWorldEvents(this.root);
+    this.omegaBossUi.bindEvents(this.root);
+    this.omegaArenaUi.bindArenaEvents(this.root);
   }
 
   private updateCurrencyLiveValues(): void {

@@ -502,6 +502,7 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
       scale: 1.15,
     });
     tip.position.y = h - 0.04;
+    animatedCrystals.push(tip);
     enableShadows(base);
     enableShadows(tower);
     pylon.add(base, tower, tip);
@@ -544,24 +545,14 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     );
     const padTop = new THREE.Mesh(createChamferSlabGeometry(7.8, 0.28, 7.8, 1.8, 0.03), slateConcreteMat);
     const helipadRing = new THREE.Mesh(
-      new THREE.RingGeometry(2.3, 2.65, 24),
+      new THREE.RingGeometry(2.55, 2.95, 28),
       new THREE.MeshBasicMaterial({ color: side < 0 ? 0x22d3ee : 0xe879f9, side: THREE.DoubleSide })
     );
     helipadRing.rotation.x = -Math.PI / 2;
     helipadRing.position.y = 0.3;
 
-    const shard = createCyberCrystalCluster({
-      frameMat: towerRibMat,
-      crystalMat: side < 0 ? cyanNeonMat : magentaNeonMat,
-      accentMat: side < 0 ? violetNeonMat : cyanNeonMat,
-      scale: 1.65,
-      shardCount: 5,
-    });
-    shard.position.y = 1.25;
-    animatedCrystals.push(shard);
-
     enableShadows(padTop);
-    isletGroup.add(turbineUnder, padTop, helipadRing, shard);
+    isletGroup.add(turbineUnder, padTop, helipadRing);
     group.add(isletGroup);
   }
 

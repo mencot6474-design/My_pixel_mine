@@ -16,7 +16,15 @@ import {
 import { HellAltarEyeController } from './HellAltarEye3D';
 import { createShopCyberPlaza, ShopCyberPlazaHandle } from './ShopCyberPlaza3D';
 
-export type ShopStationId = 'pickaxe' | 'sell' | 'gems' | 'altar' | 'tower' | 'forge';
+export type ShopStationId =
+  | 'pickaxe'
+  | 'sell'
+  | 'gems'
+  | 'altar'
+  | 'tower'
+  | 'forge'
+  | 'omega-left'
+  | 'omega-right';
 
 export interface ShopChibiBubbleAnchor {
   id: string;
@@ -96,6 +104,14 @@ const PLAZA_BUBBLE_LINES: Record<ShopStationId | 'walk', readonly string[]> = {
     'Time to craft a Relic!',
     'Smells like molten gold!',
   ],
+  'omega-left': [
+    'Crimson Ronin awaits!',
+    'Sharpen your Parry timing!',
+  ],
+  'omega-right': [
+    'Obsidian Sovereign is watching!',
+    'Shatter the Obsidian Pillars!',
+  ],
   walk: [
     'Nice weather today!',
     'Wait, I am broke!',
@@ -132,6 +148,7 @@ export class ShopWorld3D {
   public readonly shopClickables: THREE.Object3D[] = [];
 
   private readonly shopEmblems: ArtBillboard2D[] = [];
+  private readonly omegaPadBosses: ChibiSprite3D[] = [];
   private readonly altarPedestals: AltarPedestalEntry[] = [];
   private readonly floatingShards: THREE.Mesh[] = [];
   private readonly floatingIslands: AltarFloatingIslandEntry[] = [];
@@ -169,6 +186,8 @@ export class ShopWorld3D {
     { id: 'altar', title: 'Enchant Altar', subtitle: 'Spin Enchants', pos: new THREE.Vector3(0, 4.65, -0.5) },
     { id: 'tower', title: 'Gem Tower', subtitle: 'Grind Gems & Dice', pos: new THREE.Vector3(0, 9.75, -11.4) },
     { id: 'forge', title: 'Relic Forge', subtitle: 'Craft & Equip Relics', pos: new THREE.Vector3(10.2, 5.9, 0.8) },
+    { id: 'omega-left', title: 'Crimson Ronin', subtitle: 'Omega Boss • Left Pad', pos: new THREE.Vector3(-28.4, 6.3, -2.2) },
+    { id: 'omega-right', title: 'Obsidian Sovereign', subtitle: 'Omega Boss • Right Pad', pos: new THREE.Vector3(28.4, 6.3, -2.2) },
   ];
 
   constructor() {
@@ -212,6 +231,26 @@ export class ShopWorld3D {
     const towerHit = this.createHitbox(0, 4.5, -11.4, 8.2, 7.8, 7.2, 'shop-tower');
     this.shopGroup.add(towerHit);
     this.shopClickables.push(towerHit);
+
+    // Two Floating Wing Pads: Left = Crimson Ronin Boss, Right = Obsidian Sovereign Boss
+    const wingDefs: Array<{ chibiId: string; x: number; kind: string; facing: 1 | -1 }> = [
+      { chibiId: 'crimson-ronin', x: -28.4, kind: 'shop-omega-left', facing: 1 },
+      { chibiId: 'obsidian-sovereign', x: 28.4, kind: 'shop-omega-right', facing: -1 },
+    ];
+    for (const w of wingDefs) {
+      const bossDef = getChibiById(w.chibiId);
+      if (bossDef) {
+        const sprite = new ChibiSprite3D(bossDef);
+        sprite.group.position.set(w.x, 0.31, -2.2);
+        sprite.group.scale.setScalar(4.1);
+        sprite.setFacing(w.facing);
+        this.shopGroup.add(sprite.group);
+        this.omegaPadBosses.push(sprite);
+      }
+      const hit = this.createHitbox(w.x, 3.0, -2.2, 8.0, 6.2, 8.0, w.kind);
+      this.shopGroup.add(hit);
+      this.shopClickables.push(hit);
+    }
   }
 
   private addShopEmblem(
@@ -308,7 +347,7 @@ export class ShopWorld3D {
   public update(
     dt: number,
     elapsed: number,
-    mode: 'mine' | 'shop' | 'altar' | 'tower',
+    mode: 'mine' | 'shop' | 'altar' | 'tower' | 'omega',
     camera?: THREE.Camera
   ): void {
     const safeDt = Math.min(Math.max(0, dt), 0.1);
@@ -319,6 +358,11 @@ export class ShopWorld3D {
       this.cyberPlaza.update(safeDt, elapsed);
       for (let i = 0; i < this.shopEmblems.length; i++) {
         this.shopEmblems[i].updateTransform(safeDt, elapsed, false, false, camera);
+      }
+      if (camera) {
+        for (const boss of this.omegaPadBosses) {
+          boss.update(safeDt, elapsed, camera);
+        }
       }
       this.updatePlazaWalkers(safeDt, elapsed, camera);
     }
@@ -656,6 +700,10 @@ export class ShopWorld3D {
 
   public dispose(): void {
     this.cyberPlaza.dispose();
+    for (const boss of this.omegaPadBosses) {
+      boss.dispose();
+    }
+    this.omegaPadBosses.length = 0;
     for (const walker of this.plazaWalkers.values()) {
       walker.sprite.dispose();
     }

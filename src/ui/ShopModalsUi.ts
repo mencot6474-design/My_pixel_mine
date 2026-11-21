@@ -287,7 +287,7 @@ export class ShopModalsUi {
       title: 'Shop',
       theme: 'premium-shop',
       iconHtml: hudIconHtml('shopBasket', 26, 'Shop'),
-      boxClass: `w-[960px] ${TW_SHOP_MODAL_RESP}`,
+      boxClass: `w-[min(960px,calc(100%-16px))] ${TW_SHOP_MODAL_RESP}`,
       headerExtraHtml: `<div class="ml-auto mr-1 mam-pill-lg rounded-full bg-[#fef08a] border-2 border-[#14111d] text-[13.5px] font-black tabular-nums text-[#14111d] inline-flex items-center gap-1.5 whitespace-nowrap @max-[720px]:text-[12px]" title="Spire Coins (Battle Tower)">${spireCoinIconHtml(18)}<span data-premium-shop-coins="true">${fmtInt(this.state.towerCoins)}</span></div>`,
       bodyHtml: `
         <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto mam-no-scrollbar" data-premium-shop="true">

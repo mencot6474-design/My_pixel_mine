@@ -1,4 +1,5 @@
 import { CHIBI_CATALOG, ChibiDef, ChibiRarity, getChibiById } from '../game3d/ChibiCatalog';
+import { computeOmegaScaledBaseDps, OMEGA_BOSS_DEFS } from './OmegaData';
 import { computeTwinScaledBaseDps, PREMIUM_SHOP_ITEMS } from './PremiumShopData';
 import { WeatherId } from './WeatherData';
 
@@ -105,6 +106,7 @@ export const RARITY_BORDER: Record<ItemRarity, string> = {
   fusion: '#e879f9',
   limited: '#fbbf24',
   twin: '#38bdf8',
+  omega: '#ef4444',
 };
 
 export const WORLDS: readonly WorldDef[] = [
@@ -186,7 +188,7 @@ export function getLatestWorldScaleAnchor(
   };
 }
 
-/** Syncs all Twin Chibi baseDps values in CHIBI_CATALOG against the latest World anchor. */
+/** Syncs all Twin & Omega Chibi baseDps values in CHIBI_CATALOG against the latest World anchor. */
 export function syncTwinCatalogDpsFromAnchor(
   anchor: Pick<LatestWorldScaleAnchor, 'secretBaseDps'> = getLatestWorldScaleAnchor()
 ): void {
@@ -194,6 +196,11 @@ export function syncTwinCatalogDpsFromAnchor(
     const chibi = getChibiById(item.chibiId);
     if (!chibi) continue;
     chibi.baseDps = computeTwinScaledBaseDps(anchor.secretBaseDps, item.dpsMult);
+  }
+  for (const boss of OMEGA_BOSS_DEFS) {
+    const chibi = getChibiById(boss.chibiId);
+    if (!chibi) continue;
+    chibi.baseDps = computeOmegaScaledBaseDps(anchor.secretBaseDps, boss.dpsMult);
   }
 }
 

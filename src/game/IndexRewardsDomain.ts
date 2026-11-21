@@ -9,8 +9,9 @@ import {
   WORLDS,
 } from './GameData';
 import { PREMIUM_SHOP_ITEMS } from './PremiumShopData';
+import { OMEGA_BOSS_DEFS } from './OmegaData';
 
-export type IndexTabId = WorldId | 'weather' | 'fusion' | 'limited' | 'twin';
+export type IndexTabId = WorldId | 'weather' | 'fusion' | 'limited' | 'twin' | 'omega';
 
 export type IndexPassiveKind = 'oreSellPct' | 'oreDropPct' | 'allDmgPct';
 
@@ -60,6 +61,7 @@ export const ALL_INDEX_TABS: readonly IndexTabId[] = [
   'fusion',
   'limited',
   'twin',
+  'omega',
 ];
 
 const TAB_MILESTONE_CONFIG: Record<
@@ -165,6 +167,14 @@ const TAB_MILESTONE_CONFIG: Record<
       passive: { kind: 'oreSellPct', value: 0.05, label: '+5% Ore Sell' },
     },
   },
+  omega: {
+    half: { gems: 10000, enchantDice: 2 },
+    full: {
+      gems: 35000,
+      enchantDice: 4,
+      passive: { kind: 'allDmgPct', value: 0.1, label: '+10% All DMG' },
+    },
+  },
 };
 
 export const INDEX_MILESTONES: readonly IndexMilestoneDef[] = ALL_INDEX_TABS.flatMap((tabId) => {
@@ -205,6 +215,9 @@ export function getIndexMilestonesForTab(tabId: IndexTabId): IndexMilestoneDef[]
 }
 
 export function getIndexTabEntryIds(tabId: IndexTabId): string[] {
+  if (tabId === 'omega') {
+    return OMEGA_BOSS_DEFS.map((b) => b.chibiId);
+  }
   if (tabId === 'twin') {
     return PREMIUM_SHOP_ITEMS.map((item) => item.chibiId);
   }

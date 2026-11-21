@@ -25,6 +25,11 @@ import { getDailyLoginRewardByChibiId } from './DailyLoginData';
 import { RelicEffectStat } from './RelicData';
 import { getFusionRecipeByResultChibiId } from './FusionData';
 import {
+  computeOmegaUpgradeCostScale,
+  getActiveOmegaPassiveBonuses,
+  getOmegaBossByChibiId,
+} from './OmegaData';
+import {
   computeTwinUpgradeCostScale,
   getActivePremiumPassiveBonuses,
   getPremiumShopItemByChibiId,
@@ -114,6 +119,13 @@ export function getChibiUpgradeCostMult(chibiId: string): number {
       return computeTwinUpgradeCostScale(
         getLatestWorldScaleAnchor().upgradeCostScale,
         premiumItem.upgradeCostMult
+      );
+    }
+    const omegaBoss = getOmegaBossByChibiId(chibiId);
+    if (omegaBoss) {
+      return computeOmegaUpgradeCostScale(
+        getLatestWorldScaleAnchor().upgradeCostScale,
+        omegaBoss.upgradeCostMult
       );
     }
     const dailyReward = getDailyLoginRewardByChibiId(chibiId);
@@ -302,7 +314,8 @@ export function computePlotUnitStats(
   const fusionTeamDmgMult =
     1 +
     getActiveFusionPassiveBonuses(ctx.plotMiners).teamDmgPct +
-    getActivePremiumPassiveBonuses(ctx.plotMiners).teamDmgPct;
+    getActivePremiumPassiveBonuses(ctx.plotMiners).teamDmgPct +
+    getActiveOmegaPassiveBonuses(ctx.plotMiners, ctx.chibiStars).teamDmgPct;
   const indexAllDmgMult =
     1 +
     (ctx.claimedIndexRewards ? getActiveIndexPassiveBonusesDomain(ctx.claimedIndexRewards).allDmgPct : 0) +
@@ -341,7 +354,6 @@ export function computePlotUnitStats(
       (unit.miningSpeedLevel - 1) * 0.1 +
       starTier.miningSpeedBonus +
       (enc ? enc.miningSpeedPct : 0) +
-      ctx.getRelicBonus('miningSpeedPct') +
       returnRushSpeed
     ).toFixed(2)
   );

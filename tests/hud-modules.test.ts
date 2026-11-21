@@ -63,6 +63,8 @@ import {
 import { BountiesModalUi } from '../src/ui/BountiesModalUi';
 import { AchievementsModalUi } from '../src/ui/AchievementsModalUi';
 import { TowerUi } from '../src/ui/TowerUi';
+import { OmegaBossModalUi } from '../src/ui/OmegaBossModalUi';
+import { OmegaArenaHudUi } from '../src/ui/OmegaArenaHudUi';
 import { TowerArenaHudUi } from '../src/ui/TowerArenaHudUi';
 import { towerBlessingIconHtml } from '../src/ui/HudIcons';
 import { TOWER_BLESSINGS } from '../src/game/TowerData';
@@ -356,6 +358,7 @@ describe('Tahap B HUD Modules', () => {
       expect(shopHtml).toContain('data-action="open-gem-shop"');
       expect(shopHtml).toContain('data-action="open-enchant-altar"');
       expect(shopHtml).toContain('data-action="open-gem-tower"');
+      expect(shopHtml).toContain('data-action="open-omega-boss"');
     });
   });
 
@@ -1272,6 +1275,73 @@ describe('Tahap B HUD Modules', () => {
       expect(overflowOpenHtml).toContain('data-popover-all-buffs="true"');
       expect(overflowOpenHtml).toContain('Echo 28%');
       expect(overflowOpenHtml).toContain('+18% Dice');
+    });
+  });
+
+  describe('OmegaBossModalUi, OmegaArenaHudUi & Omega Index Tab', () => {
+    it('renders Omega Index tab, crest badge, Boss Hub Tier I–V drop percentages, and Omega Arena HUD', () => {
+      const state = new GameState();
+      expect(getIndexTabEntryIds('omega')).toEqual(['crimson-ronin', 'obsidian-sovereign']);
+      expect(renderRarityBadgeHtml('omega')).toContain('/badges/omega.svg');
+      expect(rarityCardClasses('omega')).toContain('rarity-omega');
+
+      const hubUi = new OmegaBossModalUi(
+        state,
+        () => {},
+        () => {},
+        () => {}
+      );
+      const hubHtml = hubUi.renderOmegaModal();
+      expect(hubHtml).toContain('Omega Duel Sanctum');
+      expect(hubHtml).toContain('data-modal-theme="omega-boss"');
+      expect(hubHtml).toContain('Crimson Ronin');
+      expect(hubHtml).toContain('Obsidian Sovereign');
+      expect(hubHtml).toContain('HP 1Qa');
+      expect(hubHtml).toContain('20% • 1 Core');
+      expect(hubHtml).toContain('100% • 2–3 Cores');
+      expect(hubHtml).toContain('Team DMG');
+      expect(hubHtml).toContain('+200%');
+      expect(hubHtml).toContain('Drop Ore');
+      expect(hubHtml).toContain('+120%');
+      expect(hubHtml).toContain('Sell Ore');
+      expect(hubHtml).toContain('+80%');
+
+      // Verify Fullscreen Omega Forge Cutscene -> Post-Cutscene Confirmation Popup flow
+      state.omegaCores['crimson-ronin'] = 5;
+      expect(hubUi.triggerForgeUnlock('crimson-ronin')).toBe(true);
+      expect(hubUi.getForgeCutsceneState()?.phase).toBe('animating');
+      const cutsceneHtml = hubUi.renderFullscreenCutsceneHtml();
+      expect(cutsceneHtml).toContain('OMEGA SANCTUM // VESSEL FORGE');
+      expect(cutsceneHtml).toContain('data-omega-cutscene-skip="true"');
+      expect(cutsceneHtml).toContain('data-omega-fs-hero="true"');
+      hubUi.finishForgeCutsceneToConfirm();
+      expect(hubUi.getForgeCutsceneState()?.phase).toBe('confirm');
+      const confirmHtml = hubUi.renderFullscreenCutsceneHtml();
+      expect(confirmHtml).toContain('data-omega-forge-confirm="true"');
+      expect(confirmHtml).toContain('OMEGA FORGE COMPLETE!');
+      expect(confirmHtml).toContain('data-omega-confirm-close="true"');
+      hubUi.confirmForgeOverlay();
+      expect(hubUi.getForgeCutsceneState()).toBeNull();
+      expect(hubUi.renderFullscreenCutsceneHtml()).toBe('');
+      expect(hubUi.renderOmegaModal()).toContain('data-omega-replay-cutscene="crimson-ronin"');
+      expect(hubUi.replayUnlockedCutscene('crimson-ronin')).toBe(true);
+      expect(hubUi.getForgeCutsceneState()?.phase).toBe('animating');
+      hubUi.confirmForgeOverlay();
+
+      state.startOmegaBoss('crimson-ronin', 1);
+      const arenaHud = new OmegaArenaHudUi(
+        state,
+        () => {},
+        () => {}
+      );
+      const hudHtml = arenaHud.renderOmegaArenaHud();
+      expect(hudHtml).toContain('Crimson Ronin');
+      expect(hudHtml).toContain('OMEGA RAID');
+      expect(hudHtml).toContain('mam-battle-hp-ticks');
+      expect(hudHtml).toContain('data-omega-parries-count');
+      expect(hudHtml).toContain('data-omega-shatter-count');
+      expect(hudHtml).toContain('STAGGER 0%');
+      expect(hudHtml).toContain('Retreat (0 Key Lost)');
     });
   });
 });

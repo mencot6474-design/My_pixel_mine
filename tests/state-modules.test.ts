@@ -23,6 +23,7 @@ import {
   PREMIUM_SHOP_ITEMS,
 } from '../src/game/PremiumShopData';
 import { FUSION_RECIPES } from '../src/game/FusionData';
+import { OMEGA_BOSS_DEFS, OMEGA_MAX_KEYS } from '../src/game/OmegaData';
 import { CHIBI_CATALOG, getChibiById } from '../src/game3d/ChibiCatalog';
 import { GameState, getChibiUpgradeCostMult } from '../src/game/GameState';
 import {
@@ -595,14 +596,17 @@ describe('Tahap C GameState Domain Modules', () => {
       const rolled = syncWeatherDomain(state, 100_000, () => 0.95);
       expect(rolled).not.toBeNull();
       expect(scaleWeatherMultDomain(state, 0.8)).toBe(0.8);
+      expect(scaleWeatherMultDomain(state, 1.5)).toBe(1.5);
+      expect(getWeatherDamageMultDomain(state)).toBeGreaterThanOrEqual(1);
 
-      const weatherRelic = RELICS.find((r) => (r.effects.weatherBuffPct ?? 0) > 0);
-      expect(weatherRelic).toBeDefined();
-      if (weatherRelic) {
-        state.equippedRelics = [weatherRelic.id];
-        const buff = weatherRelic.effects.weatherBuffPct ?? 0;
-        expect(scaleWeatherMultDomain(state, 1.5)).toBeCloseTo(1 + 0.5 * (1 + buff), 6);
-        expect(getWeatherDamageMultDomain(state)).toBeGreaterThanOrEqual(1);
+      // All 12 Relics strictly use the 3 core dopamine passives: Team DMG, Sell Ore, Drop Ore
+      const allowedRelicStats = new Set(['minerDmgPct', 'oreValuePct', 'oreDropPct']);
+      for (const relic of RELICS) {
+        const keys = Object.keys(relic.effects);
+        expect(keys.length).toBeGreaterThanOrEqual(2);
+        for (const key of keys) {
+          expect(allowedRelicStats.has(key)).toBe(true);
+        }
       }
     });
   });
@@ -861,11 +865,10 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(getChibiUpgradeCostMult('prism-seraph')).toBe(65_000_000);
       expect(getChibiUpgradeCostMult('aether-monarch')).toBe(55_000_000_000);
 
-      const baseTap = state.getTapDamage();
       const baseSell = state.getOreValueMult();
       const baseDrop = state.getOreOutputMult();
 
-      // Deploy all 5 Fusion Chibis on plots 0..4 -> activate all 5 passives
+      // Deploy all 5 Fusion Chibis on plots 0..4 -> activate all 5 passives (strictly Team DMG / Sell Ore / Drop Ore)
       state.plotMiners[0] = 'glitch-cheshire';
       state.plotMiners[1] = 'thorn-maiden';
       state.plotMiners[2] = 'monochrome-saint';
@@ -873,14 +876,15 @@ describe('Tahap C GameState Domain Modules', () => {
       state.plotMiners[4] = 'aether-monarch';
 
       const passives = state.getActiveFusionPassives();
-      expect(passives.tapDmgPct).toBeCloseTo(1.5, 5);
       expect(passives.oreDropPct).toBeCloseTo(1.5, 5);
       expect(passives.oreSellPct).toBeCloseTo(2.0, 5);
-      expect(passives.teamDmgPct).toBeCloseTo(1.25, 5);
+      expect(passives.teamDmgPct).toBeCloseTo(1.55, 5);
 
-      expect(state.getTapDamage()).toBe(Math.round(baseTap * 2.5));
       expect(state.getOreValueMult()).toBeCloseTo(baseSell + 2.0, 5);
       expect(state.getOreOutputMult()).toBeCloseTo(baseDrop + 1.5, 5);
+      for (const r of FUSION_RECIPES) {
+        expect(['teamDmgPct', 'oreSellPct', 'oreDropPct']).toContain(r.passive.stat);
+      }
     });
   });
 
@@ -1248,20 +1252,20 @@ describe('Tahap C GameState Domain Modules', () => {
       state.selectedHotbarSlot = hbLullaby;
       state.placeSelectedOnPlot(4);
       const passives = state.getActivePremiumPassives();
-      expect(passives.teamDmgPct).toBeCloseTo(2.25, 5);
-      expect(passives.oreDropPct).toBeCloseTo(1.05, 5);
-      expect(passives.oreSellPct).toBeCloseTo(1.35, 5);
-      expect(passives.tapDmgPct).toBeCloseTo(2.7, 5);
-      expect(state.getPlotUnitStats(0)!.dmg).toBeCloseTo(basePlot0Dmg * 3.25, -1);
-      expect(state.getOreOutputMult()).toBeCloseTo(baseOreDrop + 1.05, 4);
+      expect(passives.teamDmgPct).toBeCloseTo(3.6, 5);
+      expect(passives.oreDropPct).toBeCloseTo(1.9, 5);
+      expect(passives.oreSellPct).toBeCloseTo(1.5, 5);
+      expect(state.getPlotUnitStats(0)!.dmg).toBeCloseTo(basePlot0Dmg * 4.6, -1);
+      expect(state.getOreOutputMult()).toBeCloseTo(baseOreDrop + 1.9, 4);
 
-      // Swap plot #4 to Clockwork Twins & verify +150% Team / +150% Tap DMG
+      // Swap plot #4 to Clockwork Twins & verify +160% Team / +110% Ore Sell
       state.selectedHotbarSlot = hbClockwork;
       state.placeSelectedOnPlot(4);
       const clockworkPassives = state.getActivePremiumPassives();
-      expect(clockworkPassives.teamDmgPct).toBeCloseTo(3.75, 5);
-      expect(clockworkPassives.tapDmgPct).toBeCloseTo(2.7, 5);
-      expect(state.getPlotUnitStats(0)!.dmg).toBeCloseTo(basePlot0Dmg * 4.75, -1);
+      expect(clockworkPassives.teamDmgPct).toBeCloseTo(3.85, 5);
+      expect(clockworkPassives.oreDropPct).toBeCloseTo(1.05, 5);
+      expect(clockworkPassives.oreSellPct).toBeCloseTo(2.6, 5);
+      expect(state.getPlotUnitStats(0)!.dmg).toBeCloseTo(basePlot0Dmg * 4.85, -1);
 
       // Verify Twin Index tab progress & 50%/100% milestones
       expect(getIndexTabEntryIds('twin')).toEqual([
@@ -1389,6 +1393,93 @@ describe('Tahap C GameState Domain Modules', () => {
       } finally {
         mutableCatalog.pop();
       }
+    });
+  });
+
+  describe('OmegaBossDomain & Omega Tier', () => {
+    it('runs 5-tier Boss Battle with Parry, Obsidian Pillars, OMEGA BREAK!, escalating Core drop %, 0-key-loss on retreat, Unlock & Awaken, and Save/Load', () => {
+      const state = new GameState();
+      expect(state.omegaKeys).toBe(OMEGA_MAX_KEYS);
+      expect(OMEGA_BOSS_DEFS.map((b) => b.tiers.map((t) => t.coreDropChance))).toEqual([
+        [0.2, 0.4, 0.65, 0.85, 1.0],
+        [0.2, 0.4, 0.65, 0.85, 1.0],
+      ]);
+
+      // Retreat / Timeout never spends a Boss Key
+      expect(state.startOmegaBoss('crimson-ronin', 1)).toBe(true);
+      expect(state.omegaBattle?.tier).toBe(1);
+      const retreatSummary = state.abandonOmegaBoss();
+      expect(retreatSummary?.victory).toBe(false);
+      expect(state.omegaKeys).toBe(OMEGA_MAX_KEYS);
+
+      // Parry deals 8% Max HP + +25% Stagger & 4 parries trigger OMEGA BREAK! (2.5x DMG)
+      expect(state.startOmegaBoss('crimson-ronin', 1)).toBe(true);
+      state.omegaBattle!.parryWindow.active = true;
+      const parryRes = state.triggerOmegaParry(() => 0.1);
+      expect(parryRes.ok).toBe(true);
+      expect(parryRes.counterDmg).toBe(Math.round(state.omegaBattle!.maxHp * 0.08));
+      expect(state.omegaBattle!.staggerPct).toBe(25);
+
+      // Fill Stagger to 100% -> triggers OMEGA BREAK!
+      state.omegaBattle!.staggerPct = 85;
+      state.omegaBattle!.parryWindow = { active: true, remainingSec: 2, durationSec: 2.3, consumed: false };
+      const breakParry = state.triggerOmegaParry(() => 0.1);
+      expect(breakParry.breakTriggered).toBe(true);
+      expect(state.omegaBattle!.breakRemainingSec).toBeGreaterThan(0);
+
+      // Victory consumes 1 key, drops Core on low roll (rng < 0.2), unlocks Tier 2
+      state.omegaBattle!.hp = 10;
+      const killStrike = state.applyOmegaSquadStrike(0, 1.0, () => 0.05);
+      expect(killStrike.bossDefeated).toBe(true);
+      expect(state.omegaKeys).toBe(OMEGA_MAX_KEYS - 1);
+      expect(state.omegaBestTier['crimson-ronin']).toBe(1);
+      expect(state.getOmegaUnlockedMaxTier('crimson-ronin')).toBe(2);
+      expect(state.omegaCores['crimson-ronin']).toBe(1);
+      expect(state.omegaLastSummary?.firstClear).toBe(true);
+
+      // Obsidian Pillars reduce damage by 60% until shattered
+      expect(state.startOmegaBoss('obsidian-sovereign', 1)).toBe(true);
+      state.omegaBattle!.targets.push({
+        id: 'pillar-test',
+        kind: 'obsidian_pillar',
+        hp: 1,
+        maxHp: 1,
+        xOffset: -3.2,
+        zOffset: -0.2,
+      });
+      const armoredHit = state.applyOmegaSquadStrike(0, 1.0, () => 0.99);
+      const hitTarget = state.hitOmegaTargetObject('pillar-test', () => 0.5);
+      expect(hitTarget.ok).toBe(true);
+      const unarmoredHit = state.applyOmegaSquadStrike(0, 1.0, () => 0.99);
+      expect(unarmoredHit.dmgDealt).toBeGreaterThan(armoredHit.dmgDealt);
+      state.abandonOmegaBoss();
+
+      // 5 Cores -> Forge & Unlock Crimson Ronin -> all-3 passives active + non-sellable + Awaken 1★ -> 2★
+      state.omegaCores['crimson-ronin'] = 8;
+      expect(state.unlockOmegaChibi('crimson-ronin')).toBe('unlocked');
+      expect(isNonSellableChibi('crimson-ronin')).toBe(true);
+      expect(state.sellMiner('crimson-ronin', true)).toBe(0);
+      expect(state.discovered.has('crimson-ronin')).toBe(true);
+
+      state.plotMiners[0] = 'crimson-ronin';
+      const baseOmegaPassives = state.getActiveOmegaPassives();
+      expect(baseOmegaPassives.teamDmgPct).toBeCloseTo(2.0, 5);
+      expect(baseOmegaPassives.oreDropPct).toBeCloseTo(1.2, 5);
+      expect(baseOmegaPassives.oreSellPct).toBeCloseTo(0.8, 5);
+
+      expect(state.awakenOmegaChibi('crimson-ronin')).toBe('awakened'); // spends 3 cores -> 2★ (+15%)
+      const star2Passives = state.getActiveOmegaPassives();
+      expect(star2Passives.teamDmgPct).toBeCloseTo(2.3, 5);
+      expect(star2Passives.oreDropPct).toBeCloseTo(1.38, 5);
+      expect(star2Passives.oreSellPct).toBeCloseTo(0.92, 5);
+
+      // Save / Load persistence
+      const json = JSON.stringify(serializeSavePayload(state));
+      const reloaded = new GameState();
+      deserializeSaveJson(reloaded, json);
+      expect(reloaded.omegaBestTier['crimson-ronin']).toBe(1);
+      expect(reloaded.omegaCores['crimson-ronin'] ?? 0).toBe(0);
+      expect(reloaded.chibiStars['crimson-ronin']).toBe(2);
     });
   });
 });

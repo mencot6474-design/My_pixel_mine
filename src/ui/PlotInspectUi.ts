@@ -13,6 +13,7 @@ import {
   PICKAXES,
 } from '../game/GameData';
 import { getFusionRecipeByResultChibiId } from '../game/FusionData';
+import { getOmegaBossByChibiId } from '../game/OmegaData';
 import { getPremiumShopItemByChibiId } from '../game/PremiumShopData';
 import { GameState, getChibiUpgradeCostMult } from '../game/GameState';
 import {
@@ -145,6 +146,7 @@ export class PlotInspectUi {
     const worldName = worldId ? getWorldById(worldId).name : null;
     const fusionDef = getFusionRecipeByResultChibiId(chibi.id);
     const premiumDef = getPremiumShopItemByChibiId(chibi.id);
+    const omegaDef = getOmegaBossByChibiId(chibi.id);
     const eqEnchant = getEnchantById(unit.enchantId);
 
     root.innerHTML = `
@@ -175,6 +177,28 @@ export class PlotInspectUi {
                     .map(
                       (part) =>
                         `<span class="px-1.5 py-0.5 rounded-md border-[1.5px] border-[#14111d] bg-[#ffffff] text-[10px] font-black tabular-nums text-[#14111d] leading-tight">${part.trim()}</span>`
+                    )
+                    .join('')}
+                </div>
+              </div>`
+            : ''
+        }
+        ${
+          omegaDef
+            ? `<div class="mt-0.5 w-full rounded-xl border-2 border-[#14111d] bg-[linear-gradient(135deg,#ffe4e6_0%,#fef9c3_52%,#e2e8f0_100%)] px-2 py-1.5 flex flex-col gap-1">
+                <div class="text-[9.5px] font-black uppercase tracking-[0.06em] text-[#14111d] flex items-center gap-1 leading-none">
+                  <span class="text-[#dc2626]">Ω</span>
+                  <span>Triple Omega Passive${star > 1 ? ` (+${(star - 1) * 15}%)` : ''}</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-1">
+                  ${[
+                    `+${Math.round(omegaDef.teamDmgPct * (1 + Math.max(0, star - 1) * 0.15) * 100)}% Team DMG`,
+                    `+${Math.round(omegaDef.oreDropPct * (1 + Math.max(0, star - 1) * 0.15) * 100)}% Drop Ore`,
+                    `+${Math.round(omegaDef.oreSellPct * (1 + Math.max(0, star - 1) * 0.15) * 100)}% Sell Ore`,
+                  ]
+                    .map(
+                      (part) =>
+                        `<span class="px-1.5 py-0.5 rounded-md border-[1.5px] border-[#14111d] bg-[#ffffff] text-[10px] font-black tabular-nums text-[#14111d] leading-tight">${part}</span>`
                     )
                     .join('')}
                 </div>

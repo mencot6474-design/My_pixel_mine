@@ -12,7 +12,6 @@ export interface PremiumShopItemDef {
   teamDmgPct: number;
   oreDropPct: number;
   oreSellPct: number;
-  tapDmgPct: number;
 }
 
 export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
@@ -28,7 +27,6 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     teamDmgPct: 1.0,
     oreDropPct: 0.4,
     oreSellPct: 0,
-    tapDmgPct: 0,
   },
   {
     id: 'premium-halcyon-twins',
@@ -38,11 +36,10 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     dpsMult: 2.75,
     upgradeCostMult: 14,
     titleTag: 'Winged Academy Vanguard',
-    passiveSummary: '+120% Tap DMG • +60% Ore Sell',
+    passiveSummary: '+65% Ore Drop • +75% Ore Sell',
     teamDmgPct: 0,
-    oreDropPct: 0,
-    oreSellPct: 0.6,
-    tapDmgPct: 1.2,
+    oreDropPct: 0.65,
+    oreSellPct: 0.75,
   },
   {
     id: 'premium-nocturne-twins',
@@ -56,7 +53,6 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     teamDmgPct: 1.25,
     oreDropPct: 0,
     oreSellPct: 0.75,
-    tapDmgPct: 0,
   },
   {
     id: 'premium-lullaby-twins',
@@ -66,11 +62,10 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     dpsMult: 3.65,
     upgradeCostMult: 21,
     titleTag: 'Fallen Plush Pact',
-    passiveSummary: '+150% Tap DMG • +65% Ore Drop',
-    teamDmgPct: 0,
-    oreDropPct: 0.65,
+    passiveSummary: '+135% Team DMG • +85% Ore Drop',
+    teamDmgPct: 1.35,
+    oreDropPct: 0.85,
     oreSellPct: 0,
-    tapDmgPct: 1.5,
   },
   {
     id: 'premium-clockwork-twins',
@@ -80,11 +75,10 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     dpsMult: 4.1,
     upgradeCostMult: 25,
     titleTag: 'Chrono-Gear Sovereign Duo',
-    passiveSummary: '+150% Team DMG • +150% Tap DMG',
-    teamDmgPct: 1.5,
+    passiveSummary: '+160% Team DMG • +110% Ore Sell',
+    teamDmgPct: 1.6,
     oreDropPct: 0,
-    oreSellPct: 0,
-    tapDmgPct: 1.5,
+    oreSellPct: 1.1,
   },
 ] as const;
 
@@ -116,7 +110,6 @@ export interface ActivePremiumPassives {
   teamDmgPct: number;
   oreDropPct: number;
   oreSellPct: number;
-  tapDmgPct: number;
 }
 
 /** Sums unique active passive bonuses from placed TWIN Premium Shop units. */
@@ -126,7 +119,6 @@ export function getActivePremiumPassiveBonuses(plotMiners: readonly (string | nu
     teamDmgPct: 0,
     oreDropPct: 0,
     oreSellPct: 0,
-    tapDmgPct: 0,
   };
   for (const id of plotMiners) {
     if (!id || seen.has(id)) continue;
@@ -136,7 +128,6 @@ export function getActivePremiumPassiveBonuses(plotMiners: readonly (string | nu
     totals.teamDmgPct += def.teamDmgPct;
     totals.oreDropPct += def.oreDropPct;
     totals.oreSellPct += def.oreSellPct;
-    totals.tapDmgPct += def.tapDmgPct;
   }
   return totals;
 }

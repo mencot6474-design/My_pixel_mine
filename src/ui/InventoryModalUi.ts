@@ -242,7 +242,8 @@ export class InventoryModalUi {
           star >= 5 ||
           rarity === 'fusion' ||
           rarity === 'limited' ||
-          rarity === 'twin';
+          rarity === 'twin' ||
+          rarity === 'omega';
         const extraCls = [
           isHolo ? 'is-holo-foil' : '',
           isInsp ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '',

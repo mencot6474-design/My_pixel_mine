@@ -1,5 +1,6 @@
 import { getChibiById } from '../game3d/ChibiCatalog';
 import { getFusionRecipeByResultChibiId } from './FusionData';
+import { isOmegaBossChibi } from './OmegaData';
 import { isPremiumShopChibi } from './PremiumShopData';
 
 export interface DailyLoginRewardDef {
@@ -82,13 +83,16 @@ const NON_SELLABLE_CHIBI_IDS = new Set<string>(
   DAILY_LOGIN_REWARDS.filter((r) => r.nonSellable && r.chibiId).map((r) => r.chibiId as string)
 );
 
-/** Returns true if this chibi is a non-sellable Limited, Fusion, or Twin / Premium Shop unit. */
+/** Returns true if this chibi is a non-sellable Limited, Fusion, Twin, or Omega unit. */
 export function isNonSellableChibi(chibiId: string): boolean {
+  const rarity = getChibiById(chibiId)?.rarity;
   return (
     NON_SELLABLE_CHIBI_IDS.has(chibiId) ||
     Boolean(getFusionRecipeByResultChibiId(chibiId)) ||
     isPremiumShopChibi(chibiId) ||
-    getChibiById(chibiId)?.rarity === 'twin'
+    isOmegaBossChibi(chibiId) ||
+    rarity === 'twin' ||
+    rarity === 'omega'
   );
 }
 

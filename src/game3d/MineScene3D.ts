@@ -11,6 +11,9 @@ import { FusionRecipeDef } from '../game/FusionData';
 import { FusionWorld3D } from './FusionWorld3D';
 import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId, ShopWorld3D } from './ShopWorld3D';
 import { TowerArena3D, TowerFighterConfig, TowerOreBarScreen } from './TowerArena3D';
+import { OmegaArena3D, type OmegaTargetScreenAnchor } from './OmegaArena3D';
+import type { OmegaBossId } from '../game/OmegaData';
+import type { OmegaTargetObject } from '../game/OmegaBossDomain';
 import { TowerWaveOreState } from '../game/TowerData';
 import { GRAPHICS_PRESETS, GraphicsQuality } from '../game/GameSettings';
 import { getOverclockTierBuffs, type OverclockTier } from '../game/OverclockDomain';
@@ -21,7 +24,7 @@ import { applyMineWeatherAtmosphere, buildMineStageAndChest, stepMineSceneCamera
 import { MineSceneProjector } from './MineSceneProjector';
 import { bindMineSceneEvents, getPedestalAtClientPosInScene, performMineTapAtInScene, type MineInputCtx, type MineInputState } from './MineSceneInput';
 
-export type SceneMode = 'mine' | 'shop' | 'altar' | 'fusion' | 'tower';
+export type SceneMode = 'mine' | 'shop' | 'altar' | 'fusion' | 'tower' | 'omega';
 
 export function applyCameraOrbitDrag(opts: {
   cameraLocked: boolean;
@@ -162,6 +165,10 @@ export interface MineSceneCallbacks {
     attackInterval: number
   ) => { dmg: number; broken?: boolean; isCrit?: boolean } | void;
   onTowerOreBars?: (bars: TowerOreBarScreen[]) => void;
+  onOmegaTargetClick?: (targetId: string) => void;
+  onOmegaBossClick?: () => void;
+  onOmegaFighterStrike?: (slotIndex: number, attackInterval: number) => { dmg: number; isCrit?: boolean } | void;
+  onOmegaArenaOverlay?: (data: { bossHead: { x: number; y: number } | null; targets: OmegaTargetScreenAnchor[] } | null) => void;
 }
 
 export class MineScene3D {
@@ -183,6 +190,7 @@ export class MineScene3D {
   private readonly shopWorld = new ShopWorld3D();
   private readonly fusionWorld = new FusionWorld3D();
   private readonly towerArena = new TowerArena3D();
+  private readonly omegaArena = new OmegaArena3D();
   private readonly weatherFx = new WeatherFx3D();
   private readonly clickableMeshes: THREE.Object3D[] = [];
   private mode: SceneMode = 'mine';
@@ -332,6 +340,7 @@ export class MineScene3D {
       projVec: this.projVec,
       pit: this.pit,
       towerArena: this.towerArena,
+      omegaArena: this.omegaArena,
       pedestals: this.pedestals,
       crateGroup: this.crateGroup,
       callbacks: this.callbacks,
@@ -341,6 +350,7 @@ export class MineScene3D {
     this.scene.add(this.shopWorld.altarGroup);
     this.scene.add(this.fusionWorld.group);
     this.scene.add(this.towerArena.group);
+    this.scene.add(this.omegaArena.group);
     this.scene.add(this.weatherFx.group);
 
     this.bindEvents();
@@ -359,6 +369,7 @@ export class MineScene3D {
       pit: this.pit,
       shopWorld: this.shopWorld,
       towerArena: this.towerArena,
+      omegaArena: this.omegaArena,
       clickableMeshes: this.clickableMeshes,
       callbacks: this.callbacks,
       getMode: () => this.mode,
@@ -439,6 +450,14 @@ export class MineScene3D {
         this.towerArena.triggerOreHitBounce(strike.targetOreIndex, Boolean(res.broken), strike);
       }
       if (shownDmg > 0) {
+        this.emitDamageScreen(shownDmg, strike.wx, strike.wy, strike.wz, false, Boolean(res?.isCrit));
+      }
+    });
+    this.omegaArena.update(dtSec, this.elapsed, this.camera, (strike) => {
+      const res = this.callbacks.onOmegaFighterStrike?.(strike.slotIndex, strike.attackInterval);
+      const shownDmg = res ? res.dmg : strike.dmg;
+      if (shownDmg > 0) {
+        this.omegaArena.triggerBossHitEffect(strike.accentColor, Boolean(res?.isCrit));
         this.emitDamageScreen(shownDmg, strike.wx, strike.wy, strike.wz, false, Boolean(res?.isCrit));
       }
     });
@@ -560,6 +579,7 @@ export class MineScene3D {
     const isMine = mode === 'mine';
     this.fusionWorld.group.visible = mode === 'fusion';
     this.towerArena.group.visible = mode === 'tower';
+    this.omegaArena.group.visible = mode === 'omega';
     this.env.group.visible = isMine;
     this.env.skyDome.visible = mode === 'mine' || mode === 'shop' || mode === 'fusion';
     this.pit.group.visible = isMine;
@@ -595,6 +615,15 @@ export class MineScene3D {
       this.lookAtPos.set(0, 2.25, -1.6);
       this.syncTowerFighters();
       this.towerArena.resetFloorCharge();
+    } else if (mode === 'omega') {
+      this.scene.background = new THREE.Color(0x0c0b16);
+      this.scene.fog = new THREE.Fog(0x141122, 24, 72);
+      this.applyWeatherAtmosphere();
+      this.inputState.targetOrbitYaw = 0;
+      this.inputState.targetOrbitPitch = -0.26;
+      this.inputState.targetCamRadius = 15.8;
+      this.lookAtPos.set(0, 1.8, -1.2);
+      this.syncTowerFighters();
     } else if (mode === 'shop') {
       const aspect = this.camera.aspect || 1;
       this.inputState.targetOrbitYaw = 0;
@@ -739,7 +768,16 @@ export class MineScene3D {
       });
     }
     this.towerArena.syncFighters(configs);
+    this.omegaArena.syncFighters(configs);
   }
+
+  public setOmegaBossConfig(bossId: OmegaBossId): void { this.omegaArena.setBossId(bossId); }
+  public syncOmegaBattleVisuals(targets: readonly OmegaTargetObject[], breakActive: boolean, parryActive: boolean): void {
+    this.omegaArena.syncBattleTargets(targets);
+    this.omegaArena.setBattleStatus(breakActive, parryActive);
+  }
+  public triggerOmegaBossHit(color?: string, isCrit = false): void { this.omegaArena.triggerBossHitEffect(color, isCrit); }
+  public triggerOmegaTargetShatter(wx: number, wz: number, color: string): void { this.omegaArena.triggerTargetShatterFx(wx, wz, color); }
 
   public triggerEnchantSpin(targetEnchantId: string, onComplete?: () => void): void {
     this.shopWorld.triggerSpin(targetEnchantId, onComplete);
@@ -942,6 +980,7 @@ export class MineScene3D {
     this.shopWorld.dispose();
     this.fusionWorld.dispose();
     this.towerArena.dispose();
+    this.omegaArena.dispose();
     this.weatherFx.dispose();
     this.renderer.dispose();
   }

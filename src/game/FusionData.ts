@@ -8,7 +8,7 @@ export interface FusionOreIngredient {
   count: number;
 }
 
-export type FusionPassiveStat = 'teamDmgPct' | 'oreSellPct' | 'oreDropPct' | 'tapDmgPct';
+export type FusionPassiveStat = 'teamDmgPct' | 'oreSellPct' | 'oreDropPct';
 
 export interface FusionPassiveDef {
   stat: FusionPassiveStat;
@@ -40,9 +40,9 @@ export const FUSION_RECIPES: readonly FusionRecipeDef[] = [
     glowColor: '#d946ef',
     upgradeCostScale: 85_000,
     passive: {
-      stat: 'tapDmgPct',
-      value: 1.5,
-      label: '+150% Tap DMG',
+      stat: 'teamDmgPct',
+      value: 0.3,
+      label: '+30% Team DMG',
     },
     requiredMiners: [
       { chibiId: 'cyber-ki-brawler', count: 1 },
