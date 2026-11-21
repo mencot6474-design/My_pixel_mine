@@ -283,7 +283,7 @@ export function renderInspectorPanel(opts: {
               : opts.rarity === 'limited'
                 ? 'border-[3px] border-[#14111d] bg-[linear-gradient(155deg,#fef08a_0%,#fbbf24_55%,#fb923c_100%)]'
                 : opts.rarity === 'twin'
-                  ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#bae6fd_0%,#fef9c3_50%,#fda4af_100%)]'
+                  ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#38bdf8_0%,#fde047_50%,#fb7185_100%)]'
                   : 'border-[3px] border-[#14111d]';
   const showcaseStyle =
     opts.rarity === 'rainbow' ||

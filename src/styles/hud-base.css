@@ -359,7 +359,8 @@
         rgba(255, 255, 255, 0.36) 0deg 15deg,
         transparent 15deg 30deg
       ),
-      linear-gradient(135deg, #bae6fd 0%, #e0f2fe 24%, #fef9c3 50%, #ffe4e6 76%, #fda4af 100%);
+      radial-gradient(circle at 50% 46%, rgba(254, 240, 138, 0.5) 0%, transparent 62%),
+      linear-gradient(135deg, #38bdf8 0%, #7dd3fc 26%, #fde047 50%, #fda4af 74%, #fb7185 100%);
     color: #14111d;
     box-shadow: none;
     animation: none;
