@@ -335,6 +335,7 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
   }
 
   if (ctx.sceneMode === 'omega' && ctx.state.omegaBattle) {
+    const prevPhase = ctx.state.omegaBattle.phase;
     const prevParry = ctx.state.omegaBattle.parryWindow.active;
     const prevBreak = ctx.state.omegaBattle.breakRemainingSec > 0;
     const prevTargetCount = ctx.state.omegaBattle.targets.length;
@@ -342,20 +343,22 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
     if (summary) {
       if (summary.victory) {
         audio.playSfx('rare-fanfare', { volume: 0.78 });
-        ctx.syncOmegaSceneVisual?.();
-        ctx.render();
-        return;
+      } else {
+        ctx.pushToast(summary.shieldFailed ? 'Shield held! 0 Boss Keys lost.' : 'Time up! 0 Boss Keys lost.');
       }
-      ctx.pushToast('Time up! 0 Boss Keys lost.');
-      ctx.setSceneMode('shop');
-      ctx.openModal('omega-boss');
+      ctx.syncOmegaSceneVisual?.();
+      ctx.render();
       return;
     }
     ctx.syncOmegaSceneVisual?.();
     const b = ctx.state.omegaBattle;
+    if (b && prevPhase === 'entrance' && b.phase === 'invul_shield') {
+      ctx.pushToast('🛡️ BOSS INVULNERABLE (30s)! Tap random targets to shatter!');
+    }
     if (
       b &&
-      (b.parryWindow.active !== prevParry ||
+      (b.phase !== prevPhase ||
+        b.parryWindow.active !== prevParry ||
         (b.breakRemainingSec > 0) !== prevBreak ||
         b.targets.length !== prevTargetCount)
     ) {

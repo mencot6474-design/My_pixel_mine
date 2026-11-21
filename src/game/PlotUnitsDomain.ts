@@ -313,8 +313,8 @@ export function computePlotUnitStats(
   const resonanceDmgMult = 1 + getWorldResonanceDmgPct(ctx, getMinerWorldId(chibi.id));
   const fusionTeamDmgMult =
     1 +
-    getActiveFusionPassiveBonuses(ctx.plotMiners).teamDmgPct +
-    getActivePremiumPassiveBonuses(ctx.plotMiners).teamDmgPct +
+    getActiveFusionPassiveBonuses(ctx.plotMiners, ctx.chibiStars).teamDmgPct +
+    getActivePremiumPassiveBonuses(ctx.plotMiners, ctx.chibiStars).teamDmgPct +
     getActiveOmegaPassiveBonuses(ctx.plotMiners, ctx.chibiStars).teamDmgPct;
   const indexAllDmgMult =
     1 +

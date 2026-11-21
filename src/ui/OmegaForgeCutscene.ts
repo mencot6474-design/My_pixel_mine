@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { audio } from '../audio/AudioManager';
 import { assetUrl } from '../game/AssetUrl';
 import { fmtShort } from '../game/NumberFormat';
-import { getOmegaBossById, OMEGA_BOSS_DEFS, OmegaBossDef, OmegaBossId } from '../game/OmegaData';
+import { getOmegaBossById, getOmegaPassiveStarScale, OMEGA_BOSS_DEFS, OmegaBossDef, OmegaBossId } from '../game/OmegaData';
 import { ChibiDef, getChibiById } from '../game3d/ChibiCatalog';
 import { renderRarityBadgeHtml } from './HudShared';
 
@@ -225,7 +225,7 @@ export function buildFullscreenRevealDomHtml(
   boss: OmegaBossDef,
   chibi: ChibiDef | undefined
 ): string {
-  const starScale = 1 + (cs.targetStars - 1) * 0.15;
+  const starScale = getOmegaPassiveStarScale(cs.targetStars);
   const poseSrc = chibi ? assetUrl(chibi.poses.pose) : '';
   const omegaBadgeHtml = renderRarityBadgeHtml('omega', 'is-compact !ml-0');
   const passiveChips = [

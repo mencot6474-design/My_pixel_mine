@@ -204,14 +204,20 @@ export function towerIconHtml(sizePx = 22): string {
   return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="Gem Tower" />`;
 }
 
-/** Crisp crimson-gold Omega crest SVG for the Duel Sanctum modal plaque and Plaza dock button. */
+/** Crisp crimson-gold Omega crest SVG for Victory/Forge slots, Duel Sanctum modal plaque, and Plaza dock button. */
 export function omegaCrestIconHtml(sizePx = 22): string {
   return `<svg viewBox="0 0 28 28" width="${sizePx}" height="${sizePx}" fill="none" aria-hidden="true" class="shrink-0">
-    <path d="M5 21.5L21 5.5M23 21.5L7 5.5" stroke="#14111d" stroke-width="4.2" stroke-linecap="round"/>
-    <path d="M5 21.5L21 5.5M23 21.5L7 5.5" stroke="#fde047" stroke-width="2" stroke-linecap="round"/>
-    <polygon points="14,3.5 23,11 20,23.5 14,25.5 8,23.5 5,11" fill="#ef4444" stroke="#14111d" stroke-width="2.2" stroke-linejoin="round"/>
-    <circle cx="14" cy="14" r="4.6" fill="#fde047" stroke="#14111d" stroke-width="1.8"/>
-    <path d="M11.6 15.8C10.9 14.5 11.7 12.1 14 12.1C16.3 12.1 17.1 14.5 16.4 15.8" fill="none" stroke="#991b1b" stroke-width="1.9" stroke-linecap="round"/>
+    <path d="M4.2 23.8L8.4 19.6M23.8 23.8L19.6 19.6" stroke="#14111d" stroke-width="4.2" stroke-linecap="round"/>
+    <path d="M4.2 23.8L8.4 19.6M23.8 23.8L19.6 19.6" stroke="#fde047" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M6.4 18L10 21.6M21.6 18L18 21.6" stroke="#14111d" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M6.4 18L10 21.6M21.6 18L18 21.6" stroke="#fde047" stroke-width="1.4" stroke-linecap="round"/>
+    <path d="M8.8 19.2L22.2 5.8L24.5 3.5L21 7L10.4 20.6Z" fill="#e2e8f0" stroke="#14111d" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M19.2 19.2L5.8 5.8L3.5 3.5L7 7L17.6 20.6Z" fill="#f8fafc" stroke="#14111d" stroke-width="1.6" stroke-linejoin="round"/>
+    <polygon points="14,3.2 22.8,9.8 20.4,22.2 14,25.6 7.6,22.2 5.2,9.8" fill="#ef4444" stroke="#14111d" stroke-width="2.1" stroke-linejoin="round"/>
+    <polygon points="14,3.2 22.8,9.8 20.4,22.2 14,25.6" fill="#991b1b" fill-opacity="0.45"/>
+    <polygon points="14,5.6 20.3,10.6 18.4,20.4 14,23 9.6,20.4 7.7,10.6" fill="none" stroke="#fca5a5" stroke-width="1.2" stroke-linejoin="round"/>
+    <circle cx="14" cy="14" r="5.3" fill="#fde047" stroke="#14111d" stroke-width="1.9"/>
+    <path d="M10.4 16.5H12.2C11.1 15.1 11.4 11.7 14 11.7C16.6 11.7 16.9 15.1 15.8 16.5H17.6" fill="none" stroke="#7f1d1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 }
 

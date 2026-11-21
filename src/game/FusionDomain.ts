@@ -8,11 +8,22 @@ import {
 
 export type FusionPassiveBonuses = Record<FusionPassiveStat, number>;
 
+export const STAR_PASSIVE_BONUS_PER_STAR = 0.2;
+
+/** Passive multiplier for 0★–5★ units (Fusion & Twin): +20% per star above 0★. */
+export function getStarPassiveScale(stars: number): number {
+  const clamped = Math.max(0, Math.min(5, Math.floor(stars || 0)));
+  return 1 + clamped * STAR_PASSIVE_BONUS_PER_STAR;
+}
+
 /**
  * Computes active global Fusion Passive bonuses from unique Fusion Chibis currently
- * deployed on plots (each unique Fusion Chibi activates its signature passive once).
+ * deployed on plots (each unique Fusion Chibi activates its signature passive once, scaled +20%/star).
  */
-export function getActiveFusionPassiveBonuses(plotMiners: readonly (string | null)[]): FusionPassiveBonuses {
+export function getActiveFusionPassiveBonuses(
+  plotMiners: readonly (string | null)[],
+  chibiStars: Readonly<Record<string, number>> = {}
+): FusionPassiveBonuses {
   const totals: FusionPassiveBonuses = {
     teamDmgPct: 0,
     oreSellPct: 0,
@@ -24,7 +35,8 @@ export function getActiveFusionPassiveBonuses(plotMiners: readonly (string | nul
     const recipe = getFusionRecipeByResultChibiId(chibiId);
     if (!recipe) continue;
     seen.add(chibiId);
-    totals[recipe.passive.stat] += recipe.passive.value;
+    const starScale = getStarPassiveScale(chibiStars[chibiId] ?? 0);
+    totals[recipe.passive.stat] += recipe.passive.value * starScale;
   }
   return totals;
 }

@@ -366,13 +366,13 @@ describe('Pure 3D Mine World', () => {
       emits++;
     });
 
-    gs.gems = 1500;
+    gs.gems = 7500;
     expect(gs.buyGemShopItem('ore-elixir-1')).toBe('bought');
     expect(gs.buyGemShopItem('regrowth-potion')).toBe('bought');
     expect(gs.buyGemShopItem('ore-luck-potion')).toBe('bought');
     expect(gs.buyGemShopItem('mutation-luck-1')).toBe('bought');
     expect(emits).toBe(4);
-    expect(gs.gems).toBe(1500 - 100 - 300 - 500 - 600);
+    expect(gs.gems).toBe(7500 - 500 - 1500 - 2500 - 3000);
 
     // Purchased potions go to Backpack (others), not immediately active
     expect(gs.others['ore-elixir-1']).toBe(1);
@@ -391,11 +391,11 @@ describe('Pure 3D Mine World', () => {
     expect(gs.others['ore-elixir-1']).toBeUndefined();
     expect(gs.useGemPotion('ore-elixir-1')).toBe(false);
 
-    expect(gs.getOreOutputMult()).toBeCloseTo(1.1);
-    expect(gs.getRespawnSpeedMult()).toBe(2.0);
-    expect(gs.getOreLuckMult()).toBe(2.0);
-    expect(gs.getMutationLuckMult()).toBe(2.0);
-    expect(gs.getBoostRemainingSec('ore-elixir-1')).toBeGreaterThan(590);
+    expect(gs.getOreOutputMult()).toBeCloseTo(1.5);
+    expect(gs.getRespawnSpeedMult()).toBe(6.0);
+    expect(gs.getOreLuckMult()).toBe(6.0);
+    expect(gs.getMutationLuckMult()).toBe(6.0);
+    expect(gs.getBoostRemainingSec('ore-elixir-1')).toBeGreaterThan(50);
     expect(gs.buyGemShopItem('ore-elixir-3')).toBe('no_gems');
   });
 
@@ -2758,7 +2758,7 @@ describe('Pure 3D Mine World', () => {
         dy: 50,
         defaultPitch: getDefaultOrbitPitchForMode('omega'),
       })
-    ).toEqual({ yaw: 0, pitch: -0.26 });
+    ).toEqual({ yaw: 0, pitch: -0.32 });
 
     expect(clampCameraZoomRadius(5, 'mine')).toBe(9);
     expect(clampCameraZoomRadius(22, 'mine')).toBe(22);
@@ -2930,18 +2930,50 @@ describe('Pure 3D Mine World', () => {
     expect(bossHead!.y).toBeLessThan(720);
 
     let torusCollars = 0;
+    let instancedMeshes = 0;
     arena.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) instancedMeshes++;
       if (obj instanceof THREE.Mesh && obj.geometry instanceof THREE.TorusGeometry && obj.position.y > 0.28) {
         torusCollars++;
       }
     });
     expect(torusCollars).toBe(6); // 1 Boss Podium + 5 Player Chibi Podiums
+    expect(instancedMeshes).toBeGreaterThanOrEqual(3); // Rooftop & Skyline InstancedMesh windows
 
     arena.setBossId('obsidian-sovereign');
     arena.syncBattleTargets([
       { id: 'pillar-1', kind: 'obsidian_pillar', hp: 1, maxHp: 1, xOffset: -3.2, zOffset: -0.2 },
     ]);
     expect(arena.clickables.some((c) => c.userData?.targetId === 'pillar-1')).toBe(true);
+
+    // Entrance cutscene triggers slam callback once & blocks fighter attacks until active
+    arena.startEntranceCutscene();
+    const entranceStrikes: number[] = [];
+    let slamCount = 0;
+    for (let f = 0; f < 16; f++) {
+      arena.update(0.1, 2.0 + f * 0.1, cam, (ev) => entranceStrikes.push(ev.slotIndex), () => {
+        slamCount++;
+      });
+    }
+    expect(entranceStrikes.length).toBe(0);
+    expect(slamCount).toBe(1);
+
+    // Invul shield and ended phase keep fighters idle on podiums (0 strikes)
+    arena.setBattlePhase('invul_shield');
+    arena.pulseInvulShield();
+    const invulStrikes: number[] = [];
+    for (let f = 0; f < 4; f++) {
+      arena.update(0.1, 4.0 + f * 0.1, cam, (ev) => invulStrikes.push(ev.slotIndex));
+    }
+    expect(invulStrikes.length).toBe(0);
+
+    arena.setBattlePhase('ended');
+    const endedStrikes: number[] = [];
+    for (let f = 0; f < 4; f++) {
+      arena.update(0.1, 5.0 + f * 0.1, cam, (ev) => endedStrikes.push(ev.slotIndex));
+    }
+    expect(endedStrikes.length).toBe(0);
+
     expect(() => arena.dispose()).not.toThrow();
   });
 

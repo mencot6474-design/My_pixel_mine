@@ -1,4 +1,5 @@
 import { getChibiById } from '../game3d/ChibiCatalog';
+import { getStarPassiveScale } from './FusionDomain';
 
 export interface PremiumShopItemDef {
   id: string;
@@ -112,8 +113,11 @@ export interface ActivePremiumPassives {
   oreSellPct: number;
 }
 
-/** Sums unique active passive bonuses from placed TWIN Premium Shop units. */
-export function getActivePremiumPassiveBonuses(plotMiners: readonly (string | null)[]): ActivePremiumPassives {
+/** Sums unique active passive bonuses from placed TWIN Premium Shop units (scaled +20%/star). */
+export function getActivePremiumPassiveBonuses(
+  plotMiners: readonly (string | null)[],
+  chibiStars: Readonly<Record<string, number>> = {}
+): ActivePremiumPassives {
   const seen = new Set<string>();
   const totals: ActivePremiumPassives = {
     teamDmgPct: 0,
@@ -125,9 +129,10 @@ export function getActivePremiumPassiveBonuses(plotMiners: readonly (string | nu
     const def = getPremiumShopItemByChibiId(id);
     if (!def) continue;
     seen.add(id);
-    totals.teamDmgPct += def.teamDmgPct;
-    totals.oreDropPct += def.oreDropPct;
-    totals.oreSellPct += def.oreSellPct;
+    const starScale = getStarPassiveScale(chibiStars[id] ?? 0);
+    totals.teamDmgPct += def.teamDmgPct * starScale;
+    totals.oreDropPct += def.oreDropPct * starScale;
+    totals.oreSellPct += def.oreSellPct * starScale;
   }
   return totals;
 }

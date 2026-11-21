@@ -887,6 +887,15 @@ describe('Tahap C GameState Domain Modules', () => {
       for (const r of FUSION_RECIPES) {
         expect(['teamDmgPct', 'oreSellPct', 'oreDropPct']).toContain(r.passive.stat);
       }
+
+      // Star-Up Fusion Chibis scales their passive by +20% per star
+      state.chibiStars['glitch-cheshire'] = 2; // +40% -> 0.3 * 1.4 = 0.42 (+0.12)
+      state.chibiStars['thorn-maiden'] = 1; // +20% -> 1.5 * 1.2 = 1.80
+      state.chibiStars['monochrome-saint'] = 5; // +100% -> 2.0 * 2.0 = 4.00
+      const starredPassives = state.getActiveFusionPassives();
+      expect(starredPassives.teamDmgPct).toBeCloseTo(1.67, 5);
+      expect(starredPassives.oreDropPct).toBeCloseTo(1.8, 5);
+      expect(starredPassives.oreSellPct).toBeCloseTo(4.0, 5);
     });
   });
 
@@ -1300,6 +1309,14 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(clockworkPassives.oreSellPct).toBeCloseTo(2.6, 5);
       expect(state.getPlotUnitStats(0)!.dmg).toBeCloseTo(basePlot0Dmg * 4.85, -1);
 
+      // Star-Up Twin Chibis scales their dual passives by +20% per star
+      state.chibiStars['yukikage-twins'] = 1; // +20% -> (+0.20 teamDmg, +0.08 oreDrop)
+      state.chibiStars['clockwork-twins'] = 5; // +100% -> (+1.60 teamDmg, +1.10 oreSell)
+      const starredTwinPassives = state.getActivePremiumPassives();
+      expect(starredTwinPassives.teamDmgPct).toBeCloseTo(3.85 + 0.2 + 1.6, 5);
+      expect(starredTwinPassives.oreDropPct).toBeCloseTo(1.05 + 0.08, 5);
+      expect(starredTwinPassives.oreSellPct).toBeCloseTo(2.6 + 1.1, 5);
+
       // Verify Twin Index tab progress & 50%/100% milestones
       expect(getIndexTabEntryIds('twin')).toEqual([
         'yukikage-twins',
@@ -1464,8 +1481,39 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(retreatSummary?.victory).toBe(false);
       expect(state.omegaKeys).toBe(OMEGA_MAX_KEYS);
 
-      // Parry deals 8% Max HP + +25% Stagger & 4 parries trigger OMEGA BREAK! (2.5x DMG)
+      // Entrance cutscene -> 30s Invul Shield (12 random screen taps to break) -> Active Duel
       expect(state.startOmegaBoss('crimson-ronin', 1)).toBe(true);
+      expect(state.omegaBattle!.phase).toBe('entrance');
+      expect(state.applyOmegaSquadStrike(0, 1.0, () => 0.5).dmgDealt).toBe(0);
+      expect(state.triggerOmegaParry(() => 0.1).ok).toBe(false);
+
+      for (let i = 0; i < 8; i++) state.stepOmegaBossTick(0.25, () => 0.5);
+      expect(state.omegaBattle!.phase).toBe('invul_shield');
+      expect(state.applyOmegaSquadStrike(0, 1.0, () => 0.5).dmgDealt).toBe(0);
+
+      const tapsNeeded = state.omegaBattle!.invulMaxTaps;
+      for (let i = 0; i < tapsNeeded - 1; i++) {
+        const tapRes = state.tapOmegaInvulShield();
+        expect(tapRes.ok).toBe(true);
+        expect(tapRes.shattered).toBe(false);
+      }
+      const shatterRes = state.tapOmegaInvulShield();
+      expect(shatterRes.ok).toBe(true);
+      expect(shatterRes.shattered).toBe(true);
+      expect(state.omegaBattle!.phase).toBe('active');
+
+      // Invul shield timeout causes defeat with shieldFailed summary
+      const shieldFailState = new GameState();
+      shieldFailState.omegaKeys = 1;
+      expect(shieldFailState.startOmegaBoss('crimson-ronin', 1)).toBe(true);
+      for (let i = 0; i < 8; i++) shieldFailState.stepOmegaBossTick(0.25, () => 0.5);
+      expect(shieldFailState.omegaBattle!.phase).toBe('invul_shield');
+      for (let i = 0; i < 125; i++) shieldFailState.stepOmegaBossTick(0.25, () => 0.5);
+      expect(shieldFailState.omegaBattle).toBeNull();
+      expect(shieldFailState.omegaLastSummary?.victory).toBe(false);
+      expect(shieldFailState.omegaLastSummary?.shieldFailed).toBe(true);
+
+      // Parry deals 8% Max HP + +25% Stagger & 4 parries trigger OMEGA BREAK! (2.5x DMG)
       state.omegaBattle!.parryWindow.active = true;
       const parryRes = state.triggerOmegaParry(() => 0.1);
       expect(parryRes.ok).toBe(true);
@@ -1491,6 +1539,7 @@ describe('Tahap C GameState Domain Modules', () => {
 
       // Obsidian Pillars reduce damage by 60% until shattered
       expect(state.startOmegaBoss('obsidian-sovereign', 1)).toBe(true);
+      state.omegaBattle!.phase = 'active';
       state.omegaBattle!.targets.push({
         id: 'pillar-test',
         kind: 'obsidian_pillar',
@@ -1519,11 +1568,11 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(baseOmegaPassives.oreDropPct).toBeCloseTo(1.2, 5);
       expect(baseOmegaPassives.oreSellPct).toBeCloseTo(0.8, 5);
 
-      expect(state.awakenOmegaChibi('crimson-ronin')).toBe('awakened'); // spends 3 cores -> 2★ (+15%)
+      expect(state.awakenOmegaChibi('crimson-ronin')).toBe('awakened'); // spends 3 cores -> 2★ (+20%)
       const star2Passives = state.getActiveOmegaPassives();
-      expect(star2Passives.teamDmgPct).toBeCloseTo(2.3, 5);
-      expect(star2Passives.oreDropPct).toBeCloseTo(1.38, 5);
-      expect(star2Passives.oreSellPct).toBeCloseTo(0.92, 5);
+      expect(star2Passives.teamDmgPct).toBeCloseTo(2.4, 5);
+      expect(star2Passives.oreDropPct).toBeCloseTo(1.44, 5);
+      expect(star2Passives.oreSellPct).toBeCloseTo(0.96, 5);
 
       // Save / Load persistence
       const json = JSON.stringify(serializeSavePayload(state));

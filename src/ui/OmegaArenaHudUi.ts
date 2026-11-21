@@ -12,73 +12,168 @@ import {
 import { getChibiById } from '../game3d/ChibiCatalog';
 import { bossKeyIconHtml, enchantDiceIconHtml, hudIconHtml, omegaCrestIconHtml } from './HudIcons';
 import { TW_CLOSE_BTN } from './HudShared';
-
-const SVG_RETREAT = `<svg viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><path d="M8.5 4.5L3 10l5.5 5.5M4 10h11.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const SVG_TIMER = `<svg viewBox="0 0 18 18" width="14" height="14" fill="none" aria-hidden="true"><circle cx="9" cy="10" r="6" stroke="currentColor" stroke-width="2"/><path d="M7 2.5h4M9 7v3.2l2 1.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
-const SVG_ARMOR_SHIELD = `<svg viewBox="0 0 18 18" width="13" height="13" fill="none" aria-hidden="true"><path d="M9 2L15 4.5V9c0 3.6-2.5 6-6 7-3.5-1-6-3.4-6-7V4.5L9 2Z" fill="#e879f9" stroke="#14111d" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
-const SVG_BARRIER = `<svg viewBox="0 0 18 18" width="13" height="13" fill="none" aria-hidden="true"><polygon points="9,2 15,5.5 15,12.5 9,16 3,12.5 3,5.5" fill="#7dd3fc" stroke="#14111d" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
-const SVG_CLASH_BLADES = `<svg viewBox="0 0 22 22" width="18" height="18" fill="none" aria-hidden="true"><path d="M4 17L16.5 4.5M18 17L5.5 4.5" stroke="#14111d" stroke-width="3.6" stroke-linecap="round"/><path d="M4 17L16.5 4.5M18 17L5.5 4.5" stroke="#fde047" stroke-width="1.8" stroke-linecap="round"/><circle cx="11" cy="11" r="2.8" fill="#ffffff" stroke="#14111d" stroke-width="1.4"/></svg>`;
-const SVG_TARGET_RETICLE = `<svg viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="6.5" stroke="#ef4444" stroke-width="2.1"/><circle cx="10" cy="10" r="2.2" fill="#ef4444"/><path d="M10 1.8v2.6M10 15.6v2.6M1.8 10h2.6M15.6 10h2.6" stroke="#14111d" stroke-width="2" stroke-linecap="round"/></svg>`;
-const SVG_BREAK_BOLT = `<svg viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true"><polygon points="11,1.5 4,11 9.5,11 8.5,18.5 16,8.5 10.5,8.5" fill="#fde047" stroke="#14111d" stroke-width="1.7" stroke-linejoin="round"/></svg>`;
+import { omegaBattleIconHtml } from './OmegaBattleIcons';
 
 export class OmegaArenaHudUi {
+  private shieldTargets: Array<{ leftPct: number; topPct: number }> = [
+    { leftPct: 24, topPct: 42 },
+    { leftPct: 74, topPct: 40 },
+    { leftPct: 48, topPct: 62 },
+  ];
+
   constructor(
     private readonly state: GameState,
     private readonly onExitOmega: () => void,
     private readonly onTriggerParry: () => void,
     private readonly onVictoryToHub?: () => void,
-    private readonly onVictoryRetry?: (bossId: OmegaBossId, tier: number) => void
+    private readonly onVictoryRetry?: (bossId: OmegaBossId, tier: number) => void,
+    private readonly onTapInvulShield?: (targetIdx: number) => void
   ) {}
+
+  public resetShieldTargets(): void {
+    for (let i = 0; i < this.shieldTargets.length; i++) {
+      this.randomizeShieldTarget(i);
+    }
+  }
+
+  public randomizeShieldTarget(targetIdx: number): void {
+    const idx = Math.max(0, Math.min(this.shieldTargets.length - 1, targetIdx));
+    let leftPct = 20 + Math.random() * 60;
+    let topPct = 30 + Math.random() * 40;
+    for (let tries = 0; tries < 6; tries++) {
+      const candL = 16 + Math.random() * 68;
+      const candT = 28 + Math.random() * 44;
+      const tooClose = this.shieldTargets.some(
+        (other, oi) => oi !== idx && Math.hypot(other.leftPct - candL, other.topPct - candT) < 18
+      );
+      if (!tooClose) {
+        leftPct = candL;
+        topPct = candT;
+        break;
+      }
+    }
+    this.shieldTargets[idx] = {
+      leftPct: Math.round(leftPct * 10) / 10,
+      topPct: Math.round(topPct * 10) / 10,
+    };
+  }
+
+  public syncShieldTargetPos(root: HTMLElement, targetIdx: number): void {
+    const pos = this.shieldTargets[targetIdx];
+    const btn = root.querySelector<HTMLElement>(`[data-omega-shield-tap="${targetIdx}"]`);
+    if (pos && btn) {
+      btn.style.left = `${pos.leftPct}%`;
+      btn.style.top = `${pos.topPct}%`;
+    }
+  }
 
   public renderOmegaArenaHud(): string {
     const battle = this.state.omegaBattle;
     if (!battle) {
       const summary = this.state.omegaLastSummary;
-      return summary?.victory ? this.renderOmegaVictoryPopup(summary) : '';
+      if (!summary) return '';
+      return summary.victory ? this.renderOmegaVictoryPopup(summary) : this.renderOmegaDefeatPopup(summary);
     }
     const boss = getOmegaBossById(battle.bossId);
     const chibi = boss ? getChibiById(boss.chibiId) : undefined;
     const hpPct = Math.max(0, Math.min(100, (battle.hp / Math.max(1, battle.maxHp)) * 100));
-    const isBreak = battle.breakRemainingSec > 0;
+    const isEntrance = battle.phase === 'entrance';
+    const isInvul = battle.phase === 'invul_shield';
+    const isBreak = battle.phase === 'active' && battle.breakRemainingSec > 0;
     const hasArmor =
       battle.bossId === 'obsidian-sovereign' &&
+      battle.phase === 'active' &&
       !isBreak &&
       battle.targets.some((t) => t.kind === 'obsidian_pillar');
     const squadDps = this.state.getOmegaSquadEffectiveDps();
-    const timerDanger = battle.timeRemainingSec <= 10;
-    const barFillBg = isBreak
-      ? 'linear-gradient(90deg, #f59e0b 0%, #fde047 50%, #fb923c 100%)'
-      : battle.bossId === 'obsidian-sovereign'
-        ? 'linear-gradient(90deg, #9333ea 0%, #c084fc 52%, #e879f9 100%)'
-        : 'linear-gradient(90deg, #dc2626 0%, #ef4444 52%, #fb7185 100%)';
+    const activeSecLeft = isInvul ? battle.invulRemainingSec : battle.timeRemainingSec;
+    const timerDanger = !isEntrance && activeSecLeft <= 10;
+    const shieldPct = Math.max(0, Math.min(100, (battle.invulTapsRemaining / Math.max(1, battle.invulMaxTaps)) * 100));
+    const barFillBg = isInvul
+      ? 'linear-gradient(90deg, #0284c7 0%, #38bdf8 52%, #7dd3fc 100%)'
+      : isBreak
+        ? 'linear-gradient(90deg, #f59e0b 0%, #fde047 50%, #fb923c 100%)'
+        : battle.bossId === 'obsidian-sovereign'
+          ? 'linear-gradient(90deg, #9333ea 0%, #c084fc 52%, #e879f9 100%)'
+          : 'linear-gradient(90deg, #dc2626 0%, #ef4444 52%, #fb7185 100%)';
 
     const emblemHtml = chibi
       ? `<img src="${assetUrl(chibi.poses.pose)}" alt="${boss?.name ?? 'Boss'}" class="w-full h-full object-contain" />`
-      : SVG_CLASH_BLADES;
+      : omegaBattleIconHtml('parryClash', 24);
 
-    const tacticalCallout = isBreak
+    const tacticalCallout = isEntrance
       ? {
-          icon: SVG_BREAK_BOLT,
-          pillBg: 'bg-[#fef08a]',
-          text: `OMEGA BREAK ACTIVE — ALL ATTACKS DEAL ${OMEGA_BREAK_DMG_MULT}× DMG!`,
+          icon: omegaBattleIconHtml('skyDrop', 17),
+          pillBg: 'bg-[#fde047]',
+          text: `${boss?.name ?? 'OMEGA BOSS'} IS DESCENDING FROM THE SKY!`,
         }
-      : battle.targets.length > 0
+      : isInvul
         ? {
-            icon: SVG_TARGET_RETICLE,
-            pillBg: 'bg-[#ffe4e6]',
-            text: `Click floating Targets (${battle.targets.length} active) to shatter & charge Stagger!`,
+            icon: omegaBattleIconHtml('crackShield', 17),
+            pillBg: 'bg-[#bae6fd]',
+            text: `TAP RANDOM TARGETS ON SCREEN TO SHATTER 30s INVUL SHIELD (${battle.invulTapsRemaining}/${battle.invulMaxTaps})!`,
           }
-        : battle.bossId === 'crimson-ronin'
+        : isBreak
           ? {
-              icon: SVG_CLASH_BLADES,
-              pillBg: 'bg-[#e0f2fe]',
-              text: 'Watch for shrinking golden Parry Rings to counter-slash & build Stagger!',
+              icon: omegaBattleIconHtml('breakBolt', 17),
+              pillBg: 'bg-[#fef08a]',
+              text: `OMEGA BREAK ACTIVE — ALL ATTACKS DEAL ${OMEGA_BREAK_DMG_MULT}× DMG!`,
             }
-          : {
-              icon: SVG_ARMOR_SHIELD,
-              pillBg: 'bg-[#f3e8ff]',
-              text: 'Shatter Obsidian Pillars & Rune Seals to crack Boss Armor & fill Stagger!',
-            };
+          : battle.targets.length > 0
+            ? {
+                icon: omegaBattleIconHtml('crackShield', 17),
+                pillBg: 'bg-[#ffe4e6]',
+                text: `Click floating Targets (${battle.targets.length} active) to shatter & charge Stagger!`,
+              }
+            : battle.bossId === 'crimson-ronin'
+              ? {
+                  icon: omegaBattleIconHtml('clashBlades', 17),
+                  pillBg: 'bg-[#e0f2fe]',
+                  text: 'Watch for shrinking golden Parry Rings to counter-slash & build Stagger!',
+                }
+              : {
+                  icon: omegaBattleIconHtml('armorShield', 17),
+                  pillBg: 'bg-[#f3e8ff]',
+                  text: 'Shatter Obsidian Pillars & Rune Seals to crack Boss Armor & fill Stagger!',
+                };
+
+    const randomShieldTargetsHtml = isInvul
+      ? this.shieldTargets
+          .map(
+            (pos, idx) => `
+              <button
+                type="button"
+                class="pointer-events-auto fixed -translate-x-1/2 -translate-y-1/2 z-30 flex flex-col items-center gap-0.5 px-3.5 py-2 rounded-2xl border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#fde047_0%,#38bdf8_100%)] hover:scale-105 active:scale-90 text-[#14111d] font-black cursor-pointer transition-transform animate-bounce"
+                style="left:${pos.leftPct}%;top:${pos.topPct}%"
+                data-omega-shield-tap="${idx}"
+              >
+                <span class="inline-flex items-center gap-1.5 text-[13px] tracking-wide">
+                  <span class="w-6 h-6 rounded-lg bg-white border-[1.5px] border-[#14111d] flex items-center justify-center shrink-0">${omegaBattleIconHtml('crackShield', 17)}</span>
+                  <span>TAP!</span>
+                </span>
+                <span class="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.2 rounded bg-white border border-[#14111d]">CRACK SHIELD</span>
+              </button>
+            `
+          )
+          .join('')
+      : '';
+
+    const phaseBannerHtml = isEntrance
+      ? `
+        <div class="mt-1.5 mx-auto px-4 py-1.5 rounded-2xl border-[2.5px] border-[#14111d] bg-[#fde047] text-[#14111d] text-[12px] font-black uppercase tracking-wider inline-flex items-center justify-center gap-2 w-full animate-pulse" data-omega-entrance-banner="true">
+          ${omegaBattleIconHtml('skyDrop', 18)}
+          <span>OMEGA BOSS INCOMING — STAND BY TO BREAK SHIELD!</span>
+          ${omegaBattleIconHtml('skyDrop', 18)}
+        </div>
+      `
+      : isInvul
+        ? `
+          <div class="mt-1.5 mx-auto px-4 py-1.5 rounded-2xl border-[2.5px] border-[#14111d] bg-[linear-gradient(90deg,#bae6fd_0%,#fde047_50%,#fecdd3_100%)] text-[#14111d] text-[12px] font-black uppercase tracking-wide inline-flex items-center justify-center gap-2 w-full" data-omega-invul-banner="true">
+            ${omegaBattleIconHtml('invulAegis', 18)}
+            <span>INVULNERABLE SHIELD! TAP TARGETS TO BREAK (<span data-omega-invul-count>${battle.invulTapsRemaining}</span>/${battle.invulMaxTaps} LEFT)</span>
+          </div>
+        `
+        : '';
 
     return `
       <div class="pointer-events-none fixed inset-0 z-20 flex flex-col justify-between p-3.5 @max-[720px]:p-2.5">
@@ -88,7 +183,7 @@ export class OmegaArenaHudUi {
             data-omega-exit="true"
             title="Retreat without losing a Boss Key"
           >
-            ${SVG_RETREAT}
+            ${omegaBattleIconHtml('retreat', 18)}
             <span>Retreat (0 Key Lost)</span>
           </button>
 
@@ -100,12 +195,13 @@ export class OmegaArenaHudUi {
                   <div class="flex flex-col min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
                       <span class="mam-pill-xs bg-[#14111d] text-[#fde047]">TIER ${battle.tier}</span>
-                      <span class="mam-pill-xs bg-white text-[#b91c1c] border-[1.5px] border-[#14111d]">OMEGA RAID</span>
-                      ${hasArmor ? `<span class="mam-pill-xs bg-[#f5d0fe] text-[#701a75] inline-flex items-center gap-1" data-omega-armor-pill>${SVG_ARMOR_SHIELD}<span>-60% Armor</span></span>` : ''}
-                      ${battle.barrierHp > 0 ? `<span class="mam-pill-xs bg-[#bae6fd] text-[#0369a1] inline-flex items-center gap-1" data-omega-barrier-pill>${SVG_BARRIER}<span>Shield ${fmtShort(battle.barrierHp)}</span></span>` : ''}
+                      <span class="mam-pill-xs bg-white text-[#b91c1c] border-[1.5px] border-[#14111d] inline-flex items-center gap-1">${omegaBattleIconHtml('bossCrown', 12)}<span>OMEGA RAID</span></span>
+                      ${isInvul ? `<span class="mam-pill-xs bg-[#38bdf8] text-[#14111d] inline-flex items-center gap-1" data-omega-invul-pill>${omegaBattleIconHtml('invulAegis', 13)}<span>INVULNERABLE</span></span>` : ''}
+                      ${hasArmor ? `<span class="mam-pill-xs bg-[#f5d0fe] text-[#701a75] inline-flex items-center gap-1" data-omega-armor-pill>${omegaBattleIconHtml('armorShield', 13)}<span>-60% Armor</span></span>` : ''}
+                      ${battle.barrierHp > 0 ? `<span class="mam-pill-xs bg-[#bae6fd] text-[#0369a1] inline-flex items-center gap-1" data-omega-barrier-pill>${omegaBattleIconHtml('invulAegis', 13)}<span>Shield ${fmtShort(battle.barrierHp)}</span></span>` : ''}
                     </div>
                     <div class="mt-0.5 flex items-center gap-1.5 min-w-0">
-                      <span class="w-2 h-2 rounded-full shrink-0 ${isBreak ? 'bg-[#f59e0b] animate-ping' : 'bg-[#dc2626] animate-pulse'}"></span>
+                      <span class="w-2 h-2 rounded-full shrink-0 ${isInvul ? 'bg-[#38bdf8] animate-ping' : isBreak ? 'bg-[#f59e0b] animate-ping' : 'bg-[#dc2626] animate-pulse'}"></span>
                       <span class="text-[14px] font-black uppercase tracking-wide truncate text-[#14111d]">${boss?.name ?? battle.bossId}</span>
                     </div>
                   </div>
@@ -113,21 +209,29 @@ export class OmegaArenaHudUi {
 
                 <span
                   class="mam-tower-status-pill shrink-0 tabular-nums ${
-                    timerDanger ? 'bg-[#fecdd3] text-[#881337] animate-pulse' : 'bg-[#fff8e7] text-[#14111d]'
+                    isInvul
+                      ? 'bg-[#bae6fd] text-[#0c4a6e]'
+                      : timerDanger
+                        ? 'bg-[#fecdd3] text-[#881337] animate-pulse'
+                        : 'bg-[#fff8e7] text-[#14111d]'
                   }"
                   data-omega-timer
-                >${SVG_TIMER}<span data-omega-timer-val>${Math.ceil(battle.timeRemainingSec)}s</span></span>
+                >${omegaBattleIconHtml('timer', 15)}<span data-omega-timer-val>${isEntrance ? 'DROP' : isInvul ? `SHIELD ${Math.ceil(battle.invulRemainingSec)}s` : `${Math.ceil(battle.timeRemainingSec)}s`}</span></span>
               </div>
 
               <div class="mam-battle-hp-track">
-                <div class="mam-battle-hp-fill" data-omega-hp-bar style="width:${hpPct.toFixed(2)}%;background-image:${barFillBg}"></div>
+                <div class="mam-battle-hp-fill" data-omega-hp-bar style="width:${(isInvul ? shieldPct : hpPct).toFixed(2)}%;background-image:${barFillBg}"></div>
                 <div class="absolute inset-x-0 top-0 h-[42%] bg-gradient-to-b from-white/25 to-transparent pointer-events-none z-[1]"></div>
                 <div class="mam-battle-hp-ticks" aria-hidden="true">
                   <span></span><span></span><span></span><span></span><span></span>
                   <span></span><span></span><span></span><span></span><span></span>
                 </div>
                 <div class="relative z-[2] text-[13px] font-black tabular-nums text-white mam-outline-sm" data-omega-hp-text>
-                  ${fmtShort(battle.hp)} / ${fmtShort(battle.maxHp)} (${fmtPct(hpPct)})
+                  ${
+                    isInvul
+                      ? `INVUL SHIELD: ${battle.invulTapsRemaining} / ${battle.invulMaxTaps} TAPS LEFT`
+                      : `${fmtShort(battle.hp)} / ${fmtShort(battle.maxHp)} (${fmtPct(hpPct)})`
+                  }
                 </div>
               </div>
 
@@ -137,25 +241,30 @@ export class OmegaArenaHudUi {
                   data-omega-stagger-bar
                   style="width:${isBreak ? 100 : Math.min(100, battle.staggerPct)}%"
                 ></div>
-                <div class="relative z-[2] inline-flex items-center gap-1 text-[10px] font-black tracking-wide text-white mam-outline-sm tabular-nums" data-omega-stagger-text>
-                  ${isBreak ? `⚡ OMEGA BREAK! ${OMEGA_BREAK_DMG_MULT}× DMG (${battle.breakRemainingSec.toFixed(1)}s)` : `STAGGER ${Math.round(battle.staggerPct)}%`}
+                <div class="relative z-[2] inline-flex items-center gap-1 text-[10px] font-black tracking-wide text-white mam-outline-sm tabular-nums">
+                  <span data-omega-break-icon class="${isBreak ? 'inline-flex items-center' : 'hidden'}">${omegaBattleIconHtml('breakBolt', 13)}</span>
+                  <span data-omega-stagger-text>${isBreak ? `OMEGA BREAK! ${OMEGA_BREAK_DMG_MULT}× DMG (${battle.breakRemainingSec.toFixed(1)}s)` : `STAGGER ${Math.round(battle.staggerPct)}%`}</span>
                 </div>
               </div>
             </div>
+            ${phaseBannerHtml}
           </div>
 
           <div class="flex flex-col gap-1.5 shrink-0 @max-[720px]:hidden">
-            <div class="bg-[#fff8e7] border-[2.5px] border-[#14111d] rounded-xl px-3 py-1.5 flex flex-col items-end">
-              <span class="text-[9.5px] font-black uppercase tracking-wider text-[#0369a1]">Squad DPS</span>
-              <span class="text-[13.5px] font-black tabular-nums text-[#14111d]">${fmtShort(squadDps)}/s</span>
+            <div class="bg-[#fff8e7] border-[2.5px] border-[#14111d] rounded-xl px-3 py-1.5 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg border-[1.5px] border-[#14111d] bg-[#e0f2fe] flex items-center justify-center shrink-0">${omegaBattleIconHtml('squadPower', 15)}</span>
+              <div class="flex flex-col items-end">
+                <span class="text-[9.5px] font-black uppercase tracking-wider text-[#0369a1]">Squad DPS</span>
+                <span class="text-[13.5px] font-black tabular-nums text-[#14111d]">${fmtShort(squadDps)}/s</span>
+              </div>
             </div>
             <div class="grid grid-cols-2 gap-1.5">
-              <div class="bg-[#fef08a] border-2 border-[#14111d] rounded-xl px-2 py-1 flex flex-col items-center">
-                <span class="text-[8.5px] font-black uppercase text-[#854d0e]">Parries</span>
+              <div class="bg-[#fef08a] border-2 border-[#14111d] rounded-xl px-2 py-1 flex flex-col items-center gap-0.5">
+                <span class="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-[#854d0e]">${omegaBattleIconHtml('clashBlades', 11)}<span>Parries</span></span>
                 <span class="text-[12px] font-black tabular-nums text-[#14111d]" data-omega-parries-count>${fmtInt(battle.parriesLanded)}</span>
               </div>
-              <div class="bg-[#e0f2fe] border-2 border-[#14111d] rounded-xl px-2 py-1 flex flex-col items-center">
-                <span class="text-[8.5px] font-black uppercase text-[#0369a1]">Shatter</span>
+              <div class="bg-[#e0f2fe] border-2 border-[#14111d] rounded-xl px-2 py-1 flex flex-col items-center gap-0.5">
+                <span class="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-[#0369a1]">${omegaBattleIconHtml('shatterPrism', 11)}<span>Shatter</span></span>
                 <span class="text-[12px] font-black tabular-nums text-[#14111d]" data-omega-shatter-count>${fmtInt(battle.targetsShattered)}</span>
               </div>
             </div>
@@ -164,8 +273,8 @@ export class OmegaArenaHudUi {
 
         <div class="flex flex-col items-center gap-2 mb-1">
           ${
-            battle.parryWindow.active && !battle.parryWindow.consumed
-              ? `<button class="pointer-events-auto inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl border-[3px] border-[#14111d] bg-[#fde047] hover:bg-[#fef08a] text-[#14111d] text-[15px] font-black cursor-pointer animate-bounce" data-omega-parry-btn="true">${SVG_CLASH_BLADES}<span>PARRY NOW! (+8% HP &amp; +25% Stagger)</span></button>`
+            battle.phase === 'active' && battle.parryWindow.active && !battle.parryWindow.consumed
+              ? `<button class="pointer-events-auto inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl border-[3px] border-[#14111d] bg-[#fde047] hover:bg-[#fef08a] text-[#14111d] text-[15px] font-black cursor-pointer animate-bounce" data-omega-parry-btn="true">${omegaBattleIconHtml('parryClash', 21)}<span>PARRY NOW! (+8% HP &amp; +25% Stagger)</span></button>`
               : ''
           }
           <div class="inline-flex items-center gap-2 bg-[#fff8e7] border-[2.5px] border-[#14111d] rounded-2xl px-3.5 py-1.5 text-[11.5px] font-black text-[#14111d] shadow-none" data-omega-tactical-bar>
@@ -173,6 +282,7 @@ export class OmegaArenaHudUi {
             <span>${tacticalCallout.text}</span>
           </div>
         </div>
+        ${randomShieldTargetsHtml}
       </div>
     `;
   }
@@ -180,27 +290,48 @@ export class OmegaArenaHudUi {
   public updateLiveValues(root: HTMLElement): void {
     const battle = this.state.omegaBattle;
     if (!battle) return;
+    const isEntrance = battle.phase === 'entrance';
+    const isInvul = battle.phase === 'invul_shield';
     const hpPct = Math.max(0, Math.min(100, (battle.hp / Math.max(1, battle.maxHp)) * 100));
-    const isBreak = battle.breakRemainingSec > 0;
+    const shieldPct = Math.max(0, Math.min(100, (battle.invulTapsRemaining / Math.max(1, battle.invulMaxTaps)) * 100));
+    const isBreak = battle.phase === 'active' && battle.breakRemainingSec > 0;
 
     const timerVal = root.querySelector<HTMLElement>('[data-omega-timer-val]');
-    if (timerVal) timerVal.textContent = `${Math.ceil(battle.timeRemainingSec)}s`;
+    if (timerVal) {
+      timerVal.textContent = isEntrance
+        ? 'DROP'
+        : isInvul
+          ? `SHIELD ${Math.ceil(battle.invulRemainingSec)}s`
+          : `${Math.ceil(battle.timeRemainingSec)}s`;
+    }
 
     const hpBar = root.querySelector<HTMLElement>('[data-omega-hp-bar]');
-    if (hpBar) hpBar.style.width = `${hpPct.toFixed(2)}%`;
+    if (hpBar) hpBar.style.width = `${(isInvul ? shieldPct : hpPct).toFixed(2)}%`;
 
     const hpText = root.querySelector<HTMLElement>('[data-omega-hp-text]');
-    if (hpText) hpText.textContent = `${fmtShort(battle.hp)} / ${fmtShort(battle.maxHp)} (${fmtPct(hpPct)})`;
+    if (hpText) {
+      hpText.textContent = isInvul
+        ? `INVUL SHIELD: ${battle.invulTapsRemaining} / ${battle.invulMaxTaps} TAPS LEFT`
+        : `${fmtShort(battle.hp)} / ${fmtShort(battle.maxHp)} (${fmtPct(hpPct)})`;
+    }
+
+    const invulCount = root.querySelector<HTMLElement>('[data-omega-invul-count]');
+    if (invulCount) invulCount.textContent = String(battle.invulTapsRemaining);
 
     const stagBar = root.querySelector<HTMLElement>('[data-omega-stagger-bar]');
     if (stagBar) {
       stagBar.style.width = `${isBreak ? 100 : Math.min(100, battle.staggerPct)}%`;
     }
 
+    const stagIcon = root.querySelector<HTMLElement>('[data-omega-break-icon]');
+    if (stagIcon) {
+      stagIcon.classList.toggle('hidden', !isBreak);
+      stagIcon.classList.toggle('inline-flex', isBreak);
+    }
     const stagText = root.querySelector<HTMLElement>('[data-omega-stagger-text]');
     if (stagText) {
       stagText.textContent = isBreak
-        ? `⚡ OMEGA BREAK! ${OMEGA_BREAK_DMG_MULT}× DMG (${battle.breakRemainingSec.toFixed(1)}s)`
+        ? `OMEGA BREAK! ${OMEGA_BREAK_DMG_MULT}× DMG (${battle.breakRemainingSec.toFixed(1)}s)`
         : `STAGGER ${Math.round(battle.staggerPct)}%`;
     }
 
@@ -217,6 +348,13 @@ export class OmegaArenaHudUi {
     });
     root.querySelector<HTMLElement>('[data-omega-parry-btn]')?.addEventListener('click', () => {
       this.onTriggerParry();
+    });
+    root.querySelectorAll<HTMLElement>('[data-omega-shield-tap]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = Number(btn.dataset.omegaShieldTap ?? 0);
+        this.onTapInvulShield?.(idx);
+      });
     });
     root.querySelectorAll<HTMLElement>('[data-omega-victory-hub]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -294,7 +432,7 @@ export class OmegaArenaHudUi {
               </div>
               <div class="flex flex-col gap-0.5 min-w-0">
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="mam-pill-xs bg-[#16a34a] text-white">VICTORY!</span>
+                  <span class="mam-pill-xs bg-[#16a34a] text-white inline-flex items-center gap-1">${omegaBattleIconHtml('trophyStar', 12)}<span>VICTORY!</span></span>
                   <span class="mam-pill-xs bg-[#14111d] text-[#fde047]">TIER ${summary.tier}</span>
                   ${summary.firstClear ? `<span class="mam-pill-xs bg-[#fb923c] text-[#14111d]">1ST CLEAR!</span>` : ''}
                 </div>
@@ -328,9 +466,12 @@ export class OmegaArenaHudUi {
                   </div>`
                 : ''
             }
-            <div class="rounded-xl border-2 border-[#14111d] bg-white px-2.5 py-2 flex flex-col justify-center">
-              <span class="text-[9.5px] font-black uppercase text-[#64748b]">Raid Style</span>
-              <span class="text-[12px] font-black text-[#14111d] tabular-nums">${summary.parriesLanded} Parry • ${summary.targetsShattered} Hit</span>
+            <div class="rounded-xl border-2 border-[#14111d] bg-white px-2.5 py-2 flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg border-[1.5px] border-[#14111d] bg-[#fef08a] flex items-center justify-center shrink-0">${omegaBattleIconHtml('clashBlades', 17)}</span>
+              <div class="flex flex-col min-w-0">
+                <span class="text-[9.5px] font-black uppercase text-[#64748b]">Raid Style</span>
+                <span class="text-[12px] font-black text-[#14111d] tabular-nums">${summary.parriesLanded} Parry • ${summary.targetsShattered} Hit</span>
+              </div>
             </div>
           </div>
 
@@ -351,6 +492,79 @@ export class OmegaArenaHudUi {
             >
               ${bossKeyIconHtml(16)}
               <span>${hasKeys ? `Fight Again (${this.state.omegaKeys}/${OMEGA_MAX_KEYS})` : `No Keys (0/${OMEGA_MAX_KEYS})`}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderOmegaDefeatPopup(summary: OmegaBattleSummary): string {
+    const boss = getOmegaBossById(summary.bossId);
+    const chibi = boss ? getChibiById(boss.chibiId) : undefined;
+    const hasKeys = this.state.omegaKeys > 0;
+    const remHpPct = summary.remainingHpPct ?? 100;
+    const portraitHtml = chibi
+      ? `<img src="${assetUrl(chibi.poses.pose)}" alt="${boss?.name ?? 'Boss'}" class="w-full h-full object-contain" />`
+      : omegaCrestIconHtml(34);
+
+    return `
+      <div class="pointer-events-auto fixed inset-0 z-40 bg-[rgba(12,10,18,0.68)] flex items-center justify-center p-3 mam-backdrop-enter" data-omega-defeat-popup="true">
+        <div class="mam-modal mam-modal-enter w-[min(450px,calc(100%-12px))] max-h-[calc(100%-12px)] overflow-y-auto p-4 flex flex-col gap-3" data-modal-theme="omega-boss">
+          <div class="rounded-2xl border-[2.5px] border-[#14111d] px-3.5 py-2.5 flex items-center justify-between gap-2.5" style="background:linear-gradient(135deg,#fecdd3 0%,#fda4af 50%,#e2e8f0 100%)">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-13 h-13 rounded-2xl border-[2.5px] border-[#14111d] bg-[#fff8e7] p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                ${portraitHtml}
+              </div>
+              <div class="flex flex-col gap-0.5 min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="mam-pill-xs bg-[#dc2626] text-white inline-flex items-center gap-1">${omegaBattleIconHtml('bossCrown', 12)}<span>DEFEAT</span></span>
+                  <span class="mam-pill-xs bg-[#14111d] text-[#fde047]">TIER ${summary.tier}</span>
+                  <span class="mam-pill-xs bg-white text-[#15803d] border border-[#14111d]">0 KEY LOST</span>
+                </div>
+                <div class="text-[17px] font-black uppercase leading-tight text-[#14111d] truncate">${summary.shieldFailed ? 'Shield Held!' : `${boss?.name ?? summary.bossId} Survived!`}</div>
+                <div class="text-[11px] font-extrabold text-[#334155] tabular-nums">
+                  ${summary.shieldFailed ? 'Failed to shatter the 30s Invul Shield in time.' : `Time up • ${remHpPct}% Boss HP Remaining`}
+                </div>
+              </div>
+            </div>
+            <button class="${TW_CLOSE_BTN}" data-omega-victory-hub="true" aria-label="Return to Sanctum">✕</button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="rounded-xl border-2 border-[#14111d] bg-white px-3 py-2 flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-xl border-[1.5px] border-[#14111d] bg-[#e0f2fe] flex items-center justify-center shrink-0">${omegaBattleIconHtml('squadPower', 18)}</span>
+              <div class="flex flex-col min-w-0">
+                <span class="text-[9.5px] font-black uppercase text-[#64748b]">Damage Dealt</span>
+                <span class="text-[15px] font-black text-[#14111d] tabular-nums">${fmtShort(summary.damageDealt)}</span>
+              </div>
+            </div>
+            <div class="rounded-xl border-2 border-[#14111d] bg-white px-3 py-2 flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-xl border-[1.5px] border-[#14111d] bg-[#ffe4e6] flex items-center justify-center shrink-0">${omegaBattleIconHtml(summary.shieldFailed ? 'invulAegis' : 'bossCrown', 18)}</span>
+              <div class="flex flex-col min-w-0">
+                <span class="text-[9.5px] font-black uppercase text-[#64748b]">Boss HP Left</span>
+                <span class="text-[15px] font-black text-[#dc2626] tabular-nums">${remHpPct}%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 pt-0.5">
+            <button
+              class="flex-1 h-11 rounded-2xl border-[2.5px] border-[#14111d] bg-[#e2e8f0] hover:bg-white active:scale-95 text-[#14111d] text-[14px] font-black cursor-pointer transition-transform"
+              data-omega-victory-hub="true"
+            >Back to Sanctum</button>
+            <button
+              class="flex-1 h-11 rounded-2xl border-[2.5px] border-[#14111d] inline-flex items-center justify-center gap-1.5 text-[13.5px] font-black transition-transform ${
+                hasKeys
+                  ? 'bg-[#fde047] hover:bg-[#fef08a] active:scale-95 text-[#14111d] cursor-pointer'
+                  : 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed'
+              }"
+              data-omega-victory-retry="${summary.tier}"
+              data-omega-victory-boss="${summary.bossId}"
+              ${hasKeys ? '' : 'disabled'}
+            >
+              ${bossKeyIconHtml(16)}
+              <span>${hasKeys ? `Try Again (${this.state.omegaKeys}/${OMEGA_MAX_KEYS})` : `No Keys (0/${OMEGA_MAX_KEYS})`}</span>
             </button>
           </div>
         </div>

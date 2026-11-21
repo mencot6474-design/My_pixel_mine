@@ -12,8 +12,9 @@ import {
   MUTATIONS,
   PICKAXES,
 } from '../game/GameData';
-import { getFusionRecipeByResultChibiId } from '../game/FusionData';
-import { getOmegaBossByChibiId } from '../game/OmegaData';
+import { getFusionRecipeByResultChibiId, type FusionPassiveStat } from '../game/FusionData';
+import { getStarPassiveScale } from '../game/FusionDomain';
+import { getOmegaBossByChibiId, getOmegaPassiveStarScale } from '../game/OmegaData';
 import { getPremiumShopItemByChibiId } from '../game/PremiumShopData';
 import { GameState, getChibiUpgradeCostMult } from '../game/GameState';
 import {
@@ -163,38 +164,59 @@ export class PlotInspectUi {
           ${renderMutationBadgeHtml(mut.id, mut.name)}
         </div>
         ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black tabular-nums text-[#7c3aed]">✦ ${worldName} Synergy (+${Math.round(resBonusPct * 100)}% DMG${resOrePct > 0 ? ` • +${resOrePct}% Ore` : ''}${resSellPct > 0 ? ` • +${resSellPct}% Sell` : ''})</div>` : ''}
-        ${fusionDef ? `<div class="mt-0.5 w-full rounded-xl border-2 border-[#14111d] bg-[#cffafe] px-2.5 py-1 text-[10.5px] font-black leading-snug text-[#14111d] break-words">★ Passive: ${fusionDef.passive.label}</div>` : ''}
+        ${
+          fusionDef
+            ? (() => {
+                const statLabelMap: Record<FusionPassiveStat, string> = {
+                  teamDmgPct: 'Team DMG',
+                  oreSellPct: 'Ore Sell',
+                  oreDropPct: 'Ore Drop',
+                };
+                const scaledVal = Math.round(fusionDef.passive.value * getStarPassiveScale(star) * 100);
+                return `<div class="mt-0.5 w-full rounded-xl border-2 border-[#14111d] bg-[#cffafe] px-2.5 py-1 text-[10.5px] font-black leading-snug text-[#14111d] break-words">★ Passive${star > 0 ? ` (+${star * 20}%)` : ''}: +${scaledVal}% ${statLabelMap[fusionDef.passive.stat]}</div>`;
+              })()
+            : ''
+        }
         ${
           premiumDef
-            ? `<div class="mt-0.5 w-full rounded-xl border-2 border-[#14111d] bg-[linear-gradient(135deg,#e0f2fe_0%,#fef9c3_52%,#ffe4e6_100%)] px-2 py-1.5 flex flex-col gap-1">
+            ? (() => {
+                const twinScale = getStarPassiveScale(star);
+                const twinChips = [
+                  premiumDef.teamDmgPct > 0 ? `+${Math.round(premiumDef.teamDmgPct * twinScale * 100)}% Team DMG` : null,
+                  premiumDef.oreDropPct > 0 ? `+${Math.round(premiumDef.oreDropPct * twinScale * 100)}% Ore Drop` : null,
+                  premiumDef.oreSellPct > 0 ? `+${Math.round(premiumDef.oreSellPct * twinScale * 100)}% Ore Sell` : null,
+                ].filter((x): x is string => Boolean(x));
+                return `<div class="mt-0.5 w-full rounded-xl border-2 border-[#14111d] bg-[linear-gradient(135deg,#e0f2fe_0%,#fef9c3_52%,#ffe4e6_100%)] px-2 py-1.5 flex flex-col gap-1">
                 <div class="text-[9.5px] font-black uppercase tracking-[0.06em] text-[#14111d] flex items-center gap-1 leading-none">
                   <span class="text-[#0284c7]">✦</span>
-                  <span>Dual Passive</span>
+                  <span>Dual Passive${star > 0 ? ` (+${star * 20}%)` : ''}</span>
                 </div>
                 <div class="flex flex-wrap items-center gap-1">
-                  ${premiumDef.passiveSummary
-                    .split('•')
+                  ${twinChips
                     .map(
                       (part) =>
-                        `<span class="px-1.5 py-0.5 rounded-md border-[1.5px] border-[#14111d] bg-[#ffffff] text-[10px] font-black tabular-nums text-[#14111d] leading-tight">${part.trim()}</span>`
+                        `<span class="px-1.5 py-0.5 rounded-md border-[1.5px] border-[#14111d] bg-[#ffffff] text-[10px] font-black tabular-nums text-[#14111d] leading-tight">${part}</span>`
                     )
                     .join('')}
                 </div>
-              </div>`
+              </div>`;
+              })()
             : ''
         }
         ${
           omegaDef
-            ? `<div class="mt-0.5 w-full rounded-xl border-2 border-[#14111d] bg-[linear-gradient(135deg,#ffe4e6_0%,#fef9c3_52%,#e2e8f0_100%)] px-2 py-1.5 flex flex-col gap-1">
+            ? (() => {
+                const omegaScale = getOmegaPassiveStarScale(star);
+                return `<div class="mt-0.5 w-full rounded-xl border-2 border-[#14111d] bg-[linear-gradient(135deg,#ffe4e6_0%,#fef9c3_52%,#e2e8f0_100%)] px-2 py-1.5 flex flex-col gap-1">
                 <div class="text-[9.5px] font-black uppercase tracking-[0.06em] text-[#14111d] flex items-center gap-1 leading-none">
                   <span class="text-[#dc2626]">Ω</span>
-                  <span>Triple Omega Passive${star > 1 ? ` (+${(star - 1) * 15}%)` : ''}</span>
+                  <span>Triple Omega Passive${star > 1 ? ` (+${(star - 1) * 20}%)` : ''}</span>
                 </div>
                 <div class="flex flex-wrap items-center gap-1">
                   ${[
-                    `+${Math.round(omegaDef.teamDmgPct * (1 + Math.max(0, star - 1) * 0.15) * 100)}% Team DMG`,
-                    `+${Math.round(omegaDef.oreDropPct * (1 + Math.max(0, star - 1) * 0.15) * 100)}% Drop Ore`,
-                    `+${Math.round(omegaDef.oreSellPct * (1 + Math.max(0, star - 1) * 0.15) * 100)}% Sell Ore`,
+                    `+${Math.round(omegaDef.teamDmgPct * omegaScale * 100)}% Team DMG`,
+                    `+${Math.round(omegaDef.oreDropPct * omegaScale * 100)}% Drop Ore`,
+                    `+${Math.round(omegaDef.oreSellPct * omegaScale * 100)}% Sell Ore`,
                   ]
                     .map(
                       (part) =>
@@ -202,7 +224,8 @@ export class PlotInspectUi {
                     )
                     .join('')}
                 </div>
-              </div>`
+              </div>`;
+              })()
             : ''
         }
         ${eqEnchant ? `<div class="mt-0.5 w-full rounded-xl bg-white border-2 border-[#14111d] px-2.5 py-1 text-[10.5px] font-black leading-snug tabular-nums text-[#14111d] break-words">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}

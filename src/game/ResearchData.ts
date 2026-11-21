@@ -147,6 +147,8 @@ export const RESEARCH_TREE_META: Record<ResearchTreeId, ResearchTreeMeta> = {
 };
 
 function fmtBonusNumber(val: number): string {
+  if (val >= 1e15) return `${(val / 1e15).toFixed(val % 1e15 === 0 ? 0 : 1)}Qa`;
+  if (val >= 1e12) return `${(val / 1e12).toFixed(val % 1e12 === 0 ? 0 : 1)}T`;
   if (val >= 1e9) return `${(val / 1e9).toFixed(val % 1e9 === 0 ? 0 : 1)}B`;
   if (val >= 1e6) return `${(val / 1e6).toFixed(val % 1e6 === 0 ? 0 : 1)}M`;
   if (val >= 1e3) return `${(val / 1e3).toFixed(val % 1e3 === 0 ? 0 : 1)}K`;
@@ -157,28 +159,29 @@ export function formatNodeEffectLine(node: ResearchNodeDef, level: number): stri
   const effectiveLvl = Math.max(1, level);
   const total = node.perLevel * effectiveLvl;
   const pct = Math.round(total * 100);
+  const pctStr = pct >= 1000 ? fmtBonusNumber(pct) : String(pct);
   switch (node.effectType) {
     case 'tapDamageFlat':
       return `+${fmtBonusNumber(total)} tap damage`;
     case 'minerDmgPct':
-      return `+${pct}% miner damage`;
+      return `+${pctStr}% miner damage`;
     case 'oreOutputPct':
-      return `+${pct}% ore drops`;
+      return `+${pctStr}% ore drops`;
     case 'denseOreScale': {
       const hpMult = Math.pow(DENSE_ORE_HP_MULT, effectiveLvl);
       const dropMult = Math.pow(DENSE_ORE_DROP_MULT, effectiveLvl);
       return `Ore HP ×${fmtBonusNumber(hpMult)} • Ore Drops ×${fmtBonusNumber(dropMult)}`;
     }
     case 'respawnSpeedPct':
-      return `+${pct}% rock respawn speed`;
+      return `+${pctStr}% rock respawn speed`;
     case 'findChancePct':
       return `+${(total * 100).toFixed(1).replace(/\.0$/, '')}% miner & gem find`;
     case 'oreLuckPct':
-      return `+${pct}% luck for rare ores`;
+      return `+${pctStr}% luck for rare ores`;
     case 'charLuckPct':
-      return `+${pct}% luck for rare miners`;
+      return `+${pctStr}% luck for rare miners`;
     case 'oreValuePct':
-      return `+${pct}% ore sell value`;
+      return `+${pctStr}% ore sell value`;
     case 'oreFragilityPct':
       return `-${Math.min(75, pct)}% rock toughness`;
     case 'extraOreNodes':
@@ -197,7 +200,7 @@ export function getNodeNextCost(node: ResearchNodeDef, currentLevel: number): nu
 // CORE (Global across all worlds — sole source of tap damage across Worlds 1-6)
 // ============================================================================
 const CORE_NODES: readonly ResearchNodeDef[] = [
-  // Col 0: Global Tap Mastery (Strike I–VI tuned to ~8–12 clicks per normal rock across W2-W6)
+  // Col 0: Global Tap Mastery (Strike I–VI)
   {
     id: 'core-strike-1',
     treeId: 'core',
@@ -208,7 +211,7 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     requires: [],
     icon: 'strike',
     effectType: 'tapDamageFlat',
-    perLevel: 6,
+    perLevel: 600,
     baseCost: 120,
     costMult: 2.0,
     descTemplate: 'Permanent tap damage active across all worlds.',
@@ -223,7 +226,7 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     requires: ['core-strike-1'],
     icon: 'strike',
     effectType: 'tapDamageFlat',
-    perLevel: 700,
+    perLevel: 120_000,
     baseCost: 12_000,
     costMult: 2.1,
     descTemplate: 'Heavy tap mastery scaled for Crystal Caves.',
@@ -238,7 +241,7 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     requires: ['core-strike-2'],
     icon: 'strike',
     effectType: 'tapDamageFlat',
-    perLevel: 55_000,
+    perLevel: 12_000_000,
     baseCost: 2_200_000,
     costMult: 2.2,
     descTemplate: 'Molten tap force scaled for Magma Hollows.',
@@ -253,7 +256,7 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     requires: ['core-strike-3'],
     icon: 'strike',
     effectType: 'tapDamageFlat',
-    perLevel: 3_600_000,
+    perLevel: 1_000_000_000,
     baseCost: 350_000_000,
     costMult: 2.35,
     descTemplate: 'Runic impact force tuned for Ancient Ruins.',
@@ -268,8 +271,8 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     requires: ['core-strike-4'],
     icon: 'strike',
     effectType: 'tapDamageFlat',
-    perLevel: 180_000_000,
-    baseCost: 60_000_000_000,
+    perLevel: 75_000_000_000,
+    baseCost: 35_000_000_000,
     costMult: 2.45,
     descTemplate: 'Void-infused impact tuned for Voidreach.',
   },
@@ -283,9 +286,9 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     requires: ['core-strike-5'],
     icon: 'strike',
     effectType: 'tapDamageFlat',
-    perLevel: 7_200_000_000,
-    baseCost: 12_000_000_000_000,
-    costMult: 2.55,
+    perLevel: 6_000_000_000_000,
+    baseCost: 5_000_000_000_000,
+    costMult: 2.35,
     descTemplate: 'Apex Starwell tap mastery across every world.',
   },
 
@@ -300,7 +303,7 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     requires: ['core-strike-1'],
     icon: 'oreVein',
     effectType: 'findChancePct',
-    perLevel: 0.04,
+    perLevel: 0.08,
     baseCost: 12_000,
     costMult: 2.5,
     descTemplate: 'Global boost to Chibi miner and Gem drop chances.',
@@ -315,7 +318,7 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     requires: ['core-find-1'],
     icon: 'goldClover',
     effectType: 'charLuckPct',
-    perLevel: 0.25,
+    perLevel: 0.45,
     baseCost: 1_500_000,
     costMult: 2.7,
     descTemplate: 'Improves rare Chibi miner odds across all worlds.',
@@ -330,7 +333,7 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     requires: ['core-charluck-1'],
     icon: 'crystalVein',
     effectType: 'oreOutputPct',
-    perLevel: 0.2,
+    perLevel: 0.4,
     baseCost: 250_000_000,
     costMult: 2.9,
     descTemplate: 'Increases ore drops from every rock across all worlds.',
@@ -345,9 +348,9 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     requires: ['core-output-1', 'core-luck-1'],
     icon: 'worldMastery',
     effectType: 'minerDmgPct',
-    perLevel: 0.5,
-    baseCost: 15_000_000_000,
-    costMult: 3.0,
+    perLevel: 2.0,
+    baseCost: 6_000_000_000,
+    costMult: 2.6,
     descTemplate: 'Late-game global Chibi miner DPS surge across every world.',
   },
 
@@ -377,7 +380,7 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     requires: ['core-chest-1'],
     icon: 'pickaxePower',
     effectType: 'minerDmgPct',
-    perLevel: 0.35,
+    perLevel: 0.65,
     baseCost: 25_000,
     costMult: 2.7,
     descTemplate: 'Global Chibi miner DPS boost across every world.',
@@ -392,7 +395,7 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     requires: ['core-power-1'],
     icon: 'oreValue',
     effectType: 'oreValuePct',
-    perLevel: 0.25,
+    perLevel: 0.5,
     baseCost: 900_000,
     costMult: 2.9,
     descTemplate: 'Increases sell price of ores from every world.',
@@ -407,7 +410,7 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     requires: ['core-value-1'],
     icon: 'clover',
     effectType: 'oreLuckPct',
-    perLevel: 0.3,
+    perLevel: 0.6,
     baseCost: 50_000_000,
     costMult: 3.1,
     descTemplate: 'Permanent global ore luck across all worlds.',
@@ -423,8 +426,8 @@ const CORE_NODES: readonly ResearchNodeDef[] = [
     icon: 'chestCap',
     effectType: 'chestCapacityFlat',
     perLevel: 40_000,
-    baseCost: 2_500_000_000,
-    costMult: 2.5,
+    baseCost: 800_000_000,
+    costMult: 2.2,
     descTemplate: 'Void-forged storage expansion up to +300K total Core capacity.',
   },
 ];

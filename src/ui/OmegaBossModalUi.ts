@@ -4,6 +4,7 @@ import { GameState } from '../game/GameState';
 import { fmtInt, fmtShort } from '../game/NumberFormat';
 import {
   getOmegaBossById,
+  getOmegaPassiveStarScale,
   OMEGA_BOSS_DEFS,
   OMEGA_KEY_GEM_COST,
   OMEGA_MAX_KEYS,
@@ -139,7 +140,7 @@ export class OmegaBossModalUi {
       currentStars < 5
         ? boss.awakenCoreCosts[currentStars - 1] ?? boss.awakenCoreCosts[boss.awakenCoreCosts.length - 1]
         : 0;
-    const starScale = 1 + (currentStars - 1) * 0.15;
+    const starScale = getOmegaPassiveStarScale(currentStars);
 
     const bossTabsHtml = OMEGA_BOSS_DEFS.map((b) => {
       const active = b.id === boss.id;

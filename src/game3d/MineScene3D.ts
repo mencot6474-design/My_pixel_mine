@@ -13,7 +13,7 @@ import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStat
 import { TowerArena3D, TowerFighterConfig, TowerOreBarScreen } from './TowerArena3D';
 import { OmegaArena3D, type OmegaTargetScreenAnchor } from './OmegaArena3D';
 import type { OmegaBossId } from '../game/OmegaData';
-import type { OmegaTargetObject } from '../game/OmegaBossDomain';
+import type { OmegaBattlePhase, OmegaTargetObject } from '../game/OmegaBossDomain';
 import { TowerWaveOreState } from '../game/TowerData';
 import { GRAPHICS_PRESETS, GraphicsQuality } from '../game/GameSettings';
 import { getOverclockTierBuffs, type OverclockTier } from '../game/OverclockDomain';
@@ -37,7 +37,7 @@ export function getDefaultOrbitPitchForMode(mode: SceneMode): number {
     case 'tower':
       return -0.34;
     case 'omega':
-      return -0.26;
+      return -0.32;
     default:
       return 0;
   }
@@ -186,6 +186,7 @@ export interface MineSceneCallbacks {
   onTowerOreBars?: (bars: TowerOreBarScreen[]) => void;
   onOmegaTargetClick?: (targetId: string) => void;
   onOmegaBossClick?: () => void;
+  onOmegaEntranceSlam?: () => void;
   onOmegaFighterStrike?: (slotIndex: number, attackInterval: number) => { dmg: number; isCrit?: boolean } | void;
   onOmegaArenaOverlay?: (data: { bossHead: { x: number; y: number } | null; targets: OmegaTargetScreenAnchor[] } | null) => void;
 }
@@ -501,14 +502,23 @@ export class MineScene3D {
         this.emitDamageScreen(shownDmg, strike.wx, strike.wy, strike.wz, false, Boolean(res?.isCrit));
       }
     });
-    this.omegaArena.update(dtSec, this.elapsed, this.camera, (strike) => {
-      const res = this.callbacks.onOmegaFighterStrike?.(strike.slotIndex, strike.attackInterval);
-      const shownDmg = res ? res.dmg : strike.dmg;
-      if (shownDmg > 0) {
-        this.omegaArena.triggerBossHitEffect(strike.accentColor, Boolean(res?.isCrit));
-        this.emitDamageScreen(shownDmg, strike.wx, strike.wy, strike.wz, false, Boolean(res?.isCrit));
+    this.omegaArena.update(
+      dtSec,
+      this.elapsed,
+      this.camera,
+      (strike) => {
+        const res = this.callbacks.onOmegaFighterStrike?.(strike.slotIndex, strike.attackInterval);
+        const shownDmg = res ? res.dmg : strike.dmg;
+        if (shownDmg > 0) {
+          this.omegaArena.triggerBossHitEffect(strike.accentColor, Boolean(res?.isCrit));
+          this.emitDamageScreen(shownDmg, strike.wx, strike.wy, strike.wz, false, Boolean(res?.isCrit));
+        }
+      },
+      () => {
+        this.tapShakeIntensity = Math.max(this.tapShakeIntensity, 0.34);
+        this.callbacks.onOmegaEntranceSlam?.();
       }
-    });
+    );
     this.weatherFx.update(dtSec, this.elapsed, this.mode === 'mine' || this.mode === 'shop' || this.mode === 'fusion');
 
     const inMine = this.mode === 'mine';
@@ -639,13 +649,13 @@ export class MineScene3D {
       this.syncTowerFighters();
       this.towerArena.resetFloorCharge();
     } else if (mode === 'omega') {
-      this.scene.background = new THREE.Color(0x0c0b16);
-      this.scene.fog = new THREE.Fog(0x141122, 24, 72);
+      this.scene.background = new THREE.Color(0xfda4af);
+      this.scene.fog = new THREE.Fog(0xfecdd3, 38, 108);
       this.applyWeatherAtmosphere();
       this.inputState.targetOrbitYaw = 0;
       this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('omega');
-      this.inputState.targetCamRadius = 15.8;
-      this.lookAtPos.set(0, 1.8, -1.2);
+      this.inputState.targetCamRadius = 16.4;
+      this.lookAtPos.set(0, 2.1, -1.5);
       this.syncTowerFighters();
     } else if (mode === 'shop') {
       const aspect = this.camera.aspect || 1;
@@ -811,6 +821,9 @@ export class MineScene3D {
   }
 
   public setOmegaBossConfig(bossId: OmegaBossId): void { this.omegaArena.setBossId(bossId); }
+  public startOmegaEntrance(): void { this.omegaArena.startEntranceCutscene(); }
+  public setOmegaBattlePhase(phase: OmegaBattlePhase | 'ended'): void { this.omegaArena.setBattlePhase(phase); }
+  public pulseOmegaInvulShield(): void { this.omegaArena.pulseInvulShield(); }
   public syncOmegaBattleVisuals(targets: readonly OmegaTargetObject[], breakActive: boolean, parryActive: boolean): void {
     this.omegaArena.syncBattleTargets(targets);
     this.omegaArena.setBattleStatus(breakActive, parryActive);

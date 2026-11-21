@@ -6,11 +6,16 @@ import {
   OMEGA_BATTLE_DURATION_SEC,
   OMEGA_BREAK_DMG_MULT,
   OMEGA_BREAK_DURATION_SEC,
+  OMEGA_ENTRANCE_DURATION_SEC,
+  OMEGA_INVUL_DURATION_SEC,
+  OMEGA_INVUL_TAPS_REQUIRED,
   OMEGA_KEY_GEM_COST,
   OMEGA_KEY_REGEN_MS,
   OMEGA_MAX_KEYS,
   OmegaBossId,
 } from './OmegaData';
+
+export type OmegaBattlePhase = 'entrance' | 'invul_shield' | 'active';
 
 export interface OmegaTargetObject {
   id: string;
@@ -31,6 +36,11 @@ export interface OmegaParryWindow {
 export interface OmegaBattleState {
   bossId: OmegaBossId;
   tier: 1 | 2 | 3 | 4 | 5;
+  phase: OmegaBattlePhase;
+  entranceRemainingSec: number;
+  invulRemainingSec: number;
+  invulTapsRemaining: number;
+  invulMaxTaps: number;
   hp: number;
   maxHp: number;
   barrierHp: number;
@@ -56,6 +66,8 @@ export interface OmegaBattleSummary {
   tier: 1 | 2 | 3 | 4 | 5;
   reason: 'victory' | 'timeout' | 'retreat';
   damageDealt: number;
+  remainingHpPct?: number;
+  shieldFailed?: boolean;
   timeUsedSec: number;
   coresAwarded: number;
   gemsAwarded: number;
@@ -183,6 +195,11 @@ export function startOmegaBossDomain(
   ctx.omegaBattle = {
     bossId,
     tier: clampedTier,
+    phase: 'entrance',
+    entranceRemainingSec: OMEGA_ENTRANCE_DURATION_SEC,
+    invulRemainingSec: OMEGA_INVUL_DURATION_SEC,
+    invulTapsRemaining: OMEGA_INVUL_TAPS_REQUIRED,
+    invulMaxTaps: OMEGA_INVUL_TAPS_REQUIRED,
     hp: tierDef.bossHp,
     maxHp: tierDef.bossHp,
     barrierHp: 0,
@@ -263,6 +280,23 @@ export function stepOmegaBossTickDomain(
   const clampedDt = Math.max(0, Math.min(0.25, dtSec));
   if (clampedDt <= 0) return null;
 
+  if (battle.phase === 'entrance') {
+    battle.entranceRemainingSec = Math.max(0, battle.entranceRemainingSec - clampedDt);
+    if (battle.entranceRemainingSec <= 0) {
+      battle.phase = 'invul_shield';
+      emit();
+    }
+    return null;
+  }
+
+  if (battle.phase === 'invul_shield') {
+    battle.invulRemainingSec = Math.max(0, battle.invulRemainingSec - clampedDt);
+    if (battle.invulRemainingSec <= 0) {
+      return finishOmegaBossDomain(ctx, 'timeout', rng, emit);
+    }
+    return null;
+  }
+
   battle.timeRemainingSec = Math.max(0, battle.timeRemainingSec - clampedDt);
   if (battle.breakRemainingSec > 0) {
     battle.breakRemainingSec = Math.max(0, battle.breakRemainingSec - clampedDt);
@@ -317,6 +351,24 @@ export function stepOmegaBossTickDomain(
   return null;
 }
 
+/** Breaks 1 pip of the Boss's 30s invulnerability shield via random screen tap before Chibis can attack. */
+export function tapOmegaInvulShieldDomain(
+  ctx: OmegaBossContext,
+  emit: () => void = () => {}
+): { ok: boolean; shattered: boolean; tapsRemaining: number } {
+  const battle = ctx.omegaBattle;
+  if (!battle || battle.phase !== 'invul_shield') {
+    return { ok: false, shattered: false, tapsRemaining: 0 };
+  }
+  battle.invulTapsRemaining = Math.max(0, battle.invulTapsRemaining - 1);
+  const shattered = battle.invulTapsRemaining <= 0;
+  if (shattered) {
+    battle.phase = 'active';
+  }
+  emit();
+  return { ok: true, shattered, tapsRemaining: battle.invulTapsRemaining };
+}
+
 /** Applies a single Chibi fighter strike during Omega Boss duel (Team DMG + Overclock/Crit + Break). */
 export function applyOmegaSquadStrikeDomain(
   ctx: OmegaBossContext,
@@ -326,7 +378,7 @@ export function applyOmegaSquadStrikeDomain(
   emit: () => void = () => {}
 ): OmegaStrikeResult {
   const battle = ctx.omegaBattle;
-  if (!battle || battle.hp <= 0) {
+  if (!battle || battle.hp <= 0 || battle.phase !== 'active') {
     return { dmgDealt: 0, isCrit: false, isBreak: false, bossDefeated: false, breakTriggered: false };
   }
   const st = ctx.getPlotUnitStats(slotIndex);
@@ -375,7 +427,7 @@ export function triggerOmegaParryDomain(
   emit: () => void = () => {}
 ): { ok: boolean; counterDmg: number; breakTriggered: boolean; bossDefeated: boolean } {
   const battle = ctx.omegaBattle;
-  if (!battle || !battle.parryWindow.active || battle.parryWindow.consumed) {
+  if (!battle || battle.phase !== 'active' || !battle.parryWindow.active || battle.parryWindow.consumed) {
     return { ok: false, counterDmg: 0, breakTriggered: false, bossDefeated: false };
   }
   battle.parryWindow.consumed = true;
@@ -406,7 +458,7 @@ export function hitOmegaTargetObjectDomain(
   emit: () => void = () => {}
 ): { ok: boolean; kind?: OmegaTargetObject['kind']; bonusDmg: number; breakTriggered: boolean; bossDefeated: boolean } {
   const battle = ctx.omegaBattle;
-  if (!battle) return { ok: false, bonusDmg: 0, breakTriggered: false, bossDefeated: false };
+  if (!battle || battle.phase !== 'active') return { ok: false, bonusDmg: 0, breakTriggered: false, bossDefeated: false };
   const idx = battle.targets.findIndex((t) => t.id === targetId);
   if (idx < 0) return { ok: false, bonusDmg: 0, breakTriggered: false, bossDefeated: false };
 
@@ -482,6 +534,8 @@ export function finishOmegaBossDomain(
     tier: battle.tier,
     reason,
     damageDealt: battle.damageDealt,
+    remainingHpPct: Math.max(0, Math.min(100, Math.round((battle.hp / Math.max(1, battle.maxHp)) * 100))),
+    shieldFailed: !victory && battle.phase === 'invul_shield',
     timeUsedSec: Math.max(0, Math.round(OMEGA_BATTLE_DURATION_SEC - battle.timeRemainingSec)),
     coresAwarded,
     gemsAwarded,
@@ -522,7 +576,7 @@ export function unlockOmegaChibiDomain(
   return 'unlocked';
 }
 
-/** Awakens an owned OMEGA Chibi from 1★ toward 5★ using extra Boss Cores (+15% passives/star). */
+/** Awakens an owned OMEGA Chibi from 1★ toward 5★ using extra Boss Cores (+20% passives/star). */
 export function awakenOmegaChibiDomain(
   ctx: Pick<OmegaBossContext, 'omegaCores' | 'miners' | 'chibiStars'>,
   bossId: OmegaBossId,

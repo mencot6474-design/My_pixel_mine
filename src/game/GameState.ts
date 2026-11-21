@@ -592,11 +592,11 @@ export class GameState {
   }
 
   public getActiveFusionPassives(): FusionPassiveBonuses {
-    return FusionDom.getActiveFusionPassiveBonuses(this.plotMiners);
+    return FusionDom.getActiveFusionPassiveBonuses(this.plotMiners, this.chibiStars);
   }
 
   public getActivePremiumPassives(): ActivePremiumPassives {
-    return getActivePremiumPassiveBonuses(this.plotMiners);
+    return getActivePremiumPassiveBonuses(this.plotMiners, this.chibiStars);
   }
 
   public getActiveOmegaPassives(): ActiveOmegaPassives {
@@ -835,6 +835,7 @@ export class GameState {
   public grantFreeOmegaKey(): boolean { return OmegaDom.grantFreeOmegaKeyDomain(this, this.saveHooks); }
   public startOmegaBoss(bossId: OmegaBossId, tier: number, now = Date.now()): boolean { return OmegaDom.startOmegaBossDomain(this, bossId, tier, now, this.saveHooks); }
   public stepOmegaBossTick(dtSec: number, rng: () => number = Math.random) { return OmegaDom.stepOmegaBossTickDomain(this, dtSec, rng, () => this.emit()); }
+  public tapOmegaInvulShield() { return OmegaDom.tapOmegaInvulShieldDomain(this, () => this.emit()); }
   public applyOmegaSquadStrike(slotIndex: number, attackIntervalSec = 0.85, rng: () => number = Math.random): OmegaStrikeResult { return OmegaDom.applyOmegaSquadStrikeDomain(this, slotIndex, attackIntervalSec, rng, () => this.emit()); }
   public triggerOmegaParry(rng: () => number = Math.random) { return OmegaDom.triggerOmegaParryDomain(this, rng, () => this.emit()); }
   public hitOmegaTargetObject(targetId: string, rng: () => number = Math.random) { return OmegaDom.hitOmegaTargetObjectDomain(this, targetId, rng, () => this.emit()); }

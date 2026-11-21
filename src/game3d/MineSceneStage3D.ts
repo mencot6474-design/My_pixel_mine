@@ -201,23 +201,23 @@ export function applyMineWeatherAtmosphere(ctx: {
     const isShop = ctx.mode === 'shop';
     const isFusion = ctx.mode === 'fusion';
     const isTowerScene = ctx.mode === 'tower';
-    const isTower = isTowerScene || ctx.mode === 'omega';
-    ctx.hemiLight.color.set(isTowerScene ? 0xe0f2fe : weather.hemiTintHex);
+    const isOmegaScene = ctx.mode === 'omega';
+    ctx.hemiLight.color.set(isTowerScene ? 0xe0f2fe : isOmegaScene ? 0xffedd5 : weather.hemiTintHex);
     ctx.hemiLight.intensity = isTowerScene
       ? 1.68
-      : isTower
-        ? Math.max(weather.hemiIntensity, 1.32)
+      : isOmegaScene
+        ? 1.74
         : isShop || isFusion
           ? Math.max(weather.hemiIntensity, 1.24)
           : Math.max(weather.hemiIntensity, 1.18);
     ctx.sunLight.intensity = isTowerScene
       ? 2.18
-      : isTower
-        ? Math.max(weather.sunIntensity, 1.75)
+      : isOmegaScene
+        ? 2.28
         : isShop || isFusion
           ? Math.max(weather.sunIntensity, 1.62)
           : Math.max(weather.sunIntensity, 1.55);
-    ctx.rimLight.color.set(isTowerScene ? 0xbae6fd : isShop ? 0x38bdf8 : weather.rimTintHex);
+    ctx.rimLight.color.set(isTowerScene ? 0xbae6fd : isOmegaScene ? 0xfb923c : isShop ? 0x38bdf8 : weather.rimTintHex);
 
     if (ctx.mode !== 'mine' && !isShop && !isFusion) return;
     const fogColor = new THREE.Color(weather.fogTintHex);
@@ -292,7 +292,7 @@ export function stepMineSceneCamera(ctx: {
         camY,
         ctx.currentLookAt.z + Math.cos(ctx.state.orbitYaw) * ctx.state.camRadius
       );
-      if (ctx.mode === 'mine' && ctx.state.tapShakeIntensity > 0.001) {
+      if ((ctx.mode === 'mine' || ctx.mode === 'omega') && ctx.state.tapShakeIntensity > 0.001) {
         const sx = (Math.sin(ctx.elapsed * 95) * 0.7 + Math.cos(ctx.elapsed * 143) * 0.3) * ctx.state.tapShakeIntensity;
         const sy = Math.cos(ctx.elapsed * 117) * ctx.state.tapShakeIntensity * 0.75;
         ctx.camera.position.x += sx;

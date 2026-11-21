@@ -362,6 +362,10 @@ async function bootstrap(): Promise<void> {
     },
     onOmegaTargetClick: (targetId) => hud?.handleOmegaTargetClick(targetId),
     onOmegaBossClick: () => hud?.handleOmegaBossClick(),
+    onOmegaEntranceSlam: () => {
+      audio.playOreBreak('geode');
+      audio.playCrystalChord('meteor');
+    },
     onOmegaFighterStrike: (slotIndex, attackInterval) =>
       hud?.handleOmegaFighterStrike(slotIndex, attackInterval),
     onOmegaArenaOverlay: (data) => {
@@ -465,6 +469,9 @@ async function bootstrap(): Promise<void> {
     },
     {
       setBossConfig: (bossId) => scene.setOmegaBossConfig(bossId),
+      startEntrance: () => scene.startOmegaEntrance(),
+      setBattlePhase: (phase) => scene.setOmegaBattlePhase(phase),
+      pulseInvulShield: () => scene.pulseOmegaInvulShield(),
       syncBattleVisuals: (targets, breakActive, parryActive) =>
         scene.syncOmegaBattleVisuals(targets, breakActive, parryActive),
       triggerBossHit: (color, isCrit) => scene.triggerOmegaBossHit(color, isCrit),

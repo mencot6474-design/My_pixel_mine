@@ -235,7 +235,8 @@ export class GameHud {
         this.setSceneMode('shop');
         this.openModal('omega-boss');
       },
-      (bossId, tier) => this.omegaBridge.startOmegaBattle(bossId, tier)
+      (bossId, tier) => this.omegaBridge.startOmegaBattle(bossId, tier),
+      (targetIdx) => this.omegaBridge.handleOmegaTapInvulShield(targetIdx)
     );
     this.omegaBridge = new HudOmegaBridge(
       this.root,
@@ -381,7 +382,7 @@ export class GameHud {
         if (this.inspectedSlot === null) this.toggleModal('inventory');
       } else if (e.key === 'Escape') {
         if (this.inspectedSlot !== null) this.openPlotInspector(null);
-        else if (this.sceneMode === 'omega' && !this.state.omegaBattle && this.state.omegaLastSummary?.victory) {
+        else if (this.sceneMode === 'omega' && !this.state.omegaBattle && this.state.omegaLastSummary) {
           this.omegaBossUi.openForBoss(this.state.omegaLastSummary.bossId);
           this.setSceneMode('shop');
           this.openModal('omega-boss');

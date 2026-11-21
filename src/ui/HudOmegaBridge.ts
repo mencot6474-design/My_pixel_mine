@@ -1,13 +1,16 @@
 import { audio } from '../audio/AudioManager';
 import { GameState } from '../game/GameState';
 import type { OmegaBossId } from '../game/OmegaData';
-import type { OmegaTargetObject } from '../game/OmegaBossDomain';
+import type { OmegaBattlePhase, OmegaTargetObject } from '../game/OmegaBossDomain';
 import type { SceneMode } from '../game3d/MineScene3D';
 import type { ModalKind } from './HudShared';
 import type { OmegaArenaHudUi } from './OmegaArenaHudUi';
 
 export interface OmegaSceneOps {
   setBossConfig: (bossId: OmegaBossId) => void;
+  startEntrance?: () => void;
+  setBattlePhase?: (phase: OmegaBattlePhase | 'ended') => void;
+  pulseInvulShield?: () => void;
   syncBattleVisuals: (targets: readonly OmegaTargetObject[], breakActive: boolean, parryActive: boolean) => void;
   triggerBossHit: (color?: string, isCrit?: boolean) => void;
   triggerTargetShatter: (wx: number, wz: number, color: string) => void;
@@ -32,8 +35,10 @@ export class HudOmegaBridge {
       this.pushToast('Deploy Chibis & ensure at least 1 Boss Key!');
       return;
     }
+    this.omegaArenaUi.resetShieldTargets();
     this.omegaOps?.setBossConfig(bossId);
     this.setSceneMode('omega');
+    this.omegaOps?.startEntrance?.();
     this.syncOmegaSceneVisual();
   }
 
@@ -41,9 +46,32 @@ export class HudOmegaBridge {
     const b = this.state.omegaBattle;
     if (!b) {
       this.omegaOps?.syncBattleVisuals([], false, false);
+      this.omegaOps?.setBattlePhase?.('ended');
       return;
     }
+    this.omegaOps?.setBattlePhase?.(b.phase);
     this.omegaOps?.syncBattleVisuals(b.targets, b.breakRemainingSec > 0, b.parryWindow.active);
+  }
+
+  public handleOmegaTapInvulShield(targetIndex: number): void {
+    if (this.getSceneMode() !== 'omega' || !this.state.omegaBattle) return;
+    const maxTaps = this.state.omegaBattle.invulMaxTaps;
+    const res = this.state.tapOmegaInvulShield();
+    if (!res.ok) return;
+    const tapsDone = Math.max(1, maxTaps - res.tapsRemaining);
+    audio.playCrystalScaleNote(tapsDone);
+    this.omegaOps?.pulseInvulShield?.();
+    this.omegaArenaUi.randomizeShieldTarget(targetIndex);
+    if (res.shattered) {
+      audio.playCrystalChord('fever');
+      audio.playOreBreak('geode');
+      this.omegaOps?.setBattlePhase?.('active');
+      this.pushToast('💥 INVUL SHIELD SHATTERED! SQUAD ENGAGE!');
+      this.render();
+      return;
+    }
+    this.omegaArenaUi.updateLiveValues(this.root);
+    this.omegaArenaUi.syncShieldTargetPos(this.root, targetIndex);
   }
 
   public handleOmegaFighterStrike(slotIndex: number, attackInterval: number): { dmg: number; isCrit?: boolean } | undefined {
@@ -110,8 +138,13 @@ export class HudOmegaBridge {
   private finishOmegaFromCombat(): void {
     const summary = this.state.omegaLastSummary;
     this.omegaOps?.syncBattleVisuals([], false, false);
+    this.omegaOps?.setBattlePhase?.('ended');
     if (summary?.victory) {
       audio.playSfx('rare-fanfare', { volume: 0.78 });
+      this.render();
+      return;
+    }
+    if (summary) {
       this.render();
       return;
     }

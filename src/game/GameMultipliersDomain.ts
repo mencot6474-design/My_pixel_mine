@@ -152,9 +152,9 @@ export function getOreOutputMultDomain(ctx: GameMultipliersContext): number {
     omegaDrop +
     ctx.getActiveEnchantBonuses().oreDropPct +
     ctx.getActiveIndexPassiveBonuses().oreDropPct;
-  if (isBoostActiveDomain(ctx, 'ore-elixir-1')) mult += 0.1;
-  if (isBoostActiveDomain(ctx, 'ore-elixir-2')) mult += 0.25;
-  if (isBoostActiveDomain(ctx, 'ore-elixir-3')) mult += 0.5;
+  if (isBoostActiveDomain(ctx, 'ore-elixir-1')) mult += 0.5;
+  if (isBoostActiveDomain(ctx, 'ore-elixir-2')) mult += 1.25;
+  if (isBoostActiveDomain(ctx, 'ore-elixir-3')) mult += 2.5;
   const denseStacks = Math.max(0, Math.round(ctx.getActiveResearchBonus('denseOreScale')));
   if (denseStacks > 0) mult *= Math.pow(DENSE_ORE_DROP_MULT, denseStacks);
   return mult;
@@ -171,24 +171,24 @@ export function getTotalOreDropMultDomain(ctx: GameMultipliersContext, nowMs = D
 }
 
 export function getRespawnSpeedMultDomain(ctx: GameMultipliersContext): number {
-  const boost = isBoostActiveDomain(ctx, 'regrowth-potion') ? 2.0 : 1.0;
+  const boost = isBoostActiveDomain(ctx, 'regrowth-potion') ? 6.0 : 1.0;
   return boost + ctx.getActiveResearchBonus('respawnSpeedPct');
 }
 
 export function getFindChanceBonusDomain(ctx: GameMultipliersContext): number {
-  return (isBoostActiveDomain(ctx, 'unearth-elixir') ? 0.1 : 0) + ctx.getActiveResearchBonus('findChancePct');
+  return (isBoostActiveDomain(ctx, 'unearth-elixir') ? 0.5 : 0) + ctx.getActiveResearchBonus('findChancePct');
 }
 
 export function getCharacterLuckMultDomain(ctx: GameMultipliersContext): number {
-  const base = isBoostActiveDomain(ctx, 'character-luck-potion') ? 1.5 : 1.0;
+  const base = isBoostActiveDomain(ctx, 'character-luck-potion') ? 3.5 : 1.0;
   return base + ctx.getActiveResearchBonus('charLuckPct');
 }
 
 export function getOreLuckMultDomain(ctx: GameMultipliersContext): number {
-  const base = isBoostActiveDomain(ctx, 'ore-luck-potion') ? 2.0 : 1.0;
+  const base = isBoostActiveDomain(ctx, 'ore-luck-potion') ? 6.0 : 1.0;
   return base + ctx.getActiveResearchBonus('oreLuckPct');
 }
 
 export function getMutationLuckMultDomain(ctx: GameMultipliersContext): number {
-  return isBoostActiveDomain(ctx, 'mutation-luck-1') ? 2.0 : 1.0;
+  return isBoostActiveDomain(ctx, 'mutation-luck-1') ? 6.0 : 1.0;
 }

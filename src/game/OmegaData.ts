@@ -41,6 +41,9 @@ export interface OmegaBossDef {
 export const OMEGA_MAX_KEYS = 5;
 export const OMEGA_KEY_REGEN_MS = 60 * 60 * 1000; // 1 hour per key
 export const OMEGA_KEY_GEM_COST = 50_000;
+export const OMEGA_ENTRANCE_DURATION_SEC = 1.85;
+export const OMEGA_INVUL_DURATION_SEC = 30;
+export const OMEGA_INVUL_TAPS_REQUIRED = 12;
 export const OMEGA_BATTLE_DURATION_SEC = 45;
 export const OMEGA_BREAK_DURATION_SEC = 7;
 export const OMEGA_BREAK_DMG_MULT = 2.5;
@@ -212,7 +215,15 @@ export interface ActiveOmegaPassives {
   oreSellPct: number;
 }
 
-/** Sums unique all-3 dopamine passive bonuses from deployed OMEGA units (scaled +15%/star above 1★). */
+export const OMEGA_PASSIVE_BONUS_PER_STAR = 0.2;
+
+/** Passive multiplier for OMEGA units (unlocks at 1★; +20% per awakened star above 1★). */
+export function getOmegaPassiveStarScale(stars: number): number {
+  const clamped = Math.max(1, Math.min(5, Math.floor(stars || 1)));
+  return 1 + (clamped - 1) * OMEGA_PASSIVE_BONUS_PER_STAR;
+}
+
+/** Sums unique all-3 dopamine passive bonuses from deployed OMEGA units (scaled +20%/star above 1★). */
 export function getActiveOmegaPassiveBonuses(
   plotMiners: readonly (string | null)[],
   chibiStars: Readonly<Record<string, number>> = {}
@@ -228,8 +239,7 @@ export function getActiveOmegaPassiveBonuses(
     const def = getOmegaBossByChibiId(id);
     if (!def) continue;
     seen.add(id);
-    const stars = Math.max(1, Math.min(5, Math.floor(chibiStars[id] ?? 1)));
-    const starScale = 1 + (stars - 1) * 0.15;
+    const starScale = getOmegaPassiveStarScale(chibiStars[id] ?? 1);
     totals.teamDmgPct += def.teamDmgPct * starScale;
     totals.oreDropPct += def.oreDropPct * starScale;
     totals.oreSellPct += def.oreSellPct * starScale;

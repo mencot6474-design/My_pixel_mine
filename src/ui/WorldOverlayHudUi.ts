@@ -17,6 +17,7 @@ import { fmtShort } from '../game/NumberFormat';
 import { getWeatherById } from '../game/WeatherData';
 import { PIT_EVENT_DEFS } from '../game/PitEventsDomain';
 import { enchantAuraIconHtml, meteorIconHtml } from './HudIcons';
+import { omegaBattleIconHtml } from './OmegaBattleIcons';
 import { ModalKind, renderRarityBadgeHtml, TW_SHOP_SIGN_BASE } from './HudShared';
 
 export interface PlotLabelPayload {
@@ -734,8 +735,8 @@ export class WorldOverlayHudUi {
         parryActive && data.bossHead
           ? `<button class="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 w-[108px] h-[108px] flex items-center justify-center cursor-pointer group" data-omega-ring-parry style="left:${Math.round(data.bossHead.x)}px;top:${Math.round(data.bossHead.y)}px" aria-label="Parry Boss Attack">
               <span class="mam-omega-parry-ring-shrink absolute inset-0 rounded-full border-[3.5px] border-[#fde047] pointer-events-none"></span>
-              <span class="relative w-[72px] h-[72px] rounded-full border-[3px] border-[#14111d] bg-[#ef4444]/85 group-hover:bg-[#fde047] group-hover:text-[#14111d] text-white flex flex-col items-center justify-center gap-0.5 transition-transform group-hover:scale-105 active:scale-95">
-                <svg viewBox="0 0 22 22" width="22" height="22" fill="none" aria-hidden="true"><path d="M4 17L16.5 4.5M18 17L5.5 4.5" stroke="#14111d" stroke-width="3.8" stroke-linecap="round"/><path d="M4 17L16.5 4.5M18 17L5.5 4.5" stroke="#fde047" stroke-width="2" stroke-linecap="round"/></svg>
+              <span class="relative w-[76px] h-[76px] rounded-full border-[3px] border-[#14111d] bg-[#ef4444]/90 group-hover:bg-[#fde047] group-hover:text-[#14111d] text-white flex flex-col items-center justify-center gap-0.5 transition-transform group-hover:scale-105 active:scale-95">
+                ${omegaBattleIconHtml('parryClash', 30)}
                 <span class="text-[11px] font-black tracking-wider leading-none uppercase">PARRY!</span>
               </span>
             </button>`

@@ -1362,6 +1362,10 @@ describe('Tahap B HUD Modules', () => {
       expect(hudHtml).toContain('data-omega-shatter-count');
       expect(hudHtml).toContain('STAGGER 0%');
       expect(hudHtml).toContain('Retreat (0 Key Lost)');
+      expect(hudHtml).toContain('data-omega-icon="skyDrop"');
+      expect(hudHtml).toContain('data-omega-icon="bossCrown"');
+      expect(hudHtml).toContain('data-omega-icon="squadPower"');
+      expect(hudHtml).not.toContain('⚠');
     });
 
     it('renders Sticker-Pop TAP pointer above Omega target props without legacy target icons', () => {
@@ -1441,6 +1445,7 @@ describe('Tahap B HUD Modules', () => {
       const state2 = new GameState();
       state2.omegaKeys = 1;
       state2.startOmegaBoss('crimson-ronin', 1);
+      state2.omegaBattle!.phase = 'active';
       state2.omegaBattle!.hp = 5;
       state2.omegaBattle!.parryWindow = { active: true, remainingSec: 2, durationSec: 2.3, consumed: false };
       let sceneMode: 'omega' | 'shop' = 'omega';
@@ -1471,6 +1476,56 @@ describe('Tahap B HUD Modules', () => {
       expect(openModal).not.toHaveBeenCalled();
       expect(render).toHaveBeenCalled();
       expect(syncBattleVisuals).toHaveBeenCalledWith([], false, false);
+
+      // Entrance, 30s Invul Shield screen taps, and Defeat popup in omega scene
+      const state3 = new GameState();
+      state3.omegaKeys = 2;
+      state3.startOmegaBoss('crimson-ronin', 1);
+      const hud3 = new OmegaArenaHudUi(state3, vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn());
+      expect(hud3.renderOmegaArenaHud()).toContain('DROP');
+
+      for (let i = 0; i < 8; i++) state3.stepOmegaBossTick(0.25, () => 0.5);
+      expect(state3.omegaBattle!.phase).toBe('invul_shield');
+      const invulHtml = hud3.renderOmegaArenaHud();
+      expect(invulHtml).toContain('data-omega-shield-tap="0"');
+      expect(invulHtml).toContain('SHIELD');
+      expect(invulHtml).toContain('data-omega-icon="invulAegis"');
+      expect(invulHtml).toContain('data-omega-icon="crackShield"');
+      expect(invulHtml).not.toContain('🛡️');
+
+      let scene3: 'omega' | 'shop' = 'omega';
+      const setBattlePhase3 = vi.fn();
+      const pulseInvulShield3 = vi.fn();
+      const bridge3 = new HudOmegaBridge(
+        { querySelector: () => null } as unknown as HTMLElement,
+        state3,
+        hud3,
+        () => scene3,
+        (m) => {
+          scene3 = m === 'shop' ? 'shop' : 'omega';
+        },
+        vi.fn(),
+        vi.fn(),
+        vi.fn(),
+        {
+          setBossConfig: vi.fn(),
+          syncBattleVisuals: vi.fn(),
+          triggerBossHit: vi.fn(),
+          triggerTargetShatter: vi.fn(),
+          setBattlePhase: setBattlePhase3,
+          pulseInvulShield: pulseInvulShield3,
+        }
+      );
+      bridge3.handleOmegaTapInvulShield(0);
+      expect(pulseInvulShield3).toHaveBeenCalledTimes(1);
+      expect(state3.omegaBattle!.invulTapsRemaining).toBe(state3.omegaBattle!.invulMaxTaps - 1);
+
+      for (let i = 0; i < 125; i++) state3.stepOmegaBossTick(0.25, () => 0.5);
+      expect(state3.omegaLastSummary?.victory).toBe(false);
+      bridge3.syncOmegaSceneVisual();
+      expect(setBattlePhase3).toHaveBeenCalledWith('ended');
+      expect(hud3.renderOmegaArenaHud()).toContain('data-omega-defeat-popup="true"');
+      expect(scene3).toBe('omega');
     });
   });
 
