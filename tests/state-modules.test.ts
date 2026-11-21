@@ -1121,48 +1121,92 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(reloaded.spendTowerCoins(10)).toBe(false);
     });
 
-    it('purchases Yukikage Twins & Halcyon Twins (TWIN tier) with Spire Coins, protects from selling, and stacks Dual Passives', () => {
+    it('purchases Yukikage, Halcyon, Nocturne, Lullaby & Clockwork Twins (TWIN tier) with Spire Coins, protects from selling, and stacks Dual Passives', () => {
       const state = new GameState();
       expect(state.buyPremiumShopItem('yukikage-twins')).toBe('no_coins');
-      state.towerCoins = 125;
+      state.towerCoins = 425;
       const baseOreDrop = state.getOreOutputMult();
 
       expect(state.buyPremiumShopItem('yukikage-twins')).toBe('bought');
-      expect(state.towerCoins).toBe(75);
+      expect(state.towerCoins).toBe(375);
       expect(state.miners['yukikage-twins']).toBe(1);
       expect(state.discovered.has('yukikage-twins')).toBe(true);
       expect(isNonSellableChibi('yukikage-twins')).toBe(true);
       expect(state.getSellableMinerCount('yukikage-twins')).toBe(0);
 
       expect(state.buyPremiumShopItem('halcyon-twins')).toBe('bought');
-      expect(state.towerCoins).toBe(10);
+      expect(state.towerCoins).toBe(310);
       expect(state.miners['halcyon-twins']).toBe(1);
       expect(state.discovered.has('halcyon-twins')).toBe(true);
       expect(isNonSellableChibi('halcyon-twins')).toBe(true);
       expect(state.getSellableMinerCount('halcyon-twins')).toBe(0);
 
-      // Equip on plots #1 & #2 and verify stacked Dual Passives
+      expect(state.buyPremiumShopItem('nocturne-twins')).toBe('bought');
+      expect(state.towerCoins).toBe(230);
+      expect(state.miners['nocturne-twins']).toBe(1);
+      expect(state.discovered.has('nocturne-twins')).toBe(true);
+      expect(isNonSellableChibi('nocturne-twins')).toBe(true);
+      expect(state.getSellableMinerCount('nocturne-twins')).toBe(0);
+
+      expect(state.buyPremiumShopItem('lullaby-twins')).toBe('bought');
+      expect(state.towerCoins).toBe(130);
+      expect(state.miners['lullaby-twins']).toBe(1);
+      expect(state.discovered.has('lullaby-twins')).toBe(true);
+      expect(isNonSellableChibi('lullaby-twins')).toBe(true);
+      expect(state.getSellableMinerCount('lullaby-twins')).toBe(0);
+
+      expect(state.buyPremiumShopItem('clockwork-twins')).toBe('bought');
+      expect(state.towerCoins).toBe(10);
+      expect(state.miners['clockwork-twins']).toBe(1);
+      expect(state.discovered.has('clockwork-twins')).toBe(true);
+      expect(isNonSellableChibi('clockwork-twins')).toBe(true);
+      expect(state.getSellableMinerCount('clockwork-twins')).toBe(0);
+
+      // Equip on plots #1-#4 and verify stacked Dual Passives
       const basePlot0Dmg = state.getPlotUnitStats(0)!.dmg;
       const hbYukikage = state.hotbar.indexOf('yukikage-twins');
       const hbHalcyon = state.hotbar.indexOf('halcyon-twins');
+      const hbNocturne = state.hotbar.indexOf('nocturne-twins');
+      const hbLullaby = state.hotbar.indexOf('lullaby-twins');
+      const hbClockwork = state.hotbar.indexOf('clockwork-twins');
       expect(hbYukikage).toBeGreaterThanOrEqual(0);
       expect(hbHalcyon).toBeGreaterThanOrEqual(0);
+      expect(hbNocturne).toBeGreaterThanOrEqual(0);
+      expect(hbLullaby).toBeGreaterThanOrEqual(0);
+      expect(hbClockwork).toBeGreaterThanOrEqual(0);
       state.selectedHotbarSlot = hbYukikage;
       state.placeSelectedOnPlot(1);
       state.selectedHotbarSlot = hbHalcyon;
       state.placeSelectedOnPlot(2);
-      expect(state.getActivePremiumPassives()).toEqual({
-        teamDmgPct: 1.0,
-        oreDropPct: 0.4,
-        oreSellPct: 0.6,
-        tapDmgPct: 1.2,
-      });
-      expect(state.getPlotUnitStats(0)!.dmg).toBeCloseTo(basePlot0Dmg * 2, -1);
-      expect(state.getOreOutputMult()).toBeCloseTo(baseOreDrop + 0.4, 4);
+      state.selectedHotbarSlot = hbNocturne;
+      state.placeSelectedOnPlot(3);
+      state.selectedHotbarSlot = hbLullaby;
+      state.placeSelectedOnPlot(4);
+      const passives = state.getActivePremiumPassives();
+      expect(passives.teamDmgPct).toBeCloseTo(2.25, 5);
+      expect(passives.oreDropPct).toBeCloseTo(1.05, 5);
+      expect(passives.oreSellPct).toBeCloseTo(1.35, 5);
+      expect(passives.tapDmgPct).toBeCloseTo(2.7, 5);
+      expect(state.getPlotUnitStats(0)!.dmg).toBeCloseTo(basePlot0Dmg * 3.25, -1);
+      expect(state.getOreOutputMult()).toBeCloseTo(baseOreDrop + 1.05, 4);
+
+      // Swap plot #4 to Clockwork Twins & verify +150% Team / +150% Tap DMG
+      state.selectedHotbarSlot = hbClockwork;
+      state.placeSelectedOnPlot(4);
+      const clockworkPassives = state.getActivePremiumPassives();
+      expect(clockworkPassives.teamDmgPct).toBeCloseTo(3.75, 5);
+      expect(clockworkPassives.tapDmgPct).toBeCloseTo(2.7, 5);
+      expect(state.getPlotUnitStats(0)!.dmg).toBeCloseTo(basePlot0Dmg * 4.75, -1);
 
       // Verify Twin Index tab progress & 50%/100% milestones
-      expect(getIndexTabEntryIds('twin')).toEqual(['yukikage-twins', 'halcyon-twins']);
-      expect(state.getIndexTabProgress('twin')).toEqual({ found: 2, total: 2, pct: 100 });
+      expect(getIndexTabEntryIds('twin')).toEqual([
+        'yukikage-twins',
+        'halcyon-twins',
+        'nocturne-twins',
+        'lullaby-twins',
+        'clockwork-twins',
+      ]);
+      expect(state.getIndexTabProgress('twin')).toEqual({ found: 5, total: 5, pct: 100 });
       expect(state.getTabReadyIndexRewardCount('twin')).toBe(2);
       const twinHalf = state.claimIndexReward('twin:50');
       const twinFull = state.claimIndexReward('twin:100');

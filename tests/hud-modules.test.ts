@@ -1031,6 +1031,9 @@ describe('Tahap B HUD Modules', () => {
       const twinIdxHtml = idxUi.renderModal();
       expect(twinIdxHtml).toContain('Yukikage Twins');
       expect(twinIdxHtml).toContain('Halcyon Twins');
+      expect(twinIdxHtml).toContain('Nocturne Twins');
+      expect(twinIdxHtml).toContain('Lullaby Twins');
+      expect(twinIdxHtml).toContain('Clockwork Twins');
       expect(twinIdxHtml).toContain('Spire Shop Duo');
       expect(twinIdxHtml).toContain('is-holo-foil');
     });
@@ -1154,6 +1157,12 @@ describe('Tahap B HUD Modules', () => {
       expect(premiumShopHtml).toContain('data-buy-premium-item="yukikage-twins"');
       expect(premiumShopHtml).toContain('Halcyon Twins');
       expect(premiumShopHtml).toContain('data-buy-premium-item="halcyon-twins"');
+      expect(premiumShopHtml).toContain('Nocturne Twins');
+      expect(premiumShopHtml).toContain('data-buy-premium-item="nocturne-twins"');
+      expect(premiumShopHtml).toContain('Lullaby Twins');
+      expect(premiumShopHtml).toContain('data-buy-premium-item="lullaby-twins"');
+      expect(premiumShopHtml).toContain('Clockwork Twins');
+      expect(premiumShopHtml).toContain('data-buy-premium-item="clockwork-twins"');
       expect(premiumShopHtml).toContain('mam-rarity-twin');
 
       const towerUi = new TowerUi(state, () => {}, () => {}, () => {}, () => {}, () => {});

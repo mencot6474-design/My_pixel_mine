@@ -163,8 +163,8 @@ describe('Pure 3D Mine World', () => {
     expect(applyNodeDamagePure(node, 20)).toBeNull();
   });
 
-  it('registers all 59 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
-    expect(CHIBI_CATALOG.length).toBe(59);
+  it('registers all 62 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
+    expect(CHIBI_CATALOG.length).toBe(62);
     expect(getChibiById('solar-striker')?.spriteUrl).toBe('/chibi/solar-striker/idle.webp');
     expect(getChibiById('solar-striker')?.poses.attack).toBe('/chibi/solar-striker/attack.webp');
     expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.idle, 4)).toBe(0);
@@ -289,7 +289,7 @@ describe('Pure 3D Mine World', () => {
     expect(getMinersByWorld('chrono').length).toBe(5);
 
     const gs = new GameState();
-    expect(gs.getTotalIndexCount()).toBe(122);
+    expect(gs.getTotalIndexCount()).toBe(125);
     gs.discovered.add('stormwater-opal');
     gs.discovered.add('glitch-cheshire');
     gs.discovered.add('cosmic-monarch');
