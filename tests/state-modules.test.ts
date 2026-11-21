@@ -22,7 +22,10 @@ import {
 import {
   chargeOverclockDomain,
   createInitialOverclockState,
+  extendOverclockDomain,
+  getOverclockSnapshotDomain,
   OVERCLOCK_DURATION_SEC,
+  OVERCLOCK_MAX_DURATION_SEC,
   stepOverclockDomain,
 } from '../src/game/OverclockDomain';
 import {
@@ -562,6 +565,57 @@ describe('Tahap C GameState Domain Modules', () => {
       state.stepOverclock(now + OVERCLOCK_DURATION_SEC * 1000 + 100);
       expect(state.isOverclockActive(now + OVERCLOCK_DURATION_SEC * 1000 + 100)).toBe(false);
       expect(state.getTapDamage(now + OVERCLOCK_DURATION_SEC * 1000 + 100)).toBe(baseTap);
+    });
+
+    it('chains Overclock Fever Tier 1 -> Tier 2 -> Tier 3 with time extension capped at 25s and scales buffs', () => {
+      const oc = createInitialOverclockState();
+      const t0 = 50_000;
+      expect(chargeOverclockDomain(oc, 100, t0)).toBe(true);
+      expect(getOverclockSnapshotDomain(oc, t0 + 1000).tier).toBe(1);
+
+      // Extend without tier jump (e.g. Geode break +1.5s)
+      const geodeExt = extendOverclockDomain(oc, 1.5, false, t0 + 2_000);
+      expect(geodeExt.extended).toBe(true);
+      expect(geodeExt.tierUp).toBe(false);
+      expect(geodeExt.tier).toBe(1);
+
+      // Advance to Tier 2 (SUPER FEVER)
+      const t2Ext = extendOverclockDomain(oc, 4, true, t0 + 3_000);
+      expect(t2Ext.tierUp).toBe(true);
+      expect(t2Ext.tier).toBe(2);
+      const snap2 = getOverclockSnapshotDomain(oc, t0 + 3_000);
+      expect(snap2.speedMult).toBe(2.5);
+      expect(snap2.tapMult).toBe(2.75);
+      expect(snap2.dropMult).toBe(2.0);
+      expect(snap2.critChance).toBe(0.4);
+
+      // Advance to Tier 3 (HYPER FEVER) & verify remaining time cap (25s)
+      const t3Ext = extendOverclockDomain(oc, 20, true, t0 + 3_500);
+      expect(t3Ext.tierUp).toBe(true);
+      expect(t3Ext.tier).toBe(3);
+      const snap3 = getOverclockSnapshotDomain(oc, t0 + 3_500);
+      expect(snap3.remainingSec).toBeCloseTo(OVERCLOCK_MAX_DURATION_SEC, 2);
+      expect(snap3.speedMult).toBe(3.0);
+      expect(snap3.tapMult).toBe(3.5);
+      expect(snap3.dropMult).toBe(2.5);
+      expect(snap3.critChance).toBe(0.5);
+
+      // GameState pit event & expiry reset tier back to 1
+      const state = new GameState();
+      const baseTap = state.getTapDamage();
+      const baseDrop = state.getTotalOreDropMult();
+      expect(state.chargeOverclock(100, t0)).toBe(true);
+      const pitExt = state.onPitEventBroken(t0 + 1_000);
+      expect(pitExt.tierUp).toBe(true);
+      expect(pitExt.tier).toBe(2);
+      expect(state.getTapDamage(t0 + 1_000)).toBe(Math.round(baseTap * 2.75));
+      expect(state.getTotalOreDropMult(t0 + 1_000)).toBeCloseTo(baseDrop * 2.0, 6);
+
+      // After expiry, tier resets to 0 (inactive) and next trigger starts at Tier 1
+      state.stepOverclock(t0 + 30_000);
+      expect(state.getOverclockTier(t0 + 30_000)).toBe(0);
+      expect(state.chargeOverclock(100, t0 + 31_000)).toBe(true);
+      expect(state.getOverclockTier(t0 + 31_000)).toBe(1);
     });
   });
 

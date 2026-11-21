@@ -1,4 +1,5 @@
 import { audio } from '../audio/AudioManager';
+import type { OverclockTier } from '../game/OverclockDomain';
 import type { SceneMode } from '../game3d/MineScene3D';
 import { gameSettings } from '../game/GameSettings';
 import type { GameState } from '../game/GameState';
@@ -75,8 +76,10 @@ export interface HudFastTickContext {
   towerUi: TowerUi;
   lastOverclockActive: boolean;
   setLastOverclockActive: (active: boolean) => void;
-  onOverclockChange?: (active: boolean) => void;
-  syncFeverScreenFx: (active: boolean, triggerBurst: boolean) => void;
+  lastOverclockTier: 0 | OverclockTier;
+  setLastOverclockTier: (tier: 0 | OverclockTier) => void;
+  onOverclockChange?: (active: boolean, tier: 0 | OverclockTier) => void;
+  syncFeverScreenFx: (active: boolean, triggerBurst: boolean, tier: 0 | OverclockTier) => void;
   syncTowerSceneVisual: () => void;
   setSceneMode: (mode: SceneMode) => void;
   openModal: (kind: ModalKind) => void;
@@ -271,14 +274,26 @@ export function stepHudSlowTick(ctx: HudSlowTickContext): void {
 
 export function stepHudFastTick(ctx: HudFastTickContext): void {
   ctx.state.stepOverclock();
-  const ocActive = ctx.state.isOverclockActive();
-  if (ocActive !== ctx.lastOverclockActive) {
+  const ocSnap = ctx.state.getOverclockSnapshot();
+  const ocActive = ocSnap.active;
+  const ocTier = ocSnap.tier;
+  if (ocActive !== ctx.lastOverclockActive || ocTier !== ctx.lastOverclockTier) {
+    const prevTier = ctx.lastOverclockTier;
     ctx.setLastOverclockActive(ocActive);
-    ctx.onOverclockChange?.(ocActive);
-    ctx.syncFeverScreenFx(ocActive, ocActive);
-    if (ocActive) {
-      audio.playSfx('rare-fanfare', { volume: 0.65 });
-      ctx.pushToast('⚡ OVERCLOCK ACTIVE! 2x Speed • 2x Tap • +50% Ore!');
+    ctx.setLastOverclockTier(ocTier);
+    ctx.onOverclockChange?.(ocActive, ocTier);
+    const tierUp = ocActive && ocTier > prevTier;
+    ctx.syncFeverScreenFx(ocActive, tierUp, ocTier);
+    if (tierUp) {
+      audio.playSfx('rare-fanfare', { volume: ocTier >= 2 ? 0.72 : 0.65 });
+      const orePct = Math.round((ocSnap.dropMult - 1) * 100);
+      if (ocTier === 3) {
+        ctx.pushToast(`⚡ HYPER OVERDRIVE LV.3! ${ocSnap.speedMult}x Speed • ${ocSnap.tapMult}x Tap • +${orePct}% Ore!`);
+      } else if (ocTier === 2) {
+        ctx.pushToast(`⚡ SUPER FEVER LV.2! ${ocSnap.speedMult}x Speed • ${ocSnap.tapMult}x Tap • +${orePct}% Ore!`);
+      } else {
+        ctx.pushToast('⚡ OVERCLOCK ACTIVE! 2x Speed • 2x Tap • +50% Ore!');
+      }
     }
   }
   if (ctx.sceneMode === 'mine') {

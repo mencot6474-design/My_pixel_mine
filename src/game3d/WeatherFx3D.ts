@@ -1,7 +1,9 @@
 import * as THREE from 'three';
+import type { OverclockTier } from '../game/OverclockDomain';
 import { getWeatherById, WeatherId } from '../game/WeatherData';
 
 const PARTICLE_COUNT = 120;
+const FEVER_PARTICLE_COUNT = 80;
 const FIELD_HALF_W = 19;
 const FIELD_HALF_D = 16;
 const TOP_Y = 14.5;
@@ -76,13 +78,20 @@ export class WeatherFx3D {
 
   private weatherId: WeatherId = 'light_rain';
   private shopMode = false;
+  private feverTier: 0 | OverclockTier = 0;
   private activeParticleCount = PARTICLE_COUNT;
+  private activeFeverCount = FEVER_PARTICLE_COUNT;
   private readonly positions: Float32Array;
   private readonly speeds: Float32Array;
   private readonly drifts: Float32Array;
   private readonly geom: THREE.BufferGeometry;
   private readonly pointsMat: THREE.PointsMaterial;
   private readonly points: THREE.Points;
+  private readonly feverPositions: Float32Array;
+  private readonly feverSpeeds: Float32Array;
+  private readonly feverGeom: THREE.BufferGeometry;
+  private readonly feverMat: THREE.PointsMaterial;
+  private readonly feverPoints: THREE.Points;
   private readonly particleTextures: Record<ParticleSpriteKind, THREE.Texture | null>;
 
   constructor() {
@@ -124,7 +133,51 @@ export class WeatherFx3D {
     this.points.renderOrder = 4;
     this.group.add(this.points);
 
+    this.feverPositions = new Float32Array(FEVER_PARTICLE_COUNT * 3);
+    this.feverSpeeds = new Float32Array(FEVER_PARTICLE_COUNT);
+    for (let i = 0; i < FEVER_PARTICLE_COUNT; i++) {
+      this.feverPositions[i * 3] = (Math.random() * 2 - 1) * FIELD_HALF_W;
+      this.feverPositions[i * 3 + 1] = BOTTOM_Y + Math.random() * (TOP_Y - BOTTOM_Y);
+      this.feverPositions[i * 3 + 2] = (Math.random() * 2 - 1) * FIELD_HALF_D - 2;
+      this.feverSpeeds[i] = 0.8 + Math.random() * 0.7;
+    }
+    this.feverGeom = new THREE.BufferGeometry();
+    this.feverGeom.setAttribute('position', new THREE.BufferAttribute(this.feverPositions, 3));
+    this.feverMat = new THREE.PointsMaterial({
+      color: 0xfde047,
+      ...(this.particleTextures.rain ? { map: this.particleTextures.rain } : {}),
+      size: 0.56,
+      transparent: true,
+      opacity: 0.88,
+      depthWrite: false,
+      fog: false,
+      blending: THREE.AdditiveBlending,
+    });
+    this.feverPoints = new THREE.Points(this.feverGeom, this.feverMat);
+    this.feverPoints.frustumCulled = false;
+    this.feverPoints.renderOrder = 5;
+    this.feverPoints.visible = false;
+    this.group.add(this.feverPoints);
+
     this.setWeather('light_rain');
+  }
+
+  public setFeverTier(tier: 0 | OverclockTier): void {
+    if (this.feverTier === tier) return;
+    this.feverTier = tier;
+    if (tier === 3) {
+      this.feverMat.color.setHex(0x22d3ee);
+      this.feverMat.size = 0.78;
+      this.feverMat.opacity = 0.96;
+    } else if (tier === 2) {
+      this.feverMat.color.setHex(0xfb7185);
+      this.feverMat.size = 0.66;
+      this.feverMat.opacity = 0.92;
+    } else {
+      this.feverMat.color.setHex(0xfde047);
+      this.feverMat.size = 0.56;
+      this.feverMat.opacity = 0.88;
+    }
   }
 
   public setShopMode(isShop: boolean): void {
@@ -138,7 +191,9 @@ export class WeatherFx3D {
     const clamped = Number.isFinite(scale) ? Math.max(0, Math.min(1, scale)) : 1;
     this.activeParticleCount = Math.round(PARTICLE_COUNT * clamped);
     this.geom.setDrawRange(0, this.activeParticleCount);
-    if (this.activeParticleCount <= 0) {
+    this.activeFeverCount = Math.round(FEVER_PARTICLE_COUNT * clamped);
+    this.feverGeom.setDrawRange(0, this.activeFeverCount);
+    if (this.activeParticleCount <= 0 && this.activeFeverCount <= 0) {
       this.group.visible = false;
     }
   }
@@ -198,55 +253,81 @@ export class WeatherFx3D {
   }
 
   public update(dtSec: number, elapsed: number, active: boolean): void {
-    const enabled = active && this.activeParticleCount > 0;
-    this.group.visible = enabled;
-    if (!enabled) return;
+    const weatherEnabled = active && this.activeParticleCount > 0;
+    const feverEnabled = active && !this.shopMode && this.feverTier > 0 && this.activeFeverCount > 0;
+    this.points.visible = weatherEnabled;
+    this.feverPoints.visible = feverEnabled;
+    this.group.visible = weatherEnabled || feverEnabled;
+    if (!this.group.visible) return;
 
-    const w = this.weatherId;
-    const count = this.activeParticleCount;
-    for (let i = 0; i < count; i++) {
-      const idx = i * 3;
-      const spd = this.speeds[i];
-      const ph = this.drifts[i];
+    if (weatherEnabled) {
+      const w = this.weatherId;
+      const count = this.activeParticleCount;
+      for (let i = 0; i < count; i++) {
+        const idx = i * 3;
+        const spd = this.speeds[i];
+        const ph = this.drifts[i];
 
-      if (w === 'light_rain') {
-        this.positions[idx] -= dtSec * 2.2 * spd;
-        this.positions[idx + 1] -= dtSec * 16.5 * spd;
-      } else if (w === 'snow_rain') {
-        this.positions[idx] += Math.sin(elapsed * 1.6 + ph) * dtSec * 1.25;
-        this.positions[idx + 1] -= dtSec * 3.2 * spd;
-        this.positions[idx + 2] += Math.cos(elapsed * 1.3 + ph) * dtSec * 0.65;
-      } else if (w === 'bloodmoon') {
-        this.positions[idx] += Math.sin(elapsed * 0.9 + ph) * dtSec * 0.8;
-        this.positions[idx + 1] += dtSec * 1.45 * spd;
-      } else if (w === 'void') {
-        this.positions[idx] += Math.cos(elapsed * 1.2 + ph) * dtSec * 0.9;
-        this.positions[idx + 1] += dtSec * 1.8 * spd;
-      } else {
-        this.positions[idx] += Math.sin(elapsed * 1.4 + ph) * dtSec * 1.1;
-        this.positions[idx + 1] -= dtSec * 2.3 * spd;
+        if (w === 'light_rain') {
+          this.positions[idx] -= dtSec * 2.2 * spd;
+          this.positions[idx + 1] -= dtSec * 16.5 * spd;
+        } else if (w === 'snow_rain') {
+          this.positions[idx] += Math.sin(elapsed * 1.6 + ph) * dtSec * 1.25;
+          this.positions[idx + 1] -= dtSec * 3.2 * spd;
+          this.positions[idx + 2] += Math.cos(elapsed * 1.3 + ph) * dtSec * 0.65;
+        } else if (w === 'bloodmoon') {
+          this.positions[idx] += Math.sin(elapsed * 0.9 + ph) * dtSec * 0.8;
+          this.positions[idx + 1] += dtSec * 1.45 * spd;
+        } else if (w === 'void') {
+          this.positions[idx] += Math.cos(elapsed * 1.2 + ph) * dtSec * 0.9;
+          this.positions[idx + 1] += dtSec * 1.8 * spd;
+        } else {
+          this.positions[idx] += Math.sin(elapsed * 1.4 + ph) * dtSec * 1.1;
+          this.positions[idx + 1] -= dtSec * 2.3 * spd;
+        }
+
+        if (this.positions[idx + 1] < BOTTOM_Y) {
+          this.positions[idx + 1] = TOP_Y;
+          this.positions[idx] = (Math.random() * 2 - 1) * FIELD_HALF_W;
+          this.positions[idx + 2] = (Math.random() * 2 - 1) * FIELD_HALF_D - 2;
+        } else if (this.positions[idx + 1] > TOP_Y) {
+          this.positions[idx + 1] = BOTTOM_Y;
+          this.positions[idx] = (Math.random() * 2 - 1) * FIELD_HALF_W;
+          this.positions[idx + 2] = (Math.random() * 2 - 1) * FIELD_HALF_D - 2;
+        }
+        if (this.positions[idx] < -FIELD_HALF_W) this.positions[idx] = FIELD_HALF_W;
+        if (this.positions[idx] > FIELD_HALF_W) this.positions[idx] = -FIELD_HALF_W;
       }
 
-      if (this.positions[idx + 1] < BOTTOM_Y) {
-        this.positions[idx + 1] = TOP_Y;
-        this.positions[idx] = (Math.random() * 2 - 1) * FIELD_HALF_W;
-        this.positions[idx + 2] = (Math.random() * 2 - 1) * FIELD_HALF_D - 2;
-      } else if (this.positions[idx + 1] > TOP_Y) {
-        this.positions[idx + 1] = BOTTOM_Y;
-        this.positions[idx] = (Math.random() * 2 - 1) * FIELD_HALF_W;
-        this.positions[idx + 2] = (Math.random() * 2 - 1) * FIELD_HALF_D - 2;
-      }
-      if (this.positions[idx] < -FIELD_HALF_W) this.positions[idx] = FIELD_HALF_W;
-      if (this.positions[idx] > FIELD_HALF_W) this.positions[idx] = -FIELD_HALF_W;
+      const posAttr = this.geom.getAttribute('position') as THREE.BufferAttribute;
+      posAttr.needsUpdate = true;
     }
 
-    const posAttr = this.geom.getAttribute('position') as THREE.BufferAttribute;
-    posAttr.needsUpdate = true;
+    if (feverEnabled) {
+      const tierMult = this.feverTier === 3 ? 1.65 : this.feverTier === 2 ? 1.3 : 1.0;
+      const feverCount = this.activeFeverCount;
+      for (let i = 0; i < feverCount; i++) {
+        const idx = i * 3;
+        const spd = this.feverSpeeds[i] * tierMult;
+        this.feverPositions[idx] -= dtSec * 4.2 * spd;
+        this.feverPositions[idx + 1] -= dtSec * 21.0 * spd;
+        if (this.feverPositions[idx + 1] < BOTTOM_Y) {
+          this.feverPositions[idx + 1] = TOP_Y;
+          this.feverPositions[idx] = (Math.random() * 2 - 1) * FIELD_HALF_W;
+          this.feverPositions[idx + 2] = (Math.random() * 2 - 1) * FIELD_HALF_D - 2;
+        }
+        if (this.feverPositions[idx] < -FIELD_HALF_W) this.feverPositions[idx] = FIELD_HALF_W;
+      }
+      const feverAttr = this.feverGeom.getAttribute('position') as THREE.BufferAttribute;
+      feverAttr.needsUpdate = true;
+    }
   }
 
   public dispose(): void {
     this.geom.dispose();
     this.pointsMat.dispose();
+    this.feverGeom.dispose();
+    this.feverMat.dispose();
     for (const tex of Object.values(this.particleTextures)) {
       tex?.dispose();
     }

@@ -1,4 +1,5 @@
 import { fmtInt, fmtMoney } from '../game/NumberFormat';
+import type { OverclockTier } from '../game/OverclockDomain';
 import { hudIconHtml } from './HudIcons';
 import { TW_CURRENCY_BAR, TW_PLUS_BTN } from './HudShared';
 
@@ -134,28 +135,99 @@ export function renderCurrencyRailHtml(opts: {
   `;
 }
 
-export function renderFeverScreenFxHtml(active: boolean): string {
+const FEVER_RAIN_LABELS: readonly {
+  x: number;
+  delay: number;
+  dur: number;
+  scale: number;
+  rot: number;
+  kind: 0 | 1 | 2;
+  font: 0 | 1 | 2 | 3 | 4 | 5;
+}[] = [
+  { x: 4, delay: -0.3, dur: 2.35, scale: 0.96, rot: -10, kind: 0, font: 1 },
+  { x: 10, delay: -1.6, dur: 2.75, scale: 0.88, rot: 8, kind: 1, font: 3 },
+  { x: 17, delay: -0.9, dur: 2.2, scale: 1.08, rot: -6, kind: 2, font: 2 },
+  { x: 23, delay: -2.1, dur: 2.6, scale: 0.92, rot: 11, kind: 0, font: 4 },
+  { x: 30, delay: -0.5, dur: 2.45, scale: 1.02, rot: -12, kind: 1, font: 0 },
+  { x: 37, delay: -1.8, dur: 2.85, scale: 0.88, rot: 7, kind: 2, font: 5 },
+  { x: 44, delay: -1.1, dur: 2.15, scale: 1.1, rot: -8, kind: 0, font: 3 },
+  { x: 51, delay: -2.4, dur: 2.55, scale: 0.94, rot: 10, kind: 1, font: 1 },
+  { x: 58, delay: -0.4, dur: 2.4, scale: 1.04, rot: -9, kind: 2, font: 4 },
+  { x: 65, delay: -1.5, dur: 2.7, scale: 0.9, rot: 6, kind: 0, font: 2 },
+  { x: 72, delay: -0.8, dur: 2.25, scale: 1.06, rot: -11, kind: 1, font: 5 },
+  { x: 78, delay: -2.0, dur: 2.8, scale: 0.88, rot: 9, kind: 2, font: 1 },
+  { x: 84, delay: -1.2, dur: 2.3, scale: 1.0, rot: -7, kind: 0, font: 0 },
+  { x: 90, delay: -0.6, dur: 2.65, scale: 0.92, rot: 12, kind: 1, font: 3 },
+  { x: 14, delay: -2.5, dur: 2.5, scale: 0.94, rot: 8, kind: 2, font: 2 },
+  { x: 81, delay: -1.7, dur: 2.35, scale: 0.98, rot: -9, kind: 0, font: 4 },
+];
+
+function getFeverRainLabelText(tier: 0 | OverclockTier, idx: number, font: number): string {
+  const mixedCase = font === 1 || font === 5;
+  if (tier === 3) {
+    if (idx % 2 === 0) return mixedCase ? 'Hyper!' : 'HYPER!';
+    return mixedCase ? 'Fever!' : 'FEVER!';
+  }
+  if (tier === 2) {
+    if (idx % 3 === 0) return mixedCase ? 'Super!' : 'SUPER!';
+    return mixedCase ? 'Fever!' : 'FEVER!';
+  }
+  return mixedCase ? 'Fever!' : 'FEVER!';
+}
+
+function buildFeverRainHtml(tier: 0 | OverclockTier): string {
+  return FEVER_RAIN_LABELS.map((d, idx) => {
+    const cls = d.kind === 1 ? 'is-alt' : d.kind === 2 ? 'is-spark' : '';
+    return `<span class="mam-fever-drop is-font-${d.font} ${cls}" data-fever-rain-tag="true" data-font-idx="${d.font}" style="left:${d.x}%;animation-delay:${d.delay}s;animation-duration:${d.dur}s;--drop-scale:${d.scale};--tag-rot:${d.rot}deg;">${getFeverRainLabelText(tier, idx, d.font)}</span>`;
+  }).join('');
+}
+
+const FEVER_CORNER_SVG = `<svg viewBox="0 0 40 40" width="40" height="40" fill="none" aria-hidden="true"><path d="M5 34V11C5 7.7 7.7 5 11 5H34C36.2 5 38 6.8 38 9C38 11.2 36.2 13 34 13H13V34C13 36.2 11.2 38 9 38C6.8 38 5 36.2 5 34Z" fill="currentColor" stroke="#14111d" stroke-width="3" stroke-linejoin="round"/></svg>`;
+
+function getFeverBurstCopy(tier: 0 | OverclockTier): {
+  ticker: string;
+  title: string;
+} {
+  const safeTier: 0 | OverclockTier = tier === 2 || tier === 3 ? tier : 1;
+  if (safeTier === 3) {
+    return {
+      ticker: 'HYPER OVERDRIVE // LV.3 // MAX FEVER // HYPER OVERDRIVE // LV.3 //',
+      title: 'HYPER OVERDRIVE!!',
+    };
+  }
+  if (safeTier === 2) {
+    return {
+      ticker: 'SUPER FEVER // LV.2 // CHAIN EXTEND // SUPER FEVER // LV.2 //',
+      title: 'SUPER FEVER LV.2!',
+    };
+  }
+  return {
+    ticker: 'OVERCLOCK // FEVER // OVERCLOCK // FEVER // OVERCLOCK // FEVER //',
+    title: 'OVERCLOCK FEVER!',
+  };
+}
+
+export function renderFeverScreenFxHtml(active: boolean, tier: 0 | OverclockTier = active ? 1 : 0): string {
+  const effectiveTier: 0 | OverclockTier = active ? (tier === 2 || tier === 3 ? tier : 1) : 0;
+  const copy = getFeverBurstCopy(effectiveTier);
   return `
-    <div class="mam-fever-screen-fx ${active ? 'is-active' : ''}" data-fever-screen-fx="true" aria-hidden="true">
+    <div class="mam-fever-screen-fx ${active ? 'is-active' : ''}" data-fever-screen-fx="true" data-fever-tier="${effectiveTier}" aria-hidden="true">
+      <div class="mam-fever-speedlines"></div>
       <div class="mam-fever-vignette"></div>
-      <span class="mam-fever-corner is-tl"></span>
-      <span class="mam-fever-corner is-tr"></span>
-      <span class="mam-fever-corner is-bl"></span>
-      <span class="mam-fever-corner is-br"></span>
+      <div class="mam-fever-frame"><div class="mam-fever-frame-spin"></div></div>
+      <div class="mam-fever-rain">${buildFeverRainHtml(effectiveTier)}</div>
+      <span class="mam-fever-corner is-tl">${FEVER_CORNER_SVG}</span>
+      <span class="mam-fever-corner is-tr">${FEVER_CORNER_SVG}</span>
+      <span class="mam-fever-corner is-bl">${FEVER_CORNER_SVG}</span>
+      <span class="mam-fever-corner is-br">${FEVER_CORNER_SVG}</span>
       <div class="mam-fever-burst" data-fever-burst="true">
-        <div class="mam-fever-ticker">OVERCLOCK // FEVER // OVERCLOCK // FEVER // OVERCLOCK // FEVER //</div>
+        <div class="mam-fever-fold-crease"></div>
+        <div class="mam-fever-ticker" data-fever-ticker="true">${copy.ticker}</div>
         <div class="mam-fever-slash"></div>
         <div class="mam-fever-burst-row">
           <span class="mam-fever-chevrons">&gt;&gt;&gt;</span>
-          <div class="mam-fever-burst-title">OVERCLOCK FEVER!</div>
+          <div class="mam-fever-burst-title" data-fever-title="true">${copy.title}</div>
           <span class="mam-fever-chevrons">&lt;&lt;&lt;</span>
-        </div>
-        <div class="mam-fever-burst-sub">
-          <span>2× TAP</span>
-          <span>•</span>
-          <span>1.5× ORE</span>
-          <span>•</span>
-          <span>30% CRIT</span>
         </div>
       </div>
     </div>
@@ -166,11 +238,27 @@ export function syncFeverScreenFxDom(
   root: HTMLElement,
   inMine: boolean,
   active: boolean,
-  triggerBurst: boolean
+  triggerBurst: boolean,
+  tier: 0 | OverclockTier = active ? 1 : 0
 ): void {
   const fx = root.querySelector<HTMLElement>('[data-fever-screen-fx="true"]');
   if (!fx) return;
+  const effectiveTier: 0 | OverclockTier = active && inMine ? (tier === 2 || tier === 3 ? tier : 1) : 0;
   fx.classList.toggle('is-active', active && inMine);
+  fx.dataset.feverTier = String(effectiveTier);
+  if (active && inMine) {
+    const copy = getFeverBurstCopy(effectiveTier);
+    const tickerEl = fx.querySelector<HTMLElement>('[data-fever-ticker="true"]');
+    const titleEl = fx.querySelector<HTMLElement>('[data-fever-title="true"]');
+    if (tickerEl) tickerEl.textContent = copy.ticker;
+    if (titleEl) titleEl.textContent = copy.title;
+    const tagEls = fx.querySelectorAll<HTMLElement>('[data-fever-rain-tag="true"]');
+    tagEls.forEach((el, idx) => {
+      const fontIdx = Number(el.dataset.fontIdx || 0);
+      const nextText = getFeverRainLabelText(effectiveTier, idx, fontIdx);
+      if (el.textContent !== nextText) el.textContent = nextText;
+    });
+  }
   if (triggerBurst && active && inMine) {
     const burst = fx.querySelector<HTMLElement>('[data-fever-burst="true"]');
     if (burst) {

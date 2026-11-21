@@ -187,73 +187,386 @@
     line-height: 1.25;
   }
 
-  /* ═══ OVERCLOCK FEVER FULLSCREEN PULSE FX ═══ */
+  /* ═══ OVERCLOCK FEVER RAIN & CUT-IN FX ═══ */
   .mam-fever-screen-fx {
     position: absolute;
     inset: 0;
     pointer-events: none;
     z-index: 14;
     opacity: 0;
-    transition: opacity 240ms ease-out;
+    visibility: hidden;
+    transition:
+      opacity 240ms ease-out,
+      visibility 0s linear 240ms;
     overflow: hidden;
   }
 
   .mam-fever-screen-fx.is-active {
     opacity: 1;
+    visibility: visible;
+    transition:
+      opacity 200ms ease-out,
+      visibility 0s;
+  }
+
+  .mam-fever-speedlines {
+    position: absolute;
+    left: -35%;
+    top: -35%;
+    width: 170%;
+    height: 170%;
+    pointer-events: none;
+    background: repeating-conic-gradient(
+      from 0deg at 50% 50%,
+      transparent 0deg 4.2deg,
+      rgba(253, 224, 71, 0.38) 4.2deg 5.2deg,
+      transparent 5.2deg 9.5deg,
+      rgba(251, 146, 60, 0.28) 9.5deg 10.3deg,
+      transparent 10.3deg 15deg
+    );
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 40%, rgba(0, 0, 0, 0.85) 68%);
+    mask-image: radial-gradient(circle at 50% 50%, transparent 40%, rgba(0, 0, 0, 0.85) 68%);
+    opacity: 0.42;
+    will-change: transform;
+    animation: mamFeverRotateSlow 22s linear infinite;
+    animation-play-state: paused;
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-speedlines {
+    background: repeating-conic-gradient(
+      from 0deg at 50% 50%,
+      transparent 0deg 3.8deg,
+      rgba(251, 113, 133, 0.44) 3.8deg 4.9deg,
+      transparent 4.9deg 8.8deg,
+      rgba(253, 224, 71, 0.34) 8.8deg 9.7deg,
+      transparent 9.7deg 13.5deg
+    );
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='3'] .mam-fever-speedlines {
+    background: repeating-conic-gradient(
+      from 0deg at 50% 50%,
+      transparent 0deg 3.5deg,
+      rgba(34, 211, 238, 0.46) 3.5deg 4.6deg,
+      transparent 4.6deg 8.2deg,
+      rgba(253, 224, 71, 0.38) 8.2deg 9.1deg,
+      transparent 9.1deg 12.5deg
+    );
   }
 
   .mam-fever-vignette {
     position: absolute;
     inset: 0;
-    box-shadow:
-      inset 0 0 64px rgba(245, 158, 11, 0.42),
-      inset 0 0 18px rgba(254, 240, 138, 0.35);
-    animation: mamFeverEdgePulse 0.72s ease-in-out infinite alternate;
+    background:
+      radial-gradient(rgba(253, 224, 71, 0.42) 2.2px, transparent 2.4px),
+      radial-gradient(
+        ellipse at center,
+        transparent 56%,
+        rgba(245, 158, 11, 0.24) 84%,
+        rgba(234, 88, 12, 0.42) 100%
+      );
+    background-size: 12px 12px, 100% 100%;
+    -webkit-mask-image: radial-gradient(ellipse at center, transparent 54%, rgba(0, 0, 0, 0.92) 90%);
+    mask-image: radial-gradient(ellipse at center, transparent 54%, rgba(0, 0, 0, 0.92) 90%);
+    opacity: 0.72;
+  }
+
+  .mam-fever-frame {
+    position: absolute;
+    inset: 0;
+    padding: 6px;
+    overflow: hidden;
+    pointer-events: none;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  .mam-fever-frame-spin {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 165vmax;
+    height: 165vmax;
+    background: conic-gradient(
+      from 0deg at 50% 50%,
+      #fde047 0deg,
+      #fb923c 90deg,
+      #fff8e7 180deg,
+      #f59e0b 270deg,
+      #fde047 360deg
+    );
+    will-change: transform;
+    transform: translate3d(-50%, -50%, 0) rotate(0deg);
+    animation: mamFeverFrameSpin 3.2s linear infinite;
+    animation-play-state: paused;
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-frame-spin {
+    background: conic-gradient(
+      from 0deg at 50% 50%,
+      #ff3b5c 0deg,
+      #fde047 90deg,
+      #fda4af 180deg,
+      #e11d48 270deg,
+      #ff3b5c 360deg
+    );
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='3'] .mam-fever-frame-spin {
+    background: conic-gradient(
+      from 0deg at 50% 50%,
+      #22d3ee 0deg,
+      #fde047 90deg,
+      #f472b6 180deg,
+      #38bdf8 270deg,
+      #22d3ee 360deg
+    );
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-vignette {
+    background:
+      radial-gradient(rgba(251, 113, 133, 0.46) 2.2px, transparent 2.4px),
+      radial-gradient(
+        ellipse at center,
+        transparent 54%,
+        rgba(244, 63, 94, 0.28) 84%,
+        rgba(225, 29, 72, 0.46) 100%
+      );
+    background-size: 12px 12px, 100% 100%;
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='3'] .mam-fever-vignette {
+    background:
+      radial-gradient(rgba(34, 211, 238, 0.48) 2.2px, transparent 2.4px),
+      radial-gradient(
+        ellipse at center,
+        transparent 52%,
+        rgba(34, 211, 238, 0.28) 84%,
+        rgba(250, 204, 21, 0.44) 100%
+      );
+    background-size: 12px 12px, 100% 100%;
+  }
+
+  .mam-fever-rain {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .mam-fever-drop {
+    position: absolute;
+    top: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #fde047;
+    font-family: 'Rubik', sans-serif;
+    font-size: 20px;
+    font-weight: 900;
+    font-style: normal;
+    letter-spacing: 0.04em;
+    line-height: 1.05;
+    white-space: nowrap;
+    text-shadow:
+      -2px -2px 0 #14111d,
+      2px -2px 0 #14111d,
+      -2px 2px 0 #14111d,
+      2px 2px 0 #14111d,
+      0 -2px 0 #14111d,
+      -2px 0 0 #14111d,
+      2px 0 0 #14111d,
+      0 3.5px 0 #14111d;
+    will-change: transform, opacity;
+    transform: translate3d(0, -14vh, 0) rotate(var(--tag-rot, -8deg)) scale(var(--drop-scale, 1));
+    animation-name: mamFeverRainFall;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    animation-play-state: paused;
+  }
+
+  .mam-fever-drop.is-alt {
+    color: #fb923c;
+    font-size: 23px;
+  }
+
+  .mam-fever-drop.is-spark {
+    color: #fff8e7;
+    font-size: 18px;
+  }
+
+  .mam-fever-drop.is-font-0 {
+    font-family: 'Press Start 2P', monospace;
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: 0.02em;
+    font-size: 13px;
+  }
+
+  .mam-fever-drop.is-font-1 {
+    font-family: 'Pacifico', cursive;
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: 0.02em;
+    font-size: 25px;
+  }
+
+  .mam-fever-drop.is-font-2 {
+    font-family: 'Rubik Wet Paint', 'Rubik', sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: 0.06em;
+    font-size: 22px;
+  }
+
+  .mam-fever-drop.is-font-3 {
+    font-family: 'Bangers', 'Rubik', sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: 0.09em;
+    font-size: 28px;
+  }
+
+  .mam-fever-drop.is-font-4 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-style: normal;
+    letter-spacing: 0.1em;
+    font-size: 18px;
+  }
+
+  .mam-fever-drop.is-font-5 {
+    font-family: 'Alfa Slab One', Georgia, serif;
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: 0.03em;
+    font-size: 21px;
+  }
+
+  .mam-fever-screen-fx.is-active .mam-fever-speedlines,
+  .mam-fever-screen-fx.is-active .mam-fever-frame-spin,
+  .mam-fever-screen-fx.is-active .mam-fever-drop {
+    animation-play-state: running;
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-drop {
+    color: #fb7185;
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-drop.is-alt {
+    color: #fde047;
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-drop.is-spark {
+    color: #fff1f2;
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='3'] .mam-fever-drop {
+    color: #22d3ee;
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='3'] .mam-fever-drop.is-alt {
+    color: #fde047;
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='3'] .mam-fever-drop.is-spark {
+    color: #f472b6;
   }
 
   .mam-fever-corner {
+    color: #fde047;
     position: absolute;
-    width: 34px;
-    height: 34px;
-    border-color: #fde047;
-    filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.85));
-    animation: mamFeverEdgePulse 0.72s ease-in-out infinite alternate;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.95;
   }
-  .mam-fever-corner.is-tl { top: 10px; left: 10px; border-top: 3px solid; border-left: 3px solid; border-top-left-radius: 6px; }
-  .mam-fever-corner.is-tr { top: 10px; right: 10px; border-top: 3px solid; border-right: 3px solid; border-top-right-radius: 6px; }
-  .mam-fever-corner.is-bl { bottom: 10px; left: 10px; border-bottom: 3px solid; border-left: 3px solid; border-bottom-left-radius: 6px; }
-  .mam-fever-corner.is-br { bottom: 10px; right: 10px; border-bottom: 3px solid; border-right: 3px solid; border-bottom-right-radius: 6px; }
+  .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-corner { color: #fb7185; }
+  .mam-fever-screen-fx[data-fever-tier='3'] .mam-fever-corner { color: #22d3ee; }
+
+  .mam-fever-corner.is-tl { top: 8px; left: 8px; transform-origin: top left; }
+  .mam-fever-corner.is-tr { top: 8px; right: 8px; transform-origin: top right; }
+  .mam-fever-corner.is-tr > svg { transform: scaleX(-1); }
+  .mam-fever-corner.is-bl { bottom: 8px; left: 8px; transform-origin: bottom left; }
+  .mam-fever-corner.is-bl > svg { transform: scaleY(-1); }
+  .mam-fever-corner.is-br { bottom: 8px; right: 8px; transform-origin: bottom right; }
+  .mam-fever-corner.is-br > svg { transform: scale(-1); }
 
   .mam-fever-burst {
+    --fever-tape-a: #f59e0b;
+    --fever-tape-b: #fde047;
+    --fever-paper-bg: #fff8e7;
+    --fever-title-a: #fef08a;
+    --fever-title-b: #fb923c;
+    --fever-chev: #ff4d2e;
     position: absolute;
-    top: 32%;
+    top: 33%;
     left: 50%;
     width: 116vw;
-    padding: 16px 24px 14px;
-    background:
-      linear-gradient(
-        90deg,
-        rgba(8, 12, 24, 0.1) 0%,
-        rgba(10, 14, 28, 0.94) 16%,
-        rgba(18, 16, 30, 0.97) 50%,
-        rgba(10, 14, 28, 0.94) 84%,
-        rgba(8, 12, 24, 0.1) 100%
-      );
-    border-top: 3px solid #fde047;
-    border-bottom: 3px solid #f97316;
-    box-shadow:
-      0 0 42px rgba(245, 158, 11, 0.65),
-      0 12px 36px rgba(0, 0, 0, 0.85),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5),
-      inset 0 -1px 0 rgba(254, 240, 138, 0.4);
-    transform: translate(-50%, -50%) rotate(-3deg) scaleY(0.05);
+    padding: 24px 24px 22px;
+    background-color: var(--fever-paper-bg);
+    background-image:
+      radial-gradient(rgba(20, 17, 29, 0.085) 1.3px, transparent 1.3px),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(252, 236, 200, 0.35) 100%);
+    background-size: 10px 10px, 100% 100%;
+    border-top: 3.5px solid #14111d;
+    border-bottom: 3.5px solid #14111d;
+    box-shadow: none;
+    transform-origin: 50% 50%;
+    backface-visibility: visible;
+    transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(-86deg) scaleY(0.16);
     opacity: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
     text-align: center;
+  }
+
+  .mam-fever-fold-crease {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(20, 17, 29, 0.24) 0%,
+        rgba(20, 17, 29, 0.05) 47%,
+        rgba(255, 255, 255, 0.55) 49.5%,
+        rgba(20, 17, 29, 0.32) 50.5%,
+        rgba(20, 17, 29, 0.08) 54%,
+        rgba(20, 17, 29, 0.28) 100%
+      );
+  }
+
+  .mam-fever-burst.is-bursting .mam-fever-fold-crease {
+    animation: mamFeverPaperCrease 2.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-burst {
+    --fever-tape-a: #e11d48;
+    --fever-tape-b: #fda4af;
+    --fever-paper-bg: #fff1f2;
+    --fever-title-a: #fda4af;
+    --fever-title-b: #ff3b5c;
+    --fever-chev: #e11d48;
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='3'] .mam-fever-burst {
+    --fever-tape-a: #06b6d4;
+    --fever-tape-b: #fde047;
+    --fever-paper-bg: #ecfeff;
+    --fever-title-a: #67e8f9;
+    --fever-title-b: #22d3ee;
+    --fever-chev: #0284c7;
   }
 
   .mam-fever-burst::before,
@@ -262,20 +575,31 @@
     position: absolute;
     left: 0;
     right: 0;
-    height: 6px;
-    background: repeating-linear-gradient(
-      -55deg,
-      #facc15 0 12px,
-      #090d16 12px 22px
+    height: 11px;
+    background: linear-gradient(
+      -45deg,
+      var(--fever-tape-a) 25%,
+      var(--fever-tape-b) 25%,
+      var(--fever-tape-b) 50%,
+      var(--fever-tape-a) 50%,
+      var(--fever-tape-a) 75%,
+      var(--fever-tape-b) 75%,
+      var(--fever-tape-b) 100%
     );
-    opacity: 0.88;
+    background-size: 32px 32px;
     pointer-events: none;
   }
-  .mam-fever-burst::before { top: 0; }
-  .mam-fever-burst::after { bottom: 0; }
+  .mam-fever-burst::before {
+    top: 0;
+    border-bottom: 2.5px solid #14111d;
+  }
+  .mam-fever-burst::after {
+    bottom: 0;
+    border-top: 2.5px solid #14111d;
+  }
 
   .mam-fever-burst.is-bursting {
-    animation: mamFeverBannerCycle 2.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation: mamFeverBannerCycle 2.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
   .mam-fever-ticker {
@@ -284,11 +608,12 @@
     display: flex;
     align-items: center;
     white-space: nowrap;
-    font-size: 62px;
+    font-family: 'Rubik', sans-serif;
+    font-size: 58px;
     font-weight: 900;
     font-style: italic;
-    letter-spacing: 0.16em;
-    color: rgba(250, 204, 21, 0.08);
+    letter-spacing: 0.12em;
+    color: rgba(20, 17, 29, 0.065);
     text-transform: uppercase;
     pointer-events: none;
     user-select: none;
@@ -304,16 +629,16 @@
     background: linear-gradient(
       105deg,
       transparent 38%,
-      rgba(255, 255, 255, 0.85) 49%,
-      rgba(254, 240, 138, 0.95) 51%,
+      rgba(255, 255, 255, 0.72) 49%,
+      rgba(255, 255, 255, 0.92) 51%,
       transparent 62%
     );
-    transform: translateX(-120%);
+    transform: translate3d(-120%, 0, 0);
     pointer-events: none;
   }
 
   .mam-fever-burst.is-bursting .mam-fever-slash {
-    animation: mamFeverSlashSweep 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards;
+    animation: mamFeverSlashSweep 0.62s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
   }
 
   .mam-fever-burst-row {
@@ -325,76 +650,148 @@
   }
 
   .mam-fever-burst.is-bursting .mam-fever-burst-row {
-    animation: mamFeverTitleSlam 2.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    transform-origin: 50% 65%;
+    animation: mamFeverTitleSlam 2.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
   .mam-fever-chevrons {
-    font-size: clamp(20px, 2.8vw, 32px);
+    font-family: 'Rubik', sans-serif;
+    font-size: clamp(22px, 3vw, 34px);
     font-weight: 900;
     font-style: italic;
-    letter-spacing: -0.08em;
-    color: #f97316;
-    text-shadow: 0 0 14px rgba(249, 115, 22, 0.9);
+    letter-spacing: -0.06em;
+    color: var(--fever-chev);
+    text-shadow:
+      -2px -2px 0 #14111d,
+      2px -2px 0 #14111d,
+      -2px 2px 0 #14111d,
+      2px 2px 0 #14111d,
+      0 3px 0 #14111d;
   }
 
   .mam-fever-burst-title {
+    font-family: 'Rubik', sans-serif;
     font-size: clamp(32px, 5vw, 56px);
     font-weight: 900;
     font-style: italic;
-    letter-spacing: 0.12em;
-    line-height: 1;
+    letter-spacing: 0.04em;
+    line-height: 1.05;
+    padding: 2px 8px;
     text-transform: uppercase;
-    background: linear-gradient(180deg, #ffffff 10%, #fef08a 46%, #f59e0b 78%, #ea580c 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    filter:
-      drop-shadow(0 3px 0 #451a03)
-      drop-shadow(0 0 18px rgba(250, 204, 21, 0.85))
-      drop-shadow(0 0 36px rgba(234, 88, 12, 0.65));
+    color: #fde047;
+    text-shadow:
+      -2.5px -2.5px 0 #14111d,
+      2.5px -2.5px 0 #14111d,
+      -2.5px 2.5px 0 #14111d,
+      2.5px 2.5px 0 #14111d,
+      0 -2.5px 0 #14111d,
+      -2.5px 0 0 #14111d,
+      2.5px 0 0 #14111d,
+      0 5px 0 #14111d,
+      2px 5px 0 #14111d,
+      -2px 5px 0 #14111d;
     white-space: nowrap;
   }
 
-  .mam-fever-burst-sub {
-    position: relative;
-    z-index: 2;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 4px 18px;
-    border-radius: 9999px;
-    background: linear-gradient(90deg, rgba(154, 52, 18, 0.9), rgba(234, 88, 12, 0.95), rgba(154, 52, 18, 0.9));
-    border: 1.5px solid #fef08a;
-    box-shadow: 0 4px 18px rgba(234, 88, 12, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.45);
-    color: #fffbeb;
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
+  .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-burst-title {
+    color: #ff6b8b;
   }
 
-  @keyframes mamFeverEdgePulse {
-    0% { opacity: 0.55; }
-    100% { opacity: 1; }
+  .mam-fever-screen-fx[data-fever-tier='3'] .mam-fever-burst-title {
+    color: #38e8ff;
+  }
+
+  @keyframes mamFeverRotateSlow {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @keyframes mamFeverFrameSpin {
+    0% { transform: translate3d(-50%, -50%, 0) rotate(0deg); }
+    100% { transform: translate3d(-50%, -50%, 0) rotate(360deg); }
+  }
+
+  @keyframes mamFeverRainFall {
+    0% {
+      transform: translate3d(0, -14vh, 0) rotate(var(--tag-rot, -8deg)) scale(var(--drop-scale, 1));
+      opacity: 0;
+    }
+    12% {
+      opacity: 0.92;
+    }
+    82% {
+      opacity: 0.88;
+    }
+    100% {
+      transform: translate3d(-4vw, 114vh, 0) rotate(calc(var(--tag-rot, -8deg) + 12deg)) scale(var(--drop-scale, 1));
+      opacity: 0;
+    }
   }
 
   @keyframes mamFeverBannerCycle {
-    0% { opacity: 0; transform: translate(-50%, -50%) rotate(-3deg) scaleY(0.04); }
-    10% { opacity: 1; transform: translate(-50%, -50%) rotate(-3deg) scaleY(1.08); }
-    18% { opacity: 1; transform: translate(-50%, -50%) rotate(-3deg) scaleY(1); }
-    82% { opacity: 1; transform: translate(-50%, -50%) rotate(-3deg) scaleY(1); }
-    92% { opacity: 1; transform: translate(-50%, -50%) rotate(-3deg) scaleY(0.18); }
-    100% { opacity: 0; transform: translate(-50%, -50%) rotate(-3deg) scaleY(0.02); }
+    0% {
+      opacity: 0;
+      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(-88deg) scaleX(0.92) scaleY(0.14);
+    }
+    7% {
+      opacity: 1;
+      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(-24deg) scaleX(0.98) scaleY(0.76);
+    }
+    14% {
+      opacity: 1;
+      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(12deg) scaleX(1.01) scaleY(1.05);
+    }
+    21% {
+      opacity: 1;
+      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(-3deg) scaleX(1) scaleY(0.99);
+    }
+    26%, 78% {
+      opacity: 1;
+      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(0deg) scaleX(1) scaleY(1);
+    }
+    85% {
+      opacity: 1;
+      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(-12deg) scaleX(1.01) scaleY(1.03);
+    }
+    93% {
+      opacity: 0.96;
+      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(64deg) scaleX(0.96) scaleY(0.42);
+    }
+    100% {
+      opacity: 0;
+      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(88deg) scaleX(0.9) scaleY(0.12);
+    }
+  }
+
+  @keyframes mamFeverPaperCrease {
+    0% { opacity: 0.95; }
+    14% { opacity: 0.35; }
+    24%, 78% { opacity: 0; }
+    90% { opacity: 0.55; }
+    100% { opacity: 0.95; }
   }
 
   @keyframes mamFeverTitleSlam {
-    0% { opacity: 0; transform: translateX(-18vw) skewX(-18deg) scale(1.22); }
-    14% { opacity: 1; transform: translateX(0.8vw) skewX(-4deg) scale(1.04); }
-    22% { opacity: 1; transform: translateX(0) skewX(0deg) scale(1); }
-    42% { opacity: 1; transform: translateX(0) skewX(0deg) scale(1.05); }
-    62% { opacity: 1; transform: translateX(0) skewX(0deg) scale(0.99); }
-    80% { opacity: 1; transform: translateX(0) skewX(0deg) scale(1.02); }
-    100% { opacity: 0; transform: translateX(22vw) skewX(16deg) scale(0.94); }
+    0%, 6% {
+      opacity: 0;
+      transform: perspective(700px) rotateX(-82deg) scale(0.84) translateY(10px);
+    }
+    16% {
+      opacity: 1;
+      transform: perspective(700px) rotateX(12deg) scale(1.07) translateY(-2px);
+    }
+    23%, 78% {
+      opacity: 1;
+      transform: perspective(700px) rotateX(0deg) scale(1) translateY(0);
+    }
+    86% {
+      opacity: 0.92;
+      transform: perspective(700px) rotateX(36deg) scale(0.95) translateY(2px);
+    }
+    94%, 100% {
+      opacity: 0;
+      transform: perspective(700px) rotateX(84deg) scale(0.8) translateY(8px);
+    }
   }
 
   @keyframes mamFeverTickerScroll {

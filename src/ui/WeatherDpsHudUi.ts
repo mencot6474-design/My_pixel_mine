@@ -11,7 +11,11 @@ import {
 } from '../game/GameData';
 import { GameState } from '../game/GameState';
 import { fmtShort } from '../game/NumberFormat';
-import { type OverclockSnapshot } from '../game/OverclockDomain';
+import {
+  getOverclockTierBuffs,
+  type OverclockSnapshot,
+  type OverclockTier,
+} from '../game/OverclockDomain';
 import { WeatherId, WEATHERS } from '../game/WeatherData';
 import { getChibiById } from '../game3d/ChibiCatalog';
 import { enchantDiceIconHtml, gemPotionIconHtml, hudIconHtml, meteorIconHtml, weatherIconHtml } from './HudIcons';
@@ -594,7 +598,7 @@ export class WeatherDpsHudUi {
     if (!host) return;
     const snap = this.state.getOverclockSnapshot(now);
     const key = snap.active
-      ? `active:${snap.remainingSec.toFixed(1)}`
+      ? `active:${snap.tier}:${snap.remainingSec.toFixed(1)}`
       : `charge:${Math.round(snap.chargePct)}`;
     if (host.dataset.ocKey === key) return;
     host.dataset.ocKey = key;
@@ -609,28 +613,39 @@ export class WeatherDpsHudUi {
       return;
     }
 
+    const tier: 0 | OverclockTier = snap.active ? (snap.tier === 2 || snap.tier === 3 ? snap.tier : 1) : 0;
+    const buffs = getOverclockTierBuffs(tier);
     const pct = Math.max(0, Math.min(100, Math.round(snap.chargePct)));
     shell.classList.toggle('is-active', snap.active);
+    shell.classList.toggle('is-tier-2', tier === 2);
+    shell.classList.toggle('is-tier-3', tier === 3);
     shell.dataset.overclockState = snap.active ? 'active' : 'charging';
+    shell.dataset.overclockTier = String(tier);
     fillEl.style.width = `${pct}%`;
 
-    titleEl.textContent = snap.active ? 'OVERCLOCK ACTIVE' : 'OVERCLOCK FEVER';
+    titleEl.textContent = snap.active ? buffs.label : 'OVERCLOCK FEVER';
     titleEl.className = OVERCLOCK_TITLE_CLASS;
 
     valEl.textContent = snap.active ? `${snap.remainingSec.toFixed(1)}s` : `${pct}%`;
-    valEl.className = getOverclockValueClass(snap.active);
+    valEl.className = getOverclockValueClass(snap.active, tier);
 
     badgesEl.className = getOverclockBadgesClass(snap.active);
+    if (badgesEl.dataset.ocTier !== String(tier)) {
+      badgesEl.dataset.ocTier = String(tier);
+      badgesEl.innerHTML = buildOverclockBadgesInnerHtml(tier);
+    }
   }
 }
 
 const OVERCLOCK_TITLE_CLASS =
   'text-[10px] font-black italic uppercase tracking-[0.06em] text-[#14111d] truncate transition-colors duration-300';
 
-function getOverclockValueClass(active: boolean): string {
-  return active
-    ? 'px-1.5 py-[1px] rounded bg-[#ff4d2e] border border-[#14111d] text-[10px] font-black tabular-nums text-white leading-none shrink-0 transition-all duration-300'
-    : 'px-1.5 py-[1px] rounded bg-[#bae6fd] border border-[#14111d] text-[10px] font-black tabular-nums text-[#14111d] leading-none shrink-0 transition-all duration-300';
+function getOverclockValueClass(active: boolean, tier: 0 | OverclockTier = active ? 1 : 0): string {
+  if (!active) {
+    return 'px-1.5 py-[1px] rounded bg-[#bae6fd] border border-[#14111d] text-[10px] font-black tabular-nums text-[#14111d] leading-none shrink-0 transition-all duration-300';
+  }
+  const bgCls = tier === 3 ? 'bg-[#0284c7]' : tier === 2 ? 'bg-[#e11d48]' : 'bg-[#ff4d2e]';
+  return `px-1.5 py-[1px] rounded ${bgCls} border border-[#14111d] text-[10px] font-black tabular-nums text-white leading-none shrink-0 transition-all duration-300`;
 }
 
 function getOverclockBadgesClass(active: boolean): string {
@@ -639,30 +654,44 @@ function getOverclockBadgesClass(active: boolean): string {
   }`;
 }
 
+function buildOverclockBadgesInnerHtml(tier: 0 | OverclockTier): string {
+  const buffs = getOverclockTierBuffs(tier === 0 ? 1 : tier);
+  const orePct = Math.round((buffs.dropMult - 1) * 100);
+  return `
+    <span class="px-1 py-[1px] rounded bg-[#fde047] border border-[#14111d] text-[#14111d]">${buffs.speedMult}x SPD</span>
+    <span class="px-1 py-[1px] rounded bg-[#f9a8d4] border border-[#14111d] text-[#14111d]">${buffs.tapMult}x TAP</span>
+    <span class="px-1 py-[1px] rounded bg-[#7dd3fc] border border-[#14111d] text-[#14111d]">+${orePct}% ORE</span>
+  `;
+}
+
 const OVERCLOCK_TICKS_HTML = '<div class="mam-fever-ticks" aria-hidden="true">' + '<span></span>'.repeat(10) + '</div>';
 
-export function buildOverclockGaugeInnerHtml(snap: OverclockSnapshot): string {
+export function buildOverclockGaugeInnerHtml(
+  snap: Pick<OverclockSnapshot, 'active' | 'chargePct' | 'remainingSec' | 'durationSec'> &
+    Partial<Pick<OverclockSnapshot, 'tier'>>
+): string {
   const pct = Math.max(0, Math.min(100, Math.round(snap.chargePct)));
-  const shellCls = snap.active ? 'mam-fever-shell is-active' : 'mam-fever-shell';
+  const tier: 0 | OverclockTier = snap.active ? (snap.tier === 2 || snap.tier === 3 ? snap.tier : 1) : 0;
+  const buffs = getOverclockTierBuffs(tier);
+  const tierCls = tier === 3 ? ' is-tier-3' : tier === 2 ? ' is-tier-2' : '';
+  const shellCls = snap.active ? `mam-fever-shell is-active${tierCls}` : 'mam-fever-shell';
   const stateAttr = snap.active ? 'active' : 'charging';
-  const titleText = snap.active ? 'OVERCLOCK ACTIVE' : 'OVERCLOCK FEVER';
+  const titleText = snap.active ? buffs.label : 'OVERCLOCK FEVER';
   const valText = snap.active ? `${snap.remainingSec.toFixed(1)}s` : `${pct}%`;
 
   return `
-    <div class="${shellCls}" data-overclock-state="${stateAttr}">
+    <div class="${shellCls}" data-overclock-state="${stateAttr}" data-overclock-tier="${tier}">
       <div class="flex-1 min-w-0 flex flex-col gap-1">
         <div class="flex items-center justify-center gap-1.5 leading-none">
           <span class="${OVERCLOCK_TITLE_CLASS}" data-oc-title="true">${titleText}</span>
-          <span class="${getOverclockValueClass(snap.active)}" data-oc-value="true">${valText}</span>
+          <span class="${getOverclockValueClass(snap.active, tier)}" data-oc-value="true">${valText}</span>
         </div>
         <div class="mam-fever-track">
           <div class="mam-fever-fill" style="width:${pct}%"></div>
           ${OVERCLOCK_TICKS_HTML}
         </div>
-        <div class="${getOverclockBadgesClass(snap.active)}" data-oc-badges="true">
-          <span class="px-1 py-[1px] rounded bg-[#fde047] border border-[#14111d] text-[#14111d]">2x SPD</span>
-          <span class="px-1 py-[1px] rounded bg-[#f9a8d4] border border-[#14111d] text-[#14111d]">2x TAP</span>
-          <span class="px-1 py-[1px] rounded bg-[#7dd3fc] border border-[#14111d] text-[#14111d]">+50% ORE</span>
+        <div class="${getOverclockBadgesClass(snap.active)}" data-oc-badges="true" data-oc-tier="${tier}">
+          ${buildOverclockBadgesInnerHtml(tier)}
         </div>
       </div>
     </div>

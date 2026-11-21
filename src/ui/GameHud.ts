@@ -6,6 +6,7 @@ import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStat
 import { getWorldById, getWorldIndex } from '../game/GameData';
 import { gameSettings } from '../game/GameSettings';
 import { GameState } from '../game/GameState';
+import type { OverclockTier } from '../game/OverclockDomain';
 import { WeatherId } from '../game/WeatherData';
 import { fmtInt } from '../game/NumberFormat';
 import { getTowerFloorDef, TowerWaveOreState } from '../game/TowerData';
@@ -76,6 +77,7 @@ export class GameHud {
   private modalOpenedAtMs = 0;
   private lastRegrowthActive = false;
   private lastOverclockActive = false;
+  private lastOverclockTier: 0 | OverclockTier = 0;
 
   private readonly shopUi: ShopModalsUi;
   private readonly forgeUi: ForgeModalUi;
@@ -121,7 +123,7 @@ export class GameHud {
     private readonly onSetTutorialSellShopZoom?: (zoomed: boolean) => void,
     private readonly onToggleAutoMeteor?: (enabled: boolean) => void,
     private readonly onTutorialComplete?: () => void,
-    private readonly onOverclockChange?: (active: boolean) => void,
+    private readonly onOverclockChange?: (active: boolean, tier: 0 | OverclockTier) => void,
     private readonly fusionOps?: {
       syncFusionRecipe: (
         recipe: FusionRecipeDef,
@@ -370,8 +372,12 @@ export class GameHud {
         setLastOverclockActive: (active) => {
           this.lastOverclockActive = active;
         },
+        lastOverclockTier: this.lastOverclockTier,
+        setLastOverclockTier: (tier) => {
+          this.lastOverclockTier = tier;
+        },
         onOverclockChange: this.onOverclockChange,
-        syncFeverScreenFx: (active, burst) => this.syncFeverScreenFx(active, burst),
+        syncFeverScreenFx: (active, burst, tier) => this.syncFeverScreenFx(active, burst, tier),
         syncTowerSceneVisual: () => this.syncTowerSceneVisual(),
         setSceneMode: (mode) => this.setSceneMode(mode),
         openModal: (kind) => this.openModal(kind),
@@ -841,11 +847,16 @@ export class GameHud {
   }
 
   private renderFeverScreenFx(): string {
-    return renderFeverScreenFxHtml(this.sceneMode === 'mine' && this.state.isOverclockActive());
+    const ocSnap = this.state.getOverclockSnapshot();
+    return renderFeverScreenFxHtml(this.sceneMode === 'mine' && ocSnap.active, ocSnap.tier);
   }
 
-  private syncFeverScreenFx(active: boolean, triggerBurst: boolean): void {
-    syncFeverScreenFxDom(this.root, this.sceneMode === 'mine', active, triggerBurst);
+  private syncFeverScreenFx(
+    active: boolean,
+    triggerBurst: boolean,
+    tier: 0 | OverclockTier = active ? 1 : 0
+  ): void {
+    syncFeverScreenFxDom(this.root, this.sceneMode === 'mine', active, triggerBurst, tier);
   }
 
   private renderActiveModal(): string {

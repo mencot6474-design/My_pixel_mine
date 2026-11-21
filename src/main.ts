@@ -207,6 +207,7 @@ async function bootstrap(): Promise<void> {
   const scene = new MineScene3D(threeRoot, {
     onOreBroken: (variantKey, meteorWeatherId, pitEventKind) => {
       if (meteorWeatherId) {
+        const wasActive = gameState.isOverclockActive();
         const reward = gameState.onMeteorBroken(meteorWeatherId);
         audio.playOreBreak('geode');
         audio.playSfx('rare-fanfare', { volume: 0.55 });
@@ -216,6 +217,7 @@ async function bootstrap(): Promise<void> {
           `+${reward.gemsAwarded} Gems`,
           reward.diceAwarded > 0 ? `+${reward.diceAwarded} Enchant Dice` : null,
           chibiName ? `+1 ${chibiName}` : null,
+          wasActive ? '⚡ +5s FEVER CHAIN!' : null,
         ].filter(Boolean);
         hud?.pushToast(`☄️ ${reward.weatherOre.meteorName} shattered! ${extras.join(' • ')}`);
         hud?.notifyTutorialOreBroken();
@@ -226,16 +228,19 @@ async function bootstrap(): Promise<void> {
         for (let i = 0; i < drops; i++) {
           gameState.onOreBroken(variantKey);
         }
+        const ocExt = gameState.onPitEventBroken();
         activePitEvent = null;
         nextPitEventAt = Date.now() + rollNextPitEventCooldownSec() * 1000;
         audio.playOreBreak('geode');
         audio.playSfx('rare-fanfare', { volume: 0.5 });
-        hud?.pushToast(`★ GOLDEN VEIN shattered! ${drops}× Ore Drops!`);
+        const feverTag = ocExt.extended ? ` • ⚡ +${Math.round(ocExt.addedSec)}s FEVER!` : '';
+        hud?.pushToast(`★ GOLDEN VEIN shattered! ${drops}× Ore Drops${feverTag}`);
         hud?.notifyTutorialOreBroken();
         return;
       }
       if (pitEventKind === 'crystal_surge') {
         gameState.onOreBroken(variantKey);
+        const ocExt = gameState.onPitEventBroken();
         const worldIdx = Math.max(0, WORLDS.findIndex((w) => w.id === gameState.activeWorldId));
         const bonusGems = computePitEventBonusGems(worldIdx, 'crystal_surge');
         if (bonusGems > 0) gameState.grantAdGems(bonusGems);
@@ -243,7 +248,8 @@ async function bootstrap(): Promise<void> {
         nextPitEventAt = Date.now() + rollNextPitEventCooldownSec() * 1000;
         audio.playOreBreak('geode');
         audio.playSfx('rare-fanfare', { volume: 0.5 });
-        hud?.pushToast(`⚡ CRYSTAL SURGE shattered! +${bonusGems} Gems!`);
+        const feverTag = ocExt.extended ? ` • ⚡ +${Math.round(ocExt.addedSec)}s FEVER!` : '';
+        hud?.pushToast(`⚡ CRYSTAL SURGE shattered! +${bonusGems} Gems${feverTag}`);
         hud?.notifyTutorialOreBroken();
         return;
       }
@@ -407,8 +413,8 @@ async function bootstrap(): Promise<void> {
         spawnMeteorIfAllowed(gameState.weatherId);
       }
     },
-    (overclockActive) => {
-      scene.setOverclockActive(overclockActive);
+    (overclockActive, overclockTier) => {
+      scene.setOverclockActive(overclockActive, overclockTier);
       syncWorldToScene();
     },
     {

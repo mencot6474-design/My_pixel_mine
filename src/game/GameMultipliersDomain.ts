@@ -12,7 +12,10 @@ import {
   getIndexTabEntryIds,
   type IndexPassiveBonuses,
 } from './IndexRewardsDomain';
-import { OVERCLOCK_DROP_MULT, OVERCLOCK_TAP_MULT } from './OverclockDomain';
+import {
+  getOverclockTierBuffs,
+  type OverclockTier,
+} from './OverclockDomain';
 import type { RelicEffectStat } from './RelicData';
 import {
   DENSE_ORE_DROP_MULT,
@@ -34,6 +37,7 @@ export interface GameMultipliersContext {
   getWeatherDamageMult: () => number;
   getWeatherOreDropMult: () => number;
   isOverclockActive: (nowMs?: number) => boolean;
+  getOverclockTier?: (nowMs?: number) => 0 | OverclockTier;
   getActiveStarDropAndGemBonus: () => { oreDropBonusPct: number; sellBonusPct: number; gemBonusPct: number };
   getActiveEnchantBonuses: () => { oreDropPct: number; sellValuePct: number };
 }
@@ -81,7 +85,12 @@ export function getTapDamageDomain(ctx: GameMultipliersContext, nowMs = Date.now
     ctx.getActiveFusionPassives().tapDmgPct +
     ctx.getActiveIndexPassiveBonuses().allDmgPct +
     ctx.getAchievementAllDmgBonus();
-  const overclockMult = ctx.isOverclockActive(nowMs) ? OVERCLOCK_TAP_MULT : 1;
+  const tier: 0 | OverclockTier = ctx.getOverclockTier
+    ? ctx.getOverclockTier(nowMs)
+    : ctx.isOverclockActive(nowMs)
+      ? 1
+      : 0;
+  const overclockMult = getOverclockTierBuffs(tier).tapMult;
   return Math.max(
     1,
     Math.round((20 + ctx.getActiveResearchBonus('tapDamageFlat')) * tapMult * ctx.getWeatherDamageMult() * overclockMult)
@@ -145,7 +154,12 @@ export function getOreOutputMultDomain(ctx: GameMultipliersContext): number {
 }
 
 export function getTotalOreDropMultDomain(ctx: GameMultipliersContext, nowMs = Date.now()): number {
-  const overclockMult = ctx.isOverclockActive(nowMs) ? OVERCLOCK_DROP_MULT : 1;
+  const tier: 0 | OverclockTier = ctx.getOverclockTier
+    ? ctx.getOverclockTier(nowMs)
+    : ctx.isOverclockActive(nowMs)
+      ? 1
+      : 0;
+  const overclockMult = getOverclockTierBuffs(tier).dropMult;
   return getOreOutputMultDomain(ctx) * ctx.getWeatherOreDropMult() * overclockMult;
 }
 

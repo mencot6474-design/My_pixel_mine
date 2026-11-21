@@ -212,12 +212,19 @@ import {
 import {
   chargeOverclockDomain,
   createInitialOverclockState,
+  extendOverclockDomain,
   getOverclockSnapshotDomain,
   isOverclockActiveDomain,
   OVERCLOCK_BREAK_CHARGE,
+  OVERCLOCK_GEODE_EXTEND_SEC,
   OVERCLOCK_METEOR_BREAK_CHARGE,
+  OVERCLOCK_METEOR_EXTEND_SEC,
+  OVERCLOCK_PIT_EVENT_CHARGE,
+  OVERCLOCK_PIT_EVENT_EXTEND_SEC,
+  type OverclockExtendResult,
   type OverclockSnapshot,
   type OverclockState,
+  type OverclockTier,
   stepOverclockDomain,
 } from './OverclockDomain';
 import {
@@ -590,14 +597,32 @@ export class GameState {
     if (variantKey === 'vein' || variantKey === 'geode') {
       recordBountyProgressDomain(this, 'break_rare_ore', 1);
     }
-    this.chargeOverclock(OVERCLOCK_BREAK_CHARGE);
+    if (this.isOverclockActive()) {
+      if (variantKey === 'geode') {
+        this.extendOverclock(OVERCLOCK_GEODE_EXTEND_SEC, false);
+      }
+    } else {
+      this.chargeOverclock(OVERCLOCK_BREAK_CHARGE);
+    }
     onOreBrokenDomain(this, variantKey, rng, () => this.emit());
   }
 
   public onMeteorBroken(weatherId: WeatherId, rng: () => number = Math.random) {
     recordBountyProgressDomain(this, 'shatter_meteor', 1);
-    this.chargeOverclock(OVERCLOCK_METEOR_BREAK_CHARGE);
+    if (this.isOverclockActive()) {
+      this.extendOverclock(OVERCLOCK_METEOR_EXTEND_SEC, true);
+    } else {
+      this.chargeOverclock(OVERCLOCK_METEOR_BREAK_CHARGE);
+    }
     return onMeteorBrokenDomain(this, weatherId, rng, () => this.emit());
+  }
+
+  public onPitEventBroken(nowMs = Date.now()): OverclockExtendResult {
+    if (this.isOverclockActive(nowMs)) {
+      return this.extendOverclock(OVERCLOCK_PIT_EVENT_EXTEND_SEC, true, nowMs);
+    }
+    this.chargeOverclock(OVERCLOCK_PIT_EVENT_CHARGE, nowMs);
+    return { extended: false, tierUp: false, tier: 1, addedSec: 0 };
   }
 
   public takeAllFromChest(): number {
@@ -1030,12 +1055,24 @@ export class GameState {
     return activated;
   }
 
+  public extendOverclock(
+    extendSec: number,
+    advanceTier = false,
+    nowMs = Date.now()
+  ): OverclockExtendResult {
+    return extendOverclockDomain(this.overclock, extendSec, advanceTier, nowMs);
+  }
+
   public stepOverclock(nowMs = Date.now()): boolean {
     return stepOverclockDomain(this.overclock, nowMs);
   }
 
   public isOverclockActive(nowMs = Date.now()): boolean {
     return isOverclockActiveDomain(this.overclock, nowMs);
+  }
+
+  public getOverclockTier(nowMs = Date.now()): 0 | OverclockTier {
+    return getOverclockSnapshotDomain(this.overclock, nowMs).tier;
   }
 
   public getOverclockSnapshot(nowMs = Date.now()): OverclockSnapshot {

@@ -13,7 +13,7 @@ import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStat
 import { TowerArena3D, TowerFighterConfig, TowerOreBarScreen } from './TowerArena3D';
 import { TowerWaveOreState } from '../game/TowerData';
 import { GRAPHICS_PRESETS, GraphicsQuality } from '../game/GameSettings';
-import { OVERCLOCK_SPEED_MULT } from '../game/OverclockDomain';
+import { getOverclockTierBuffs, type OverclockTier } from '../game/OverclockDomain';
 import { getWeatherById, WeatherId } from '../game/WeatherData';
 import { type PitEventKind } from '../game/PitEventsDomain';
 import { WeatherFx3D } from './WeatherFx3D';
@@ -96,10 +96,13 @@ export function stepHoldMineTimer(opts: {
 export function rollTapCriticalDamage(
   baseTapDamage: number,
   overclockActive: boolean,
-  rng: () => number = Math.random
+  rng: () => number = Math.random,
+  overclockTier: 0 | OverclockTier = overclockActive ? 1 : 0
 ): { damage: number; isCrit: boolean } {
   const safeBase = Math.max(1, Math.round(baseTapDamage));
-  const critChance = overclockActive ? OVERCLOCK_TAP_CRIT_CHANCE : BASE_TAP_CRIT_CHANCE;
+  const critChance = overclockActive
+    ? getOverclockTierBuffs(overclockTier || 1).critChance
+    : BASE_TAP_CRIT_CHANCE;
   const isCrit = rng() < critChance;
   return {
     damage: isCrit ? Math.max(1, Math.round(safeBase * TAP_CRIT_MULT)) : safeBase,
@@ -165,6 +168,7 @@ export class MineScene3D {
   private activeWeatherId: WeatherId = 'light_rain';
   private graphicsQuality: GraphicsQuality = 'high';
   private overclockActive = false;
+  private overclockTier: 0 | OverclockTier = 0;
   private tapDamage = 45;
   private tapShakeIntensity = 0;
 
@@ -771,7 +775,12 @@ export class MineScene3D {
     const hit = preHit !== undefined ? preHit : this.raycastAt(clientX, clientY);
     const holdFx = isHold ? { accentColor: '#38bdf8' } : undefined;
     if (hit && hit.userData.kind === 'ore-node') {
-      const { damage, isCrit } = rollTapCriticalDamage(this.tapDamage, this.overclockActive);
+      const { damage, isCrit } = rollTapCriticalDamage(
+        this.tapDamage,
+        this.overclockActive,
+        Math.random,
+        this.overclockTier
+      );
       const res = this.pit.hitNode(Number(hit.userData.nodeId || 0), damage, true, isHold ? 5 : 4, holdFx);
       if (res) {
         const wp = new THREE.Vector3();
@@ -804,7 +813,12 @@ export class MineScene3D {
           for (let i = 1; i < pool.length; i++) {
             if (pool[i].hp > best.hp) best = pool[i];
           }
-          const { damage, isCrit } = rollTapCriticalDamage(this.tapDamage, this.overclockActive);
+          const { damage, isCrit } = rollTapCriticalDamage(
+            this.tapDamage,
+            this.overclockActive,
+            Math.random,
+            this.overclockTier
+          );
           const res = this.pit.hitNode(best.id, damage, true, isHold ? 5 : 4, holdFx);
           if (res) {
             this.emitDamageScreen(
@@ -882,7 +896,10 @@ export class MineScene3D {
           this.emitDamageScreen(dmg, wx, wy, wz, false, false, undefined, isMeteor)
       : undefined;
 
-    const minerDt = inMine && this.overclockActive ? dtSec * OVERCLOCK_SPEED_MULT : dtSec;
+    const minerDt =
+      inMine && this.overclockActive
+        ? dtSec * getOverclockTierBuffs(this.overclockTier || 1).speedMult
+        : dtSec;
     for (const fm of this.fieldMiners.values()) {
       fm.update(minerDt, this.elapsed, this.camera, this.pit, this.callbacks.onOreBroken, hitCb, inMine);
     }
@@ -1121,6 +1138,7 @@ export class MineScene3D {
   public setMode(mode: SceneMode): void {
     this.mode = mode;
     this.weatherFx.setShopMode(mode === 'shop' || mode === 'fusion');
+    this.weatherFx.setFeverTier(mode === 'mine' ? this.overclockTier : 0);
     if (mode !== 'mine' && mode !== 'tower') {
       this.renderer.domElement.classList.remove('mam-mining-cursor');
     }
@@ -1456,16 +1474,20 @@ export class MineScene3D {
     return this.pedestals[slotIndex]?.getChibi() ?? null;
   }
 
-  public setOverclockActive(active: boolean): void {
-    if (this.overclockActive === active) return;
+  public setOverclockActive(active: boolean, tier: 0 | OverclockTier = active ? 1 : 0): void {
+    const nextTier: 0 | OverclockTier = active ? (tier === 2 || tier === 3 ? tier : 1) : 0;
+    if (this.overclockActive === active && this.overclockTier === nextTier) return;
     this.overclockActive = active;
+    this.overclockTier = nextTier;
+    this.weatherFx.setFeverTier(this.mode === 'mine' ? nextTier : 0);
     if (active) {
-      this.stageNeonMat.color.setHex(0xf59e0b);
-      this.stageNeonMat.emissive.setHex(0xf59e0b);
-      this.stageNeonMat.emissiveIntensity = 1.85;
-      this.stageHoloMat.color.setHex(0xf59e0b);
-      this.rimLight.color.setHex(0xf59e0b);
-      this.rimLight.intensity = 1.25;
+      const hex = nextTier === 3 ? 0x22d3ee : nextTier === 2 ? 0xfb7185 : 0xf59e0b;
+      this.stageNeonMat.color.setHex(hex);
+      this.stageNeonMat.emissive.setHex(hex);
+      this.stageNeonMat.emissiveIntensity = nextTier === 3 ? 2.4 : nextTier === 2 ? 2.1 : 1.85;
+      this.stageHoloMat.color.setHex(hex);
+      this.rimLight.color.setHex(hex);
+      this.rimLight.intensity = nextTier === 3 ? 1.55 : nextTier === 2 ? 1.4 : 1.25;
     } else {
       this.stageNeonMat.color.set(this.activePalette.crystalColor);
       this.stageNeonMat.emissive.set(this.activePalette.crystalColor);

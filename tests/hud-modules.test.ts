@@ -44,6 +44,7 @@ import {
   formatWeatherTimer,
 } from '../src/ui/WeatherDpsHudUi';
 import { UpgradesWorldsUi } from '../src/ui/UpgradesWorldsUi';
+import { renderFeverScreenFxHtml } from '../src/ui/HudChromeRenderer';
 import {
   buildAltarAnchorsHtml,
   buildMineOreBarsHtml,
@@ -686,6 +687,27 @@ describe('Tahap B HUD Modules', () => {
       expect(activeHtml).toContain('mam-fever-ticks');
       expect(activeHtml).not.toContain('mam-fever-emblem');
       expect(activeHtml).toContain('justify-center');
+
+      const tier3GaugeHtml = buildOverclockGaugeInnerHtml({
+        active: true,
+        tier: 3,
+        chargePct: 90,
+        remainingSec: 21.5,
+        durationSec: 25,
+      });
+      expect(tier3GaugeHtml).toContain('HYPER FEVER LV.3');
+      expect(tier3GaugeHtml).toContain('mam-fever-shell is-active is-tier-3');
+      expect(tier3GaugeHtml).toContain('3x SPD');
+      expect(tier3GaugeHtml).toContain('3.5x TAP');
+      expect(tier3GaugeHtml).toContain('+150% ORE');
+
+      const feverRainHtml = renderFeverScreenFxHtml(true, 2);
+      expect(feverRainHtml).toContain('mam-fever-rain');
+      expect(feverRainHtml).toContain('mam-fever-drop');
+      expect(feverRainHtml).toContain('FEVER!');
+      expect(feverRainHtml).toContain('data-fever-tier="2"');
+      expect(feverRainHtml).toContain('SUPER FEVER LV.2!');
+      expect(feverRainHtml).not.toContain('mam-fever-burst-sub');
 
       const ocToast = renderToastBannerHtml('⚡ OVERCLOCK ACTIVE! 2x Speed');
       expect(ocToast).toContain('data-toast-tone="overclock"');
