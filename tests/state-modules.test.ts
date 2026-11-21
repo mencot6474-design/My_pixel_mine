@@ -1,4 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { isNonSellableChibi } from '../src/game/DailyLoginData';
+import {
+  TOWER_BOSS_COIN_CHANCE,
+  TOWER_BOSS_COIN_DROP,
+  TOWER_ORE_COIN_CHANCE,
+} from '../src/game/TowerData';
 import { computeBulkUpgradePlan, getPlotStatUpgradeCost } from '../src/game/UpgradeBulkHelper';
 import { getIndexTabEntryIds } from '../src/game/IndexRewardsDomain';
 import { rollTapCriticalDamage, TAP_CRIT_MULT } from '../src/game3d/MineScene3D';
@@ -1063,6 +1069,96 @@ describe('Tahap C GameState Domain Modules', () => {
       // +50% Fever Charge rate reflected on chargeOverclock
       state.chargeOverclock(20, baseNow);
       expect(state.overclock.charge).toBeCloseTo(20 * (1 + RETURN_RUSH_FEVER_CHARGE_BONUS), 4);
+    });
+  });
+
+  describe('Spire Coin Tower Drops & Save Persistence', () => {
+    it('drops 1 Spire Coin at 0.1% per broken wave ore rock, 5 Spire Coins at 5% on Boss defeat, and persists across save/load', () => {
+      const state = new GameState();
+      expect(TOWER_ORE_COIN_CHANCE).toBeCloseTo(0.001, 6);
+      expect(TOWER_BOSS_COIN_CHANCE).toBeCloseTo(0.05, 6);
+      expect(TOWER_BOSS_COIN_DROP).toBe(5);
+
+      state.startTowerRun(1);
+      expect(state.towerCoins).toBe(0);
+      expect(state.towerRun?.coinsEarned).toBe(0);
+
+      // Break rock #0 with luck (< 0.001) -> +1 Spire Coin
+      const luckyOreRes = state.applyTowerTargetDamage(0, 999_999, () => 0.0005);
+      expect(luckyOreRes.rockBroken).toBe(true);
+      expect(luckyOreRes.coinsAwarded).toBe(1);
+      expect(state.towerCoins).toBe(1);
+      expect(state.towerRun?.coinsEarned).toBe(1);
+
+      // Break rock #1 without luck (>= 0.001) -> +0 Spire Coins
+      const unluckyOreRes = state.applyTowerTargetDamage(1, 999_999, () => 0.5);
+      expect(unluckyOreRes.rockBroken).toBe(true);
+      expect(unluckyOreRes.coinsAwarded).toBe(0);
+      expect(state.towerCoins).toBe(1);
+
+      // Defeat Wave 10 Boss with luck (< 0.05) -> +5 Spire Coins
+      state.towerRun!.wave = 10;
+      state.towerRun!.isBossWave = true;
+      state.towerRun!.bossInvulLeft = 0;
+      state.towerRun!.hp = 100;
+      state.towerRun!.maxHp = 100;
+      const bossRes = state.applyTowerTargetDamage(null, 500, () => 0.02);
+      expect(bossRes.floorCleared).toBe(true);
+      expect(bossRes.coinsAwarded).toBe(5);
+      expect(state.towerCoins).toBe(6);
+      expect(state.towerRun?.coinsEarned).toBe(6);
+
+      // Summary records coinsEarned and save/load restores towerCoins
+      const summary = state.abandonTowerRun();
+      expect(summary?.coinsEarned).toBe(6);
+
+      const saved = JSON.stringify(serializeSavePayload(state));
+      const reloaded = new GameState();
+      deserializeSaveJson(reloaded, saved);
+      expect(reloaded.towerCoins).toBe(6);
+      expect(reloaded.spendTowerCoins(4)).toBe(true);
+      expect(reloaded.towerCoins).toBe(2);
+      expect(reloaded.spendTowerCoins(10)).toBe(false);
+    });
+
+    it('purchases Yukikage Twins & Halcyon Twins (TWIN tier) with Spire Coins, protects from selling, and stacks Dual Passives', () => {
+      const state = new GameState();
+      expect(state.buyPremiumShopItem('yukikage-twins')).toBe('no_coins');
+      state.towerCoins = 125;
+      const baseOreDrop = state.getOreOutputMult();
+
+      expect(state.buyPremiumShopItem('yukikage-twins')).toBe('bought');
+      expect(state.towerCoins).toBe(75);
+      expect(state.miners['yukikage-twins']).toBe(1);
+      expect(state.discovered.has('yukikage-twins')).toBe(true);
+      expect(isNonSellableChibi('yukikage-twins')).toBe(true);
+      expect(state.getSellableMinerCount('yukikage-twins')).toBe(0);
+
+      expect(state.buyPremiumShopItem('halcyon-twins')).toBe('bought');
+      expect(state.towerCoins).toBe(10);
+      expect(state.miners['halcyon-twins']).toBe(1);
+      expect(state.discovered.has('halcyon-twins')).toBe(true);
+      expect(isNonSellableChibi('halcyon-twins')).toBe(true);
+      expect(state.getSellableMinerCount('halcyon-twins')).toBe(0);
+
+      // Equip on plots #1 & #2 and verify stacked Dual Passives
+      const basePlot0Dmg = state.getPlotUnitStats(0)!.dmg;
+      const hbYukikage = state.hotbar.indexOf('yukikage-twins');
+      const hbHalcyon = state.hotbar.indexOf('halcyon-twins');
+      expect(hbYukikage).toBeGreaterThanOrEqual(0);
+      expect(hbHalcyon).toBeGreaterThanOrEqual(0);
+      state.selectedHotbarSlot = hbYukikage;
+      state.placeSelectedOnPlot(1);
+      state.selectedHotbarSlot = hbHalcyon;
+      state.placeSelectedOnPlot(2);
+      expect(state.getActivePremiumPassives()).toEqual({
+        teamDmgPct: 1.0,
+        oreDropPct: 0.4,
+        oreSellPct: 0.6,
+        tapDmgPct: 1.2,
+      });
+      expect(state.getPlotUnitStats(0)!.dmg).toBeCloseTo(basePlot0Dmg * 2, -1);
+      expect(state.getOreOutputMult()).toBeCloseTo(baseOreDrop + 0.4, 4);
     });
   });
 });

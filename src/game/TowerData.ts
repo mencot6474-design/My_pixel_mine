@@ -103,6 +103,9 @@ export const TOWER_BOSS_SWEETSPOT_DURATION_SEC = 1.45;
 export const TOWER_DICE_PITY_MAX = 4;
 export const TOWER_STREAK_GEM_STEP = 0.25;
 export const TOWER_STREAK_MAX_BONUS = 2.0;
+export const TOWER_ORE_COIN_CHANCE = 0.001; // 0.1% per broken ore rock in waves 1-9
+export const TOWER_BOSS_COIN_CHANCE = 0.05; // 5% chance on Boss defeat
+export const TOWER_BOSS_COIN_DROP = 5; // +5 Spire Coins on Boss drop
 
 export const TOWER_ANOMALIES: readonly TowerAnomalyDef[] = [
   {
@@ -474,6 +477,7 @@ export interface TowerSaveData {
   lastKeyRegenAt: number;
   claimedMilestones: number[];
   dicePity?: number;
+  coins?: number;
 }
 
 export interface TowerRunState {
@@ -488,6 +492,7 @@ export interface TowerRunState {
   maxTime: number;
   gemsEarned: number;
   diceEarned: number;
+  coinsEarned: number;
   floorsCleared: number;
   wavesCleared: number;
   blessings: TowerBlessingDef[];
@@ -506,6 +511,7 @@ export interface TowerRunSummary {
   wavesCleared: number;
   gemsEarned: number;
   diceEarned: number;
+  coinsEarned?: number;
   newRecord: boolean;
   reason: 'timeout' | 'exit' | 'victory';
   remainingHpPct?: number;

@@ -118,9 +118,9 @@ const DIALOG_COPY: Record<Exclude<TutorialStep, 'done'>, TutorialDialogCopy> = {
   'go-shop': {
     stage: 4,
     stageLabel: 'Sell',
-    text: 'Time to cash in! Click Shops at the top to travel to the Shop Plaza.',
-    hint: 'Click Shops',
-    badge: 'SHOPS',
+    text: 'Time to cash in! Click Plaza at the top to travel to the Shop Plaza.',
+    hint: 'Click Plaza',
+    badge: 'PLAZA',
     domSelector: '[data-action="shops-pill"]',
     arrowPlacement: 'below',
   },

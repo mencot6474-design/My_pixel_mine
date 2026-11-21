@@ -20,7 +20,7 @@ import {
   TOWER_ORE_ROCKS_PER_WAVE,
   TOWER_WAVES_PER_FLOOR,
 } from '../game/TowerData';
-import { hudIconHtml, towerIconHtml } from './HudIcons';
+import { hudIconHtml, spireCoinIconHtml, towerIconHtml } from './HudIcons';
 import { ModalKind, renderModalShell } from './HudShared';
 
 const BATTLE_SHIELD_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" class="shrink-0 drop-shadow-[0_0_5px_rgba(34,211,238,0.85)]" fill="none" aria-hidden="true">
@@ -127,6 +127,10 @@ export class TowerUi {
               }`
             : ''
         }
+        <div class="mam-tower-hub-chip bg-[#fef08a] text-[#14111d]" data-tower-coins-pill="true" title="Spire Coins">
+          ${spireCoinIconHtml(15)}
+          <span>${fmtInt(this.state.towerCoins)}</span>
+        </div>
         <div class="mam-tower-hub-chip bg-[#fce7f3] text-[#14111d]" data-tower-gems-pill="true">
           ${hudIconHtml('gem', 15, 'Gems')}
           <span>${fmtInt(this.state.gems)}</span>
@@ -168,6 +172,7 @@ export class TowerUi {
           <div class="flex items-center gap-1.5 flex-wrap shrink-0">
             <span class="mam-tower-hub-chip bg-[#fce7f3] text-[#9d174d]">+${fmtInt(summary.gemsEarned)} Gems</span>
             ${summary.diceEarned > 0 ? `<span class="mam-tower-hub-chip bg-[#f3e8ff] text-[#6b21a8]">+${summary.diceEarned} Dice</span>` : ''}
+            ${(summary.coinsEarned ?? 0) > 0 ? `<span class="mam-tower-hub-chip bg-[#fef08a] text-[#14111d]">+${fmtInt(summary.coinsEarned ?? 0)} Spire Coins</span>` : ''}
             <button
               class="mam-tower-hub-chip ${
                 this.state.towerKeys > 0
@@ -579,8 +584,8 @@ export class TowerUi {
         </div>
       </div>
 
-      <div class="mam-battle-dock absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(740px,calc(100%-24px))] px-3 py-2 flex flex-col gap-1.5 pointer-events-auto z-20">
-        <div class="w-full grid grid-cols-6 @max-[640px]:grid-cols-3 gap-1.5">
+      <div class="mam-battle-dock absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(820px,calc(100%-24px))] px-3 py-2 flex flex-col gap-1.5 pointer-events-auto z-20">
+        <div class="w-full grid grid-cols-7 @max-[720px]:grid-cols-4 gap-1.5">
           <div class="mam-battle-stat-cell bg-[#fce7f3]">
             <span class="mam-battle-stat-label text-[#9d174d]">Run Gems</span>
             <span class="mam-battle-stat-val text-[#14111d]" data-tower-run-gems="true">+${fmtInt(run.gemsEarned)}</span>
@@ -588,6 +593,10 @@ export class TowerUi {
           <div class="mam-battle-stat-cell bg-[#f3e8ff]">
             <span class="mam-battle-stat-label text-[#6b21a8]">Run Dice</span>
             <span class="mam-battle-stat-val text-[#14111d]" data-tower-run-dice="true">+${run.diceEarned} Dice</span>
+          </div>
+          <div class="mam-battle-stat-cell bg-[#fef08a]">
+            <span class="mam-battle-stat-label text-[#854d0e]">Run Coins</span>
+            <span class="mam-battle-stat-val text-[#14111d]" data-tower-run-coins="true">+${fmtInt(run.coinsEarned)}</span>
           </div>
           <div class="mam-battle-stat-cell bg-[#e0f2fe]">
             <span class="mam-battle-stat-label text-[#0369a1]">Team DPS</span>
@@ -711,6 +720,8 @@ export class TowerUi {
     if (gemsEl) gemsEl.textContent = `+${fmtInt(run.gemsEarned)}`;
     const diceEl = root.querySelector<HTMLElement>('[data-tower-run-dice="true"]');
     if (diceEl) diceEl.textContent = `+${run.diceEarned} Dice`;
+    const coinsEl = root.querySelector<HTMLElement>('[data-tower-run-coins="true"]');
+    if (coinsEl) coinsEl.textContent = `+${fmtInt(run.coinsEarned)}`;
     const streakEl = root.querySelector<HTMLElement>('[data-tower-streak="true"]');
     if (streakEl) {
       const sMult = getTowerStreakGemMult(run.floorsCleared);

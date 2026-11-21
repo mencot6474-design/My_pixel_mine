@@ -31,6 +31,7 @@ export type ModalKind =
   | 'pickaxe-shop'
   | 'sell-shop'
   | 'gem-shop'
+  | 'premium-shop'
   | 'upgrades'
   | 'worlds'
   | 'tower'
@@ -55,12 +56,17 @@ export function rarityCardClasses(rarity: ItemRarity, extra = ''): string {
   if (rarity === 'secret') cls.push('rarity-secret');
   if (rarity === 'fusion') cls.push('rarity-fusion');
   if (rarity === 'limited') cls.push('rarity-limited');
+  if (rarity === 'twin') cls.push('rarity-twin');
   if (extra) cls.push(extra);
   return cls.join(' ');
 }
 
 export function renderRarityBadgeHtml(rarity: ItemRarity, extraCls = ''): string {
   const extra = extraCls ? ` ${extraCls}` : '';
+  if (rarity === 'twin') {
+    const src = assetUrl('/badges/twin.svg');
+    return `<span class="mam-rarity-badge mam-rarity-twin is-crest${extra}"><span class="mam-rarity-label sr-only">TWIN</span><img class="mam-rarity-crest-img" src="${src}" alt="TWIN" draggable="false" /></span>`;
+  }
   if (rarity === 'fusion') {
     return `<span class="mam-rarity-badge mam-rarity-fusion mam-fusion-badge${extra}"><span class="mam-rarity-glint"></span><span class="mam-rarity-emblem" style="background:linear-gradient(135deg,#38bdf8,#e879f9);color:#fff"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L14.8 9.2L23 12L14.8 14.8L12 23L9.2 14.8L1 12L9.2 9.2L12 1Z"/></svg></span><span class="mam-rarity-label">FUSION</span><span class="mam-rarity-spark s1">✦</span><span class="mam-rarity-spark s2">✧</span></span>`;
   }
@@ -276,14 +282,17 @@ export function renderInspectorPanel(opts: {
               ? 'border-[3px] border-[#14111d] bg-[linear-gradient(145deg,#7dd3fc_0%,#c084fc_50%,#f472b6_100%)]'
               : opts.rarity === 'limited'
                 ? 'border-[3px] border-[#14111d] bg-[linear-gradient(155deg,#fef08a_0%,#fbbf24_55%,#fb923c_100%)]'
-                : 'border-[3px] border-[#14111d]';
+                : opts.rarity === 'twin'
+                  ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#0284c7_0%,#181523_50%,#e11d48_100%)]'
+                  : 'border-[3px] border-[#14111d]';
   const showcaseStyle =
     opts.rarity === 'rainbow' ||
     opts.rarity === 'mythic' ||
     opts.rarity === 'exotic' ||
     opts.rarity === 'secret' ||
     opts.rarity === 'fusion' ||
-    opts.rarity === 'limited'
+    opts.rarity === 'limited' ||
+    opts.rarity === 'twin'
       ? ''
       : `background:radial-gradient(circle at 50% 42%,${borderColor}7a 0%,${borderColor}38 90%);`;
   const statsHtml = opts.stats

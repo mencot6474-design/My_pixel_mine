@@ -13,6 +13,8 @@ import {
   rollTowerWaveOres,
   TOWER_BLESSING_AUTO_PICK_SEC,
   TOWER_BLESSING_REROLL_GEM_COST,
+  TOWER_BOSS_COIN_CHANCE,
+  TOWER_BOSS_COIN_DROP,
   TOWER_BOSS_EXPOSE_DMG_MULT,
   TOWER_BOSS_EXPOSE_SEC,
   TOWER_BOSS_INVUL_SEC,
@@ -23,6 +25,7 @@ import {
   TOWER_MAX_FLOOR,
   TOWER_MAX_KEYS,
   TOWER_MILESTONES,
+  TOWER_ORE_COIN_CHANCE,
   TOWER_WAVES_PER_FLOOR,
   TowerBlessingDef,
   TowerRunState,
@@ -43,6 +46,7 @@ export interface TowerRunContext {
   towerLastKeyRegenAt: number;
   towerClaimedMilestones: number[];
   towerDicePity: number;
+  towerCoins: number;
   towerRun: TowerRunState | null;
   towerLastSummary: TowerRunSummary | null;
   towerRunMeta: TowerRunMeta;
@@ -60,6 +64,7 @@ export interface TowerWaveClearResult {
   clearedWave: number;
   gemsAwarded: number;
   diceAwarded: number;
+  coinsAwarded: number;
   milestoneUnlocked: number | null;
   pityTriggered?: boolean;
 }
@@ -75,6 +80,7 @@ export interface TowerTargetDamageResult {
   clearedWave: number | null;
   gemsAwarded: number;
   diceAwarded: number;
+  coinsAwarded: number;
   milestoneUnlocked: number | null;
   isCrit?: boolean;
   pityTriggered?: boolean;
@@ -268,6 +274,7 @@ export function startTowerRunDomain(
     maxTime: 24,
     gemsEarned: 0,
     diceEarned: 0,
+    coinsEarned: 0,
     floorsCleared: 0,
     wavesCleared: 0,
     blessings: [],
@@ -310,6 +317,7 @@ function completeCurrentTowerWaveOrFloor(
       clearedWave: currentWave,
       gemsAwarded,
       diceAwarded: 0,
+      coinsAwarded: 0,
       milestoneUnlocked: null,
     };
   }
@@ -327,6 +335,12 @@ function completeCurrentTowerWaveOrFloor(
     ctx.towerDicePity = 0;
   } else {
     ctx.towerDicePity = Math.min(TOWER_DICE_PITY_MAX - 1, (ctx.towerDicePity ?? 0) + 1);
+  }
+
+  const coinsAwarded = rng() < TOWER_BOSS_COIN_CHANCE ? TOWER_BOSS_COIN_DROP : 0;
+  if (coinsAwarded > 0) {
+    ctx.towerCoins = (ctx.towerCoins ?? 0) + coinsAwarded;
+    run.coinsEarned += coinsAwarded;
   }
 
   ctx.gems += gemsAwarded;
@@ -367,6 +381,7 @@ function completeCurrentTowerWaveOrFloor(
       clearedWave: currentWave,
       gemsAwarded,
       diceAwarded,
+      coinsAwarded,
       milestoneUnlocked,
       pityTriggered,
     };
@@ -383,6 +398,7 @@ function completeCurrentTowerWaveOrFloor(
     clearedWave: currentWave,
     gemsAwarded,
     diceAwarded,
+    coinsAwarded,
     milestoneUnlocked,
     pityTriggered,
   };
@@ -407,6 +423,7 @@ export function finishTowerRunDomain(
     wavesCleared: run.wavesCleared,
     gemsEarned: run.gemsEarned,
     diceEarned: run.diceEarned,
+    coinsEarned: run.coinsEarned,
     newRecord: ctx.towerRunMeta.newRecord,
     reason,
     remainingHpPct,
@@ -564,6 +581,7 @@ export function applyTowerTargetDamageDomain(
     clearedWave: null,
     gemsAwarded: 0,
     diceAwarded: 0,
+    coinsAwarded: 0,
     milestoneUnlocked: null,
   };
   const run = ctx.towerRun;
@@ -627,8 +645,10 @@ export function applyTowerTargetDamageDomain(
   const dmgDealt = Math.min(target.hp, effectiveDmg);
   target.hp = Math.max(0, target.hp - dmgDealt);
   const rockBroken = target.hp <= 0;
+  let brokenRocksThisHit = 0;
   if (rockBroken) {
     target.alive = false;
+    brokenRocksThisHit += 1;
   }
 
   // Overkill Splash: excess damage on ore break carries into the next alive ore
@@ -639,7 +659,10 @@ export function applyTowerTargetDamageDomain(
       if (!nextOre) break;
       const splashHit = Math.min(nextOre.hp, splashPool);
       nextOre.hp = Math.max(0, nextOre.hp - splashHit);
-      if (nextOre.hp <= 0) nextOre.alive = false;
+      if (nextOre.hp <= 0) {
+        nextOre.alive = false;
+        brokenRocksThisHit += 1;
+      }
       splashPool -= splashHit;
     }
   }
@@ -651,8 +674,22 @@ export function applyTowerTargetDamageDomain(
     for (let i = 0; i < Math.min(bSummary.chainTargets, others.length); i++) {
       const other = others[i];
       other.hp = Math.max(0, other.hp - arcDmg);
-      if (other.hp <= 0) other.alive = false;
+      if (other.hp <= 0) {
+        other.alive = false;
+        brokenRocksThisHit += 1;
+      }
     }
+  }
+
+  let oreCoinsAwarded = 0;
+  for (let i = 0; i < brokenRocksThisHit; i++) {
+    if (rng() < TOWER_ORE_COIN_CHANCE) {
+      oreCoinsAwarded += 1;
+    }
+  }
+  if (oreCoinsAwarded > 0) {
+    ctx.towerCoins = (ctx.towerCoins ?? 0) + oreCoinsAwarded;
+    run.coinsEarned += oreCoinsAwarded;
   }
 
   run.hp = run.waveOres.reduce((sum, o) => sum + (o.alive ? o.hp : 0), 0);
@@ -666,6 +703,7 @@ export function applyTowerTargetDamageDomain(
       targetOreIndex: target.index,
       isCrit,
       ...res,
+      coinsAwarded: res.coinsAwarded + oreCoinsAwarded,
     };
   }
 
@@ -675,6 +713,7 @@ export function applyTowerTargetDamageDomain(
     dmgDealt,
     rockBroken,
     targetOreIndex: target.index,
+    coinsAwarded: oreCoinsAwarded,
     isCrit,
   };
 }

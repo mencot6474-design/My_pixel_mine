@@ -13,8 +13,12 @@ import {
   PICKAXES,
 } from '../game/GameData';
 import { GameState } from '../game/GameState';
-import { fmtInt, fmtMoney } from '../game/NumberFormat';
-import { gemPotionIconHtml, hudIconHtml, oreIconSvg, pickaxeIconHtml } from './HudIcons';
+import { fmtInt, fmtMoney, fmtShort } from '../game/NumberFormat';
+import {
+  getPremiumShopItemByChibiId,
+  PREMIUM_SHOP_ITEMS,
+} from '../game/PremiumShopData';
+import { gemPotionIconHtml, hudIconHtml, oreIconSvg, pickaxeIconHtml, spireCoinIconHtml } from './HudIcons';
 import {
   applyInspectRing,
   chibiPortraitHtml,
@@ -24,6 +28,7 @@ import {
   renderEmptyInspectorPanel,
   renderInspectorPanel,
   renderModalShell,
+  renderRarityBadgeHtml,
   TW_MODAL_GRID_BASE,
   TW_SHOP_BUY_BTN,
   TW_SHOP_MODAL_RESP,
@@ -44,6 +49,7 @@ export class ShopModalsUi {
   private sellSelected = new Set<string>();
   private shopInspectPickaxeId: string = PICKAXES[0].id;
   private shopInspectGemId: string = GEM_SHOP_ITEMS[0].id;
+  private shopInspectPremiumId: string = PREMIUM_SHOP_ITEMS[0]?.chibiId ?? '';
   private sellInspectKey: string | null = null;
   private lastSellCardsHtml = '';
   private lastShopInspectorHtml = '';
@@ -194,6 +200,102 @@ export class ShopModalsUi {
             ${cards}
           </div>
           <div class="mam-inspector-well mam-no-scrollbar w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-shop-inspector="pickaxe">
+            ${inspHtml}
+          </div>
+        </div>
+      `,
+    });
+  }
+
+  private buildPremiumShopInspectorHtml(): string {
+    const def =
+      getPremiumShopItemByChibiId(this.shopInspectPremiumId) ?? PREMIUM_SHOP_ITEMS[0];
+    if (!def) {
+      return renderEmptyInspectorPanel('Select any Premium Chibi to inspect its stats.');
+    }
+    this.shopInspectPremiumId = def.chibiId;
+    const chibi = getChibiById(def.chibiId);
+    if (!chibi) {
+      return renderEmptyInspectorPanel('Chibi data not found.');
+    }
+    const owned = this.state.miners[def.chibiId] || 0;
+    const canBuy = this.state.towerCoins >= def.coinCost;
+    return renderInspectorPanel({
+      rarity: def.rarity,
+      title: chibi.name,
+      subtitle: def.titleTag,
+      badgesHtml: `<span class="mam-pill rounded-full bg-[#fef08a] border-2 border-[#14111d] text-[10px] font-black text-[#14111d]">${def.passiveSummary}</span>`,
+      artHtml: chibiPortraitHtml(chibi, { usePose: true }),
+      stats: [
+        ['Base DPS', `${fmtShort(chibi.baseDps)}/s`, 'text-[#dc2626]'],
+        ['Cost', `${fmtInt(def.coinCost)} Coins`, 'text-[#b45309]'],
+        ['Owned', `x${fmtInt(owned)}`, 'text-[#14111d]'],
+        ['Source', 'Battle Tower', 'text-[#0284c7]'],
+      ],
+      actionHtml: `
+        <button class="${TW_SHOP_BUY_BTN} !h-10 !text-[14px] inline-flex items-center justify-center gap-1.5 ${canBuy ? '' : 'disabled'}" data-buy-premium-item="${def.chibiId}">
+          ${spireCoinIconHtml(17)}
+          <span>Buy • ${fmtInt(def.coinCost)}</span>
+        </button>
+      `,
+    });
+  }
+
+  public renderPremiumShopModal(): string {
+    if (!getPremiumShopItemByChibiId(this.shopInspectPremiumId) && PREMIUM_SHOP_ITEMS[0]) {
+      this.shopInspectPremiumId = PREMIUM_SHOP_ITEMS[0].chibiId;
+    }
+
+    const cards = PREMIUM_SHOP_ITEMS.map((item) => {
+      const chibi = getChibiById(item.chibiId);
+      if (!chibi) return '';
+      const owned = this.state.miners[item.chibiId] || 0;
+      const canBuy = this.state.towerCoins >= item.coinCost;
+      const isInspected = this.shopInspectPremiumId === item.chibiId;
+      const isTwin = item.rarity === 'twin';
+      const subTextCls = isTwin ? 'text-[#cbd5e1]' : 'text-[#5b526e]';
+      const ownedTextCls = isTwin ? 'text-[#7dd3fc]' : 'text-[#0284c7]';
+
+      return `
+        <div class="${rarityCardClasses(item.rarity, `is-holo-foil ${isInspected ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : ''}`)} !aspect-auto min-h-[252px] pt-2.5 px-2.5 pb-[10px] gap-1.5 !justify-between" style="${rarityVars(item.rarity)}" data-inspect-premium="${item.chibiId}">
+          <div class="w-full flex items-center justify-center min-h-[34px] shrink-0">
+            ${renderRarityBadgeHtml(item.rarity, 'is-compact')}
+          </div>
+          <div class="mam-card-art !relative !inset-auto w-full h-[94px] shrink-0 flex items-center justify-center [&_.mam-chibi-portrait_img]:max-w-[104px] [&_.mam-chibi-portrait_img]:max-h-[92px]">
+            ${chibiPortraitHtml(chibi, { usePose: true })}
+          </div>
+          <div class="w-full flex flex-col items-center gap-0.5 min-h-0">
+            <div class="w-full px-0.5 text-center text-[14.5px] font-black leading-[1.15] whitespace-nowrap overflow-hidden text-ellipsis ${isTwin ? 'text-[#fff8e7]' : 'text-[#14111d]'}" title="${chibi.name}">${chibi.name}</div>
+            <div class="text-[11px] font-extrabold leading-[1.2] text-center ${subTextCls}">
+              ${fmtShort(chibi.baseDps)} DPS • ${item.passiveSummary}
+            </div>
+            <div class="min-h-[14px] text-[11px] font-black text-center ${ownedTextCls}" data-premium-owned="${item.chibiId}">
+              ${owned > 0 ? `Owned: x${fmtInt(owned)}` : 'Not Owned'}
+            </div>
+          </div>
+          <button class="${TW_SHOP_BUY_BTN} inline-flex items-center justify-center gap-1.5 ${canBuy ? '' : 'disabled'}" data-buy-premium-item="${item.chibiId}">
+            ${spireCoinIconHtml(16)}
+            <span>${fmtInt(item.coinCost)}</span>
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    const inspHtml = this.buildPremiumShopInspectorHtml();
+    this.lastShopInspectorHtml = inspHtml;
+
+    return renderModalShell({
+      title: 'Shop',
+      theme: 'premium-shop',
+      iconHtml: hudIconHtml('shopBasket', 26, 'Shop'),
+      boxClass: `w-[960px] ${TW_SHOP_MODAL_RESP}`,
+      headerExtraHtml: `<div class="ml-auto mr-1 mam-pill-lg rounded-full bg-[#fef08a] border-2 border-[#14111d] text-[13.5px] font-black tabular-nums text-[#14111d] inline-flex items-center gap-1.5 whitespace-nowrap @max-[720px]:text-[12px]" title="Spire Coins (Battle Tower)">${spireCoinIconHtml(18)}<span data-premium-shop-coins="true">${fmtInt(this.state.towerCoins)}</span></div>`,
+      bodyHtml: `
+        <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto mam-no-scrollbar" data-premium-shop="true">
+          <div class="${TW_MODAL_GRID_BASE} grid-cols-3 gap-2.5 flex-1 min-h-[240px] @max-[920px]:flex-none @max-[920px]:max-h-[360px] p-0.5 @max-[720px]:grid-cols-2">
+            ${cards}
+          </div>
+          <div class="mam-inspector-well mam-no-scrollbar w-[268px] @max-[920px]:w-full shrink-0 rounded-xl p-3.5 flex flex-col items-center gap-2 text-center overflow-y-auto" data-shop-inspector="premium">
             ${inspHtml}
           </div>
         </div>
@@ -442,6 +544,16 @@ export class ShopModalsUi {
       });
     });
 
+    root.querySelectorAll('[data-inspect-premium]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const id = (el as HTMLElement).dataset.inspectPremium;
+        if (!id) return;
+        audio.playSfx('ui-tab');
+        this.shopInspectPremiumId = id;
+        this.refreshInspectorLive(root);
+      });
+    });
+
     const shopPanel = root.querySelector<HTMLElement>('[data-shop-inspector]');
     if (shopPanel) this.lastShopInspectorHtml = shopPanel.innerHTML;
 
@@ -487,6 +599,26 @@ export class ShopModalsUi {
           this.pushToast('Not enough Gems!');
         }
         this.updateGemShopLive(root);
+      });
+    });
+
+    scope.querySelectorAll('[data-buy-premium-item]').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const chibiId = (el as HTMLElement).dataset.buyPremiumItem;
+        if (!chibiId) return;
+        this.shopInspectPremiumId = chibiId;
+        const chibi = getChibiById(chibiId);
+        const res = this.state.buyPremiumShopItem(chibiId);
+        if (res === 'bought') {
+          audio.playSfx('rare-fanfare', { volume: 0.72 });
+          audio.playCrystalChord('perfect');
+          this.pushToast(`✨ ${chibi?.name ?? 'Premium Chibi'} unlocked!`);
+        } else if (res === 'no_coins') {
+          audio.playSfx('ui-error');
+          this.pushToast('Not enough Spire Coins!');
+        }
+        this.updatePremiumShopLive(root);
       });
     });
 
@@ -573,6 +705,11 @@ export class ShopModalsUi {
       root.querySelectorAll<HTMLElement>('[data-inspect-gem]').forEach((el) => {
         applyInspectRing(el, el.dataset.inspectGem === this.shopInspectGemId);
       });
+    } else if (mode === 'premium') {
+      nextHtml = this.buildPremiumShopInspectorHtml();
+      root.querySelectorAll<HTMLElement>('[data-inspect-premium]').forEach((el) => {
+        applyInspectRing(el, el.dataset.inspectPremium === this.shopInspectPremiumId);
+      });
     } else if (mode === 'sell') {
       const entries = this.getSellableEntries();
       nextHtml = this.buildSellShopInspectorHtml(entries);
@@ -617,6 +754,20 @@ export class ShopModalsUi {
       if (bagEl) bagEl.textContent = inBag > 0 ? `In Bag: x${fmtInt(inBag)}` : '';
     }
     refreshPotionTimersInDom(root, this.state);
+    this.refreshInspectorLive(root);
+  }
+
+  public updatePremiumShopLive(root: HTMLElement): void {
+    const coinsEl = root.querySelector<HTMLElement>('[data-premium-shop-coins="true"]');
+    if (coinsEl) coinsEl.textContent = fmtInt(this.state.towerCoins);
+    for (const item of PREMIUM_SHOP_ITEMS) {
+      const owned = this.state.miners[item.chibiId] || 0;
+      const canBuy = this.state.towerCoins >= item.coinCost;
+      const btn = root.querySelector<HTMLElement>(`[data-buy-premium-item="${item.chibiId}"]`);
+      if (btn) btn.classList.toggle('disabled', !canBuy);
+      const ownedEl = root.querySelector<HTMLElement>(`[data-premium-owned="${item.chibiId}"]`);
+      if (ownedEl) ownedEl.textContent = owned > 0 ? `Owned: x${fmtInt(owned)}` : 'Not Owned';
+    }
     this.refreshInspectorLive(root);
   }
 

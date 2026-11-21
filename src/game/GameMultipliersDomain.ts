@@ -7,6 +7,7 @@ import {
   WorldId,
 } from './GameData';
 import type { FusionPassiveBonuses } from './FusionDomain';
+import type { ActivePremiumPassives } from './PremiumShopData';
 import {
   ALL_INDEX_TABS,
   getIndexTabEntryIds,
@@ -31,6 +32,7 @@ export interface GameMultipliersContext {
   discovered: Set<string>;
   getRelicBonus: (stat: RelicEffectStat) => number;
   getActiveFusionPassives: () => FusionPassiveBonuses;
+  getActivePremiumPassives?: () => ActivePremiumPassives;
   getActiveIndexPassiveBonuses: () => IndexPassiveBonuses;
   getAchievementAllDmgBonus: () => number;
   getActiveResearchBonus: (effectType: ResearchEffectType) => number;
@@ -79,10 +81,12 @@ export function getWorldIndexProgressDomain(
 }
 
 export function getTapDamageDomain(ctx: GameMultipliersContext, nowMs = Date.now()): number {
+  const premTap = ctx.getActivePremiumPassives?.().tapDmgPct ?? 0;
   const tapMult =
     1 +
     ctx.getRelicBonus('tapDmgPct') +
     ctx.getActiveFusionPassives().tapDmgPct +
+    premTap +
     ctx.getActiveIndexPassiveBonuses().allDmgPct +
     ctx.getAchievementAllDmgBonus();
   const tier: 0 | OverclockTier = ctx.getOverclockTier
@@ -118,12 +122,14 @@ export function getOreHpScaleDomain(ctx: GameMultipliersContext): number {
 
 export function getOreValueMultDomain(ctx: GameMultipliersContext): number {
   const { sellBonusPct } = ctx.getActiveStarDropAndGemBonus();
+  const premSell = ctx.getActivePremiumPassives?.().oreSellPct ?? 0;
   return (
     1 +
     ctx.getActiveResearchBonus('oreValuePct') +
     sellBonusPct +
     ctx.getRelicBonus('oreValuePct') +
     ctx.getActiveFusionPassives().oreSellPct +
+    premSell +
     ctx.getActiveEnchantBonuses().sellValuePct +
     ctx.getActiveIndexPassiveBonuses().oreSellPct
   );
@@ -137,12 +143,14 @@ export function getEffectiveOreSellValueDomain(ctx: GameMultipliersContext, oreI
 
 export function getOreOutputMultDomain(ctx: GameMultipliersContext): number {
   const { oreDropBonusPct } = ctx.getActiveStarDropAndGemBonus();
+  const premDrop = ctx.getActivePremiumPassives?.().oreDropPct ?? 0;
   let mult =
     1 +
     ctx.getActiveResearchBonus('oreOutputPct') +
     oreDropBonusPct +
     ctx.getRelicBonus('oreDropPct') +
     ctx.getActiveFusionPassives().oreDropPct +
+    premDrop +
     ctx.getActiveEnchantBonuses().oreDropPct +
     ctx.getActiveIndexPassiveBonuses().oreDropPct;
   if (isBoostActiveDomain(ctx, 'ore-elixir-1')) mult += 0.1;

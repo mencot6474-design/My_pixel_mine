@@ -11,7 +11,8 @@ export type ChibiRarity =
   | 'exotic'
   | 'secret'
   | 'fusion'
-  | 'limited';
+  | 'limited'
+  | 'twin';
 
 export interface ChibiPoseUrls {
   idle: string;
@@ -702,6 +703,30 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     rarity: 'limited',
     accentColor: '#e2e8f0',
     baseDps: 260_000,
+    smoothFilter: true,
+  },
+  {
+    id: 'yukikage-twins',
+    name: 'Yukikage Twins',
+    spriteUrl: '/chibi/yukikage-twins/idle.webp',
+    poses: makePoses('yukikage-twins'),
+    frames: 4,
+    rarity: 'twin',
+    accentColor: '#38bdf8',
+    baseDps: 10_000_000,
+    poseScale: 1.24,
+    smoothFilter: true,
+  },
+  {
+    id: 'halcyon-twins',
+    name: 'Halcyon Twins',
+    spriteUrl: '/chibi/halcyon-twins/idle.webp',
+    poses: makePoses('halcyon-twins'),
+    frames: 4,
+    rarity: 'twin',
+    accentColor: '#60a5fa',
+    baseDps: 12_000_000,
+    poseScale: 1.24,
     smoothFilter: true,
   },
 ] as const;

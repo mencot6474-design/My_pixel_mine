@@ -310,6 +310,8 @@ export class GameHud {
         this.shopUi.updateSellShopLive(this.root);
       } else if (this.activeModal === 'gem-shop') {
         this.shopUi.updateGemShopLive(this.root);
+      } else if (this.activeModal === 'premium-shop') {
+        this.shopUi.updatePremiumShopLive(this.root);
       } else if (this.activeModal === 'index') {
         this.indexUi.updateLive(this.root);
       } else if (this.activeModal === 'inventory') {
@@ -550,15 +552,18 @@ export class GameHud {
     clearedWave: number | null;
     gemsAwarded: number;
     diceAwarded: number;
+    coinsAwarded?: number;
     milestoneUnlocked: number | null;
     isCrit?: boolean;
     pityTriggered?: boolean;
   }): { dmg: number; broken: boolean; isCrit?: boolean } | undefined {
     if (res.dmgDealt <= 0 && !res.waveCleared && !res.floorCleared) return undefined;
+    const coins = res.coinsAwarded ?? 0;
     if (res.towerCompleted) {
       audio.playSfx('rare-fanfare', { volume: 0.85 });
       const diceTxt = res.diceAwarded > 0 ? ` +${res.diceAwarded} Dice` : '';
-      this.pushToast(`🏆 TOWER CONQUERED! Floor 80 Final Boss Defeated! +${fmtInt(res.gemsAwarded)} Gems${diceTxt}`);
+      const coinTxt = coins > 0 ? ` +${fmtInt(coins)} Spire Coins` : '';
+      this.pushToast(`🏆 TOWER CONQUERED! Floor 80 Final Boss Defeated! +${fmtInt(res.gemsAwarded)} Gems${diceTxt}${coinTxt}`);
       if (res.milestoneUnlocked) {
         this.pushToast(`Tower Milestone Floor ${res.milestoneUnlocked} Unlocked!`);
       }
@@ -571,6 +576,10 @@ export class GameHud {
       audio.playSfx('rare-fanfare', { volume: 0.72 });
       const diceTxt = res.diceAwarded > 0 ? ` +${res.diceAwarded} Dice` : '';
       this.pushToast(`Floor ${res.clearedFloor} Cleared! +${fmtInt(res.gemsAwarded)} Gems${diceTxt}`);
+      if (coins > 0) {
+        audio.playCrystalChord('perfect');
+        this.pushToast(`🪙 BOSS DROP! +${fmtInt(coins)} Spire Coins!`);
+      }
       if (res.pityTriggered) {
         this.pushToast('🎲 Boss Pity Triggered! Guaranteed Enchant Dice!');
       }
@@ -585,11 +594,19 @@ export class GameHud {
       const nextWave = this.state.towerRun?.wave ?? 1;
       const bossHint = nextWave === 10 ? ' • Boss Incoming!' : '';
       this.pushToast(`Wave ${res.clearedWave}/9 Cleared! +${fmtInt(res.gemsAwarded)} Gems${bossHint}`);
+      if (coins > 0) {
+        audio.playCrystalChord('perfect');
+        this.pushToast(`🪙 RARE DROP! +${fmtInt(coins)} Spire Coin${coins > 1 ? 's' : ''}!`);
+      }
       this.syncTowerSceneVisual();
       this.render();
     } else {
       if (res.rockBroken) {
         audio.playOreBreak('tower');
+        if (coins > 0) {
+          audio.playCrystalChord('perfect');
+          this.pushToast(`🪙 RARE DROP! +${fmtInt(coins)} Spire Coin${coins > 1 ? 's' : ''}!`);
+        }
         this.syncTowerSceneVisual();
       }
       this.towerUi.updateLiveValues(this.root);
@@ -824,9 +841,9 @@ export class GameHud {
       this.root.innerHTML = `
       ${this.weatherDpsUi.renderWeatherWidget(Date.now(), true)}
       <div class="${TW_TOP_CENTER} flex flex-wrap items-center justify-center gap-2.5 @max-[720px]:gap-1.5">
-        <button class="${TW_SHOPS_PILL} whitespace-nowrap" data-action="shops-pill">
-          ${hudIconHtml('shops', 28, 'Shops')}
-          <span>Shops</span>
+        <button class="${TW_SHOPS_PILL} whitespace-nowrap" data-action="shops-pill" title="Go to Shop Plaza">
+          ${hudIconHtml('shops', 28, 'Plaza')}
+          <span>Plaza</span>
         </button>
         <div class="w-[224px] @max-[720px]:w-[202px] shrink-0">
           ${this.weatherDpsUi.renderOverclockWidget()}
@@ -863,7 +880,7 @@ export class GameHud {
       </div>
 
       <div class="absolute left-4 @max-[720px]:left-2.5 top-1/2 -translate-y-1/2 flex flex-col gap-2.5 @max-[720px]:gap-2">
-        <button class="${TW_SIDE_BTN_RAINBOW}" data-action="open-shop">
+        <button class="${TW_SIDE_BTN_RAINBOW}" data-action="open-shop" title="Premium Shop">
           ${hudIconHtml('shopBasket', 44, 'Shop')}
           <span class="text-[14px] font-black leading-none text-[#14111d]">Shop</span>
         </button>

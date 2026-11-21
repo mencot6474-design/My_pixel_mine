@@ -184,6 +184,19 @@
     --mam-m-well-border: #3d216e;
   }
 
+  .mam-modal[data-modal-theme='premium-shop'] {
+    --mam-m-accent: #ec4899;
+    --mam-m-accent-hi: #fde047;
+    --mam-m-accent-deep: #be185d;
+    --mam-m-surface-top: #26122b;
+    --mam-m-surface-bot: #140917;
+    --mam-m-plaque-bg: #3d1845;
+    --mam-m-border: #7a2c78;
+    --mam-m-ambient: rgba(236, 72, 153, 0.24);
+    --mam-m-glow: rgba(253, 224, 71, 0.38);
+    --mam-m-well-border: #592059;
+  }
+
   .mam-modal {
     position: relative;
     background: #fff8e7;

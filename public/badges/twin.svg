@@ -1,0 +1,255 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" width="800" height="420">
+  <defs>
+    <linearGradient id="goldBevel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb"/>
+      <stop offset="22%" stop-color="#fde047"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="78%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#fef08a"/>
+    </linearGradient>
+
+    <linearGradient id="goldBright" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#fef08a"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+
+    <linearGradient id="goldShadow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="65%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+
+    <linearGradient id="cyanWingHi" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ecfeff"/>
+      <stop offset="35%" stop-color="#67e8f9"/>
+      <stop offset="78%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0c4a6e"/>
+    </linearGradient>
+    <linearGradient id="cyanWingShad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#082f49"/>
+    </linearGradient>
+
+    <linearGradient id="roseWingHi" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff1f2"/>
+      <stop offset="35%" stop-color="#fda4af"/>
+      <stop offset="78%" stop-color="#e11d48"/>
+      <stop offset="100%" stop-color="#881337"/>
+    </linearGradient>
+    <linearGradient id="roseWingShad" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="100%" stop-color="#4c0519"/>
+    </linearGradient>
+
+    <linearGradient id="plateSplit" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0c4a6e"/>
+      <stop offset="36%" stop-color="#0369a1"/>
+      <stop offset="49%" stop-color="#171429"/>
+      <stop offset="51%" stop-color="#221028"/>
+      <stop offset="66%" stop-color="#9f1239"/>
+      <stop offset="100%" stop-color="#4c0519"/>
+    </linearGradient>
+
+    <!-- Animated Flowing Gradient Inside "TWIN" Letters -->
+    <linearGradient id="twinTextGrad" x1="-100%" y1="0%" x2="100%" y2="0%" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="22%" stop-color="#ffffff"/>
+      <stop offset="38%" stop-color="#fef08a"/>
+      <stop offset="54%" stop-color="#fb7185"/>
+      <stop offset="72%" stop-color="#ffffff"/>
+      <stop offset="88%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#fef08a"/>
+      <animate attributeName="x1" values="-100%;0%" dur="2.2s" repeatCount="indefinite"/>
+      <animate attributeName="x2" values="100%;200%" dur="2.2s" repeatCount="indefinite"/>
+    </linearGradient>
+
+    <linearGradient id="glintSweep" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.58"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <clipPath id="innerPlateClip">
+      <path d="M 196 226 L 236 176 L 348 172 L 400 158 L 452 172 L 564 176 L 604 226 L 564 276 L 452 280 L 400 294 L 348 280 L 236 276 Z"/>
+    </clipPath>
+
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <style>
+      @keyframes wingL { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(2.8deg); } }
+      @keyframes wingR { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(-2.8deg); } }
+      @keyframes haloPulse { 0%,100% { transform: translateY(0px); opacity: 0.92; } 50% { transform: translateY(-4px); opacity: 1; } }
+      @keyframes rayPulse { 0%,100% { opacity: 0.78; transform: scale(1); } 50% { opacity: 1; transform: scale(1.06); } }
+      @keyframes glintMove { 0%,45% { transform: translateX(-340px) skewX(-24deg); } 100% { transform: translateX(520px) skewX(-24deg); } }
+      @keyframes sparkTwinkle { 0%,100% { transform: scale(0.65) rotate(0deg); opacity: 0.45; } 50% { transform: scale(1.25) rotate(22deg); opacity: 1; } }
+      .wing-left { transform-origin: 225px 226px; animation: wingL 2.4s ease-in-out infinite; }
+      .wing-right { transform-origin: 575px 226px; animation: wingR 2.4s ease-in-out infinite; }
+      .halos { animation: haloPulse 2.2s ease-in-out infinite; }
+      .rays { transform-origin: 400px 128px; animation: rayPulse 2s ease-in-out infinite; }
+      .glint-bar { animation: glintMove 2.8s ease-in-out infinite; }
+      .spark-l { transform-origin: 146px 128px; animation: sparkTwinkle 1.8s ease-in-out infinite; }
+      .spark-r { transform-origin: 654px 128px; animation: sparkTwinkle 1.8s ease-in-out 0.9s infinite; }
+    </style>
+  </defs>
+
+  <!-- Crown Sunburst Rays (2-plane cel-shaded spikes matching DIVINE reference) -->
+  <g class="rays" filter="url(#softGlow)">
+    <g transform="translate(400, 128)">
+      <!-- Center Spike -->
+      <polygon points="0,-104 -8,-38 0,-38" fill="url(#goldBright)" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+      <polygon points="0,-104 0,-38 8,-38" fill="url(#goldShadow)" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+      <!-- Mid Left/Right Spikes -->
+      <polygon points="-46,-92 -24,-34 -18,-36" fill="url(#goldBright)" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+      <polygon points="-46,-92 -18,-36 -11,-38" fill="url(#goldShadow)" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+      <polygon points="46,-92 18,-36 11,-38" fill="url(#goldShadow)" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+      <polygon points="46,-92 24,-34 18,-36" fill="url(#goldBright)" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+      <!-- Outer Left/Right Spikes -->
+      <polygon points="-88,-66 -38,-22 -30,-30" fill="url(#goldBright)" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+      <polygon points="88,-66 30,-30 38,-22" fill="url(#goldShadow)" stroke="#14111d" stroke-width="2" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- Interlocking Twin Halos -->
+  <g class="halos" filter="url(#softGlow)">
+    <ellipse cx="370" cy="94" rx="56" ry="15" fill="none" stroke="#38bdf8" stroke-width="5.5" transform="rotate(-8 370 94)"/>
+    <ellipse cx="370" cy="94" rx="56" ry="15" fill="none" stroke="#ecfeff" stroke-width="2" transform="rotate(-8 370 94)"/>
+    <ellipse cx="430" cy="94" rx="56" ry="15" fill="none" stroke="#fb7185" stroke-width="5.5" transform="rotate(8 430 94)"/>
+    <ellipse cx="430" cy="94" rx="56" ry="15" fill="none" stroke="#fff1f2" stroke-width="2" transform="rotate(8 430 94)"/>
+  </g>
+
+  <!-- LEFT LAYERED CYAN-PLATINUM WINGS -->
+  <g class="wing-left" stroke="#14111d" stroke-width="3.2" stroke-linejoin="round">
+    <path d="M 225 204 C 145 168, 78 122, 26 74 C 56 128, 112 174, 202 218 Z" fill="url(#cyanWingHi)"/>
+    <path d="M 26 74 C 68 126, 122 168, 202 218 L 210 208 C 132 166, 76 122, 26 74 Z" fill="url(#cyanWingShad)" stroke="none"/>
+    <path d="M 212 218 C 134 198, 74 170, 38 140 C 76 184, 130 214, 200 232 Z" fill="url(#cyanWingHi)"/>
+    <path d="M 206 232 C 142 225, 92 212, 58 192 C 94 226, 140 242, 200 246 Z" fill="url(#cyanWingHi)"/>
+    <path d="M 208 245 C 158 248, 116 244, 84 234 C 114 256, 156 264, 206 258 Z" fill="url(#cyanWingShad)"/>
+    <path d="M 226 198 L 172 186 L 156 214 L 200 252 L 230 240 Z" fill="url(#goldBevel)"/>
+  </g>
+
+  <!-- RIGHT LAYERED CRIMSON-ROSE WINGS -->
+  <g class="wing-right" stroke="#14111d" stroke-width="3.2" stroke-linejoin="round">
+    <path d="M 575 204 C 655 168, 722 122, 774 74 C 744 128, 688 174, 598 218 Z" fill="url(#roseWingHi)"/>
+    <path d="M 774 74 C 732 126, 678 168, 598 218 L 590 208 C 668 166, 724 122, 774 74 Z" fill="url(#roseWingShad)" stroke="none"/>
+    <path d="M 588 218 C 666 198, 726 170, 762 140 C 724 184, 670 214, 600 232 Z" fill="url(#roseWingHi)"/>
+    <path d="M 594 232 C 658 225, 708 212, 742 192 C 706 226, 660 242, 600 246 Z" fill="url(#roseWingHi)"/>
+    <path d="M 592 245 C 642 248, 684 244, 716 234 C 686 256, 644 264, 594 258 Z" fill="url(#roseWingShad)"/>
+    <path d="M 574 198 L 628 186 L 644 214 L 600 252 L 570 240 Z" fill="url(#goldBevel)"/>
+  </g>
+
+  <!-- SCULPTED CEL-SHADED TWIN CROWN (3D split-plane prongs, curved collar, multi-faceted gems) -->
+  <g stroke="#14111d" stroke-width="2.6" stroke-linejoin="round">
+    <!-- Inner Dark Crown Velvet Backing -->
+    <path d="M 332 154 L 344 124 L 400 116 L 456 124 L 468 154 Z" fill="#17142b"/>
+    <!-- Left Outer Wing-Prong -->
+    <polygon points="326,154 308,104 334,126 334,154" fill="url(#goldBright)"/>
+    <polygon points="334,126 346,134 344,154 334,154" fill="url(#goldShadow)"/>
+    <!-- Right Outer Wing-Prong -->
+    <polygon points="474,154 492,104 466,126 466,154" fill="url(#goldShadow)"/>
+    <polygon points="466,126 454,134 456,154 466,154" fill="url(#goldBright)"/>
+    <!-- Left Twin Peak -->
+    <polygon points="342,154 342,124 366,86 366,154" fill="url(#goldBright)"/>
+    <polygon points="366,86 388,124 388,154 366,154" fill="url(#goldShadow)"/>
+    <!-- Right Twin Peak -->
+    <polygon points="412,154 412,124 434,86 434,154" fill="url(#goldBright)"/>
+    <polygon points="434,86 458,124 458,154 434,154" fill="url(#goldShadow)"/>
+    <!-- Center Crest Arch -->
+    <polygon points="384,154 386,126 400,108 400,154" fill="url(#goldBright)"/>
+    <polygon points="400,108 414,126 416,154 400,154" fill="url(#goldShadow)"/>
+    <!-- Curved Beveled Crown Band -->
+    <path d="M 324 154 Q 400 142 476 154 L 470 164 Q 400 153 330 164 Z" fill="url(#goldBright)"/>
+    <path d="M 330 164 Q 400 153 470 164 L 466 172 Q 400 161 334 172 Z" fill="url(#goldShadow)"/>
+
+    <!-- Left Faceted Sapphire -->
+    <g transform="translate(366, 122)">
+      <polygon points="0,-16 11,0 0,16 -11,0" fill="#14111d" stroke-width="2"/>
+      <polygon points="0,-13 0,0 -8.5,0" fill="#e0f2fe" stroke-width="1.2"/>
+      <polygon points="0,-13 8.5,0 0,0" fill="#38bdf8" stroke-width="1.2"/>
+      <polygon points="-8.5,0 0,0 0,13" fill="#0284c7" stroke-width="1.2"/>
+      <polygon points="8.5,0 0,13 0,0" fill="#075985" stroke-width="1.2"/>
+    </g>
+    <!-- Right Faceted Ruby -->
+    <g transform="translate(434, 122)">
+      <polygon points="0,-16 11,0 0,16 -11,0" fill="#14111d" stroke-width="2"/>
+      <polygon points="0,-13 0,0 -8.5,0" fill="#ffe4e6" stroke-width="1.2"/>
+      <polygon points="0,-13 8.5,0 0,0" fill="#fb7185" stroke-width="1.2"/>
+      <polygon points="-8.5,0 0,0 0,13" fill="#e11d48" stroke-width="1.2"/>
+      <polygon points="8.5,0 0,13 0,0" fill="#881337" stroke-width="1.2"/>
+    </g>
+    <!-- Center Solar Diamond -->
+    <g transform="translate(400, 134)">
+      <polygon points="0,-13 9,0 0,13 -9,0" fill="#14111d" stroke-width="1.8"/>
+      <polygon points="0,-10 0,0 -6.5,0" fill="#ffffff" stroke-width="1"/>
+      <polygon points="0,-10 6.5,0 0,0" fill="#fef08a" stroke-width="1"/>
+      <polygon points="-6.5,0 0,0 0,10" fill="#f59e0b" stroke-width="1"/>
+      <polygon points="6.5,0 0,10 0,0" fill="#b45309" stroke-width="1"/>
+    </g>
+  </g>
+
+  <!-- BACK COLLAR PLATE -->
+  <path d="M 206 226 L 244 166 L 348 158 L 400 142 L 452 158 L 556 166 L 594 226 L 552 292 L 448 302 L 400 332 L 352 302 L 248 292 Z"
+        fill="#19162b" stroke="url(#goldBevel)" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M 206 226 L 244 166 L 348 158 L 400 142 L 452 158 L 556 166 L 594 226 L 552 292 L 448 302 L 400 332 L 352 302 L 248 292 Z"
+        fill="none" stroke="#14111d" stroke-width="2.5" stroke-linejoin="round"/>
+
+  <!-- MAIN BEVELED GOLD FRAME -->
+  <path d="M 182 226 L 226 168 L 344 162 L 400 148 L 456 162 L 574 168 L 618 226 L 574 284 L 456 290 L 400 306 L 344 290 L 226 284 Z"
+        fill="url(#goldBevel)" stroke="#14111d" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- INNER DUAL-SPLIT PLATE -->
+  <path d="M 196 226 L 236 176 L 348 172 L 400 158 L 452 172 L 564 176 L 604 226 L 564 276 L 452 280 L 400 294 L 348 280 L 236 276 Z"
+        fill="url(#plateSplit)" stroke="#14111d" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Animated Light Sweep Inside Plate -->
+  <g clip-path="url(#innerPlateClip)">
+    <path d="M 412 158 L 386 294" stroke="#fef08a" stroke-width="3" opacity="0.5"/>
+    <rect class="glint-bar" x="280" y="140" width="90" height="180" fill="url(#glintSweep)"/>
+    <path d="M 218 202 L 242 182 L 348 178 L 400 165 L 452 178 L 558 182 L 582 202"
+          fill="none" stroke="#ffffff" stroke-width="2.2" opacity="0.32" stroke-linecap="round"/>
+  </g>
+
+  <!-- BIG BOLD ANIMATED "TWIN" TYPOGRAPHY (Steady size, flowing color shimmer) -->
+  <g transform="translate(400, 260)">
+    <text x="0" y="6" text-anchor="middle" font-family="'Arial Black', Impact, 'Rubik', sans-serif" font-size="102" font-weight="900" letter-spacing="8"
+          fill="#14111d" stroke="#14111d" stroke-width="14" stroke-linejoin="round">TWIN</text>
+    <text x="0" y="0" text-anchor="middle" font-family="'Arial Black', Impact, 'Rubik', sans-serif" font-size="102" font-weight="900" letter-spacing="8"
+          fill="url(#twinTextGrad)" stroke="#14111d" stroke-width="7" paint-order="stroke fill" stroke-linejoin="round">TWIN</text>
+  </g>
+
+  <!-- LEFT FACETED CYAN STAR-DIAMOND -->
+  <g transform="translate(184, 226)">
+    <polygon points="0,-24 24,0 0,24 -24,0" fill="url(#goldBevel)" stroke="#14111d" stroke-width="3.2" stroke-linejoin="round"/>
+    <polygon points="0,-16 0,0 -16,0" fill="#bae6fd" stroke="#14111d" stroke-width="1.5"/>
+    <polygon points="0,-16 16,0 0,0" fill="#38bdf8" stroke="#14111d" stroke-width="1.5"/>
+    <polygon points="-16,0 0,0 0,16" fill="#0284c7" stroke="#14111d" stroke-width="1.5"/>
+    <polygon points="16,0 0,16 0,0" fill="#0c4a6e" stroke="#14111d" stroke-width="1.5"/>
+  </g>
+
+  <!-- RIGHT FACETED CRIMSON STAR-DIAMOND -->
+  <g transform="translate(616, 226)">
+    <polygon points="0,-24 24,0 0,24 -24,0" fill="url(#goldBevel)" stroke="#14111d" stroke-width="3.2" stroke-linejoin="round"/>
+    <polygon points="0,-16 0,0 -16,0" fill="#fecdd3" stroke="#14111d" stroke-width="1.5"/>
+    <polygon points="0,-16 16,0 0,0" fill="#fb7185" stroke="#14111d" stroke-width="1.5"/>
+    <polygon points="-16,0 0,0 0,16" fill="#e11d48" stroke="#14111d" stroke-width="1.5"/>
+    <polygon points="16,0 0,16 0,0" fill="#881337" stroke="#14111d" stroke-width="1.5"/>
+  </g>
+
+  <!-- BOTTOM CENTER TWIN-GEM CLASP -->
+  <g transform="translate(400, 310)">
+    <polygon points="0,-22 24,0 0,22 -24,0" fill="url(#goldBevel)" stroke="#14111d" stroke-width="3.2" stroke-linejoin="round"/>
+    <polygon points="0,-14 -14,0 0,14" fill="#38bdf8" stroke="#14111d" stroke-width="1.8"/>
+    <polygon points="0,-14 14,0 0,14" fill="#fb7185" stroke="#14111d" stroke-width="1.8"/>
+    <polygon points="0,-7 6,0 0,7 -6,0" fill="#ffffff" opacity="0.8"/>
+  </g>
+
+  <!-- ANIMATED STAR SPARKLES -->
+  <path class="spark-l" d="M 146 112 L 150 124 L 162 128 L 150 132 L 146 144 L 142 132 L 130 128 L 142 124 Z" fill="#67e8f9" stroke="#14111d" stroke-width="1.5" filter="url(#softGlow)"/>
+  <path class="spark-r" d="M 654 112 L 658 124 L 670 128 L 658 132 L 654 144 L 650 132 L 638 128 L 650 124 Z" fill="#fda4af" stroke="#14111d" stroke-width="1.5" filter="url(#softGlow)"/>
+</svg>

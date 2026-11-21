@@ -1,4 +1,5 @@
 import { getFusionRecipeByResultChibiId } from './FusionData';
+import { isPremiumShopChibi } from './PremiumShopData';
 
 export interface DailyLoginRewardDef {
   day: number;
@@ -80,9 +81,13 @@ const NON_SELLABLE_CHIBI_IDS = new Set<string>(
   DAILY_LOGIN_REWARDS.filter((r) => r.nonSellable && r.chibiId).map((r) => r.chibiId as string)
 );
 
-/** Returns true if this chibi is a non-sellable Limited or Fusion reward. */
+/** Returns true if this chibi is a non-sellable Limited, Fusion, or Premium Shop unit. */
 export function isNonSellableChibi(chibiId: string): boolean {
-  return NON_SELLABLE_CHIBI_IDS.has(chibiId) || Boolean(getFusionRecipeByResultChibiId(chibiId));
+  return (
+    NON_SELLABLE_CHIBI_IDS.has(chibiId) ||
+    Boolean(getFusionRecipeByResultChibiId(chibiId)) ||
+    isPremiumShopChibi(chibiId)
+  );
 }
 
 /** Returns all configured Daily Login Limited Chibi IDs. */

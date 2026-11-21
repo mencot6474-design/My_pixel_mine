@@ -157,6 +157,7 @@ export interface SaveableGameState {
   towerLastKeyRegenAt: number;
   towerClaimedMilestones: number[];
   towerDicePity: number;
+  towerCoins: number;
   weatherId: WeatherId;
   weatherExpiresAt: number;
   lastSavedAt: number;
@@ -251,6 +252,7 @@ export function serializeSavePayload(state: SaveableGameState): SavePayload {
       lastKeyRegenAt: state.towerLastKeyRegenAt,
       claimedMilestones: state.towerClaimedMilestones,
       dicePity: state.towerDicePity,
+      coins: state.towerCoins,
     },
     weather: {
       id: state.weatherId,
@@ -482,6 +484,9 @@ export function deserializeSaveJson(
       }
       if (typeof data.tower.dicePity === 'number' && Number.isFinite(data.tower.dicePity)) {
         state.towerDicePity = Math.max(0, Math.min(TOWER_DICE_PITY_MAX - 1, Math.floor(data.tower.dicePity)));
+      }
+      if (typeof data.tower.coins === 'number' && Number.isFinite(data.tower.coins)) {
+        state.towerCoins = Math.max(0, Math.min(1_000_000_000, Math.floor(data.tower.coins)));
       }
     }
     if (data.weather && typeof data.weather === 'object') {

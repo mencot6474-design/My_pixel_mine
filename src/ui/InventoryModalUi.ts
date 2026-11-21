@@ -238,7 +238,11 @@ export class InventoryModalUi {
         const hotbarIdx = this.state.hotbar.indexOf(def.id);
         const isEquipped = hotbarIdx !== -1;
         const isInsp = selTarget?.kind === 'miner' && selTarget.id === def.id;
-        const isHolo = star >= 5 || rarity === 'fusion' || rarity === 'limited';
+        const isHolo =
+          star >= 5 ||
+          rarity === 'fusion' ||
+          rarity === 'limited' ||
+          rarity === 'twin';
         const extraCls = [
           isHolo ? 'is-holo-foil' : '',
           isInsp ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '',

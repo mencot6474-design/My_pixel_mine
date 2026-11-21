@@ -63,6 +63,8 @@ import {
 import { BountiesModalUi } from '../src/ui/BountiesModalUi';
 import { AchievementsModalUi } from '../src/ui/AchievementsModalUi';
 import { TowerUi } from '../src/ui/TowerUi';
+import { buildHudCoordinatorActions } from '../src/ui/HudActionRouter';
+import { ShopModalsUi } from '../src/ui/ShopModalsUi';
 import { getTapComboTier, stepTapCombo, TAP_COMBO_WINDOW_MS } from '../src/game/TapComboHelper';
 import { OfflineModalUi } from '../src/ui/OfflineModalUi';
 import { SettingsModalUi } from '../src/ui/SettingsModalUi';
@@ -896,6 +898,14 @@ describe('Tahap B HUD Modules', () => {
       expect(renderRarityBadgeHtml('secret')).toContain('SECRET');
       expect(renderRarityBadgeHtml('fusion')).toContain('FUSION');
       expect(renderRarityBadgeHtml('limited')).toContain('LIMITED');
+
+      for (const crestTier of ['twin'] as const) {
+        const html = renderRarityBadgeHtml(crestTier);
+        expect(html).toContain(`mam-rarity-${crestTier}`);
+        expect(html).toContain('is-crest');
+        expect(html).toContain('mam-rarity-label');
+        expect(html).toContain(crestTier.toUpperCase());
+      }
     });
 
     it('wraps label text in .mam-mut-label for animated gradient styling across all 9 mutations', () => {
@@ -1093,6 +1103,70 @@ describe('Tahap B HUD Modules', () => {
       const victoryHtml = towerUi.renderTowerHubModal();
       expect(victoryHtml).toContain('SPIRE CONQUERED');
       expect(victoryHtml).toContain('80/80 TAMAT!');
+    });
+  });
+
+  describe('Plaza & Premium Shop HUD Routing', () => {
+    it('routes shops-pill to Plaza scene and open-shop to empty Premium Shop modal', () => {
+      const state = new GameState();
+      state.towerCoins = 12;
+      const toggleModal = vi.fn();
+      const setSceneMode = vi.fn();
+      const shopUi = new ShopModalsUi(state, () => {});
+      const actions = buildHudCoordinatorActions({
+        root: {} as HTMLElement,
+        state,
+        shopUi,
+        inventoryUi: {} as never,
+        upgradesUi: {} as never,
+        getActiveModal: () => 'none',
+        openModal: vi.fn(),
+        toggleModal,
+        setSceneMode,
+        pushToast: vi.fn(),
+        render: vi.fn(),
+      });
+
+      actions['shops-pill']();
+      expect(setSceneMode).toHaveBeenCalledWith('shop');
+
+      actions['open-shop']();
+      expect(toggleModal).toHaveBeenCalledWith('premium-shop');
+
+      const premiumShopHtml = shopUi.renderPremiumShopModal();
+      expect(premiumShopHtml).toContain('data-modal-theme="premium-shop"');
+      expect(premiumShopHtml).toContain('data-premium-shop="true"');
+      expect(premiumShopHtml).toContain('data-premium-shop-coins="true">12<');
+      expect(premiumShopHtml).toContain('Yukikage Twins');
+      expect(premiumShopHtml).toContain('data-buy-premium-item="yukikage-twins"');
+      expect(premiumShopHtml).toContain('Halcyon Twins');
+      expect(premiumShopHtml).toContain('data-buy-premium-item="halcyon-twins"');
+      expect(premiumShopHtml).toContain('mam-rarity-twin');
+
+      const towerUi = new TowerUi(state, () => {}, () => {}, () => {}, () => {}, () => {});
+      state.towerLastSummary = {
+        startFloor: 1,
+        highestReached: 2,
+        highestWave: 4,
+        floorsCleared: 1,
+        wavesCleared: 13,
+        gemsEarned: 150,
+        diceEarned: 1,
+        coinsEarned: 6,
+        newRecord: true,
+        reason: 'exit',
+      };
+      const hubHtml = towerUi.renderTowerHubModal();
+      expect(hubHtml).toContain('data-tower-coins-pill="true"');
+      expect(hubHtml).toContain('+6 Spire Coins');
+
+      state.startTowerRun(1);
+      state.towerRun!.coinsEarned = 5;
+      const arenaHtml = towerUi.renderTowerArenaHud('<div></div>', '');
+      expect(arenaHtml).toContain('data-tower-run-coins="true">+5<');
+
+      const goShopCard = buildTutorialCardHtml('go-shop');
+      expect(goShopCard).toContain('Click Plaza at the top');
     });
   });
 });

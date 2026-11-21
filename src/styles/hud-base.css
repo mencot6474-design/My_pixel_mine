@@ -349,6 +349,22 @@
     box-shadow: none;
   }
 
+  .mam-card.rarity-twin,
+  .mam-strip-card.rarity-twin,
+  .mam-altar-card.rarity-twin {
+    border: 3px solid #14111d;
+    background:
+      linear-gradient(135deg, rgba(56, 189, 248, 0.34) 0%, rgba(255, 248, 231, 0) 48%, rgba(244, 63, 94, 0.34) 100%),
+      #181523;
+    color: #fff8e7;
+    box-shadow: none;
+    animation: none;
+  }
+
+  .mam-card.rarity-twin .mam-card-name {
+    color: #fff8e7;
+  }
+
   .mam-fusion-text {
     background: linear-gradient(90deg, #0284c7, #7c3aed, #db2777);
     -webkit-background-clip: text;
@@ -855,6 +871,34 @@
     animation: mam-tier-text-flow 2.5s linear infinite;
     --mam-ring-c1: #fffbeb;
     --mam-ring-c2: #f59e0b;
+  }
+
+  .mam-rarity-badge.is-crest {
+    height: 44px;
+    padding: 0;
+    margin-left: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .mam-rarity-badge.is-crest::before {
+    display: none;
+  }
+
+  .mam-rarity-badge.is-crest.is-compact {
+    height: 38px;
+    padding: 0;
+    margin-left: 0;
+  }
+
+  .mam-rarity-crest-img {
+    height: 100%;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
   }
 
   .mam-rarity-badge .mam-rarity-label,

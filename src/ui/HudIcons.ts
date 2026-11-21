@@ -312,3 +312,11 @@ export function meteorIconHtml(weatherId: WeatherId = 'celestial', sizePx = 20, 
   const src = assetUrl(`/meteors/${weatherId}.webp`);
   return `<img src="${src}" width="${sizePx}" height="${sizePx}" alt="${alt}" style="width:${sizePx}px;height:${sizePx}px;object-fit:contain;display:inline-block;vertical-align:middle;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.65));flex-shrink:0;" draggable="false" />`;
 }
+
+export function spireCoinIconHtml(sizePx = 18): string {
+  return `<svg viewBox="0 0 24 24" width="${sizePx}" height="${sizePx}" class="shrink-0" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" fill="#fde047" stroke="#14111d" stroke-width="2.2"/>
+    <circle cx="12" cy="12" r="7.2" fill="#f59e0b" stroke="#14111d" stroke-width="1.3"/>
+    <path d="M12 6.2L13.7 10.3L17.8 12L13.7 13.7L12 17.8L10.3 13.7L6.2 12L10.3 10.3Z" fill="#fffbeb" stroke="#14111d" stroke-width="1.2" stroke-linejoin="round"/>
+  </svg>`;
+}

@@ -238,6 +238,11 @@ import {
   getDailyLoginSnapshotDomain,
 } from './DailyLoginDomain';
 import type { DailyLoginRewardDef } from './DailyLoginData';
+import {
+  type ActivePremiumPassives,
+  buyPremiumShopChibiDomain,
+  getActivePremiumPassiveBonuses,
+} from './PremiumShopData';
 
 export type {
   PlotUnitState,
@@ -297,6 +302,7 @@ export class GameState {
   public towerLastKeyRegenAt = Date.now();
   public towerClaimedMilestones: number[] = [];
   public towerDicePity = 0;
+  public towerCoins = 0;
   public towerRun: TowerRunState | null = null;
   public towerLastSummary: TowerRunSummary | null = null;
   public readonly towerRunMeta: TowerRunMeta = { startFloor: 1, newRecord: false };
@@ -783,6 +789,30 @@ export class GameState {
     return getActiveFusionPassiveBonuses(this.plotMiners);
   }
 
+  public getActivePremiumPassives(): ActivePremiumPassives {
+    return getActivePremiumPassiveBonuses(this.plotMiners);
+  }
+
+  public buyPremiumShopItem(chibiId: string): 'bought' | 'no_coins' | 'invalid' {
+    const self = this;
+    return buyPremiumShopChibiDomain(
+      {
+        get towerCoins() {
+          return self.towerCoins;
+        },
+        set towerCoins(v: number) {
+          self.towerCoins = v;
+        },
+        miners: this.miners,
+        hotbar: this.hotbar,
+        discovered: this.discovered,
+        save: () => this.save(),
+        emit: () => this.emit(),
+      },
+      chibiId
+    );
+  }
+
   public getTapDamage(nowMs = Date.now()): number {
     return getTapDamageDomain(this, nowMs);
   }
@@ -1004,6 +1034,14 @@ export class GameState {
       save: () => this.save(),
       emit: () => this.emit(),
     });
+  }
+
+  public spendTowerCoins(amount: number): boolean {
+    const safeCost = Math.max(0, Math.floor(amount));
+    if (safeCost <= 0 || this.towerCoins < safeCost) return false;
+    this.towerCoins -= safeCost;
+    this.emit();
+    return true;
   }
 
   public grantAdGems(amount = 150): number {

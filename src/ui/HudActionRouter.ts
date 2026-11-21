@@ -104,6 +104,8 @@ export function renderActiveModalHtml(activeModal: ModalKind, ui: HudModalRender
       return ui.shopUi.renderSellShopModal();
     case 'gem-shop':
       return ui.shopUi.renderGemShopModal();
+    case 'premium-shop':
+      return ui.shopUi.renderPremiumShopModal();
     case 'upgrades':
       return ui.upgradesUi.renderUpgradesModal();
     case 'worlds':
@@ -197,7 +199,7 @@ export function buildHudCoordinatorActions(ctx: HudActionRouterContext): Record<
     },
     'open-shop': () => {
       audio.playSfx('ui-open');
-      ctx.setSceneMode('shop');
+      ctx.toggleModal('premium-shop');
     },
     'gems-plus': () => {
       audio.playSfx('ui-open');

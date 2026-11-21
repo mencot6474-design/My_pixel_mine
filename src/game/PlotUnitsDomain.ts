@@ -22,6 +22,7 @@ import { compactHotbarSlots, PlotUnitState } from './GameStateSave';
 import { getDailyLoginRewardByChibiId } from './DailyLoginData';
 import { RelicEffectStat } from './RelicData';
 import { getFusionRecipeByResultChibiId } from './FusionData';
+import { getActivePremiumPassiveBonuses, getPremiumShopItemByChibiId } from './PremiumShopData';
 import { getAchievementAllDmgBonusDomain } from './AchievementsDomain';
 import { getActiveFusionPassiveBonuses } from './FusionDomain';
 import { getActiveIndexPassiveBonusesDomain } from './IndexRewardsDomain';
@@ -112,6 +113,10 @@ export function getChibiUpgradeCostMult(chibiId: string): number {
     const fusionRecipe = getFusionRecipeByResultChibiId(chibiId);
     if (fusionRecipe) {
       return fusionRecipe.upgradeCostScale;
+    }
+    const premiumItem = getPremiumShopItemByChibiId(chibiId);
+    if (premiumItem) {
+      return premiumItem.upgradeCostScale;
     }
     const dailyReward = getDailyLoginRewardByChibiId(chibiId);
     if (dailyReward?.upgradeCostScale !== undefined) {
@@ -296,7 +301,10 @@ export function computePlotUnitStats(
   const weatherDmgMult = ctx.getWeatherDamageMult();
   const starTier = getChibiStarTier(getChibiStarCount(ctx, chibi.id));
   const resonanceDmgMult = 1 + getWorldResonanceDmgPct(ctx, getMinerWorldId(chibi.id));
-  const fusionTeamDmgMult = 1 + getActiveFusionPassiveBonuses(ctx.plotMiners).teamDmgPct;
+  const fusionTeamDmgMult =
+    1 +
+    getActiveFusionPassiveBonuses(ctx.plotMiners).teamDmgPct +
+    getActivePremiumPassiveBonuses(ctx.plotMiners).teamDmgPct;
   const indexAllDmgMult =
     1 +
     (ctx.claimedIndexRewards ? getActiveIndexPassiveBonusesDomain(ctx.claimedIndexRewards).allDmgPct : 0) +

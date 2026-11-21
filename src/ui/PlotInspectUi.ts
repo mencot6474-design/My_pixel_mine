@@ -13,6 +13,7 @@ import {
   PICKAXES,
 } from '../game/GameData';
 import { getFusionRecipeByResultChibiId } from '../game/FusionData';
+import { getPremiumShopItemByChibiId } from '../game/PremiumShopData';
 import { GameState, getChibiUpgradeCostMult } from '../game/GameState';
 import {
   computeBulkUpgradePlan,
@@ -143,6 +144,7 @@ export class PlotInspectUi {
     const resSellPct = resMatch ? Math.round(resMatch.tier.sellBonusPct * 100) : 0;
     const worldName = worldId ? getWorldById(worldId).name : null;
     const fusionDef = getFusionRecipeByResultChibiId(chibi.id);
+    const premiumDef = getPremiumShopItemByChibiId(chibi.id);
     const eqEnchant = getEnchantById(unit.enchantId);
 
     root.innerHTML = `
@@ -160,6 +162,7 @@ export class PlotInspectUi {
         </div>
         ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black tabular-nums text-[#7c3aed]">✦ ${worldName} Synergy (+${Math.round(resBonusPct * 100)}% DMG${resOrePct > 0 ? ` • +${resOrePct}% Ore` : ''}${resSellPct > 0 ? ` • +${resSellPct}% Sell` : ''})</div>` : ''}
         ${fusionDef ? `<div class="mt-0.5 mam-pill bg-[#cffafe] text-[#14111d] self-start max-w-full truncate">★ Passive: ${fusionDef.passive.label}</div>` : ''}
+        ${premiumDef ? `<div class="mt-0.5 mam-pill bg-[#fef08a] text-[#14111d] self-start max-w-full truncate">✦ Dual Passive: ${premiumDef.passiveSummary}</div>` : ''}
         ${eqEnchant ? `<div class="mt-0.5 mam-pill rounded-lg bg-white border-2 border-[#14111d] text-[10.5px] font-black text-[#14111d] self-start max-w-full truncate">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}
         <div class="text-[12.5px] font-bold tabular-nums text-[#475569] mt-0.5">
           Lv. ${unit.damageLevel} • Speed ${stats.speed} • Mining x${stats.miningMult}
