@@ -83,7 +83,7 @@ export class AchievementsModalUi {
       case 'bounty':
         return hudIconHtml('quest', 36, 'Bounty');
       case 'world':
-        return `<img src="${assetUrl('worlds/astral.webp')}" alt="World" class="w-9 h-9 rounded-lg object-cover border border-white/25" draggable="false" />`;
+        return `<img src="${assetUrl('worlds/chrono.webp')}" alt="World" class="w-9 h-9 rounded-lg object-cover border border-white/25" draggable="false" />`;
     }
   }
 

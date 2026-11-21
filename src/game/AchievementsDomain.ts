@@ -130,8 +130,8 @@ export const ACHIEVEMENT_CATEGORIES: readonly AchievementCategoryDef[] = [
     iconKind: 'index',
     tiers: buildTiers(
       'index_collector',
-      [10, 25, 45, 65, 80],
-      [500, 1500, 4000, 10000, 25000],
+      [12, 30, 55, 80, 105],
+      [500, 1500, 4000, 12000, 35000],
       [0, 1, 1, 2, 4]
     ),
   },
@@ -178,9 +178,9 @@ export const ACHIEVEMENT_CATEGORIES: readonly AchievementCategoryDef[] = [
     iconKind: 'world',
     tiers: buildTiers(
       'world_explorer',
-      [2, 3, 4, 5, 6],
-      [600, 1800, 4500, 10000, 25000],
-      [0, 1, 1, 2, 4]
+      [2, 3, 5, 7, 8],
+      [600, 1800, 4500, 15000, 40000],
+      [0, 1, 2, 3, 5]
     ),
   },
 ];

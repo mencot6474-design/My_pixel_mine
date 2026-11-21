@@ -4,6 +4,7 @@ import { getEnchantById } from '../game/GameData';
 import { ChibiAnimState, ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
 import { disposeObject3D } from './ChestVaultStation3D';
+import { createChamferSlabGeometry } from './MeshHelpers3D';
 
 export interface PlotLabelInfo {
   name: string;
@@ -533,33 +534,7 @@ function createChamferPadGeometry(
   chamfer: number,
   bevel = 0.015
 ): THREE.ExtrudeGeometry {
-  const hw = width * 0.5;
-  const hd = depth * 0.5;
-  const c = Math.min(chamfer, hw * 0.42, hd * 0.42);
-  const shape = new THREE.Shape();
-  shape.moveTo(-hw + c, -hd);
-  shape.lineTo(hw - c, -hd);
-  shape.lineTo(hw, -hd + c);
-  shape.lineTo(hw, hd - c);
-  shape.lineTo(hw - c, hd);
-  shape.lineTo(-hw + c, hd);
-  shape.lineTo(-hw, hd - c);
-  shape.lineTo(-hw, -hd + c);
-  shape.closePath();
-
-  const innerH = Math.max(0.015, height - bevel * 2);
-  const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: innerH,
-    bevelEnabled: true,
-    bevelThickness: bevel,
-    bevelSize: bevel,
-    bevelSegments: 1,
-    curveSegments: 1,
-  });
-  geo.rotateX(-Math.PI / 2);
-  geo.translate(0, bevel, 0);
-  geo.computeVertexNormals();
-  return geo;
+  return createChamferSlabGeometry(width, height, depth, chamfer, bevel);
 }
 
 function createSlotPlaqueTexture(slotIndex: number): THREE.CanvasTexture | null {

@@ -163,8 +163,8 @@ describe('Pure 3D Mine World', () => {
     expect(applyNodeDamagePure(node, 20)).toBeNull();
   });
 
-  it('registers all 46 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
-    expect(CHIBI_CATALOG.length).toBe(46);
+  it('registers all 57 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
+    expect(CHIBI_CATALOG.length).toBe(57);
     expect(getChibiById('solar-striker')?.spriteUrl).toBe('/chibi/solar-striker/idle.webp');
     expect(getChibiById('solar-striker')?.poses.attack).toBe('/chibi/solar-striker/attack.webp');
     expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.idle, 4)).toBe(0);
@@ -176,8 +176,8 @@ describe('Pure 3D Mine World', () => {
   it('formats Roblox My Anime Mine suffixes and populates Index/Inventory/Chest flows', () => {
     expect(fmtShort(1500)).toBe('1.5K');
     expect(fmtMoney(16.7e45)).toBe('$16.7Qad');
-    expect(ORES.length).toBe(48);
-    expect(WORLD_MINERS.length).toBe(30);
+    expect(ORES.length).toBe(58);
+    expect(WORLD_MINERS.length).toBe(40);
     expect(getOresByWorld('underground').map((o) => o.name)).toContain('Coalite');
     const crystalOres = getOresByWorld('crystal');
     expect(crystalOres.map((o) => o.name)).toEqual([
@@ -253,21 +253,51 @@ describe('Pure 3D Mine World', () => {
     expect(starwellOres[0].sellValue).toBeGreaterThan(voidOres[0].sellValue);
     expect(starwellOres[7].sellValue).toBeGreaterThan(voidOres[7].sellValue);
 
+    const abyssalOres = getOresByWorld('abyssal');
+    expect(abyssalOres.map((o) => o.name)).toEqual([
+      'Trenchslate',
+      'Prismarine',
+      'Pelagium',
+      'Abyssalite',
+      'Leviapearl',
+    ]);
+    expect(abyssalOres.map((o) => o.rarity)).toEqual(['legendary', 'rainbow', 'mythic', 'exotic', 'secret']);
+    expect(abyssalOres.reduce((acc, o) => acc + o.chancePct, 0)).toBeCloseTo(100, 4);
+    expect(abyssalOres[0].sellValue).toBeGreaterThan(starwellOres[0].sellValue);
+    expect(abyssalOres[4].sellValue).toBeGreaterThan(starwellOres[7].sellValue);
+
+    const chronoOres = getOresByWorld('chrono');
+    expect(chronoOres.map((o) => o.name)).toEqual([
+      'Mithrilite',
+      'Orichalcite',
+      'Adamantite',
+      'Aetherium',
+      'Chronocrown',
+    ]);
+    expect(chronoOres.map((o) => o.rarity)).toEqual(['legendary', 'rainbow', 'mythic', 'exotic', 'secret']);
+    expect(chronoOres.reduce((acc, o) => acc + o.chancePct, 0)).toBeCloseTo(100, 4);
+    expect(chronoOres[0].sellValue).toBeGreaterThan(abyssalOres[0].sellValue);
+    expect(chronoOres[4].sellValue).toBeGreaterThan(abyssalOres[4].sellValue);
+
     expect(getMinersByWorld('underground').length).toBe(5);
     expect(getMinersByWorld('crystal').length).toBe(5);
     expect(getMinersByWorld('magma').length).toBe(5);
     expect(getMinersByWorld('ruins').length).toBe(5);
     expect(getMinersByWorld('astral').length).toBe(5);
     expect(getMinersByWorld('starwell').length).toBe(5);
+    expect(getMinersByWorld('abyssal').length).toBe(5);
+    expect(getMinersByWorld('chrono').length).toBe(5);
 
     const gs = new GameState();
-    expect(gs.getTotalIndexCount()).toBe(99);
+    expect(gs.getTotalIndexCount()).toBe(120);
     gs.discovered.add('stormwater-opal');
     gs.discovered.add('glitch-cheshire');
     gs.discovered.add('cosmic-monarch');
     expect(gs.getDiscoveredCount()).toBe(4);
     expect(gs.getWorldIndexProgress('astral')).toEqual({ found: 0, total: 13, pct: 0 });
     expect(gs.getWorldIndexProgress('starwell')).toEqual({ found: 0, total: 13, pct: 0 });
+    expect(gs.getWorldIndexProgress('abyssal')).toEqual({ found: 0, total: 10, pct: 0 });
+    expect(gs.getWorldIndexProgress('chrono')).toEqual({ found: 0, total: 10, pct: 0 });
     expect(gs.hotbar.every((s) => s === null)).toBe(true);
     expect(gs.plotMiners[0]).toBe('astral-recruit');
     expect(gs.plotMiners.slice(1).every((s) => s === null)).toBe(true);
@@ -567,19 +597,22 @@ describe('Pure 3D Mine World', () => {
   });
 
   it('enforces sequential world unlock gates, Voidreach naming, global Core upgrades, and per-world tree isolation', () => {
-    expect(WORLDS).toHaveLength(6);
+    expect(WORLDS).toHaveLength(8);
     expect(getWorldById('astral').name).toBe('Voidreach');
     expect(getWorldById('starwell').name).toBe('Starwell');
+    expect(getWorldById('abyssal').name).toBe('Abyssal Biolume');
+    expect(getWorldById('chrono').name).toBe('Chrono Nexus');
     expect(PIT_NODE_COUNT).toBe(1);
     expect(BASE_ORE_RESPAWN_SEC).toBeGreaterThanOrEqual(3.5);
 
-    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell'] as const) {
+    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell', 'abyssal', 'chrono'] as const) {
       expect(getResearchNodesForTree(wid)).toHaveLength(12);
       expect(getResearchTreeMaxPoints(wid)).toBe(58);
+      expect(existsSync(resolve(process.cwd(), 'public', 'worlds', `${wid}.webp`))).toBe(true);
     }
 
-    // Tap damage must live strictly in Core; Worlds 1-6 replace tap nodes with standardized denseOreScale (HP x10, Drops x3)
-    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell'] as const) {
+    // Tap damage must live strictly in Core; Worlds 1-8 replace tap nodes with standardized denseOreScale (HP x10, Drops x3)
+    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell', 'abyssal', 'chrono'] as const) {
       const treeNodes = getResearchNodesForTree(wid);
       expect(treeNodes.some((n) => n.effectType === 'tapDamageFlat')).toBe(false);
       const denseNodes = treeNodes.filter((n) => n.effectType === 'denseOreScale');
@@ -1582,8 +1615,8 @@ describe('Pure 3D Mine World', () => {
     expect(enchantDiceIconHtml(34)).toContain('enchants/enchant_dice.webp');
   });
 
-  it('serves 2D fantasy PNG art for all 48 World 1–6 ores', () => {
-    expect(ORES.length).toBe(48);
+  it('serves 2D fantasy PNG art for all 58 World 1–8 ores', () => {
+    expect(ORES.length).toBe(58);
     for (const ore of ORES) {
       expect(existsSync(resolve(process.cwd(), 'public', 'ores', `${ore.id}.webp`))).toBe(true);
       expect(oreIconSvg(ore.color, ore.secondaryColor, ore.rarity, `ix_${ore.id}`)).toContain(`ores/${ore.id}.webp`);

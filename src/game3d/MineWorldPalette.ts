@@ -1,3 +1,5 @@
+import type { WorldId } from '../game/GameData';
+
 export interface MineWorldPalette {
   crystalColor: string;
   rockColor: string;
@@ -22,10 +24,7 @@ export const DEFAULT_WORLD_PALETTE: MineWorldPalette = {
   foliageColor: '#16a34a',
 };
 
-export const WORLD_PALETTES: Record<
-  'underground' | 'crystal' | 'magma' | 'ruins' | 'astral' | 'starwell',
-  MineWorldPalette
-> = {
+export const WORLD_PALETTES: Record<WorldId, MineWorldPalette> = {
   underground: DEFAULT_WORLD_PALETTE,
   crystal: {
     crystalColor: '#22d3ee',
@@ -81,6 +80,28 @@ export const WORLD_PALETTES: Record<
     cliffColor: '#475569',
     pitFloorColor: '#cbd5e1',
     foliageColor: '#0ea5e9',
+  },
+  abyssal: {
+    crystalColor: '#2dd4bf',
+    rockColor: '#1e293b',
+    skyTop: '#042f2e',
+    skyBottom: '#134e4a',
+    fogColor: '#0f766e',
+    terrainColor: '#0f172a',
+    cliffColor: '#042f2e',
+    pitFloorColor: '#115e59',
+    foliageColor: '#fb7185',
+  },
+  chrono: {
+    crystalColor: '#fbbf24',
+    rockColor: '#27272a',
+    skyTop: '#1e1b4b',
+    skyBottom: '#78350f',
+    fogColor: '#451a03',
+    terrainColor: '#292524',
+    cliffColor: '#18181b',
+    pitFloorColor: '#44403c',
+    foliageColor: '#06b6d4',
   },
 };
 

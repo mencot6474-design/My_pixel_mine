@@ -118,6 +118,22 @@ export const RESEARCH_TREE_META: Record<ResearchTreeId, ResearchTreeMeta> = {
     cols: 5,
     rows: 4,
   },
+  abyssal: {
+    id: 'abyssal',
+    title: 'Abyssal Biolume',
+    subtitle: 'World 7 • Isolated',
+    global: false,
+    cols: 5,
+    rows: 4,
+  },
+  chrono: {
+    id: 'chrono',
+    title: 'Chrono Nexus',
+    subtitle: 'World 8 • Isolated',
+    global: false,
+    cols: 5,
+    rows: 4,
+  },
 };
 
 function fmtBonusNumber(val: number): string {
@@ -893,6 +909,84 @@ const STARWELL_NODES = buildStandardWorldTree({
   },
 });
 
+const ABYSSAL_NODES = buildStandardWorldTree({
+  treeId: 'abyssal',
+  worldLabel: 'Abyssal Biolume',
+  prefix: 'ab',
+  names: {
+    root: 'Trench Veins',
+    dmg: 'Leviathan Force',
+    oreLuck: 'Pearl Fortune',
+    respawn: 'Tidal Surge',
+    value: 'Abyssal Worth',
+    fragility: 'Pressure Fracture',
+    dense: 'Dense Trench Core',
+    output: 'Prismarine Flow',
+    charLuck: 'Biolume Lure',
+    find: 'Sonar Eye',
+    chest: 'Abyssal Vault',
+    apex: 'Leviathan Crown',
+  },
+  stats: {
+    dmgPerLv: 1.5,
+    oreLuckPerLv: 0.45,
+    respawnPerLv: 0.5,
+    valuePerLv: 0.5,
+    fragilityPerLv: 0.1,
+    outputPerLv: 0.45,
+    charLuckPerLv: 0.5,
+    findPerLv: 0.12,
+    chestPerLv: 150_000,
+    apexDmgPerLv: 2.4,
+  },
+  costs: {
+    root: 320_000_000_000_000,
+    tier1: 640_000_000_000_000,
+    dense: 8_000_000_000_000_000,
+    tier2: 3_200_000_000_000_000,
+    apex: 32_000_000_000_000_000,
+  },
+});
+
+const CHRONO_NODES = buildStandardWorldTree({
+  treeId: 'chrono',
+  worldLabel: 'Chrono Nexus',
+  prefix: 'cn',
+  names: {
+    root: 'Temporal Seams',
+    dmg: 'Chrono Strike',
+    oreLuck: 'Aether Fortune',
+    respawn: 'Clockwork Loop',
+    value: 'Nexus Appraisal',
+    fragility: 'Paradox Shear',
+    dense: 'Dense Hourglass Core',
+    output: 'Aether Cascade',
+    charLuck: 'Timeless Beacon',
+    find: 'Astrolabe Lens',
+    chest: 'Eternity Vault',
+    apex: 'Chronocrown Mastery',
+  },
+  stats: {
+    dmgPerLv: 1.8,
+    oreLuckPerLv: 0.5,
+    respawnPerLv: 0.55,
+    valuePerLv: 0.55,
+    fragilityPerLv: 0.11,
+    outputPerLv: 0.5,
+    charLuckPerLv: 0.55,
+    findPerLv: 0.14,
+    chestPerLv: 180_000,
+    apexDmgPerLv: 2.8,
+  },
+  costs: {
+    root: 9_500_000_000_000_000,
+    tier1: 19_000_000_000_000_000,
+    dense: 240_000_000_000_000_000,
+    tier2: 95_000_000_000_000_000,
+    apex: 950_000_000_000_000_000,
+  },
+});
+
 export const RESEARCH_NODES: readonly ResearchNodeDef[] = [
   ...CORE_NODES,
   ...UNDERGROUND_NODES,
@@ -901,6 +995,8 @@ export const RESEARCH_NODES: readonly ResearchNodeDef[] = [
   ...RUINS_NODES,
   ...VOIDREACH_NODES,
   ...STARWELL_NODES,
+  ...ABYSSAL_NODES,
+  ...CHRONO_NODES,
 ] as const;
 
 export function getResearchNodesForTree(treeId: ResearchTreeId): readonly ResearchNodeDef[] {

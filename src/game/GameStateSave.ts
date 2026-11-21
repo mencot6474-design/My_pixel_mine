@@ -179,7 +179,7 @@ export function isValidIndexId(id: string): boolean {
   return Boolean(getOreById(id) || getChibiById(id));
 }
 
-/** Creates an empty per-tree research level record for all 7 research trees. */
+/** Creates an empty per-tree research level record for all 9 research trees. */
 export function createEmptyResearchLevels(): ResearchLevelsMap {
   return {
     core: {},
@@ -189,6 +189,8 @@ export function createEmptyResearchLevels(): ResearchLevelsMap {
     ruins: {},
     astral: {},
     starwell: {},
+    abyssal: {},
+    chrono: {},
   };
 }
 

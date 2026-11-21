@@ -1,4 +1,11 @@
 import * as THREE from 'three';
+import {
+  createChamferSlabGeometry,
+  disposeObject3D,
+  enableShadows,
+} from './MeshHelpers3D';
+
+export { disposeObject3D, enableShadows };
 
 export interface ProceduralChestOptions {
   scale?: number;
@@ -16,48 +23,6 @@ export interface ProceduralChestHandle {
   dispose: () => void;
 }
 
-export function disposeObject3D(
-  root: THREE.Object3D,
-  excludedMaterials?: ReadonlySet<THREE.Material>
-): void {
-  const disposedGeos = new Set<THREE.BufferGeometry>();
-  const disposedMats = new Set<THREE.Material>();
-
-  root.traverse((child) => {
-    if (!(child instanceof THREE.Mesh)) return;
-
-    if (!disposedGeos.has(child.geometry)) {
-      disposedGeos.add(child.geometry);
-      child.geometry.dispose();
-    }
-
-    const mats = Array.isArray(child.material) ? child.material : [child.material];
-    for (const mat of mats) {
-      if (excludedMaterials?.has(mat) || disposedMats.has(mat)) continue;
-      disposedMats.add(mat);
-      mat.dispose();
-    }
-  });
-}
-
-
-function createChamferRectShape(width: number, depth: number, chamfer: number): THREE.Shape {
-  const hw = width * 0.5;
-  const hd = depth * 0.5;
-  const c = Math.min(chamfer, hw * 0.45, hd * 0.45);
-  const shape = new THREE.Shape();
-  shape.moveTo(-hw + c, -hd);
-  shape.lineTo(hw - c, -hd);
-  shape.lineTo(hw, -hd + c);
-  shape.lineTo(hw, hd - c);
-  shape.lineTo(hw - c, hd);
-  shape.lineTo(-hw + c, hd);
-  shape.lineTo(-hw, hd - c);
-  shape.lineTo(-hw, -hd + c);
-  shape.closePath();
-  return shape;
-}
-
 export function createExtrudedSlabGeometry(
   width: number,
   height: number,
@@ -65,21 +30,10 @@ export function createExtrudedSlabGeometry(
   chamfer: number,
   bevelSize = 0.03
 ): THREE.ExtrudeGeometry {
-  const shape = createChamferRectShape(width, depth, chamfer);
-  const innerDepth = Math.max(0.02, height - bevelSize * 2);
-  const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: innerDepth,
-    bevelEnabled: true,
-    bevelThickness: bevelSize,
-    bevelSize,
-    bevelSegments: 1,
-    curveSegments: 1,
+  return createChamferSlabGeometry(width, height, depth, chamfer, bevelSize, {
+    minInnerH: 0.02,
+    maxChamferRatio: 0.45,
   });
-  // Extrude runs along +Z; rotate -90 deg around X so extrusion rises along +Y, bottom at y = 0
-  geo.rotateX(-Math.PI / 2);
-  geo.translate(0, bevelSize, 0);
-  geo.computeVertexNormals();
-  return geo;
 }
 
 export function createVaultArchProfileGeometry(
@@ -147,15 +101,6 @@ function createShieldLockGeometry(w: number, h: number, depth: number): THREE.Ex
   return geo;
 }
 
-
-export function enableShadows(mesh: THREE.Object3D, cast = true, receive = true): void {
-  mesh.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      child.castShadow = cast;
-      child.receiveShadow = receive;
-    }
-  });
-}
 
 /**
  * Creates a multi-part low-poly stylized procedural Treasure Chest with pivot at y = 0.

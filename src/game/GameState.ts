@@ -1,4 +1,4 @@
-import { MAX_PIT_NODE_COUNT, OreVariantKey, STAGE_PEDESTAL_COUNT } from '../game3d/MineWorldPalette';
+import { OreVariantKey, STAGE_PEDESTAL_COUNT } from '../game3d/MineWorldPalette';
 import {
   AchievementClaimResult,
   AchievementProgressSnapshot,
@@ -9,11 +9,9 @@ import {
   getReadyAchievementCountDomain,
 } from './AchievementsDomain';
 import {
-  ALL_INDEX_TABS,
   claimIndexRewardDomain,
   getActiveIndexPassiveBonusesDomain,
   getIndexMilestonesForTab,
-  getIndexTabEntryIds,
   getIndexTabProgressDomain,
   getReadyIndexRewardCountDomain,
   getTabReadyIndexRewardCountDomain,
@@ -34,10 +32,6 @@ import {
   DEFAULT_PICKAXE_STOCK,
   ENCHANT_DICE_GEM_COST,
   EnchantDef,
-  getMinersByWorld,
-  getOreById,
-  getOresByWorld,
-  getWorldById,
   ItemRarity,
   PICKAXE_RESTOCK_MS,
   rollEnchantDef,
@@ -45,8 +39,24 @@ import {
   WorldResonanceStatus,
 } from './GameData';
 import {
-  DENSE_ORE_DROP_MULT,
-  DENSE_ORE_HP_MULT,
+  getActiveOreNodeCountDomain,
+  getCharacterLuckMultDomain,
+  getDiscoveredCountDomain,
+  getEffectiveOreSellValueDomain,
+  getFindChanceBonusDomain,
+  getMaxChestCapacityDomain,
+  getMutationLuckMultDomain,
+  getOreHpScaleDomain,
+  getOreLuckMultDomain,
+  getOreOutputMultDomain,
+  getOreValueMultDomain,
+  getRespawnSpeedMultDomain,
+  getTapDamageDomain,
+  getTotalIndexCountDomain,
+  getTotalOreDropMultDomain,
+  getWorldIndexProgressDomain,
+} from './GameMultipliersDomain';
+import {
   getResearchTreeMaxPoints,
   ResearchEffectType,
   ResearchTreeId,
@@ -175,7 +185,6 @@ import {
   getWeatherGemDropMultDomain,
   getWeatherOreDropMultDomain,
   getWeatherRemainingSecDomain,
-  isBoostActiveDomain,
   refreshPickaxeStockIfDueDomain,
   sellAllOresDomain,
   sellBatchDomain,
@@ -206,9 +215,7 @@ import {
   getOverclockSnapshotDomain,
   isOverclockActiveDomain,
   OVERCLOCK_BREAK_CHARGE,
-  OVERCLOCK_DROP_MULT,
   OVERCLOCK_METEOR_BREAK_CHARGE,
-  OVERCLOCK_TAP_MULT,
   type OverclockSnapshot,
   type OverclockState,
   stepOverclockDomain,
@@ -317,36 +324,15 @@ export class GameState {
   }
 
   public getTotalIndexCount(): number {
-    let total = 0;
-    for (const tabId of ALL_INDEX_TABS) {
-      total += getIndexTabEntryIds(tabId).length;
-    }
-    return total;
+    return getTotalIndexCountDomain();
   }
 
   public getDiscoveredCount(): number {
-    let count = 0;
-    for (const tabId of ALL_INDEX_TABS) {
-      for (const id of getIndexTabEntryIds(tabId)) {
-        if (this.discovered.has(id)) count++;
-      }
-    }
-    return count;
+    return getDiscoveredCountDomain(this.discovered);
   }
 
   public getWorldIndexProgress(worldId: WorldId): { found: number; total: number; pct: number } {
-    const ores = getOresByWorld(worldId);
-    const miners = getMinersByWorld(worldId);
-    const total = ores.length + miners.length;
-    let found = 0;
-    for (const o of ores) {
-      if (this.discovered.has(o.id)) found++;
-    }
-    for (const m of miners) {
-      if (this.discovered.has(m.entry.chibiId)) found++;
-    }
-    const pct = total > 0 ? Math.round((found / total) * 100) : 0;
-    return { found, total, pct };
+    return getWorldIndexProgressDomain(this.discovered, worldId);
   }
 
   public getIndexTabProgress(tabId: IndexTabId): IndexTabProgress {
@@ -768,102 +754,55 @@ export class GameState {
   }
 
   public getTapDamage(nowMs = Date.now()): number {
-    const tapMult =
-      1 +
-      this.getRelicBonus('tapDmgPct') +
-      this.getActiveFusionPassives().tapDmgPct +
-      this.getActiveIndexPassiveBonuses().allDmgPct +
-      this.getAchievementAllDmgBonus();
-    const overclockMult = this.isOverclockActive(nowMs) ? OVERCLOCK_TAP_MULT : 1;
-    return Math.max(
-      1,
-      Math.round((20 + this.getActiveResearchBonus('tapDamageFlat')) * tapMult * this.getWeatherDamageMult() * overclockMult)
-    );
+    return getTapDamageDomain(this, nowMs);
   }
 
   public getMaxChestCapacity(): number {
-    return (
-      this.chestCapacity +
-      Math.round(this.getActiveResearchBonus('chestCapacityFlat') + this.getRelicBonus('chestCapacityFlat'))
-    );
+    return getMaxChestCapacityDomain(this);
   }
 
   public getActiveOreNodeCount(): number {
-    return Math.min(MAX_PIT_NODE_COUNT, 1 + Math.round(this.getActiveResearchBonus('extraOreNodes')));
+    return getActiveOreNodeCountDomain(this);
   }
 
   public getOreHpScale(): number {
-    const worldDef = getWorldById(this.activeWorldId);
-    const fragility = Math.min(0.75, Math.max(0, this.getActiveResearchBonus('oreFragilityPct')));
-    const denseStacks = Math.max(0, Math.round(this.getActiveResearchBonus('denseOreScale')));
-    const denseHpMult = denseStacks > 0 ? Math.pow(DENSE_ORE_HP_MULT, denseStacks) : 1;
-    return Math.max(0.25, worldDef.oreHpMult * (1 - fragility) * denseHpMult);
+    return getOreHpScaleDomain(this);
   }
 
   public getOreValueMult(): number {
-    const { sellBonusPct } = this.getActiveStarDropAndGemBonus();
-    return (
-      1 +
-      this.getActiveResearchBonus('oreValuePct') +
-      sellBonusPct +
-      this.getRelicBonus('oreValuePct') +
-      this.getActiveFusionPassives().oreSellPct +
-      this.getActiveEnchantBonuses().sellValuePct +
-      this.getActiveIndexPassiveBonuses().oreSellPct
-    );
+    return getOreValueMultDomain(this);
   }
 
   public getEffectiveOreSellValue(oreId: string): number {
-    const def = getOreById(oreId);
-    if (!def) return 0;
-    return Math.round(def.sellValue * this.getOreValueMult());
+    return getEffectiveOreSellValueDomain(this, oreId);
   }
 
   public getOreOutputMult(): number {
-    const { oreDropBonusPct } = this.getActiveStarDropAndGemBonus();
-    let mult =
-      1 +
-      this.getActiveResearchBonus('oreOutputPct') +
-      oreDropBonusPct +
-      this.getRelicBonus('oreDropPct') +
-      this.getActiveFusionPassives().oreDropPct +
-      this.getActiveEnchantBonuses().oreDropPct +
-      this.getActiveIndexPassiveBonuses().oreDropPct;
-    if (isBoostActiveDomain(this, 'ore-elixir-1')) mult += 0.1;
-    if (isBoostActiveDomain(this, 'ore-elixir-2')) mult += 0.25;
-    if (isBoostActiveDomain(this, 'ore-elixir-3')) mult += 0.5;
-    const denseStacks = Math.max(0, Math.round(this.getActiveResearchBonus('denseOreScale')));
-    if (denseStacks > 0) mult *= Math.pow(DENSE_ORE_DROP_MULT, denseStacks);
-    return mult;
+    return getOreOutputMultDomain(this);
   }
 
   public getTotalOreDropMult(nowMs = Date.now()): number {
-    const overclockMult = this.isOverclockActive(nowMs) ? OVERCLOCK_DROP_MULT : 1;
-    return this.getOreOutputMult() * this.getWeatherOreDropMult() * overclockMult;
+    return getTotalOreDropMultDomain(this, nowMs);
   }
 
   public getRespawnSpeedMult(): number {
-    const boost = isBoostActiveDomain(this, 'regrowth-potion') ? 2.0 : 1.0;
-    return boost + this.getActiveResearchBonus('respawnSpeedPct');
+    return getRespawnSpeedMultDomain(this);
   }
 
   public getFindChanceBonus(): number {
-    return (isBoostActiveDomain(this, 'unearth-elixir') ? 0.1 : 0) + this.getActiveResearchBonus('findChancePct');
+    return getFindChanceBonusDomain(this);
   }
 
   public getCharacterLuckMult(): number {
-    const base = isBoostActiveDomain(this, 'character-luck-potion') ? 1.5 : 1.0;
-    return base + this.getActiveResearchBonus('charLuckPct');
+    return getCharacterLuckMultDomain(this);
   }
 
   public getOreLuckMult(): number {
-    const base = isBoostActiveDomain(this, 'ore-luck-potion') ? 2.0 : 1.0;
-    return base + this.getActiveResearchBonus('oreLuckPct') + this.getRelicBonus('oreLuckPct');
+    return getOreLuckMultDomain(this);
   }
 
   public getMutationLuckMult(): number {
-    const base = isBoostActiveDomain(this, 'mutation-luck-1') ? 2.0 : 1.0;
-    return base + this.getRelicBonus('mutationLuckPct');
+    return getMutationLuckMultDomain(this);
   }
 
   // === RELIC FORGE ===

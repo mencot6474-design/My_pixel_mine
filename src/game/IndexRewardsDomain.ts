@@ -115,6 +115,22 @@ const TAB_MILESTONE_CONFIG: Record<
       passive: { kind: 'allDmgPct', value: 0.05, label: '+5% All DMG' },
     },
   },
+  abyssal: {
+    half: { gems: 35000, enchantDice: 1 },
+    full: {
+      gems: 85000,
+      enchantDice: 5,
+      passive: { kind: 'oreDropPct', value: 0.05, label: '+5% Ore Drop' },
+    },
+  },
+  chrono: {
+    half: { gems: 60000, enchantDice: 2 },
+    full: {
+      gems: 150000,
+      enchantDice: 6,
+      passive: { kind: 'allDmgPct', value: 0.05, label: '+5% All DMG' },
+    },
+  },
   weather: {
     half: { gems: 5000, enchantDice: 1 },
     full: {

@@ -7,7 +7,7 @@ import { getWorldById, getWorldIndex } from '../game/GameData';
 import { gameSettings } from '../game/GameSettings';
 import { GameState } from '../game/GameState';
 import { WeatherId } from '../game/WeatherData';
-import { fmtInt, fmtMoney } from '../game/NumberFormat';
+import { fmtInt } from '../game/NumberFormat';
 import { getTowerFloorDef, TowerWaveOreState } from '../game/TowerData';
 import { AchievementsModalUi } from './AchievementsModalUi';
 import { AltarShopHudUi } from './AltarShopHudUi';
@@ -28,8 +28,14 @@ import {
 } from './HudChromeRenderer';
 import { hudIconHtml } from './HudIcons';
 import {
+  buildHudCoordinatorActions,
+  renderActiveModalHtml,
+  stepHudFastTick,
+  stepHudSlowTick,
+  updateHudCurrencyAndBadges,
+} from './HudActionRouter';
+import {
   captureRootScrolls,
-  formatCountdownTimer,
   ModalKind,
   PlotDropOps,
   refreshPotionTimersInDom,
@@ -336,78 +342,42 @@ export class GameHud {
 
     window.setInterval(() => {
       if (this.adPaused) return;
-      if (this.activeModal === 'pickaxe-shop') {
-        this.state.refreshPickaxeStockIfDue();
-        const el = this.root.querySelector('[data-restock-timer="true"]');
-        if (el) {
-          el.textContent = `Restock in ${formatCountdownTimer(this.state.getPickaxeRestockRemainingSec())}`;
-        }
-      } else if (this.activeModal === 'gem-shop' || this.activeModal === 'inventory') {
-        refreshPotionTimersInDom(this.root, this.state);
-      } else if (this.activeModal === 'tower') {
-        const prevKeys = this.state.towerKeys;
-        this.state.syncTowerKeys();
-        if (this.state.towerKeys !== prevKeys) {
-          this.render();
-        } else {
-          const regenEl = this.root.querySelector('[data-tower-regen="true"]');
-          if (regenEl) {
-            const sec = this.state.getTowerNextKeyRegenSec();
-            regenEl.textContent = sec > 0 ? `(+1 in ${formatCountdownTimer(sec)})` : '(Full)';
-          }
-        }
-      }
-      this.weatherDpsUi.syncActivePotionsHud(this.root);
-      const nextWeather = this.state.syncWeather();
-      if (nextWeather) {
-        this.onWeatherChange?.(nextWeather.id);
-        this.onSyncPlots(this.state.getEquippedPlotMinerIds());
-        this.pushToast(
-          `Weather: ${nextWeather.name} (${nextWeather.oreDropMult}x Ore • ${nextWeather.gemDropMult}x Gems • ${nextWeather.damageMult}x DMG)`
-        );
-        this.weatherDpsUi.syncWeatherWidget(this.root, true);
-      } else {
-        this.weatherDpsUi.syncWeatherWidget(this.root, false);
-      }
-      const regrowthActive = this.state.getBoostRemainingSec('regrowth-potion') > 0;
-      if (regrowthActive !== this.lastRegrowthActive) {
-        this.lastRegrowthActive = regrowthActive;
-        this.onSyncPlots(this.state.getEquippedPlotMinerIds());
-      }
-      this.weatherDpsUi.syncDpsMeterWidget(this.root);
+      stepHudSlowTick({
+        root: this.root,
+        state: this.state,
+        activeModal: this.activeModal,
+        weatherDpsUi: this.weatherDpsUi,
+        lastRegrowthActive: this.lastRegrowthActive,
+        setLastRegrowthActive: (active) => {
+          this.lastRegrowthActive = active;
+        },
+        onSyncPlots: this.onSyncPlots,
+        onWeatherChange: this.onWeatherChange,
+        pushToast: (msg) => this.pushToast(msg),
+        render: () => this.render(),
+      });
     }, 1000);
 
     window.setInterval(() => {
       if (this.adPaused) return;
-      this.state.stepOverclock();
-      const ocActive = this.state.isOverclockActive();
-      if (ocActive !== this.lastOverclockActive) {
-        this.lastOverclockActive = ocActive;
-        this.onOverclockChange?.(ocActive);
-        this.syncFeverScreenFx(ocActive, ocActive);
-        if (ocActive) {
-          audio.playSfx('rare-fanfare', { volume: 0.65 });
-          this.pushToast('⚡ OVERCLOCK ACTIVE! 2x Speed • 2x Tap • +50% Ore!');
-        }
-      }
-      if (this.sceneMode === 'mine') {
-        this.weatherDpsUi.syncOverclockWidget(this.root);
-      }
-
-      if (this.sceneMode !== 'tower' || !this.state.towerRun) return;
-      const tick = this.state.stepTowerTick(0.1);
-      if (tick.status === 'timeout') {
-        this.pushToast('Tower timer ended!');
-        this.setSceneMode('shop');
-        this.openModal('tower');
-      } else if (tick.status === 'blessing-auto-picked') {
-        audio.playSfx('rare-fanfare', { volume: 0.65 });
-        this.pushToast(`Auto-picked Spire Blessing: ${tick.autoPickedBlessing?.name ?? 'Blessing'}!`);
-        this.syncTowerSceneVisual();
-        this.render();
-      } else if (tick.status === 'active' || tick.status === 'paused') {
-        this.towerUi.updateLiveValues(this.root);
-      }
+      stepHudFastTick({
+        root: this.root,
+        state: this.state,
+        sceneMode: this.sceneMode,
+        weatherDpsUi: this.weatherDpsUi,
+        towerUi: this.towerUi,
+        lastOverclockActive: this.lastOverclockActive,
+        setLastOverclockActive: (active) => {
+          this.lastOverclockActive = active;
+        },
+        onOverclockChange: this.onOverclockChange,
+        syncFeverScreenFx: (active, burst) => this.syncFeverScreenFx(active, burst),
+        syncTowerSceneVisual: () => this.syncTowerSceneVisual(),
+        setSceneMode: (mode) => this.setSceneMode(mode),
+        openModal: (kind) => this.openModal(kind),
+        pushToast: (msg) => this.pushToast(msg),
+        render: () => this.render(),
+      });
     }, 100);
   }
 
@@ -879,23 +849,21 @@ export class GameHud {
   }
 
   private renderActiveModal(): string {
-    if (this.activeModal === 'index') return this.indexUi.renderModal();
-    if (this.activeModal === 'inventory') return this.inventoryUi.renderModal();
-    if (this.activeModal === 'chest') return this.chestUi.renderModal();
-    if (this.activeModal === 'pickaxe-shop') return this.shopUi.renderPickaxeShopModal();
-    if (this.activeModal === 'sell-shop') return this.shopUi.renderSellShopModal();
-    if (this.activeModal === 'gem-shop') return this.shopUi.renderGemShopModal();
-    if (this.activeModal === 'upgrades') return this.upgradesUi.renderUpgradesModal();
-    if (this.activeModal === 'worlds') return this.upgradesUi.renderWorldsModal();
-    if (this.activeModal === 'tower') return this.towerUi.renderTowerHubModal();
-    if (this.activeModal === 'forge') return this.forgeUi.renderForgeModal();
-    if (this.activeModal === 'settings') return this.settingsUi.renderModal();
-    if (this.activeModal === 'offline') return this.offlineUi.renderModal();
-    if (this.activeModal === 'bounties') return this.bountiesUi.renderModal();
-    if (this.activeModal === 'achievements') return this.achievementsUi.renderModal();
-    if (this.activeModal === 'daily-login') return this.dailyLoginUi.renderModal();
-    if (this.activeModal === 'altar-hub') return this.fusionUi.renderAltarChoiceModal();
-    return '';
+    return renderActiveModalHtml(this.activeModal, {
+      indexUi: this.indexUi,
+      inventoryUi: this.inventoryUi,
+      chestUi: this.chestUi,
+      shopUi: this.shopUi,
+      upgradesUi: this.upgradesUi,
+      towerUi: this.towerUi,
+      forgeUi: this.forgeUi,
+      settingsUi: this.settingsUi,
+      offlineUi: this.offlineUi,
+      bountiesUi: this.bountiesUi,
+      achievementsUi: this.achievementsUi,
+      dailyLoginUi: this.dailyLoginUi,
+      fusionUi: this.fusionUi,
+    });
   }
 
   private renderTowerHud(): void {
@@ -972,80 +940,19 @@ export class GameHud {
       });
     }
 
-    const coordinatorActions: Record<string, () => void> = {
-      'open-index': () => this.toggleModal('index'),
-      'open-settings': () => this.toggleModal('settings'),
-      'toggle-camera-lock': () => {
-        const next = gameSettings.update({ cameraLocked: !gameSettings.get().cameraLocked });
-        audio.playSfx('ui-tab');
-        this.pushToast(next.cameraLocked ? 'Camera Locked (Zoom Only)' : 'Camera Unlocked');
-        this.render();
-      },
-      'open-bounties': () => this.toggleModal('bounties'),
-      'open-achievements': () => this.toggleModal('achievements'),
-      'open-daily-login': () => this.toggleModal('daily-login'),
-      'toggle-audio': () => {
-        const nextMuted = audio.toggleMuted();
-        this.pushToast(nextMuted ? 'Audio Muted' : 'Audio On');
-        this.render();
-      },
-      'open-chest': () => this.toggleModal('chest'),
-      'close-modal': () => this.openModal('none'),
-      'equip-best': () => {
-        this.state.equipBestMiners();
-        audio.playSfx('place-chibi');
-        this.pushToast('Equipped best miners to Plot!');
-      },
-      'auto-star-up': () => {
-        const upgrades = this.state.autoStarUpAll();
-        if (upgrades > 0) {
-          audio.playSfx('upgrade');
-          this.pushToast(`Starred up ${upgrades}x!`);
-          this.inventoryUi.updateLive(this.root);
-        } else {
-          audio.playSfx('ui-error');
-          this.pushToast('No Chibi has enough spare duplicates!');
-        }
-      },
-      'chest-take-all': () => {
-        const taken = this.state.takeAllFromChest();
-        audio.playSfx(taken > 0 ? 'coin-alt' : 'ui-error');
-        this.pushToast(taken > 0 ? `Collected ${fmtInt(taken)} items!` : 'Chest is empty');
-      },
-      'chest-sell-ores': () => {
-        const res = this.state.sellAllChestOres();
-        audio.playSfx(res.earned > 0 ? 'coin' : 'ui-error');
-        this.pushToast(
-          res.earned > 0
-            ? `Sold chest ores for ${fmtMoney(res.earned)}${res.bonusApplied ? ' (+35% Full-Chest Bonus!)' : ''}`
-            : 'No ores in chest to sell'
-        );
-      },
-      'shops-pill': () => {
-        audio.playSfx('teleport', { volume: 0.45 });
-        this.setSceneMode('shop');
-      },
-      'sell-select-all': () => {
-        audio.playSfx('ui-tab');
-        this.shopUi.toggleSellSelectAll(this.root);
-      },
-      'sell-selected': () => this.shopUi.sellSelectedItems(this.root),
-      'open-worlds': () => this.toggleModal('worlds'),
-      'open-upgrades': () => {
-        if (this.activeModal !== 'upgrades') {
-          this.upgradesUi.syncActiveWorldTab();
-        }
-        this.toggleModal('upgrades');
-      },
-      'open-shop': () => {
-        audio.playSfx('ui-open');
-        this.setSceneMode('shop');
-      },
-      'gems-plus': () => {
-        audio.playSfx('ui-open');
-        this.openModal('gem-shop');
-      },
-    };
+    const coordinatorActions = buildHudCoordinatorActions({
+      root: this.root,
+      state: this.state,
+      shopUi: this.shopUi,
+      inventoryUi: this.inventoryUi,
+      upgradesUi: this.upgradesUi,
+      getActiveModal: () => this.activeModal,
+      openModal: (kind) => this.openModal(kind),
+      toggleModal: (kind) => this.toggleModal(kind),
+      setSceneMode: (mode) => this.setSceneMode(mode),
+      pushToast: (msg) => this.pushToast(msg),
+      render: () => this.render(),
+    });
 
     this.root.querySelectorAll<HTMLElement>('[data-action]').forEach((el) => {
       const action = el.dataset.action;
@@ -1075,27 +982,6 @@ export class GameHud {
   }
 
   private updateCurrencyLiveValues(): void {
-    const gemsEl = this.root.querySelector('[data-hud-gems="true"]');
-    if (gemsEl) gemsEl.textContent = fmtInt(this.state.gems);
-    const cashEl = this.root.querySelector('[data-hud-cash="true"]');
-    if (cashEl) cashEl.textContent = fmtMoney(this.state.cash);
-    const bountiesBadge = this.root.querySelector<HTMLElement>('[data-bounties-badge="true"]');
-    if (bountiesBadge) {
-      const ready = this.state.getReadyBountyCount();
-      bountiesBadge.textContent = String(ready);
-      bountiesBadge.classList.toggle('hidden', ready <= 0);
-    }
-    const indexBadge = this.root.querySelector<HTMLElement>('[data-index-badge="true"]');
-    if (indexBadge) {
-      const readyIndex = this.state.getReadyIndexRewardCount();
-      indexBadge.textContent = String(readyIndex);
-      indexBadge.classList.toggle('hidden', readyIndex <= 0);
-    }
-    const achBadge = this.root.querySelector<HTMLElement>('[data-achievements-badge="true"]');
-    if (achBadge) {
-      const readyAch = this.state.getReadyAchievementCount();
-      achBadge.textContent = String(readyAch);
-      achBadge.classList.toggle('hidden', readyAch <= 0);
-    }
+    updateHudCurrencyAndBadges(this.root, this.state);
   }
 }

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { disposeObject3D } from './ChestVaultStation3D';
 import { createCyberRadarArray } from './CyberProps3D';
+import { createChamferSlabGeometry, enableShadows } from './MeshHelpers3D';
 
 export interface CaveRailwayOptions {
   crystalColor?: number | string;
@@ -36,15 +37,6 @@ const SLOPE_ANGLE = Math.atan2(SLOPE_DY, SLOPE_DX);
 const RAIL_GAUGE_HALF = 0.31;
 const RAIL_HEAD_HEIGHT = 0.085;
 
-function enableShadows(obj: THREE.Object3D, cast = true, receive = true): void {
-  obj.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      child.castShadow = cast;
-      child.receiveShadow = receive;
-    }
-  });
-}
-
 function createExtrudedChamferBox(
   width: number,
   height: number,
@@ -52,33 +44,10 @@ function createExtrudedChamferBox(
   chamfer: number,
   bevel = 0.02
 ): THREE.ExtrudeGeometry {
-  const hw = width * 0.5;
-  const hd = depth * 0.5;
-  const c = Math.min(chamfer, hw * 0.4, hd * 0.4);
-  const shape = new THREE.Shape();
-  shape.moveTo(-hw + c, -hd);
-  shape.lineTo(hw - c, -hd);
-  shape.lineTo(hw, -hd + c);
-  shape.lineTo(hw, hd - c);
-  shape.lineTo(hw - c, hd);
-  shape.lineTo(-hw + c, hd);
-  shape.lineTo(-hw, hd - c);
-  shape.lineTo(-hw, -hd + c);
-  shape.closePath();
-
-  const innerH = Math.max(0.02, height - bevel * 2);
-  const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: innerH,
-    bevelEnabled: true,
-    bevelThickness: bevel,
-    bevelSize: bevel,
-    bevelSegments: 1,
-    curveSegments: 1,
+  return createChamferSlabGeometry(width, height, depth, chamfer, bevel, {
+    minInnerH: 0.02,
+    maxChamferRatio: 0.4,
   });
-  geo.rotateX(-Math.PI / 2);
-  geo.translate(0, bevel, 0);
-  geo.computeVertexNormals();
-  return geo;
 }
 
 function createBallastBedGeometry(

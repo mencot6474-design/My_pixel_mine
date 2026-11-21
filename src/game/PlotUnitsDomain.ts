@@ -85,6 +85,8 @@ const WORLD_UPGRADE_COST_SCALE: Record<WorldId, number> = {
   ruins: 25_000,
   astral: 750_000,
   starwell: 22_500_000,
+  abyssal: 675_000_000,
+  chrono: 20_000_000_000,
 };
 
 const WEATHER_UPGRADE_COST_SCALE: Record<WeatherId, number> = {

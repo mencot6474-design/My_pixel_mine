@@ -297,8 +297,8 @@ export class FusionHudUi {
       `;
     } else {
       bottomSectionHtml = `
-        <div class="absolute bottom-2.5 left-1/2 -translate-x-1/2 w-[min(940px,calc(100%-20px))] flex flex-col gap-1.5 pointer-events-auto">
-          <div class="grid grid-cols-4 @max-[820px]:grid-cols-2 gap-1.5">
+        <div class="absolute bottom-2.5 left-1/2 -translate-x-1/2 w-[min(1040px,calc(100%-20px))] flex flex-col gap-1.5 pointer-events-auto">
+          <div class="grid grid-cols-5 @max-[920px]:grid-cols-3 @max-[560px]:grid-cols-2 gap-1.5">
             ${recipeCardsHtml}
           </div>
 

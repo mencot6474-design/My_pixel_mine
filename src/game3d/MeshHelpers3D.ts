@@ -1,0 +1,166 @@
+import * as THREE from 'three';
+
+/**
+ * Enables shadow casting and/or receiving on all Mesh descendants of a 3D object.
+ */
+export function enableShadows(obj: THREE.Object3D, cast = true, receive = true): void {
+  obj.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = cast;
+      child.receiveShadow = receive;
+    }
+  });
+}
+
+/**
+ * Recursively disposes all BufferGeometries and Materials in an Object3D subtree,
+ * optionally skipping shared materials in `excludedMaterials`.
+ */
+export function disposeObject3D(
+  root: THREE.Object3D,
+  excludedMaterials?: ReadonlySet<THREE.Material>
+): void {
+  const disposedGeos = new Set<THREE.BufferGeometry>();
+  const disposedMats = new Set<THREE.Material>();
+
+  root.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+
+    if (!disposedGeos.has(child.geometry)) {
+      disposedGeos.add(child.geometry);
+      child.geometry.dispose();
+    }
+
+    const mats = Array.isArray(child.material) ? child.material : [child.material];
+    for (const mat of mats) {
+      if (excludedMaterials?.has(mat) || disposedMats.has(mat)) continue;
+      disposedMats.add(mat);
+      mat.dispose();
+    }
+  });
+}
+
+/**
+ * Builds a 2D chamfered rectangle THREE.Shape centered on the origin.
+ */
+export function createChamferRectShape(
+  width: number,
+  depth: number,
+  chamfer: number,
+  maxChamferRatio = 0.42
+): THREE.Shape {
+  const hw = width * 0.5;
+  const hd = depth * 0.5;
+  const c = Math.min(chamfer, hw * maxChamferRatio, hd * maxChamferRatio);
+  const shape = new THREE.Shape();
+  shape.moveTo(-hw + c, -hd);
+  shape.lineTo(hw - c, -hd);
+  shape.lineTo(hw, -hd + c);
+  shape.lineTo(hw, hd - c);
+  shape.lineTo(hw - c, hd);
+  shape.lineTo(-hw + c, hd);
+  shape.lineTo(-hw, hd - c);
+  shape.lineTo(-hw, -hd + c);
+  shape.closePath();
+  return shape;
+}
+
+/**
+ * Extrudes a horizontal chamfered rectangular slab resting on y = 0 and rising along +Y.
+ */
+export function createChamferSlabGeometry(
+  width: number,
+  height: number,
+  depth: number,
+  chamfer = 0.2,
+  bevel = 0.025,
+  opts: { minInnerH?: number; maxChamferRatio?: number } = {}
+): THREE.ExtrudeGeometry {
+  const shape = createChamferRectShape(width, depth, chamfer, opts.maxChamferRatio ?? 0.42);
+  const innerH = Math.max(opts.minInnerH ?? 0.015, height - bevel * 2);
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: innerH,
+    bevelEnabled: bevel > 0,
+    bevelThickness: bevel,
+    bevelSize: bevel,
+    bevelSegments: 1,
+    curveSegments: 1,
+  });
+  // Extrude runs along +Z; rotate -90 deg around X so extrusion rises along +Y, bottom at y = 0
+  geo.rotateX(-Math.PI / 2);
+  geo.translate(0, bevel, 0);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/**
+ * Extrudes a 2D polygon point list centered along Z with beveled edges.
+ */
+export function createExtrudedProfileGeometry(
+  pts: ReadonlyArray<readonly [number, number]>,
+  depth: number,
+  bevel = 0.018
+): THREE.ExtrudeGeometry {
+  const shape = new THREE.Shape();
+  if (pts.length > 0) {
+    shape.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) {
+      shape.lineTo(pts[i][0], pts[i][1]);
+    }
+    shape.closePath();
+  }
+  const innerD = Math.max(0.01, depth - bevel * 2);
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: innerD,
+    bevelEnabled: bevel > 0,
+    bevelThickness: bevel,
+    bevelSize: bevel,
+    bevelSegments: 1,
+    curveSegments: 1,
+  });
+  geo.translate(0, 0, -innerD * 0.5);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/**
+ * Builds an upright chamfered rectangular panel centered on XY and extruded along Z.
+ */
+export function createChamferPanelXYGeometry(
+  width: number,
+  height: number,
+  depth: number,
+  chamfer = 0.08,
+  bevel = 0.015
+): THREE.ExtrudeGeometry {
+  const hw = width * 0.5;
+  const hh = height * 0.5;
+  const c = Math.min(chamfer, hw * 0.42, hh * 0.42);
+  return createExtrudedProfileGeometry(
+    [
+      [-hw + c, -hh],
+      [hw - c, -hh],
+      [hw, -hh + c],
+      [hw, hh - c],
+      [hw - c, hh],
+      [-hw + c, hh],
+      [-hw, hh - c],
+      [-hw, -hh + c],
+    ],
+    depth,
+    bevel
+  );
+}
+
+/**
+ * Builds a multi-stepped faceted LatheGeometry from [radius, y] profile pairs.
+ */
+export function createLatheProfileGeometry(
+  profile: ReadonlyArray<readonly [number, number]>,
+  radialSegments = 10
+): THREE.LatheGeometry {
+  const vecs = profile.map(([r, y]) => new THREE.Vector2(Math.max(0.001, r), y));
+  const geo = new THREE.LatheGeometry(vecs, radialSegments);
+  geo.computeVertexNormals();
+  return geo;
+}

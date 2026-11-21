@@ -86,7 +86,9 @@ describe('Tahap C GameState Domain Modules', () => {
 
       const empty = createEmptyResearchLevels();
       expect(Object.keys(empty).sort()).toEqual([
+        'abyssal',
         'astral',
+        'chrono',
         'core',
         'crystal',
         'magma',
@@ -564,8 +566,8 @@ describe('Tahap C GameState Domain Modules', () => {
   });
 
   describe('FusionDomain', () => {
-    it('validates all 4 Fusion recipes, protects placed plot chibis, consumes bag+chest ores & gems, and grants Fusion Chibi', () => {
-      expect(FUSION_RECIPES.length).toBe(4);
+    it('validates all 5 Fusion recipes, protects placed plot chibis, consumes bag+chest ores & gems, and grants Fusion Chibi', () => {
+      expect(FUSION_RECIPES.length).toBe(5);
       for (const r of FUSION_RECIPES) {
         expect(getChibiById(r.resultChibiId)).toBeDefined();
         expect(r.requiredMiners.length).toBeGreaterThanOrEqual(2);
@@ -609,22 +611,24 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(getChibiUpgradeCostMult('thorn-maiden')).toBe(1_800_000);
       expect(getChibiUpgradeCostMult('monochrome-saint')).toBe(28_000_000);
       expect(getChibiUpgradeCostMult('prism-seraph')).toBe(65_000_000);
+      expect(getChibiUpgradeCostMult('aether-monarch')).toBe(55_000_000_000);
 
       const baseTap = state.getTapDamage();
       const baseSell = state.getOreValueMult();
       const baseDrop = state.getOreOutputMult();
 
-      // Deploy all 4 Fusion Chibis on plots 0..3 -> activate all 4 passives
+      // Deploy all 5 Fusion Chibis on plots 0..4 -> activate all 5 passives
       state.plotMiners[0] = 'glitch-cheshire';
       state.plotMiners[1] = 'thorn-maiden';
       state.plotMiners[2] = 'monochrome-saint';
       state.plotMiners[3] = 'prism-seraph';
+      state.plotMiners[4] = 'aether-monarch';
 
       const passives = state.getActiveFusionPassives();
       expect(passives.tapDmgPct).toBeCloseTo(1.5, 5);
       expect(passives.oreDropPct).toBeCloseTo(1.5, 5);
       expect(passives.oreSellPct).toBeCloseTo(2.0, 5);
-      expect(passives.teamDmgPct).toBeCloseTo(0.5, 5);
+      expect(passives.teamDmgPct).toBeCloseTo(1.25, 5);
 
       expect(state.getTapDamage()).toBe(Math.round(baseTap * 2.5));
       expect(state.getOreValueMult()).toBeCloseTo(baseSell + 2.0, 5);
@@ -816,6 +820,12 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(reloaded.careerStats.critTaps).toBe(10);
       expect(reloaded.careerStats.highestCrit).toBe(340);
       expect(reloaded.claimedAchievements.has('crit_striker:1')).toBe(true);
+
+      // World Explorer & Index Collector scale across all 8 Worlds (119 total index entries)
+      reloaded.unlockedWorlds = ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell', 'abyssal', 'chrono'];
+      const explorerTier5 = reloaded.claimAchievementTier('world_explorer:5');
+      expect(explorerTier5).not.toBeNull();
+      expect(explorerTier5!.tier.target).toBe(8);
     });
   });
 

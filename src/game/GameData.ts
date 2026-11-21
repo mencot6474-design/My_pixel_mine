@@ -1,7 +1,15 @@
 import { CHIBI_CATALOG, ChibiDef, ChibiRarity } from '../game3d/ChibiCatalog';
 import { WeatherId } from './WeatherData';
 
-export type WorldId = 'underground' | 'crystal' | 'magma' | 'ruins' | 'astral' | 'starwell';
+export type WorldId =
+  | 'underground'
+  | 'crystal'
+  | 'magma'
+  | 'ruins'
+  | 'astral'
+  | 'starwell'
+  | 'abyssal'
+  | 'chrono';
 
 export type ItemRarity = ChibiRarity;
 
@@ -104,6 +112,8 @@ export const WORLDS: readonly WorldDef[] = [
   { id: 'ruins', name: 'Ancient Ruins', iconColor: '#a855f7', unlockCost: 100_000_000_000, oreHpMult: 900_000 },
   { id: 'astral', name: 'Voidreach', iconColor: '#e879f9', unlockCost: 25_000_000_000_000, oreHpMult: 45_000_000 },
   { id: 'starwell', name: 'Starwell', iconColor: '#38bdf8', unlockCost: 5_000_000_000_000_000, oreHpMult: 1_800_000_000 },
+  { id: 'abyssal', name: 'Abyssal Biolume', iconColor: '#2dd4bf', unlockCost: 1_000_000_000_000_000_000, oreHpMult: 72_000_000_000 },
+  { id: 'chrono', name: 'Chrono Nexus', iconColor: '#fbbf24', unlockCost: 200_000_000_000_000_000_000, oreHpMult: 2_880_000_000_000 },
 ] as const;
 
 export function getWorldById(worldId: WorldId): WorldDef {
@@ -174,6 +184,20 @@ export const ORES: readonly OreDef[] = [
   { id: 'zenithite', name: 'Zenithite', worldId: 'starwell', chancePct: 0.99, rarity: 'legendary', color: '#0ea5e9', secondaryColor: '#09090b', sellValue: 34000000000 },
   { id: 'caelite', name: 'Caelite', worldId: 'starwell', chancePct: 0.25, rarity: 'rainbow', color: '#38bdf8', secondaryColor: '#f472b6', sellValue: 140000000000 },
   { id: 'dawncrown', name: 'Dawncrown', worldId: 'starwell', chancePct: 0.005, rarity: 'mythic', color: '#fbbf24', secondaryColor: '#ec4899', sellValue: 950000000000 },
+
+  // 7. Abyssal Biolume (World 7 Index — 5 endgame ores climbing to Exotic & Secret)
+  { id: 'trenchslate', name: 'Trenchslate', worldId: 'abyssal', chancePct: 52.0, rarity: 'legendary', color: '#2dd4bf', secondaryColor: '#042f2e', sellValue: 6_000_000_000 },
+  { id: 'prismarine', name: 'Prismarine', worldId: 'abyssal', chancePct: 26.0, rarity: 'rainbow', color: '#5eead4', secondaryColor: '#0f172a', sellValue: 25_000_000_000 },
+  { id: 'pelagium', name: 'Pelagium', worldId: 'abyssal', chancePct: 16.0, rarity: 'mythic', color: '#fb7185', secondaryColor: '#1e1b4b', sellValue: 100_000_000_000 },
+  { id: 'abyssalite', name: 'Abyssalite', worldId: 'abyssal', chancePct: 5.5, rarity: 'exotic', color: '#14b8a6', secondaryColor: '#312e81', sellValue: 450_000_000_000 },
+  { id: 'leviapearl', name: 'Leviapearl', worldId: 'abyssal', chancePct: 0.5, rarity: 'secret', color: '#f43f5e', secondaryColor: '#0f172a', sellValue: 3_000_000_000_000 },
+
+  // 8. Chrono Nexus (World 8 Index — 5 endgame ores climbing to Exotic & Secret)
+  { id: 'mithrilite', name: 'Mithrilite', worldId: 'chrono', chancePct: 52.0, rarity: 'legendary', color: '#93c5fd', secondaryColor: '#451a03', sellValue: 180_000_000_000 },
+  { id: 'orichalcite', name: 'Orichalcite', worldId: 'chrono', chancePct: 26.0, rarity: 'rainbow', color: '#fb923c', secondaryColor: '#1e1b4b', sellValue: 750_000_000_000 },
+  { id: 'adamantite', name: 'Adamantite', worldId: 'chrono', chancePct: 16.0, rarity: 'mythic', color: '#e11d48', secondaryColor: '#18181b', sellValue: 3_000_000_000_000 },
+  { id: 'aetherium', name: 'Aetherium', worldId: 'chrono', chancePct: 5.5, rarity: 'exotic', color: '#2dd4bf', secondaryColor: '#0f172a', sellValue: 14_000_000_000_000 },
+  { id: 'chronocrown', name: 'Chronocrown', worldId: 'chrono', chancePct: 0.5, rarity: 'secret', color: '#fbbf24', secondaryColor: '#09090b', sellValue: 95_000_000_000_000 },
 ] as const;
 
 export interface WeatherOreDef extends OreDef {
@@ -305,6 +329,20 @@ export const WORLD_MINERS: readonly WorldMinerEntry[] = [
   { chibiId: 'ashen-titan', worldId: 'starwell', chancePct: 0.18, rarity: 'mythic' },
   { chibiId: 'vesper-reaver', worldId: 'starwell', chancePct: 0.065, rarity: 'exotic' },
   { chibiId: 'null-prism', worldId: 'starwell', chancePct: 0.02, rarity: 'secret' },
+
+  // 7. Abyssal Biolume (5 miners)
+  { chibiId: 'scroll-wraith', worldId: 'abyssal', chancePct: 1.0, rarity: 'legendary' },
+  { chibiId: 'abyssal-fiend', worldId: 'abyssal', chancePct: 0.45, rarity: 'rainbow' },
+  { chibiId: 'mirror-phantasm', worldId: 'abyssal', chancePct: 0.15, rarity: 'mythic' },
+  { chibiId: 'abyssal-gaze', worldId: 'abyssal', chancePct: 0.055, rarity: 'exotic' },
+  { chibiId: 'trench-oracle', worldId: 'abyssal', chancePct: 0.016, rarity: 'secret' },
+
+  // 8. Chrono Nexus (5 miners)
+  { chibiId: 'glitch-warden', worldId: 'chrono', chancePct: 0.85, rarity: 'legendary' },
+  { chibiId: 'scarlet-dealer', worldId: 'chrono', chancePct: 0.38, rarity: 'rainbow' },
+  { chibiId: 'chain-arbiter', worldId: 'chrono', chancePct: 0.12, rarity: 'mythic' },
+  { chibiId: 'crimson-king', worldId: 'chrono', chancePct: 0.045, rarity: 'exotic' },
+  { chibiId: 'chrono-seraph', worldId: 'chrono', chancePct: 0.012, rarity: 'secret' },
 ] as const;
 
 export const OTHER_ITEMS: readonly OtherItemDef[] = [] as const;
@@ -641,6 +679,8 @@ export const WORLD_RESONANCE_WORLD_SCALES: Record<WorldId, number> = {
   ruins: 1.6,
   astral: 1.8,
   starwell: 2.0,
+  abyssal: 2.25,
+  chrono: 2.5,
 };
 
 export function getWorldResonanceScale(worldId: WorldId): number {

@@ -1,4 +1,10 @@
 import * as THREE from 'three';
+import {
+  createLatheProfileGeometry as createLatheProfileGeometryShared,
+  enableShadows,
+} from './MeshHelpers3D';
+
+export { enableShadows };
 
 export interface SculptOptions {
   foldZ?: number;
@@ -8,15 +14,6 @@ export interface SculptOptions {
   height?: number;
   camberX?: number;
   camberSpan?: number;
-}
-
-export function enableShadows(obj: THREE.Object3D, cast = true, receive = true): void {
-  obj.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      child.castShadow = cast;
-      child.receiveShadow = receive;
-    }
-  });
 }
 
 export function mirrorPoints2D(pts: ReadonlyArray<readonly [number, number]>): [number, number][] {
@@ -103,10 +100,7 @@ export function createLatheProfileGeometry(
   profile: ReadonlyArray<readonly [number, number]>,
   radialSegments = 8
 ): THREE.LatheGeometry {
-  const vecs = profile.map(([r, y]) => new THREE.Vector2(Math.max(0.001, r), y));
-  const geo = new THREE.LatheGeometry(vecs, radialSegments);
-  geo.computeVertexNormals();
-  return geo;
+  return createLatheProfileGeometryShared(profile, radialSegments);
 }
 
 /**

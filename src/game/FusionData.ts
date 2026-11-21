@@ -126,6 +126,30 @@ export const FUSION_RECIPES: readonly FusionRecipeDef[] = [
     ],
     gemCost: 85_000,
   },
+  {
+    id: 'fusion-aether-monarch',
+    resultChibiId: 'aether-monarch',
+    title: 'Aether Monarch',
+    subtitle: 'Nexus Crown Synchro • 3-Unit Fusion',
+    accentColor: '#fbbf24',
+    glowColor: '#22d3ee',
+    upgradeCostScale: 55_000_000_000,
+    passive: {
+      stat: 'teamDmgPct',
+      value: 0.75,
+      label: '+75% Team DMG',
+    },
+    requiredMiners: [
+      { chibiId: 'trench-oracle', count: 1 },
+      { chibiId: 'crimson-king', count: 1 },
+      { chibiId: 'chrono-seraph', count: 1 },
+    ],
+    requiredOres: [
+      { oreId: 'abyssalite', count: 12 },
+      { oreId: 'aetherium', count: 12 },
+    ],
+    gemCost: 160_000,
+  },
 ] as const;
 
 export function getFusionRecipeById(id: string): FusionRecipeDef | undefined {
