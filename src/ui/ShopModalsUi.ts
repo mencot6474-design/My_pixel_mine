@@ -252,9 +252,8 @@ export class ShopModalsUi {
       const owned = this.state.miners[item.chibiId] || 0;
       const canBuy = this.state.towerCoins >= item.coinCost;
       const isInspected = this.shopInspectPremiumId === item.chibiId;
-      const isTwin = item.rarity === 'twin';
-      const subTextCls = isTwin ? 'text-[#cbd5e1]' : 'text-[#5b526e]';
-      const ownedTextCls = isTwin ? 'text-[#7dd3fc]' : 'text-[#0284c7]';
+      const subTextCls = 'text-[#5b526e]';
+      const ownedTextCls = 'text-[#0284c7]';
 
       return `
         <div class="${rarityCardClasses(item.rarity, `is-holo-foil ${isInspected ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : ''}`)} !aspect-auto min-h-[252px] pt-2.5 px-2.5 pb-[10px] gap-1.5 !justify-between" style="${rarityVars(item.rarity)}" data-inspect-premium="${item.chibiId}">
@@ -265,7 +264,7 @@ export class ShopModalsUi {
             ${chibiPortraitHtml(chibi, { usePose: true })}
           </div>
           <div class="w-full flex flex-col items-center gap-0.5 min-h-0">
-            <div class="w-full px-0.5 text-center text-[14.5px] font-black leading-[1.15] whitespace-nowrap overflow-hidden text-ellipsis ${isTwin ? 'text-[#fff8e7]' : 'text-[#14111d]'}" title="${chibi.name}">${chibi.name}</div>
+            <div class="w-full px-0.5 text-center text-[14.5px] font-black leading-[1.15] whitespace-nowrap overflow-hidden text-ellipsis text-[#14111d]" title="${chibi.name}">${chibi.name}</div>
             <div class="text-[11px] font-extrabold leading-[1.2] text-center ${subTextCls}">
               ${fmtShort(chibi.baseDps)} DPS • ${item.passiveSummary}
             </div>

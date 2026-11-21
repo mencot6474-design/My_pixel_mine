@@ -354,15 +354,19 @@
   .mam-altar-card.rarity-twin {
     border: 3px solid #14111d;
     background:
-      linear-gradient(135deg, rgba(56, 189, 248, 0.34) 0%, rgba(255, 248, 231, 0) 48%, rgba(244, 63, 94, 0.34) 100%),
-      #181523;
-    color: #fff8e7;
+      repeating-conic-gradient(
+        from 0deg at 50% 48%,
+        rgba(255, 255, 255, 0.36) 0deg 15deg,
+        transparent 15deg 30deg
+      ),
+      linear-gradient(135deg, #bae6fd 0%, #e0f2fe 24%, #fef9c3 50%, #ffe4e6 76%, #fda4af 100%);
+    color: #14111d;
     box-shadow: none;
     animation: none;
   }
 
   .mam-card.rarity-twin .mam-card-name {
-    color: #fff8e7;
+    color: #14111d;
   }
 
   .mam-fusion-text {

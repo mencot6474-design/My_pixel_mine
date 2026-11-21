@@ -161,9 +161,27 @@ export class PlotInspectUi {
           ${renderMutationBadgeHtml(mut.id, mut.name)}
         </div>
         ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black tabular-nums text-[#7c3aed]">✦ ${worldName} Synergy (+${Math.round(resBonusPct * 100)}% DMG${resOrePct > 0 ? ` • +${resOrePct}% Ore` : ''}${resSellPct > 0 ? ` • +${resSellPct}% Sell` : ''})</div>` : ''}
-        ${fusionDef ? `<div class="mt-0.5 mam-pill bg-[#cffafe] text-[#14111d] self-start max-w-full truncate">★ Passive: ${fusionDef.passive.label}</div>` : ''}
-        ${premiumDef ? `<div class="mt-0.5 mam-pill bg-[#fef08a] text-[#14111d] self-start max-w-full truncate">✦ Dual Passive: ${premiumDef.passiveSummary}</div>` : ''}
-        ${eqEnchant ? `<div class="mt-0.5 mam-pill rounded-lg bg-white border-2 border-[#14111d] text-[10.5px] font-black text-[#14111d] self-start max-w-full truncate">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}
+        ${fusionDef ? `<div class="mt-0.5 w-full rounded-xl border-2 border-[#14111d] bg-[#cffafe] px-2.5 py-1 text-[10.5px] font-black leading-snug text-[#14111d] break-words">★ Passive: ${fusionDef.passive.label}</div>` : ''}
+        ${
+          premiumDef
+            ? `<div class="mt-0.5 w-full rounded-xl border-2 border-[#14111d] bg-[linear-gradient(135deg,#e0f2fe_0%,#fef9c3_52%,#ffe4e6_100%)] px-2 py-1.5 flex flex-col gap-1">
+                <div class="text-[9.5px] font-black uppercase tracking-[0.06em] text-[#14111d] flex items-center gap-1 leading-none">
+                  <span class="text-[#0284c7]">✦</span>
+                  <span>Dual Passive</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-1">
+                  ${premiumDef.passiveSummary
+                    .split('•')
+                    .map(
+                      (part) =>
+                        `<span class="px-1.5 py-0.5 rounded-md border-[1.5px] border-[#14111d] bg-[#ffffff] text-[10px] font-black tabular-nums text-[#14111d] leading-tight">${part.trim()}</span>`
+                    )
+                    .join('')}
+                </div>
+              </div>`
+            : ''
+        }
+        ${eqEnchant ? `<div class="mt-0.5 w-full rounded-xl bg-white border-2 border-[#14111d] px-2.5 py-1 text-[10.5px] font-black leading-snug tabular-nums text-[#14111d] break-words">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}
         <div class="text-[12.5px] font-bold tabular-nums text-[#475569] mt-0.5">
           Lv. ${unit.damageLevel} • Speed ${stats.speed} • Mining x${stats.miningMult}
         </div>
