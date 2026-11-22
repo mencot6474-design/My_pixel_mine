@@ -602,7 +602,8 @@
     filter: none !important;
   }
 
-  body.mam-quality-low .mam-fever-speedlines {
+  body.mam-quality-low .mam-fever-speedlines,
+  body.mam-quality-low .mam-fever-rain {
     display: none;
   }
 

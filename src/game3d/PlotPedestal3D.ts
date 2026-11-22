@@ -296,6 +296,7 @@ export class PlotPedestal3D {
   private auraSigilMesh: THREE.Mesh | null = null;
   private auraGroundMat: THREE.MeshBasicMaterial | null = null;
   private auraVeilMat: THREE.ShaderMaterial | null = null;
+  private auraVeilMesh: THREE.Mesh | null = null;
   private auraOuterVeilMat: THREE.ShaderMaterial | null = null;
   private auraOuterVeilMesh: THREE.Mesh | null = null;
   private auraMoteGeo: THREE.BufferGeometry | null = null;
@@ -564,6 +565,7 @@ export class PlotPedestal3D {
       this.auraSigilMesh = null;
       this.auraGroundMat = null;
       this.auraVeilMat = null;
+      this.auraVeilMesh = null;
       this.auraOuterVeilMat = null;
       this.auraOuterVeilMesh = null;
       this.auraMoteGeo?.dispose();
@@ -644,8 +646,10 @@ export class PlotPedestal3D {
 
     auraGroup.add(auraVeil, outerAuraVeil);
     this.auraVeilMat = veilMat;
+    this.auraVeilMesh = auraVeil;
     this.auraOuterVeilMat = outerVeilMat;
     this.auraOuterVeilMesh = outerAuraVeil;
+    auraVeil.visible = !this.lowQuality;
     outerAuraVeil.visible = !this.lowQuality;
 
     // 3. GPU Lifetime-Shaded Anime Aura Wisps & Vertical Energy Streaks (smooth birth/death fade)
@@ -669,6 +673,9 @@ export class PlotPedestal3D {
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
     this.chibiSprite?.setLowQuality(low);
+    if (this.auraVeilMesh) {
+      this.auraVeilMesh.visible = !low;
+    }
     if (this.auraOuterVeilMesh) {
       this.auraOuterVeilMesh.visible = !low;
     }
@@ -765,7 +772,7 @@ export class PlotPedestal3D {
       if (this.auraSigilMesh) {
         this.auraSigilMesh.rotation.z = phase * 0.12;
       }
-      if (this.auraVeilMat) {
+      if (!this.lowQuality && this.auraVeilMat) {
         this.auraVeilMat.uniforms.uTime.value = phase;
         this.auraVeilMat.uniforms.uOpacity.value = 0.7 + Math.sin(phase * 1.8) * 0.12;
       }

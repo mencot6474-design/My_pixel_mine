@@ -13,7 +13,8 @@ export const OVERCLOCK_GEODE_EXTEND_SEC = 1.5;
 export const OVERCLOCK_PERFECT_EXTEND_SEC = 1.2;
 export const OVERCLOCK_DECAY_DELAY_SEC = 5;
 export const OVERCLOCK_DECAY_PER_SEC = 1.5;
-export const OVERCLOCK_SPEED_MULT = 2.0;
+export const OVERCLOCK_CHIBI_DMG_MULT = 2.0;
+export const OVERCLOCK_SPEED_MULT = 1.0;
 export const OVERCLOCK_TAP_MULT = 2.0;
 export const OVERCLOCK_DROP_MULT = 1.5;
 
@@ -22,6 +23,7 @@ export type OverclockTier = 1 | 2 | 3;
 export interface OverclockTierBuffs {
   tier: 0 | OverclockTier;
   label: string;
+  chibiDmgMult: number;
   speedMult: number;
   tapMult: number;
   dropMult: number;
@@ -32,6 +34,7 @@ const TIER_BUFFS: Record<0 | OverclockTier, OverclockTierBuffs> = {
   0: {
     tier: 0,
     label: 'OVERCLOCK FEVER',
+    chibiDmgMult: 1,
     speedMult: 1,
     tapMult: 1,
     dropMult: 1,
@@ -40,6 +43,7 @@ const TIER_BUFFS: Record<0 | OverclockTier, OverclockTierBuffs> = {
   1: {
     tier: 1,
     label: 'OVERCLOCK ACTIVE',
+    chibiDmgMult: OVERCLOCK_CHIBI_DMG_MULT,
     speedMult: OVERCLOCK_SPEED_MULT,
     tapMult: OVERCLOCK_TAP_MULT,
     dropMult: OVERCLOCK_DROP_MULT,
@@ -48,7 +52,8 @@ const TIER_BUFFS: Record<0 | OverclockTier, OverclockTierBuffs> = {
   2: {
     tier: 2,
     label: 'SUPER FEVER LV.2',
-    speedMult: 2.5,
+    chibiDmgMult: 2.5,
+    speedMult: 1,
     tapMult: 2.75,
     dropMult: 2.0,
     critChance: 0.4,
@@ -56,7 +61,8 @@ const TIER_BUFFS: Record<0 | OverclockTier, OverclockTierBuffs> = {
   3: {
     tier: 3,
     label: 'HYPER FEVER LV.3',
-    speedMult: 3.0,
+    chibiDmgMult: 3.0,
+    speedMult: 1,
     tapMult: 3.5,
     dropMult: 2.5,
     critChance: 0.5,
@@ -82,6 +88,7 @@ export interface OverclockSnapshot {
   chargePct: number;
   remainingSec: number;
   durationSec: number;
+  chibiDmgMult: number;
   speedMult: number;
   tapMult: number;
   dropMult: number;
@@ -234,6 +241,7 @@ export function getOverclockSnapshotDomain(
     chargePct,
     remainingSec,
     durationSec: active ? maxDur : OVERCLOCK_DURATION_SEC,
+    chibiDmgMult: buffs.chibiDmgMult,
     speedMult: buffs.speedMult,
     tapMult: buffs.tapMult,
     dropMult: buffs.dropMult,

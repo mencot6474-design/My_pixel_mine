@@ -637,12 +637,8 @@ export class MineScene3D {
       this.callbacks.onOreBroken?.(variantKey, meteorWeatherId, pitEventKind, screenPos);
     };
 
-    const minerDt =
-      inMine && this.overclockActive
-        ? dtSec * getOverclockTierBuffs(this.overclockTier || 1).speedMult
-        : dtSec;
     this.plotAttackController.update(
-      minerDt,
+      dtSec,
       this.camera,
       this.pit,
       this.pedestals,

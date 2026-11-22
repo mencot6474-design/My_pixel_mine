@@ -753,18 +753,22 @@ describe('Tahap C GameState Domain Modules', () => {
 
       // Verify GameState multipliers boost while active and return to normal after expiry
       const state = new GameState();
+      state.equipBestMiners();
       const baseTap = state.getTapDamage();
       const baseDrop = state.getTotalOreDropMult();
+      const baseUnitDmg = state.getPlotUnitStats(0, now)?.dmg ?? 0;
 
       expect(state.chargeOverclock(100, now)).toBe(true);
       expect(state.isOverclockActive(now + 1000)).toBe(true);
       expect(state.getTapDamage(now + 1000)).toBe(baseTap * 2);
       expect(state.getTotalOreDropMult(now + 1000)).toBeCloseTo(baseDrop * 1.5, 6);
+      expect(state.getPlotUnitStats(0, now + 1000)?.dmg).toBe(baseUnitDmg * 2);
 
       // Expires after 15s
       state.stepOverclock(now + OVERCLOCK_DURATION_SEC * 1000 + 100);
       expect(state.isOverclockActive(now + OVERCLOCK_DURATION_SEC * 1000 + 100)).toBe(false);
       expect(state.getTapDamage(now + OVERCLOCK_DURATION_SEC * 1000 + 100)).toBe(baseTap);
+      expect(state.getPlotUnitStats(0, now + OVERCLOCK_DURATION_SEC * 1000 + 100)?.dmg).toBe(baseUnitDmg);
     });
 
     it('chains Overclock Fever Tier 1 -> Tier 2 -> Tier 3 with time extension capped at 25s and scales buffs', () => {
@@ -784,7 +788,8 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(t2Ext.tierUp).toBe(true);
       expect(t2Ext.tier).toBe(2);
       const snap2 = getOverclockSnapshotDomain(oc, t0 + 3_000);
-      expect(snap2.speedMult).toBe(2.5);
+      expect(snap2.chibiDmgMult).toBe(2.5);
+      expect(snap2.speedMult).toBe(1);
       expect(snap2.tapMult).toBe(2.75);
       expect(snap2.dropMult).toBe(2.0);
       expect(snap2.critChance).toBe(0.4);
@@ -795,7 +800,8 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(t3Ext.tier).toBe(3);
       const snap3 = getOverclockSnapshotDomain(oc, t0 + 3_500);
       expect(snap3.remainingSec).toBeCloseTo(OVERCLOCK_MAX_DURATION_SEC, 2);
-      expect(snap3.speedMult).toBe(3.0);
+      expect(snap3.chibiDmgMult).toBe(3.0);
+      expect(snap3.speedMult).toBe(1);
       expect(snap3.tapMult).toBe(3.5);
       expect(snap3.dropMult).toBe(2.5);
       expect(snap3.critChance).toBe(0.5);

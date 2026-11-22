@@ -683,7 +683,7 @@ function buildOverclockBadgesInnerHtml(tier: 0 | OverclockTier): string {
   const buffs = getOverclockTierBuffs(tier === 0 ? 1 : tier);
   const orePct = Math.round((buffs.dropMult - 1) * 100);
   return `
-    <span class="mam-pill-xs bg-[#fde047] text-[#14111d] uppercase">${buffs.speedMult}x SPD</span>
+    <span class="mam-pill-xs bg-[#fde047] text-[#14111d] uppercase">${buffs.chibiDmgMult}x DMG</span>
     <span class="mam-pill-xs bg-[#f9a8d4] text-[#14111d] uppercase">${buffs.tapMult}x TAP</span>
     <span class="mam-pill-xs bg-[#7dd3fc] text-[#14111d] uppercase">+${orePct}% ORE</span>
   `;

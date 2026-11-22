@@ -699,7 +699,7 @@ describe('Tahap B HUD Modules', () => {
       });
       expect(activeHtml).toContain('OVERCLOCK ACTIVE');
       expect(activeHtml).toContain('12.4s');
-      expect(activeHtml).toContain('2x SPD');
+      expect(activeHtml).toContain('2x DMG');
       expect(activeHtml).toContain('mam-fever-shell is-active');
       expect(activeHtml).toContain('mam-fever-ticks');
       expect(activeHtml).not.toContain('mam-fever-emblem');
@@ -714,7 +714,7 @@ describe('Tahap B HUD Modules', () => {
       });
       expect(tier3GaugeHtml).toContain('HYPER FEVER LV.3');
       expect(tier3GaugeHtml).toContain('mam-fever-shell is-active is-tier-3');
-      expect(tier3GaugeHtml).toContain('3x SPD');
+      expect(tier3GaugeHtml).toContain('3x DMG');
       expect(tier3GaugeHtml).toContain('3.5x TAP');
       expect(tier3GaugeHtml).toContain('+150% ORE');
 
@@ -726,7 +726,7 @@ describe('Tahap B HUD Modules', () => {
       expect(feverRainHtml).toContain('SUPER FEVER LV.2!');
       expect(feverRainHtml).not.toContain('mam-fever-burst-sub');
 
-      const ocToast = renderToastBannerHtml('⚡ OVERCLOCK ACTIVE! 2x Speed');
+      const ocToast = renderToastBannerHtml('⚡ OVERCLOCK ACTIVE! 2x DMG');
       expect(ocToast).toContain('data-toast-tone="overclock"');
       expect(ocToast).not.toContain('⚡');
 

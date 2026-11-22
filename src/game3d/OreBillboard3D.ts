@@ -421,11 +421,13 @@ export class OreBillboard2D {
     void loadPublicSpriteTexture(urlPath)
       .then((tex) => {
         if (this.oreId !== spriteKey) return;
+        const firstMap = !this.spriteMat.map;
         this.spriteMat.map = tex;
         this.spriteMat.opacity = 1;
-        this.spriteMat.needsUpdate = true;
+        if (firstMap) this.spriteMat.needsUpdate = true;
+        const firstDepthMap = !this.depthMat.map;
         this.depthMat.map = tex;
-        this.depthMat.needsUpdate = true;
+        if (firstDepthMap) this.depthMat.needsUpdate = true;
         this.spriteMesh.castShadow = true;
       })
       .catch(() => {

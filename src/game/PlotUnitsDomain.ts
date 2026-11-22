@@ -38,6 +38,7 @@ import { getAchievementAllDmgBonusDomain } from './AchievementsDomain';
 import { getActiveFusionPassiveBonuses } from './FusionDomain';
 import { getActiveIndexPassiveBonusesDomain } from './IndexRewardsDomain';
 import { RETURN_RUSH_BOOST_ID, RETURN_RUSH_SPEED_BONUS } from './OfflineEarningsDomain';
+import { getOverclockTierBuffs, type OverclockTier } from './OverclockDomain';
 import { ResearchEffectType } from './ResearchData';
 import { WeatherId } from './WeatherData';
 
@@ -90,6 +91,8 @@ export interface PlotUnitsContext {
   getWeatherDamageMult(): number;
   getTapDamage(): number;
   getMutationLuckMult(): number;
+  isOverclockActive?: (nowMs?: number) => boolean;
+  getOverclockTier?: (nowMs?: number) => 0 | OverclockTier;
 }
 
 const WEATHER_UPGRADE_COST_SCALE: Record<WeatherId, number> = {
@@ -331,7 +334,10 @@ export function computePlotUnitStats(
     resonanceDmgMult *
     fusionTeamDmgMult *
     indexAllDmgMult;
-  const dmg = Math.round(baseDmg * weatherDmgMult);
+  const ocActive = ctx.isOverclockActive ? ctx.isOverclockActive(nowMs) : false;
+  const ocTier = ocActive ? (ctx.getOverclockTier ? ctx.getOverclockTier(nowMs) : 1) : 0;
+  const ocChibiDmgMult = ocActive ? getOverclockTierBuffs(ocTier || 1).chibiDmgMult : 1;
+  const dmg = Math.round(baseDmg * weatherDmgMult * ocChibiDmgMult);
   const nextDmg = Math.round(
     chibi.baseDps *
       lvlScale(unit.damageLevel + 1) *
@@ -343,7 +349,8 @@ export function computePlotUnitStats(
       resonanceDmgMult *
       fusionTeamDmgMult *
       indexAllDmgMult *
-      weatherDmgMult
+      weatherDmgMult *
+      ocChibiDmgMult
   );
   const returnRushSpeed =
     (ctx.activeBoosts?.[RETURN_RUSH_BOOST_ID] ?? 0) > nowMs ? RETURN_RUSH_SPEED_BONUS : 0;

@@ -396,20 +396,24 @@ async function bootstrap(): Promise<void> {
     if (toastText) hud?.pushToast(toastText);
   };
 
+  const syncPlotStatsToScene = (): void => {
+    for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {
+      const unit = gameState.getPlotUnit(i);
+      const st = gameState.getPlotUnitStats(i);
+      scene.syncPlotEnchant(i, unit?.enchantId ?? null);
+      if (st) {
+        scene.syncPlotUnitStats(i, st.dmg, st.speed, st.miningMult);
+      }
+    }
+  };
+
   hud = new GameHud(
     hudRoot,
     gameState,
     (ids) => {
       scene.syncPlotMiners(ids);
       syncWorldToScene();
-      for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {
-        const unit = gameState.getPlotUnit(i);
-        const st = gameState.getPlotUnitStats(i);
-        scene.syncPlotEnchant(i, unit?.enchantId ?? null);
-        if (st) {
-          scene.syncPlotUnitStats(i, st.dmg, st.speed, st.miningMult);
-        }
-      }
+      syncPlotStatsToScene();
     },
     (slot) => {
       scene.focusPlot(slot);
@@ -465,6 +469,7 @@ async function bootstrap(): Promise<void> {
     (overclockActive, overclockTier) => {
       scene.setOverclockActive(overclockActive, overclockTier);
       syncWorldToScene();
+      syncPlotStatsToScene();
     },
     {
       syncFusionRecipe: (recipe, readyFlags, oreReadyFlags, canFuse) =>

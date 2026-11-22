@@ -322,11 +322,11 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
       audio.playCrystalChord('fever');
       const orePct = Math.round((ocSnap.dropMult - 1) * 100);
       if (ocTier === 3) {
-        ctx.pushToast(`⚡ HYPER OVERDRIVE LV.3! ${ocSnap.speedMult}x Speed • ${ocSnap.tapMult}x Tap • +${orePct}% Ore!`);
+        ctx.pushToast(`⚡ HYPER OVERDRIVE LV.3! ${ocSnap.chibiDmgMult}x DMG • ${ocSnap.tapMult}x Tap • +${orePct}% Ore!`);
       } else if (ocTier === 2) {
-        ctx.pushToast(`⚡ SUPER FEVER LV.2! ${ocSnap.speedMult}x Speed • ${ocSnap.tapMult}x Tap • +${orePct}% Ore!`);
+        ctx.pushToast(`⚡ SUPER FEVER LV.2! ${ocSnap.chibiDmgMult}x DMG • ${ocSnap.tapMult}x Tap • +${orePct}% Ore!`);
       } else {
-        ctx.pushToast('⚡ OVERCLOCK ACTIVE! 2x Speed • 2x Tap • +50% Ore!');
+        ctx.pushToast('⚡ OVERCLOCK ACTIVE! 2x DMG • 2x Tap • +50% Ore!');
       }
     }
   }
