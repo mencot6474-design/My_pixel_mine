@@ -28,6 +28,8 @@ const activeOrbs: ActiveLootOrb[] = [];
 let orbLoopRaf = 0;
 let orbLayerEl: HTMLElement | null = null;
 const rollStates = new WeakMap<HTMLElement, RollState>();
+const lastBounceAt = new WeakMap<HTMLElement, number>();
+let lastLowOreOrbAtMs = 0;
 const orbTargetCache = new Map<
   LootOrbKind,
   { x: number; y: number; bounceEl: HTMLElement | null; atMs: number }
@@ -63,6 +65,10 @@ function ensureOrbLayer(): HTMLElement | null {
 /** Triggers a snappy Sticker-Pop bounce (`scale(1.12)`) on a HUD pill element. */
 export function bounceHudPill(target: HTMLElement | null): void {
   if (!target) return;
+  const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  const prevMs = lastBounceAt.get(target) ?? 0;
+  if (nowMs - prevMs < 260) return;
+  lastBounceAt.set(target, nowMs);
   target.classList.remove('is-hud-bounce');
   if (typeof requestAnimationFrame === 'function') {
     requestAnimationFrame(() => target.classList.add('is-hud-bounce'));
@@ -137,7 +143,9 @@ function stepOrbs(nowMs: number): void {
     const y = inv * inv * orb.startY + 2 * inv * u * orb.ctrlY + u * u * orb.endY;
     const scale = t < 0.2 ? 0.65 + (t / 0.2) * 0.45 : t > 0.8 ? 1.1 - ((t - 0.8) / 0.2) * 0.3 : 1.1;
     orb.el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%) scale(${scale.toFixed(2)})`;
-    orb.el.style.opacity = t > 0.88 ? String((1 - t) / 0.12) : '1';
+    if (t > 0.88) {
+      orb.el.style.opacity = String((1 - t) / 0.12);
+    }
   }
 
   if (activeOrbs.length > 0 && typeof requestAnimationFrame === 'function') {
@@ -159,10 +167,12 @@ export function spawnLootVacuumParticles(
   if (!layer) return;
 
   const isLow = document.body.classList.contains('mam-quality-low');
+  const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  if (isLow && kind === 'ore' && nowMs - lastLowOreOrbAtMs < 350) return;
+  if (isLow && kind === 'ore') lastLowOreOrbAtMs = nowMs;
   const rawPlan = getLootVacuumBurstPlan(kind);
   const plan = isLow ? rawPlan.slice(0, 2) : rawPlan;
   const maxOrbs = isLow ? 8 : MAX_ACTIVE_ORBS;
-  const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
 
   plan.forEach((orbKind, idx) => {
     if (activeOrbs.length >= maxOrbs) {

@@ -383,8 +383,14 @@ export class ChibiSprite3D {
   }
 
   /** Computes steady world-space anchor just above the tilted chibi sprite top. */
-  public getLabelAnchorWorldPosition(out: THREE.Vector3, extraLocalClearance = 0.13): THREE.Vector3 {
-    this.spritePivot.updateWorldMatrix(true, false);
+  public getLabelAnchorWorldPosition(
+    out: THREE.Vector3,
+    extraLocalClearance = 0.13,
+    forceMatrixUpdate = true
+  ): THREE.Vector3 {
+    if (forceMatrixUpdate) {
+      this.spritePivot.updateWorldMatrix(true, false);
+    }
     const peakPosY = this.animState === 'aura' ? 0.19 : 0.035;
     const peakScaleY = this.animState === 'aura' ? 1.04 : 1.032;
     const visibleRatio = Math.max(0.55, 1 - this.topTrimRatio);

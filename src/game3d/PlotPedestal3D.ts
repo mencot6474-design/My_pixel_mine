@@ -685,9 +685,13 @@ export class PlotPedestal3D {
     return this.enchantId;
   }
 
-  public getLabelAnchorWorldPosition(out: THREE.Vector3, extraLocalClearance = 0.13): THREE.Vector3 {
+  public getLabelAnchorWorldPosition(
+    out: THREE.Vector3,
+    extraLocalClearance = 0.13,
+    forceMatrixUpdate = true
+  ): THREE.Vector3 {
     if (this.chibiSprite) {
-      return this.chibiSprite.getLabelAnchorWorldPosition(out, extraLocalClearance);
+      return this.chibiSprite.getLabelAnchorWorldPosition(out, extraLocalClearance, forceMatrixUpdate);
     }
     return out.set(this.group.position.x, this.group.position.y + 3.85, this.group.position.z);
   }
@@ -707,9 +711,11 @@ export class PlotPedestal3D {
   }
 
   public getAttackOriginWorldPosition(out: THREE.Vector3): THREE.Vector3 {
-    this.group.updateWorldMatrix(true, false);
-    out.set(0, 1.35, 0.35);
-    return this.group.localToWorld(out);
+    return out.set(
+      this.group.position.x,
+      this.group.position.y + 1.35 * PLOT_PODIUM_SCALE,
+      this.group.position.z + 0.35 * PLOT_PODIUM_SCALE
+    );
   }
 
   public getActiveAccentColor(): string {

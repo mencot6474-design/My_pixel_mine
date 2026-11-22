@@ -542,8 +542,6 @@ export class PlotAttackController3D {
       p.trailMesh.visible = !this.lowQuality;
     }
 
-    p.coreMat.needsUpdate = true;
-    p.trailMat.needsUpdate = true;
     p.group.position.set(sx, sy, sz);
     p.group.visible = true;
   }

@@ -154,7 +154,7 @@ export class MineSceneProjector {
       }
 
       const p = ped.group.position;
-      ped.getLabelAnchorWorldPosition(this.ctx.projVec).project(this.ctx.camera);
+      ped.getLabelAnchorWorldPosition(this.ctx.projVec, 0.13, false).project(this.ctx.camera);
       const labelVisible = this.ctx.projVec.z > -1 && this.ctx.projVec.z < 1;
       const labelX = (this.ctx.projVec.x * 0.5 + 0.5) * w;
       const labelY = (-this.ctx.projVec.y * 0.5 + 0.5) * h;

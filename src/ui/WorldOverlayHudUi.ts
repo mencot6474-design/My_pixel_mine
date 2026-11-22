@@ -90,54 +90,54 @@ export function shouldShowTowerOreBars(ctx: {
   );
 }
 
+function buildSingleMineOreBarHtml(b: OreHpScreen): string {
+  if (b.isMeteor) {
+    const wDef = getWeatherById(b.meteorWeatherId ?? 'light_rain');
+    return `
+      <div class="absolute flex flex-col items-center gap-1 pointer-events-none select-none" data-ore-bar="${b.id}">
+        <div class="mam-pill rounded-lg bg-[#fff8e7] border-2 border-[#14111d] gap-1.5">
+          ${meteorIconHtml(wDef.id, 15, wDef.name)}
+          <span class="text-[10.5px] font-black uppercase tracking-[0.06em] leading-none text-[#14111d]">${wDef.name}</span>
+          <span class="mam-pill-xs rounded text-[8.5px] uppercase tracking-wider bg-[#fde047] text-[#14111d] border border-[#14111d]">Meteor</span>
+        </div>
+        <div class="relative w-[184px] @max-[720px]:w-[156px] h-[22px] rounded-lg border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center">
+          <div class="absolute inset-y-0 left-0 w-full origin-left will-change-transform transition-transform duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${wDef.glowColor},${wDef.accentColor})" data-ore-fill="true"></div>
+          <div class="absolute inset-x-0 top-0 h-[44%] bg-gradient-to-b from-white/30 to-transparent pointer-events-none z-[1]"></div>
+          <div class="absolute inset-0 flex justify-evenly pointer-events-none z-[1]">
+            <span class="w-px h-full bg-black/35"></span>
+            <span class="w-px h-full bg-black/35"></span>
+            <span class="w-px h-full bg-black/35"></span>
+          </div>
+          <div class="relative z-[2] text-[11px] font-black tabular-nums tracking-wide text-white leading-none mam-outline-sm" data-ore-text="true"></div>
+        </div>
+      </div>
+    `;
+  }
+  if (b.pitEventKind) {
+    const ev = PIT_EVENT_DEFS[b.pitEventKind];
+    return `
+      <div class="absolute flex flex-col items-center gap-1 pointer-events-none select-none" data-ore-bar="${b.id}">
+        <div class="mam-pill-xs rounded-md bg-[#fff8e7] border-2 border-[#14111d]">
+          <span class="text-[9.5px] font-black uppercase tracking-[0.06em] leading-none text-[#14111d]">${ev.badgeText}</span>
+        </div>
+        <div class="relative w-28 h-[17px] rounded-md border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center">
+          <div class="absolute inset-y-0 left-0 w-full origin-left will-change-transform transition-transform duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${ev.colorHex}bb,${ev.colorHex})" data-ore-fill="true"></div>
+          <div class="relative z-[2] text-[10.5px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="absolute w-24 h-4 rounded-md border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center" data-ore-bar="${b.id}">
+      <div class="absolute inset-y-0 left-0 w-full origin-left will-change-transform bg-[linear-gradient(180deg,#38bdf8,#0284c7)] transition-transform duration-[80ms] ease-linear" data-ore-fill="true"></div>
+      <div class="relative z-[2] text-[10.5px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
+    </div>
+  `;
+}
+
 /** Builds overlay HTML for Mine Pit rock and weather meteor HP bars. */
 export function buildMineOreBarsHtml(bars: OreHpScreen[]): string {
-  return bars
-    .map((b) => {
-      if (b.isMeteor) {
-        const wDef = getWeatherById(b.meteorWeatherId ?? 'light_rain');
-        return `
-              <div class="absolute flex flex-col items-center gap-1 pointer-events-none select-none" data-ore-bar="${b.id}">
-                <div class="mam-pill rounded-lg bg-[#fff8e7] border-2 border-[#14111d] gap-1.5">
-                  ${meteorIconHtml(wDef.id, 15, wDef.name)}
-                  <span class="text-[10.5px] font-black uppercase tracking-[0.06em] leading-none text-[#14111d]">${wDef.name}</span>
-                  <span class="mam-pill-xs rounded text-[8.5px] uppercase tracking-wider bg-[#fde047] text-[#14111d] border border-[#14111d]">Meteor</span>
-                </div>
-                <div class="relative w-[184px] @max-[720px]:w-[156px] h-[22px] rounded-lg border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center">
-                  <div class="absolute inset-y-0 left-0 w-full origin-left will-change-transform transition-transform duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${wDef.glowColor},${wDef.accentColor})" data-ore-fill="true"></div>
-                  <div class="absolute inset-x-0 top-0 h-[44%] bg-gradient-to-b from-white/30 to-transparent pointer-events-none z-[1]"></div>
-                  <div class="absolute inset-0 flex justify-evenly pointer-events-none z-[1]">
-                    <span class="w-px h-full bg-black/35"></span>
-                    <span class="w-px h-full bg-black/35"></span>
-                    <span class="w-px h-full bg-black/35"></span>
-                  </div>
-                  <div class="relative z-[2] text-[11px] font-black tabular-nums tracking-wide text-white leading-none mam-outline-sm" data-ore-text="true"></div>
-                </div>
-              </div>
-            `;
-      }
-      if (b.pitEventKind) {
-        const ev = PIT_EVENT_DEFS[b.pitEventKind];
-        return `
-          <div class="absolute flex flex-col items-center gap-1 pointer-events-none select-none" data-ore-bar="${b.id}">
-            <div class="mam-pill-xs rounded-md bg-[#fff8e7] border-2 border-[#14111d]">
-              <span class="text-[9.5px] font-black uppercase tracking-[0.06em] leading-none text-[#14111d]">${ev.badgeText}</span>
-            </div>
-            <div class="relative w-28 h-[17px] rounded-md border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center">
-              <div class="absolute inset-y-0 left-0 w-full origin-left will-change-transform transition-transform duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${ev.colorHex}bb,${ev.colorHex})" data-ore-fill="true"></div>
-              <div class="relative z-[2] text-[10.5px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
-            </div>
-          </div>
-        `;
-      }
-      return `
-          <div class="absolute w-24 h-4 rounded-md border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center" data-ore-bar="${b.id}">
-            <div class="absolute inset-y-0 left-0 w-full origin-left will-change-transform bg-[linear-gradient(180deg,#38bdf8,#0284c7)] transition-transform duration-[80ms] ease-linear" data-ore-fill="true"></div>
-            <div class="relative z-[2] text-[10.5px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
-          </div>
-        `;
-    })
-    .join('');
+  return bars.map((b) => buildSingleMineOreBarHtml(b)).join('');
 }
 
 /** Builds overlay HTML for Tower Arena rock HP bars. */
@@ -267,6 +267,8 @@ export class WorldOverlayHudUi {
   private omegaLayerEl: HTMLElement | null = null;
   private readonly lastPlotLabelKeys = new Map<number, string>();
   private readonly plotLabelCache = new Map<number, { el: HTMLElement; x: number; y: number }>();
+  private readonly mineOreBarNodes = new Map<number, { key: string; el: HTMLElement }>();
+  private lastAutoDmgPopupAtMs = 0;
 
   constructor(
     private readonly state: GameState,
@@ -334,6 +336,7 @@ export class WorldOverlayHudUi {
       this.oreBarLayerEl.innerHTML = '';
       this.oreBarLayerEl.dataset.keys = '';
       this.oreBarCache.clear();
+      this.mineOreBarNodes.clear();
     }
     if (this.dmgLayerEl) {
       this.dmgLayerEl.innerHTML = '';
@@ -479,6 +482,7 @@ export class WorldOverlayHudUi {
         this.oreBarLayerEl.innerHTML = '';
         this.oreBarLayerEl.dataset.keys = '';
         this.oreBarCache.clear();
+        this.mineOreBarNodes.clear();
       }
       return;
     }
@@ -487,15 +491,45 @@ export class WorldOverlayHudUi {
         this.oreBarLayerEl.innerHTML = '';
         this.oreBarLayerEl.dataset.keys = '';
         this.oreBarCache.clear();
+        this.mineOreBarNodes.clear();
       }
       return;
     }
 
     const key = `mine:${bars.map((b) => `${b.id}:${b.meteorWeatherId ?? ''}:${b.pitEventKind ?? ''}`).join(',')}`;
     if (this.oreBarLayerEl.dataset.keys !== key) {
+      if (!this.oreBarLayerEl.dataset.keys?.startsWith('mine:')) {
+        this.oreBarLayerEl.innerHTML = '';
+        this.oreBarCache.clear();
+        this.mineOreBarNodes.clear();
+      }
       this.oreBarLayerEl.dataset.keys = key;
-      this.oreBarLayerEl.innerHTML = buildMineOreBarsHtml(bars);
-      this.oreBarCache.clear();
+
+      const activeIds = new Set<number>();
+      const scratch = document.createElement('div');
+      for (const b of bars) {
+        activeIds.add(b.id);
+        const barKey = `${b.meteorWeatherId ?? ''}:${b.pitEventKind ?? ''}`;
+        const existing = this.mineOreBarNodes.get(b.id);
+        if (existing && existing.key === barKey) continue;
+        if (existing) {
+          existing.el.remove();
+          this.oreBarCache.delete(`[data-ore-bar="${b.id}"]`);
+        }
+        scratch.innerHTML = buildSingleMineOreBarHtml(b).trim();
+        const node = scratch.firstElementChild as HTMLElement | null;
+        if (node) {
+          this.oreBarLayerEl.appendChild(node);
+          this.mineOreBarNodes.set(b.id, { key: barKey, el: node });
+        }
+      }
+      for (const [id, existing] of this.mineOreBarNodes) {
+        if (!activeIds.has(id)) {
+          existing.el.remove();
+          this.mineOreBarNodes.delete(id);
+          this.oreBarCache.delete(`[data-ore-bar="${id}"]`);
+        }
+      }
     }
 
     for (const b of bars) {
@@ -527,6 +561,7 @@ export class WorldOverlayHudUi {
 
     const key = `tower:${bars.map((b) => `${b.index}:${b.name}`).join(',')}`;
     if (this.oreBarLayerEl.dataset.keys !== key) {
+      this.mineOreBarNodes.clear();
       this.oreBarLayerEl.dataset.keys = key;
       this.oreBarLayerEl.innerHTML = buildTowerOreBarsHtml(bars);
       this.oreBarCache.clear();
@@ -612,6 +647,11 @@ export class WorldOverlayHudUi {
     const settings = this.settings.get();
     if (!settings.showDamagePopups) return;
     if (!this.dmgLayerEl || this.getUiContext().inspectedSlot !== null) return;
+    if (settings.graphicsQuality === 'low' && !isClick && !isCrit && !isPerfect) {
+      const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      if (nowMs - this.lastAutoDmgPopupAtMs < 140) return;
+      this.lastAutoDmgPopupAtMs = nowMs;
+    }
     const maxPopups = settings.graphicsQuality === 'low' ? 6 : 24;
     if (this.dmgLayerEl.childElementCount >= maxPopups) {
       this.dmgLayerEl.firstElementChild?.remove();
