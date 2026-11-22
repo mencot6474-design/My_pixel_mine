@@ -770,6 +770,7 @@ describe('Pure 3D Mine World', () => {
 
   it('runs full Gem Tower 10-wave loop: no passive HP drain, 5 rocks per wave, wave 10 boss, blessing, milestone 5, sweep & key buy', () => {
     const gs = new GameState();
+    gs.weatherId = 'light_rain';
     const startNow = 1_700_000_000_000;
     expect(gs.towerKeys).toBe(TOWER_MAX_KEYS);
 
