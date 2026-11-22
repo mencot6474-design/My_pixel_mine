@@ -215,8 +215,8 @@ export function buildMineStageAndChest(ctx: {
     ctx.clickableMeshes.push(ped.hitMesh);
   }
 
-  // Right Floating Satellite Chest on Vault Core Dais (x=10.25, y=0.55+0.48=1.03, z=1.65)
-  ctx.crateGroup.position.set(10.25, 1.03, 1.65);
+  // Right Floating Satellite Chest on Vault Core Dais (x=9.85, y=0.55+0.48=1.03, z=3.85)
+  ctx.crateGroup.position.set(9.85, 1.03, 3.85);
   const chestVisual = createProceduralTreasureChest({
     scale: 1.08,
     woodColor: 0x1e293b,

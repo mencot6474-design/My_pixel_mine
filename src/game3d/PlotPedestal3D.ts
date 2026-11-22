@@ -313,7 +313,10 @@ export class PlotPedestal3D {
     this.hitMesh = hitMesh;
     this.group.add(hitMesh);
 
-    mergeStaticMeshesByMaterial(this.podiumBodyGroup, new Set<THREE.Object3D>([holoLensDisc, thrusterPlume]));
+    mergeStaticMeshesByMaterial(
+      this.podiumBodyGroup,
+      new Set<THREE.Object3D>([holoLensDisc, thrusterPlume, frontApron])
+    );
 
     this.labelMat = new THREE.SpriteMaterial({
       transparent: true,
@@ -397,6 +400,7 @@ export class PlotPedestal3D {
         this.ringMat.emissive.setHex(0x22d3ee);
         this.holoDiscMat.color.setHex(0x22d3ee);
       }
+      this.thrusterPlumeMat.color.copy(this.ringMat.color);
       this.ringMat.emissiveIntensity = this.hovered ? 1.15 : 0.85;
       return;
     }
@@ -413,8 +417,10 @@ export class PlotPedestal3D {
     this.ringMat.emissive.set(enc.color);
     this.ringMat.emissiveIntensity = 1.05;
     this.holoDiscMat.color.set(enc.color);
+    this.thrusterPlumeMat.color.set(enc.color);
 
     const auraGroup = new THREE.Group();
+    auraGroup.position.y = this.hoverBobOffset;
 
     // 1. Clean Minimalist Ground Sigil Decal (serene slow drift, zero square clutter)
     const sigilTex = getEnchantSigilTexture();

@@ -59,6 +59,7 @@ import {
   type MineInputState,
 } from './MineSceneInput';
 import { configureSceneTextureSharpness } from './MeshHelpers3D';
+import { disposeObject3D } from './ChestVaultStation3D';
 
 export {
   applyCameraOrbitDrag,
@@ -959,6 +960,9 @@ export class MineScene3D {
     this.pedestals.forEach((p) => p.dispose());
     this.plotAttackController.dispose();
     this.chestVisual.dispose();
+    disposeObject3D(this.crateGroup);
+    this.stageNeonMat.dispose();
+    this.stageHoloMat.dispose();
     this.env.dispose();
     this.pit.dispose();
     this.shopWorld?.dispose();

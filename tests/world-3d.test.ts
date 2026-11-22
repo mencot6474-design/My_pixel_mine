@@ -3657,6 +3657,18 @@ describe('Pure 3D Mine World', () => {
     expect(ped.group.rotation.y).toBe(0);
     expect(ped.getVisualYaw()).toBeCloseTo(0.58, 4);
 
+    // Numeric slot plaque must survive mergeStaticMeshesByMaterial inside podiumBodyGroup
+    let hasPlaqueMesh = false;
+    ped.group.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.geometry instanceof THREE.PlaneGeometry) {
+        const p = obj.geometry.parameters;
+        if (Math.abs(p.width - 0.44) < 0.01 && Math.abs(p.height - 0.16) < 0.01) {
+          hasPlaqueMesh = true;
+        }
+      }
+    });
+    expect(hasPlaqueMesh).toBe(true);
+
     ped.update(0.05, 0.85);
     expect(ped.group.position.y).toBe(0.72);
     expect(Math.abs(ped.getHoverBobOffset())).toBeGreaterThan(0.005);
@@ -3782,11 +3794,11 @@ describe('Pure 3D Mine World', () => {
     const vaultDais = createVaultCoreDais({ crystalColor: '#38bdf8', cliffColor: '#1e293b' });
     vaultDais.group.updateMatrixWorld(true);
     const vaultBox = new THREE.Box3().setFromObject(vaultDais.group);
-    expect(vaultBox.min.x).toBeGreaterThan(8.3);
+    expect(vaultBox.min.x).toBeGreaterThan(8.0);
     expect(vaultBox.min.y).toBeLessThan(0);
     // Wing fin connects flush to floating rearDeck around y=1.1
     const finRay = new THREE.Raycaster(
-      new THREE.Vector3(10.0, 1.1, 1.65 + 1.48),
+      new THREE.Vector3(9.6, 1.1, 3.85 + 1.48),
       new THREE.Vector3(1, 0, 0)
     );
     expect(finRay.intersectObject(vaultDais.group, true).length).toBeGreaterThan(0);
@@ -3855,10 +3867,46 @@ describe('Pure 3D Mine World', () => {
     expect(envGroup.children).toHaveLength(0);
     expect(pedestals).toHaveLength(5);
     expect(pedestals[2].group.position.y).toBe(1.38);
-    expect(crateGroup.position.x).toBeCloseTo(10.25, 2);
+    expect(crateGroup.position.x).toBeCloseTo(9.85, 2);
     expect(crateGroup.position.y).toBeCloseTo(1.03, 2);
-    expect(crateGroup.position.z).toBeCloseTo(1.65, 2);
+    expect(crateGroup.position.z).toBeCloseTo(3.85, 2);
     pedestals.forEach((p) => p.dispose());
     built.chestVisual.dispose();
+
+    // TierAttackVfxPool3D debris & spark floorY must follow deep -1.95 pool floor instead of snapping to +0.08
+    const vfxPool = new TierAttackVfxPool3D();
+    const vfxCam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
+    const targetPt = { x: 0, y: PIT_FLOOR_Y, z: PIT_CENTER_Z };
+    vfxPool.fireTierAttack({
+      rarity: 'legendary',
+      chibiId: 'frost-mage',
+      colorHex: '#38bdf8',
+      target: targetPt,
+      allTargets: [targetPt],
+      areaScale: 0.72,
+      wideCenter: targetPt,
+    });
+    const poolInternal = vfxPool as unknown as {
+      debris: Array<{ active: boolean; floorY: number }>;
+      quads: Array<{ active: boolean; floorY: number; gravity: number }>;
+    };
+    let sawDebris = false;
+    let sawFallingSparks = false;
+    for (let step = 0; step < 8; step++) {
+      vfxPool.update(0.08, vfxCam);
+      for (const d of poolInternal.debris) {
+        if (!d.active) continue;
+        sawDebris = true;
+        expect(d.floorY).toBeLessThan(-1.0);
+      }
+      for (const q of poolInternal.quads) {
+        if (!q.active || q.gravity <= 0) continue;
+        sawFallingSparks = true;
+        expect(q.floorY).toBeLessThan(-1.0);
+      }
+    }
+    expect(sawDebris).toBe(true);
+    expect(sawFallingSparks).toBe(true);
+    vfxPool.dispose();
   });
 });

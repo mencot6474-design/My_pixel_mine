@@ -33,7 +33,7 @@ The user wants a dramatic visual pivot (**Opsi 2 — Open-Sky Circular Ring & Sa
    - Apply a gentle phase-offset hover bob (`±0.045m`) to `podiumBodyGroup`, `chibiSprite.group`, and `auraGroup` while keeping `PlotPedestal3D.group`, `hitMesh`, `labelSprite`, and `ChibiSprite3D` blitz axes rock-solid (`rotation.y === 0`).
 4. **Floating Satellite Wings (`ArenaWings3D.ts`, `MineSceneStage3D.ts`)**:
    - Upgrade `createNexusLeftGate` (left satellite) and `createVaultCoreDais` (right satellite) with tapered floating keels and downward anti-grav thruster cones.
-   - Reposition the right satellite + `crateGroup` (`Chest`) to `(10.25, 0.55, 1.65)` (chest at `(10.25, 1.03, 1.65)`) so the Vault Dais floats with a clean `~0.54m` sky gap outside the `r = 7.95m` circular ring and clears the right HUD `Daily` button cleanly on `1280×720`.
+   - Reposition the right satellite + `crateGroup` (`Chest`) to `(9.85, 0.55, 3.85)` (chest at `(9.85, 1.03, 3.85)`) so the Vault Dais floats with a clean sky gap outside the `r = 7.95m` circular ring and clears the right HUD `Daily` button cleanly on `1280×720`.
 5. **Arena-Wide Camera Framing (`MineScene3D.ts`, `MineSceneStage3D.ts`)**:
    - Pull Mine resting camera slightly back (`targetCamRadius = 20.4`, `getDefaultOrbitPitchForMode('mine') = -0.18`, `lookAtPos = (0, 0.85, 0.15)`) to frame the `15.9m` circular ring, all 5 floating pedestals, and both floating satellite wings without clipping `P3` under the top Overclock bar, while leaving all 5 other modes (`shop`, `altar`, `fusion`, `tower`, `omega`) untouched.
 
@@ -114,9 +114,9 @@ The user wants a dramatic visual pivot (**Opsi 2 — Open-Sky Circular Ring & Sa
    - Connect `leftGate.cableSocketWorld` and `vaultDais.cableSocketWorld` to the circular ring's flank anchor nodes (`(±7.90, 0.0, 1.35)`) and distant spire buoys via catenary energy conduits + `InstancedMesh` flowing pulses.
 2. **Floating Satellite Wings (`ArenaWings3D.ts`)**:
    - **Left Satellite Nexus Gate** centered at `(-11.4, 0.55, 1.15)` (`yaw = +0.26 rad`): add a tapered octagonal floating island keel + downward anti-grav thruster cone beneath `lowerPlinth` (`local y = -0.95 .. 0`), keeping all gate slabs bottom-origin `[0..h]` and `cableSocketWorld` computed on the north pillar top.
-   - **Right Satellite Vault Core Dais** centered at `(10.25, 0.55, 1.65)` (`yaw = -0.26 rad` around `(10.25, 1.65)`):
+   - **Right Satellite Vault Core Dais** centered at `(9.85, 0.55, 3.85)` (`yaw = -0.26 rad` around `(9.85, 3.85)`):
      - Raised floating octagonal dais at `y = 0.55` with tapered floating underside keel + downward anti-grav thruster glow (`local y = -0.85 .. 0`), plus rear shield fins sitting flush on `rearDeck`, separated by a clean sky gap from the `r = 7.95m` circular arena ring.
-     - `crateGroup` (`Chest`) sits on top of the dais at `(10.25, 1.03, 1.65)` with `chestVisual.group.rotation.y = -Math.PI / 2 - 0.28`, placing it below the HUD `Daily`/`Trophy` rail on `1280×720` so the Chest is unoccluded and cleanly clickable.
+     - `crateGroup` (`Chest`) sits on top of the dais at `(9.85, 1.03, 3.85)` with `chestVisual.group.rotation.y = -Math.PI / 2 - 0.28`, placing it below the HUD `Daily`/`Trophy` rail on `1280×720` so the Chest is unoccluded and cleanly clickable.
 
 ---
 

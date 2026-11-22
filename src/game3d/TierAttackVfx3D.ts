@@ -734,7 +734,7 @@ export class TierAttackVfxPool3D {
       slot.active = true;
       slot.age = 0;
       slot.life = 0.45 + Math.random() * 0.22;
-      slot.floorY = Math.max(0.08, y - 0.35);
+      slot.floorY = Math.max(y < -0.5 ? -1.9 : 0.08, y - 0.35);
       slot.vx = Math.cos(a) * spd;
       slot.vy = 3.2 + Math.random() * 3.8;
       slot.vz = Math.sin(a) * spd;
@@ -759,7 +759,7 @@ export class TierAttackVfxPool3D {
     slot.active = true;
     slot.age = 0;
     slot.life = opts.life ?? 0.34;
-    slot.floorY = opts.floorY ?? 0.06;
+    slot.floorY = opts.floorY ?? (opts.y < -0.5 ? -1.92 : 0.06);
     slot.vx = opts.vx ?? 0;
     slot.vy = opts.vy ?? 0;
     slot.vz = opts.vz ?? 0;
@@ -822,7 +822,7 @@ export class TierAttackVfxPool3D {
         s0: 0.45 + Math.random() * 0.32,
         s1: 0.06,
         life: 0.24 + Math.random() * 0.2,
-        floorY: Math.max(0.06, y - 0.5),
+        floorY: Math.max(y < -0.5 ? -1.92 : 0.06, y - 0.5),
         vx: Math.cos(a) * spd,
         vy: 1.8 + Math.random() * 3.6,
         vz: Math.sin(a) * spd,

@@ -236,6 +236,7 @@ export function createNexusLeftGate(options: ArenaWingOptions = {}): NexusLeftGa
       veilMat.dispose();
       plumeMat.dispose();
       chevronGeo.dispose();
+      chevronInst.dispose();
       disposeObject3D(group);
     },
   };
@@ -270,10 +271,10 @@ export function createVaultCoreDais(options: ArenaWingOptions = {}): VaultCoreDa
     flatShading: true,
   });
 
-  // Floating octagonal Vault Core Dais at (10.25, 0.55, 1.65) (clean ~0.65m sky gap outside r=7.95 ring)
-  const daisX = 10.25;
+  // Floating octagonal Vault Core Dais at (9.85, 0.55, 3.85) (clean sky gap outside r=7.95 ring & clears Daily HUD row)
+  const daisX = 9.85;
   const daisY = 0.55;
-  const daisZ = 1.65;
+  const daisZ = 3.85;
 
   const vaultKeel = new THREE.Mesh(new THREE.CylinderGeometry(1.46, 0.42, 0.66, 8), baseMat);
   vaultKeel.position.set(daisX, daisY - 0.33, daisZ);
@@ -400,6 +401,7 @@ export function createVaultCoreDais(options: ArenaWingOptions = {}): VaultCoreDa
     dispose(): void {
       plumeMat.dispose();
       prismGeo.dispose();
+      prismInst.dispose();
       disposeObject3D(group);
     },
   };

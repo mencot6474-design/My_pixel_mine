@@ -201,6 +201,7 @@ export class MineEnvironment3D {
       `,
     });
     this.dustPoints = new THREE.Points(this.dustGeo, this.dustMat);
+    this.dustPoints.raycast = () => {};
     this.group.add(this.dustPoints);
 
     this.setPalette(palette);
@@ -248,8 +249,8 @@ export class MineEnvironment3D {
     // Sweeping Catenary Power Tethers (merged per side so left/right bounding centers stay outside central sky window)
     const leftChains: THREE.Vector3[][] = [
       [
-        new THREE.Vector3(-8.2, 0.0, 1.65),
-        new THREE.Vector3(-9.7, -0.35, 1.45),
+        new THREE.Vector3(-7.9, 0.0, 1.65),
+        new THREE.Vector3(-9.6, -0.35, 1.45),
         new THREE.Vector3(-11.4, 0.55, 1.15),
       ],
       [
@@ -265,13 +266,13 @@ export class MineEnvironment3D {
     ];
     const rightChains: THREE.Vector3[][] = [
       [
-        new THREE.Vector3(8.2, 0.0, 1.65),
-        new THREE.Vector3(9.2, -0.25, 1.65),
-        new THREE.Vector3(10.25, 0.55, 1.65),
+        new THREE.Vector3(7.6, 0.0, 3.55),
+        new THREE.Vector3(8.75, -0.25, 3.7),
+        new THREE.Vector3(9.85, 0.55, 3.85),
       ],
       [
         this.vaultDais.cableSocketWorld.clone(),
-        new THREE.Vector3(14.8, 2.35, -4.2),
+        new THREE.Vector3(14.8, 2.5, -2.5),
         new THREE.Vector3(17.2, 2.95, -9.2),
       ],
       [
@@ -355,13 +356,14 @@ export class MineEnvironment3D {
     chestHovered = false,
     chestBounce = 0
   ): void {
+    const safeDt = Math.min(Math.max(0, dtSec), 0.1);
     for (const c of this.clouds) {
-      c.group.position.x += c.speed * dtSec;
+      c.group.position.x += c.speed * safeDt;
       if (c.group.position.x > 26) c.group.position.x = -26;
     }
 
-    this.leftGate.update(dtSec, elapsed);
-    this.vaultDais.update(dtSec, elapsed, chestHovered, chestBounce);
+    this.leftGate.update(safeDt, elapsed);
+    this.vaultDais.update(safeDt, elapsed, chestHovered, chestBounce);
 
     this.cyberDeckTrimMat.emissiveIntensity = 1.0 + Math.sin(elapsed * 2.2) * 0.14;
     if (!this.lowQuality) {
@@ -390,6 +392,8 @@ export class MineEnvironment3D {
   public dispose(): void {
     this.leftGate.dispose();
     this.vaultDais.dispose();
+    this.voidShardsInst.dispose();
+    this.cableFlowInst?.dispose();
     this.dustGeo.dispose();
     this.dustMat.dispose();
     disposeObject3D(this.group);
