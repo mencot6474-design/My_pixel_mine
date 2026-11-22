@@ -8,6 +8,13 @@ import {
 } from './ChibiCatalog';
 import { getWindupGlintTexture } from './ProceduralTextures3D';
 import { applySharpSpriteTexture } from './MeshHelpers3D';
+import {
+  buildTierMotionWaypoints,
+  getRaritySecondaryColor,
+  sampleTierMotionWaypoints,
+  type TierMotionWaypoint,
+  type WorldPoint3,
+} from './TierAttackVfx3D';
 
 interface LoadedPoseMeta {
   texture: THREE.Texture;
@@ -136,6 +143,16 @@ export class ChibiSprite3D {
   private readonly baseShadowOpacity: number;
   private readonly ghostMeshes: THREE.Mesh[] = [];
   private readonly ghostMats: THREE.MeshBasicMaterial[] = [];
+  private readonly blitzGhosts: Array<{
+    mesh: THREE.Mesh;
+    mat: THREE.MeshBasicMaterial;
+    life: number;
+    maxLife: number;
+    face: 1 | -1;
+    rz: number;
+  }> = [];
+  private readonly blitzCloneMesh: THREE.Mesh;
+  private readonly blitzCloneMat: THREE.MeshBasicMaterial;
   private readonly glintMesh: THREE.Mesh;
   private readonly glintMat: THREE.MeshBasicMaterial;
 
@@ -143,15 +160,23 @@ export class ChibiSprite3D {
   private readonly spriteHeight: number;
   private readonly phaseOffset: number;
   private readonly worldPos = new THREE.Vector3();
+  private readonly blitzAnchorWorld = new THREE.Vector3();
+  private readonly blitzScaleWorld = new THREE.Vector3(1, 1, 1);
 
   private animState: ChibiAnimState = 'idle';
   private facing: 1 | -1 = 1;
   private accentColorHex: string;
+  private secondaryColorHex: string;
   private showcaseTimer = 0;
   private attackSwingTimer = 0;
   private attackSwingDuration = 0.42;
   private attackComboStep = 0;
   private nextComboStep = 0;
+  private blitzActive = false;
+  private blitzTimer = 0;
+  private blitzDuration = 0.65;
+  private blitzGhostAccum = 0;
+  private blitzTracks: { hero: TierMotionWaypoint[]; clone?: TierMotionWaypoint[] } | null = null;
   private idlePixelHeight: number | null = null;
   private currentSpriteHeight: number;
   private topTrimRatio = 0;
@@ -166,6 +191,7 @@ export class ChibiSprite3D {
     this.currentSpriteHeight = spriteHeight;
     this.phaseOffset = phaseOffset;
     this.accentColorHex = def.accentColor;
+    this.secondaryColorHex = getRaritySecondaryColor(def.rarity);
 
     this.material = new THREE.MeshBasicMaterial({
       transparent: true,
@@ -221,6 +247,36 @@ export class ChibiSprite3D {
     }
 
     this.group.add(this.spritePivot);
+
+    for (let i = 0; i < 6; i++) {
+      const bgMat = new THREE.MeshBasicMaterial({
+        color: this.accentColorHex,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      const bgMesh = new THREE.Mesh(new THREE.PlaneGeometry(spriteHeight * 0.85, spriteHeight), bgMat);
+      bgMesh.visible = false;
+      this.group.add(bgMesh);
+      this.blitzGhosts.push({ mesh: bgMesh, mat: bgMat, life: 0, maxLife: 0.3, face: 1, rz: 0 });
+    }
+
+    this.blitzCloneMat = new THREE.MeshBasicMaterial({
+      color: this.secondaryColorHex,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    this.blitzCloneMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(spriteHeight * 0.85, spriteHeight),
+      this.blitzCloneMat
+    );
+    this.blitzCloneMesh.visible = false;
+    this.group.add(this.blitzCloneMesh);
 
     const shadowTex = getSoftContactShadowTexture();
     this.baseShadowOpacity = shadowTex ? 0.85 : 0.3;
@@ -298,6 +354,18 @@ export class ChibiSprite3D {
         this.ghostMats[i].map = meta.texture;
         this.ghostMats[i].needsUpdate = true;
       }
+
+      for (let i = 0; i < this.blitzGhosts.length; i++) {
+        const bg = this.blitzGhosts[i];
+        bg.mesh.geometry.dispose();
+        bg.mesh.geometry = new THREE.PlaneGeometry(width, h);
+        bg.mat.map = meta.texture;
+        bg.mat.needsUpdate = true;
+      }
+      this.blitzCloneMesh.geometry.dispose();
+      this.blitzCloneMesh.geometry = new THREE.PlaneGeometry(width, h);
+      this.blitzCloneMat.map = meta.texture;
+      this.blitzCloneMat.needsUpdate = true;
 
       this.material.map = meta.texture;
       this.material.color.set(this.hologramMode ? this.hologramTintHex : '#ffffff');
@@ -413,6 +481,62 @@ export class ChibiSprite3D {
 
   public triggerShowcase(durationSec = 1.4): void {
     this.showcaseTimer = durationSec;
+  }
+
+  /**
+   * Triggers Rainbow-standard world-space multi-teleport blitz choreography across
+   * pit / tower / boss arenas without disturbing animGroup tests or pedestal scaling.
+   */
+  public triggerBlitz(opts: {
+    rarity: string;
+    targetX: number;
+    targetY: number;
+    targetZ: number;
+    allTargets?: readonly WorldPoint3[];
+    durationSec: number;
+    colorHex?: string;
+    secondaryHex?: string;
+  }): void {
+    if (this.hologramMode) return;
+    this.group.updateWorldMatrix(true, false);
+    this.group.getWorldPosition(this.blitzAnchorWorld);
+    this.group.getWorldScale(this.blitzScaleWorld);
+
+    const col = opts.colorHex ?? this.accentColorHex;
+    const sec = opts.secondaryHex ?? getRaritySecondaryColor(opts.rarity);
+    this.secondaryColorHex = sec;
+    this.blitzCloneMat.color.set(sec);
+
+    this.blitzDuration = Math.max(0.28, opts.durationSec);
+    this.blitzTimer = 0;
+    this.blitzGhostAccum = 0;
+    this.blitzActive = true;
+    this.blitzTracks = buildTierMotionWaypoints(
+      opts.rarity,
+      { x: this.blitzAnchorWorld.x, y: this.blitzAnchorWorld.y, z: this.blitzAnchorWorld.z },
+      { x: opts.targetX, y: opts.targetY, z: opts.targetZ },
+      opts.allTargets ?? [{ x: opts.targetX, y: opts.targetY, z: opts.targetZ }],
+      col,
+      sec
+    );
+  }
+
+  private spawnBlitzGhost(lx: number, ly: number, lz: number, rz: number, face: 1 | -1, col: string): void {
+    if (this.lowQuality) return;
+    for (let i = 0; i < this.blitzGhosts.length; i++) {
+      const g = this.blitzGhosts[i];
+      if (g.life <= 0) {
+        g.life = 0.28;
+        g.maxLife = 0.28;
+        g.face = face;
+        g.rz = rz;
+        g.mesh.position.set(lx, ly + this.currentSpriteHeight * 0.5, lz);
+        g.mat.color.set(col);
+        g.mat.opacity = 0.72;
+        g.mesh.visible = true;
+        return;
+      }
+    }
   }
 
   public update(dtSec: number, elapsed: number, camera: THREE.Camera): void {
@@ -635,8 +759,81 @@ export class ChibiSprite3D {
       }
     }
 
+    // Fade world-anchored blitz afterimages
+    for (let i = 0; i < this.blitzGhosts.length; i++) {
+      const bg = this.blitzGhosts[i];
+      if (bg.life > 0) {
+        bg.life = Math.max(0, bg.life - dtSec);
+        const gp = bg.life / bg.maxLife;
+        bg.mesh.quaternion.copy(this.spritePivot.quaternion);
+        bg.mesh.rotateZ(bg.rz);
+        bg.mat.opacity = gp * 0.72;
+        const sc = 1 + (1 - gp) * 0.22;
+        bg.mesh.scale.set(bg.face * sc, sc, 1);
+        if (bg.life <= 0) bg.mesh.visible = false;
+      }
+    }
+
+    if (this.blitzActive && this.blitzTracks) {
+      this.blitzTimer += dtSec;
+      const bp = Math.min(1, this.blitzTimer / this.blitzDuration);
+      const cur = sampleTierMotionWaypoints(this.blitzTracks.hero, bp);
+      const invX = 1 / Math.max(0.01, this.blitzScaleWorld.x);
+      const invY = 1 / Math.max(0.01, this.blitzScaleWorld.y);
+      const invZ = 1 / Math.max(0.01, this.blitzScaleWorld.z);
+      const lx = (cur.x - this.blitzAnchorWorld.x) * invX;
+      const ly = (cur.y - this.blitzAnchorWorld.y) * invY;
+      const lz = (cur.z - this.blitzAnchorWorld.z) * invZ;
+
+      this.spritePivot.position.set(lx, ly, lz);
+      if (this.facing !== cur.face) this.setFacing(cur.face);
+      if (this.animState !== cur.pose) this.setAnimState(cur.pose);
+
+      if (bp > 0.08 && bp < 0.88) {
+        this.blitzGhostAccum += dtSec;
+        if (this.blitzGhostAccum >= (cur.snapping ? 0.02 : 0.036)) {
+          this.blitzGhostAccum = 0;
+          const faceFlip = this.mesh.scale.x < 0 ? -1 : 1;
+          this.spawnBlitzGhost(lx, ly, lz, cur.rz, faceFlip, cur.col);
+        }
+      }
+
+      if (this.blitzTracks.clone) {
+        const cCur = sampleTierMotionWaypoints(this.blitzTracks.clone, bp);
+        this.blitzCloneMesh.visible = cCur.opacity > 0.05 && !this.lowQuality;
+        if (this.blitzCloneMesh.visible) {
+          const clx = (cCur.x - this.blitzAnchorWorld.x) * invX;
+          const cly = (cCur.y - this.blitzAnchorWorld.y) * invY;
+          const clz = (cCur.z - this.blitzAnchorWorld.z) * invZ;
+          this.blitzCloneMesh.position.set(clx, cly + this.currentSpriteHeight * 0.5, clz);
+          this.blitzCloneMesh.quaternion.copy(this.spritePivot.quaternion);
+          this.blitzCloneMesh.rotateZ(cCur.rz);
+          this.blitzCloneMesh.scale.set(cCur.face * cCur.scale, cCur.scale, 1);
+          this.blitzCloneMat.opacity = cCur.opacity;
+        }
+      } else {
+        this.blitzCloneMesh.visible = false;
+      }
+
+      this.shadowDisc.rotation.y = this.spritePivot.rotation.y;
+      this.shadowDisc.position.set(lx, 0.012, lz);
+      this.shadowDisc.scale.setScalar(Math.max(0.45, 1 - Math.max(0, ly) * 0.25));
+      this.shadowMat.opacity = this.baseShadowOpacity * Math.max(0.25, 1 - Math.max(0, ly) * 0.35);
+
+      if (bp >= 1) {
+        this.blitzActive = false;
+        this.blitzTracks = null;
+        this.blitzCloneMesh.visible = false;
+        this.spritePivot.position.set(0, 0, 0);
+        this.setAnimState('attack');
+      }
+      return;
+    }
+
     const yaw = this.spritePivot.rotation.y;
     const heightFactor = Math.max(0.42, 1 - posY * 1.45);
+    this.spritePivot.position.set(0, 0, 0);
+    this.blitzCloneMesh.visible = false;
     this.shadowDisc.rotation.y = yaw;
     this.shadowDisc.position.x = Math.cos(yaw) * posX * 0.65;
     this.shadowDisc.position.z = -Math.sin(yaw) * posX * 0.65;
@@ -658,6 +855,12 @@ export class ChibiSprite3D {
       this.ghostMeshes[i].geometry.dispose();
       this.ghostMats[i].dispose();
     }
+    for (let i = 0; i < this.blitzGhosts.length; i++) {
+      this.blitzGhosts[i].mesh.geometry.dispose();
+      this.blitzGhosts[i].mat.dispose();
+    }
+    this.blitzCloneMesh.geometry.dispose();
+    this.blitzCloneMat.dispose();
     this.shadowDisc.geometry.dispose();
     this.shadowMat.dispose();
   }

@@ -23,8 +23,10 @@ import type { TowerFighterConfig } from './TowerArena3D';
 import {
   getChibiAttackStyle,
   type PlotAttackStyle,
+  type SignatureProjectileArrival,
   SignatureProjectilePool3D,
 } from './SignatureProjectilePool3D';
+import { TierAttackVfxPool3D, type TierVfxHooks, type WorldPoint3 } from './TierAttackVfx3D';
 
 export interface OmegaStrikeEvent {
   slotIndex: number;
@@ -46,6 +48,7 @@ export interface OmegaTargetScreenAnchor {
 interface OmegaFighterEntry {
   slotIndex: number;
   chibiId: string;
+  rarity: ChibiDef['rarity'];
   style: PlotAttackStyle;
   sprite: ChibiSprite3D;
   fx: ChibiFieldFxController;
@@ -201,6 +204,7 @@ export class OmegaArena3D {
   private readonly targetsGroup = new THREE.Group();
   private readonly impactFx = new AttackImpactFxController();
   private readonly projectiles = new SignatureProjectilePool3D();
+  private readonly tierVfx = new TierAttackVfxPool3D();
   private readonly projVec = new THREE.Vector3();
   private lowQuality = false;
 
@@ -364,7 +368,7 @@ export class OmegaArena3D {
     this.podiumMats.push(this.entranceDropMat, this.entranceTargetMat, this.invulShieldMat);
     this.group.add(this.entranceDropBeam, this.entranceTargetRing, this.invulShieldMesh);
 
-    this.group.add(this.targetsGroup, this.impactFx.group, this.projectiles.group);
+    this.group.add(this.targetsGroup, this.impactFx.group, this.projectiles.group, this.tierVfx.group);
     this.setBossId('crimson-ronin');
   }
 
@@ -613,10 +617,15 @@ export class OmegaArena3D {
     }
   }
 
+  public setTierVfxHooks(hooks: TierVfxHooks): void {
+    this.tierVfx.setHooks(hooks);
+  }
+
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
     this.impactFx.setLowQuality(low);
     this.projectiles.setLowQuality(low);
+    this.tierVfx.setLowQuality(low);
     this.bossSprite?.setLowQuality(low);
     this.bossPodium?.setLowQuality(low);
     this.emberPoints.visible = !low;
@@ -763,6 +772,7 @@ export class OmegaArena3D {
       this.fighters.set(cfg.slotIndex, {
         slotIndex: cfg.slotIndex,
         chibiId: cfg.def.id,
+        rarity: cfg.def.rarity,
         style: getChibiAttackStyle(cfg.def),
         sprite,
         fx,
@@ -1014,7 +1024,34 @@ export class OmegaArena3D {
     const canAttack = this.battlePhase === 'active';
     if (!canAttack) {
       this.projectiles.clear();
+      this.tierVfx.clear();
     }
+
+    const handleOmegaArrival = (a: SignatureProjectileArrival): void => {
+      const fighter = this.fighters.get(a.slotIndex);
+      if (fighter) {
+        const bossPt: WorldPoint3 = { x: 0, y: this.bossStageY, z: BOSS_POS_Z + 0.25 };
+        const speedScale = Math.max(0.48, Math.min(1.05, a.attackInterval / 0.85));
+        this.tierVfx.fireTierAttack({
+          rarity: fighter.rarity,
+          colorHex: a.accentColor,
+          target: bossPt,
+          allTargets: [bossPt],
+          comboStep: a.comboStep,
+          speedScale,
+        });
+      }
+      onStrike?.({
+        slotIndex: a.slotIndex,
+        attackInterval: a.attackInterval,
+        dmg: a.dmg,
+        wx: a.ex,
+        wy: a.ey,
+        wz: a.ez,
+        accentColor: a.accentColor,
+      });
+    };
+
     for (const f of this.fighters.values()) {
       f.fx.update(elapsed);
       f.colorHex = f.fx.getAccentColor();
@@ -1027,7 +1064,21 @@ export class OmegaArena3D {
           f.attackCooldown = f.attackInterval;
           const step = f.comboStep;
           f.comboStep = (f.comboStep + 1) % 3;
+          const bossPt: WorldPoint3 = { x: 0, y: this.bossStageY, z: BOSS_POS_Z + 0.25 };
+          const blitzDur = Math.min(Math.max(0.42, f.attackInterval * 0.92), f.rarity === 'omega' ? 1.1 : 0.82);
+
           f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), step);
+          f.sprite.triggerBlitz({
+            rarity: f.rarity,
+            targetX: bossPt.x,
+            targetY: bossPt.y,
+            targetZ: bossPt.z,
+            allTargets: [bossPt],
+            durationSec: blitzDur,
+            colorHex: f.colorHex,
+          });
+          this.tierVfx.fireAnticipation(f.rarity, f.colorHex, bossPt, [bossPt]);
+
           this.projectiles.launch(
             {
               style: f.style,
@@ -1045,17 +1096,7 @@ export class OmegaArena3D {
               attackInterval: f.attackInterval,
               isBoss: true,
             },
-            (a) => {
-              onStrike?.({
-                slotIndex: a.slotIndex,
-                attackInterval: a.attackInterval,
-                dmg: a.dmg,
-                wx: a.ex,
-                wy: a.ey,
-                wz: a.ez,
-                accentColor: a.accentColor,
-              });
-            }
+            handleOmegaArrival
           );
         }
       } else {
@@ -1065,17 +1106,10 @@ export class OmegaArena3D {
     }
 
     if (canAttack) {
-      this.projectiles.step(safeDt, camera, (a) => {
-        onStrike?.({
-          slotIndex: a.slotIndex,
-          attackInterval: a.attackInterval,
-          dmg: a.dmg,
-          wx: a.ex,
-          wy: a.ey,
-          wz: a.ez,
-          accentColor: a.accentColor,
-        });
-      });
+      this.projectiles.step(safeDt, camera, handleOmegaArrival);
+      if (camera) {
+        this.tierVfx.update(safeDt, camera);
+      }
     }
 
     this.impactFx.update(safeDt, camera);
@@ -1083,6 +1117,7 @@ export class OmegaArena3D {
 
   public dispose(): void {
     this.projectiles.dispose();
+    this.tierVfx.dispose();
     if (this.bossSprite) {
       this.bossSprite.dispose();
       this.bossSprite = null;

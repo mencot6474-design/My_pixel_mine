@@ -720,3 +720,97 @@ export function getFusionPortalVortexTexture(): THREE.Texture {
     }
   });
 }
+
+/** Summoning hexagram rune seal for AoE & tier attack anchors. */
+export function getRuneSealTexture(): THREE.Texture {
+  return paintCachedTexture('vfx-rune-seal-v1', 256, 256, 1, 1, [255, 255, 255, 0], (ctx) => {
+    ctx.clearRect(0, 0, 256, 256);
+    const m = 128;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.92)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(m, m, 114, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.beginPath();
+    ctx.arc(m, m, 98, 0, Math.PI * 2);
+    ctx.stroke();
+
+    for (let rot = 0; rot < 2; rot++) {
+      ctx.beginPath();
+      for (let i = 0; i <= 3; i++) {
+        const a = (i / 3) * Math.PI * 2 + rot * (Math.PI / 3);
+        const x = m + Math.cos(a) * 98;
+        const y = m + Math.sin(a) * 98;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.72)';
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+    }
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(m + Math.cos(a) * 100, m + Math.sin(a) * 100);
+      ctx.lineTo(m + Math.cos(a) * 112, m + Math.sin(a) * 112);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Radial ground fracture fissures for lightning & meteor slams. */
+export function getGroundCrackTexture(): THREE.Texture {
+  return paintCachedTexture('vfx-ground-crack-v1', 256, 256, 1, 1, [255, 255, 255, 0], (ctx) => {
+    ctx.clearRect(0, 0, 256, 256);
+    const m = 128;
+    const g = ctx.createRadialGradient(m, m, 2, m, m, 90);
+    g.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+    g.addColorStop(0.45, 'rgba(255, 255, 255, 0.2)');
+    g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(m, m, 90, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    for (let arm = 0; arm < 7; arm++) {
+      const baseA = (arm / 7) * Math.PI * 2;
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(m, m);
+      let cx = m;
+      let cy = m;
+      for (let s = 1; s <= 4; s++) {
+        const a = baseA + (s % 2 === 0 ? 0.25 : -0.25);
+        cx += Math.cos(a) * 24;
+        cy += Math.sin(a) * 24;
+        ctx.lineTo(cx, cy);
+      }
+      ctx.stroke();
+    }
+  });
+}
+
+/** Soft additive flame/energy puff for meteor trails and orb wakes. */
+export function getFlamePuffTexture(): THREE.Texture {
+  return paintCachedTexture('vfx-flame-puff-v1', 128, 128, 1, 1, [255, 255, 255, 0], (ctx) => {
+    ctx.clearRect(0, 0, 128, 128);
+    const m = 64;
+    const g = ctx.createRadialGradient(m, m, 4, m, m, 56);
+    g.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    g.addColorStop(0.4, 'rgba(255, 255, 255, 0.72)');
+    g.addColorStop(0.75, 'rgba(255, 255, 255, 0.16)');
+    g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(m, m, 56, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}

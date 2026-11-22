@@ -713,6 +713,18 @@ export class PlotPedestal3D {
     this.chibiSprite.triggerAttack(durationSec, comboStep);
   }
 
+  public triggerChibiBlitz(opts: {
+    rarity: string;
+    targetX: number;
+    targetY: number;
+    targetZ: number;
+    allTargets?: ReadonlyArray<{ x: number; y: number; z: number }>;
+    durationSec: number;
+    colorHex?: string;
+  }): void {
+    this.chibiSprite?.triggerBlitz(opts);
+  }
+
   public setChibiFacing(sign: 1 | -1): void {
     this.chibiSprite?.setFacing(sign);
   }

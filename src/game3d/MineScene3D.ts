@@ -1,7 +1,14 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { ChibiDef, getChibiById } from './ChibiCatalog';
 import { ProceduralChestHandle } from './ChestVaultStation3D';
+import { ImpactFrameShader } from './MeshFx3D';
 import { PlotAttackController3D } from './PlotAttackController3D';
+import { type TierVfxHooks } from './TierAttackVfx3D';
 import { preloadCommonMineModels } from './GlbAssets3D';
 import { MineEnvironment3D } from './MineEnvironment3D';
 import { DEFAULT_WORLD_PALETTE, MineWorldPalette, OreVariantKey, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
@@ -197,6 +204,16 @@ export class MineScene3D {
   private readonly scene = new THREE.Scene();
   private readonly camera: THREE.PerspectiveCamera;
   private readonly renderer: THREE.WebGLRenderer;
+  private readonly composer: EffectComposer;
+  private readonly bloomPass: UnrealBloomPass;
+  private readonly impactPass: ShaderPass;
+  private impactFrameTimer = 0;
+  private impactFrameCooldown = 0;
+  private speedLinesTimer = 0;
+  private arenaDimTimer = 0;
+  private arenaDimCooldown = 0;
+  private arenaDimCurrent = 0;
+  private arenaDimTarget = 0;
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
 
@@ -287,6 +304,8 @@ export class MineScene3D {
     this.camera.updateProjectionMatrix();
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.maxPixelRatio));
     this.renderer.setSize(w, h);
+    this.composer.setSize(w, h);
+    this.bloomPass.setSize(w, h);
   };
 
   constructor(
@@ -320,6 +339,14 @@ export class MineScene3D {
     this.renderer.shadowMap.enabled = initialPreset.shadowsEnabled;
     this.renderer.shadowMap.type = this.graphicsQuality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     mountEl.appendChild(this.renderer.domElement);
+
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.24, 0.22, 0.9);
+    this.composer.addPass(this.bloomPass);
+    this.impactPass = new ShaderPass(ImpactFrameShader);
+    this.composer.addPass(this.impactPass);
+    this.composer.addPass(new OutputPass());
 
     // Urban Night Cyber Hemisphere + Directional Key & Cool Cyan Rim Light
     this.hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x3b4f6e, 1.18);
@@ -374,6 +401,7 @@ export class MineScene3D {
       this.clickableMeshes.push(m);
     }
     this.plotAttackController.setLowQuality(this.graphicsQuality === 'low');
+    this.plotAttackController.setTierVfxHooks(this.createTierVfxHooks());
     this.scene.add(this.plotAttackController.group);
 
     this.projector = new MineSceneProjector({
@@ -394,6 +422,37 @@ export class MineScene3D {
 
     this.bindEvents();
     this.loop(performance.now());
+  }
+
+  private createTierVfxHooks(): TierVfxHooks {
+    return {
+      onArenaDim: (level, _tintHex, duration) => {
+        if (this.arenaDimCooldown > 0) return;
+        this.arenaDimCooldown = 2.0;
+        this.arenaDimTarget = Math.min(0.65, level);
+        this.arenaDimTimer = Math.min(0.75, duration);
+      },
+      onImpactFrame: (strength, invert, tintHex, duration) => {
+        if (this.graphicsQuality === 'low' || this.impactFrameCooldown > 0) return;
+        this.impactFrameCooldown = 2.35;
+        this.impactPass.uniforms.uImpactStrength.value = strength;
+        this.impactPass.uniforms.uImpactInvert.value = invert;
+        (this.impactPass.uniforms.uTint.value as THREE.Color).set(tintHex);
+        this.impactFrameTimer = Math.min(0.055, duration);
+      },
+      onSpeedLines: (level, duration) => {
+        if (this.graphicsQuality === 'low') return;
+        this.impactPass.uniforms.uSpeedLines.value = Math.max(
+          this.impactPass.uniforms.uSpeedLines.value as number,
+          level * 0.75
+        );
+        this.speedLinesTimer = Math.max(this.speedLinesTimer, Math.min(0.28, duration));
+      },
+      onFlash: (_colorHex, strength) => {
+        if (this.graphicsQuality === 'low') return;
+        this.bloomPass.strength = Math.min(0.36, 0.24 + strength * 0.2);
+      },
+    };
   }
 
   private getTextureAnisoCap(): number {
@@ -429,6 +488,7 @@ export class MineScene3D {
     if (!this.towerArena) {
       const ta = new TowerArena3D();
       ta.setLowQuality(this.graphicsQuality === 'low');
+      ta.setTierVfxHooks(this.createTierVfxHooks());
       this.towerArena = ta;
       this.scene.add(ta.group);
       configureSceneTextureSharpness(this.renderer, ta.group, this.getTextureAnisoCap());
@@ -441,6 +501,7 @@ export class MineScene3D {
     if (!this.omegaArena) {
       const oa = new OmegaArena3D();
       oa.setLowQuality(this.graphicsQuality === 'low');
+      oa.setTierVfxHooks(this.createTierVfxHooks());
       this.omegaArena = oa;
       this.scene.add(oa.group);
       configureSceneTextureSharpness(this.renderer, oa.group, this.getTextureAnisoCap());
@@ -680,11 +741,41 @@ export class MineScene3D {
     if (inMine || this.mode === 'shop') {
       this.env.updateSky(this.elapsed, this.camera.position);
     }
+
+    // Smooth Domain Dim, Bloom Decay & Sakuga Impact Frame Post-FX
+    this.impactPass.uniforms.uTime.value = now * 0.001;
+    if (this.impactFrameCooldown > 0) this.impactFrameCooldown = Math.max(0, this.impactFrameCooldown - dtSec);
+    if (this.arenaDimCooldown > 0) this.arenaDimCooldown = Math.max(0, this.arenaDimCooldown - dtSec);
+    if (this.impactFrameTimer > 0) {
+      this.impactFrameTimer = Math.max(0, this.impactFrameTimer - dtSec);
+      if (this.impactFrameTimer <= 0) this.impactPass.uniforms.uImpactStrength.value = 0;
+    }
+    if (this.speedLinesTimer > 0) {
+      this.speedLinesTimer = Math.max(0, this.speedLinesTimer - dtSec);
+      if (this.speedLinesTimer <= 0) this.impactPass.uniforms.uSpeedLines.value = 0;
+    }
+    if (this.arenaDimTimer > 0) {
+      this.arenaDimTimer = Math.max(0, this.arenaDimTimer - dtSec);
+      if (this.arenaDimTimer <= 0) this.arenaDimTarget = 0;
+    }
+    const dimRate = this.arenaDimTarget > this.arenaDimCurrent ? 12 : 4.5;
+    this.arenaDimCurrent += (this.arenaDimTarget - this.arenaDimCurrent) * Math.min(1, dtSec * dimRate);
+    if (inMine && (this.arenaDimCurrent > 0.005 || this.arenaDimTarget > 0)) {
+      const k = 1 - this.arenaDimCurrent * 0.52;
+      this.hemiLight.intensity = 1.18 * k;
+      this.sunLight.intensity = 1.85 * k;
+    }
+    this.bloomPass.strength += (0.24 - this.bloomPass.strength) * Math.min(1, dtSec * 7);
+
     const shouldRenderFrame =
       !this.modalBackdropThrottled || now - this.lastThrottledRenderMs >= 33;
     if (shouldRenderFrame) {
       this.lastThrottledRenderMs = now;
-      this.renderer.render(this.scene, this.camera);
+      if (this.graphicsQuality === 'low') {
+        this.renderer.render(this.scene, this.camera);
+      } else {
+        this.composer.render();
+      }
       if (this.graphicsQuality !== 'low' || now - this.lastOverlayEmitMs >= 32) {
         this.lastOverlayEmitMs = now;
         this.projector.emitModeOverlays(this.mode, this.shopWorld, this.fusionWorld);
@@ -1180,6 +1271,7 @@ export class MineScene3D {
     this.towerArena?.dispose();
     this.omegaArena?.dispose();
     this.weatherFx.dispose();
+    this.composer.dispose();
     this.renderer.dispose();
   }
 }

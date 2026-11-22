@@ -11,6 +11,11 @@ import {
   type SignatureProjectileArrival,
   SignatureProjectilePool3D,
 } from './SignatureProjectilePool3D';
+import {
+  TierAttackVfxPool3D,
+  type TierVfxHooks,
+  type WorldPoint3,
+} from './TierAttackVfx3D';
 
 export { getChibiAttackStyle, type PlotAttackStyle };
 
@@ -48,6 +53,8 @@ export class PlotAttackController3D {
 
   private readonly units = new Map<number, PlotUnitState>();
   private readonly projectiles = new SignatureProjectilePool3D();
+  private readonly tierVfx = new TierAttackVfxPool3D();
+  private readonly alivePointScratch: WorldPoint3[] = [];
   private readonly originVec = new THREE.Vector3();
   private readonly tmpWorldPos = { x: 0, y: 0, z: 0 };
 
@@ -55,10 +62,16 @@ export class PlotAttackController3D {
 
   constructor() {
     this.group.add(this.projectiles.group);
+    this.group.add(this.tierVfx.group);
+  }
+
+  public setTierVfxHooks(hooks: TierVfxHooks): void {
+    this.tierVfx.setHooks(hooks);
   }
 
   public setLowQuality(low: boolean): void {
     this.projectiles.setLowQuality(low);
+    this.tierVfx.setLowQuality(low);
   }
 
   public setSlotUnit(
@@ -105,6 +118,7 @@ export class PlotAttackController3D {
 
   public clearProjectiles(): void {
     this.projectiles.clear();
+    this.tierVfx.clear();
   }
 
   private pickTarget(
@@ -210,6 +224,26 @@ export class PlotAttackController3D {
     const ped = pedestals[a.slotIndex];
     const originX = ped ? ped.group.position.x : a.sx;
     const originZ = ped ? ped.group.position.z : a.sz;
+    if (renderVisuals) {
+      const unit = this.units.get(a.slotIndex);
+      if (unit) {
+        const alive = pit.getAliveNodesInfo();
+        this.alivePointScratch.length = 0;
+        for (let ai = 0; ai < alive.length; ai++) {
+          const an = alive[ai];
+          this.alivePointScratch.push({ x: an.worldX, y: an.worldY, z: an.worldZ });
+        }
+        const speedScale = Math.max(0.48, Math.min(1.05, a.attackInterval / 0.85));
+        this.tierVfx.fireTierAttack({
+          rarity: unit.def.rarity,
+          colorHex: a.accentColor,
+          target: { x: a.ex, y: Math.max(0, a.ey - 0.65), z: a.ez },
+          allTargets: this.alivePointScratch,
+          comboStep: a.comboStep,
+          speedScale,
+        });
+      }
+    }
     this.applyImpact(
       pit,
       a.targetId,
@@ -265,10 +299,29 @@ export class PlotAttackController3D {
         const strikeDamage = Math.max(1, unit.dmg * attackInterval);
 
         if (renderVisuals && ped) {
+          this.alivePointScratch.length = 0;
+          for (let ai = 0; ai < alive.length; ai++) {
+            const an = alive[ai];
+            this.alivePointScratch.push({ x: an.worldX, y: an.worldY, z: an.worldZ });
+          }
+          const targetPt: WorldPoint3 = { x: target.worldX, y: target.worldY, z: target.worldZ };
+          const accentColor = ped.getActiveAccentColor();
+          const blitzDur = Math.min(Math.max(0.42, attackInterval * 0.94), unit.def.rarity === 'omega' ? 1.15 : 0.86);
+
           ped.setChibiFacing(target.worldX < pedX ? -1 : 1);
           ped.triggerChibiAttack(Math.min(0.45, attackInterval * 0.92), unit.comboStep);
+          ped.triggerChibiBlitz({
+            rarity: unit.def.rarity,
+            targetX: targetPt.x,
+            targetY: targetPt.y,
+            targetZ: targetPt.z,
+            allTargets: this.alivePointScratch,
+            durationSec: blitzDur,
+            colorHex: accentColor,
+          });
+          this.tierVfx.fireAnticipation(unit.def.rarity, accentColor, targetPt, this.alivePointScratch);
+
           ped.getAttackOriginWorldPosition(this.originVec);
-          const accentColor = ped.getActiveAccentColor();
           this.projectiles.launch(
             {
               style: unit.style,
@@ -283,6 +336,7 @@ export class PlotAttackController3D {
               ex: target.worldX,
               ey: target.worldY + 0.65,
               ez: target.worldZ,
+              attackInterval,
             },
             (a) => this.handleArrival(a, pit, pedestals, true, onOreBroken, onOreHit)
           );
@@ -309,6 +363,7 @@ export class PlotAttackController3D {
       this.projectiles.step(safeDt, camera, (a) =>
         this.handleArrival(a, pit, pedestals, true, onOreBroken, onOreHit)
       );
+      this.tierVfx.update(safeDt, camera);
     }
   }
 
@@ -317,5 +372,6 @@ export class PlotAttackController3D {
     this.disposed = true;
     this.units.clear();
     this.projectiles.dispose();
+    this.tierVfx.dispose();
   }
 }

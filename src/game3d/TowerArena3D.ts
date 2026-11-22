@@ -14,6 +14,7 @@ import {
   type SignatureProjectileArrival,
   SignatureProjectilePool3D,
 } from './SignatureProjectilePool3D';
+import { TierAttackVfxPool3D, type TierVfxHooks, type WorldPoint3 } from './TierAttackVfx3D';
 import {
   BossGravityRockSeed,
   BossHaloArcHandle,
@@ -146,6 +147,8 @@ export class TowerArena3D {
   private readonly fighters = new Map<number, TowerChibiFighter>();
   private readonly impactFx = new AttackImpactFxController({ floorY: 0.11 });
   private readonly projectiles = new SignatureProjectilePool3D();
+  private readonly tierVfx = new TierAttackVfxPool3D();
+  private readonly targetPtsScratch: WorldPoint3[] = [];
   private readonly shardGroup = new THREE.Group();
   private readonly sharedShardGeo = new THREE.OctahedronGeometry(0.14, 0);
   private readonly sharedRockGeo = new THREE.DodecahedronGeometry(0.125, 0);
@@ -221,6 +224,7 @@ export class TowerArena3D {
     this.sharedShardGeo.scale(0.75, 1.45, 0.75);
     this.group.add(this.impactFx.group);
     this.group.add(this.projectiles.group);
+    this.group.add(this.tierVfx.group);
     this.group.add(this.shardGroup);
 
     // 7. Boss Monolith Raycast Hitbox (keep at index 0 of clickables)
@@ -579,10 +583,15 @@ export class TowerArena3D {
     });
   }
 
+  public setTierVfxHooks(hooks: TierVfxHooks): void {
+    this.tierVfx.setHooks(hooks);
+  }
+
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
     this.impactFx.setLowQuality(low);
     this.projectiles.setLowQuality(low);
+    this.tierVfx.setLowQuality(low);
     this.bossSprite?.setLowQuality(low);
     for (let i = 0; i < this.spawnPodiums.length; i++) {
       this.spawnPodiums[i].setLowQuality(low);
@@ -886,13 +895,27 @@ export class TowerArena3D {
 
     if (this.paused) {
       this.projectiles.clear();
+      this.tierVfx.clear();
     }
 
     const handleProjectileArrival = (a: SignatureProjectileArrival): void => {
       if (this.paused) return;
+      const fighter = this.fighters.get(a.slotIndex);
+      const speedScale = Math.max(0.48, Math.min(1.05, a.attackInterval / 0.85));
       if (a.isBoss) {
         if (!this.bossWave) return;
         this.bounceTimer = Math.max(this.bounceTimer, 0.09);
+        if (fighter) {
+          const bossPt: WorldPoint3 = { x: 0, y: 0.8, z: BOSS_CENTER_Z + 0.85 };
+          this.tierVfx.fireTierAttack({
+            rarity: fighter.def.rarity,
+            colorHex: a.accentColor,
+            target: bossPt,
+            allTargets: [bossPt],
+            comboStep: a.comboStep,
+            speedScale,
+          });
+        }
         this.impactFx.spawnImpact({
           targetX: a.ex,
           targetY: 2.45,
@@ -924,6 +947,21 @@ export class TowerArena3D {
           rock = this.waveRocks.find((r) => r.alive) ?? rock;
         }
         if (!rock || !rock.alive) return;
+        if (fighter) {
+          this.targetPtsScratch.length = 0;
+          for (let ri = 0; ri < this.waveRocks.length; ri++) {
+            const wr = this.waveRocks[ri];
+            if (wr.alive) this.targetPtsScratch.push({ x: wr.x, y: 0.45, z: wr.z });
+          }
+          this.tierVfx.fireTierAttack({
+            rarity: fighter.def.rarity,
+            colorHex: a.accentColor,
+            target: { x: rock.x, y: 0.45, z: rock.z },
+            allTargets: this.targetPtsScratch,
+            comboStep: a.comboStep,
+            speedScale,
+          });
+        }
         onFighterStrike?.({
           slotIndex: a.slotIndex,
           targetOreIndex: rock.index,
@@ -964,7 +1002,26 @@ export class TowerArena3D {
             f.attackCooldown = f.attackInterval;
             const step = f.comboStep;
             f.comboStep = (f.comboStep + 1) % 3;
+            this.targetPtsScratch.length = 0;
+            for (let ri = 0; ri < this.waveRocks.length; ri++) {
+              const wr = this.waveRocks[ri];
+              if (wr.alive) this.targetPtsScratch.push({ x: wr.x, y: 0.45, z: wr.z });
+            }
+            const targetPt: WorldPoint3 = { x: targetRock.x, y: 0.45, z: targetRock.z };
+            const blitzDur = Math.min(Math.max(0.42, f.attackInterval * 0.92), f.def.rarity === 'omega' ? 1.1 : 0.82);
+
             f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), step);
+            f.sprite.triggerBlitz({
+              rarity: f.def.rarity,
+              targetX: targetRock.x,
+              targetY: 0.45,
+              targetZ: targetRock.z,
+              allTargets: this.targetPtsScratch,
+              durationSec: blitzDur,
+              colorHex: f.colorHex,
+            });
+            this.tierVfx.fireAnticipation(f.def.rarity, f.colorHex, targetPt, this.targetPtsScratch);
+
             this.projectiles.launch(
               {
                 style: f.style,
@@ -996,7 +1053,21 @@ export class TowerArena3D {
           f.attackCooldown = f.attackInterval;
           const step = f.comboStep;
           f.comboStep = (f.comboStep + 1) % 3;
+          const bossPt: WorldPoint3 = { x: 0, y: 0.8, z: BOSS_CENTER_Z + 0.85 };
+          const blitzDur = Math.min(Math.max(0.42, f.attackInterval * 0.92), f.def.rarity === 'omega' ? 1.1 : 0.82);
+
           f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), step);
+          f.sprite.triggerBlitz({
+            rarity: f.def.rarity,
+            targetX: bossPt.x,
+            targetY: bossPt.y,
+            targetZ: bossPt.z,
+            allTargets: [bossPt],
+            durationSec: blitzDur,
+            colorHex: f.colorHex,
+          });
+          this.tierVfx.fireAnticipation(f.def.rarity, f.colorHex, bossPt, [bossPt]);
+
           const bossTargetX = (Math.random() - 0.5) * 0.65;
           const bossTargetY = 2.15 + Math.random() * 0.45;
           this.projectiles.launch(
@@ -1028,12 +1099,16 @@ export class TowerArena3D {
 
     if (!this.paused) {
       this.projectiles.step(safeDt, camera, handleProjectileArrival);
+      if (camera) {
+        this.tierVfx.update(safeDt, camera);
+      }
     }
   }
 
   public dispose(): void {
     this.impactFx.dispose();
     this.projectiles.dispose();
+    this.tierVfx.dispose();
     for (const p of this.shardPool) {
       this.shardGroup.remove(p.mesh);
       if (p.ownsMat) (p.mesh.material as THREE.Material).dispose();
