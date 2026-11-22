@@ -506,7 +506,10 @@ export class PlotPedestal3D {
     forceMatrixUpdate = true
   ): THREE.Vector3 {
     if (this.chibiSprite) {
-      return this.chibiSprite.getLabelAnchorWorldPosition(out, extraLocalClearance, forceMatrixUpdate);
+      this.chibiSprite.getLabelAnchorWorldPosition(out, extraLocalClearance, forceMatrixUpdate);
+      // Keep projected HUD tier badge/nameplate vertically steady while 3D podium & sprite gently hover
+      out.y -= this.hoverBobOffset * this.group.scale.y;
+      return out;
     }
     return out.set(this.group.position.x, this.group.position.y + 3.85, this.group.position.z);
   }

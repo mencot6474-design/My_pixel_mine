@@ -3817,8 +3817,8 @@ describe('Pure 3D Mine World', () => {
     env.dispose();
   });
 
-  it('uses heroic -0.22 resting pitch for mine mode without altering other 5 scene modes', () => {
-    expect(getDefaultOrbitPitchForMode('mine')).toBe(-0.22);
+  it('uses wide arena -0.18 resting pitch for mine mode without altering other 5 scene modes', () => {
+    expect(getDefaultOrbitPitchForMode('mine')).toBe(-0.18);
     expect(getDefaultOrbitPitchForMode('shop')).toBe(0.02);
     expect(getDefaultOrbitPitchForMode('altar')).toBe(-0.18);
     expect(getDefaultOrbitPitchForMode('fusion')).toBe(-0.18);
@@ -3834,7 +3834,7 @@ describe('Pure 3D Mine World', () => {
       defaultYaw: 0,
       defaultPitch: getDefaultOrbitPitchForMode('mine'),
     });
-    expect(locked).toEqual({ yaw: 0, pitch: -0.22 });
+    expect(locked).toEqual({ yaw: 0, pitch: -0.18 });
   });
 
   it('floats crescent pedestals and chest cleanly with zero ground plinths in envGroup', () => {
