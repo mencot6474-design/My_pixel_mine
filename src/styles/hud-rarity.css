@@ -602,4 +602,18 @@
     filter: none !important;
   }
 
+  body.mam-quality-low .mam-fever-speedlines {
+    display: none;
+  }
+
+  body.mam-quality-low .mam-fever-frame-spin,
+  body.mam-quality-low .mam-notif-badge {
+    animation: none;
+  }
+
+  body.mam-quality-low .mam-fever-fill {
+    animation: none !important;
+    transition: none !important;
+  }
+
 }

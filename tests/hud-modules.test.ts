@@ -465,7 +465,7 @@ describe('Tahap B HUD Modules', () => {
     it('exposes exact graphics quality presets and normalizes invalid/out-of-range inputs', () => {
       expect(GRAPHICS_PRESETS.high).toEqual({ maxPixelRatio: 2, shadowsEnabled: true, weatherParticleScale: 1 });
       expect(GRAPHICS_PRESETS.medium).toEqual({ maxPixelRatio: 1.5, shadowsEnabled: true, weatherParticleScale: 0.5 });
-      expect(GRAPHICS_PRESETS.low).toEqual({ maxPixelRatio: 1, shadowsEnabled: false, weatherParticleScale: 0 });
+      expect(GRAPHICS_PRESETS.low).toEqual({ maxPixelRatio: 1.25, shadowsEnabled: false, weatherParticleScale: 0 });
 
       expect(normalizeGameSettings(null)).toEqual(DEFAULT_GAME_SETTINGS);
       expect(

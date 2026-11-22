@@ -265,6 +265,7 @@ export class MineScene3D {
   private adPaused = false;
   private modalBackdropThrottled = false;
   private lastThrottledRenderMs = 0;
+  private lastOverlayEmitMs = 0;
   private fpsFrames = 0;
   private fpsSampleStartMs = performance.now();
   private focusedPlotIndex: number | null = null;
@@ -394,7 +395,7 @@ export class MineScene3D {
   }
 
   private getTextureAnisoCap(): number {
-    return this.graphicsQuality === 'low' ? 4 : 8;
+    return 8;
   }
 
   private ensureShopWorld(): ShopWorld3D {
@@ -672,7 +673,10 @@ export class MineScene3D {
     if (shouldRenderFrame) {
       this.lastThrottledRenderMs = now;
       this.renderer.render(this.scene, this.camera);
-      this.projector.emitModeOverlays(this.mode, this.shopWorld, this.fusionWorld);
+      if (this.graphicsQuality !== 'low' || now - this.lastOverlayEmitMs >= 32) {
+        this.lastOverlayEmitMs = now;
+        this.projector.emitModeOverlays(this.mode, this.shopWorld, this.fusionWorld);
+      }
       this.fpsFrames++;
     }
     const fpsElapsedMs = now - this.fpsSampleStartMs;
@@ -694,6 +698,7 @@ export class MineScene3D {
   public setMode(mode: SceneMode): void {
     const modeChanged = this.mode !== mode;
     this.mode = mode;
+    this.lastOverlayEmitMs = 0;
     this.tapShakeIntensity = 0;
     this.weatherFx.setShopMode(mode === 'shop');
     this.weatherFx.setFeverTier(mode === 'mine' ? this.overclockTier : 0);

@@ -545,6 +545,7 @@ export class PlotPedestal3D {
     const sprite = new ChibiSprite3D(def, 2.05, this.index * 0.75);
     sprite.group.position.y = 0.28;
     sprite.setAnimState('aura');
+    sprite.setLowQuality(this.lowQuality);
     this.chibiSprite = sprite;
     this.group.add(sprite.group);
   }
@@ -660,6 +661,7 @@ export class PlotPedestal3D {
 
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
+    this.chibiSprite?.setLowQuality(low);
     if (this.auraOuterVeilMesh) {
       this.auraOuterVeilMesh.visible = !low;
     }

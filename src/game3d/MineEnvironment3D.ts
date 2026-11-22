@@ -387,12 +387,14 @@ export class MineEnvironment3D {
       [-12.2, 5.2],
       [12.2, 5.2],
     ];
+    const subInfraLeft = new THREE.Group();
+    const subInfraRight = new THREE.Group();
     for (const [px, pz] of subSpecs) {
       const pylon = new THREE.Mesh(subPylonGeo, darkMetalMat);
       pylon.position.set(px, -6.5, pz);
       const collar = new THREE.Mesh(subCollarGeo, this.cyberDeckTrimMat);
       collar.position.set(px, -2.2, pz);
-      this.group.add(pylon, collar);
+      (px < 0 ? subInfraLeft : subInfraRight).add(pylon, collar);
     }
 
     // 2. Lateral Distant City Conduit Towers tucked cleanly outside Void Black Hole / Bloodmoon azimuth windows
@@ -459,8 +461,11 @@ export class MineEnvironment3D {
       this.cableCurves.push(curve);
       const cableGeo = new THREE.TubeGeometry(curve, 14, 0.065, 6, false);
       const cableMesh = new THREE.Mesh(cableGeo, darkMetalMat);
-      this.group.add(cableMesh);
+      (cableChains[idx][0].x < 0 ? subInfraLeft : subInfraRight).add(cableMesh);
     }
+    mergeStaticMeshesByMaterial(subInfraLeft);
+    mergeStaticMeshesByMaterial(subInfraRight);
+    this.group.add(subInfraLeft, subInfraRight);
 
     // Animated Flowing Energy Pulses Along All Overhead Power Cables
     const pulseCount = this.cableCurves.length * 3;

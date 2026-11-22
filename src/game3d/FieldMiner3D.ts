@@ -220,6 +220,7 @@ export class FieldMiner3D {
 
   public setLowQuality(low: boolean): void {
     this.fx.setLowQuality(low);
+    this.sprite.setLowQuality(low);
   }
 
   public setCombatStats(dmg: number, speed: number, miningMult: number): void {

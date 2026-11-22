@@ -157,6 +157,7 @@ export class ChibiSprite3D {
   private topTrimRatio = 0;
   private hologramMode = false;
   private hologramTintHex = '#38bdf8';
+  private lowQuality = false;
   private disposed = false;
 
   constructor(def: ChibiDef, spriteHeight = 1.24, phaseOffset = 0) {
@@ -309,6 +310,15 @@ export class ChibiSprite3D {
       this.mesh.castShadow = !this.hologramMode;
     } catch {
       // Keep previous texture if asset fails to load
+    }
+  }
+
+  public setLowQuality(low: boolean): void {
+    this.lowQuality = low;
+    if (low) {
+      for (let i = 0; i < this.ghostMeshes.length; i++) {
+        this.ghostMeshes[i].visible = false;
+      }
     }
   }
 
@@ -601,11 +611,12 @@ export class ChibiSprite3D {
     }
 
     const baseHeightOffset = this.mesh.position.y;
+    const renderGhosts = showGhosts && !this.lowQuality;
     for (let i = 0; i < this.ghostMeshes.length; i++) {
       const gm = this.ghostMeshes[i];
       const gMat = this.ghostMats[i];
-      gm.visible = showGhosts;
-      if (showGhosts) {
+      gm.visible = renderGhosts;
+      if (renderGhosts) {
         const trailDist = 0.14 + i * 0.15;
         gm.position.set(
           posX - this.facing * trailDist,
