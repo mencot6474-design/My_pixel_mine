@@ -100,31 +100,32 @@ export function createNexusLeftGate(options: ArenaWingOptions = {}): NexusLeftGa
   plinthGroup.rotation.y = gateYaw;
 
   const lowerPlinth = new THREE.Mesh(createChamferSlabGeometry(3.2, 0.24, 5.2, 0.42, 0.02), baseMat);
-  lowerPlinth.position.y = 0.12;
+  lowerPlinth.position.y = 0;
   lowerPlinth.receiveShadow = true;
   lowerPlinth.castShadow = true;
 
   const upperPlinth = new THREE.Mesh(createChamferSlabGeometry(2.5, 0.2, 4.4, 0.34, 0.016), trimMat);
-  upperPlinth.position.y = 0.34;
+  upperPlinth.position.y = 0.24;
   upperPlinth.receiveShadow = true;
   upperPlinth.castShadow = true;
 
   const thresholdStrip = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 3.2), neonMat);
-  thresholdStrip.position.set(0.45, 0.45, 0);
+  thresholdStrip.position.set(0.45, 0.46, 0);
 
-  // Twin vertical monolith pillars framing the Nexus Gate
+  // Twin vertical monolith pillars framing the Nexus Gate (bottom-origin slabs stacked cleanly)
+  const pillarZOffset = 1.72;
   for (const sz of [-1, 1]) {
-    const pillarZ = sz * 1.72;
+    const pillarZ = sz * pillarZOffset;
     const pillarBase = new THREE.Mesh(createChamferSlabGeometry(0.95, 0.45, 0.95, 0.14, 0.016), baseMat);
-    pillarBase.position.set(0, 0.66, pillarZ);
+    pillarBase.position.set(0, 0.44, pillarZ);
     pillarBase.castShadow = true;
 
-    const pillarShaft = new THREE.Mesh(createChamferSlabGeometry(0.66, 3.35, 0.68, 0.1, 0.014), baseMat);
-    pillarShaft.position.set(0, 2.52, pillarZ);
+    const pillarShaft = new THREE.Mesh(createChamferSlabGeometry(0.66, 3.16, 0.68, 0.1, 0.014), baseMat);
+    pillarShaft.position.set(0, 0.89, pillarZ);
     pillarShaft.castShadow = true;
 
-    const innerNeon = new THREE.Mesh(new THREE.BoxGeometry(0.1, 3.1, 0.12), neonMat);
-    innerNeon.position.set(0.24, 2.52, pillarZ - sz * 0.26);
+    const innerNeon = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.96, 0.12), neonMat);
+    innerNeon.position.set(0.24, 2.37, pillarZ - sz * 0.26);
 
     const finial = createCyberMonolithForkFinial({
       frameMat: baseMat,
@@ -132,16 +133,16 @@ export function createNexusLeftGate(options: ArenaWingOptions = {}): NexusLeftGa
       coreMat: neonMat,
       scale: 0.92,
     });
-    finial.position.set(0, 4.2, pillarZ);
+    finial.position.set(0, 4.32, pillarZ);
     plinthGroup.add(pillarBase, pillarShaft, innerNeon, finial);
   }
 
-  // Overhead chamfered lintel arch
-  const lintel = new THREE.Mesh(createChamferSlabGeometry(0.92, 0.42, 4.3, 0.18, 0.016), trimMat);
-  lintel.position.set(0, 4.18, 0);
+  // Overhead chamfered lintel arch spanning pillar tops (y = 3.96..4.32)
+  const lintel = new THREE.Mesh(createChamferSlabGeometry(0.92, 0.36, 4.3, 0.18, 0.016), trimMat);
+  lintel.position.set(0, 3.96, 0);
   lintel.castShadow = true;
   const lintelNeon = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 3.35), neonMat);
-  lintelNeon.position.set(0.42, 4.18, 0);
+  lintelNeon.position.set(0.42, 4.14, 0);
 
   plinthGroup.add(lowerPlinth, upperPlinth, thresholdStrip, lintel, lintelNeon);
   staticGroup.add(plinthGroup);
@@ -151,7 +152,7 @@ export function createNexusLeftGate(options: ArenaWingOptions = {}): NexusLeftGa
   // Vertical translucent energy portal curtain (pure vertical gate plane)
   const veilMat = makePortalVeilMaterial(crystalHex);
   const veilMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.86, 3.5), veilMat);
-  veilMesh.position.set(gateCenterX, 2.22, gateCenterZ);
+  veilMesh.position.set(gateCenterX, 2.19, gateCenterZ);
   veilMesh.rotation.y = Math.PI / 2 + gateYaw;
   group.add(veilMesh);
 
@@ -190,7 +191,11 @@ export function createNexusLeftGate(options: ArenaWingOptions = {}): NexusLeftGa
 
   return {
     group,
-    cableSocketWorld: new THREE.Vector3(-11.4, 4.35, -1.02),
+    cableSocketWorld: new THREE.Vector3(
+      gateCenterX - pillarZOffset * Math.sin(gateYaw),
+      4.32,
+      gateCenterZ - pillarZOffset * Math.cos(gateYaw)
+    ),
     setPalette(nextCrystalHex: string, nextCliffHex: string): void {
       baseMat.color.setHex(0x162032).lerp(new THREE.Color(nextCliffHex), 0.18);
       neonMat.color.set(nextCrystalHex);
@@ -265,7 +270,7 @@ export function createVaultCoreDais(options: ArenaWingOptions = {}): VaultCoreDa
 
   // Rear vault anchor monolith & twin flank shield fins (strictly behind chest x >= 10.2 so chest raycasts stay open)
   const rearDeck = new THREE.Mesh(createChamferSlabGeometry(2.4, 0.28, 3.8, 0.32, 0.018), baseMat);
-  rearDeck.position.set(11.15, 0.14, daisZ);
+  rearDeck.position.set(11.15, 0, daisZ);
   rearDeck.receiveShadow = true;
   rearDeck.castShadow = true;
 
@@ -284,17 +289,18 @@ export function createVaultCoreDais(options: ArenaWingOptions = {}): VaultCoreDa
   staticGroup.add(lowerOct, upperOct, daisRing, rearDeck, rearPillar, rearFinial);
 
   for (const sz of [-1, 1]) {
+    const finGroup = new THREE.Group();
+    finGroup.position.set(10.85, 0.28, daisZ + sz * 1.48);
+    finGroup.rotation.set(0, sz * 0.22, 0.14);
+
     const wingFin = new THREE.Mesh(createChamferSlabGeometry(0.54, 1.65, 0.42, 0.08, 0.014), trimMat);
-    wingFin.position.set(10.85, 1.02, daisZ + sz * 1.48);
-    wingFin.rotation.z = 0.14;
-    wingFin.rotation.y = sz * 0.22;
     wingFin.castShadow = true;
 
     const finLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.35, 0.08), neonMat);
-    finLed.position.set(10.56, 1.04, daisZ + sz * 1.48);
-    finLed.rotation.z = 0.14;
-    finLed.rotation.y = sz * 0.22;
-    staticGroup.add(wingFin, finLed);
+    finLed.position.set(-0.29, 0.825, 0);
+
+    finGroup.add(wingFin, finLed);
+    staticGroup.add(finGroup);
   }
 
   mergeStaticMeshesByMaterial(staticGroup);

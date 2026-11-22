@@ -131,9 +131,9 @@ This overhaul converts the Mining World into a **Crescent Nexus Arena**: an anim
 - *(Designer's call — preserving shared camera math across all 6 modes)* Keep `baseCamPos.y = 11.7` unchanged so `shop`, `altar`, `fusion`, `tower`, and `omega` remain untouched and `stepMineSceneCamera` / `applyMineSceneModeTransition` keep using the existing cylindrical orbit formula `camY = (baseCamPos.y + pitch * 7) * (camRadius / 16.5)` and `camZ = lookAtPos.z + camRadius`.
 - Adjust **only** Mine mode's resting orbit parameters:
   - `getDefaultOrbitPitchForMode('mine')`: **`-0.22`** (was `0`, matching how `'tower'`/`'omega'`/`'altar'`/`'fusion'` set negative pitch for hero framing and keeping `cameraLocked` snapping to `-0.22`)
-  - `lookAtPos`: `(0, 0.72, -0.35)` (was `(0, 0.55, 0.35)`)
-  - `targetCamRadius` / initial `camRadius`: **`17.6`** (was `18.8`)
-  - Sync initial `MineScene3D` fields (`orbitPitch = -0.22`, `targetOrbitPitch = -0.22`, `camRadius = 17.6`, `targetCamRadius = 17.6`, `baseCamPos = new THREE.Vector3(0, 11.7, 17.25)`) so frame-0 matches the resting orbit (`world camera ≈ (0, 10.84, 17.25)` vs old `(0, 13.33, 19.15)`).
+  - `lookAtPos`: `(0, 0.95, -0.35)` (was `(0, 0.55, 0.35)`)
+  - `targetCamRadius` / initial `camRadius`: **`18.4`** (was `18.8`)
+  - Sync initial `MineScene3D` fields (`orbitPitch = -0.22`, `targetOrbitPitch = -0.22`, `camRadius = 18.4`, `targetCamRadius = 18.4`, `baseCamPos = new THREE.Vector3(0, 11.7, 18.05)`) so frame-0 matches the resting orbit (`world camera ≈ (0, 11.33, 18.05)` vs old `(0, 13.33, 19.15)`).
 - Builder should verify in browser smoke test (`1280×720` desktop & `390×844` mobile portrait) that:
   - All 5 pedestals (`P1..P5`) including `P3` label & tier crest stay cleanly below the top currency HUD rail.
   - Both Left Nexus Gate and Right Chest Vault remain framed inside desktop viewport and accessible via orbit/zoom on mobile.

@@ -530,6 +530,7 @@ export class PlotAttackController3D {
   public dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.skillPulseHook = undefined;
     this.units.clear();
     this.pendingStrikes.length = 0;
     this.tierVfx.dispose();

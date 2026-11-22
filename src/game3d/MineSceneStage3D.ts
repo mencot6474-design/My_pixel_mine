@@ -241,7 +241,7 @@ export function buildMineStageAndChest(ctx: {
       createChamferSlabGeometry(spec.w, tierH, spec.d, 0.38, 0.02),
       tierDarkMat
     );
-    plinth.position.set(spec.x, tierH * 0.5 - 0.08, spec.z);
+    plinth.position.set(spec.x, -0.08, spec.z);
     plinth.rotation.y = spec.yaw;
     plinth.receiveShadow = true;
     plinth.castShadow = true;
@@ -250,7 +250,7 @@ export function buildMineStageAndChest(ctx: {
       createChamferSlabGeometry(spec.w - 0.28, 0.06, spec.d - 0.28, 0.3, 0.012),
       tierDeckMat
     );
-    deckPlate.position.set(spec.x, spec.y - 0.02, spec.z);
+    deckPlate.position.set(spec.x, spec.y - 0.06, spec.z);
     deckPlate.rotation.y = spec.yaw;
     deckPlate.receiveShadow = true;
 

@@ -18,7 +18,7 @@ import {
   HOLD_MINE_INTERVAL_SEC,
   stepHoldMineTimer,
 } from '../src/game3d/MineScene3D';
-import { STAGE_CRESCENT_SLOTS } from '../src/game3d/MineSceneStage3D';
+import { buildMineStageAndChest, STAGE_CRESCENT_SLOTS } from '../src/game3d/MineSceneStage3D';
 import { createNexusLeftGate, createVaultCoreDais } from '../src/game3d/ArenaWings3D';
 import { AudioManager } from '../src/audio/AudioManager';
 import {
@@ -3723,6 +3723,23 @@ describe('Pure 3D Mine World', () => {
     const gateBox = new THREE.Box3().setFromObject(leftGate.group);
     expect(gateBox.max.x).toBeLessThan(-7.5);
     expect(gateBox.max.y).toBeGreaterThan(3.5);
+    expect(gateBox.min.y).toBeLessThanOrEqual(0.01);
+    expect(gateBox.max.y).toBeLessThan(5.2);
+
+    // North pillar shaft must span y=1.6 with zero vertical air gap & match cableSocketWorld XZ
+    const pillarRay = new THREE.Raycaster(
+      new THREE.Vector3(leftGate.cableSocketWorld.x - 1.5, 1.6, leftGate.cableSocketWorld.z),
+      new THREE.Vector3(1, 0, 0)
+    );
+    expect(pillarRay.intersectObject(leftGate.group, true).length).toBeGreaterThan(0);
+    const socketTopRay = new THREE.Raycaster(
+      new THREE.Vector3(leftGate.cableSocketWorld.x, 6, leftGate.cableSocketWorld.z),
+      new THREE.Vector3(0, -1, 0)
+    );
+    const socketTopHits = socketTopRay.intersectObject(leftGate.group, true);
+    expect(socketTopHits.length).toBeGreaterThan(0);
+    expect(socketTopHits[0].point.y).toBeGreaterThanOrEqual(4.0);
+
     let gateInstanced = 0;
     leftGate.group.traverse((obj) => {
       if (obj instanceof THREE.InstancedMesh) gateInstanced += 1;
@@ -3741,6 +3758,14 @@ describe('Pure 3D Mine World', () => {
     vaultDais.group.updateMatrixWorld(true);
     const vaultBox = new THREE.Box3().setFromObject(vaultDais.group);
     expect(vaultBox.min.x).toBeGreaterThan(6.8);
+    expect(vaultBox.min.y).toBeLessThanOrEqual(0.01);
+    // Wing fin must connect flush to rearDeck around y=0.5 (not float at y=1.02)
+    const finRay = new THREE.Raycaster(
+      new THREE.Vector3(9.5, 0.5, 0.15 + 1.48),
+      new THREE.Vector3(1, 0, 0)
+    );
+    expect(finRay.intersectObject(vaultDais.group, true).length).toBeGreaterThan(0);
+
     let vaultInstanced = 0;
     vaultDais.group.traverse((obj) => {
       if (obj instanceof THREE.InstancedMesh) vaultInstanced += 1;
@@ -3786,5 +3811,34 @@ describe('Pure 3D Mine World', () => {
       defaultPitch: getDefaultOrbitPitchForMode('mine'),
     });
     expect(locked).toEqual({ yaw: 0, pitch: -0.22 });
+  });
+
+  it('grounds crescent plinths flush beneath each pedestal elevation without swallowing podiums', () => {
+    const stageScene = new THREE.Scene();
+    const envGroup = new THREE.Group();
+    const pedestals: PlotPedestal3D[] = [];
+    const clickableMeshes: THREE.Object3D[] = [];
+    const crateGroup = new THREE.Group();
+    const built = buildMineStageAndChest({
+      palette: DEFAULT_WORLD_PALETTE,
+      scene: stageScene,
+      envGroup,
+      pedestals,
+      clickableMeshes,
+      crateGroup,
+    });
+    envGroup.updateMatrixWorld(true);
+
+    for (const slot of STAGE_CRESCENT_SLOTS) {
+      const ray = new THREE.Raycaster(new THREE.Vector3(slot.x, 5, slot.z), new THREE.Vector3(0, -1, 0));
+      const hits = ray.intersectObject(envGroup, true);
+      expect(hits.length).toBeGreaterThan(0);
+      expect(hits[0].point.y).toBeCloseTo(slot.y, 2);
+    }
+
+    const stageBox = new THREE.Box3().setFromObject(envGroup);
+    expect(stageBox.min.y).toBeLessThanOrEqual(0);
+    pedestals.forEach((p) => p.dispose());
+    built.chestVisual.dispose();
   });
 });
