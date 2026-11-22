@@ -247,6 +247,9 @@ export class MineScene3D {
     }
     this.plotAttackController.setLowQuality(this.graphicsQuality === 'low');
     this.plotAttackController.setTierVfxHooks(this.createTierVfxHooks());
+    this.plotAttackController.setSkillPulseHook((colorHex, strength) => {
+      this.pit.triggerSkillPulse(colorHex, strength);
+    });
     this.scene.add(this.plotAttackController.group);
 
     this.projector = new MineSceneProjector({

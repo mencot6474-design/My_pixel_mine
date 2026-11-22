@@ -371,6 +371,45 @@ export function getQuarryFloorTexture(stoneHex: string, crystalHex: string): THR
   });
 }
 
+export function getNexusArenaFloorTexture(stoneHex: string, crystalHex: string): THREE.Texture {
+  return paintCachedTexture(`nexus-arena-floor|${stoneHex}|${crystalHex}`, 256, 256, 1, 1, [11, 17, 30, 255], (ctx) => {
+    // Dark-matte cyber-slate crater floor so additive GLSL skill shaders pop cleanly
+    ctx.fillStyle = mixHex('#0b111e', stoneHex, 0.14);
+    ctx.fillRect(0, 0, 256, 256);
+
+    const radial = ctx.createRadialGradient(128, 128, 12, 128, 128, 134);
+    radial.addColorStop(0, mixHex('#131d33', crystalHex, 0.12));
+    radial.addColorStop(0.62, mixHex('#0b111e', stoneHex, 0.12));
+    radial.addColorStop(1, '#070b14');
+    ctx.fillStyle = radial;
+    ctx.fillRect(0, 0, 256, 256);
+
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
+    ctx.lineWidth = 1;
+    const gridStep = 32;
+    for (let i = gridStep; i < 256; i += gridStep) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, 256);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(256, i);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = crystalHex;
+    ctx.globalAlpha = 0.16;
+    ctx.lineWidth = 1.5;
+    for (const r of [42, 82, 114]) {
+      ctx.beginPath();
+      ctx.arc(128, 128, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  });
+}
+
 export function getHazardStripeTexture(accentHex = '#38bdf8'): THREE.Texture {
   return paintCachedTexture(`quarry-hazard3|${accentHex}`, 128, 64, 6, 1, [15, 23, 42, 255], (ctx) => {
     ctx.fillStyle = '#0f172a';

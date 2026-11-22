@@ -18,7 +18,7 @@ import {
 } from './OreBillboard3D';
 import {
   getHazardStripeTexture,
-  getQuarryFloorTexture,
+  getNexusArenaFloorTexture,
 } from './ProceduralTextures3D';
 import {
   applyNodeDamagePure,
@@ -144,6 +144,10 @@ export class OrePit3D {
   private readonly sweetSpotFloorMat: THREE.MeshBasicMaterial;
   private sweetSpot: { nodeId: number; age: number; duration: number } | null = null;
   private sweetSpotCooldownSec = 4.5;
+  private skillPulseTimer = 0;
+  private skillPulsePeakIntensity = 1.05;
+  private readonly skillPulseColor = new THREE.Color();
+  private readonly paletteColorHelper = new THREE.Color();
 
   constructor(palette: MineWorldPalette) {
     this.activePalette = palette;
@@ -287,13 +291,15 @@ export class OrePit3D {
     this.activeWorldId = resolveWorldIdFromPalette(palette);
 
     const cColor = new THREE.Color(palette.crystalColor);
-    this.floorMat.map = getQuarryFloorTexture(palette.pitFloorColor, palette.crystalColor);
+    this.floorMat.map = getNexusArenaFloorTexture(palette.pitFloorColor, palette.crystalColor);
     this.floorMat.needsUpdate = true;
     this.wallMat.color.setHex(0x161f30);
     this.trimMat.map = getHazardStripeTexture(palette.crystalColor);
     this.trimMat.needsUpdate = true;
     this.pitNeonMat.color.copy(cColor);
     this.pitNeonMat.emissive.copy(cColor);
+    this.pitNeonMat.emissiveIntensity = 1.05;
+    this.skillPulseTimer = 0;
     this.shardMat.color.copy(cColor);
     this.shardMat.emissive.copy(cColor);
 
@@ -709,6 +715,15 @@ export class OrePit3D {
     return list;
   }
 
+  public triggerSkillPulse(colorHex: string, strength = 1): void {
+    this.skillPulseColor.set(colorHex);
+    this.skillPulseTimer = 0.45;
+    this.skillPulsePeakIntensity = 1.05 + Math.min(1.4, Math.max(0.4, strength) * 1.15);
+    this.pitNeonMat.color.copy(this.skillPulseColor);
+    this.pitNeonMat.emissive.copy(this.skillPulseColor);
+    this.pitNeonMat.emissiveIntensity = this.skillPulsePeakIntensity;
+  }
+
   public setRespawnSpeedMult(mult: number): void {
     this.respawnSpeedMult = Math.max(0.5, mult);
   }
@@ -796,6 +811,14 @@ export class OrePit3D {
     }
 
     if (renderVisuals) {
+      if (this.skillPulseTimer > 0) {
+        this.skillPulseTimer = Math.max(0, this.skillPulseTimer - Math.min(dtSec, 0.1));
+        const t = this.skillPulseTimer / 0.45;
+        this.paletteColorHelper.set(this.activePalette.crystalColor);
+        this.pitNeonMat.color.copy(this.paletteColorHelper).lerp(this.skillPulseColor, t);
+        this.pitNeonMat.emissive.copy(this.pitNeonMat.color);
+        this.pitNeonMat.emissiveIntensity = 1.05 + (this.skillPulsePeakIntensity - 1.05) * t;
+      }
       stepOrePitShards(dtSec, {
         group: this.group,
         shardPool: this.shardPool,

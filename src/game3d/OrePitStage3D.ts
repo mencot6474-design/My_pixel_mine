@@ -16,7 +16,7 @@ import type { OreBillboard2D } from './OreBillboard3D';
 import { getSoftContactShadowTexture } from './OreBillboard3D';
 import {
   getHazardStripeTexture,
-  getQuarryFloorTexture,
+  getNexusArenaFloorTexture,
   getShockwaveRingTexture,
 } from './ProceduralTextures3D';
 
@@ -171,11 +171,11 @@ export function buildOrePitEnvironmentMeshes(ctx: {
 } {
   const { palette } = ctx;
   const pitEnvGroup = new THREE.Group();
-    // Sunlit Textured Sunken Quarry Floor (sits cleanly 0.68m below courtyard deck y=0)
+    // Dark-Matte Nexus Crater Floor (sits cleanly 0.68m below courtyard deck y=0)
     const floorMat = new THREE.MeshStandardMaterial({
-      map: getQuarryFloorTexture(palette.pitFloorColor, palette.crystalColor),
-      roughness: 0.85,
-      metalness: 0.05,
+      map: getNexusArenaFloorTexture(palette.pitFloorColor, palette.crystalColor),
+      roughness: 0.9,
+      metalness: 0.04,
     });
     const floorGeo = new THREE.BoxGeometry(11.8, 0.14, 9.2);
     const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -183,10 +183,10 @@ export function buildOrePitEnvironmentMeshes(ctx: {
     floor.receiveShadow = true;
     pitEnvGroup.add(floor);
 
-    // Full-Height Excavated Cyber-Slate Retaining Walls + Hazard Collar + Thin Neon Rim
+    // Continuous Cyber-Slate Containment Retaining Walls + Hazard Collar + Neon Rim
     const wallMat = new THREE.MeshStandardMaterial({
-      color: 0x2a3952,
-      roughness: 0.76,
+      color: 0x222f46,
+      roughness: 0.78,
       metalness: 0.1,
       flatShading: true,
     });
@@ -207,18 +207,11 @@ export function buildOrePitEnvironmentMeshes(ctx: {
     const pitW = 11.8;
     const pitD = 9.2;
     const wallH = 0.86;
-    // Open portals (pit centered at world z=1.85 -> world z=0.15 sits at local z=-1.70):
-    // - North center (x in [-1.3, +1.3]) for stepped cyber stairwell descending from deck
-    // - Left spur (local z in [-2.45, -0.95] -> world z=0.15) for sloped Drop Shaft shuttle entry
-    // - Right chute (local z in [-2.45, -0.95] -> world z=0.15) for inclined Plasma Refinery conveyor exit
     const wallSpecs: [number, number, number, number, number][] = [
-      [-3.6, -pitD / 2, 4.6, wallH, 0.36],
-      [3.6, -pitD / 2, 4.6, wallH, 0.36],
+      [0, -pitD / 2, pitW, wallH, 0.36],
       [0, pitD / 2, pitW, wallH, 0.36],
-      [-pitW / 2, -3.525, 0.36, wallH, 2.15],
-      [-pitW / 2, 1.825, 0.36, wallH, 5.55],
-      [pitW / 2, -3.525, 0.36, wallH, 2.15],
-      [pitW / 2, 1.825, 0.36, wallH, 5.55],
+      [-pitW / 2, 0, 0.36, wallH, pitD],
+      [pitW / 2, 0, 0.36, wallH, pitD],
     ];
     for (const [wx, wz, ww, wh, wd] of wallSpecs) {
       const wallGeo = new THREE.BoxGeometry(ww, wh, wd);
@@ -241,10 +234,9 @@ export function buildOrePitEnvironmentMeshes(ctx: {
       pitEnvGroup.add(neonRim);
     }
 
-    // Stepped inner basalt retaining ledge along bottom perimeter
+    // Stepped inner basalt retaining ledge along north & south pit walls
     const benchSpecs: [number, number, number, number][] = [
-      [-3.6, -pitD / 2 + 0.26, 4.4, 0.28],
-      [3.6, -pitD / 2 + 0.26, 4.4, 0.28],
+      [0, -pitD / 2 + 0.26, 11.4, 0.28],
       [0, pitD / 2 - 0.26, 11.4, 0.28],
     ];
     for (const [bx, bz, bw, bd] of benchSpecs) {
@@ -256,7 +248,7 @@ export function buildOrePitEnvironmentMeshes(ctx: {
       pitEnvGroup.add(bench);
     }
 
-    // Corner Cyber Steel Anchor Pylons + Glowing Beacon Collars framing the excavated pit rim
+    // Corner/Shoulder Cyber Anchor Pylons (NW/NE shifted to pit-local ±6.12, -3.70 = world ±6.12, -1.85 clear of P1/P5)
     const postMat = new THREE.MeshStandardMaterial({
       color: 0x223047,
       roughness: 0.44,
@@ -271,22 +263,24 @@ export function buildOrePitEnvironmentMeshes(ctx: {
     });
     const postGeo = new THREE.CylinderGeometry(0.24, 0.28, 1.04, 8);
     ctx.ownedMats.push(postMat, steelCapMat);
-    for (const sx of [-1, 1]) {
-      for (const sz of [-1, 1]) {
-        const px = sx * (pitW / 2);
-        const pz = sz * (pitD / 2);
-        const post = new THREE.Mesh(postGeo, postMat);
-        post.position.set(px, 0.52, pz);
-        post.castShadow = true;
-        const finial = createCyberLanternBollardFinial({
-          frameMat: postMat,
-          steelMat: steelCapMat,
-          coreMat: pitNeonMat,
-          scale: 0.86,
-        });
-        finial.position.set(px, 1.02, pz);
-        pitEnvGroup.add(post, finial);
-      }
+    const pylonCoords: [number, number][] = [
+      [-6.12, -3.7],
+      [6.12, -3.7],
+      [-pitW / 2, pitD / 2],
+      [pitW / 2, pitD / 2],
+    ];
+    for (const [px, pz] of pylonCoords) {
+      const post = new THREE.Mesh(postGeo, postMat);
+      post.position.set(px, 0.52, pz);
+      post.castShadow = true;
+      const finial = createCyberLanternBollardFinial({
+        frameMat: postMat,
+        steelMat: steelCapMat,
+        coreMat: pitNeonMat,
+        scale: 0.86,
+      });
+      finial.position.set(px, 1.02, pz);
+      pitEnvGroup.add(post, finial);
     }
     mergeStaticMeshesByMaterial(pitEnvGroup);
     pitEnvGroup.traverse((child) => {

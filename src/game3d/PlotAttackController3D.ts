@@ -128,6 +128,7 @@ export class PlotAttackController3D {
   private readonly aoeTargetsScratch: AliveNodeTarget[] = [];
   private readonly originVec = new THREE.Vector3();
   private readonly tmpWorldPos = { x: 0, y: 0, z: 0 };
+  private skillPulseHook?: (colorHex: string, strength: number) => void;
 
   private disposed = false;
 
@@ -137,6 +138,10 @@ export class PlotAttackController3D {
 
   public setTierVfxHooks(hooks: TierVfxHooks): void {
     this.tierVfx.setHooks(hooks);
+  }
+
+  public setSkillPulseHook(cb?: (colorHex: string, strength: number) => void): void {
+    this.skillPulseHook = cb;
   }
 
   public setLowQuality(low: boolean): void {
@@ -368,6 +373,10 @@ export class PlotAttackController3D {
           areaScale: MINE_PIT_VFX_SCALE,
           wideCenter,
         });
+        const r = unit.def.rarity;
+        if (r === 'secret' || r === 'fusion' || r === 'limited' || r === 'twin' || r === 'omega') {
+          this.skillPulseHook?.(a.accentColor, r === 'twin' || r === 'omega' ? 1.1 : 0.85);
+        }
       }
     }
     const arrivalUnit = this.units.get(a.slotIndex);

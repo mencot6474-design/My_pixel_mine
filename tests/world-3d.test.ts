@@ -3215,6 +3215,7 @@ describe('Pure 3D Mine World', () => {
   it('fires plot-to-pit signature attacks from pedestals in visual and background modes', () => {
     const controller = new PlotAttackController3D();
     const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    pit.setHpScale(10);
     const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
     cam.position.set(0, 11.7, 15.6);
     cam.lookAt(0, 0.55, -0.55);
@@ -3655,5 +3656,63 @@ describe('Pure 3D Mine World', () => {
     expect(origin.x).toBeCloseTo(-7.05 + Math.sin(0.46) * localFwd, 3);
     expect(origin.z).toBeCloseTo(-4.35 + Math.cos(0.46) * localFwd, 3);
     ped.dispose();
+  });
+
+  it('seals pit walls cleanly, keeps NW/NE pylons clear of P1/P5, and pulses pit trim on high-tier skills', () => {
+    const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    pit.group.updateMatrixWorld(true);
+
+    // Continuous north pit wall must block a vertical ray at x=0, world z=-2.75 (no stairwell gap)
+    const ray = new THREE.Raycaster(
+      new THREE.Vector3(0, 5, -2.75),
+      new THREE.Vector3(0, -1, 0)
+    );
+    const northHits = ray.intersectObject(pit.group, true);
+    expect(northHits.length).toBeGreaterThan(0);
+    expect(northHits[0].point.y).toBeGreaterThan(0);
+
+    // Relocated NW/NE pylons at world (±6.12, -1.85) sit clear of P1/P5 front aprons
+    const nwRay = new THREE.Raycaster(
+      new THREE.Vector3(-6.12, 5, -1.85),
+      new THREE.Vector3(0, -1, 0)
+    );
+    const nwHits = nwRay.intersectObject(pit.group, true);
+    expect(nwHits.length).toBeGreaterThan(0);
+    expect(nwHits[0].point.y).toBeGreaterThan(0.35);
+
+    (pit as unknown as { triggerSkillPulse: (hex: string, s?: number) => void }).triggerSkillPulse('#f43f5e', 1.0);
+    const neonMat = (pit as unknown as { pitNeonMat: THREE.MeshStandardMaterial }).pitNeonMat;
+    const pulsedIntensity = neonMat.emissiveIntensity;
+    expect(pulsedIntensity).toBeGreaterThan(1.4);
+    for (let i = 0; i < 12; i++) pit.update(0.05, i * 0.05, undefined, true);
+    expect(neonMat.emissiveIntensity).toBeLessThan(pulsedIntensity);
+
+    const pedTwin = new PlotPedestal3D(0, -7.05, -4.35, 0.46);
+    const pedCommon = new PlotPedestal3D(1, -3.6, -5.45, 0.24);
+    const twinDef = CHIBI_CATALOG.find((c) => c.rarity === 'twin')!;
+    const commonDef = CHIBI_CATALOG.find((c) => c.rarity === 'common')!;
+    pedTwin.setChibi(twinDef);
+    pedCommon.setChibi(commonDef);
+
+    const pulses: Array<{ color: string; strength: number }> = [];
+    const ctrl = new PlotAttackController3D() as PlotAttackController3D & {
+      setSkillPulseHook: (cb?: (colorHex: string, strength: number) => void) => void;
+    };
+    ctrl.setSkillPulseHook((color, strength) => pulses.push({ color, strength }));
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
+    ctrl.setSlotUnit(1, commonDef, { dmg: 100, speed: 1, miningMult: 1 });
+    for (let i = 0; i < 10; i++) ctrl.update(0.1, cam, pit, [pedTwin, pedCommon], true);
+    expect(pulses).toHaveLength(0);
+
+    ctrl.setSlotUnit(1, null);
+    ctrl.setSlotUnit(0, twinDef, { dmg: 100, speed: 1, miningMult: 1 });
+    for (let i = 0; i < 10; i++) ctrl.update(0.1, cam, pit, [pedTwin, pedCommon], true);
+    expect(pulses.length).toBeGreaterThanOrEqual(1);
+    expect(pulses[0].strength).toBeGreaterThanOrEqual(1.0);
+
+    pedTwin.dispose();
+    pedCommon.dispose();
+    ctrl.dispose();
+    pit.dispose();
   });
 });
