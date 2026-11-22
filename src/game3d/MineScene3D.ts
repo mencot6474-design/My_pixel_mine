@@ -426,6 +426,7 @@ export class MineScene3D {
   private ensureTowerArena(): TowerArena3D {
     if (!this.towerArena) {
       const ta = new TowerArena3D();
+      ta.setLowQuality(this.graphicsQuality === 'low');
       this.towerArena = ta;
       this.scene.add(ta.group);
       configureSceneTextureSharpness(this.renderer, ta.group, this.getTextureAnisoCap());
@@ -1124,6 +1125,7 @@ export class MineScene3D {
     this.weatherFx.setQualityScale(preset.weatherParticleScale);
     this.env.setLowQuality(low);
     this.pit.setLowQuality(low);
+    this.towerArena?.setLowQuality(low);
     for (let i = 0; i < this.pedestals.length; i++) {
       this.pedestals[i].setLowQuality(low);
     }

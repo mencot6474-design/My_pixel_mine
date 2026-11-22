@@ -179,6 +179,18 @@ export class OrePit3D {
   private readonly ownedGeos: THREE.BufferGeometry[] = [];
   private readonly ownedMats: THREE.Material[] = [];
   private readonly nodes: InternalOreNode[] = [];
+  private readonly aliveNodesSnapshot: Array<{
+    id: number;
+    worldX: number;
+    worldY: number;
+    worldZ: number;
+    hp: number;
+    maxHp: number;
+    variantKey: OreVariantKey;
+    isMeteor?: boolean;
+    meteorWeatherId?: WeatherId;
+    pitEventKind?: PitEventKind;
+  }> = [];
 
   private activePalette!: MineWorldPalette;
   private activeWorldId: WorldId = 'underground';
@@ -735,20 +747,12 @@ export class OrePit3D {
     meteorWeatherId?: WeatherId;
     pitEventKind?: PitEventKind;
   }> {
-    const list: Array<{
-      id: number;
-      worldX: number;
-      worldY: number;
-      worldZ: number;
-      hp: number;
-      maxHp: number;
-      variantKey: OreVariantKey;
-      isMeteor?: boolean;
-      meteorWeatherId?: WeatherId;
-      pitEventKind?: PitEventKind;
-    }> = this.nodes
-      .filter((n) => n.alive)
-      .map((n) => ({
+    const list = this.aliveNodesSnapshot;
+    list.length = 0;
+    for (let i = 0; i < this.nodes.length; i++) {
+      const n = this.nodes[i];
+      if (!n.alive) continue;
+      list.push({
         id: n.id,
         worldX: n.x,
         worldY: PIT_FLOOR_Y,
@@ -757,7 +761,8 @@ export class OrePit3D {
         maxHp: n.maxHp,
         variantKey: n.variant.key,
         pitEventKind: n.pitEventKind,
-      }));
+      });
+    }
     if (this.meteorNode.alive) {
       list.push({
         id: this.meteorNode.id,
@@ -779,8 +784,9 @@ export class OrePit3D {
   }
 
   public update(dtSec: number, elapsed: number, camera?: THREE.Camera, renderVisuals = true): void {
-    const allNodes = this.meteorNode.alive ? [...this.nodes, this.meteorNode] : this.nodes;
-    for (const node of allNodes) {
+    const nodeCount = this.nodes.length + (this.meteorNode.alive ? 1 : 0);
+    for (let idx = 0; idx < nodeCount; idx++) {
+      const node = idx < this.nodes.length ? this.nodes[idx] : this.meteorNode;
       if (!node.isMeteor && node.id >= this.activeNodeCount) continue;
       if (!node.alive) {
         if (node.respawnTimer > 0) {

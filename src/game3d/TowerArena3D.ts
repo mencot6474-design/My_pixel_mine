@@ -165,6 +165,7 @@ export class TowerArena3D {
   private lastFloor = 0;
   private lastWave = 0;
   private activeMiners = 0;
+  private lowQuality = false;
 
   constructor() {
     this.group.visible = false;
@@ -351,8 +352,10 @@ export class TowerArena3D {
         sprite.setAnimState('dash');
         sprite.setFacing(spawnPos.x <= 0 ? 1 : -1);
         sprite.setAccentColor(cfg.def.accentColor);
+        sprite.setLowQuality(this.lowQuality);
         this.fightersGroup.add(sprite.group);
         const fx = new ChibiFieldFxController(sprite.group, cfg.def.accentColor, cfg.slotIndex);
+        fx.setLowQuality(this.lowQuality);
 
         existing = {
           slotIndex: cfg.slotIndex,
@@ -450,6 +453,7 @@ export class TowerArena3D {
     sprite.group.scale.setScalar(3.35);
     sprite.setFacing(-1);
     sprite.setAnimState('aura');
+    sprite.setLowQuality(this.lowQuality);
     sprite.setAccentColor(nextDef.accentColor);
     this.monolithGroup.add(sprite.group);
     this.bossSprite = sprite;
@@ -581,6 +585,16 @@ export class TowerArena3D {
     });
   }
 
+  public setLowQuality(low: boolean): void {
+    this.lowQuality = low;
+    this.impactFx.setLowQuality(low);
+    this.bossSprite?.setLowQuality(low);
+    for (const f of this.fighters.values()) {
+      f.sprite.setLowQuality(low);
+      f.fx.setLowQuality(low);
+    }
+  }
+
   private spawnTowerShardsAt(
     lx: number,
     ly: number,
@@ -590,12 +604,14 @@ export class TowerArena3D {
     isShatter = false,
     isBoss = false
   ): void {
-    spawnTowerArenaShards(lx, ly, lz, colorHex, count, isShatter, isBoss, {
+    const safeCount = this.lowQuality ? (isShatter ? 3 : 1) : count;
+    spawnTowerArenaShards(lx, ly, lz, colorHex, safeCount, isShatter, isBoss, {
       shardPool: this.shardPool,
       shardGroup: this.shardGroup,
       sharedShardGeo: this.sharedShardGeo,
       sharedRockGeo: this.sharedRockGeo,
       rockChipMat: this.rockChipMat,
+      maxCap: this.lowQuality ? 8 : 64,
     });
   }
 

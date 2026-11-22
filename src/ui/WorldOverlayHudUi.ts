@@ -253,6 +253,7 @@ export class WorldOverlayHudUi {
       y: number;
       pct: string;
       text: string;
+      lastTextAtMs: number;
     }
   >();
   private dmgLayerEl: HTMLElement | null = null;
@@ -441,6 +442,7 @@ export class WorldOverlayHudUi {
         y: NaN,
         pct: '',
         text: '',
+        lastTextAtMs: 0,
       };
       this.oreBarCache.set(selector, entry);
     }
@@ -460,8 +462,10 @@ export class WorldOverlayHudUi {
       entry.fill.style.transform = `scaleX(${pctStr})`;
     }
 
+    const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
     const textStr = `${fmtShort(Math.ceil(hp))} / ${fmtShort(Math.ceil(maxHp))}`;
-    if (entry.txt && textStr !== entry.text) {
+    if (entry.txt && textStr !== entry.text && (hp <= 0 || entry.lastTextAtMs === 0 || nowMs - entry.lastTextAtMs >= 140)) {
+      entry.lastTextAtMs = nowMs;
       entry.text = textStr;
       entry.txt.textContent = textStr;
     }
@@ -608,7 +612,7 @@ export class WorldOverlayHudUi {
     const settings = this.settings.get();
     if (!settings.showDamagePopups) return;
     if (!this.dmgLayerEl || this.getUiContext().inspectedSlot !== null) return;
-    const maxPopups = settings.graphicsQuality === 'low' ? 10 : 24;
+    const maxPopups = settings.graphicsQuality === 'low' ? 6 : 24;
     if (this.dmgLayerEl.childElementCount >= maxPopups) {
       this.dmgLayerEl.firstElementChild?.remove();
     }

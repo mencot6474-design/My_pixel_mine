@@ -616,4 +616,14 @@
     transition: none !important;
   }
 
+  body.mam-quality-low #oreBarLayer [data-ore-fill='true'] {
+    transition: none !important;
+    will-change: auto !important;
+  }
+
+  body.mam-quality-low #oreBarLayer .mam-outline-sm,
+  body.mam-quality-low #dmgPopupLayer .mam-outline {
+    text-shadow: 0 1px 0 #000 !important;
+  }
+
 }

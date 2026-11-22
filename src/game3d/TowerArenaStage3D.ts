@@ -403,9 +403,10 @@ export interface TowerShardParticle {
       sharedShardGeo: THREE.BufferGeometry;
       sharedRockGeo: THREE.BufferGeometry;
       rockChipMat: THREE.Material;
+      maxCap?: number;
     }
   ): void {
-    const maxCap = 64;
+    const maxCap = ctx.maxCap ?? 64;
     for (let i = 0; i < count; i++) {
       if (ctx.shardPool.length >= maxCap) {
         const oldest = ctx.shardPool.shift();
