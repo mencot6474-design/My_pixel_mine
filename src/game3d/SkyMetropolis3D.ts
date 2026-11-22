@@ -3,6 +3,17 @@ import type { OverclockTier } from '../game/OverclockDomain';
 import { disposeObject3D } from './ChestVaultStation3D';
 import type { MineWorldPalette } from './MineWorldPalette';
 import { getBroadcastBannerTexture, getSkyscraperFacadeTexture } from './ProceduralTextures3D';
+import {
+  buildCyberZeppelin,
+  createSkyscraperShaftGeometry,
+  getCityMistTexture,
+  getRooftopHoloSignTexture,
+  getSearchlightBeamTexture,
+  getSkyscraperVariantTexture,
+  type HoloBillboardLabel,
+} from './SkyMetropolisAssets3D';
+
+type TowerArchetype = 0 | 1 | 2; // 0: Curtain Megatower, 1: Diagrid Tower, 2: Octagonal Arcology
 
 interface SkyscraperSeed {
   x: number;
@@ -10,9 +21,15 @@ interface SkyscraperSeed {
   w: number;
   d: number;
   topY: number;
+  rotY: number;
+  archetype: TowerArchetype;
+  hasSetback: boolean;
+  setbackH: number;
+  hasFins: boolean;
   hasCrown: boolean;
   hasRing: boolean;
   hasAntenna: boolean;
+  holoLabel: HoloBillboardLabel | null;
 }
 
 interface SearchlightBeam {
@@ -23,14 +40,33 @@ interface SearchlightBeam {
   basePitch: number;
 }
 
+interface SkyTrafficVehicle {
+  laneRadiusX: number;
+  laneRadiusZ: number;
+  centerZ: number;
+  y: number;
+  angle: number;
+  speed: number;
+  scaleX: number;
+}
+
+interface HoloBillboardEntry {
+  mesh: THREE.Mesh;
+  label: HoloBillboardLabel;
+  baseY: number;
+  phase: number;
+}
+
 const CITY_BASE_Y = -42;
-const BLIMP_START_X = 33.5;
-const BLIMP_END_X = -33.5;
-const BLIMP_BASE_Y = 2.15;
-const BLIMP_BASE_Z = -22.5;
-const BLIMP_SPEED = 2.55;
-const BLIMP_PAUSE_SEC = 1.8;
-const BLIMP_INITIAL_OFFSET_SEC = 3.4;
+const BLIMP_START_X = 37.0;
+const BLIMP_END_X = -37.0;
+const BLIMP_BASE_Y = 2.95;
+const BLIMP_BASE_Z = -21.5;
+const BLIMP_SPEED = 2.65;
+const BLIMP_PAUSE_SEC = 0.75;
+const BLIMP_INITIAL_OFFSET_SEC = 4.2;
+
+const HOLO_LABELS: readonly HoloBillboardLabel[] = ['MINE', 'CYBER', 'NEXUS'];
 
 function disableRaycast(obj: THREE.Object3D): void {
   obj.traverse((child) => {
@@ -40,39 +76,74 @@ function disableRaycast(obj: THREE.Object3D): void {
 
 function buildCitySeeds(): SkyscraperSeed[] {
   const seeds: SkyscraperSeed[] = [];
-  // High-altitude view: every skyscraper sits cleanly BELOW the floating sky arena (topY <= -4.8)
-  const rings: Array<{ count: number; rx: number; rz: number; cz: number; minTop: number; maxTop: number; wRange: [number, number] }> = [
-    // Deep abyss core towers directly below the floating pit & void shards
-    { count: 14, rx: 10.5, rz: 9.0, cz: 0.5, minTop: -15.5, maxTop: -9.5, wRange: [2.2, 3.4] },
+  const rings: Array<{
+    count: number;
+    rx: number;
+    rz: number;
+    cz: number;
+    minTop: number;
+    maxTop: number;
+    wRange: [number, number];
+  }> = [
+    // Deep abyss core towers below the floating pit & void shards
+    { count: 14, rx: 11.2, rz: 9.2, cz: 0.5, minTop: -14.0, maxTop: -8.5, wRange: [2.3, 3.6] },
     // Mid-ring metropolitan towers framing the floating arena perimeter
-    { count: 18, rx: 20.0, rz: 16.5, cz: -3.5, minTop: -12.0, maxTop: -6.2, wRange: [2.6, 4.0] },
-    // Outer skyline canyon extending across the wide lower horizon
-    { count: 22, rx: 35.0, rz: 24.0, cz: -18.0, minTop: -9.8, maxTop: -4.8, wRange: [2.8, 4.4] },
+    { count: 20, rx: 21.0, rz: 17.5, cz: -4.5, minTop: -10.2, maxTop: -4.4, wRange: [2.7, 4.2] },
+    // Outer skyline canyon with soaring lateral supertall flanks
+    { count: 24, rx: 36.0, rz: 25.0, cz: -18.5, minTop: -7.0, maxTop: -2.4, wRange: [3.0, 4.8] },
+    // Deep horizon megatowers
+    { count: 10, rx: 40.0, rz: 14.0, cz: -36.0, minTop: -5.2, maxTop: -0.6, wRange: [3.6, 5.4] },
   ];
 
   let idx = 0;
+  let holoCount = 0;
   for (let rIdx = 0; rIdx < rings.length; rIdx++) {
     const ring = rings[rIdx];
     for (let i = 0; i < ring.count; i++) {
-      const a = (i / ring.count) * Math.PI * 2 + rIdx * 0.41;
-      // Avoid crowding directly right in front of the elevated camera lens
-      if (rIdx === 2 && Math.sin(a) > 0.52 && Math.abs(Math.cos(a)) < 0.55) continue;
-      const jitterR = 0.82 + ((idx * 19) % 7) * 0.055;
+      const a = (i / ring.count) * Math.PI * 2 + rIdx * 0.43;
+      // Keep the elevated camera lens corridor clear
+      if (rIdx >= 2 && Math.sin(a) > 0.46 && Math.abs(Math.cos(a)) < 0.62) continue;
+      const jitterR = 0.84 + ((idx * 19) % 7) * 0.05;
       const x = Math.cos(a) * ring.rx * jitterR;
       const z = ring.cz + Math.sin(a) * ring.rz * jitterR;
 
-      const topY = ring.minTop + (((idx * 29 + 7) % 11) / 10) * (ring.maxTop - ring.minTop);
+      let topY = ring.minTop + (((idx * 29 + 7) % 11) / 10) * (ring.maxTop - ring.minTop);
+      // Raise outer lateral flanks (|x| >= 16.5) into dramatic canyon spires while keeping central upper sky clear (max < 4.2)
+      if (rIdx >= 2 && Math.abs(x) >= 16.5 && z < -8) {
+        topY = Math.min(0.6, topY + 2.0 + ((idx * 17) % 5) * 0.42);
+      }
+
       const w = ring.wRange[0] + (((idx * 13) % 5) / 4) * (ring.wRange[1] - ring.wRange[0]);
-      const d = w * (0.82 + ((idx * 7) % 4) * 0.12);
+      const d = w * (0.84 + ((idx * 7) % 4) * 0.11);
+      const archetype = (idx % 3) as TowerArchetype;
+      const hasSetback = rIdx >= 1 && idx % 3 !== 2;
+      const setbackH = hasSetback ? 2.6 + ((idx * 11) % 4) * 0.65 : 0;
+      const hasFins = hasSetback && idx % 2 === 0;
+      const hasCrown = idx % 2 === 0;
+      const hasRing = archetype === 2 || idx % 4 === 0;
+      const hasAntenna = topY > -7.5 && idx % 2 === 1;
+
+      let holoLabel: HoloBillboardLabel | null = null;
+      if (rIdx >= 1 && z < -6 && Math.abs(x) > 9.5 && topY > -6.5 && holoCount < 8 && idx % 3 === 1) {
+        holoLabel = HOLO_LABELS[holoCount % HOLO_LABELS.length];
+        holoCount += 1;
+      }
+
       seeds.push({
         x,
         z,
         w,
         d,
         topY,
-        hasCrown: idx % 2 === 0,
-        hasRing: idx % 3 === 0,
-        hasAntenna: topY > -8.5 && idx % 3 === 1,
+        rotY: (idx % 4) * (Math.PI * 0.25),
+        archetype,
+        hasSetback,
+        setbackH,
+        hasFins,
+        hasCrown,
+        hasRing,
+        hasAntenna,
+        holoLabel,
       });
       idx += 1;
     }
@@ -87,106 +158,237 @@ export class SkyMetropolis3D {
   private readonly blimpGroup = new THREE.Group();
   private readonly seeds: SkyscraperSeed[];
 
-  private readonly facadeMat: THREE.MeshStandardMaterial;
+  private readonly curtainMat: THREE.MeshStandardMaterial;
+  private readonly diagridMat: THREE.MeshStandardMaterial;
+  private readonly megacorpMat: THREE.MeshStandardMaterial;
   private readonly crownMat: THREE.MeshStandardMaterial;
   private readonly cityNeonMat: THREE.MeshBasicMaterial;
+  private readonly beaconMat: THREE.MeshBasicMaterial;
   private readonly searchlightMat: THREE.MeshBasicMaterial;
+  private readonly mistMat: THREE.MeshBasicMaterial;
 
-  private readonly shaftInst: THREE.InstancedMesh;
+  private readonly curtainShaftInst: THREE.InstancedMesh;
+  private readonly diagridShaftInst: THREE.InstancedMesh;
+  private readonly octaShaftInst: THREE.InstancedMesh;
+  private readonly setbackInst: THREE.InstancedMesh;
+  private readonly finInst: THREE.InstancedMesh;
   private readonly crownInst: THREE.InstancedMesh;
   private readonly ringInst: THREE.InstancedMesh;
   private readonly antennaInst: THREE.InstancedMesh;
+  private readonly beaconInst: THREE.InstancedMesh;
+  private readonly skyTrafficInst: THREE.InstancedMesh;
+
+  private readonly skyTraffic: SkyTrafficVehicle[] = [];
+  private readonly trafficDummy = new THREE.Object3D();
   private readonly searchlights: SearchlightBeam[] = [];
+  private readonly holoBillboards: HoloBillboardEntry[] = [];
+  private readonly holoSignMats: Record<HoloBillboardLabel, THREE.MeshBasicMaterial>;
 
   private readonly blimpHullMat: THREE.MeshStandardMaterial;
   private readonly blimpTrimMat: THREE.MeshStandardMaterial;
   private readonly blimpScreenMat: THREE.MeshBasicMaterial;
   private readonly blimpBeaconMat: THREE.MeshBasicMaterial;
+  private readonly blimpHoloBeamMat: THREE.MeshBasicMaterial;
+  private readonly blimpFanRotors: THREE.Group[] = [];
+  private readonly blimpEscortDrones: Array<{ group: THREE.Group; basePos: THREE.Vector3; phase: number }> = [];
   private readonly blimpFadableMats: Array<{ mat: THREE.Material; baseOpacity: number }> = [];
 
   private activeAccentHex: string;
   private overclockTier: 0 | OverclockTier = 0;
   private blimpScrollOffset = 0;
+  private lowQuality = false;
 
   constructor(palette: MineWorldPalette) {
     this.activeAccentHex = palette.crystalColor;
     this.seeds = buildCitySeeds();
 
-    const facadeTex = getSkyscraperFacadeTexture(palette.crystalColor);
-    this.facadeMat = new THREE.MeshStandardMaterial({
-      color: 0xdbeafe,
-      map: facadeTex,
-      emissive: new THREE.Color(0xffffff),
-      emissiveMap: facadeTex,
-      emissiveIntensity: 0.72,
-      roughness: 0.52,
-      metalness: 0.34,
-      flatShading: true,
-    });
+    const curtainTex = getSkyscraperFacadeTexture(palette.crystalColor);
+    const diagridTex = getSkyscraperVariantTexture('diagrid', palette.crystalColor);
+    const megacorpTex = getSkyscraperVariantTexture('megacorp', palette.crystalColor);
+
+    const makeTowerMat = (tex: THREE.Texture, emissiveIntensity: number) =>
+      new THREE.MeshStandardMaterial({
+        color: 0xdbeafe,
+        map: tex,
+        emissive: new THREE.Color(0xffffff),
+        emissiveMap: tex,
+        emissiveIntensity,
+        roughness: 0.48,
+        metalness: 0.38,
+        flatShading: true,
+      });
+
+    this.curtainMat = makeTowerMat(curtainTex, 0.78);
+    this.diagridMat = makeTowerMat(diagridTex, 0.82);
+    this.megacorpMat = makeTowerMat(megacorpTex, 0.88);
     this.crownMat = new THREE.MeshStandardMaterial({
-      color: 0x162238,
-      roughness: 0.45,
-      metalness: 0.48,
+      color: 0x111b30,
+      roughness: 0.42,
+      metalness: 0.52,
       flatShading: true,
     });
     this.cityNeonMat = new THREE.MeshBasicMaterial({
       color: palette.crystalColor,
       transparent: true,
-      opacity: 0.9,
+      opacity: 0.92,
+    });
+    this.beaconMat = new THREE.MeshBasicMaterial({
+      color: 0xf43f5e,
+      fog: false,
+      transparent: true,
+      opacity: 0.95,
     });
     this.searchlightMat = new THREE.MeshBasicMaterial({
       color: palette.crystalColor,
+      map: getSearchlightBeamTexture(),
       transparent: true,
-      opacity: 0.075,
+      opacity: 0.12,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    this.mistMat = new THREE.MeshBasicMaterial({
+      map: getCityMistTexture(palette.crystalColor),
+      transparent: true,
+      opacity: 0.22,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
 
-    // 1. Instanced Skyscraper Shafts + Rooftops + Flat Horizontal Rings + Antennas
-    const total = this.seeds.length;
+    this.holoSignMats = {
+      MINE: new THREE.MeshBasicMaterial({
+        map: getRooftopHoloSignTexture('MINE', palette.crystalColor),
+        transparent: true,
+        opacity: 0.92,
+        fog: false,
+        side: THREE.DoubleSide,
+      }),
+      CYBER: new THREE.MeshBasicMaterial({
+        map: getRooftopHoloSignTexture('CYBER', palette.crystalColor),
+        transparent: true,
+        opacity: 0.92,
+        fog: false,
+        side: THREE.DoubleSide,
+      }),
+      NEXUS: new THREE.MeshBasicMaterial({
+        map: getRooftopHoloSignTexture('NEXUS', palette.crystalColor),
+        transparent: true,
+        opacity: 0.92,
+        fog: false,
+        side: THREE.DoubleSide,
+      }),
+    };
+
+    // 1. Multi-Archetype Instanced Skyscrapers + Setbacks + Vertical Neon Fins + Crowns + Spires
+    const curtainSeeds = this.seeds.filter((s) => s.archetype === 0);
+    const diagridSeeds = this.seeds.filter((s) => s.archetype === 1);
+    const octaSeeds = this.seeds.filter((s) => s.archetype === 2);
+    const setbackSeeds = this.seeds.filter((s) => s.hasSetback);
+    const finSeeds = this.seeds.filter((s) => s.hasFins);
     const crownSeeds = this.seeds.filter((s) => s.hasCrown);
     const ringSeeds = this.seeds.filter((s) => s.hasRing);
     const antennaSeeds = this.seeds.filter((s) => s.hasAntenna);
 
-    this.shaftInst = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), this.facadeMat, total);
-    this.crownInst = new THREE.InstancedMesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      this.crownMat,
-      Math.max(1, crownSeeds.length)
-    );
-    const ringGeo = new THREE.RingGeometry(0.32, 0.44, 16);
+    const chamferGeo = createSkyscraperShaftGeometry();
+    const octaGeo = new THREE.CylinderGeometry(0.46, 0.56, 1, 8);
+    const ringGeo = new THREE.RingGeometry(0.32, 0.46, 16);
     ringGeo.rotateX(-Math.PI / 2);
+
+    this.curtainShaftInst = new THREE.InstancedMesh(chamferGeo, this.curtainMat, Math.max(1, curtainSeeds.length));
+    this.diagridShaftInst = new THREE.InstancedMesh(chamferGeo, this.diagridMat, Math.max(1, diagridSeeds.length));
+    this.octaShaftInst = new THREE.InstancedMesh(octaGeo, this.megacorpMat, Math.max(1, octaSeeds.length));
+    this.setbackInst = new THREE.InstancedMesh(chamferGeo, this.megacorpMat, Math.max(1, setbackSeeds.length));
+    this.finInst = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.16, 1, 0.16),
+      this.cityNeonMat,
+      Math.max(1, finSeeds.length * 2)
+    );
+    this.crownInst = new THREE.InstancedMesh(chamferGeo, this.crownMat, Math.max(1, crownSeeds.length));
     this.ringInst = new THREE.InstancedMesh(ringGeo, this.cityNeonMat, Math.max(1, ringSeeds.length));
     this.antennaInst = new THREE.InstancedMesh(
-      new THREE.CylinderGeometry(0.04, 0.08, 1, 6),
+      new THREE.CylinderGeometry(0.035, 0.09, 1, 6),
       this.cityNeonMat,
       Math.max(1, antennaSeeds.length)
     );
+    this.beaconInst = new THREE.InstancedMesh(
+      new THREE.OctahedronGeometry(0.16, 0),
+      this.beaconMat,
+      Math.max(1, antennaSeeds.length)
+    );
+
+    this.curtainShaftInst.count = curtainSeeds.length;
+    this.diagridShaftInst.count = diagridSeeds.length;
+    this.octaShaftInst.count = octaSeeds.length;
+    this.setbackInst.count = setbackSeeds.length;
+    this.finInst.count = finSeeds.length * 2;
+    this.crownInst.count = crownSeeds.length;
+    this.ringInst.count = ringSeeds.length;
+    this.antennaInst.count = antennaSeeds.length;
+    this.beaconInst.count = antennaSeeds.length;
 
     const dummy = new THREE.Object3D();
+    const shaftCounters: [number, number, number] = [0, 0, 0];
+    let setbackIdx = 0;
+    let finIdx = 0;
     let crownIdx = 0;
     let ringIdx = 0;
     let antIdx = 0;
-    for (let i = 0; i < total; i++) {
-      const s = this.seeds[i];
-      const h = Math.max(4, s.topY - CITY_BASE_Y);
+    const holoPlaneGeo = new THREE.PlaneGeometry(3.3, 1.65);
+
+    for (const s of this.seeds) {
+      const shaftTop = s.topY - s.setbackH;
+      const h = Math.max(4, shaftTop - CITY_BASE_Y);
       dummy.position.set(s.x, CITY_BASE_Y + h * 0.5, s.z);
-      dummy.rotation.set(0, (i % 4) * (Math.PI * 0.25), 0);
+      dummy.rotation.set(0, s.rotY, 0);
       dummy.scale.set(s.w, h, s.d);
       dummy.updateMatrix();
-      this.shaftInst.setMatrixAt(i, dummy.matrix);
 
+      if (s.archetype === 0) {
+        this.curtainShaftInst.setMatrixAt(shaftCounters[0]++, dummy.matrix);
+      } else if (s.archetype === 1) {
+        this.diagridShaftInst.setMatrixAt(shaftCounters[1]++, dummy.matrix);
+      } else {
+        this.octaShaftInst.setMatrixAt(shaftCounters[2]++, dummy.matrix);
+      }
+
+      if (s.hasSetback) {
+        const sw = s.w * 0.68;
+        const sd = s.d * 0.68;
+        dummy.position.set(s.x, shaftTop + s.setbackH * 0.5, s.z);
+        dummy.rotation.set(0, s.rotY, 0);
+        dummy.scale.set(sw, s.setbackH, sd);
+        dummy.updateMatrix();
+        this.setbackInst.setMatrixAt(setbackIdx++, dummy.matrix);
+
+        if (s.hasFins) {
+          const finH = s.setbackH + 1.45;
+          const cosR = Math.cos(s.rotY);
+          const sinR = Math.sin(s.rotY);
+          for (const side of [-1, 1]) {
+            const ox = side * (sw * 0.54);
+            dummy.position.set(s.x + ox * cosR, shaftTop + finH * 0.48, s.z - ox * sinR);
+            dummy.rotation.set(0, s.rotY, 0);
+            dummy.scale.set(1, finH, 1);
+            dummy.updateMatrix();
+            this.finInst.setMatrixAt(finIdx++, dummy.matrix);
+          }
+        }
+      }
+
+      const roofW = s.hasSetback ? s.w * 0.68 : s.w;
+      const roofD = s.hasSetback ? s.d * 0.68 : s.d;
       if (s.hasCrown) {
-        const crownH = 1.15;
+        const crownH = 1.1;
         dummy.position.set(s.x, s.topY + crownH * 0.5, s.z);
-        dummy.scale.set(s.w * 0.68, crownH, s.d * 0.68);
+        dummy.rotation.set(0, s.rotY, 0);
+        dummy.scale.set(roofW * 0.72, crownH, roofD * 0.72);
         dummy.updateMatrix();
         this.crownInst.setMatrixAt(crownIdx++, dummy.matrix);
       }
       if (s.hasRing) {
-        const ringY = s.hasCrown ? s.topY + 1.18 : s.topY + 0.05;
-        const ringScale = Math.min(s.w, s.d) * 0.72;
+        const ringY = s.hasCrown ? s.topY + 1.14 : s.topY + 0.06;
+        const ringScale = Math.min(roofW, roofD) * 0.82;
         dummy.position.set(s.x, ringY, s.z);
         dummy.rotation.set(0, 0, 0);
         dummy.scale.setScalar(ringScale);
@@ -194,45 +396,114 @@ export class SkyMetropolis3D {
         this.ringInst.setMatrixAt(ringIdx++, dummy.matrix);
       }
       if (s.hasAntenna) {
-        const antH = 2.1;
-        const antBaseY = s.hasCrown ? s.topY + 1.15 : s.topY;
+        const antH = 2.0;
+        const antBaseY = s.hasCrown ? s.topY + 1.1 : s.topY;
         dummy.position.set(s.x, antBaseY + antH * 0.5, s.z);
         dummy.rotation.set(0, 0, 0);
         dummy.scale.set(1, antH, 1);
         dummy.updateMatrix();
-        this.antennaInst.setMatrixAt(antIdx++, dummy.matrix);
+        this.antennaInst.setMatrixAt(antIdx, dummy.matrix);
+
+        dummy.position.set(s.x, antBaseY + antH + 0.12, s.z);
+        dummy.scale.setScalar(1);
+        dummy.updateMatrix();
+        this.beaconInst.setMatrixAt(antIdx, dummy.matrix);
+        antIdx += 1;
+      }
+
+      if (s.holoLabel) {
+        const baseY = Math.min(2.8, (s.hasCrown ? s.topY + 1.1 : s.topY) + 1.35);
+        const signMesh = new THREE.Mesh(holoPlaneGeo, this.holoSignMats[s.holoLabel]);
+        signMesh.position.set(s.x, baseY, s.z + roofD * 0.25);
+        signMesh.rotation.y = -Math.atan2(s.x, Math.max(8, 20 - s.z)) * 0.65;
+        this.cityGroup.add(signMesh);
+        this.holoBillboards.push({
+          mesh: signMesh,
+          label: s.holoLabel,
+          baseY,
+          phase: this.holoBillboards.length * 1.4,
+        });
       }
     }
-    this.shaftInst.instanceMatrix.needsUpdate = true;
-    this.crownInst.instanceMatrix.needsUpdate = true;
-    this.ringInst.instanceMatrix.needsUpdate = true;
-    this.antennaInst.instanceMatrix.needsUpdate = true;
-    this.cityGroup.add(this.shaftInst, this.crownInst, this.ringInst, this.antennaInst);
 
-    // 2. Three Sweeping Hologram City Searchlight Cones flanking the central sky stage
-    const skyConeGeo = new THREE.ConeGeometry(2.6, 26, 12, 1, true);
+    for (const inst of [
+      this.curtainShaftInst,
+      this.diagridShaftInst,
+      this.octaShaftInst,
+      this.setbackInst,
+      this.finInst,
+      this.crownInst,
+      this.ringInst,
+      this.antennaInst,
+      this.beaconInst,
+    ]) {
+      inst.instanceMatrix.needsUpdate = true;
+      this.cityGroup.add(inst);
+    }
+
+    // 2. Low-Altitude Additive City Mist Planes (depth separation between arena & deep city)
+    const mistGeo = new THREE.PlaneGeometry(92, 74);
+    mistGeo.rotateX(-Math.PI / 2);
+    for (const [my, mz, scale] of [
+      [-10.5, -14, 1.0],
+      [-17.2, -16, 1.18],
+    ] as const) {
+      const mist = new THREE.Mesh(mistGeo, this.mistMat);
+      mist.position.set(0, my, mz);
+      mist.scale.setScalar(scale);
+      this.cityGroup.add(mist);
+    }
+
+    // 3. Sky-Traffic Aerial Light Lanes (1 InstancedMesh of 28 cruising neon vehicles)
+    const trafficCount = 28;
+    const trafficMat = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: true });
+    this.skyTrafficInst = new THREE.InstancedMesh(new THREE.BoxGeometry(0.95, 0.12, 0.24), trafficMat, trafficCount);
+    const trafficPalette = [
+      new THREE.Color(0x38bdf8),
+      new THREE.Color(0xfbbf24),
+      new THREE.Color(0xf472b6),
+    ];
+    for (let i = 0; i < trafficCount; i++) {
+      const upperLane = i % 2 === 0;
+      this.skyTraffic.push({
+        laneRadiusX: upperLane ? 25 + (i % 5) * 2.2 : 17 + (i % 4) * 2.4,
+        laneRadiusZ: upperLane ? 17 + (i % 4) * 1.8 : 13 + (i % 3) * 1.5,
+        centerZ: upperLane ? -14.5 : -9.0,
+        y: upperLane ? -6.8 - (i % 3) * 0.7 : -10.4 - (i % 3) * 0.65,
+        angle: (i / trafficCount) * Math.PI * 2,
+        speed: (upperLane ? 1 : -1) * (0.12 + (i % 5) * 0.025),
+        scaleX: 0.75 + (i % 3) * 0.35,
+      });
+      this.skyTrafficInst.setColorAt(i, trafficPalette[i % trafficPalette.length]);
+    }
+    if (this.skyTrafficInst.instanceColor) this.skyTrafficInst.instanceColor.needsUpdate = true;
+    this.cityGroup.add(this.skyTrafficInst);
+    this.updateSkyTraffic(0);
+
+    // 4. Four Soft-Gradient Searchlight Cones flanking the horizon
+    const skyConeGeo = new THREE.ConeGeometry(3.1, 30, 14, 1, true);
     skyConeGeo.rotateX(Math.PI);
-    skyConeGeo.translate(0, 13, 0);
+    skyConeGeo.translate(0, 15, 0);
     const beamSpecs: Array<[number, number, number, number, number, number]> = [
-      [-22.5, -7.5, -26, 0.22, 0.14, 0.42],
-      [18.0, -9.5, -35, -0.24, 0.16, 0.34],
-      [23.5, -7.5, -25, -0.18, 0.14, 0.48],
+      [-25.5, -7.2, -26, 0.24, 0.14, 0.42],
+      [-17.2, -10.5, -36, 0.14, 0.18, 0.31],
+      [17.6, -10.5, -36, -0.16, 0.17, 0.36],
+      [25.5, -7.2, -25, -0.22, 0.14, 0.48],
     ];
     for (let i = 0; i < beamSpecs.length; i++) {
       const [bx, by, bz, baseRoll, basePitch, speed] = beamSpecs[i];
       const pivot = new THREE.Group();
       pivot.position.set(bx, by, bz);
-      const beamMesh = new THREE.Mesh(skyConeGeo, this.searchlightMat);
-      pivot.add(beamMesh);
+      pivot.add(new THREE.Mesh(skyConeGeo, this.searchlightMat));
       this.cityGroup.add(pivot);
-      this.searchlights.push({ pivot, phase: i * 2.1, speed, baseRoll, basePitch });
+      this.searchlights.push({ pivot, phase: i * 1.8, speed, baseRoll, basePitch });
     }
 
-    // 3. Modern Live Broadcast Blimp ("MyChibiMine" LED TV Banner)
+    // 5. Cyber Zeppelin + Curved Wrap-Around LED Banner ("MyChibiMine") + Escort Drones
     this.blimpHullMat = new THREE.MeshStandardMaterial({
       color: 0xe2e8f0,
-      roughness: 0.32,
-      metalness: 0.45,
+      roughness: 0.3,
+      metalness: 0.48,
       flatShading: true,
       transparent: true,
       opacity: 1,
@@ -240,36 +511,13 @@ export class SkyMetropolis3D {
     this.blimpTrimMat = new THREE.MeshStandardMaterial({
       color: palette.crystalColor,
       emissive: palette.crystalColor,
-      emissiveIntensity: 1.15,
+      emissiveIntensity: 1.2,
       roughness: 0.22,
       metalness: 0.35,
       flatShading: true,
       transparent: true,
       opacity: 1,
     });
-    const bannerTex = getBroadcastBannerTexture(palette.crystalColor, false);
-    this.blimpScreenMat = new THREE.MeshBasicMaterial({
-      map: bannerTex,
-      fog: false,
-      transparent: true,
-      opacity: 1,
-    });
-    this.blimpBeaconMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      fog: false,
-      transparent: true,
-      opacity: 0.95,
-    });
-
-    this.buildBroadcastBlimp();
-    this.blimpGroup.position.set(BLIMP_START_X, BLIMP_BASE_Y, BLIMP_BASE_Z);
-
-    this.group.add(this.cityGroup, this.blimpGroup);
-    disableRaycast(this.group);
-    this.updateBlimpPlacement(0);
-  }
-
-  private buildBroadcastBlimp(): void {
     const darkFrameMat = new THREE.MeshStandardMaterial({
       color: 0x0f172a,
       roughness: 0.44,
@@ -278,78 +526,62 @@ export class SkyMetropolis3D {
       transparent: true,
       opacity: 1,
     });
+    this.blimpScreenMat = new THREE.MeshBasicMaterial({
+      map: getBroadcastBannerTexture(palette.crystalColor, false),
+      fog: false,
+      transparent: true,
+      opacity: 1,
+      side: THREE.DoubleSide,
+    });
+    this.blimpBeaconMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      fog: false,
+      transparent: true,
+      opacity: 0.96,
+    });
+
     this.blimpFadableMats.push(
       { mat: this.blimpHullMat, baseOpacity: 1 },
       { mat: this.blimpTrimMat, baseOpacity: 1 },
+      { mat: darkFrameMat, baseOpacity: 1 },
       { mat: this.blimpScreenMat, baseOpacity: 1 },
-      { mat: this.blimpBeaconMat, baseOpacity: 0.95 },
-      { mat: darkFrameMat, baseOpacity: 1 }
+      { mat: this.blimpBeaconMat, baseOpacity: 0.96 }
     );
 
-    // Aerodynamic envelope (nose points -X for Right->Left flight)
-    const hull = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), this.blimpHullMat);
-    hull.scale.set(4.55, 1.0, 1.24);
-    this.blimpGroup.add(hull);
+    const zeppelin = buildCyberZeppelin({
+      blimpGroup: this.blimpGroup,
+      hullMat: this.blimpHullMat,
+      trimMat: this.blimpTrimMat,
+      darkFrameMat,
+      screenMat: this.blimpScreenMat,
+      beaconMat: this.blimpBeaconMat,
+      fadableMats: this.blimpFadableMats,
+    });
+    this.blimpFanRotors = zeppelin.fanRotors;
+    this.blimpEscortDrones = zeppelin.escortDrones;
+    this.blimpHoloBeamMat = zeppelin.holoBeamMat;
 
-    // Upper & nose cyber belt
-    const spine = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.18, 0.42), darkFrameMat);
-    spine.position.y = 0.96;
-    this.blimpGroup.add(spine);
+    this.blimpGroup.position.set(BLIMP_START_X, BLIMP_BASE_Y, BLIMP_BASE_Z);
+    this.group.add(this.cityGroup, this.blimpGroup);
+    disableRaycast(this.group);
+    this.updateBlimpPlacement(0);
+  }
 
-    const noseCone = new THREE.Mesh(new THREE.ConeGeometry(0.36, 1.1, 10), this.blimpTrimMat);
-    noseCone.rotation.z = Math.PI / 2;
-    noseCone.position.set(-4.62, 0, 0);
-    this.blimpGroup.add(noseCone);
-
-    // Top navigation strobe beacon
-    const beacon = new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), this.blimpBeaconMat);
-    beacon.position.set(-0.5, 1.15, 0);
-    this.blimpGroup.add(beacon);
-
-    // Rear tail stabilizer fins (+X)
-    const vFinTop = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.02, 0.12), darkFrameMat);
-    vFinTop.position.set(3.65, 0.72, 0);
-    vFinTop.rotation.z = -0.28;
-    const vFinBot = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.78, 0.12), darkFrameMat);
-    vFinBot.position.set(3.65, -0.58, 0);
-    vFinBot.rotation.z = 0.24;
-    const hFin = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.12, 2.35), this.blimpTrimMat);
-    hFin.position.set(3.8, 0, 0);
-    this.blimpGroup.add(vFinTop, vFinBot, hFin);
-
-    // Twin side turbine pods
-    const podGeo = new THREE.CylinderGeometry(0.24, 0.28, 1.45, 10);
-    podGeo.rotateZ(Math.PI / 2);
-    const thrusterGeo = new THREE.CylinderGeometry(0.2, 0.16, 0.26, 10);
-    thrusterGeo.rotateZ(Math.PI / 2);
-    for (const side of [-1, 1]) {
-      const pod = new THREE.Mesh(podGeo, darkFrameMat);
-      pod.position.set(0.4, -0.22, side * 1.24);
-      const glow = new THREE.Mesh(thrusterGeo, this.blimpTrimMat);
-      glow.position.set(1.18, -0.22, side * 1.24);
-      this.blimpGroup.add(pod, glow);
+  private updateSkyTraffic(elapsed: number): void {
+    for (let i = 0; i < this.skyTraffic.length; i++) {
+      const v = this.skyTraffic[i];
+      const a = v.angle + elapsed * v.speed;
+      const x = Math.cos(a) * v.laneRadiusX;
+      const z = v.centerZ + Math.sin(a) * v.laneRadiusZ;
+      const dx = -Math.sin(a) * v.laneRadiusX * v.speed;
+      const dz = Math.cos(a) * v.laneRadiusZ * v.speed;
+      this.trafficDummy.position.set(x, v.y, z);
+      this.trafficDummy.rotation.set(0, -Math.atan2(dz, dx), 0);
+      this.trafficDummy.scale.set(v.scaleX, 1, 1);
+      this.trafficDummy.updateMatrix();
+      this.skyTrafficInst.setMatrixAt(i, this.trafficDummy.matrix);
     }
-
-    // Underslung broadcast gondola + prominent front-facing LED TV frame ("MyChibiMine" banner)
-    const gondola = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.34, 1.1), darkFrameMat);
-    gondola.position.set(0, -0.96, 0.12);
-    this.blimpGroup.add(gondola);
-
-    const tvBoard = new THREE.Group();
-    tvBoard.position.set(0, -1.02, 1.02);
-    tvBoard.rotation.x = 0.18; // tilted cleanly toward the elevated arena camera
-
-    const tvHousing = new THREE.Mesh(new THREE.BoxGeometry(6.85, 2.15, 0.3), darkFrameMat);
-    const tvNeonFrameTop = new THREE.Mesh(new THREE.BoxGeometry(6.95, 0.11, 0.36), this.blimpTrimMat);
-    tvNeonFrameTop.position.y = 1.08;
-    const tvNeonFrameBot = new THREE.Mesh(new THREE.BoxGeometry(6.95, 0.11, 0.36), this.blimpTrimMat);
-    tvNeonFrameBot.position.y = -1.08;
-
-    const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(6.55, 1.88), this.blimpScreenMat);
-    screenMesh.position.z = 0.17;
-
-    tvBoard.add(tvHousing, tvNeonFrameTop, tvNeonFrameBot, screenMesh);
-    this.blimpGroup.add(tvBoard);
+    this.skyTrafficInst.instanceMatrix.needsUpdate = true;
   }
 
   private updateBlimpPlacement(elapsed: number): void {
@@ -366,13 +598,12 @@ export class SkyMetropolis3D {
 
     this.blimpGroup.visible = true;
     const x = BLIMP_START_X - cyclePos * BLIMP_SPEED;
-    const y = BLIMP_BASE_Y + Math.sin(elapsed * 0.95) * 0.18;
+    const y = BLIMP_BASE_Y + Math.sin(elapsed * 0.95) * 0.22;
     this.blimpGroup.position.set(x, y, BLIMP_BASE_Z);
-    this.blimpGroup.rotation.z = Math.sin(elapsed * 0.85) * 0.02;
+    this.blimpGroup.rotation.z = Math.sin(elapsed * 0.85) * 0.022;
 
-    // Smooth edge fade-in from right and fade-out at left boundary
-    const enterFade = THREE.MathUtils.clamp((BLIMP_START_X - x) / 4.2, 0, 1);
-    const exitFade = THREE.MathUtils.clamp((x - BLIMP_END_X) / 4.2, 0, 1);
+    const enterFade = THREE.MathUtils.clamp((BLIMP_START_X - x) / 4.8, 0, 1);
+    const exitFade = THREE.MathUtils.clamp((x - BLIMP_END_X) / 4.8, 0, 1);
     const edgeAlpha = Math.min(enterFade, exitFade);
     for (const entry of this.blimpFadableMats) {
       (entry.mat as { opacity: number }).opacity = entry.baseOpacity * edgeAlpha;
@@ -393,15 +624,26 @@ export class SkyMetropolis3D {
 
   public setPalette(palette: MineWorldPalette): void {
     this.activeAccentHex = palette.crystalColor;
-    const facadeTex = getSkyscraperFacadeTexture(palette.crystalColor);
-    this.facadeMat.map = facadeTex;
-    this.facadeMat.emissiveMap = facadeTex;
-    this.facadeMat.needsUpdate = true;
+
+    const applyFacade = (mat: THREE.MeshStandardMaterial, tex: THREE.Texture) => {
+      mat.map = tex;
+      mat.emissiveMap = tex;
+      mat.needsUpdate = true;
+    };
+    applyFacade(this.curtainMat, getSkyscraperFacadeTexture(palette.crystalColor));
+    applyFacade(this.diagridMat, getSkyscraperVariantTexture('diagrid', palette.crystalColor));
+    applyFacade(this.megacorpMat, getSkyscraperVariantTexture('megacorp', palette.crystalColor));
 
     this.cityNeonMat.color.set(palette.crystalColor);
     this.searchlightMat.color.set(palette.crystalColor);
-    this.blimpTrimMat.color.set(palette.crystalColor);
-    this.blimpTrimMat.emissive.set(palette.crystalColor);
+    this.mistMat.map = getCityMistTexture(palette.crystalColor);
+    this.mistMat.needsUpdate = true;
+
+    for (const label of HOLO_LABELS) {
+      this.holoSignMats[label].map = getRooftopHoloSignTexture(label, palette.crystalColor);
+      this.holoSignMats[label].needsUpdate = true;
+    }
+
     this.refreshBannerTexture();
   }
 
@@ -428,40 +670,80 @@ export class SkyMetropolis3D {
 
     this.blimpTrimMat.color.set(accent);
     this.blimpTrimMat.emissive.set(accent);
-    this.blimpTrimMat.emissiveIntensity = feverActive ? 1.65 : 1.15;
-    this.facadeMat.emissiveIntensity = feverActive ? 0.92 : 0.72;
+    this.blimpTrimMat.emissiveIntensity = feverActive ? 1.7 : 1.2;
+    this.blimpHoloBeamMat.color.set(accent);
+
+    const facadeBoost = feverActive ? 0.2 : 0;
+    this.curtainMat.emissiveIntensity = 0.78 + facadeBoost;
+    this.diagridMat.emissiveIntensity = 0.82 + facadeBoost;
+    this.megacorpMat.emissiveIntensity = 0.88 + facadeBoost;
   }
 
   public setLowQuality(low: boolean): void {
-    this.searchlightMat.opacity = low ? 0.05 : 0.08;
+    this.lowQuality = low;
+    this.searchlightMat.opacity = low ? 0.06 : 0.12;
+    this.mistMat.opacity = low ? 0.12 : 0.22;
+    this.skyTrafficInst.visible = !low;
   }
 
   public update(dtSec: number, elapsed: number): void {
     const safeDt = Math.min(Math.max(0, dtSec), 0.1);
     this.updateBlimpPlacement(elapsed);
 
-    // Smooth marquee UV scroll across LED broadcast banner
-    this.blimpScrollOffset = (this.blimpScrollOffset + safeDt * (this.overclockTier > 0 ? 0.24 : 0.16)) % 1;
+    // Smooth marquee UV scroll across the curved MyChibiMine LED banner
+    this.blimpScrollOffset = (this.blimpScrollOffset + safeDt * (this.overclockTier > 0 ? 0.24 : 0.15)) % 1;
     if (this.blimpScreenMat.map) {
       this.blimpScreenMat.map.offset.x = this.blimpScrollOffset;
     }
 
-    // Strobe top navigation beacon subtly
+    // Spin 4 zeppelin turbofan rotors & bank escort drones
+    const rotorSpeed = this.overclockTier > 0 ? 16 : 11;
+    for (const rotor of this.blimpFanRotors) {
+      rotor.rotation.x += safeDt * rotorSpeed;
+    }
+    for (const drone of this.blimpEscortDrones) {
+      drone.group.position.y = drone.basePos.y + Math.sin(elapsed * 2.4 + drone.phase) * 0.28;
+      drone.group.position.z = drone.basePos.z + Math.cos(elapsed * 1.5 + drone.phase) * 0.22;
+      drone.group.rotation.x = Math.sin(elapsed * 2.1 + drone.phase) * 0.16;
+    }
+
+    // Pulse navigation beacon & city aviation strobes
     const pulse = 0.55 + 0.45 * Math.sin(elapsed * 4.4);
     this.blimpBeaconMat.color.setRGB(1, 0.78 + pulse * 0.22, 0.65 + pulse * 0.35);
+    const cityStrobe = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(elapsed * 3.1));
+    this.beaconMat.opacity = 0.35 + cityStrobe * 0.65;
 
-    // Sweep distant skyscraper searchlight cones gently
+    // Gentle hover on rooftop holographic billboards
+    for (const sign of this.holoBillboards) {
+      sign.mesh.position.y = sign.baseY + Math.sin(elapsed * 1.6 + sign.phase) * 0.12;
+    }
+
+    if (!this.lowQuality) {
+      this.updateSkyTraffic(elapsed);
+    }
+
+    // Sweep searchlight beams across the skyline
     for (const b of this.searchlights) {
-      b.pivot.rotation.z = b.baseRoll + Math.sin(elapsed * b.speed + b.phase) * 0.14;
+      b.pivot.rotation.z = b.baseRoll + Math.sin(elapsed * b.speed + b.phase) * 0.15;
       b.pivot.rotation.x = b.basePitch + Math.cos(elapsed * (b.speed * 0.85) + b.phase) * 0.08;
     }
   }
 
   public dispose(): void {
-    this.shaftInst.dispose();
-    this.crownInst.dispose();
-    this.ringInst.dispose();
-    this.antennaInst.dispose();
+    for (const inst of [
+      this.curtainShaftInst,
+      this.diagridShaftInst,
+      this.octaShaftInst,
+      this.setbackInst,
+      this.finInst,
+      this.crownInst,
+      this.ringInst,
+      this.antennaInst,
+      this.beaconInst,
+      this.skyTrafficInst,
+    ]) {
+      inst.dispose();
+    }
     disposeObject3D(this.group);
   }
 }

@@ -18,7 +18,7 @@ import {
 } from './OreBillboard3D';
 import {
   getCircularNexusPoolTexture,
-  getHazardStripeTexture,
+  getCyberColosseumDeckTexture,
 } from './ProceduralTextures3D';
 import {
   applyNodeDamagePure,
@@ -296,7 +296,7 @@ export class OrePit3D {
     this.floorMat.map = getCircularNexusPoolTexture(palette.pitFloorColor, palette.crystalColor);
     this.floorMat.needsUpdate = true;
     this.wallMat.color.setHex(0x161f30);
-    this.trimMat.map = getHazardStripeTexture(palette.crystalColor);
+    this.trimMat.map = getCyberColosseumDeckTexture(palette.crystalColor);
     this.trimMat.needsUpdate = true;
     this.pitNeonMat.color.copy(cColor);
     this.pitNeonMat.emissive.copy(cColor);

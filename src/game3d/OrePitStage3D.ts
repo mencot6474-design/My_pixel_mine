@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { getOresByWorld, type OreDef, type WorldId } from '../game/GameData';
 import { type PitEventKind } from '../game/PitEventsDomain';
-import { createCyberLanternBollardFinial } from './CyberProps3D';
-import { mergeStaticMeshesByMaterial } from './MeshHelpers3D';
+import { createChamferSlabGeometry, mergeStaticMeshesByMaterial } from './MeshHelpers3D';
 import {
   BASE_PIT_NODE_COUNT,
   type MineWorldPalette,
@@ -16,7 +15,7 @@ import type { OreBillboard2D } from './OreBillboard3D';
 import { getSoftContactShadowTexture } from './OreBillboard3D';
 import {
   getCircularNexusPoolTexture,
-  getHazardStripeTexture,
+  getCyberColosseumDeckTexture,
   getShockwaveRingTexture,
 } from './ProceduralTextures3D';
 
@@ -194,9 +193,9 @@ export function buildOrePitEnvironmentMeshes(ctx: {
       side: THREE.DoubleSide,
     });
     const trimMat = new THREE.MeshStandardMaterial({
-      map: getHazardStripeTexture(palette.crystalColor),
-      roughness: 0.42,
-      metalness: 0.25,
+      map: getCyberColosseumDeckTexture(palette.crystalColor),
+      roughness: 0.36,
+      metalness: 0.45,
     });
     const pitNeonMat = new THREE.MeshStandardMaterial({
       color: palette.crystalColor,
@@ -246,38 +245,56 @@ export function buildOrePitEnvironmentMeshes(ctx: {
       pitEnvGroup.add(neonTorus);
     }
 
-    // 6 Radial Rim Anchor Finials Placed on Lateral/South Arc (keeping North P1..P5 sightlines 100% open)
-    const postMat = new THREE.MeshStandardMaterial({
+    // 8 Sleek Low-Profile Rim Armor Emitters & Under-Hull Stabilizer Fins (zero tall clutter)
+    const armorMat = new THREE.MeshStandardMaterial({
       color: 0x223047,
-      roughness: 0.44,
-      metalness: 0.42,
+      roughness: 0.38,
+      metalness: 0.52,
       flatShading: true,
     });
     const steelCapMat = new THREE.MeshStandardMaterial({
       color: 0x3b4d6b,
-      metalness: 0.48,
-      roughness: 0.34,
+      metalness: 0.56,
+      roughness: 0.32,
       flatShading: true,
     });
-    const postGeo = new THREE.CylinderGeometry(0.22, 0.28, 0.72, 8);
-    ctx.ownedMats.push(postMat, steelCapMat);
-    const finialAnglesDeg = [78, 126, 160, -78, -126, -160];
-    const finialR = PIT_RADIUS + 1.24;
-    for (const deg of finialAnglesDeg) {
-      const rad = (deg * Math.PI) / 180;
-      const px = Math.sin(rad) * finialR;
-      const pz = -Math.cos(rad) * finialR;
-      const post = new THREE.Mesh(postGeo, postMat);
-      post.position.set(px, 2.31, pz);
-      post.castShadow = true;
-      const finial = createCyberLanternBollardFinial({
-        frameMat: postMat,
-        steelMat: steelCapMat,
-        coreMat: pitNeonMat,
-        scale: 0.86,
-      });
-      finial.position.set(px, 2.66, pz);
-      pitEnvGroup.add(post, finial);
+    ctx.ownedMats.push(armorMat, steelCapMat);
+
+    const emitterCapGeo = createChamferSlabGeometry(0.68, 0.18, 0.48, 0.1, 0.014);
+    const emitterNeonGeo = new THREE.BoxGeometry(0.42, 0.06, 0.1);
+    const hullFinGeo = createChamferSlabGeometry(0.32, 0.58, 1.05, 0.08, 0.014);
+    const underVentGeo = new THREE.CylinderGeometry(0.48, 0.28, 0.24, 8);
+
+    const nodeAnglesDeg = [45, 90, 135, 165, -45, -90, -135, -165];
+    const rimR = PIT_RADIUS + 1.24;
+    for (let i = 0; i < nodeAnglesDeg.length; i++) {
+      const rad = (nodeAnglesDeg[i] * Math.PI) / 180;
+      const sinA = Math.sin(rad);
+      const cosA = -Math.cos(rad);
+
+      // Low-profile armor emitter cap flush with the upper deck collar
+      const cap = new THREE.Mesh(emitterCapGeo, armorMat);
+      cap.position.set(sinA * rimR, 1.97, cosA * rimR);
+      cap.rotation.y = -rad;
+      cap.castShadow = true;
+
+      const capLed = new THREE.Mesh(emitterNeonGeo, pitNeonMat);
+      capLed.position.set(sinA * (rimR - 0.18), 2.13, cosA * (rimR - 0.18));
+      capLed.rotation.y = -rad;
+      pitEnvGroup.add(cap, capLed);
+
+      // Under-hull stabilizer wing fin + glowing thruster vent on cardinal angles
+      const fin = new THREE.Mesh(hullFinGeo, steelCapMat);
+      fin.position.set(sinA * (PIT_RADIUS + 1.18), 0.72, cosA * (PIT_RADIUS + 1.18));
+      fin.rotation.y = -rad;
+      fin.castShadow = true;
+      pitEnvGroup.add(fin);
+
+      if (i % 2 === 1) {
+        const vent = new THREE.Mesh(underVentGeo, pitNeonMat);
+        vent.position.set(sinA * (PIT_RADIUS + 0.85), 0.28, cosA * (PIT_RADIUS + 0.85));
+        pitEnvGroup.add(vent);
+      }
     }
     mergeStaticMeshesByMaterial(pitEnvGroup);
     pitEnvGroup.traverse((child) => {

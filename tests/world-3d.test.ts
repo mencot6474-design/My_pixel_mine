@@ -20,6 +20,7 @@ import {
 } from '../src/game3d/MineScene3D';
 import { buildMineStageAndChest, STAGE_CRESCENT_SLOTS } from '../src/game3d/MineSceneStage3D';
 import { createNexusLeftGate, createVaultCoreDais } from '../src/game3d/ArenaWings3D';
+import { createCyberCargoPod } from '../src/game3d/CyberCargoPod3D';
 import { AudioManager } from '../src/audio/AudioManager';
 import {
   PlotAttackController3D,
@@ -115,6 +116,7 @@ import {
 import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
 import {
   getBroadcastBannerTexture,
+  getCyberColosseumDeckTexture,
   getDualSlashArcTexture,
   getFusionMagicCircuitTexture,
   getHitSparkStarTexture,
@@ -126,6 +128,12 @@ import {
 import { createShopCyberPlaza } from '../src/game3d/ShopCyberPlaza3D';
 import { ShopWorld3D } from '../src/game3d/ShopWorld3D';
 import { SkyMetropolis3D } from '../src/game3d/SkyMetropolis3D';
+import {
+  getCityMistTexture,
+  getRooftopHoloSignTexture,
+  getSearchlightBeamTexture,
+  getSkyscraperVariantTexture,
+} from '../src/game3d/SkyMetropolisAssets3D';
 import { createSeraphimBoss3D } from '../src/game3d/SeraphimBoss3D';
 import { TowerArena3D } from '../src/game3d/TowerArena3D';
 import {
@@ -3757,54 +3765,20 @@ describe('Pure 3D Mine World', () => {
     pit.dispose();
   });
 
-  it('builds floating Nexus Left Gate and Vault Core Dais satellites with InstancedMeshes, sky gap, and open-sky MineEnvironment3D', () => {
+  it('builds sleek Vault Hover-Pad + Cyber Cargo Pod, clears left portal & floating pillars, and applies Cyber-Colosseum deck texture', () => {
+    expect(getCyberColosseumDeckTexture('#38bdf8')).toBeInstanceOf(THREE.Texture);
+
+    // Keep createNexusLeftGate exported & valid if referenced directly
     const leftGate = createNexusLeftGate({ crystalColor: '#38bdf8', cliffColor: '#1e293b' });
-    leftGate.group.updateMatrixWorld(true);
-    const gateBox = new THREE.Box3().setFromObject(leftGate.group);
-    expect(gateBox.max.x).toBeLessThan(-7.5);
-    expect(gateBox.max.y).toBeGreaterThan(3.8);
-    expect(gateBox.min.y).toBeLessThan(0);
-    expect(gateBox.max.y).toBeLessThan(6.0);
-
-    // North pillar shaft spans y=2.1 with zero vertical air gap & matches cableSocketWorld XZ
-    const pillarRay = new THREE.Raycaster(
-      new THREE.Vector3(leftGate.cableSocketWorld.x - 1.5, 2.1, leftGate.cableSocketWorld.z),
-      new THREE.Vector3(1, 0, 0)
-    );
-    expect(pillarRay.intersectObject(leftGate.group, true).length).toBeGreaterThan(0);
-    const socketTopRay = new THREE.Raycaster(
-      new THREE.Vector3(leftGate.cableSocketWorld.x, 7, leftGate.cableSocketWorld.z),
-      new THREE.Vector3(0, -1, 0)
-    );
-    const socketTopHits = socketTopRay.intersectObject(leftGate.group, true);
-    expect(socketTopHits.length).toBeGreaterThan(0);
-    expect(socketTopHits[0].point.y).toBeGreaterThanOrEqual(4.5);
-
-    let gateInstanced = 0;
-    leftGate.group.traverse((obj) => {
-      if (obj instanceof THREE.InstancedMesh) gateInstanced += 1;
-    });
-    expect(gateInstanced).toBeGreaterThanOrEqual(1);
-    expect(() => {
-      leftGate.setPalette('#c084fc', '#334155');
-      leftGate.setLowQuality(true);
-      leftGate.update(0.05, 1.5);
-      leftGate.setLowQuality(false);
-      leftGate.update(0.05, 2.5);
-      leftGate.dispose();
-    }).not.toThrow();
+    leftGate.dispose();
 
     const vaultDais = createVaultCoreDais({ crystalColor: '#38bdf8', cliffColor: '#1e293b' });
     vaultDais.group.updateMatrixWorld(true);
     const vaultBox = new THREE.Box3().setFromObject(vaultDais.group);
-    expect(vaultBox.min.x).toBeGreaterThan(8.0);
+    expect(vaultBox.min.x).toBeGreaterThan(7.5);
     expect(vaultBox.min.y).toBeLessThan(0);
-    // Wing fin connects flush to floating rearDeck around y=1.1
-    const finRay = new THREE.Raycaster(
-      new THREE.Vector3(9.6, 1.1, 3.85 + 1.48),
-      new THREE.Vector3(1, 0, 0)
-    );
-    expect(finRay.intersectObject(vaultDais.group, true).length).toBeGreaterThan(0);
+    // Sleek hover-pad without tall rear pillar wall
+    expect(vaultBox.max.y).toBeLessThan(2.0);
 
     let vaultInstanced = 0;
     vaultDais.group.traverse((obj) => {
@@ -3818,12 +3792,39 @@ describe('Pure 3D Mine World', () => {
       vaultDais.dispose();
     }).not.toThrow();
 
-    // Open-sky MineEnvironment3D removes all boxy courtyard slabs around the circular ring (open sky at x=+-6.45, z=0.15)
+    // Cyber Cargo Pod replaces classic wooden chest with sliding hatches, LED capacity bars, and holo badge
+    const pod = createCyberCargoPod({ scale: 1.08, accentColor: '#38bdf8' });
+    pod.group.updateMatrixWorld(true);
+    const podBox = new THREE.Box3().setFromObject(pod.group);
+    expect(podBox.min.y).toBeGreaterThanOrEqual(-0.02);
+    expect(podBox.min.y).toBeLessThanOrEqual(0.02);
+    let podMeshCount = 0;
+    let podInstancedCount = 0;
+    pod.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) podInstancedCount += 1;
+      if (obj instanceof THREE.Mesh) podMeshCount += 1;
+    });
+    expect(podMeshCount).toBeGreaterThanOrEqual(10);
+    expect(podInstancedCount).toBe(1);
+    pod.setInteraction(true, 0.8, 0.5);
+    expect(pod.lidPivot.rotation.x).toBeLessThan(-0.08);
+    expect(() => {
+      pod.setAccentColor('#f97316');
+      pod.dispose();
+    }).not.toThrow();
+
+    // Open-sky MineEnvironment3D clears left portal gate & floating conduit pillars/cables
     const env = new MineEnvironment3D(DEFAULT_WORLD_PALETTE);
     env.group.updateMatrixWorld(true);
-    for (const sx of [-6.45, 6.45]) {
+    for (const [sx, sz] of [
+      [-6.45, 0.15],
+      [6.45, 0.15],
+      [-11.4, 1.15],
+      [-17.2, -9.2],
+      [17.2, -9.2],
+    ] as const) {
       const skyRay = new THREE.Raycaster(
-        new THREE.Vector3(sx, 2, 0.15),
+        new THREE.Vector3(sx, 2, sz),
         new THREE.Vector3(0, -1, 0)
       );
       const hits = skyRay.intersectObject(env.group, true).filter((h) => h.object !== env.skyDome);
@@ -3915,11 +3916,16 @@ describe('Pure 3D Mine World', () => {
 
   it('builds Hologram Sky-Metropolis skyline + Broadcast Blimp (MyChibiMine TV banner) and replaces sky weather shader with zero-lag gradient sky', () => {
     expect(getSkyscraperFacadeTexture('#38bdf8')).toBeInstanceOf(THREE.Texture);
+    expect(getSkyscraperVariantTexture('diagrid', '#38bdf8')).toBeInstanceOf(THREE.Texture);
+    expect(getSkyscraperVariantTexture('megacorp', '#38bdf8')).toBeInstanceOf(THREE.Texture);
+    expect(getRooftopHoloSignTexture('MINE', '#38bdf8')).toBeInstanceOf(THREE.Texture);
+    expect(getCityMistTexture('#38bdf8')).toBeInstanceOf(THREE.Texture);
+    expect(getSearchlightBeamTexture()).toBeInstanceOf(THREE.Texture);
     expect(getBroadcastBannerTexture('#38bdf8', false)).toBeInstanceOf(THREE.Texture);
     expect(getBroadcastBannerTexture('#fbbf24', true)).toBeInstanceOf(THREE.Texture);
 
     const city = new SkyMetropolis3D(DEFAULT_WORLD_PALETTE);
-    expect(city.getBuildingCount()).toBeGreaterThanOrEqual(24);
+    expect(city.getBuildingCount()).toBeGreaterThanOrEqual(45);
     expect(city.isScreenFogDisabled()).toBe(true);
 
     const startX = city.getBlimpWorldPosition().x;
@@ -3934,6 +3940,8 @@ describe('Pure 3D Mine World', () => {
 
     expect(() => {
       city.setOverclockTier(2);
+      city.setLowQuality(false);
+      city.update(0.05, 2.0);
       city.setLowQuality(true);
       city.setPalette({ ...DEFAULT_WORLD_PALETTE, crystalColor: '#f97316' });
       city.update(0.05, 35.0);
@@ -3947,5 +3955,52 @@ describe('Pure 3D Mine World', () => {
     env.setOverclockTier(3);
     env.update(0.016, 1.5);
     env.dispose();
+  });
+
+  it('patches TierAttackVfxPool3D ShaderMaterials with world-space circular pit clipping when setPitBounds is active', () => {
+    const pool = new TierAttackVfxPool3D();
+    let shaderMatCount = 0;
+    let unpatchedCount = 0;
+    let defaultActiveSum = 0;
+    pool.group.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.material instanceof THREE.ShaderMaterial) {
+        shaderMatCount += 1;
+        if (!obj.material.userData.__pitClipPatched) unpatchedCount += 1;
+        defaultActiveSum += obj.material.uniforms.uPitClipActive?.value ?? 0;
+        expect(obj.material.vertexShader).toContain('vPitWorldPos');
+        expect(obj.material.fragmentShader).toContain('uPitClipActive');
+      }
+    });
+    expect(shaderMatCount).toBeGreaterThanOrEqual(40);
+    expect(unpatchedCount).toBe(0);
+    // Disabled by default so Tower & Omega arenas are never clipped
+    expect(defaultActiveSum).toBe(0);
+
+    pool.setPitBounds({ centerX: 0, floorY: PIT_FLOOR_Y, centerZ: PIT_CENTER_Z, radius: PIT_RADIUS - 0.18 });
+    pool.fireAnticipation('fusion', '#22d3ee', { x: 4.5, y: PIT_FLOOR_Y, z: PIT_CENTER_Z }, [], 0.72);
+    pool.fireTierAttack({
+      rarity: 'twin',
+      chibiId: 'clockwork-twins',
+      colorHex: '#fbbf24',
+      target: { x: 4.2, y: PIT_FLOOR_Y, z: PIT_CENTER_Z },
+      allTargets: [{ x: 4.2, y: PIT_FLOOR_Y, z: PIT_CENTER_Z }],
+      areaScale: 0.72,
+    });
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
+    pool.update(0.05, cam);
+
+    let activeClipSum = 0;
+    let minActiveY = Infinity;
+    pool.group.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.material instanceof THREE.ShaderMaterial) {
+        activeClipSum += obj.material.uniforms.uPitClipActive?.value ?? 0;
+        if (obj.visible) minActiveY = Math.min(minActiveY, obj.position.y);
+      }
+    });
+    expect(activeClipSum).toBe(shaderMatCount);
+    expect(minActiveY).toBeGreaterThanOrEqual(PIT_FLOOR_Y - 0.5);
+
+    pool.setPitBounds(null);
+    pool.dispose();
   });
 });

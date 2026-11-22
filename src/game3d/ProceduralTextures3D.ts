@@ -26,7 +26,7 @@ function finalizeTex(canvas: HTMLCanvasElement, repeatX = 1, repeatY = 1): THREE
 }
 
 /** Builds and caches a 2D procedural CanvasTexture, falling back to a 1x1 DataTexture in headless Node. */
-function paintCachedTexture(
+export function paintCachedTexture(
   key: string,
   w: number,
   h: number,
@@ -411,33 +411,72 @@ export function getNexusArenaFloorTexture(stoneHex: string, crystalHex: string):
 }
 
 export function getCircularNexusPoolTexture(stoneHex: string, crystalHex: string): THREE.Texture {
-  return paintCachedTexture(`circular-nexus-pool|${stoneHex}|${crystalHex}`, 512, 512, 1, 1, [6, 10, 20, 255], (ctx) => {
+  return paintCachedTexture(`circular-nexus-pool-v2|${stoneHex}|${crystalHex}`, 512, 512, 1, 1, [6, 10, 20, 255], (ctx) => {
     // Deep dark-matte abyssal circular pool so additive GLSL skill shaders pop brilliantly
     const grad = ctx.createRadialGradient(256, 256, 18, 256, 256, 256);
-    grad.addColorStop(0, mixHex('#0e172c', crystalHex, 0.14));
-    grad.addColorStop(0.55, mixHex('#080d1a', stoneHex, 0.1));
-    grad.addColorStop(0.92, '#050811');
+    grad.addColorStop(0, mixHex('#101c36', crystalHex, 0.18));
+    grad.addColorStop(0.52, mixHex('#080e1c', stoneHex, 0.1));
+    grad.addColorStop(0.9, '#050811');
     grad.addColorStop(1, '#03050b');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 512, 512);
 
     ctx.strokeStyle = crystalHex;
-    ctx.globalAlpha = 0.15;
-    ctx.lineWidth = 2;
-    for (const r of [58, 118, 178, 228]) {
+    ctx.globalAlpha = 0.22;
+    ctx.lineWidth = 2.2;
+    for (const r of [64, 128, 192, 238]) {
       ctx.beginPath();
       ctx.arc(256, 256, r, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    ctx.globalAlpha = 0.1;
-    ctx.lineWidth = 1.4;
-    for (let i = 0; i < 12; i++) {
-      const a = (i * Math.PI * 2) / 12;
+    // Segmented outer cyber alignment arcs
+    ctx.globalAlpha = 0.34;
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 8; i++) {
+      const a0 = (i * Math.PI) / 4 + 0.08;
       ctx.beginPath();
-      ctx.moveTo(256 + Math.cos(a) * 58, 256 + Math.sin(a) * 58);
-      ctx.lineTo(256 + Math.cos(a) * 242, 256 + Math.sin(a) * 242);
+      ctx.arc(256, 256, 216, a0, a0 + Math.PI / 4 - 0.16);
       ctx.stroke();
+    }
+
+    ctx.globalAlpha = 0.12;
+    ctx.lineWidth = 1.4;
+    for (let i = 0; i < 16; i++) {
+      const a = (i * Math.PI * 2) / 16;
+      ctx.beginPath();
+      ctx.moveTo(256 + Math.cos(a) * 64, 256 + Math.sin(a) * 64);
+      ctx.lineTo(256 + Math.cos(a) * 244, 256 + Math.sin(a) * 244);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  });
+}
+
+/** Sleek dark-titanium segmented armor deck texture for the Cyber-Colosseum arena rim. */
+export function getCyberColosseumDeckTexture(accentHex = '#38bdf8'): THREE.Texture {
+  return paintCachedTexture(`cyber-colosseum-deck-v1|${accentHex}`, 256, 64, 8, 1, [16, 24, 40, 255], (ctx) => {
+    const grad = ctx.createLinearGradient(0, 0, 0, 64);
+    grad.addColorStop(0.0, '#1e293b');
+    grad.addColorStop(0.5, '#0f172a');
+    grad.addColorStop(1.0, '#090f1d');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 256, 64);
+
+    // Precision armor plate seam lines
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.22)';
+    for (let x = 0; x < 256; x += 64) {
+      ctx.fillRect(x, 6, 3, 52);
+    }
+    ctx.fillRect(0, 30, 256, 2);
+
+    // Glowing accent alignment ticks & top/bottom cyber trim rails
+    ctx.fillStyle = accentHex;
+    ctx.globalAlpha = 0.88;
+    ctx.fillRect(0, 2, 256, 4);
+    ctx.fillRect(0, 58, 256, 4);
+    for (let x = 18; x < 256; x += 64) {
+      ctx.fillRect(x, 18, 28, 5);
     }
     ctx.globalAlpha = 1;
   });
@@ -890,7 +929,7 @@ export function getFlamePuffTexture(): THREE.Texture {
 /** Seamless glowing cyber-metropolis window grid facade for distant skyscrapers. */
 export function getSkyscraperFacadeTexture(accentHex: string): THREE.Texture {
   const tex = paintCachedTexture(
-    `sky-city-facade-v1|${accentHex}`,
+    `sky-city-facade-v2|${accentHex}`,
     256,
     512,
     1,
@@ -898,28 +937,30 @@ export function getSkyscraperFacadeTexture(accentHex: string): THREE.Texture {
     [16, 26, 46, 255],
     (ctx) => {
       const grad = ctx.createLinearGradient(0, 0, 0, 512);
-      grad.addColorStop(0.0, '#132038');
-      grad.addColorStop(0.55, '#0c1528');
-      grad.addColorStop(1.0, '#070d1a');
+      grad.addColorStop(0.0, '#182947');
+      grad.addColorStop(0.55, '#0c162b');
+      grad.addColorStop(1.0, '#060c18');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 256, 512);
 
-      // Vertical architectural ribs
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.14)';
+      // Curtain-wall vertical mullions & sleek glass reflections
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.16)';
       for (const rx of [0, 62, 126, 190, 248]) {
         ctx.fillRect(rx, 0, 6, 512);
       }
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+      ctx.fillRect(16, 0, 34, 512);
+      ctx.fillRect(142, 0, 28, 512);
 
       const rows = 28;
       const cols = 12;
       const rowH = 512 / rows;
       const colW = 256 / cols;
       for (let r = 0; r < rows; r++) {
-        // Every 7th floor has an accent cyber-trim band
         if (r % 7 === 2) {
           ctx.fillStyle = accentHex;
-          ctx.globalAlpha = 0.72;
-          ctx.fillRect(8, r * rowH + rowH * 0.35, 240, 3.5);
+          ctx.globalAlpha = 0.85;
+          ctx.fillRect(6, r * rowH + rowH * 0.3, 244, 4);
           ctx.globalAlpha = 1;
           continue;
         }
@@ -927,19 +968,19 @@ export function getSkyscraperFacadeTexture(accentHex: string): THREE.Texture {
         for (let c = 0; c < cols; c++) {
           const hash = (r * 53 + c * 29 + 7) % 17;
           if (hash < 6) continue;
-          const x = c * colW + 4;
-          const y = r * rowH + 4;
-          const w = colW - 8;
-          const h = rowH - 8;
-          if (hash >= 14 || floorSeed === 3 && c % 3 === 0) {
+          const x = c * colW + 3.5;
+          const y = r * rowH + 3.5;
+          const w = colW - 7;
+          const h = rowH - 7;
+          if (hash >= 14 || (floorSeed === 3 && c % 3 === 0)) {
             ctx.fillStyle = accentHex;
-            ctx.globalAlpha = 0.82;
+            ctx.globalAlpha = 0.88;
           } else if (hash >= 11) {
             ctx.fillStyle = '#fde68a';
-            ctx.globalAlpha = 0.68;
+            ctx.globalAlpha = 0.72;
           } else {
             ctx.fillStyle = '#bae6fd';
-            ctx.globalAlpha = 0.56;
+            ctx.globalAlpha = 0.58;
           }
           ctx.fillRect(x, y, w, h);
         }
@@ -954,75 +995,91 @@ export function getSkyscraperFacadeTexture(accentHex: string): THREE.Texture {
 
 /** Wide LED broadcast banner texture featuring top/bottom neon lines and MyChibiMine marquee text. */
 export function getBroadcastBannerTexture(accentHex: string, feverActive = false): THREE.Texture {
-  const key = `blimp-tv-banner-v1|${accentHex}|${feverActive ? 1 : 0}`;
-  const tex = paintCachedTexture(key, 512, 160, 1, 1, [8, 14, 28, 255], (ctx) => {
-    const W = 512;
-    const H = 160;
+  const key = `blimp-tv-banner-v2|${accentHex}|${feverActive ? 1 : 0}`;
+  const tex = paintCachedTexture(key, 768, 224, 1, 1, [8, 14, 28, 255], (ctx) => {
+    const W = 768;
+    const H = 224;
     const barColor = feverActive ? '#fde047' : accentHex;
-    const secondaryColor = feverActive ? '#fb7185' : '#e0f2fe';
+    const secondaryColor = feverActive ? '#fb7185' : '#38bdf8';
 
     const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0.0, '#050914');
-    bg.addColorStop(0.5, '#0b162c');
-    bg.addColorStop(1.0, '#050914');
+    bg.addColorStop(0.0, '#040814');
+    bg.addColorStop(0.5, '#0b1832');
+    bg.addColorStop(1.0, '#040814');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    // Subtle LED matrix scanlines
+    // Subtle LED pixel scanlines & diagonal cyber shimmer
     ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
-    for (let y = 24; y < H - 24; y += 5) {
-      ctx.fillRect(0, y, W, 1.5);
+    for (let y = 28; y < H - 28; y += 6) {
+      ctx.fillRect(0, y, W, 2);
     }
 
-    // Thick top & bottom glowing banner stripes + inner fine accent rules
+    // Thick top & bottom glowing banner rails + inner tech rules
     ctx.fillStyle = barColor;
     ctx.shadowColor = barColor;
-    ctx.shadowBlur = 12;
-    ctx.fillRect(0, 10, W, 10);
-    ctx.fillRect(0, H - 20, W, 10);
+    ctx.shadowBlur = 14;
+    ctx.fillRect(0, 10, W, 12);
+    ctx.fillRect(0, H - 22, W, 12);
     ctx.shadowBlur = 0;
 
     ctx.fillStyle = secondaryColor;
-    ctx.globalAlpha = 0.72;
-    ctx.fillRect(0, 26, W, 2.5);
-    ctx.fillRect(0, H - 28.5, W, 2.5);
+    ctx.globalAlpha = 0.78;
+    ctx.fillRect(0, 29, W, 3);
+    ctx.fillRect(0, H - 32, W, 3);
     ctx.globalAlpha = 1;
 
-    // Seamless horizontally-wrapping "MyChibiMine" broadcast headline + diamond divider
+    // Leading cyber chevrons (>>>)
+    ctx.fillStyle = barColor;
+    for (let i = 0; i < 3; i++) {
+      const cx = 36 + i * 20;
+      const cy = H * 0.51;
+      ctx.beginPath();
+      ctx.moveTo(cx - 8, cy - 16);
+      ctx.lineTo(cx + 4, cy);
+      ctx.lineTo(cx - 8, cy + 16);
+      ctx.lineTo(cx - 14, cy + 16);
+      ctx.lineTo(cx - 2, cy);
+      ctx.lineTo(cx - 14, cy - 16);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Seamless horizontally-wrapping "MyChibiMine" broadcast headline
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
-    ctx.font = '900 50px "Fredoka", "Rubik", "Segoe UI", sans-serif';
+    ctx.font = '900 72px "Fredoka", "Rubik", "Segoe UI", sans-serif';
     ctx.lineJoin = 'round';
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = '#040814';
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = '#030712';
     ctx.shadowColor = barColor;
-    ctx.shadowBlur = 16;
-    ctx.strokeText('MyChibiMine', W * 0.42, H * 0.51);
+    ctx.shadowBlur = 20;
+    ctx.strokeText('MyChibiMine', W * 0.45, H * 0.52);
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('MyChibiMine', W * 0.42, H * 0.51);
+    ctx.fillText('MyChibiMine', W * 0.45, H * 0.52);
     ctx.shadowBlur = 0;
 
-    // Compact diamond emblem + LIVE badge tag on trailing edge
-    const tagX = W * 0.84;
+    // Trailing diamond emblem + LIVE / FEVER broadcast pill
+    const tagX = W * 0.855;
     const tagY = H * 0.51;
     ctx.fillStyle = barColor;
     ctx.beginPath();
-    ctx.moveTo(tagX - 58, tagY);
-    ctx.lineTo(tagX - 48, tagY - 10);
-    ctx.lineTo(tagX - 38, tagY);
-    ctx.lineTo(tagX - 48, tagY + 10);
+    ctx.moveTo(tagX - 66, tagY);
+    ctx.lineTo(tagX - 54, tagY - 12);
+    ctx.lineTo(tagX - 42, tagY);
+    ctx.lineTo(tagX - 54, tagY + 12);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = feverActive ? '#ef4444' : '#0ea5e9';
-    ctx.fillRect(tagX - 24, tagY - 16, 70, 32);
+    ctx.fillStyle = feverActive ? '#ef4444' : '#0284c7';
+    ctx.fillRect(tagX - 28, tagY - 21, 96, 42);
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(tagX - 24, tagY - 16, 70, 32);
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(tagX - 28, tagY - 21, 96, 42);
 
-    ctx.font = '800 18px "Rubik", "Segoe UI", sans-serif';
+    ctx.font = '800 24px "Rubik", "Segoe UI", sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(feverActive ? 'FEVER' : 'LIVE', tagX + 11, tagY + 1);
+    ctx.fillText(feverActive ? 'FEVER' : 'LIVE', tagX + 20, tagY + 2);
   });
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;

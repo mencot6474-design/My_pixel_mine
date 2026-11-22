@@ -31,6 +31,11 @@ import {
   type TierVfxChoreoContext,
 } from './TierVfxChoreography3D';
 import {
+  createPitArenaClipUniforms,
+  patchTierVfxPoolMaterialsWithPitClip,
+  type PitArenaClipUniforms,
+} from './TierVfxPitClip3D';
+import {
   createTierVfxPoolCollections,
   firePodiumWeaponCastChoreography,
   type PodiumWeaponCastOpts,
@@ -128,6 +133,7 @@ export class TierAttackVfxPool3D {
   private readonly tmpDir = new THREE.Vector3();
   private readonly tmpUp = new THREE.Vector3(0, 1, 0);
   private readonly tmpQuat = new THREE.Quaternion();
+  private readonly pitClipUniforms: PitArenaClipUniforms = createPitArenaClipUniforms();
 
   constructor(hooks: TierVfxHooks = {}) {
     this.hooks = hooks;
@@ -165,6 +171,22 @@ export class TierAttackVfxPool3D {
     this.debris = pools.debris;
     this.quads = pools.quads;
     this.orbs = pools.orbs;
+
+    patchTierVfxPoolMaterialsWithPitClip(pools, this.pitClipUniforms);
+  }
+
+  /** Enables or disables circular pit wall/floor shader clipping (enabled in Mine Pit, disabled in Tower/Omega). */
+  public setPitBounds(bounds: { centerX: number; floorY: number; centerZ: number; radius: number } | null): void {
+    if (!bounds) {
+      this.pitClipUniforms.uPitClipActive.value = 0;
+      this.pitClipUniforms.uPitRadius.value = 999;
+      this.pitClipUniforms.uPitFloorY.value = -999;
+      return;
+    }
+    this.pitClipUniforms.uPitCenter.value.set(bounds.centerX, bounds.floorY, bounds.centerZ);
+    this.pitClipUniforms.uPitFloorY.value = bounds.floorY;
+    this.pitClipUniforms.uPitRadius.value = bounds.radius;
+    this.pitClipUniforms.uPitClipActive.value = 1;
   }
 
   private getChoreoContext(): TierVfxChoreoContext {
@@ -259,7 +281,11 @@ export class TierAttackVfxPool3D {
     slot.s0 = opts.s0 ?? 1.5;
     slot.s1 = opts.s1 ?? 2.7;
     slot.spinSpeed = opts.spinSpeed ?? 3.0;
-    slot.mesh.position.set(opts.x, opts.y, opts.z);
+    const minY =
+      this.pitClipUniforms.uPitClipActive.value > 0.5
+        ? this.pitClipUniforms.uPitFloorY.value + Math.min(slot.s1, 5.6) * 0.2 + 0.16
+        : -Infinity;
+    slot.mesh.position.set(opts.x, Math.max(opts.y, minY), opts.z);
     slot.mesh.rotation.set(opts.rx ?? 0, opts.ry ?? 0, opts.rz ?? 0);
     slot.mesh.scale.setScalar(slot.s0);
     const mode = opts.shaderMode ?? (opts.darkCore ? 1 : 0);
@@ -338,6 +364,9 @@ export class TierAttackVfxPool3D {
     slot.arrived = false;
     slot.startPos.copy(opts.startPos);
     slot.endPos.copy(opts.endPos);
+    if (this.pitClipUniforms.uPitClipActive.value > 0.5 && slot.mode === 'plunge') {
+      slot.endPos.y = Math.max(slot.endPos.y, this.pitClipUniforms.uPitFloorY.value + 0.12);
+    }
     slot.startRot.copy(opts.startRot ?? new THREE.Euler());
     slot.endRot.copy(opts.endRot ?? slot.startRot);
     slot.mesh.position.copy(slot.startPos);
@@ -619,7 +648,11 @@ export class TierAttackVfxPool3D {
     slot.life = opts.life ?? 0.58;
     slot.len = opts.len ?? 5.5;
     slot.height = opts.height ?? 1.0;
-    slot.mesh.position.set(opts.x, opts.y, opts.z);
+    const minY =
+      this.pitClipUniforms.uPitClipActive.value > 0.5
+        ? this.pitClipUniforms.uPitFloorY.value + 0.85
+        : -Infinity;
+    slot.mesh.position.set(opts.x, Math.max(opts.y, minY), opts.z);
     slot.mesh.rotation.set(opts.rx ?? 0, opts.ry ?? 0, opts.rz ?? 0);
     slot.mesh.scale.set(slot.len, slot.height, 1);
     slot.mat.uniforms.uColor.value.set(opts.color);
@@ -654,6 +687,9 @@ export class TierAttackVfxPool3D {
     slot.arrived = false;
     slot.startPos.copy(opts.startPos);
     slot.endPos.copy(opts.endPos);
+    if (this.pitClipUniforms.uPitClipActive.value > 0.5 && slot.mode === 'plunge') {
+      slot.endPos.y = Math.max(slot.endPos.y, this.pitClipUniforms.uPitFloorY.value + 0.12);
+    }
     slot.startRot.copy(opts.startRot);
     slot.endRot.copy(opts.endRot);
     slot.mesh.position.copy(opts.startPos);
@@ -770,9 +806,18 @@ export class TierAttackVfxPool3D {
     slot.spin = opts.spin ?? 0;
     slot.billboard = opts.billboard ?? true;
     slot.flatFloor = opts.flatFloor ?? false;
+    let qy = opts.y;
+    if (slot.flatFloor && this.pitClipUniforms.uPitClipActive.value > 0.5) {
+      const pc = this.pitClipUniforms.uPitCenter.value;
+      const dist = Math.hypot(opts.x - pc.x, opts.z - pc.z);
+      const maxDia = Math.max(1.2, (this.pitClipUniforms.uPitRadius.value - dist) * 1.92);
+      slot.s1 = Math.min(slot.s1, maxDia);
+      slot.s0 = Math.min(slot.s0, slot.s1);
+      qy = Math.max(qy, this.pitClipUniforms.uPitFloorY.value + 0.04);
+    }
     slot.baseRotZ = opts.rotZ ?? 0;
     slot.baseAlpha = opts.alpha ?? 1;
-    slot.mesh.position.set(opts.x, opts.y, opts.z);
+    slot.mesh.position.set(opts.x, qy, opts.z);
     slot.mesh.scale.setScalar(slot.s0);
     if (slot.flatFloor) slot.mesh.rotation.set(-Math.PI / 2, 0, slot.baseRotZ);
     else slot.mesh.rotation.set(0, 0, slot.baseRotZ);

@@ -3,7 +3,7 @@ import { type PitEventKind } from '../game/PitEventsDomain';
 import { type WeatherId } from '../game/WeatherData';
 import { type ChibiDef } from './ChibiCatalog';
 import { type OreVariantKey } from './MineWorldPalette';
-import { type OrePit3D, PIT_CENTER_Z, PIT_FLOOR_Y } from './OrePit3D';
+import { type OrePit3D, PIT_CENTER_Z, PIT_FLOOR_Y, PIT_RADIUS } from './OrePit3D';
 import { type PlotPedestal3D } from './PlotPedestal3D';
 import {
   getChibiAttackStyle,
@@ -112,16 +112,21 @@ function computeZoneWideCenter(
   cx /= allTargets.length;
   cy /= allTargets.length;
   cz /= allTargets.length;
-  // Blend 68% target stone + 32% pit center and clamp inside circular pool core (r <= 3.8m)
+  // Blend 68% target stone + 32% pit center and clamp inside inner colosseum core (r <= 2.35m)
   let bx = target.x * 0.68 + cx * 0.32;
   let dz = (target.z * 0.68 + cz * 0.32) - PIT_CENTER_Z;
   const dist = Math.hypot(bx, dz);
-  if (dist > 3.8) {
-    const k = 3.8 / dist;
+  if (dist > 2.35) {
+    const k = 2.35 / dist;
     bx *= k;
     dz *= k;
   }
   return { x: bx, y: target.y * 0.68 + cy * 0.32, z: PIT_CENTER_Z + dz };
+}
+
+function computeSafePitAreaScale(center: WorldPoint3): number {
+  const distFromPit = Math.hypot(center.x, center.z - PIT_CENTER_Z);
+  return Math.min(MINE_PIT_VFX_SCALE, Math.max(0.45, (PIT_RADIUS - 0.45 - distFromPit) / 4.7));
 }
 
 export class PlotAttackController3D {
@@ -139,6 +144,12 @@ export class PlotAttackController3D {
   private disposed = false;
 
   constructor() {
+    this.tierVfx.setPitBounds({
+      centerX: 0,
+      floorY: PIT_FLOOR_Y,
+      centerZ: PIT_CENTER_Z,
+      radius: PIT_RADIUS - 0.18,
+    });
     this.group.add(this.tierVfx.group);
   }
 
@@ -368,6 +379,7 @@ export class PlotAttackController3D {
         const speedScale = computeAttackVfxSpeedScale(a.attackInterval);
         const targetPt: WorldPoint3 = { x: a.ex, y: Math.max(PIT_FLOOR_Y, a.ey - 0.65), z: a.ez };
         const wideCenter = computeZoneWideCenter(targetPt, this.alivePointScratch);
+        const areaScale = computeSafePitAreaScale(wideCenter);
         this.tierVfx.fireTierAttack({
           rarity: unit.def.rarity,
           chibiId: unit.def.id,
@@ -376,7 +388,7 @@ export class PlotAttackController3D {
           allTargets: this.alivePointScratch,
           comboStep: a.comboStep,
           speedScale,
-          areaScale: MINE_PIT_VFX_SCALE,
+          areaScale,
           wideCenter,
         });
         const r = unit.def.rarity;
@@ -452,6 +464,7 @@ export class PlotAttackController3D {
           }
           const targetPt: WorldPoint3 = { x: target.worldX, y: target.worldY, z: target.worldZ };
           const wideCenter = computeZoneWideCenter(targetPt, this.alivePointScratch);
+          const areaScale = computeSafePitAreaScale(wideCenter);
           const accentColor = ped.getActiveAccentColor();
 
           ped.setChibiAnimState('idle');
@@ -464,7 +477,7 @@ export class PlotAttackController3D {
             origin: { x: ped.group.position.x, y: ped.group.position.y, z: ped.group.position.z },
             target: targetPt,
             allTargets: this.alivePointScratch,
-            areaScale: MINE_PIT_VFX_SCALE,
+            areaScale,
             wideCenter,
           });
           this.tierVfx.fireAnticipation(
@@ -472,7 +485,7 @@ export class PlotAttackController3D {
             accentColor,
             targetPt,
             this.alivePointScratch,
-            MINE_PIT_VFX_SCALE,
+            areaScale,
             wideCenter
           );
 

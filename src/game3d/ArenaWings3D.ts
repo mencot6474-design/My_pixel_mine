@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { disposeObject3D } from './ChestVaultStation3D';
-import { createCyberLanternBollardFinial, createCyberMonolithForkFinial } from './CyberProps3D';
+import { createCyberMonolithForkFinial } from './CyberProps3D';
 import { createChamferSlabGeometry, mergeStaticMeshesByMaterial } from './MeshHelpers3D';
 
 export interface ArenaWingOptions {
@@ -271,69 +271,54 @@ export function createVaultCoreDais(options: ArenaWingOptions = {}): VaultCoreDa
     flatShading: true,
   });
 
-  // Floating octagonal Vault Core Dais at (9.85, 0.55, 3.85) (clean sky gap outside r=7.95 ring & clears Daily HUD row)
+  // Floating octagonal Cyber Hover-Pad at (9.85, 0.55, 3.85) — sleek & pillar-free
   const daisX = 9.85;
   const daisY = 0.55;
   const daisZ = 3.85;
 
-  const vaultKeel = new THREE.Mesh(new THREE.CylinderGeometry(1.46, 0.42, 0.66, 8), baseMat);
-  vaultKeel.position.set(daisX, daisY - 0.33, daisZ);
+  const vaultKeel = new THREE.Mesh(new THREE.CylinderGeometry(1.62, 0.46, 0.72, 8), baseMat);
+  vaultKeel.position.set(daisX, daisY - 0.36, daisZ);
   vaultKeel.rotation.y = Math.PI / 8;
   vaultKeel.castShadow = true;
 
-  const vaultThruster = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.32, 0.075, 8), neonMat);
-  vaultThruster.position.set(daisX, daisY - 0.69, daisZ);
+  const vaultThruster = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.34, 0.09, 8), neonMat);
+  vaultThruster.position.set(daisX, daisY - 0.75, daisZ);
   vaultThruster.rotation.y = Math.PI / 8;
 
-  const lowerOct = new THREE.Mesh(new THREE.CylinderGeometry(1.52, 1.66, 0.26, 8), baseMat);
-  lowerOct.position.set(daisX, daisY + 0.13, daisZ);
+  const lowerOct = new THREE.Mesh(new THREE.CylinderGeometry(1.66, 1.56, 0.24, 8), baseMat);
+  lowerOct.position.set(daisX, daisY + 0.12, daisZ);
   lowerOct.rotation.y = Math.PI / 8;
   lowerOct.receiveShadow = true;
   lowerOct.castShadow = true;
 
-  const upperOct = new THREE.Mesh(new THREE.CylinderGeometry(1.24, 1.38, 0.22, 8), trimMat);
-  upperOct.position.set(daisX, daisY + 0.37, daisZ);
+  const upperOct = new THREE.Mesh(new THREE.CylinderGeometry(1.38, 1.52, 0.22, 8), trimMat);
+  upperOct.position.set(daisX, daisY + 0.35, daisZ);
   upperOct.rotation.y = Math.PI / 8;
   upperOct.receiveShadow = true;
   upperOct.castShadow = true;
 
-  const daisRing = new THREE.Mesh(new THREE.CylinderGeometry(1.28, 1.3, 0.04, 8), neonMat);
-  daisRing.position.set(daisX, daisY + 0.46, daisZ);
+  const daisRing = new THREE.Mesh(new THREE.CylinderGeometry(1.42, 1.44, 0.045, 8), neonMat);
+  daisRing.position.set(daisX, daisY + 0.45, daisZ);
   daisRing.rotation.y = Math.PI / 8;
 
-  // Rear vault monolith & flank shield fins (strictly behind chest x >= 11.4 so chest clicks stay open)
-  const rearDeck = new THREE.Mesh(createChamferSlabGeometry(2.2, 0.26, 3.6, 0.3, 0.018), baseMat);
-  rearDeck.position.set(daisX + 2.35, daisY, daisZ);
-  rearDeck.receiveShadow = true;
-  rearDeck.castShadow = true;
+  staticGroup.add(vaultKeel, vaultThruster, lowerOct, upperOct, daisRing);
 
-  const rearPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.54, 2.05, 8), baseMat);
-  rearPillar.position.set(daisX + 2.45, daisY + 1.24, daisZ);
-  rearPillar.castShadow = true;
+  // 4 Low-profile octagonal corner bumper clamps (no tall rear pillar/walls)
+  const clampGeo = createChamferSlabGeometry(0.36, 0.18, 0.32, 0.07, 0.012);
+  const clampLedGeo = new THREE.BoxGeometry(0.22, 0.05, 0.08);
+  for (let i = 0; i < 4; i++) {
+    const a = (i * Math.PI) / 2 + Math.PI / 4;
+    const cx = daisX + Math.cos(a) * 1.44;
+    const cz = daisZ + Math.sin(a) * 1.44;
+    const clamp = new THREE.Mesh(clampGeo, trimMat);
+    clamp.position.set(cx, daisY + 0.24, cz);
+    clamp.rotation.y = -a;
+    clamp.castShadow = true;
 
-  const rearFinial = createCyberLanternBollardFinial({
-    frameMat: baseMat,
-    steelMat: trimMat,
-    coreMat: neonMat,
-    scale: 1.0,
-  });
-  rearFinial.position.set(daisX + 2.45, daisY + 2.24, daisZ);
-
-  staticGroup.add(vaultKeel, vaultThruster, lowerOct, upperOct, daisRing, rearDeck, rearPillar, rearFinial);
-
-  for (const sz of [-1, 1]) {
-    const finGroup = new THREE.Group();
-    finGroup.position.set(daisX + 2.05, daisY + 0.26, daisZ + sz * 1.48);
-    finGroup.rotation.set(0, sz * 0.22, 0.14);
-
-    const wingFin = new THREE.Mesh(createChamferSlabGeometry(0.52, 1.55, 0.4, 0.08, 0.014), trimMat);
-    wingFin.castShadow = true;
-
-    const finLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.25, 0.08), neonMat);
-    finLed.position.set(-0.28, 0.78, 0);
-
-    finGroup.add(wingFin, finLed);
-    staticGroup.add(finGroup);
+    const led = new THREE.Mesh(clampLedGeo, neonMat);
+    led.position.set(cx, daisY + 0.45, cz);
+    led.rotation.y = -a;
+    staticGroup.add(clamp, led);
   }
 
   mergeStaticMeshesByMaterial(staticGroup);
@@ -365,13 +350,13 @@ export function createVaultCoreDais(options: ArenaWingOptions = {}): VaultCoreDa
     const activeCount = lowQuality ? 3 : prismCount;
     prismInst.count = activeCount;
     for (let i = 0; i < activeCount; i++) {
-      const ang = ((i - (activeCount - 1) / 2) / Math.max(1, activeCount - 1)) * 1.35;
-      const px = daisX + 1.65 + Math.cos(ang) * 0.62;
-      const pz = daisZ + Math.sin(ang) * 1.48;
-      const py = daisY + 0.95 + Math.sin(elapsed * 2.4 + i * 0.9) * (0.1 + hoverBoost * 0.08);
+      const ang = (i / activeCount) * Math.PI * 2 + elapsed * 0.25;
+      const px = daisX + Math.cos(ang) * 1.36;
+      const pz = daisZ + Math.sin(ang) * 1.36;
+      const py = daisY + 0.78 + Math.sin(elapsed * 2.4 + i * 0.9) * (0.09 + hoverBoost * 0.08);
       dummy.position.set(px, py, pz);
       dummy.rotation.set(0, elapsed * 1.1 + i * 0.7, 0);
-      dummy.scale.setScalar(1 + hoverBoost * 0.22);
+      dummy.scale.setScalar(0.85 + hoverBoost * 0.22);
       dummy.updateMatrix();
       prismInst.setMatrixAt(i, dummy.matrix);
     }

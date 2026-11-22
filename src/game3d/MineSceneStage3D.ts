@@ -4,7 +4,8 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { createProceduralTreasureChest, ProceduralChestHandle } from './ChestVaultStation3D';
+import { type ProceduralChestHandle } from './ChestVaultStation3D';
+import { createCyberCargoPod } from './CyberCargoPod3D';
 import { configureSceneTextureSharpness } from './MeshHelpers3D';
 import { ImpactFrameShader } from './MeshFx3D';
 import type { MineEnvironment3D } from './MineEnvironment3D';
@@ -215,16 +216,15 @@ export function buildMineStageAndChest(ctx: {
     ctx.clickableMeshes.push(ped.hitMesh);
   }
 
-  // Right Floating Satellite Chest on Vault Core Dais (x=9.85, y=0.55+0.48=1.03, z=3.85)
+  // Right Floating Satellite Cyber Cargo Pod on Vault Hover-Pad (x=9.85, y=0.55+0.48=1.03, z=3.85)
   ctx.crateGroup.position.set(9.85, 1.03, 3.85);
-  const chestVisual = createProceduralTreasureChest({
+  const chestVisual = createCyberCargoPod({
     scale: 1.08,
-    woodColor: 0x1e293b,
-    ironColor: 0x3b4d6b,
-    trimColor: 0x7084a3,
-    gemColor: palette.crystalColor,
+    hullColor: 0x162238,
+    trimColor: 0x4b6082,
+    accentColor: palette.crystalColor,
   });
-  chestVisual.group.rotation.y = -Math.PI / 2 - 0.28;
+  chestVisual.group.rotation.y = -Math.PI / 6;
   ctx.crateGroup.add(chestVisual.group);
 
   const crateHit = new THREE.Mesh(
