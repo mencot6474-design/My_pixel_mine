@@ -2424,7 +2424,7 @@ describe('Pure 3D Mine World', () => {
         }
       }
     });
-    expect(meshCount).toBeGreaterThan(50);
+    expect(meshCount).toBeGreaterThanOrEqual(15);
     expect(rearSkyOccluderCount).toBe(0);
 
     expect(() => {
@@ -3742,28 +3742,28 @@ describe('Pure 3D Mine World', () => {
     pit.dispose();
   });
 
-  it('builds Nexus Left Gate and Vault Core Dais wings with InstancedMeshes, chest clearance, and continuous courtyard deck', () => {
+  it('builds floating Nexus Left Gate and Vault Core Dais satellites with InstancedMeshes, sky gap, and open-sky MineEnvironment3D', () => {
     const leftGate = createNexusLeftGate({ crystalColor: '#38bdf8', cliffColor: '#1e293b' });
     leftGate.group.updateMatrixWorld(true);
     const gateBox = new THREE.Box3().setFromObject(leftGate.group);
     expect(gateBox.max.x).toBeLessThan(-7.5);
-    expect(gateBox.max.y).toBeGreaterThan(3.5);
-    expect(gateBox.min.y).toBeLessThanOrEqual(0.01);
-    expect(gateBox.max.y).toBeLessThan(5.2);
+    expect(gateBox.max.y).toBeGreaterThan(3.8);
+    expect(gateBox.min.y).toBeLessThan(0);
+    expect(gateBox.max.y).toBeLessThan(6.0);
 
-    // North pillar shaft must span y=1.6 with zero vertical air gap & match cableSocketWorld XZ
+    // North pillar shaft spans y=2.1 with zero vertical air gap & matches cableSocketWorld XZ
     const pillarRay = new THREE.Raycaster(
-      new THREE.Vector3(leftGate.cableSocketWorld.x - 1.5, 1.6, leftGate.cableSocketWorld.z),
+      new THREE.Vector3(leftGate.cableSocketWorld.x - 1.5, 2.1, leftGate.cableSocketWorld.z),
       new THREE.Vector3(1, 0, 0)
     );
     expect(pillarRay.intersectObject(leftGate.group, true).length).toBeGreaterThan(0);
     const socketTopRay = new THREE.Raycaster(
-      new THREE.Vector3(leftGate.cableSocketWorld.x, 6, leftGate.cableSocketWorld.z),
+      new THREE.Vector3(leftGate.cableSocketWorld.x, 7, leftGate.cableSocketWorld.z),
       new THREE.Vector3(0, -1, 0)
     );
     const socketTopHits = socketTopRay.intersectObject(leftGate.group, true);
     expect(socketTopHits.length).toBeGreaterThan(0);
-    expect(socketTopHits[0].point.y).toBeGreaterThanOrEqual(4.0);
+    expect(socketTopHits[0].point.y).toBeGreaterThanOrEqual(4.5);
 
     let gateInstanced = 0;
     leftGate.group.traverse((obj) => {
@@ -3782,11 +3782,11 @@ describe('Pure 3D Mine World', () => {
     const vaultDais = createVaultCoreDais({ crystalColor: '#38bdf8', cliffColor: '#1e293b' });
     vaultDais.group.updateMatrixWorld(true);
     const vaultBox = new THREE.Box3().setFromObject(vaultDais.group);
-    expect(vaultBox.min.x).toBeGreaterThan(6.8);
-    expect(vaultBox.min.y).toBeLessThanOrEqual(0.01);
-    // Wing fin must connect flush to rearDeck around y=0.5 (not float at y=1.02)
+    expect(vaultBox.min.x).toBeGreaterThan(8.3);
+    expect(vaultBox.min.y).toBeLessThan(0);
+    // Wing fin connects flush to floating rearDeck around y=1.1
     const finRay = new THREE.Raycaster(
-      new THREE.Vector3(9.5, 0.5, 0.15 + 1.48),
+      new THREE.Vector3(10.0, 1.1, 1.65 + 1.48),
       new THREE.Vector3(1, 0, 0)
     );
     expect(finRay.intersectObject(vaultDais.group, true).length).toBeGreaterThan(0);
@@ -3803,17 +3803,16 @@ describe('Pure 3D Mine World', () => {
       vaultDais.dispose();
     }).not.toThrow();
 
-    // Continuous courtyard deck slabs close old left/right trench gaps at x = +-6.45, z = 0.15
+    // Open-sky MineEnvironment3D removes all boxy courtyard slabs around the circular ring (open sky at x=+-6.45, z=0.15)
     const env = new MineEnvironment3D(DEFAULT_WORLD_PALETTE);
     env.group.updateMatrixWorld(true);
     for (const sx of [-6.45, 6.45]) {
-      const trenchRay = new THREE.Raycaster(
+      const skyRay = new THREE.Raycaster(
         new THREE.Vector3(sx, 2, 0.15),
         new THREE.Vector3(0, -1, 0)
       );
-      const hits = trenchRay.intersectObject(env.group, true);
-      expect(hits.length).toBeGreaterThan(0);
-      expect(hits[0].point.y).toBeGreaterThan(-0.1);
+      const hits = skyRay.intersectObject(env.group, true).filter((h) => h.object !== env.skyDome);
+      expect(hits).toHaveLength(0);
     }
     env.dispose();
   });

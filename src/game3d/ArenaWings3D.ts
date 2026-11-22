@@ -61,7 +61,7 @@ function makePortalVeilMaterial(crystalHex: string): THREE.ShaderMaterial {
   });
 }
 
-/** Builds the Left Dimensional Nexus Gate wing replacing legacy minecart railway. */
+/** Builds the Left Floating Satellite Nexus Gate replacing legacy minecart railway. */
 export function createNexusLeftGate(options: ArenaWingOptions = {}): NexusLeftGateHandle {
   const crystalHex = options.crystalColor ?? '#38bdf8';
   const cliffHex = options.cliffColor ?? '#334155';
@@ -90,14 +90,24 @@ export function createNexusLeftGate(options: ArenaWingOptions = {}): NexusLeftGa
     flatShading: true,
   });
 
-  // Stepped chamfered plinth (x = -11.4, z = 0.15)
   const gateCenterX = -11.4;
-  const gateCenterZ = 0.15;
-  const gateYaw = 0.14;
+  const gateCenterY = 0.55;
+  const gateCenterZ = 1.15;
+  const gateYaw = 0.26;
 
   const plinthGroup = new THREE.Group();
-  plinthGroup.position.set(gateCenterX, 0, gateCenterZ);
+  plinthGroup.position.set(gateCenterX, gateCenterY, gateCenterZ);
   plinthGroup.rotation.y = gateYaw;
+
+  // Floating satellite keel & thruster emitter beneath lowerPlinth
+  const keelMesh = new THREE.Mesh(new THREE.CylinderGeometry(1.48, 0.42, 0.72, 8), baseMat);
+  keelMesh.position.y = -0.36;
+  keelMesh.rotation.y = Math.PI / 8;
+  keelMesh.castShadow = true;
+
+  const thrusterRing = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.34, 0.08, 8), neonMat);
+  thrusterRing.position.y = -0.75;
+  thrusterRing.rotation.y = Math.PI / 8;
 
   const lowerPlinth = new THREE.Mesh(createChamferSlabGeometry(3.2, 0.24, 5.2, 0.42, 0.02), baseMat);
   lowerPlinth.position.y = 0;
@@ -112,7 +122,6 @@ export function createNexusLeftGate(options: ArenaWingOptions = {}): NexusLeftGa
   const thresholdStrip = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 3.2), neonMat);
   thresholdStrip.position.set(0.45, 0.46, 0);
 
-  // Twin vertical monolith pillars framing the Nexus Gate (bottom-origin slabs stacked cleanly)
   const pillarZOffset = 1.72;
   for (const sz of [-1, 1]) {
     const pillarZ = sz * pillarZOffset;
@@ -137,26 +146,36 @@ export function createNexusLeftGate(options: ArenaWingOptions = {}): NexusLeftGa
     plinthGroup.add(pillarBase, pillarShaft, innerNeon, finial);
   }
 
-  // Overhead chamfered lintel arch spanning pillar tops (y = 3.96..4.32)
   const lintel = new THREE.Mesh(createChamferSlabGeometry(0.92, 0.36, 4.3, 0.18, 0.016), trimMat);
   lintel.position.set(0, 3.96, 0);
   lintel.castShadow = true;
   const lintelNeon = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 3.35), neonMat);
   lintelNeon.position.set(0.42, 4.14, 0);
 
-  plinthGroup.add(lowerPlinth, upperPlinth, thresholdStrip, lintel, lintelNeon);
+  plinthGroup.add(keelMesh, thrusterRing, lowerPlinth, upperPlinth, thresholdStrip, lintel, lintelNeon);
   staticGroup.add(plinthGroup);
   mergeStaticMeshesByMaterial(staticGroup);
   group.add(staticGroup);
 
-  // Vertical translucent energy portal curtain (pure vertical gate plane)
+  const plumeMat = new THREE.MeshBasicMaterial({
+    color: crystalHex,
+    transparent: true,
+    opacity: 0.24,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const plumeMesh = new THREE.Mesh(new THREE.ConeGeometry(0.66, 0.95, 12, 1, true), plumeMat);
+  plumeMesh.position.set(gateCenterX, gateCenterY - 1.24, gateCenterZ);
+  plumeMesh.rotation.x = Math.PI;
+  group.add(plumeMesh);
+
   const veilMat = makePortalVeilMaterial(crystalHex);
   const veilMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.86, 3.5), veilMat);
-  veilMesh.position.set(gateCenterX, 2.19, gateCenterZ);
+  veilMesh.position.set(gateCenterX, gateCenterY + 2.19, gateCenterZ);
   veilMesh.rotation.y = Math.PI / 2 + gateYaw;
   group.add(veilMesh);
 
-  // Instanced floating upward energy chevrons inside the Nexus Gate
   const chevronCount = 8;
   const chevronGeo = new THREE.OctahedronGeometry(0.11, 0);
   chevronGeo.scale(0.65, 1.45, 0.65);
@@ -172,7 +191,7 @@ export function createNexusLeftGate(options: ArenaWingOptions = {}): NexusLeftGa
     for (let i = 0; i < activeCount; i++) {
       const phase = (elapsed * 0.42 + i / activeCount) % 1;
       const localZ = ((i % 4) - 1.5) * 0.62;
-      const localY = 0.72 + phase * 3.05;
+      const localY = gateCenterY + 0.72 + phase * 3.05;
       const localX = Math.sin(elapsed * 2.1 + i * 1.4) * 0.16;
       const sc = Math.sin(phase * Math.PI) * 1.05;
       dummy.position.set(
@@ -193,13 +212,14 @@ export function createNexusLeftGate(options: ArenaWingOptions = {}): NexusLeftGa
     group,
     cableSocketWorld: new THREE.Vector3(
       gateCenterX - pillarZOffset * Math.sin(gateYaw),
-      4.32,
+      gateCenterY + 4.32,
       gateCenterZ - pillarZOffset * Math.cos(gateYaw)
     ),
     setPalette(nextCrystalHex: string, nextCliffHex: string): void {
       baseMat.color.setHex(0x162032).lerp(new THREE.Color(nextCliffHex), 0.18);
       neonMat.color.set(nextCrystalHex);
       neonMat.emissive.set(nextCrystalHex);
+      plumeMat.color.set(nextCrystalHex);
       (veilMat.uniforms.uColor.value as THREE.Color).set(nextCrystalHex);
     },
     setLowQuality(low: boolean): void {
@@ -209,17 +229,19 @@ export function createNexusLeftGate(options: ArenaWingOptions = {}): NexusLeftGa
     update(_dtSec: number, elapsed: number): void {
       veilMat.uniforms.uTime.value = elapsed;
       neonMat.emissiveIntensity = 1.08 + Math.sin(elapsed * 2.5) * 0.16;
+      plumeMat.opacity = 0.22 + Math.sin(elapsed * 3.8) * 0.05;
       updateChevrons(elapsed);
     },
     dispose(): void {
       veilMat.dispose();
+      plumeMat.dispose();
       chevronGeo.dispose();
       disposeObject3D(group);
     },
   };
 }
 
-/** Builds the Right Vault Core Dais wing framing the clickable treasure chest. */
+/** Builds the Right Floating Satellite Vault Core Dais framing the clickable chest. */
 export function createVaultCoreDais(options: ArenaWingOptions = {}): VaultCoreDaisHandle {
   const crystalHex = options.crystalColor ?? '#38bdf8';
   const cliffHex = options.cliffColor ?? '#334155';
@@ -248,56 +270,66 @@ export function createVaultCoreDais(options: ArenaWingOptions = {}): VaultCoreDa
     flatShading: true,
   });
 
-  // Stepped octagonal Vault Core Dais centered under crateGroup (x = 8.45, y = 0..0.48, z = 0.15)
-  const daisX = 8.45;
-  const daisZ = 0.15;
+  // Floating octagonal Vault Core Dais at (10.25, 0.55, 1.65) (clean ~0.65m sky gap outside r=7.95 ring)
+  const daisX = 10.25;
+  const daisY = 0.55;
+  const daisZ = 1.65;
 
-  const lowerOct = new THREE.Mesh(new THREE.CylinderGeometry(1.58, 1.76, 0.26, 8), baseMat);
-  lowerOct.position.set(daisX, 0.13, daisZ);
+  const vaultKeel = new THREE.Mesh(new THREE.CylinderGeometry(1.46, 0.42, 0.66, 8), baseMat);
+  vaultKeel.position.set(daisX, daisY - 0.33, daisZ);
+  vaultKeel.rotation.y = Math.PI / 8;
+  vaultKeel.castShadow = true;
+
+  const vaultThruster = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.32, 0.075, 8), neonMat);
+  vaultThruster.position.set(daisX, daisY - 0.69, daisZ);
+  vaultThruster.rotation.y = Math.PI / 8;
+
+  const lowerOct = new THREE.Mesh(new THREE.CylinderGeometry(1.52, 1.66, 0.26, 8), baseMat);
+  lowerOct.position.set(daisX, daisY + 0.13, daisZ);
   lowerOct.rotation.y = Math.PI / 8;
   lowerOct.receiveShadow = true;
   lowerOct.castShadow = true;
 
-  const upperOct = new THREE.Mesh(new THREE.CylinderGeometry(1.26, 1.42, 0.22, 8), trimMat);
-  upperOct.position.set(daisX, 0.37, daisZ);
+  const upperOct = new THREE.Mesh(new THREE.CylinderGeometry(1.24, 1.38, 0.22, 8), trimMat);
+  upperOct.position.set(daisX, daisY + 0.37, daisZ);
   upperOct.rotation.y = Math.PI / 8;
   upperOct.receiveShadow = true;
   upperOct.castShadow = true;
 
-  const daisRing = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.32, 0.04, 8), neonMat);
-  daisRing.position.set(daisX, 0.46, daisZ);
+  const daisRing = new THREE.Mesh(new THREE.CylinderGeometry(1.28, 1.3, 0.04, 8), neonMat);
+  daisRing.position.set(daisX, daisY + 0.46, daisZ);
   daisRing.rotation.y = Math.PI / 8;
 
-  // Rear vault anchor monolith & twin flank shield fins (strictly behind chest x >= 10.2 so chest raycasts stay open)
-  const rearDeck = new THREE.Mesh(createChamferSlabGeometry(2.4, 0.28, 3.8, 0.32, 0.018), baseMat);
-  rearDeck.position.set(11.15, 0, daisZ);
+  // Rear vault monolith & flank shield fins (strictly behind chest x >= 11.4 so chest clicks stay open)
+  const rearDeck = new THREE.Mesh(createChamferSlabGeometry(2.2, 0.26, 3.6, 0.3, 0.018), baseMat);
+  rearDeck.position.set(daisX + 2.35, daisY, daisZ);
   rearDeck.receiveShadow = true;
   rearDeck.castShadow = true;
 
-  const rearPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.56, 2.15, 8), baseMat);
-  rearPillar.position.set(11.25, 1.32, daisZ);
+  const rearPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.54, 2.05, 8), baseMat);
+  rearPillar.position.set(daisX + 2.45, daisY + 1.24, daisZ);
   rearPillar.castShadow = true;
 
   const rearFinial = createCyberLanternBollardFinial({
     frameMat: baseMat,
     steelMat: trimMat,
     coreMat: neonMat,
-    scale: 1.05,
+    scale: 1.0,
   });
-  rearFinial.position.set(11.25, 2.38, daisZ);
+  rearFinial.position.set(daisX + 2.45, daisY + 2.24, daisZ);
 
-  staticGroup.add(lowerOct, upperOct, daisRing, rearDeck, rearPillar, rearFinial);
+  staticGroup.add(vaultKeel, vaultThruster, lowerOct, upperOct, daisRing, rearDeck, rearPillar, rearFinial);
 
   for (const sz of [-1, 1]) {
     const finGroup = new THREE.Group();
-    finGroup.position.set(10.85, 0.28, daisZ + sz * 1.48);
+    finGroup.position.set(daisX + 2.05, daisY + 0.26, daisZ + sz * 1.48);
     finGroup.rotation.set(0, sz * 0.22, 0.14);
 
-    const wingFin = new THREE.Mesh(createChamferSlabGeometry(0.54, 1.65, 0.42, 0.08, 0.014), trimMat);
+    const wingFin = new THREE.Mesh(createChamferSlabGeometry(0.52, 1.55, 0.4, 0.08, 0.014), trimMat);
     wingFin.castShadow = true;
 
-    const finLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.35, 0.08), neonMat);
-    finLed.position.set(-0.29, 0.825, 0);
+    const finLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.25, 0.08), neonMat);
+    finLed.position.set(-0.28, 0.78, 0);
 
     finGroup.add(wingFin, finLed);
     staticGroup.add(finGroup);
@@ -306,7 +338,19 @@ export function createVaultCoreDais(options: ArenaWingOptions = {}): VaultCoreDa
   mergeStaticMeshesByMaterial(staticGroup);
   group.add(staticGroup);
 
-  // Instanced hovering energy prisms along the rear Vault Dais flank
+  const plumeMat = new THREE.MeshBasicMaterial({
+    color: crystalHex,
+    transparent: true,
+    opacity: 0.24,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const plumeMesh = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.88, 12, 1, true), plumeMat);
+  plumeMesh.position.set(daisX, daisY - 1.14, daisZ);
+  plumeMesh.rotation.x = Math.PI;
+  group.add(plumeMesh);
+
   const prismCount = 6;
   const prismGeo = new THREE.OctahedronGeometry(0.12, 0);
   prismGeo.scale(0.8, 1.5, 0.8);
@@ -321,9 +365,9 @@ export function createVaultCoreDais(options: ArenaWingOptions = {}): VaultCoreDa
     prismInst.count = activeCount;
     for (let i = 0; i < activeCount; i++) {
       const ang = ((i - (activeCount - 1) / 2) / Math.max(1, activeCount - 1)) * 1.35;
-      const px = daisX + 1.85 + Math.cos(ang) * 0.65;
-      const pz = daisZ + Math.sin(ang) * 1.55;
-      const py = 0.95 + Math.sin(elapsed * 2.4 + i * 0.9) * (0.1 + hoverBoost * 0.08);
+      const px = daisX + 1.65 + Math.cos(ang) * 0.62;
+      const pz = daisZ + Math.sin(ang) * 1.48;
+      const py = daisY + 0.95 + Math.sin(elapsed * 2.4 + i * 0.9) * (0.1 + hoverBoost * 0.08);
       dummy.position.set(px, py, pz);
       dummy.rotation.set(0, elapsed * 1.1 + i * 0.7, 0);
       dummy.scale.setScalar(1 + hoverBoost * 0.22);
@@ -336,11 +380,12 @@ export function createVaultCoreDais(options: ArenaWingOptions = {}): VaultCoreDa
 
   return {
     group,
-    cableSocketWorld: new THREE.Vector3(11.25, 2.55, 0.15),
+    cableSocketWorld: new THREE.Vector3(daisX + 2.45, daisY + 2.42, daisZ),
     setPalette(nextCrystalHex: string, nextCliffHex: string): void {
       baseMat.color.setHex(0x162032).lerp(new THREE.Color(nextCliffHex), 0.18);
       neonMat.color.set(nextCrystalHex);
       neonMat.emissive.set(nextCrystalHex);
+      plumeMat.color.set(nextCrystalHex);
     },
     setLowQuality(low: boolean): void {
       lowQuality = low;
@@ -349,9 +394,11 @@ export function createVaultCoreDais(options: ArenaWingOptions = {}): VaultCoreDa
     update(_dtSec: number, elapsed: number, chestHovered = false, chestBounce = 0): void {
       const hoverBoost = (chestHovered ? 1.0 : 0) + Math.min(1, chestBounce * 2);
       neonMat.emissiveIntensity = 1.05 + hoverBoost * 0.55 + Math.sin(elapsed * 2.6) * 0.12;
+      plumeMat.opacity = 0.22 + hoverBoost * 0.2 + Math.sin(elapsed * 3.8) * 0.04;
       updatePrisms(elapsed, hoverBoost);
     },
     dispose(): void {
+      plumeMat.dispose();
       prismGeo.dispose();
       disposeObject3D(group);
     },
