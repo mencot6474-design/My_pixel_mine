@@ -19,6 +19,7 @@ import {
   stepHoldMineTimer,
 } from '../src/game3d/MineScene3D';
 import { STAGE_CRESCENT_SLOTS } from '../src/game3d/MineSceneStage3D';
+import { createNexusLeftGate, createVaultCoreDais } from '../src/game3d/ArenaWings3D';
 import { AudioManager } from '../src/audio/AudioManager';
 import {
   PlotAttackController3D,
@@ -3714,5 +3715,56 @@ describe('Pure 3D Mine World', () => {
     pedCommon.dispose();
     ctrl.dispose();
     pit.dispose();
+  });
+
+  it('builds Nexus Left Gate and Vault Core Dais wings with InstancedMeshes, chest clearance, and continuous courtyard deck', () => {
+    const leftGate = createNexusLeftGate({ crystalColor: '#38bdf8', cliffColor: '#1e293b' });
+    leftGate.group.updateMatrixWorld(true);
+    const gateBox = new THREE.Box3().setFromObject(leftGate.group);
+    expect(gateBox.max.x).toBeLessThan(-7.5);
+    expect(gateBox.max.y).toBeGreaterThan(3.5);
+    let gateInstanced = 0;
+    leftGate.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) gateInstanced += 1;
+    });
+    expect(gateInstanced).toBeGreaterThanOrEqual(1);
+    expect(() => {
+      leftGate.setPalette('#c084fc', '#334155');
+      leftGate.setLowQuality(true);
+      leftGate.update(0.05, 1.5);
+      leftGate.setLowQuality(false);
+      leftGate.update(0.05, 2.5);
+      leftGate.dispose();
+    }).not.toThrow();
+
+    const vaultDais = createVaultCoreDais({ crystalColor: '#38bdf8', cliffColor: '#1e293b' });
+    vaultDais.group.updateMatrixWorld(true);
+    const vaultBox = new THREE.Box3().setFromObject(vaultDais.group);
+    expect(vaultBox.min.x).toBeGreaterThan(6.8);
+    let vaultInstanced = 0;
+    vaultDais.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) vaultInstanced += 1;
+    });
+    expect(vaultInstanced).toBeGreaterThanOrEqual(1);
+    expect(() => {
+      vaultDais.setPalette('#f59e0b', '#334155');
+      vaultDais.setLowQuality(true);
+      vaultDais.update(0.05, 1.2, true, 0.5);
+      vaultDais.dispose();
+    }).not.toThrow();
+
+    // Continuous courtyard deck slabs close old left/right trench gaps at x = +-6.45, z = 0.15
+    const env = new MineEnvironment3D(DEFAULT_WORLD_PALETTE);
+    env.group.updateMatrixWorld(true);
+    for (const sx of [-6.45, 6.45]) {
+      const trenchRay = new THREE.Raycaster(
+        new THREE.Vector3(sx, 2, 0.15),
+        new THREE.Vector3(0, -1, 0)
+      );
+      const hits = trenchRay.intersectObject(env.group, true);
+      expect(hits.length).toBeGreaterThan(0);
+      expect(hits[0].point.y).toBeGreaterThan(-0.1);
+    }
+    env.dispose();
   });
 });

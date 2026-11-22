@@ -1,8 +1,13 @@
 import * as THREE from 'three';
 import type { WeatherId } from '../game/WeatherData';
 import type { MineWorldPalette } from './MineWorldPalette';
-import { CaveRailwayHandle, createCaveRailway } from './CaveRailway3D';
-import { ChestVaultStationHandle, createChestVaultStation, disposeObject3D } from './ChestVaultStation3D';
+import {
+  createNexusLeftGate,
+  createVaultCoreDais,
+  type NexusLeftGateHandle,
+  type VaultCoreDaisHandle,
+} from './ArenaWings3D';
+import { disposeObject3D } from './ChestVaultStation3D';
 import { createCyberLanternBollardFinial, createCyberMonolithForkFinial } from './CyberProps3D';
 import { mergeStaticMeshesByMaterial } from './MeshHelpers3D';
 import { getCobblePathTexture, getTerrainTexture } from './ProceduralTextures3D';
@@ -36,8 +41,8 @@ export class MineEnvironment3D {
   private readonly cablePosTmp = new THREE.Vector3();
   private readonly cableTanTmp = new THREE.Vector3();
   private readonly cableUpAxis = new THREE.Vector3(0, 1, 0);
-  private readonly caveRailway: CaveRailwayHandle;
-  private readonly chestVault: ChestVaultStationHandle;
+  private readonly leftGate: NexusLeftGateHandle;
+  private readonly vaultDais: VaultCoreDaisHandle;
 
   constructor(palette: MineWorldPalette) {
     // 1. Procedural 3D Atmospheric Sky Dome Shader (stars, aurora, Bloodmoon, Void Black Hole & Celestial star)
@@ -79,13 +84,14 @@ export class MineEnvironment3D {
     // Shared Cyber-Slate & Gunmetal Industrial Materials (low metalness so floor stays bright without envMap)
     this.terrainMat = new THREE.MeshStandardMaterial({
       map: getTerrainTexture(palette.terrainColor, palette.crystalColor),
-      roughness: 0.78,
+      color: 0xcbd5e1,
+      roughness: 0.82,
       metalness: 0.08,
     });
     this.cobbleMat = new THREE.MeshStandardMaterial({
       map: getCobblePathTexture(palette.pitFloorColor),
-      color: 0xe2ecff,
-      roughness: 0.76,
+      color: 0xc2d0e6,
+      roughness: 0.8,
       metalness: 0.08,
     });
     this.cliffMat = new THREE.MeshStandardMaterial({
@@ -139,22 +145,13 @@ export class MineEnvironment3D {
     const deckGroup = new THREE.Group();
     deckGroup.add(cliffLower, cliffUpper, hullNeonBand);
 
-    // 4. Dark Basalt Courtyard Armor Slabs Framing Sunken Pit + Stairwell Bay + Drop Shaft & Refinery Channels
+    // 4. Continuous Symmetrical Dark Basalt Courtyard Framing Nexus Crater Pit
     // Pit hole: x [-5.78..5.78], z [-2.63..6.33]
-    // Center stairwell bay: x [-1.30..1.30], z [-3.18..-2.63]
-    // Left Drop Shaft trench: x [-7.15..-5.78], z [-0.55..0.85]
-    // Right Plasma Refinery escalator channel: x [5.78..7.12], z [-0.55..0.85]
     const courtyardSpecs: [number, number, number, number][] = [
-      [0, -5.14, 19.6, 3.92],
-      [-5.55, -2.905, 8.5, 0.55],
-      [5.55, -2.905, 8.5, 0.55],
+      [0, -5.04, 19.6, 4.82],
       [0, 7.65, 19.6, 2.64],
-      [-8.475, 1.85, 2.65, 8.96],
-      [-6.465, -1.59, 1.37, 2.08],
-      [-6.465, 3.59, 1.37, 5.48],
-      [8.46, 1.85, 2.68, 8.96],
-      [6.45, -1.59, 1.34, 2.08],
-      [6.45, 3.59, 1.34, 5.48],
+      [-7.79, 1.85, 4.02, 8.96],
+      [7.79, 1.85, 4.02, 8.96],
     ];
     for (const [cx, cz, cw, cd] of courtyardSpecs) {
       const slab = new THREE.Mesh(new THREE.BoxGeometry(cw, 0.28, cd), this.cobbleMat);
@@ -167,26 +164,10 @@ export class MineEnvironment3D {
       deckGroup.add(underSkirt);
     }
 
-    // Sunken Basalt Trench Floors Under Left Track & Right Escalator (y = -0.74, z = 0.15)
-    const leftTrench = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.14, 1.44), this.cliffMat);
-    leftTrench.position.set(-6.465, -0.74, 0.15);
-    const rightTrench = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.14, 1.44), this.cliffMat);
-    rightTrench.position.set(6.45, -0.74, 0.15);
-    deckGroup.add(leftTrench, rightTrench);
-
-    // Dark Basalt / Cyber-Industrial Outer Deck Terraces cleanly abutting courtyard x = +-9.80 (zero overlap!)
-    // Split wingLeft around the Drop Shaft & Maglev Track corridor (z in [-1.85 .. +2.15]) so terrain never clips rails
-    const wingLeftNorth = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.95, 6.95), this.terrainMat);
-    wingLeftNorth.position.set(-12.4, -0.305, -5.325);
-    wingLeftNorth.receiveShadow = true;
-
-    const wingLeftBay = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.78, 4.0), this.cliffMat);
-    wingLeftBay.position.set(-12.4, -0.39, 0.15);
-    wingLeftBay.receiveShadow = true;
-
-    const wingLeftSouth = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.95, 8.22), this.terrainMat);
-    wingLeftSouth.position.set(-12.4, -0.305, 6.26);
-    wingLeftSouth.receiveShadow = true;
+    // Symmetrical Dark Basalt Outer Wing Terraces & Crescent Rear Support Deck (x = +-12.4)
+    const wingLeft = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.95, 19.17), this.terrainMat);
+    wingLeft.position.set(-12.4, -0.305, 0.785);
+    wingLeft.receiveShadow = true;
 
     const wingRight = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.95, 19.17), this.terrainMat);
     wingRight.position.set(12.4, -0.305, 0.785);
@@ -196,12 +177,12 @@ export class MineEnvironment3D {
     frontDeck.position.set(0, -0.38, 10.17);
     frontDeck.receiveShadow = true;
 
-    const backDeck = new THREE.Mesh(new THREE.BoxGeometry(19.6, 0.99, 3.6), this.terrainMat);
-    backDeck.position.set(0, -0.285, -7.8);
+    const backDeck = new THREE.Mesh(new THREE.BoxGeometry(19.6, 0.99, 4.2), this.terrainMat);
+    backDeck.position.set(0, -0.285, -8.1);
     backDeck.receiveShadow = true;
-    deckGroup.add(wingLeftNorth, wingLeftBay, wingLeftSouth, wingRight, frontDeck, backDeck);
+    deckGroup.add(wingLeft, wingRight, frontDeck, backDeck);
 
-    // Retaining Gunmetal Curbs + Thin Perimeter Neon Trim Strips (segmented cleanly around Drop Shaft & Refinery Vault)
+    // Continuous Retaining Gunmetal Curbs + Perimeter Neon Trim Strips
     const addSideCurbSeg = (cx: number, zCenter: number, lenZ: number): void => {
       const curb = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.24, lenZ), darkMetalMat);
       curb.position.set(cx, 0.1, zCenter);
@@ -244,20 +225,19 @@ export class MineEnvironment3D {
     mergeStaticMeshesByMaterial(deckGroup);
     this.group.add(deckGroup);
 
-    // 5. Left Wing: Cyber Mine Elevator / Drop Shaft + Cyan Energy Gate + Maglev Track
-    this.caveRailway = createCaveRailway({
+    // 5. Left Wing: Dimensional Nexus Gate / Energy Beacon Pylon
+    this.leftGate = createNexusLeftGate({
       crystalColor: palette.crystalColor,
       cliffColor: palette.cliffColor,
-      foliageColor: palette.foliageColor,
     });
-    this.group.add(this.caveRailway.group);
+    this.group.add(this.leftGate.group);
 
-    // 7. Right Wing: Plasma Ore Refinery + Cyber Vault Escalator Station
-    this.chestVault = createChestVaultStation({
+    // 7. Right Wing: Vault Core Dais Framing Clickable Chest
+    this.vaultDais = createVaultCoreDais({
       crystalColor: palette.crystalColor,
       cliffColor: palette.cliffColor,
     });
-    this.group.add(this.chestVault.group);
+    this.group.add(this.vaultDais.group);
 
     // 8. Sculpted Cyber Deck Beacon Pylons + Lateral Sub-City Infrastructure Pillars & Energy Cables
     this.buildDeckBeacons(darkMetalMat, steelMat);
@@ -423,11 +403,11 @@ export class MineEnvironment3D {
       this.group.add(tg);
     }
 
-    // 3. Sweeping Lateral Catenary Power Cables Anchored Socket-to-Socket into Drop Shaft & Refinery Caps
+    // 3. Sweeping Lateral Catenary Power Cables Anchored Socket-to-Socket into Left Nexus Gate & Right Vault Dais
     const cableChains: THREE.Vector3[][] = [
       [
-        new THREE.Vector3(-11.78, 4.72, -1.02),
-        new THREE.Vector3(-14.4, 3.35, -4.8),
+        this.leftGate.cableSocketWorld.clone(),
+        new THREE.Vector3(-14.2, 3.35, -4.8),
         new THREE.Vector3(-16.8, 3.05, -8.8),
       ],
       [
@@ -436,8 +416,8 @@ export class MineEnvironment3D {
         new THREE.Vector3(-19.6, 3.35, -15.4),
       ],
       [
-        new THREE.Vector3(10.61, 2.09, 0.15),
-        new THREE.Vector3(13.8, 1.95, -4.2),
+        this.vaultDais.cableSocketWorld.clone(),
+        new THREE.Vector3(14.0, 2.25, -4.2),
         new THREE.Vector3(16.8, 2.95, -8.8),
       ],
       [
@@ -477,8 +457,8 @@ export class MineEnvironment3D {
 
     this.crystalAccentMat.color.set(palette.crystalColor);
     this.crystalAccentMat.emissive.set(palette.crystalColor);
-    this.caveRailway.setPalette(palette.crystalColor, palette.cliffColor, palette.foliageColor);
-    this.chestVault.setPalette(palette.crystalColor, palette.cliffColor);
+    this.leftGate.setPalette(palette.crystalColor, palette.cliffColor);
+    this.vaultDais.setPalette(palette.crystalColor, palette.cliffColor);
     (this.dustMat.uniforms.uColor.value as THREE.Color).set(palette.crystalColor);
   }
 
@@ -493,6 +473,8 @@ export class MineEnvironment3D {
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
     this.skyHandle.setLowQuality(low);
+    this.leftGate.setLowQuality(low);
+    this.vaultDais.setLowQuality(low);
     this.dustPoints.visible = !low;
     if (this.cableFlowInst) {
       this.cableFlowInst.visible = !low;
@@ -515,8 +497,8 @@ export class MineEnvironment3D {
       if (c.group.position.x > 26) c.group.position.x = -26;
     }
 
-    this.caveRailway.update(dtSec, elapsed);
-    this.chestVault.update(dtSec, elapsed, chestHovered, chestBounce);
+    this.leftGate.update(dtSec, elapsed);
+    this.vaultDais.update(dtSec, elapsed, chestHovered, chestBounce);
 
     this.cyberDeckTrimMat.emissiveIntensity = 1.0 + Math.sin(elapsed * 2.2) * 0.14;
     if (!this.lowQuality) {
@@ -542,8 +524,8 @@ export class MineEnvironment3D {
   }
 
   public dispose(): void {
-    this.caveRailway.dispose();
-    this.chestVault.dispose();
+    this.leftGate.dispose();
+    this.vaultDais.dispose();
     this.dustGeo.dispose();
     this.dustMat.dispose();
     disposeObject3D(this.group);
