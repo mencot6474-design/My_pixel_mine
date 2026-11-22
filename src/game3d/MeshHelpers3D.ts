@@ -1,5 +1,86 @@
 import * as THREE from 'three';
 
+let activeTextureAnisotropy = 4;
+
+const MATERIAL_TEXTURE_SLOTS = [
+  'map',
+  'emissiveMap',
+  'roughnessMap',
+  'metalnessMap',
+  'normalMap',
+  'bumpMap',
+  'alphaMap',
+] as const;
+
+/**
+ * Returns the active anisotropic filtering level clamped to the current GPU capability.
+ */
+export function getActiveTextureAnisotropy(): number {
+  return activeTextureAnisotropy;
+}
+
+/**
+ * Configures crisp billboard/sprite texture filtering while keeping mipmaps enabled
+ * so textures remain sharp without shimmering or blurry trilinear down-blending.
+ */
+export function applySharpSpriteTexture<T extends THREE.Texture>(tex: T, pixelArt = false): T {
+  tex.generateMipmaps = true;
+  if (pixelArt) {
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestMipmapNearestFilter;
+  } else {
+    tex.magFilter = THREE.LinearFilter;
+    tex.minFilter = THREE.LinearMipmapNearestFilter;
+    tex.anisotropy = activeTextureAnisotropy;
+  }
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/**
+ * Configures global texture anisotropy on the renderer and upgrades existing mipmapped textures in a scene.
+ */
+export function configureSceneTextureSharpness(
+  renderer: THREE.WebGLRenderer,
+  root?: THREE.Object3D,
+  maxCap = 8
+): number {
+  const gpuMax =
+    typeof renderer.capabilities?.getMaxAnisotropy === 'function'
+      ? renderer.capabilities.getMaxAnisotropy()
+      : 1;
+  activeTextureAnisotropy = Math.max(1, Math.min(maxCap, gpuMax || 1));
+  THREE.Texture.DEFAULT_ANISOTROPY = activeTextureAnisotropy;
+
+  if (root) {
+    const visited = new Set<THREE.Texture>();
+    root.traverse((child) => {
+      if (!(child instanceof THREE.Mesh || child instanceof THREE.Sprite)) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const mat of mats) {
+        if (!mat) continue;
+        for (const slot of MATERIAL_TEXTURE_SLOTS) {
+          const tex: unknown = Reflect.get(mat, slot);
+          if (
+            tex instanceof THREE.Texture &&
+            !(tex instanceof THREE.DataTexture) &&
+            tex.generateMipmaps &&
+            tex.minFilter !== THREE.NearestFilter &&
+            tex.minFilter !== THREE.NearestMipmapNearestFilter &&
+            !visited.has(tex)
+          ) {
+            visited.add(tex);
+            tex.anisotropy = activeTextureAnisotropy;
+            tex.needsUpdate = true;
+          }
+        }
+      }
+    });
+  }
+
+  return activeTextureAnisotropy;
+}
+
 /**
  * Enables shadow casting and/or receiving on all Mesh descendants of a 3D object.
  */

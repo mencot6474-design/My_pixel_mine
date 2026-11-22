@@ -308,6 +308,9 @@ async function bootstrap(): Promise<void> {
     onSweetSpot: (spot) => {
       hud?.updateSweetSpot(spot);
     },
+    onFpsUpdate: (fps) => {
+      hud?.updateFps(fps);
+    },
     onHoldMineChange: (active) => {
       holdMiningVisualActive = active;
       pickaxeCursorEl.classList.toggle('is-hold-mining', active);
@@ -478,6 +481,7 @@ async function bootstrap(): Promise<void> {
       triggerTargetShatter: (wx, wz, color) => scene.triggerOmegaTargetShatter(wx, wz, color),
     }
   );
+  hud.setOnModalVisibilityChange((open) => scene.setModalBackdropThrottled(open));
 
   const applySettings = (s: GameSettingsData): void => {
     audio.setBgmVolumeScale(s.bgmVolume);

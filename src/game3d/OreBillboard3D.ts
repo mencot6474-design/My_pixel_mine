@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { assetUrl } from '../game/AssetUrl';
 import { type WeatherId } from '../game/WeatherData';
+import { applySharpSpriteTexture } from './MeshHelpers3D';
 
 const spriteTexCache = new Map<string, Promise<THREE.Texture>>();
 const spriteTexLoader = new THREE.TextureLoader();
@@ -225,12 +226,9 @@ export function loadPublicSpriteTexture(publicPath: string): Promise<THREE.Textu
       url,
       (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
-        tex.magFilter = THREE.LinearFilter;
-        tex.minFilter = THREE.LinearMipmapLinearFilter;
-        tex.generateMipmaps = true;
         tex.wrapS = THREE.ClampToEdgeWrapping;
         tex.wrapT = THREE.ClampToEdgeWrapping;
-        tex.needsUpdate = true;
+        applySharpSpriteTexture(tex, false);
         resolve(tex);
       },
       undefined,

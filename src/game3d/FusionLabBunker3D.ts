@@ -368,7 +368,7 @@ export function buildLabBunkerFloorDeck(ctx: LabBunkerBuildCtx): void {
   const grateGlowGeo = new THREE.PlaneGeometry(1.96, 1.02);
   const grateBarGeo = new THREE.BoxGeometry(1.92, 0.032, 0.075);
   const grateBarInst = new THREE.InstancedMesh(grateBarGeo, ctx.labSlateMat, grateCoords.length * 6);
-  grateBarInst.castShadow = true;
+  grateBarInst.castShadow = false;
   grateBarInst.receiveShadow = true;
   ctx.ownedGeos.push(grateWellGeo, grateGlowGeo, grateBarGeo);
 

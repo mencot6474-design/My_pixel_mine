@@ -7,6 +7,7 @@ import {
   LEFT_FACING_WALK_IDS,
 } from './ChibiCatalog';
 import { getWindupGlintTexture } from './ProceduralTextures3D';
+import { applySharpSpriteTexture } from './MeshHelpers3D';
 
 interface LoadedPoseMeta {
   texture: THREE.Texture;
@@ -51,16 +52,23 @@ function getSoftContactShadowTexture(): THREE.CanvasTexture | null {
   return tex;
 }
 
+let trimScratchCanvas: HTMLCanvasElement | null = null;
+let trimScratchCtx: CanvasRenderingContext2D | null = null;
+
 function measureTopTrimRatio(img: HTMLImageElement): number {
   if (typeof document === 'undefined' || !img.width || !img.height) return 0;
   try {
     const sw = Math.min(64, img.width);
     const sh = Math.min(64, img.height);
-    const canvas = document.createElement('canvas');
-    canvas.width = sw;
-    canvas.height = sh;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!trimScratchCanvas) {
+      trimScratchCanvas = document.createElement('canvas');
+      trimScratchCanvas.width = 64;
+      trimScratchCanvas.height = 64;
+      trimScratchCtx = trimScratchCanvas.getContext('2d', { willReadFrequently: true });
+    }
+    const ctx = trimScratchCtx;
     if (!ctx) return 0;
+    ctx.clearRect(0, 0, sw, sh);
     ctx.drawImage(img, 0, 0, sw, sh);
     const data = ctx.getImageData(0, 0, sw, sh).data;
     for (let y = 0; y < sh; y++) {
@@ -88,18 +96,9 @@ function loadPoseMeta(url: string, smoothFilter = false): Promise<LoadedPoseMeta
       resolved,
       (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
-        if (smoothFilter) {
-          tex.magFilter = THREE.LinearFilter;
-          tex.minFilter = THREE.LinearFilter;
-          tex.generateMipmaps = false;
-        } else {
-          tex.magFilter = THREE.NearestFilter;
-          tex.minFilter = THREE.NearestFilter;
-          tex.generateMipmaps = false;
-        }
         tex.wrapS = THREE.ClampToEdgeWrapping;
         tex.wrapT = THREE.ClampToEdgeWrapping;
-        tex.needsUpdate = true;
+        applySharpSpriteTexture(tex, !smoothFilter);
 
         const img = tex.image as HTMLImageElement;
         resolve({

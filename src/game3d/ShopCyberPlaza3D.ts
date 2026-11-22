@@ -150,22 +150,17 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
   const amberNeonMat = makeNeonMat(0xf97316, 1.65, 0.24, 3.1, 0.4);
   const warmLampMat = makeNeonMat(0xe0f2fe, 1.6, 0.05, 1.2, 0);
 
-  // Safe-Zone Urban Night Fill & Localized Neon Pool Lights
-  const plazaSafeHemi = new THREE.HemisphereLight(0xbae6fd, 0x1e293b, 0.75);
+  // Safe-Zone Urban Night Fill & 3 Key Neon Pool Lights (trimmed from 8 to cut per-pixel PBR PointLight cost)
+  const plazaSafeHemi = new THREE.HemisphereLight(0xbae6fd, 0x26354d, 0.96);
   group.add(plazaSafeHemi);
 
   const zoneLights: Array<[number, number, number, number, number, number]> = [
-    [0, 4.4, -0.5, 0xd8b4fe, 2.3, 15],
-    [0, 6.4, -9.2, 0x38bdf8, 2.6, 17],
-    [-11.4, 4.0, -7.8, 0x38bdf8, 2.0, 14],
-    [-10.2, 3.4, 1.8, 0x4ade80, 1.9, 14],
-    [11.4, 4.6, -7.8, 0xf472b6, 2.1, 14],
-    [10.2, 3.4, 1.8, 0xf97316, 2.3, 14],
-    [-17.6, 4.2, -9.6, 0xef4444, 1.8, 12],
-    [17.6, 4.2, -9.6, 0xc084fc, 1.8, 12],
+    [0, 5.2, -0.5, 0xd8b4fe, 2.5, 20],
+    [0, 6.8, -9.2, 0x38bdf8, 2.9, 24],
+    [0, 4.6, 5.5, 0xf472b6, 1.9, 20],
   ];
   for (const [lx, ly, lz, col, intensity, dist] of zoneLights) {
-    const pt = new THREE.PointLight(col, intensity, dist, 1.45);
+    const pt = new THREE.PointLight(col, intensity, dist, 1.35);
     pt.position.set(lx, ly, lz);
     group.add(pt);
   }
@@ -296,7 +291,7 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     8
   );
   const bollardInst = new THREE.InstancedMesh(bollardGeo, gunmetalMat, barrierPositions.length);
-  bollardInst.castShadow = true;
+  bollardInst.castShadow = false;
   bollardInst.receiveShadow = true;
 
   const railGeo = createChamferSlabGeometry(2.15, 0.08, 0.1, 0.03, 0.008);
@@ -352,9 +347,9 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
   const benchFrameGeo = createChamferSlabGeometry(1.88, 0.3, 0.68, 0.08, 0.015);
   const benchSeatInst = new THREE.InstancedMesh(benchSeatGeo, brushedSteelMat, benchPositions.length);
   const benchFrameInst = new THREE.InstancedMesh(benchFrameGeo, darkHullMat, benchPositions.length);
-  benchSeatInst.castShadow = true;
+  benchSeatInst.castShadow = false;
   benchSeatInst.receiveShadow = true;
-  benchFrameInst.castShadow = true;
+  benchFrameInst.castShadow = false;
   benchPositions.forEach(([bx, bz, rotY], idx) => {
     dummy.position.set(bx, 0.44, bz);
     dummy.rotation.set(0, rotY, 0);

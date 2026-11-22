@@ -250,13 +250,13 @@ export function stepMineSceneCamera(ctx: {
   crateGroup: THREE.Group;
   tutorialFocusChest: boolean;
   tutorialFocusSellShop: boolean;
-  fusionWorld: FusionWorld3D;
+  fusionWorld: FusionWorld3D | null;
   inputState: MineInputState;
   state: { orbitYaw: number; orbitPitch: number; camRadius: number; tapShakeIntensity: number };
 }): void {
   const dtSec = ctx.dtSec;
     const damp = 1 - Math.exp(-dtSec * 16);
-    const fusionCam = ctx.mode === 'fusion' ? ctx.fusionWorld.getCameraFocusState() : null;
+    const fusionCam = ctx.mode === 'fusion' ? (ctx.fusionWorld?.getCameraFocusState() ?? null) : null;
     if (fusionCam?.active) {
       const cineDamp = 1 - Math.exp(-dtSec * 6.5);
       ctx.camera.position.lerp(fusionCam.camPos, cineDamp);

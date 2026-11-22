@@ -769,7 +769,7 @@ export class OrePit3D {
     this.respawnSpeedMult = Math.max(0.5, mult);
   }
 
-  public update(dtSec: number, elapsed: number, camera?: THREE.Camera): void {
+  public update(dtSec: number, elapsed: number, camera?: THREE.Camera, renderVisuals = true): void {
     const allNodes = this.meteorNode.alive ? [...this.nodes, this.meteorNode] : this.nodes;
     for (const node of allNodes) {
       if (!node.isMeteor && node.id >= this.activeNodeCount) continue;
@@ -825,38 +825,42 @@ export class OrePit3D {
         node.recoilAmt = Math.max(0, node.recoilAmt - dtSec * 1.35);
       }
 
-      const hoverMult = (node.id === this.hoveredNodeId ? 1.1 : 1.0) * node.spawnScale;
       const flashing = node.flashTimer > 0;
       if (flashing) {
         node.flashTimer -= dtSec;
       }
 
-      node.oreSprite.updateTransform(
-        elapsed,
-        node.phase,
-        node.squashAmt,
-        hoverMult,
-        flashing,
-        camera,
-        node.recoilAmt * node.recoilDirX,
-        meteorRoll,
-        meteorStretchY
-      );
+      if (renderVisuals) {
+        const hoverMult = (node.id === this.hoveredNodeId ? 1.1 : 1.0) * node.spawnScale;
+        node.oreSprite.updateTransform(
+          elapsed,
+          node.phase,
+          node.squashAmt,
+          hoverMult,
+          flashing,
+          camera,
+          node.recoilAmt * node.recoilDirX,
+          meteorRoll,
+          meteorStretchY
+        );
 
-      if (node.geodeRing.visible) {
-        node.geodeRing.rotation.z = elapsed * 0.18 + node.phase;
+        if (node.geodeRing.visible) {
+          node.geodeRing.rotation.z = elapsed * 0.18 + node.phase;
+        }
       }
     }
 
-    stepOrePitShards(dtSec, {
-      group: this.group,
-      shardPool: this.shardPool,
-      shardFreeCrystal: this.shardFreeCrystal,
-      shardFreeRock: this.shardFreeRock,
-      shardMat: this.shardMat,
-    });
-    this.impactFx.update(dtSec, camera);
-    this.stepSweetSpot(dtSec, elapsed);
+    if (renderVisuals) {
+      stepOrePitShards(dtSec, {
+        group: this.group,
+        shardPool: this.shardPool,
+        shardFreeCrystal: this.shardFreeCrystal,
+        shardFreeRock: this.shardFreeRock,
+        shardMat: this.shardMat,
+      });
+      this.impactFx.update(dtSec, camera);
+      this.stepSweetSpot(dtSec, elapsed);
+    }
   }
 
   private findNodeById(nodeId: number): InternalOreNode | undefined {

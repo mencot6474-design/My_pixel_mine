@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { WeatherId } from '../game/WeatherData';
+import { getActiveTextureAnisotropy } from './MeshHelpers3D';
 
 const texCache = new Map<string, THREE.Texture>();
 
@@ -14,6 +15,7 @@ function makeCanvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingCo
 function finalizeTex(canvas: HTMLCanvasElement, repeatX = 1, repeatY = 1): THREE.Texture {
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = getActiveTextureAnisotropy();
   if (repeatX !== 1 || repeatY !== 1) {
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;

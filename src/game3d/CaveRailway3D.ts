@@ -736,7 +736,7 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
   }
   const sleeperGeo = new THREE.BoxGeometry(0.14, 0.045, 0.9);
   const sleeperInst = new THREE.InstancedMesh(sleeperGeo, gunmetalMat, sleeperXs.length);
-  sleeperInst.castShadow = true;
+  sleeperInst.castShadow = false;
   sleeperInst.receiveShadow = true;
   const dummy = new THREE.Object3D();
   sleeperXs.forEach((sx, idx) => {

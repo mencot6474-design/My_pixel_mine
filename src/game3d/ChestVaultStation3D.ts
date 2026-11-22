@@ -190,7 +190,7 @@ export function createChestVaultStation(
   // Instanced Moving Tread Cleats climbing smoothly along the closed belt loop
   const cleatGeo = new THREE.BoxGeometry(0.075, 0.04, 0.62);
   const cleatInstances = new THREE.InstancedMesh(cleatGeo, cleatMat, BELT_CLEAT_COUNT);
-  cleatInstances.castShadow = true;
+  cleatInstances.castShadow = false;
   cleatInstances.receiveShadow = true;
   escalatorGroup.add(cleatInstances);
 

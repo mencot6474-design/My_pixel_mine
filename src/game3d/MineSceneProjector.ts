@@ -13,8 +13,8 @@ export interface MineProjectorCtx {
   camera: THREE.PerspectiveCamera;
   projVec: THREE.Vector3;
   pit: OrePit3D;
-  towerArena: TowerArena3D;
-  omegaArena?: OmegaArena3D;
+  getTowerArena: () => TowerArena3D | null;
+  getOmegaArena: () => OmegaArena3D | null;
   pedestals: PlotPedestal3D[];
   crateGroup: THREE.Group;
   callbacks: MineSceneCallbacks;
@@ -22,6 +22,8 @@ export interface MineProjectorCtx {
 }
 
 export class MineSceneProjector {
+  private lastOverlayMode: SceneMode | null = null;
+
   constructor(private readonly ctx: MineProjectorCtx) {}
 
   public projectWorldToScreen(wx: number, wy: number, wz: number): { x: number; y: number } | null {
@@ -67,7 +69,7 @@ export class MineSceneProjector {
 
   public emitTowerSweetSpot(): void {
     if (!this.ctx.callbacks.onSweetSpot) return;
-    const spot = this.ctx.towerArena.getBossSweetSpotState();
+    const spot = this.ctx.getTowerArena()?.getBossSweetSpotState() ?? null;
     if (!spot) {
       this.ctx.callbacks.onSweetSpot(null);
       return;
@@ -178,90 +180,77 @@ export class MineSceneProjector {
       });
     }
   }
-  public emitModeOverlays(mode: SceneMode, shopWorld: ShopWorld3D, fusionWorld: FusionWorld3D): void {
+  public emitModeOverlays(
+    mode: SceneMode,
+    shopWorld: ShopWorld3D | null,
+    fusionWorld: FusionWorld3D | null
+  ): void {
+    const modeChanged = this.lastOverlayMode !== mode;
+    if (modeChanged) {
+      this.lastOverlayMode = mode;
+      if (mode !== 'mine') {
+        this.ctx.callbacks.onPlotAnchors?.([]);
+        this.ctx.callbacks.onOreBars?.([]);
+      }
+      if (mode !== 'mine' && mode !== 'tower') {
+        this.ctx.callbacks.onSweetSpot?.(null);
+      }
+      if (mode !== 'shop') {
+        this.ctx.callbacks.onShopAnchors?.([]);
+      }
+      if (mode !== 'shop' && mode !== 'fusion') {
+        this.ctx.callbacks.onShopChibiBubbles?.([]);
+      }
+      if (mode !== 'altar') {
+        this.ctx.callbacks.onAltarAnchors?.([]);
+      }
+      if (mode !== 'tower') {
+        this.ctx.callbacks.onTowerOreBars?.([]);
+      }
+      if (mode !== 'omega') {
+        this.ctx.callbacks.onOmegaArenaOverlay?.(null);
+      }
+    }
+
     if (mode === 'mine') {
       this.emitPlotAnchors();
       this.emitOreBars();
       this.emitSweetSpot();
-      this.ctx.callbacks.onShopAnchors?.([]);
-      this.ctx.callbacks.onShopChibiBubbles?.([]);
-      this.ctx.callbacks.onAltarAnchors?.([]);
-      this.ctx.callbacks.onTowerOreBars?.([]);
-      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
-    } else if (mode === 'shop') {
-      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
-      this.ctx.callbacks.onPlotAnchors?.([]);
-      this.ctx.callbacks.onOreBars?.([]);
-      this.ctx.callbacks.onSweetSpot?.(null);
+    } else if (mode === 'shop' && shopWorld) {
       const w = this.ctx.mountEl.clientWidth || 1;
       const h = this.ctx.mountEl.clientHeight || 1;
       this.ctx.callbacks.onShopAnchors?.(shopWorld.getShopAnchors(this.ctx.camera, w, h, this.ctx.projVec));
       this.ctx.callbacks.onShopChibiBubbles?.(shopWorld.getPlazaBubbleAnchors(this.ctx.camera, w, h));
-      this.ctx.callbacks.onAltarAnchors?.([]);
-      this.ctx.callbacks.onTowerOreBars?.([]);
-    } else if (mode === 'altar') {
-      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
-      this.ctx.callbacks.onPlotAnchors?.([]);
-      this.ctx.callbacks.onOreBars?.([]);
-      this.ctx.callbacks.onSweetSpot?.(null);
-      this.ctx.callbacks.onShopAnchors?.([]);
-      this.ctx.callbacks.onShopChibiBubbles?.([]);
+    } else if (mode === 'altar' && shopWorld) {
       const w = this.ctx.mountEl.clientWidth || 1;
       const h = this.ctx.mountEl.clientHeight || 1;
       this.ctx.callbacks.onAltarAnchors?.(shopWorld.getAltarAnchors(this.ctx.camera, w, h, this.ctx.projVec));
-      this.ctx.callbacks.onTowerOreBars?.([]);
     } else if (mode === 'tower') {
-      this.ctx.callbacks.onPlotAnchors?.([]);
-      this.ctx.callbacks.onOreBars?.([]);
       this.emitTowerSweetSpot();
-      this.ctx.callbacks.onShopAnchors?.([]);
-      this.ctx.callbacks.onShopChibiBubbles?.([]);
-      this.ctx.callbacks.onAltarAnchors?.([]);
-      const w = this.ctx.mountEl.clientWidth || 1;
-      const h = this.ctx.mountEl.clientHeight || 1;
-      this.ctx.callbacks.onTowerOreBars?.(this.ctx.towerArena.getAliveOreScreenBars(this.ctx.camera, w, h, this.ctx.projVec));
-      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
+      const towerArena = this.ctx.getTowerArena();
+      if (towerArena) {
+        const w = this.ctx.mountEl.clientWidth || 1;
+        const h = this.ctx.mountEl.clientHeight || 1;
+        this.ctx.callbacks.onTowerOreBars?.(towerArena.getAliveOreScreenBars(this.ctx.camera, w, h, this.ctx.projVec));
+      }
     } else if (mode === 'omega') {
-      this.ctx.callbacks.onPlotAnchors?.([]);
-      this.ctx.callbacks.onOreBars?.([]);
-      this.ctx.callbacks.onSweetSpot?.(null);
-      this.ctx.callbacks.onShopAnchors?.([]);
-      this.ctx.callbacks.onShopChibiBubbles?.([]);
-      this.ctx.callbacks.onAltarAnchors?.([]);
-      this.ctx.callbacks.onTowerOreBars?.([]);
-      if (this.ctx.omegaArena && this.ctx.callbacks.onOmegaArenaOverlay) {
+      const omegaArena = this.ctx.getOmegaArena();
+      if (omegaArena && this.ctx.callbacks.onOmegaArenaOverlay) {
         const w = this.ctx.mountEl.clientWidth || 1;
         const h = this.ctx.mountEl.clientHeight || 1;
         this.ctx.callbacks.onOmegaArenaOverlay({
-          bossHead: this.ctx.omegaArena.getBossHeadScreenAnchor(this.ctx.camera, w, h),
-          targets: this.ctx.omegaArena.getTargetScreenAnchors(this.ctx.camera, w, h),
+          bossHead: omegaArena.getBossHeadScreenAnchor(this.ctx.camera, w, h),
+          targets: omegaArena.getTargetScreenAnchors(this.ctx.camera, w, h),
         });
       }
-    } else if (mode === 'fusion') {
-      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
-      this.ctx.callbacks.onPlotAnchors?.([]);
-      this.ctx.callbacks.onOreBars?.([]);
-      this.ctx.callbacks.onSweetSpot?.(null);
-      this.ctx.callbacks.onShopAnchors?.([]);
-      this.ctx.callbacks.onAltarAnchors?.([]);
-      this.ctx.callbacks.onTowerOreBars?.([]);
+    } else if (mode === 'fusion' && fusionWorld) {
       if (fusionWorld.isAnimating() || fusionWorld.isRevealHolding()) {
         this.ctx.callbacks.onShopChibiBubbles?.([]);
       } else {
-      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
         const w = this.ctx.mountEl.clientWidth || 1;
         const h = this.ctx.mountEl.clientHeight || 1;
         this.ctx.callbacks.onShopChibiBubbles?.(fusionWorld.getNpcBubbleAnchors(this.ctx.camera, w, h));
       }
-    } else {
-      this.ctx.callbacks.onOmegaArenaOverlay?.(null);
-      this.ctx.callbacks.onPlotAnchors?.([]);
-      this.ctx.callbacks.onOreBars?.([]);
-      this.ctx.callbacks.onSweetSpot?.(null);
-      this.ctx.callbacks.onShopAnchors?.([]);
-      this.ctx.callbacks.onShopChibiBubbles?.([]);
-      this.ctx.callbacks.onAltarAnchors?.([]);
-      this.ctx.callbacks.onTowerOreBars?.([]);
     }
   }
 }

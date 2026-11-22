@@ -153,6 +153,12 @@
     transform: translateX(135%);
   }
 
+  /* Skip off-screen modal card paint/shimmer work while preserving full shimmer on visible cards */
+  .mam-modal .mam-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 130px;
+  }
+
   @keyframes mamHoloFoilSweep {
     0%, 28% {
       transform: translate3d(-120%, -18%, 0) rotate(22deg);

@@ -89,6 +89,10 @@ import { ChibiSprite3D } from '../src/game3d/ChibiSprite3D';
 import { ChibiFieldFxController, FieldMiner3D } from '../src/game3d/FieldMiner3D';
 import { FusionWorld3D } from '../src/game3d/FusionWorld3D';
 import { OmegaArena3D } from '../src/game3d/OmegaArena3D';
+import {
+  applySharpSpriteTexture,
+  configureSceneTextureSharpness,
+} from '../src/game3d/MeshHelpers3D';
 import { MineEnvironment3D } from '../src/game3d/MineEnvironment3D';
 import { DEFAULT_WORLD_PALETTE, rollOreVariant, STAGE_PEDESTAL_COUNT } from '../src/game3d/MineWorldPalette';
 import {
@@ -2275,7 +2279,7 @@ describe('Pure 3D Mine World', () => {
     });
     expect(roundaboutShadowCount).toBeGreaterThanOrEqual(1);
     expect(instancedCount).toBeGreaterThanOrEqual(6);
-    expect(lightCount).toBeGreaterThanOrEqual(5);
+    expect(lightCount).toBeGreaterThanOrEqual(4);
     expect(plaza.animatedCrystals.length).toBeGreaterThan(4);
     expect(plaza.animatedRings.length).toBeGreaterThanOrEqual(4);
     expect(() => {
@@ -3022,5 +3026,61 @@ describe('Pure 3D Mine World', () => {
     // All pedestals at the same Z/camera pitch keep nearly identical world Y height above chibi heads
     expect(Math.abs(anchors[0].y - anchors[1].y)).toBeLessThan(0.05);
     expect(Math.abs(anchors[1].y - anchors[2].y)).toBeLessThan(0.05);
+  });
+
+  it('preserves mipmaps and configures crisp anisotropy on sprite and scene textures without blurring', () => {
+    const fakeRenderer = {
+      capabilities: {
+        getMaxAnisotropy: () => 16,
+      },
+    } as unknown as THREE.WebGLRenderer;
+
+    const scene = new THREE.Scene();
+    const sceneTex = new THREE.Texture();
+    sceneTex.generateMipmaps = true;
+    const mat = new THREE.MeshBasicMaterial({ map: sceneTex });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+    scene.add(mesh);
+
+    const aniso = configureSceneTextureSharpness(fakeRenderer, scene, 8);
+    expect(aniso).toBe(8);
+    expect(THREE.Texture.DEFAULT_ANISOTROPY).toBe(8);
+    expect(sceneTex.anisotropy).toBe(8);
+
+    const smoothTex = applySharpSpriteTexture(new THREE.Texture(), false);
+    expect(smoothTex.generateMipmaps).toBe(true);
+    expect(smoothTex.magFilter).toBe(THREE.LinearFilter);
+    expect(smoothTex.minFilter).toBe(THREE.LinearMipmapNearestFilter);
+    expect(smoothTex.anisotropy).toBe(8);
+
+    const pixelTex = applySharpSpriteTexture(new THREE.Texture(), true);
+    expect(pixelTex.generateMipmaps).toBe(true);
+    expect(pixelTex.magFilter).toBe(THREE.NearestFilter);
+    expect(pixelTex.minFilter).toBe(THREE.NearestMipmapNearestFilter);
+
+    sceneTex.dispose();
+    smoothTex.dispose();
+    pixelTex.dispose();
+    mat.dispose();
+    mesh.geometry.dispose();
+  });
+
+  it('keeps OrePit3D background mining respawns alive when renderVisuals=false without ticking visual overlays', () => {
+    const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 100);
+    cam.position.set(0, 11.7, 15.6);
+    cam.lookAt(0, 0.55, -0.55);
+
+    const target = pit.getAliveNodesInfo()[0];
+    expect(target).toBeTruthy();
+    const res = pit.hitNode(target.id, target.maxHp + 100, true);
+    expect(res?.broken).toBe(true);
+    expect(pit.getAliveNodesInfo().some((n) => n.id === target.id)).toBe(false);
+
+    for (let i = 0; i < 40; i++) {
+      pit.update(0.15, i * 0.15, cam, false);
+    }
+    expect(pit.getAliveNodesInfo().some((n) => n.id === target.id)).toBe(true);
+    pit.dispose();
   });
 });

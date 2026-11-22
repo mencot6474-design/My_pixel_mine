@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { ENCHANTS, GEM_SHOP_ITEMS, GemPotionShape, ItemRarity, ORES, PICKAXES } from '../game/GameData';
-import { WEATHERS, WeatherId } from '../game/WeatherData';
-import { createEnchantAura3D, createEnchantDice3D } from './AuraModels3D';
+import { GemPotionShape, ItemRarity } from '../game/GameData';
+import { WeatherId } from '../game/WeatherData';
+import { createEnchantAura3D } from './AuraModels3D';
 import { toonMat } from './HudIconOreModelsA3D';
-import { buildOreModel } from './HudIconOreModelsB3D';
+import { disposeObject3D } from './MeshHelpers3D';
 
 export type Hud3dIconKey =
   | 'shops'
@@ -394,7 +394,7 @@ function buildPotionModel(liquidColor = 0x38bdf8): THREE.Group {
   return g;
 }
 
-function buildGemPotionModel(shape: GemPotionShape, colorHex: string): THREE.Group {
+export function buildGemPotionModel(shape: GemPotionShape, colorHex: string): THREE.Group {
   const g = new THREE.Group();
   const liqMat = toonMat(colorHex, 0.14, 0.12, colorHex, 0.35);
   const rimMat = toonMat(0xe2e8f0, 0.18, 0.25);
@@ -546,7 +546,7 @@ function buildWeatherCloudCluster(colorHex: number, emissiveHex: number): THREE.
   return cloud;
 }
 
-function buildWeatherModel(weatherId: WeatherId): THREE.Group {
+export function buildWeatherModel(weatherId: WeatherId): THREE.Group {
   const g = new THREE.Group();
   if (weatherId === 'light_rain') {
     g.add(buildWeatherCloudCluster(0x93c5fd, 0x0284c7));
@@ -677,11 +677,7 @@ function buildWeatherModel(weatherId: WeatherId): THREE.Group {
   return g;
 }
 
-export function init3dHudIcons(): void {
-  if (initialized) return;
-  initialized = true;
-  if (typeof document === 'undefined' || typeof WebGLRenderingContext === 'undefined') return;
-
+function renderLazyFallback3dIcons(): void {
   let renderer: THREE.WebGLRenderer | null = null;
   try {
     const canvas = document.createElement('canvas');
@@ -707,94 +703,43 @@ export function init3dHudIcons(): void {
     rimLight.position.set(-3.2, -1.5, -2.5);
     scene.add(rimLight);
 
-    const renderAndCache = (cacheKey: string, model: THREE.Group): void => {
-      scene.add(model);
-      renderer!.render(scene, camera);
-      iconCache.set(cacheKey, canvas.toDataURL('image/png'));
-      scene.remove(model);
-    };
-
-    const keys: Hud3dIconKey[] = [
-      'shops',
-      'shopBasket',
-      'hourglass',
-      'indexBook',
-      'gem',
-      'backpack',
-      'daily',
-      'chest',
-      'quest',
-      'trade',
-      'sparkle',
-      'pickaxe',
-      'stats',
-      'mutation',
-      'enchant',
-      'lock',
+    // Only the 4 generic 'other_*' icons actually use 3D fallback thumbnails;
+    // all Ores, Pickaxes, Potions, Enchants, Weathers, and HUD icons use 2D .webp art.
+    const fallbackKeys: Hud3dIconKey[] = [
       'other_gems',
       'other_scroll',
       'other_potion',
       'other_charm',
     ];
 
-    for (const key of keys) {
-      renderAndCache(key, buildModelForKey(key));
+    for (const key of fallbackKeys) {
+      const model = buildModelForKey(key);
+      scene.add(model);
+      renderer.render(scene, camera);
+      iconCache.set(key, canvas.toDataURL('image/png'));
+      scene.remove(model);
+      disposeObject3D(model);
     }
-
-    for (const ore of ORES) {
-      const idKey = `ore:id:${ore.id}`;
-      if (!iconCache.has(idKey)) {
-        renderAndCache(idKey, buildOreModel(ore.color, ore.secondaryColor, ore.rarity, ore.id));
-      }
-      const oreKey = `ore:${ore.rarity}:${ore.color}:${ore.secondaryColor}`;
-      if (!iconCache.has(oreKey)) {
-        renderAndCache(oreKey, buildOreModel(ore.color, ore.secondaryColor, ore.rarity, ore.id));
-      }
-    }
-
-    for (const p of PICKAXES) {
-      renderAndCache(`pickaxe:${p.id}`, buildPickaxeModel(p.color, p.rarity));
-    }
-
-    for (const item of GEM_SHOP_ITEMS) {
-      renderAndCache(`gem_potion:${item.id}`, buildGemPotionModel(item.shape, item.color));
-    }
-
-    for (const enc of ENCHANTS) {
-      renderAndCache(`aura:${enc.id}`, createEnchantAura3D(enc.id, 1.02));
-    }
-    for (const w of WEATHERS) {
-      renderAndCache(`weather:${w.id}`, buildWeatherModel(w.id));
-    }
-    renderAndCache('enchant_dice', createEnchantDice3D());
-
-    // 48x48 3D Pickaxe cursor oriented with tip pointing top-left (hotspot 4,4)
-    const cursorCanvas = document.createElement('canvas');
-    cursorCanvas.width = 48;
-    cursorCanvas.height = 48;
-    const cursorRenderer = new THREE.WebGLRenderer({
-      canvas: cursorCanvas,
-      alpha: true,
-      antialias: true,
-      preserveDrawingBuffer: true,
-    });
-    cursorRenderer.setSize(48, 48, false);
-    cursorRenderer.outputColorSpace = THREE.SRGBColorSpace;
-    cursorRenderer.toneMapping = THREE.ACESFilmicToneMapping;
-    cursorRenderer.toneMappingExposure = 1.2;
-
-    const cursorPick = buildPickaxeModel(0x38bdf8);
-    cursorPick.rotation.set(0.18, -0.32, 0.72);
-    cursorPick.scale.setScalar(1.08);
-    scene.add(cursorPick);
-    cursorRenderer.render(scene, camera);
-    iconCache.set('cursor_pickaxe', cursorCanvas.toDataURL('image/png'));
-    scene.remove(cursorPick);
-    cursorRenderer.dispose();
   } catch {
     // Headless / WebGL-unavailable environment: fallback SVGs will be used cleanly
   } finally {
     renderer?.dispose();
+  }
+}
+
+export function init3dHudIcons(): void {
+  if (initialized) return;
+  initialized = true;
+  if (typeof document === 'undefined' || typeof WebGLRenderingContext === 'undefined') return;
+
+  // Defer offscreen WebGL thumbnail rendering until after first paint so startup never freezes
+  const win = typeof window !== 'undefined'
+    ? (window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number })
+    : null;
+  if (win && typeof win.requestIdleCallback === 'function') {
+    win.requestIdleCallback(() => renderLazyFallback3dIcons(), { timeout: 600 });
+  } else {
+    setTimeout(() => renderLazyFallback3dIcons(), 120);
   }
 }
 

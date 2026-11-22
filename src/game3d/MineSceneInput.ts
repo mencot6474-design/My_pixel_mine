@@ -46,9 +46,9 @@ export interface MineInputCtx {
   pointer: THREE.Vector2;
   pedestals: PlotPedestal3D[];
   pit: OrePit3D;
-  shopWorld: ShopWorld3D;
-  towerArena: TowerArena3D;
-  omegaArena?: OmegaArena3D;
+  getShopWorld: () => ShopWorld3D | null;
+  getTowerArena: () => TowerArena3D | null;
+  getOmegaArena: () => OmegaArena3D | null;
   clickableMeshes: THREE.Object3D[];
   callbacks: MineSceneCallbacks;
   getMode: () => SceneMode;
@@ -88,11 +88,11 @@ export function raycastAtInScene(ctx: MineInputCtx, clientX: number, clientY: nu
       ctx.getMode() === 'mine'
         ? ctx.clickableMeshes
         : ctx.getMode() === 'shop'
-          ? ctx.shopWorld.shopClickables
+          ? (ctx.getShopWorld()?.shopClickables ?? [])
           : ctx.getMode() === 'tower'
-            ? ctx.towerArena.getActiveClickables()
+            ? (ctx.getTowerArena()?.getActiveClickables() ?? [])
             : ctx.getMode() === 'omega'
-              ? (ctx.omegaArena?.clickables ?? [])
+              ? (ctx.getOmegaArena()?.clickables ?? [])
               : [];
     if (!targets.length) return null;
     const hits = ctx.raycaster.intersectObjects(targets, false);
@@ -335,28 +335,31 @@ export function bindMineSceneEvents(ctx: MineInputCtx): ResizeObserver | null {
         ctx.callbacks.onOmegaBossClick?.();
       } else if (hit.userData.kind === 'tower-ore') {
         const oreIndex = Number(hit.userData.oreIndex ?? -1);
-        if (oreIndex >= 0) {
+        const towerArena = ctx.getTowerArena();
+        if (oreIndex >= 0 && towerArena) {
           const res = ctx.callbacks.onTowerTargetClick?.(oreIndex);
           if (res && res.dmg > 0) {
-            ctx.towerArena.triggerOreHitBounce(oreIndex, Boolean(res.broken));
-            const wp = ctx.towerArena.getOreWorldPos(oreIndex);
+            towerArena.triggerOreHitBounce(oreIndex, Boolean(res.broken));
+            const wp = towerArena.getOreWorldPos(oreIndex);
             ctx.emitDamageScreen(res.dmg, wp.x, wp.y + 0.35, wp.z, true, Boolean(res.isCrit));
           }
         }
       } else if (hit.userData.kind === 'tower-core') {
-        const isShieldBreak = ctx.towerArena.consumeBossSweetSpotTap();
+        const towerArena = ctx.getTowerArena();
+        if (!towerArena) return;
+        const isShieldBreak = towerArena.consumeBossSweetSpotTap();
         const res =
           ctx.callbacks.onTowerTargetClick?.(null, { isShieldBreak }) ??
           ctx.callbacks.onTowerMonolithClick?.();
         const shieldHit =
           res && (('shieldShaved' in res && res.shieldShaved) || ('shieldBroken' in res && res.shieldBroken));
         if (shieldHit) {
-          ctx.towerArena.triggerBossShieldBreakFx();
+          towerArena.triggerBossShieldBreakFx();
         } else {
-          ctx.towerArena.triggerHitBounce();
+          towerArena.triggerHitBounce();
         }
         if (res && res.dmg > 0) {
-          const wp = ctx.towerArena.getMonolithWorldPos();
+          const wp = towerArena.getMonolithWorldPos();
           ctx.emitDamageScreen(
             res.dmg,
             wp.x,

@@ -20,8 +20,9 @@ export function renderAudioControlsHtml(opts: {
   floating: boolean;
   muted: boolean;
   cameraLocked: boolean;
+  fps?: number;
 }): string {
-  const { floating, muted, cameraLocked } = opts;
+  const { floating, muted, cameraLocked, fps = 0 } = opts;
   const audioIcon = muted
     ? `<svg viewBox="0 0 28 28" width="24" height="24" fill="none" aria-hidden="true">
         <defs>
@@ -74,8 +75,25 @@ export function renderAudioControlsHtml(opts: {
   const utilBtnCls =
     'w-12 h-12 @max-[720px]:w-10 @max-[720px]:h-10 rounded-2xl border-[2.5px] flex items-center justify-center cursor-pointer touch-manipulation transition-[transform,filter] duration-150 ease-out hover:scale-[0.95] hover:-rotate-2 even:hover:rotate-2 hover:brightness-105 active:scale-90 pointer-events-auto';
 
+  const fpsText = fps > 0 ? String(fps) : '--';
+  const fpsDotColor = fps >= 50 ? '#22c55e' : fps >= 30 ? '#f59e0b' : '#ef4444';
+
   return `
     <div class="${placementCls} flex items-center gap-2 @max-[720px]:gap-1.5 pointer-events-none">
+      <div
+        class="h-12 @max-[720px]:h-10 px-2.5 @max-[720px]:px-2 rounded-2xl border-[2.5px] border-[#14111d] bg-[#fff8e7] flex items-center gap-1.5 select-none pointer-events-auto"
+        title="Live Frames Per Second"
+        aria-label="FPS Counter"
+      >
+        <span
+          data-fps-dot
+          class="w-2.5 h-2.5 rounded-full border-[1.5px] border-[#14111d] shrink-0"
+          style="background:${fpsDotColor}"
+        ></span>
+        <span class="font-extrabold text-[13px] @max-[720px]:text-[11px] text-[#14111d] tabular-nums leading-none whitespace-nowrap">
+          <span data-fps-value>${fpsText}</span> <span class="text-[10px] @max-[720px]:text-[9px] text-[#64748b] font-black">FPS</span>
+        </span>
+      </div>
       <button
         class="${utilBtnCls} ${camFrameCls}"
         data-action="toggle-camera-lock"

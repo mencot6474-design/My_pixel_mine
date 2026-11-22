@@ -69,6 +69,9 @@ export class GameHud {
   private adPaused = false;
   private lastRenderViewKey = '';
   private lastRenderedModal: ModalKind = 'none';
+  private lastNotifiedModalOpen = false;
+  private onModalVisibilityChange?: (open: boolean) => void;
+  private currentFps = 0;
   private toasts: Array<{ id: number; text: string }> = [];
   private nextToastId = 1;
   private modalOpenedAtMs = 0;
@@ -711,7 +714,20 @@ export class GameHud {
       floating,
       muted: audio.isMuted(),
       cameraLocked: gameSettings.get().cameraLocked,
+      fps: this.currentFps,
     });
+  }
+
+  public updateFps(fps: number): void {
+    this.currentFps = fps;
+    const valEl = this.root.querySelector<HTMLElement>('[data-fps-value]');
+    if (valEl) {
+      valEl.textContent = fps > 0 ? String(fps) : '--';
+    }
+    const dotEl = this.root.querySelector<HTMLElement>('[data-fps-dot]');
+    if (dotEl) {
+      dotEl.style.background = fps >= 50 ? '#22c55e' : fps >= 30 ? '#f59e0b' : '#ef4444';
+    }
   }
 
   private renderCurrencyRail(opts: {
@@ -740,7 +756,17 @@ export class GameHud {
     el.innerHTML = this.toasts.map((t) => renderToastBannerHtml(t.text)).join('');
   }
 
+  public setOnModalVisibilityChange(cb: (open: boolean) => void): void {
+    this.onModalVisibilityChange = cb;
+    cb(this.activeModal !== 'none');
+  }
+
   public render(): void {
+    const modalOpen = this.activeModal !== 'none';
+    if (modalOpen !== this.lastNotifiedModalOpen) {
+      this.lastNotifiedModalOpen = modalOpen;
+      this.onModalVisibilityChange?.(modalOpen);
+    }
     const viewKey = `${this.sceneMode}:${this.activeModal}:${this.inspectedSlot ?? 'none'}`;
     const sameView = viewKey === this.lastRenderViewKey;
     const shouldAnimateModal = this.activeModal !== 'none' && this.activeModal !== this.lastRenderedModal;

@@ -429,12 +429,12 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
     [6.6, 6.2, 0.34, ROAD_Y],
   ];
   const rubbleInst = new THREE.InstancedMesh(rockWallGeo, concreteMat, rubbleData.length);
-  rubbleInst.castShadow = true;
+  rubbleInst.castShadow = false;
   rubbleInst.receiveShadow = true;
 
   const rebarGeo = new THREE.CylinderGeometry(0.022, 0.026, 0.72, 5);
   const rebarInst = new THREE.InstancedMesh(rebarGeo, rebarMat, rubbleData.length * 2);
-  rebarInst.castShadow = true;
+  rebarInst.castShadow = false;
 
   const dummy = new THREE.Object3D();
   rubbleData.forEach(([rx, rz, sc, baseY], idx) => {
