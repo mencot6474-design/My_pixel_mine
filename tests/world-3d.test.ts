@@ -114,15 +114,18 @@ import {
 } from '../src/game3d/OrePit3D';
 import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
 import {
+  getBroadcastBannerTexture,
   getDualSlashArcTexture,
   getFusionMagicCircuitTexture,
   getHitSparkStarTexture,
   getShockwaveRingTexture,
+  getSkyscraperFacadeTexture,
   getSparkStreakTexture,
   getWindupGlintTexture,
 } from '../src/game3d/ProceduralTextures3D';
 import { createShopCyberPlaza } from '../src/game3d/ShopCyberPlaza3D';
 import { ShopWorld3D } from '../src/game3d/ShopWorld3D';
+import { SkyMetropolis3D } from '../src/game3d/SkyMetropolis3D';
 import { createSeraphimBoss3D } from '../src/game3d/SeraphimBoss3D';
 import { TowerArena3D } from '../src/game3d/TowerArena3D';
 import {
@@ -3908,5 +3911,41 @@ describe('Pure 3D Mine World', () => {
     expect(sawDebris).toBe(true);
     expect(sawFallingSparks).toBe(true);
     vfxPool.dispose();
+  });
+
+  it('builds Hologram Sky-Metropolis skyline + Broadcast Blimp (MyChibiMine TV banner) and replaces sky weather shader with zero-lag gradient sky', () => {
+    expect(getSkyscraperFacadeTexture('#38bdf8')).toBeInstanceOf(THREE.Texture);
+    expect(getBroadcastBannerTexture('#38bdf8', false)).toBeInstanceOf(THREE.Texture);
+    expect(getBroadcastBannerTexture('#fbbf24', true)).toBeInstanceOf(THREE.Texture);
+
+    const city = new SkyMetropolis3D(DEFAULT_WORLD_PALETTE);
+    expect(city.getBuildingCount()).toBeGreaterThanOrEqual(24);
+    expect(city.isScreenFogDisabled()).toBe(true);
+
+    const startX = city.getBlimpWorldPosition().x;
+    city.update(0.05, 1.0);
+    const nextX = city.getBlimpWorldPosition().x;
+    // Moves continuously from Right (+X) to Left (-X)
+    expect(nextX).toBeLessThan(startX);
+
+    // Non-interactive raycast safety
+    const ray = new THREE.Raycaster(new THREE.Vector3(0, 10, 0), new THREE.Vector3(0, -1, 0));
+    expect(ray.intersectObject(city.group, true)).toHaveLength(0);
+
+    expect(() => {
+      city.setOverclockTier(2);
+      city.setLowQuality(true);
+      city.setPalette({ ...DEFAULT_WORLD_PALETTE, crystalColor: '#f97316' });
+      city.update(0.05, 35.0);
+      city.dispose();
+    }).not.toThrow();
+
+    // MineEnvironment3D uses static MeshBasicMaterial gradient skyDome (no per-pixel ShaderMaterial lag)
+    const env = new MineEnvironment3D(DEFAULT_WORLD_PALETTE);
+    expect(env.skyDome.material).toBeInstanceOf(THREE.MeshBasicMaterial);
+    expect(env.getMetropolis()).toBeInstanceOf(SkyMetropolis3D);
+    env.setOverclockTier(3);
+    env.update(0.016, 1.5);
+    env.dispose();
   });
 });

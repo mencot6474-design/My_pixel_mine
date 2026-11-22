@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { OverclockTier } from '../game/OverclockDomain';
 import type { WeatherId } from '../game/WeatherData';
 import type { MineWorldPalette } from './MineWorldPalette';
 import {
@@ -10,12 +11,8 @@ import {
 import { disposeObject3D } from './ChestVaultStation3D';
 import { createCyberMonolithForkFinial } from './CyberProps3D';
 import { mergeStaticMeshesByMaterial } from './MeshHelpers3D';
-import { createWeatherSkyMaterial, WeatherSkyMaterialHandle } from './WeatherSkyShader';
-
-interface CloudCluster {
-  group: THREE.Group;
-  speed: number;
-}
+import { getSkyDomeTexture } from './ProceduralTextures3D';
+import { SkyMetropolis3D } from './SkyMetropolis3D';
 
 interface VoidShardSeed {
   angle: number;
@@ -25,12 +22,18 @@ interface VoidShardSeed {
   speed: number;
 }
 
+function getCleanSkyColors(palette: MineWorldPalette): { topHex: string; bottomHex: string } {
+  const topHex = '#' + new THREE.Color(palette.skyTop).lerp(new THREE.Color(0x091124), 0.72).getHexString();
+  const bottomHex = '#' + new THREE.Color(palette.fogColor).lerp(new THREE.Color(0x162544), 0.68).getHexString();
+  return { topHex, bottomHex };
+}
+
 export class MineEnvironment3D {
   public readonly group = new THREE.Group();
   public readonly skyDome: THREE.Mesh;
 
-  private readonly skyHandle: WeatherSkyMaterialHandle;
-  private readonly cloudMat: THREE.MeshStandardMaterial;
+  private readonly skyMat: THREE.MeshBasicMaterial;
+  private readonly metropolis: SkyMetropolis3D;
   private readonly cliffMat: THREE.MeshStandardMaterial;
   private readonly cyberDeckTrimMat: THREE.MeshStandardMaterial;
   private readonly dustGeo: THREE.BufferGeometry;
@@ -38,7 +41,6 @@ export class MineEnvironment3D {
   private readonly dustPoints: THREE.Points;
   private lowQuality = false;
 
-  private readonly clouds: CloudCluster[] = [];
   private readonly cableCurves: THREE.CatmullRomCurve3[] = [];
   private cableFlowInst: THREE.InstancedMesh | null = null;
   private readonly cableDummy = new THREE.Object3D();
@@ -52,41 +54,22 @@ export class MineEnvironment3D {
   private readonly vaultDais: VaultCoreDaisHandle;
 
   constructor(palette: MineWorldPalette) {
-    // 1. Procedural 3D Atmospheric Sky Dome Shader (stars, aurora, Bloodmoon, Void Black Hole & Celestial star)
-    this.skyHandle = createWeatherSkyMaterial('light_rain');
-    this.skyDome = new THREE.Mesh(new THREE.SphereGeometry(120, 48, 32), this.skyHandle.material);
-    this.skyDome.renderOrder = -100;
-    this.group.add(this.skyDome);
-
-    // 2. Soft Layered Drifting Clouds
-    this.cloudMat = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      roughness: 0.95,
-      emissive: 0xffffff,
-      emissiveIntensity: 0.3,
-      flatShading: true,
+    // 1. Lightweight Static Gradient Sky Dome (zero per-pixel weather shader or cloud overhead)
+    const { topHex, bottomHex } = getCleanSkyColors(palette);
+    this.skyMat = new THREE.MeshBasicMaterial({
+      map: getSkyDomeTexture(topHex, bottomHex),
+      side: THREE.BackSide,
+      depthWrite: false,
       fog: false,
     });
-    const cloudLayout: [number, number, number, number][] = [
-      [-15, 6.2, -16, 1.15],
-      [-4, 7.1, -20, 1.35],
-      [8, 6.0, -17, 1.1],
-      [18, 6.8, -19, 1.25],
-    ];
-    for (const [cx, cy, cz, scale] of cloudLayout) {
-      const cg = new THREE.Group();
-      const p1 = new THREE.Mesh(new THREE.IcosahedronGeometry(1.05, 1), this.cloudMat);
-      const p2 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8, 1), this.cloudMat);
-      p2.position.set(0.95, -0.14, 0.08);
-      const p3 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.75, 1), this.cloudMat);
-      p3.position.set(-0.9, -0.18, -0.08);
-      cg.add(p1, p2, p3);
-      cg.position.set(cx, cy, cz);
-      cg.scale.set(scale * 1.45, scale * 0.65, scale);
-      cg.visible = false;
-      this.group.add(cg);
-      this.clouds.push({ group: cg, speed: 0.2 + (scale - 1) * 0.14 });
-    }
+    this.skyDome = new THREE.Mesh(new THREE.SphereGeometry(120, 24, 16), this.skyMat);
+    this.skyDome.renderOrder = -100;
+    this.skyDome.raycast = () => {};
+    this.group.add(this.skyDome);
+
+    // 2. Hologram Sky-Metropolis Skyline + Live Broadcast Blimp ("MyChibiMine")
+    this.metropolis = new SkyMetropolis3D(palette);
+    this.group.add(this.metropolis.group);
 
     this.cliffMat = new THREE.MeshStandardMaterial({
       color: 0x26354d,
@@ -317,25 +300,35 @@ export class MineEnvironment3D {
     this.voidShardsInst.instanceMatrix.needsUpdate = true;
   }
 
+  public getMetropolis(): SkyMetropolis3D {
+    return this.metropolis;
+  }
+
   public setPalette(palette: MineWorldPalette): void {
+    const { topHex, bottomHex } = getCleanSkyColors(palette);
+    this.skyMat.map = getSkyDomeTexture(topHex, bottomHex);
+    this.skyMat.needsUpdate = true;
+
     this.cliffMat.color.setHex(0x24334a).lerp(new THREE.Color(palette.cliffColor), 0.28);
     this.cyberDeckTrimMat.color.set(palette.crystalColor);
     this.cyberDeckTrimMat.emissive.set(palette.crystalColor);
     this.leftGate.setPalette(palette.crystalColor, palette.cliffColor);
     this.vaultDais.setPalette(palette.crystalColor, palette.cliffColor);
+    this.metropolis.setPalette(palette);
     (this.dustMat.uniforms.uColor.value as THREE.Color).set(palette.crystalColor);
   }
 
-  public setWeatherSky(weatherId: WeatherId, cloudHex: string): void {
-    this.skyHandle.setWeather(weatherId);
-    const cc = new THREE.Color(cloudHex);
-    this.cloudMat.color.copy(cc);
-    this.cloudMat.emissive.copy(cc);
+  public setWeatherSky(_weatherId: WeatherId, _cloudHex: string): void {
+    // Sky weather dome shader removed for maximum FPS; world sky gradient stays crisp and lag-free.
+  }
+
+  public setOverclockTier(tier: 0 | OverclockTier): void {
+    this.metropolis.setOverclockTier(tier);
   }
 
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
-    this.skyHandle.setLowQuality(low);
+    this.metropolis.setLowQuality(low);
     this.leftGate.setLowQuality(low);
     this.vaultDais.setLowQuality(low);
     this.dustPoints.visible = !low;
@@ -345,8 +338,7 @@ export class MineEnvironment3D {
     this.updateVoidShards(0);
   }
 
-  public updateSky(elapsed: number, camPos: THREE.Vector3): void {
-    this.skyHandle.update(elapsed);
+  public updateSky(_elapsed: number, camPos: THREE.Vector3): void {
     this.skyDome.position.copy(camPos);
   }
 
@@ -357,11 +349,7 @@ export class MineEnvironment3D {
     chestBounce = 0
   ): void {
     const safeDt = Math.min(Math.max(0, dtSec), 0.1);
-    for (const c of this.clouds) {
-      c.group.position.x += c.speed * safeDt;
-      if (c.group.position.x > 26) c.group.position.x = -26;
-    }
-
+    this.metropolis.update(safeDt, elapsed);
     this.leftGate.update(safeDt, elapsed);
     this.vaultDais.update(safeDt, elapsed, chestHovered, chestBounce);
 
@@ -390,6 +378,7 @@ export class MineEnvironment3D {
   }
 
   public dispose(): void {
+    this.metropolis.dispose();
     this.leftGate.dispose();
     this.vaultDais.dispose();
     this.voidShardsInst.dispose();
@@ -398,6 +387,6 @@ export class MineEnvironment3D {
     this.dustMat.dispose();
     disposeObject3D(this.group);
     this.skyDome.geometry.dispose();
-    this.skyHandle.material.dispose();
+    this.skyMat.dispose();
   }
 }

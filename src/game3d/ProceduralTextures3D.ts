@@ -886,3 +886,145 @@ export function getFlamePuffTexture(): THREE.Texture {
     ctx.fill();
   });
 }
+
+/** Seamless glowing cyber-metropolis window grid facade for distant skyscrapers. */
+export function getSkyscraperFacadeTexture(accentHex: string): THREE.Texture {
+  const tex = paintCachedTexture(
+    `sky-city-facade-v1|${accentHex}`,
+    256,
+    512,
+    1,
+    3,
+    [16, 26, 46, 255],
+    (ctx) => {
+      const grad = ctx.createLinearGradient(0, 0, 0, 512);
+      grad.addColorStop(0.0, '#132038');
+      grad.addColorStop(0.55, '#0c1528');
+      grad.addColorStop(1.0, '#070d1a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 256, 512);
+
+      // Vertical architectural ribs
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.14)';
+      for (const rx of [0, 62, 126, 190, 248]) {
+        ctx.fillRect(rx, 0, 6, 512);
+      }
+
+      const rows = 28;
+      const cols = 12;
+      const rowH = 512 / rows;
+      const colW = 256 / cols;
+      for (let r = 0; r < rows; r++) {
+        // Every 7th floor has an accent cyber-trim band
+        if (r % 7 === 2) {
+          ctx.fillStyle = accentHex;
+          ctx.globalAlpha = 0.72;
+          ctx.fillRect(8, r * rowH + rowH * 0.35, 240, 3.5);
+          ctx.globalAlpha = 1;
+          continue;
+        }
+        const floorSeed = (r * 37 + 11) % 10;
+        for (let c = 0; c < cols; c++) {
+          const hash = (r * 53 + c * 29 + 7) % 17;
+          if (hash < 6) continue;
+          const x = c * colW + 4;
+          const y = r * rowH + 4;
+          const w = colW - 8;
+          const h = rowH - 8;
+          if (hash >= 14 || floorSeed === 3 && c % 3 === 0) {
+            ctx.fillStyle = accentHex;
+            ctx.globalAlpha = 0.82;
+          } else if (hash >= 11) {
+            ctx.fillStyle = '#fde68a';
+            ctx.globalAlpha = 0.68;
+          } else {
+            ctx.fillStyle = '#bae6fd';
+            ctx.globalAlpha = 0.56;
+          }
+          ctx.fillRect(x, y, w, h);
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+  );
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+/** Wide LED broadcast banner texture featuring top/bottom neon lines and MyChibiMine marquee text. */
+export function getBroadcastBannerTexture(accentHex: string, feverActive = false): THREE.Texture {
+  const key = `blimp-tv-banner-v1|${accentHex}|${feverActive ? 1 : 0}`;
+  const tex = paintCachedTexture(key, 512, 160, 1, 1, [8, 14, 28, 255], (ctx) => {
+    const W = 512;
+    const H = 160;
+    const barColor = feverActive ? '#fde047' : accentHex;
+    const secondaryColor = feverActive ? '#fb7185' : '#e0f2fe';
+
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0.0, '#050914');
+    bg.addColorStop(0.5, '#0b162c');
+    bg.addColorStop(1.0, '#050914');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle LED matrix scanlines
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
+    for (let y = 24; y < H - 24; y += 5) {
+      ctx.fillRect(0, y, W, 1.5);
+    }
+
+    // Thick top & bottom glowing banner stripes + inner fine accent rules
+    ctx.fillStyle = barColor;
+    ctx.shadowColor = barColor;
+    ctx.shadowBlur = 12;
+    ctx.fillRect(0, 10, W, 10);
+    ctx.fillRect(0, H - 20, W, 10);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = secondaryColor;
+    ctx.globalAlpha = 0.72;
+    ctx.fillRect(0, 26, W, 2.5);
+    ctx.fillRect(0, H - 28.5, W, 2.5);
+    ctx.globalAlpha = 1;
+
+    // Seamless horizontally-wrapping "MyChibiMine" broadcast headline + diamond divider
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.font = '900 50px "Fredoka", "Rubik", "Segoe UI", sans-serif';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#040814';
+    ctx.shadowColor = barColor;
+    ctx.shadowBlur = 16;
+    ctx.strokeText('MyChibiMine', W * 0.42, H * 0.51);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('MyChibiMine', W * 0.42, H * 0.51);
+    ctx.shadowBlur = 0;
+
+    // Compact diamond emblem + LIVE badge tag on trailing edge
+    const tagX = W * 0.84;
+    const tagY = H * 0.51;
+    ctx.fillStyle = barColor;
+    ctx.beginPath();
+    ctx.moveTo(tagX - 58, tagY);
+    ctx.lineTo(tagX - 48, tagY - 10);
+    ctx.lineTo(tagX - 38, tagY);
+    ctx.lineTo(tagX - 48, tagY + 10);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = feverActive ? '#ef4444' : '#0ea5e9';
+    ctx.fillRect(tagX - 24, tagY - 16, 70, 32);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(tagX - 24, tagY - 16, 70, 32);
+
+    ctx.font = '800 18px "Rubik", "Segoe UI", sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(feverActive ? 'FEVER' : 'LIVE', tagX + 11, tagY + 1);
+  });
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  return tex;
+}

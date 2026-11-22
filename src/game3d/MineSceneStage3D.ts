@@ -242,6 +242,7 @@ export function buildMineStageAndChest(ctx: {
 
 export function applyMineWeatherAtmosphere(ctx: {
   activeWeatherId: WeatherId;
+  activePalette?: MineWorldPalette;
   mode: SceneMode;
   env: MineEnvironment3D;
   hemiLight: THREE.HemisphereLight;
@@ -281,13 +282,13 @@ export function applyMineWeatherAtmosphere(ctx: {
     );
 
     if (ctx.mode !== 'mine' && !isShop) return;
-    const fogColor = new THREE.Color(weather.fogTintHex);
-    fogColor.lerp(new THREE.Color(0x0b162b), isShop ? 0.56 : 0.28);
+    const fogColor = new THREE.Color(ctx.activePalette?.fogColor ?? weather.fogTintHex);
+    fogColor.lerp(new THREE.Color(0x162544), isShop ? 0.66 : 0.68);
     ctx.scene.background = fogColor;
-    // Softly blend distant terrain border into the sky shader's horizon mist band
+    // Softly blend distant skyline horizon into the clean static sky gradient
     ctx.scene.fog = isShop
       ? new THREE.Fog(fogColor, 50, 108)
-      : new THREE.Fog(fogColor, 30, 78);
+      : new THREE.Fog(fogColor, 46, 114);
 }
 
 export function stepMineSceneCamera(ctx: {
@@ -482,6 +483,7 @@ export function applyMineSceneModeTransition(ctx: {
   const { mode } = ctx;
   ctx.weatherFx.setShopMode(mode === 'shop');
   ctx.weatherFx.setFeverTier(mode === 'mine' ? ctx.overclockTier : 0);
+  ctx.env.setOverclockTier(mode === 'mine' ? ctx.overclockTier : 0);
   if (mode !== 'mine' && mode !== 'tower') {
     ctx.renderer.domElement.classList.remove('mam-mining-cursor');
   }
@@ -761,12 +763,14 @@ export function applyMineOverclockVisual(ctx: {
   mode: SceneMode;
   activePalette: MineWorldPalette;
   weatherFx: WeatherFx3D;
+  env?: MineEnvironment3D;
   stageNeonMat: THREE.MeshStandardMaterial;
   stageHoloMat: THREE.MeshBasicMaterial;
   rimLight: THREE.DirectionalLight;
   applyWeatherAtmosphere: () => void;
 }): void {
   ctx.weatherFx.setFeverTier(ctx.mode === 'mine' ? ctx.tier : 0);
+  ctx.env?.setOverclockTier(ctx.mode === 'mine' ? ctx.tier : 0);
   if (ctx.active) {
     const hex = ctx.tier === 3 ? 0x22d3ee : ctx.tier === 2 ? 0xfb7185 : 0xf59e0b;
     ctx.stageNeonMat.color.setHex(hex);
@@ -807,7 +811,8 @@ export function applyMineGraphicsQuality(ctx: {
   ctx.renderer.shadowMap.type = ctx.quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   ctx.sunLight.castShadow = preset.shadowsEnabled;
   ctx.renderer.shadowMap.needsUpdate = true;
-  ctx.weatherFx.setQualityScale(preset.weatherParticleScale);
+  // Disable sky weather rain/snow particle system across presets to maximize FPS
+  ctx.weatherFx.setQualityScale(0);
   ctx.env.setLowQuality(low);
   ctx.pit.setLowQuality(low);
   ctx.towerArena?.setLowQuality(low);

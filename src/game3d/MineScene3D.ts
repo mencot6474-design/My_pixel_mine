@@ -266,6 +266,7 @@ export class MineScene3D {
       callbacks: this.callbacks,
       getFocusedPlotIndex: () => this.focusedPlotIndex,
     });
+    this.weatherFx.setQualityScale(0);
     this.scene.add(this.weatherFx.group);
     configureSceneTextureSharpness(this.renderer, this.scene, this.getTextureAnisoCap());
 
@@ -614,6 +615,7 @@ export class MineScene3D {
   private applyWeatherAtmosphere(): void {
     applyMineWeatherAtmosphere({
       activeWeatherId: this.activeWeatherId,
+      activePalette: this.activePalette,
       mode: this.mode,
       env: this.env,
       hemiLight: this.hemiLight,
@@ -894,6 +896,7 @@ export class MineScene3D {
       mode: this.mode,
       activePalette: this.activePalette,
       weatherFx: this.weatherFx,
+      env: this.env,
       stageNeonMat: this.stageNeonMat,
       stageHoloMat: this.stageHoloMat,
       rimLight: this.rimLight,
