@@ -123,7 +123,7 @@ export function getDefaultOrbitPitchForMode(mode: SceneMode): number {
     case 'omega':
       return -0.32;
     default:
-      return 0;
+      return -0.22;
   }
 }
 
@@ -668,8 +668,8 @@ export function applyMineSceneModeTransition(ctx: {
   } else {
     ctx.inputState.targetOrbitYaw = 0;
     ctx.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('mine');
-    ctx.inputState.targetCamRadius = 18.8;
-    ctx.lookAtPos.set(0, 0.55, 0.35);
+    ctx.inputState.targetCamRadius = 18.4;
+    ctx.lookAtPos.set(0, 0.95, -0.35);
     ctx.applyWeatherAtmosphere();
   }
 

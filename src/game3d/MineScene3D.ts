@@ -131,11 +131,11 @@ export class MineScene3D {
   private readonly stageHoloMat: THREE.MeshBasicMaterial;
 
   private elapsed = 0;
-  private baseCamPos = new THREE.Vector3(0, 11.7, 15.6);
-  private lookAtPos = new THREE.Vector3(0, 0.55, 0.35);
+  private baseCamPos = new THREE.Vector3(0, 11.7, 18.05);
+  private lookAtPos = new THREE.Vector3(0, 0.95, -0.35);
   private orbitYaw = 0;
-  private orbitPitch = 0;
-  private camRadius = 18.8;
+  private orbitPitch = -0.22;
+  private camRadius = 18.4;
   private readonly inputState: MineInputState = {
     isDragging: false,
     dragMoved: false,
@@ -153,8 +153,8 @@ export class MineScene3D {
     holdMineClientX: 0,
     holdMineClientY: 0,
     targetOrbitYaw: 0,
-    targetOrbitPitch: 0,
-    targetCamRadius: 18.8,
+    targetOrbitPitch: -0.22,
+    targetCamRadius: 18.4,
     cameraLocked: false,
     crateHovered: false,
     crateBounce: 0,
@@ -171,7 +171,7 @@ export class MineScene3D {
   private focusedPlotIndex: number | null = null;
   private tutorialFocusChest = false;
   private tutorialFocusSellShop = false;
-  private currentLookAt = new THREE.Vector3(0, 0.55, -0.55);
+  private currentLookAt = new THREE.Vector3(0, 0.95, -0.35);
   private readonly projVec = new THREE.Vector3();
   private readonly projector: MineSceneProjector;
   private mountResizeObserver: ResizeObserver | null = null;
@@ -804,8 +804,8 @@ export class MineScene3D {
       this.pit.spawnTutorialCenterOre(Math.max(100, this.tapDamage * 10));
     } else {
       this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = 0;
-      this.inputState.targetCamRadius = 16.5;
+      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('mine');
+      this.inputState.targetCamRadius = 18.4;
     }
   }
 
@@ -816,8 +816,8 @@ export class MineScene3D {
       this.focusedPlotIndex = null;
     } else {
       this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = 0;
-      this.inputState.targetCamRadius = 16.5;
+      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('mine');
+      this.inputState.targetCamRadius = 18.4;
     }
   }
 
