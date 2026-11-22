@@ -108,7 +108,9 @@ import {
   METEOR_HP_MULT,
   OrePit3D,
   PIT_CENTER_Z,
+  PIT_FLOOR_Y,
   PIT_NODE_COUNT,
+  PIT_RADIUS,
 } from '../src/game3d/OrePit3D';
 import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
 import {
@@ -3659,29 +3661,45 @@ describe('Pure 3D Mine World', () => {
     ped.dispose();
   });
 
-  it('seals pit walls cleanly, keeps NW/NE pylons clear of P1/P5, and pulses pit trim on high-tier skills', () => {
+  it('builds a deep circular colosseum ore pool with circular node spawns and pulses 3-ring trim on high-tier skills', () => {
+    expect(PIT_RADIUS).toBe(6.4);
+    expect(PIT_FLOOR_Y).toBe(-1.95);
+    expect(PIT_CENTER_Z).toBe(1.65);
+
     const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    pit.setActiveNodeCount(20);
     pit.group.updateMatrixWorld(true);
 
-    // Continuous north pit wall must block a vertical ray at x=0, world z=-2.75 (no stairwell gap)
-    const ray = new THREE.Raycaster(
-      new THREE.Vector3(0, 5, -2.75),
+    // Deep circular pool floor at center (0, PIT_CENTER_Z) sits at world y ≈ -1.95
+    const centerRay = new THREE.Raycaster(
+      new THREE.Vector3(0, 5, PIT_CENTER_Z),
       new THREE.Vector3(0, -1, 0)
     );
-    const northHits = ray.intersectObject(pit.group, true);
-    expect(northHits.length).toBeGreaterThan(0);
-    expect(northHits[0].point.y).toBeGreaterThan(0);
+    const centerHits = centerRay.intersectObject(pit.group, true);
+    expect(centerHits.length).toBeGreaterThan(0);
+    expect(centerHits[centerHits.length - 1].point.y).toBeCloseTo(PIT_FLOOR_Y, 1);
 
-    // Relocated NW/NE pylons at world (±6.12, -1.85) sit clear of P1/P5 front aprons
-    const nwRay = new THREE.Raycaster(
-      new THREE.Vector3(-6.12, 5, -1.85),
-      new THREE.Vector3(0, -1, 0)
-    );
-    const nwHits = nwRay.intersectObject(pit.group, true);
-    expect(nwHits.length).toBeGreaterThan(0);
-    expect(nwHits[0].point.y).toBeGreaterThan(0.35);
+    // Continuous circular rim geometry wraps 360 deg at upper walkway radius 7.6 around (0, PIT_CENTER_Z)
+    for (const [rx, rz] of [
+      [7.6, PIT_CENTER_Z],
+      [-7.6, PIT_CENTER_Z],
+      [0, PIT_CENTER_Z + 7.6],
+      [0, PIT_CENTER_Z - 7.6],
+    ]) {
+      const rimRay = new THREE.Raycaster(new THREE.Vector3(rx, 5, rz), new THREE.Vector3(0, -1, 0));
+      const rimHits = rimRay.intersectObject(pit.group, true);
+      expect(rimHits.length).toBeGreaterThan(0);
+      expect(rimHits[0].point.y).toBeGreaterThan(-0.2);
+    }
 
-    (pit as unknown as { triggerSkillPulse: (hex: string, s?: number) => void }).triggerSkillPulse('#f43f5e', 1.0);
+    // All 20 spawned ores stay strictly inside circular pool bounds
+    const alive = pit.getAliveNodesInfo();
+    expect(alive.length).toBe(20);
+    for (const n of alive) {
+      expect(Math.hypot(n.worldX, n.worldZ - PIT_CENTER_Z)).toBeLessThanOrEqual(PIT_RADIUS - 0.85);
+    }
+
+    pit.triggerSkillPulse('#f43f5e', 1.0);
     const neonMat = (pit as unknown as { pitNeonMat: THREE.MeshStandardMaterial }).pitNeonMat;
     const pulsedIntensity = neonMat.emissiveIntensity;
     expect(pulsedIntensity).toBeGreaterThan(1.4);

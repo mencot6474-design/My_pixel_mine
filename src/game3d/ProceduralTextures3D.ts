@@ -410,6 +410,39 @@ export function getNexusArenaFloorTexture(stoneHex: string, crystalHex: string):
   });
 }
 
+export function getCircularNexusPoolTexture(stoneHex: string, crystalHex: string): THREE.Texture {
+  return paintCachedTexture(`circular-nexus-pool|${stoneHex}|${crystalHex}`, 512, 512, 1, 1, [6, 10, 20, 255], (ctx) => {
+    // Deep dark-matte abyssal circular pool so additive GLSL skill shaders pop brilliantly
+    const grad = ctx.createRadialGradient(256, 256, 18, 256, 256, 256);
+    grad.addColorStop(0, mixHex('#0e172c', crystalHex, 0.14));
+    grad.addColorStop(0.55, mixHex('#080d1a', stoneHex, 0.1));
+    grad.addColorStop(0.92, '#050811');
+    grad.addColorStop(1, '#03050b');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 512);
+
+    ctx.strokeStyle = crystalHex;
+    ctx.globalAlpha = 0.15;
+    ctx.lineWidth = 2;
+    for (const r of [58, 118, 178, 228]) {
+      ctx.beginPath();
+      ctx.arc(256, 256, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = 0.1;
+    ctx.lineWidth = 1.4;
+    for (let i = 0; i < 12; i++) {
+      const a = (i * Math.PI * 2) / 12;
+      ctx.beginPath();
+      ctx.moveTo(256 + Math.cos(a) * 58, 256 + Math.sin(a) * 58);
+      ctx.lineTo(256 + Math.cos(a) * 242, 256 + Math.sin(a) * 242);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  });
+}
+
 export function getHazardStripeTexture(accentHex = '#38bdf8'): THREE.Texture {
   return paintCachedTexture(`quarry-hazard3|${accentHex}`, 128, 64, 6, 1, [15, 23, 42, 255], (ctx) => {
     ctx.fillStyle = '#0f172a';

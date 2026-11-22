@@ -17,8 +17,8 @@ import {
   OreBillboard2D,
 } from './OreBillboard3D';
 import {
+  getCircularNexusPoolTexture,
   getHazardStripeTexture,
-  getNexusArenaFloorTexture,
 } from './ProceduralTextures3D';
 import {
   applyNodeDamagePure,
@@ -38,6 +38,7 @@ import {
   PIT_HALF_D,
   PIT_HALF_W,
   PIT_NODE_COUNT,
+  PIT_RADIUS,
   type PureOreHitResult,
   resolveWorldIdFromPalette,
   spawnOrePitShards,
@@ -66,6 +67,7 @@ export {
   PIT_HALF_D,
   PIT_HALF_W,
   PIT_NODE_COUNT,
+  PIT_RADIUS,
   SWEET_SPOT_DMG_MULT,
   SWEET_SPOT_DURATION_SEC,
   SWEET_SPOT_MAX_PROGRESS,
@@ -291,7 +293,7 @@ export class OrePit3D {
     this.activeWorldId = resolveWorldIdFromPalette(palette);
 
     const cColor = new THREE.Color(palette.crystalColor);
-    this.floorMat.map = getNexusArenaFloorTexture(palette.pitFloorColor, palette.crystalColor);
+    this.floorMat.map = getCircularNexusPoolTexture(palette.pitFloorColor, palette.crystalColor);
     this.floorMat.needsUpdate = true;
     this.wallMat.color.setHex(0x161f30);
     this.trimMat.map = getHazardStripeTexture(palette.crystalColor);
@@ -426,14 +428,19 @@ export class OrePit3D {
   }
 
   private pickNonOverlappingSpot(excludeId: number): { x: number; z: number } {
-    let bestX = (Math.random() - 0.5) * (PIT_HALF_W * 1.8);
-    let bestZ = (Math.random() - 0.5) * (PIT_HALF_D * 1.75);
+    const maxR = Math.max(1.5, PIT_RADIUS - 1.05);
+    const r0 = Math.sqrt(Math.random()) * maxR;
+    const a0 = Math.random() * Math.PI * 2;
+    let bestX = Math.cos(a0) * r0;
+    let bestZ = Math.sin(a0) * r0;
     let bestMinDist = -1;
-    const desiredMinDist = this.activeNodeCount > 14 ? 1.55 : 1.85;
+    const desiredMinDist = this.activeNodeCount > 14 ? 1.85 : 2.25;
 
     for (let attempt = 0; attempt < 28; attempt++) {
-      const cx = (Math.random() * 2 - 1) * PIT_HALF_W;
-      const cz = (Math.random() * 2 - 1) * PIT_HALF_D;
+      const r = Math.sqrt(Math.random()) * maxR;
+      const ang = Math.random() * Math.PI * 2;
+      const cx = Math.cos(ang) * r;
+      const cz = Math.sin(ang) * r;
       let minDist = 999;
       for (const other of this.nodes) {
         if (other.id === excludeId || other.id >= this.activeNodeCount) continue;

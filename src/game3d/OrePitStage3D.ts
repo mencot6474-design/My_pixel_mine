@@ -15,16 +15,17 @@ import type { AttackImpactFxController } from './AttackImpactFx3D';
 import type { OreBillboard2D } from './OreBillboard3D';
 import { getSoftContactShadowTexture } from './OreBillboard3D';
 import {
+  getCircularNexusPoolTexture,
   getHazardStripeTexture,
-  getNexusArenaFloorTexture,
   getShockwaveRingTexture,
 } from './ProceduralTextures3D';
 
 export const PIT_NODE_COUNT = BASE_PIT_NODE_COUNT;
-export const PIT_CENTER_Z = 1.85;
-export const PIT_FLOOR_Y = -0.68;
-export const PIT_HALF_W = 4.8;
-export const PIT_HALF_D = 3.45;
+export const PIT_CENTER_Z = 1.65;
+export const PIT_FLOOR_Y = -1.95;
+export const PIT_RADIUS = 6.4;
+export const PIT_HALF_W = 5.2;
+export const PIT_HALF_D = 5.2;
 
 /** Balanced 25% nerf from 500 -> 375 so Weather Meteors feel rewarding without dragging. */
 export const METEOR_HP_MULT = 375;
@@ -171,24 +172,26 @@ export function buildOrePitEnvironmentMeshes(ctx: {
 } {
   const { palette } = ctx;
   const pitEnvGroup = new THREE.Group();
-    // Dark-Matte Nexus Crater Floor (sits cleanly 0.68m below courtyard deck y=0)
+    // Deep Circular Nexus Pool Floor (local y = 0 = world PIT_FLOOR_Y = -1.95)
     const floorMat = new THREE.MeshStandardMaterial({
-      map: getNexusArenaFloorTexture(palette.pitFloorColor, palette.crystalColor),
-      roughness: 0.9,
+      map: getCircularNexusPoolTexture(palette.pitFloorColor, palette.crystalColor),
+      roughness: 0.92,
       metalness: 0.04,
     });
-    const floorGeo = new THREE.BoxGeometry(11.8, 0.14, 9.2);
+    const floorGeo = new THREE.CircleGeometry(PIT_RADIUS, 48);
+    floorGeo.rotateX(-Math.PI / 2);
     const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.position.y = -0.05;
+    floor.position.y = 0;
     floor.receiveShadow = true;
     pitEnvGroup.add(floor);
 
-    // Continuous Cyber-Slate Containment Retaining Walls + Hazard Collar + Neon Rim
+    // 3-Tier Stepped Circular Colosseum Bowl + Floating Outer Sky Ring Hull
     const wallMat = new THREE.MeshStandardMaterial({
-      color: 0x222f46,
-      roughness: 0.78,
-      metalness: 0.1,
+      color: 0x1b263b,
+      roughness: 0.72,
+      metalness: 0.16,
       flatShading: true,
+      side: THREE.DoubleSide,
     });
     const trimMat = new THREE.MeshStandardMaterial({
       map: getHazardStripeTexture(palette.crystalColor),
@@ -198,57 +201,52 @@ export function buildOrePitEnvironmentMeshes(ctx: {
     const pitNeonMat = new THREE.MeshStandardMaterial({
       color: palette.crystalColor,
       emissive: palette.crystalColor,
-      emissiveIntensity: 1.05,
+      emissiveIntensity: 1.08,
       roughness: 0.2,
       metalness: 0.25,
       flatShading: true,
     });
 
-    const pitW = 11.8;
-    const pitD = 9.2;
-    const wallH = 0.86;
-    const wallSpecs: [number, number, number, number, number][] = [
-      [0, -pitD / 2, pitW, wallH, 0.36],
-      [0, pitD / 2, pitW, wallH, 0.36],
-      [-pitW / 2, 0, 0.36, wallH, pitD],
-      [pitW / 2, 0, 0.36, wallH, pitD],
+    const bowlProfile = [
+      new THREE.Vector2(PIT_RADIUS - 0.05, -0.08),
+      new THREE.Vector2(PIT_RADIUS, 0.0),
+      new THREE.Vector2(PIT_RADIUS + 0.08, 0.62),
+      new THREE.Vector2(PIT_RADIUS + 0.38, 0.64),
+      new THREE.Vector2(PIT_RADIUS + 0.44, 1.3),
+      new THREE.Vector2(PIT_RADIUS + 0.78, 1.32),
+      new THREE.Vector2(PIT_RADIUS + 0.85, 1.95),
+      new THREE.Vector2(PIT_RADIUS + 1.55, 1.95),
+      new THREE.Vector2(PIT_RADIUS + 1.42, 1.36),
+      new THREE.Vector2(PIT_RADIUS + 0.28, 0.46),
+      new THREE.Vector2(PIT_RADIUS - 0.05, -0.08),
     ];
-    for (const [wx, wz, ww, wh, wd] of wallSpecs) {
-      const wallGeo = new THREE.BoxGeometry(ww, wh, wd);
-      const wall = new THREE.Mesh(wallGeo, wallMat);
-      wall.position.set(wx, wh * 0.5, wz);
-      wall.castShadow = true;
-      wall.receiveShadow = true;
-      pitEnvGroup.add(wall);
+    const bowlMesh = new THREE.Mesh(new THREE.LatheGeometry(bowlProfile, 36), wallMat);
+    bowlMesh.castShadow = true;
+    bowlMesh.receiveShadow = true;
+    pitEnvGroup.add(bowlMesh);
 
-      const trimGeo = new THREE.BoxGeometry(ww > wd ? ww : 0.34, 0.11, wd > ww ? wd : 0.34);
-      const trim = new THREE.Mesh(trimGeo, trimMat);
-      trim.position.set(wx, wh + 0.04, wz);
-      trim.castShadow = true;
-      pitEnvGroup.add(trim);
+    const upperDeckCollar = new THREE.Mesh(
+      new THREE.RingGeometry(PIT_RADIUS + 0.86, PIT_RADIUS + 1.52, 36),
+      trimMat
+    );
+    upperDeckCollar.rotation.x = -Math.PI / 2;
+    upperDeckCollar.position.y = 1.96;
+    pitEnvGroup.add(upperDeckCollar);
 
-      const isHoriz = ww > wd;
-      const neonGeo = new THREE.BoxGeometry(isHoriz ? ww + 0.04 : 0.06, 0.035, isHoriz ? 0.06 : wd + 0.04);
-      const neonRim = new THREE.Mesh(neonGeo, pitNeonMat);
-      neonRim.position.set(wx, wh + 0.115, wz);
-      pitEnvGroup.add(neonRim);
+    // 3 Concentric Flat Horizontal Neon Rings (pool floor, mid terrace, upper outer rim)
+    const neonRings: Array<[number, number, number]> = [
+      [PIT_RADIUS - 0.06, 0.055, 0.05],
+      [PIT_RADIUS + 0.38, 0.045, 1.32],
+      [PIT_RADIUS + 1.5, 0.06, 1.97],
+    ];
+    for (const [ringR, tubeR, ringY] of neonRings) {
+      const neonTorus = new THREE.Mesh(new THREE.TorusGeometry(ringR, tubeR, 6, 48), pitNeonMat);
+      neonTorus.rotation.x = Math.PI / 2;
+      neonTorus.position.y = ringY;
+      pitEnvGroup.add(neonTorus);
     }
 
-    // Stepped inner basalt retaining ledge along north & south pit walls
-    const benchSpecs: [number, number, number, number][] = [
-      [0, -pitD / 2 + 0.26, 11.4, 0.28],
-      [0, pitD / 2 - 0.26, 11.4, 0.28],
-    ];
-    for (const [bx, bz, bw, bd] of benchSpecs) {
-      const benchGeo = new THREE.BoxGeometry(bw, 0.26, bd);
-      const bench = new THREE.Mesh(benchGeo, wallMat);
-      bench.position.set(bx, 0.13, bz);
-      bench.receiveShadow = true;
-      bench.castShadow = true;
-      pitEnvGroup.add(bench);
-    }
-
-    // Corner/Shoulder Cyber Anchor Pylons (NW/NE shifted to pit-local ±6.12, -3.70 = world ±6.12, -1.85 clear of P1/P5)
+    // 6 Radial Rim Anchor Finials Placed on Lateral/South Arc (keeping North P1..P5 sightlines 100% open)
     const postMat = new THREE.MeshStandardMaterial({
       color: 0x223047,
       roughness: 0.44,
@@ -261,17 +259,16 @@ export function buildOrePitEnvironmentMeshes(ctx: {
       roughness: 0.34,
       flatShading: true,
     });
-    const postGeo = new THREE.CylinderGeometry(0.24, 0.28, 1.04, 8);
+    const postGeo = new THREE.CylinderGeometry(0.22, 0.28, 0.72, 8);
     ctx.ownedMats.push(postMat, steelCapMat);
-    const pylonCoords: [number, number][] = [
-      [-6.12, -3.7],
-      [6.12, -3.7],
-      [-pitW / 2, pitD / 2],
-      [pitW / 2, pitD / 2],
-    ];
-    for (const [px, pz] of pylonCoords) {
+    const finialAnglesDeg = [78, 126, 160, -78, -126, -160];
+    const finialR = PIT_RADIUS + 1.24;
+    for (const deg of finialAnglesDeg) {
+      const rad = (deg * Math.PI) / 180;
+      const px = Math.sin(rad) * finialR;
+      const pz = -Math.cos(rad) * finialR;
       const post = new THREE.Mesh(postGeo, postMat);
-      post.position.set(px, 0.52, pz);
+      post.position.set(px, 2.31, pz);
       post.castShadow = true;
       const finial = createCyberLanternBollardFinial({
         frameMat: postMat,
@@ -279,7 +276,7 @@ export function buildOrePitEnvironmentMeshes(ctx: {
         coreMat: pitNeonMat,
         scale: 0.86,
       });
-      finial.position.set(px, 1.02, pz);
+      finial.position.set(px, 2.66, pz);
       pitEnvGroup.add(post, finial);
     }
     mergeStaticMeshesByMaterial(pitEnvGroup);

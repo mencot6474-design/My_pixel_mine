@@ -3,7 +3,7 @@ import { type PitEventKind } from '../game/PitEventsDomain';
 import { type WeatherId } from '../game/WeatherData';
 import { type ChibiDef } from './ChibiCatalog';
 import { type OreVariantKey } from './MineWorldPalette';
-import { type OrePit3D } from './OrePit3D';
+import { type OrePit3D, PIT_CENTER_Z, PIT_FLOOR_Y } from './OrePit3D';
 import { type PlotPedestal3D } from './PlotPedestal3D';
 import {
   getChibiAttackStyle,
@@ -112,10 +112,16 @@ function computeZoneWideCenter(
   cx /= allTargets.length;
   cy /= allTargets.length;
   cz /= allTargets.length;
-  // Blend 68% target stone + 32% pit center so multi-unit wide AoEs spread across pit zones cleanly
-  const bx = Math.max(-2.6, Math.min(2.6, target.x * 0.68 + cx * 0.32));
-  const bz = Math.max(0.35, Math.min(3.35, target.z * 0.68 + cz * 0.32));
-  return { x: bx, y: target.y * 0.68 + cy * 0.32, z: bz };
+  // Blend 68% target stone + 32% pit center and clamp inside circular pool core (r <= 3.8m)
+  let bx = target.x * 0.68 + cx * 0.32;
+  let dz = (target.z * 0.68 + cz * 0.32) - PIT_CENTER_Z;
+  const dist = Math.hypot(bx, dz);
+  if (dist > 3.8) {
+    const k = 3.8 / dist;
+    bx *= k;
+    dz *= k;
+  }
+  return { x: bx, y: target.y * 0.68 + cy * 0.32, z: PIT_CENTER_Z + dz };
 }
 
 export class PlotAttackController3D {
@@ -360,7 +366,7 @@ export class PlotAttackController3D {
           this.alivePointScratch.push({ x: an.worldX, y: an.worldY, z: an.worldZ });
         }
         const speedScale = computeAttackVfxSpeedScale(a.attackInterval);
-        const targetPt: WorldPoint3 = { x: a.ex, y: Math.max(-0.68, a.ey - 0.65), z: a.ez };
+        const targetPt: WorldPoint3 = { x: a.ex, y: Math.max(PIT_FLOOR_Y, a.ey - 0.65), z: a.ez };
         const wideCenter = computeZoneWideCenter(targetPt, this.alivePointScratch);
         this.tierVfx.fireTierAttack({
           rarity: unit.def.rarity,

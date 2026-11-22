@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
-import { SWEET_SPOT_DMG_MULT } from './OrePit3D';
+import { PIT_CENTER_Z, PIT_FLOOR_Y, PIT_RADIUS, SWEET_SPOT_DMG_MULT } from './OrePit3D';
 import { type PitEventKind } from '../game/PitEventsDomain';
 import { getOverclockTierBuffs, type OverclockTier } from '../game/OverclockDomain';
 import type { MineSceneCallbacks } from './MineScene3D';
@@ -123,11 +123,14 @@ export function getPitFloorHitInScene(ctx: MineInputCtx, clientX: number, client
     ctx.raycaster.setFromCamera(ctx.pointer, ctx.camera);
     const dirY = ctx.raycaster.ray.direction.y;
     if (Math.abs(dirY) <= 0.001) return null;
-    const t = -ctx.raycaster.ray.origin.y / dirY;
+    const t = (PIT_FLOOR_Y - ctx.raycaster.ray.origin.y) / dirY;
     if (t <= 0) return null;
     const px = ctx.raycaster.ray.origin.x + ctx.raycaster.ray.direction.x * t;
     const pz = ctx.raycaster.ray.origin.z + ctx.raycaster.ray.direction.z * t;
-    if (Math.abs(px) <= 7.0 && Math.abs(pz) <= 5.2) {
+    const dx = px;
+    const dz = pz - PIT_CENTER_Z;
+    const maxHitR = PIT_RADIUS + 0.45;
+    if (dx * dx + dz * dz <= maxHitR * maxHitR) {
       return { x: px, z: pz };
     }
     return null;
