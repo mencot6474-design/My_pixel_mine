@@ -42,9 +42,20 @@ import { getOverclockTierBuffs, type OverclockTier } from './OverclockDomain';
 import { ResearchEffectType } from './ResearchData';
 import { WeatherId } from './WeatherData';
 
+export const CHIBI_DMG_MULT_PER_LEVEL = 0.12;
+export const CHIBI_BASE_CRIT_CHANCE = 0.05;
+export const CHIBI_CRIT_PER_LEVEL = 0.03;
+export const CHIBI_MAX_CRIT_CHANCE = 0.8;
+export const CHIBI_CRIT_DMG_MULT = 2.25;
+
 export interface PlotUnitStatsResult {
   dmg: number;
   nextDmg: number;
+  dmgMult: number;
+  nextDmgMult: number;
+  critChance: number;
+  nextCritChance: number;
+  critMult: number;
   speed: number;
   miningMult: number;
   worth: number;
@@ -323,9 +334,15 @@ export function computePlotUnitStats(
     1 +
     (ctx.claimedIndexRewards ? getActiveIndexPassiveBonusesDomain(ctx.claimedIndexRewards).allDmgPct : 0) +
     (ctx.claimedAchievements ? getAchievementAllDmgBonusDomain(ctx.claimedAchievements) : 0);
+  const dmgMult = Number((1 + (unit.speedLevel - 1) * CHIBI_DMG_MULT_PER_LEVEL).toFixed(2));
+  const nextDmgMult =
+    unit.speedLevel >= 17
+      ? dmgMult
+      : Number((1 + unit.speedLevel * CHIBI_DMG_MULT_PER_LEVEL).toFixed(2));
   const baseDmg =
     chibi.baseDps *
     lvlScale(unit.damageLevel) *
+    dmgMult *
     pickMult *
     mut.mult *
     encMult *
@@ -341,6 +358,7 @@ export function computePlotUnitStats(
   const nextDmg = Math.round(
     chibi.baseDps *
       lvlScale(unit.damageLevel + 1) *
+      dmgMult *
       pickMult *
       mut.mult *
       encMult *
@@ -364,6 +382,21 @@ export function computePlotUnitStats(
       returnRushSpeed
     ).toFixed(2)
   );
+  const baseCrit =
+    CHIBI_BASE_CRIT_CHANCE +
+    starTier.miningSpeedBonus +
+    (enc ? enc.miningSpeedPct * 0.25 : 0) +
+    (returnRushSpeed > 0 ? 0.1 : 0);
+  const critChance = Number(
+    Math.min(CHIBI_MAX_CRIT_CHANCE, baseCrit + (unit.miningSpeedLevel - 1) * CHIBI_CRIT_PER_LEVEL).toFixed(3)
+  );
+  const nextCritChance =
+    unit.miningSpeedLevel >= 16
+      ? critChance
+      : Number(
+          Math.min(CHIBI_MAX_CRIT_CHANCE, baseCrit + unit.miningSpeedLevel * CHIBI_CRIT_PER_LEVEL).toFixed(3)
+        );
+  const critMult = CHIBI_CRIT_DMG_MULT;
   const worth = Math.round(baseDmg * 12);
 
   const upgradeCostMult = getChibiUpgradeCostMult(chibi.id);
@@ -375,6 +408,11 @@ export function computePlotUnitStats(
   return {
     dmg,
     nextDmg,
+    dmgMult,
+    nextDmgMult,
+    critChance,
+    nextCritChance,
+    critMult,
     speed,
     miningMult,
     worth,

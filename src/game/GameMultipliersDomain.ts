@@ -1,4 +1,4 @@
-import { MAX_PIT_NODE_COUNT } from '../game3d/MineWorldPalette';
+import { BASE_PIT_NODE_COUNT, MAX_PIT_NODE_COUNT } from '../game3d/MineWorldPalette';
 import {
   getMinersByWorld,
   getOreById,
@@ -104,7 +104,7 @@ export function getMaxChestCapacityDomain(ctx: GameMultipliersContext): number {
 }
 
 export function getActiveOreNodeCountDomain(ctx: GameMultipliersContext): number {
-  return Math.min(MAX_PIT_NODE_COUNT, 1 + Math.round(ctx.getActiveResearchBonus('extraOreNodes')));
+  return Math.min(MAX_PIT_NODE_COUNT, BASE_PIT_NODE_COUNT + Math.round(ctx.getActiveResearchBonus('extraOreNodes')));
 }
 
 export function getOreHpScaleDomain(ctx: GameMultipliersContext): number {

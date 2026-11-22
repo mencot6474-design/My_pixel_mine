@@ -106,7 +106,8 @@ export const WORLD_PALETTES: Record<WorldId, MineWorldPalette> = {
 };
 
 export const STAGE_PEDESTAL_COUNT = 5;
-export const MAX_PIT_NODE_COUNT = 12;
+export const BASE_PIT_NODE_COUNT = 5;
+export const MAX_PIT_NODE_COUNT = 20;
 
 export type OreVariantKey = 'common' | 'vein' | 'geode';
 

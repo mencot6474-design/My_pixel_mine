@@ -132,22 +132,22 @@ export class MineEnvironment3D {
     });
 
     // 3. Multi-Tiered Dark Basalt Floating Substructure + Hull Neon Band (harmonizes with Neo-Cyber City Plaza)
-    const cliffLower = new THREE.Mesh(new THREE.BoxGeometry(25.2, 2.0, 15.2), this.cliffMat);
-    cliffLower.position.set(0, -2.75, -0.35);
-    const cliffUpper = new THREE.Mesh(new THREE.BoxGeometry(28.6, 1.3, 17.8), this.cliffMat);
-    cliffUpper.position.set(0, -1.42, -0.35);
+    const cliffLower = new THREE.Mesh(new THREE.BoxGeometry(25.2, 2.0, 17.6), this.cliffMat);
+    cliffLower.position.set(0, -2.75, 0.85);
+    const cliffUpper = new THREE.Mesh(new THREE.BoxGeometry(28.6, 1.3, 20.2), this.cliffMat);
+    cliffUpper.position.set(0, -1.42, 0.85);
     cliffUpper.receiveShadow = true;
 
     const hullNeonBand = new THREE.Mesh(
-      new THREE.BoxGeometry(29.0, 0.08, 18.2),
+      new THREE.BoxGeometry(29.0, 0.08, 20.6),
       this.cyberDeckTrimMat
     );
-    hullNeonBand.position.set(0, -1.06, -0.35);
+    hullNeonBand.position.set(0, -1.06, 0.85);
     const deckGroup = new THREE.Group();
     deckGroup.add(cliffLower, cliffUpper, hullNeonBand);
 
     // 4. Dark Basalt Courtyard Armor Slabs Framing Sunken Pit + Stairwell Bay + Drop Shaft & Refinery Channels
-    // Pit hole: x [-5.78..5.78], z [-2.63..3.93]
+    // Pit hole: x [-5.78..5.78], z [-2.63..6.33]
     // Center stairwell bay: x [-1.30..1.30], z [-3.18..-2.63]
     // Left Drop Shaft trench: x [-7.15..-5.78], z [-0.55..0.85]
     // Right Plasma Refinery escalator channel: x [5.78..7.12], z [-0.55..0.85]
@@ -155,13 +155,13 @@ export class MineEnvironment3D {
       [0, -5.14, 19.6, 3.92],
       [-5.55, -2.905, 8.5, 0.55],
       [5.55, -2.905, 8.5, 0.55],
-      [0, 5.315, 19.6, 2.77],
-      [-8.475, 0.65, 2.65, 6.56],
+      [0, 7.65, 19.6, 2.64],
+      [-8.475, 1.85, 2.65, 8.96],
       [-6.465, -1.59, 1.37, 2.08],
-      [-6.465, 2.39, 1.37, 3.08],
-      [8.46, 0.65, 2.68, 6.56],
+      [-6.465, 3.59, 1.37, 5.48],
+      [8.46, 1.85, 2.68, 8.96],
       [6.45, -1.59, 1.34, 2.08],
-      [6.45, 2.39, 1.34, 3.08],
+      [6.45, 3.59, 1.34, 5.48],
     ];
     for (const [cx, cz, cw, cd] of courtyardSpecs) {
       const slab = new THREE.Mesh(new THREE.BoxGeometry(cw, 0.28, cd), this.cobbleMat);
@@ -191,16 +191,16 @@ export class MineEnvironment3D {
     wingLeftBay.position.set(-12.4, -0.39, 0.15);
     wingLeftBay.receiveShadow = true;
 
-    const wingLeftSouth = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.95, 5.85), this.terrainMat);
-    wingLeftSouth.position.set(-12.4, -0.305, 5.075);
+    const wingLeftSouth = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.95, 8.22), this.terrainMat);
+    wingLeftSouth.position.set(-12.4, -0.305, 6.26);
     wingLeftSouth.receiveShadow = true;
 
-    const wingRight = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.95, 16.8), this.terrainMat);
-    wingRight.position.set(12.4, -0.305, -0.4);
+    const wingRight = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.95, 19.17), this.terrainMat);
+    wingRight.position.set(12.4, -0.305, 0.785);
     wingRight.receiveShadow = true;
 
     const frontDeck = new THREE.Mesh(new THREE.BoxGeometry(19.6, 0.8, 2.4), this.terrainMat);
-    frontDeck.position.set(0, -0.38, 7.9);
+    frontDeck.position.set(0, -0.38, 10.17);
     frontDeck.receiveShadow = true;
 
     const backDeck = new THREE.Mesh(new THREE.BoxGeometry(19.6, 0.99, 3.6), this.terrainMat);
@@ -223,16 +223,16 @@ export class MineEnvironment3D {
       deckGroup.add(curb, trim);
     };
     addSideCurbSeg(-9.66, -4.875, 6.05);
-    addSideCurbSeg(-9.66, 4.625, 4.95);
+    addSideCurbSeg(-9.66, 5.75, 7.2);
     addSideCurbSeg(9.66, -4.875, 6.05);
-    addSideCurbSeg(9.66, 4.625, 4.95);
+    addSideCurbSeg(9.66, 5.75, 7.2);
 
     for (const sx of [-1, 1]) {
       const outerFlankTrim = new THREE.Mesh(
-        new THREE.BoxGeometry(0.07, 0.05, 16.75),
+        new THREE.BoxGeometry(0.07, 0.05, 19.12),
         this.cyberDeckTrimMat
       );
-      outerFlankTrim.position.set(sx * 14.96, 0.2, -0.4);
+      outerFlankTrim.position.set(sx * 14.96, 0.2, 0.785);
       deckGroup.add(outerFlankTrim);
     }
 
@@ -241,12 +241,12 @@ export class MineEnvironment3D {
       new THREE.BoxGeometry(19.04, 0.05, 0.07),
       this.cyberDeckTrimMat
     );
-    frontPerimeterTrim.position.set(0, 0.04, 6.72);
+    frontPerimeterTrim.position.set(0, 0.04, 8.99);
     const frontOuterTrim = new THREE.Mesh(
       new THREE.BoxGeometry(18.84, 0.05, 0.07),
       this.cyberDeckTrimMat
     );
-    frontOuterTrim.position.set(0, 0.04, 9.06);
+    frontOuterTrim.position.set(0, 0.04, 11.33);
     deckGroup.add(frontPerimeterTrim, frontOuterTrim);
     mergeStaticMeshesByMaterial(deckGroup);
     this.group.add(deckGroup);
@@ -349,9 +349,9 @@ export class MineEnvironment3D {
     // Architectural Armored Lantern Caps on Deck Beacons (zero plain box/diamond/ring clutter)
     const placements: [number, number, number][] = [
       [-11.8, 0.17, -5.6],
-      [-11.8, 0.17, 4.6],
+      [-11.8, 0.17, 6.9],
       [11.8, 0.17, -5.6],
-      [11.8, 0.17, 4.4],
+      [11.8, 0.17, 6.7],
     ];
     for (const [bx, by, bz] of placements) {
       const bg = new THREE.Group();

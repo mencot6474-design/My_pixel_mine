@@ -3,6 +3,7 @@ import { type OreDef, type WorldId } from '../game/GameData';
 import { getWeatherById, type WeatherId } from '../game/WeatherData';
 import { PIT_EVENT_DEFS, type PitEventKind } from '../game/PitEventsDomain';
 import {
+  BASE_PIT_NODE_COUNT,
   MAX_PIT_NODE_COUNT,
   type MineWorldPalette,
   ORE_VARIANTS,
@@ -39,16 +40,16 @@ export {
   OreBillboard2D,
 };
 
-export const PIT_NODE_COUNT = 1;
-export const PIT_CENTER_Z = 0.65;
+export const PIT_NODE_COUNT = BASE_PIT_NODE_COUNT;
+export const PIT_CENTER_Z = 1.85;
 export const PIT_FLOOR_Y = -0.68;
-export const PIT_HALF_W = 4.55;
-export const PIT_HALF_D = 2.25;
+export const PIT_HALF_W = 4.8;
+export const PIT_HALF_D = 3.45;
 
 const BASE_ORE_HP = 180;
 /** Balanced 25% nerf from 500 -> 375 so Weather Meteors feel rewarding without dragging. */
 export const METEOR_HP_MULT = 375;
-export const BASE_ORE_RESPAWN_SEC = 4.0;
+export const BASE_ORE_RESPAWN_SEC = 3.5;
 export const SWEET_SPOT_MIN_PROGRESS = 0.56;
 export const SWEET_SPOT_MAX_PROGRESS = 0.90;
 export const SWEET_SPOT_DURATION_SEC = 2.25;
@@ -494,8 +495,9 @@ export class OrePit3D {
     let bestX = (Math.random() - 0.5) * (PIT_HALF_W * 1.8);
     let bestZ = (Math.random() - 0.5) * (PIT_HALF_D * 1.75);
     let bestMinDist = -1;
+    const desiredMinDist = this.activeNodeCount > 14 ? 1.55 : 1.85;
 
-    for (let attempt = 0; attempt < 22; attempt++) {
+    for (let attempt = 0; attempt < 28; attempt++) {
       const cx = (Math.random() * 2 - 1) * PIT_HALF_W;
       const cz = (Math.random() * 2 - 1) * PIT_HALF_D;
       let minDist = 999;
@@ -504,7 +506,7 @@ export class OrePit3D {
         const d = Math.hypot(cx - other.x, cz - other.z);
         if (d < minDist) minDist = d;
       }
-      if (minDist >= 1.9) return { x: cx, z: cz };
+      if (minDist >= desiredMinDist) return { x: cx, z: cz };
       if (minDist > bestMinDist) {
         bestMinDist = minDist;
         bestX = cx;

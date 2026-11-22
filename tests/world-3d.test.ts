@@ -105,6 +105,7 @@ import {
   computeMeteorDynamicHp,
   METEOR_HP_MULT,
   OrePit3D,
+  PIT_CENTER_Z,
   PIT_NODE_COUNT,
 } from '../src/game3d/OrePit3D';
 import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
@@ -615,7 +616,7 @@ describe('Pure 3D Mine World', () => {
     expect(getWorldById('starwell').name).toBe('Starwell');
     expect(getWorldById('abyssal').name).toBe('Abyssal Biolume');
     expect(getWorldById('chrono').name).toBe('Chrono Nexus');
-    expect(PIT_NODE_COUNT).toBe(1);
+    expect(PIT_NODE_COUNT).toBe(5);
     expect(BASE_ORE_RESPAWN_SEC).toBeGreaterThanOrEqual(3.5);
 
     for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell', 'abyssal', 'chrono'] as const) {
@@ -650,10 +651,10 @@ describe('Pure 3D Mine World', () => {
     expect(gs.getTapDamage()).toBeGreaterThan(baseTap);
     const tapWithCore = gs.getTapDamage();
 
-    // Start at 1 ore node; upgrade World 1 node (Deposits I: +1 ore node per lvl)
-    expect(gs.getActiveOreNodeCount()).toBe(1);
+    // Start at 5 ore nodes; upgrade World 1 node (Deposits I: +1 ore node per lvl)
+    expect(gs.getActiveOreNodeCount()).toBe(5);
     expect(gs.upgradeResearch('ug-deposits-1')).toBe(true);
-    expect(gs.getActiveOreNodeCount()).toBe(2);
+    expect(gs.getActiveOreNodeCount()).toBe(6);
 
     // Partial World 1 tree still blocks Crystal Caves unlock
     expect(gs.isTreeComplete('underground')).toBe(false);
@@ -677,10 +678,10 @@ describe('Pure 3D Mine World', () => {
     expect(gs.isTreeComplete('underground')).toBe(true);
     expect(gs.canUnlockWorld('crystal')).toBe('ok');
 
-    // Unlock Crystal Caves and verify World 1 research is isolated (resets pit to 1 node and clears W1 denseOreScale!)
+    // Unlock Crystal Caves and verify World 1 research is isolated (resets pit to 5 base nodes and clears W1 denseOreScale!)
     expect(gs.unlockWorld('crystal')).toBe(true);
     expect(gs.activeWorldId).toBe('crystal');
-    expect(gs.getActiveOreNodeCount()).toBe(1); // World 1 Deposits (+8) did NOT carry over to Crystal Caves!
+    expect(gs.getActiveOreNodeCount()).toBe(5); // World 1 Deposits (+8) did NOT carry over to Crystal Caves!
     expect(gs.getOreHpScale()).toBe(getWorldById('crystal').oreHpMult);
     expect(getWorldById('crystal').oreHpMult).toBeGreaterThanOrEqual(150);
     expect((getChibiById('volt-kensei')?.baseDps ?? 0)).toBeGreaterThanOrEqual(
@@ -690,9 +691,9 @@ describe('Pure 3D Mine World', () => {
 
     // Magma Hollows stays gated behind Crystal Caves (44/44)
     expect(gs.canUnlockWorld('magma')).toBe('locked-prereq');
-    // Travel back to World 1 restores World 1's Deposits (+8 => 9 nodes)
+    // Travel back to World 1 restores World 1's Deposits (+8 => 13 nodes)
     expect(gs.setActiveWorld('underground')).toBe(true);
-    expect(gs.getActiveOreNodeCount()).toBe(9);
+    expect(gs.getActiveOreNodeCount()).toBe(13);
   });
 
   it('auto-populates hotbar 1-9 with Chibis and Ores on chest takeAll and clears sold ores', () => {
@@ -1191,13 +1192,13 @@ describe('Pure 3D Mine World', () => {
     const celestialMinerDmg = state.getPlotUnitStats(0)!.dmg;
     const celestialOreMult = state.getTotalOreDropMult();
 
-    // Check actual ore & gem drops from breaking a Geode (3 base ores, 3 base gems)
+    // Check actual ore & gem drops from breaking a Geode (6 base ores, 4 base gems)
     state.chestOres = {};
     const gemsBefore = state.gems;
     state.onOreBroken('geode', () => 0.05);
     const oresDropped = Object.values(state.chestOres).reduce((a, b) => a + b, 0);
-    expect(oresDropped).toBe(30); // 3 base geode rolls * 10x Celestial ore drop
-    expect(state.gems - gemsBefore).toBe(12); // 3 base geode gems * 4x Celestial gem drop
+    expect(oresDropped).toBe(60); // 6 base geode rolls * 10x Celestial ore drop
+    expect(state.gems - gemsBefore).toBe(16); // 4 base geode gems * 4x Celestial gem drop
 
     // Compare against Bloodmoon (3x Ore, 2x Gem, 2.5x DMG)
     state.forceWeather('bloodmoon', t0);
@@ -2528,14 +2529,14 @@ describe('Pure 3D Mine World', () => {
     pit.update(BASE_ORE_RESPAWN_SEC + 0.1, 1.0, cam);
     pit.update(0.016, 1.016, cam);
 
-    const respawned = pit.getAliveNodesInfo()[0];
+    const respawned = pit.getAliveNodesInfo().find((n) => n.id === info.id);
     expect(respawned).toBeDefined();
     // Locate the active OreBillboard2D visualGroup inside pit.group (position matches respawned x, z)
     const nodeRoot = pit.group.children.find(
       (c) =>
         c.visible &&
-        Math.abs(c.position.x - respawned.worldX) < 0.01 &&
-        Math.abs(c.position.z - (respawned.worldZ - 0.65)) < 0.01 &&
+        Math.abs(c.position.x - respawned!.worldX) < 0.01 &&
+        Math.abs(c.position.z - (respawned!.worldZ - PIT_CENTER_Z)) < 0.01 &&
         c.children[0]?.children[0]?.children[0] instanceof THREE.Group
     );
     const visualGroup = nodeRoot?.children[0]?.children[0]?.children[0] as THREE.Group | undefined;
@@ -3182,12 +3183,12 @@ describe('Pure 3D Mine World', () => {
     }
     expect(controller.getActiveProjectileCount()).toBeGreaterThan(0);
 
-    // Advance projectile flight until impacts land
+    // Advance projectile flight until impacts land — single AoE attack hits >= 3 ore nodes
     for (let i = 0; i < 12; i++) {
       pit.update(0.05, i * 0.05, cam, false);
       controller.update(0.05, cam, pit, peds, true, onBroken, onHit);
     }
-    expect(hits.length).toBeGreaterThan(0);
+    expect(hits.length).toBeGreaterThanOrEqual(3);
 
     // Switch to headless/background mining: flushes projectiles and deals damage directly with 0 active projectiles
     const prevHits = hits.length;

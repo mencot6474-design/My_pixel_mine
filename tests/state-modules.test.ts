@@ -261,6 +261,17 @@ describe('Tahap C GameState Domain Modules', () => {
       const stats = computePlotUnitStats(state, 0);
       expect(stats).not.toBeNull();
       expect(stats?.dmg).toBeGreaterThan(0);
+      expect(stats?.dmgMult).toBe(1);
+      expect(stats?.critChance).toBe(0.05);
+      expect(stats?.critMult).toBe(2.25);
+
+      state.cash = 10_000;
+      expect(state.upgradePlotSpeed(0)).toBe(true);
+      expect(state.upgradePlotMiningSpeed(0)).toBe(true);
+      const upgradedStats = computePlotUnitStats(state, 0)!;
+      expect(upgradedStats.dmgMult).toBe(1.12);
+      expect(upgradedStats.dmg).toBeGreaterThan(stats!.dmg);
+      expect(upgradedStats.critChance).toBeCloseTo(0.08, 3);
 
       const dps = computeDpsBreakdown(state);
       expect(dps.units).toHaveLength(1);

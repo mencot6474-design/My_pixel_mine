@@ -220,7 +220,10 @@ export class MineScene3D {
   private readonly pedestals: PlotPedestal3D[] = [];
   private readonly plotAttackController = new PlotAttackController3D();
   private readonly slotEnchants: (string | null)[] = Array(STAGE_PEDESTAL_COUNT).fill(null);
-  private readonly slotCombatStats = new Map<number, { dmg: number; speed: number; miningMult: number }>();
+  private readonly slotCombatStats = new Map<
+    number,
+    { dmg: number; speed: number; miningMult: number; critChance: number; critMult: number }
+  >();
   private readonly env: MineEnvironment3D;
   private readonly hemiLight: THREE.HemisphereLight;
   private readonly sunLight: THREE.DirectionalLight;
@@ -249,10 +252,10 @@ export class MineScene3D {
 
   private elapsed = 0;
   private baseCamPos = new THREE.Vector3(0, 11.7, 15.6);
-  private lookAtPos = new THREE.Vector3(0, 0.55, -0.55);
+  private lookAtPos = new THREE.Vector3(0, 0.55, 0.35);
   private orbitYaw = 0;
   private orbitPitch = 0;
-  private camRadius = 16.5;
+  private camRadius = 18.8;
   private readonly inputState: MineInputState = {
     isDragging: false,
     dragMoved: false,
@@ -271,7 +274,7 @@ export class MineScene3D {
     holdMineClientY: 0,
     targetOrbitYaw: 0,
     targetOrbitPitch: 0,
-    targetCamRadius: 16.5,
+    targetCamRadius: 18.8,
     cameraLocked: false,
     crateHovered: false,
     crateBounce: 0,
@@ -685,8 +688,8 @@ export class MineScene3D {
     }
 
     const hitCb = inMine
-      ? (dmg: number, wx: number, wy: number, wz: number, isMeteor?: boolean) =>
-          this.emitDamageScreen(dmg, wx, wy, wz, false, false, undefined, isMeteor)
+      ? (dmg: number, wx: number, wy: number, wz: number, isMeteor?: boolean, isCrit?: boolean) =>
+          this.emitDamageScreen(dmg, wx, wy, wz, false, Boolean(isCrit), undefined, isMeteor)
       : undefined;
 
     const minerBreakCb = (
@@ -891,8 +894,8 @@ export class MineScene3D {
     } else {
       this.inputState.targetOrbitYaw = 0;
       this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('mine');
-      this.inputState.targetCamRadius = 16.5;
-      this.lookAtPos.set(0, 0.55, -0.55);
+      this.inputState.targetCamRadius = 18.8;
+      this.lookAtPos.set(0, 0.55, 0.35);
       this.applyWeatherAtmosphere();
     }
 
@@ -1132,9 +1135,16 @@ export class MineScene3D {
     }
   }
 
-  public syncPlotUnitStats(slotIndex: number, dmg: number, speed: number, miningMult: number): void {
-    this.slotCombatStats.set(slotIndex, { dmg, speed, miningMult });
-    this.plotAttackController.setSlotStats(slotIndex, dmg, speed, miningMult);
+  public syncPlotUnitStats(
+    slotIndex: number,
+    dmg: number,
+    speed: number,
+    miningMult: number,
+    critChance = 0.05,
+    critMult = 2.25
+  ): void {
+    this.slotCombatStats.set(slotIndex, { dmg, speed, miningMult, critChance, critMult });
+    this.plotAttackController.setSlotStats(slotIndex, dmg, speed, miningMult, critChance, critMult);
     if (this.mode === 'tower') this.syncTowerFighters();
   }
 

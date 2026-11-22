@@ -230,7 +230,7 @@ export class PlotInspectUi {
         }
         ${eqEnchant ? `<div class="mt-0.5 w-full rounded-xl bg-white border-2 border-[#14111d] px-2.5 py-1 text-[10.5px] font-black leading-snug tabular-nums text-[#14111d] break-words">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}
         <div class="text-[12.5px] font-bold tabular-nums text-[#475569] mt-0.5">
-          Lv. ${unit.damageLevel} • Speed ${stats.speed} • Mining x${stats.miningMult}
+          Lv. ${unit.damageLevel} • DMG ×${stats.dmgMult.toFixed(2)} • Crit ${Math.round(stats.critChance * 100)}%
         </div>
         <div class="text-[24px] font-black tabular-nums text-[#dc2626] leading-[1.1] mt-1">${fmtShort(stats.dmg)} dmg</div>
         <div class="text-[14px] font-black tabular-nums text-[#15803d]">Worth ${fmtMoney(stats.worth)}</div>
@@ -345,15 +345,19 @@ export class PlotInspectUi {
             </button>
           </div>
           <div class="${TW_STAT_CARD}">
-            <div class="text-[13px] font-black tabular-nums text-[#14111d]">Speed Lv. ${unit.speedLevel} / 17</div>
-            <div class="text-[15px] font-black tabular-nums text-[#15803d]">${stats.speed}</div>
+            <div class="text-[13px] font-black tabular-nums text-[#14111d]">DMG Mult Lv. ${unit.speedLevel} / 17</div>
+            <div class="text-[15px] font-black tabular-nums">
+              <span class="text-[#dc2626]">×${stats.dmgMult.toFixed(2)}</span>${spdMax ? '' : ` &gt; <span class="text-[#15803d]">×${stats.nextDmgMult.toFixed(2)}</span>`}
+            </div>
             <button class="${TW_STAT_BTN} tabular-nums ${spdMax ? 'maxed' : ''}" data-inspect-action="up-spd">
               ${fmtPlanBtn(spdMax, spdPlan)}
             </button>
           </div>
           <div class="${TW_STAT_CARD}">
-            <div class="text-[13px] font-black tabular-nums text-[#14111d]">Mining Speed Lv. ${unit.miningSpeedLevel} / 16</div>
-            <div class="text-[15px] font-black tabular-nums text-[#15803d]">x${stats.miningMult}</div>
+            <div class="text-[13px] font-black tabular-nums text-[#14111d]">Crit Chance Lv. ${unit.miningSpeedLevel} / 16</div>
+            <div class="text-[15px] font-black tabular-nums">
+              <span class="text-[#dc2626]">${Math.round(stats.critChance * 100)}%</span>${minMax ? '' : ` &gt; <span class="text-[#15803d]">${Math.round(stats.nextCritChance * 100)}%</span>`}
+            </div>
             <button class="${TW_STAT_BTN} tabular-nums ${minMax ? 'maxed' : ''}" data-inspect-action="up-mine">
               ${fmtPlanBtn(minMax, minPlan)}
             </button>

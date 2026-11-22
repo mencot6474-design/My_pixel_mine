@@ -721,6 +721,8 @@ export class PlotPedestal3D {
     allTargets?: ReadonlyArray<{ x: number; y: number; z: number }>;
     durationSec: number;
     colorHex?: string;
+    wideCenter?: { x: number; y: number; z: number };
+    motionScale?: number;
   }): void {
     this.chibiSprite?.triggerBlitz(opts);
   }

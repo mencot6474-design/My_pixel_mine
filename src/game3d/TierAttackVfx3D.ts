@@ -70,6 +70,7 @@ export interface TierAttackFireOpts {
   allTargets?: readonly WorldPoint3[];
   comboStep?: number;
   speedScale?: number;
+  areaScale?: number;
   wideCenter?: WorldPoint3;
 }
 
@@ -122,7 +123,11 @@ export function isWideAoeRarity(rarity: string): boolean {
   return rarity === 'fusion' || rarity === 'limited' || rarity === 'twin' || rarity === 'omega';
 }
 
-function resolvePitBounds(allTargets: readonly WorldPoint3[], target: WorldPoint3): { cx: number; cy: number; cz: number; pts: WorldPoint3[] } {
+function resolvePitBounds(
+  allTargets: readonly WorldPoint3[],
+  target: WorldPoint3,
+  wideCenter?: WorldPoint3
+): { cx: number; cy: number; cz: number; pts: WorldPoint3[] } {
   if (allTargets.length >= 2) {
     let minX = Infinity;
     let maxX = -Infinity;
@@ -137,23 +142,34 @@ function resolvePitBounds(allTargets: readonly WorldPoint3[], target: WorldPoint
       if (p.z > maxZ) maxZ = p.z;
       avgY += p.y;
     }
-    const cx = (minX + maxX) * 0.5;
-    const cz = (minZ + maxZ) * 0.5;
-    const cy = avgY / allTargets.length;
-    return { cx, cy, cz, pts: [...allTargets] };
+    const cx = wideCenter ? wideCenter.x : (minX + maxX) * 0.5;
+    const cz = wideCenter ? wideCenter.z : (minZ + maxZ) * 0.5;
+    const cy = wideCenter ? wideCenter.y : avgY / allTargets.length;
+    const pts =
+      allTargets.length <= 6
+        ? [...allTargets]
+        : [...allTargets]
+            .sort(
+              (a, b) =>
+                (a.x - cx) * (a.x - cx) +
+                (a.z - cz) * (a.z - cz) -
+                ((b.x - cx) * (b.x - cx) + (b.z - cz) * (b.z - cz))
+            )
+            .slice(0, 6);
+    return { cx, cy, cz, pts };
   }
-  const cx = target.x;
-  const cy = target.y;
-  const cz = target.z;
+  const cx = wideCenter ? wideCenter.x : target.x;
+  const cy = wideCenter ? wideCenter.y : target.y;
+  const cz = wideCenter ? wideCenter.z : target.z;
   return {
     cx,
     cy,
     cz,
     pts: [
-      { x: cx - 2.6, y: cy, z: cz - 1.1 },
-      { x: cx + 2.6, y: cy, z: cz - 1.0 },
-      { x: cx - 2.3, y: cy, z: cz + 1.2 },
-      { x: cx + 2.4, y: cy, z: cz + 1.1 },
+      { x: cx - 2.4, y: cy, z: cz - 1.1 },
+      { x: cx + 2.4, y: cy, z: cz - 1.0 },
+      { x: cx - 2.1, y: cy, z: cz + 1.2 },
+      { x: cx + 2.2, y: cy, z: cz + 1.1 },
       { x: cx, y: cy, z: cz },
     ],
   };
@@ -168,7 +184,9 @@ export function buildTierMotionWaypoints(
   target: WorldPoint3,
   allTargets: readonly WorldPoint3[],
   color: string,
-  secondary: string
+  secondary: string,
+  wideCenter?: WorldPoint3,
+  motionScale = 1.0
 ): { hero: TierMotionWaypoint[]; clone?: TierMotionWaypoint[] } {
   const ax = anchor.x;
   const ay = anchor.y;
@@ -186,7 +204,12 @@ export function buildTierMotionWaypoints(
     t: 1.0, x: ax, y: ay, z: az, face: faceToward, rz: 0, pose: 'idle', snap: false, col: color, scale: 1,
   };
 
-  const { cx, cy, cz, pts } = resolvePitBounds(allTargets, target);
+  const bounds = resolvePitBounds(allTargets, target, wideCenter);
+  const cx = bounds.cx;
+  const cy = bounds.cy;
+  const cz = bounds.cz;
+  const pts = bounds.pts;
+  const ms = Math.max(0.55, Math.min(1.2, motionScale));
 
   switch (rarity) {
     case 'common':
@@ -308,10 +331,10 @@ export function buildTierMotionWaypoints(
       return {
         hero: [
           restStart,
-          { t: 0.15, x: cx - 3.0, y: cy + 0.75, z: cz - 1.0, face: 1, rz: -0.28, pose: 'attack', snap: true, col: '#22d3ee', scale: 1.14 },
-          { t: 0.31, x: cx + 3.0, y: cy + 0.95, z: cz - 0.9, face: -1, rz: 0.28, pose: 'attack', snap: true, col: '#ec4899', scale: 1.14 },
-          { t: 0.47, x: cx - 2.6, y: cy + 0.7, z: cz + 1.3, face: 1, rz: -0.24, pose: 'attack', snap: true, col: '#22d3ee', scale: 1.14 },
-          { t: 0.63, x: cx + 2.7, y: cy + 1.05, z: cz + 1.2, face: -1, rz: 0.24, pose: 'attack', snap: true, col: '#ec4899', scale: 1.14 },
+          { t: 0.15, x: cx - 3.0 * ms, y: cy + 0.75, z: cz - 1.0 * ms, face: 1, rz: -0.28, pose: 'attack', snap: true, col: '#22d3ee', scale: 1.14 },
+          { t: 0.31, x: cx + 3.0 * ms, y: cy + 0.95, z: cz - 0.9 * ms, face: -1, rz: 0.28, pose: 'attack', snap: true, col: '#ec4899', scale: 1.14 },
+          { t: 0.47, x: cx - 2.6 * ms, y: cy + 0.7, z: cz + 1.3 * ms, face: 1, rz: -0.24, pose: 'attack', snap: true, col: '#22d3ee', scale: 1.14 },
+          { t: 0.63, x: cx + 2.7 * ms, y: cy + 1.05, z: cz + 1.2 * ms, face: -1, rz: 0.24, pose: 'attack', snap: true, col: '#ec4899', scale: 1.14 },
           { t: 0.84, x: cx, y: cy + 1.7, z: cz, face: 1, rz: 0, pose: 'aura', snap: true, col: '#ffffff', scale: 1.24 },
           restEnd,
         ],
@@ -321,8 +344,8 @@ export function buildTierMotionWaypoints(
       return {
         hero: [
           restStart,
-          { t: 0.16, x: cx - 3.6, y: cy + 1.25, z: cz, face: 1, rz: -0.26, pose: 'attack', snap: true, col: color, scale: 1.16 },
-          { t: 0.36, x: cx + 3.6, y: cy + 1.4, z: cz + 0.15, face: -1, rz: 0.26, pose: 'attack', snap: true, col: secondary, scale: 1.16 },
+          { t: 0.16, x: cx - 3.6 * ms, y: cy + 1.25, z: cz, face: 1, rz: -0.26, pose: 'attack', snap: true, col: color, scale: 1.16 },
+          { t: 0.36, x: cx + 3.6 * ms, y: cy + 1.4, z: cz + 0.15, face: -1, rz: 0.26, pose: 'attack', snap: true, col: secondary, scale: 1.16 },
           { t: 0.62, x: cx, y: cy + 2.05, z: cz - 0.35, face: 1, rz: 0, pose: 'aura', snap: true, col: color, scale: 1.25 },
           { t: 0.85, x: cx, y: cy + 1.55, z: cz + 0.2, face: 1, rz: 0, pose: 'aura', snap: false, col: secondary, scale: 1.2 },
           restEnd,
@@ -333,16 +356,16 @@ export function buildTierMotionWaypoints(
       return {
         hero: [
           restStart,
-          { t: 0.16, x: cx - 3.1, y: cy + 0.8, z: cz - 1.1, face: 1, rz: -0.3, pose: 'attack', snap: true, col: color, scale: 1.14 },
-          { t: 0.38, x: cx + 3.0, y: cy + 0.95, z: cz + 1.2, face: -1, rz: 0.3, pose: 'attack', snap: true, col: color, scale: 1.14 },
+          { t: 0.16, x: cx - 3.1 * ms, y: cy + 0.8, z: cz - 1.1 * ms, face: 1, rz: -0.3, pose: 'attack', snap: true, col: color, scale: 1.14 },
+          { t: 0.38, x: cx + 3.0 * ms, y: cy + 0.95, z: cz + 1.2 * ms, face: -1, rz: 0.3, pose: 'attack', snap: true, col: color, scale: 1.14 },
           { t: 0.62, x: cx - 0.65, y: cy + 1.45, z: cz + 0.1, face: 1, rz: -0.1, pose: 'aura', snap: true, col: '#ffffff', scale: 1.2 },
           { t: 0.85, x: cx - 0.75, y: cy + 1.3, z: cz + 0.1, face: 1, rz: 0, pose: 'attack', snap: false, col: color, scale: 1.15 },
           restEnd,
         ],
         clone: [
           { t: 0.0, x: ax, y: ay, z: az, face: -1, rz: 0, pose: 'attack', snap: false, col: secondary, scale: 1, opacity: 0 },
-          { t: 0.16, x: cx + 3.1, y: cy + 0.8, z: cz - 1.1, face: -1, rz: 0.3, pose: 'attack', snap: true, col: secondary, scale: 1.12, opacity: 0.92 },
-          { t: 0.38, x: cx - 3.0, y: cy + 0.95, z: cz + 1.2, face: 1, rz: -0.3, pose: 'attack', snap: true, col: secondary, scale: 1.12, opacity: 0.92 },
+          { t: 0.16, x: cx + 3.1 * ms, y: cy + 0.8, z: cz - 1.1 * ms, face: -1, rz: 0.3, pose: 'attack', snap: true, col: secondary, scale: 1.12, opacity: 0.92 },
+          { t: 0.38, x: cx - 3.0 * ms, y: cy + 0.95, z: cz + 1.2 * ms, face: 1, rz: -0.3, pose: 'attack', snap: true, col: secondary, scale: 1.12, opacity: 0.92 },
           { t: 0.62, x: cx + 0.65, y: cy + 1.45, z: cz + 0.1, face: -1, rz: 0.1, pose: 'aura', snap: true, col: secondary, scale: 1.18, opacity: 0.92 },
           { t: 0.85, x: cx + 0.75, y: cy + 1.3, z: cz + 0.1, face: -1, rz: 0, pose: 'attack', snap: false, col: secondary, scale: 1.14, opacity: 0.78 },
           { t: 1.0, x: ax, y: ay, z: az, face: -1, rz: 0, pose: 'attack', snap: false, col: secondary, scale: 1, opacity: 0 },
@@ -353,10 +376,10 @@ export function buildTierMotionWaypoints(
       return {
         hero: [
           restStart,
-          { t: 0.12, x: cx - 3.3, y: cy + 0.75, z: cz - 1.0, face: 1, rz: -0.32, pose: 'attack', snap: true, col: '#ef4444', scale: 1.16 },
-          { t: 0.24, x: cx + 3.2, y: cy + 1.05, z: cz + 1.1, face: -1, rz: 0.32, pose: 'attack', snap: true, col: '#fbbf24', scale: 1.16 },
-          { t: 0.36, x: cx + 3.1, y: cy + 0.8, z: cz - 1.0, face: -1, rz: 0.28, pose: 'attack', snap: true, col: '#ef4444', scale: 1.16 },
-          { t: 0.48, x: cx - 2.8, y: cy + 0.95, z: cz + 1.2, face: 1, rz: -0.28, pose: 'attack', snap: true, col: '#ffffff', scale: 1.18 },
+          { t: 0.12, x: cx - 3.3 * ms, y: cy + 0.75, z: cz - 1.0 * ms, face: 1, rz: -0.32, pose: 'attack', snap: true, col: '#ef4444', scale: 1.16 },
+          { t: 0.24, x: cx + 3.2 * ms, y: cy + 1.05, z: cz + 1.1 * ms, face: -1, rz: 0.32, pose: 'attack', snap: true, col: '#fbbf24', scale: 1.16 },
+          { t: 0.36, x: cx + 3.1 * ms, y: cy + 0.8, z: cz - 1.0 * ms, face: -1, rz: 0.28, pose: 'attack', snap: true, col: '#ef4444', scale: 1.16 },
+          { t: 0.48, x: cx - 2.8 * ms, y: cy + 0.95, z: cz + 1.2 * ms, face: 1, rz: -0.28, pose: 'attack', snap: true, col: '#ffffff', scale: 1.18 },
           { t: 0.64, x: cx, y: cy + 1.85, z: cz - 0.3, face: 1, rz: 0, pose: 'aura', snap: true, col: '#ef4444', scale: 1.28 },
           { t: 0.86, x: cx, y: cy + 1.65, z: cz - 0.3, face: 1, rz: 0, pose: 'aura', snap: false, col: '#fbbf24', scale: 1.22 },
           restEnd,
@@ -376,18 +399,18 @@ export function sampleTierMotionWaypoints(track: readonly TierMotionWaypoint[], 
       const span = Math.max(0.0001, b.t - a.t);
       const localT = (p - a.t) / span;
       if (b.snap) {
-        const ease = localT < 0.34 ? 0 : easeOutCubic((localT - 0.34) / 0.66);
+        const ease = localT < 0.42 ? 0 : easeOutCubic((localT - 0.42) / 0.58);
         return {
           x: lerpNum(a.x, b.x, ease),
           y: lerpNum(a.y, b.y, ease),
           z: lerpNum(a.z, b.z, ease),
-          face: localT < 0.34 ? a.face : b.face,
+          face: localT < 0.42 ? a.face : b.face,
           rz: lerpNum(a.rz, b.rz, ease),
-          pose: localT < 0.34 ? a.pose : b.pose,
-          col: localT < 0.34 ? a.col : b.col,
+          pose: localT < 0.42 ? a.pose : b.pose,
+          col: localT < 0.42 ? a.col : b.col,
           scale: lerpNum(a.scale, b.scale, ease),
           opacity: lerpNum(a.opacity ?? 1, b.opacity ?? 1, ease),
-          snapping: localT >= 0.3 && localT <= 0.72,
+          snapping: localT >= 0.38 && localT <= 0.78,
         };
       }
       const ease = easeOutCubic(localT);
@@ -1098,9 +1121,19 @@ export class TierAttackVfxPool3D {
     }
   }
 
-  public fireAnticipation(rarity: string, colorHex: string, target: WorldPoint3, allTargets: readonly WorldPoint3[] = []): void {
+  public fireAnticipation(
+    rarity: string,
+    colorHex: string,
+    target: WorldPoint3,
+    allTargets: readonly WorldPoint3[] = [],
+    areaScale = 1,
+    wideCenter?: WorldPoint3
+  ): void {
     const wide = isWideAoeRarity(rarity);
-    const { cx, cy, cz } = wide ? resolvePitBounds(allTargets, target) : { cx: target.x, cy: target.y, cz: target.z };
+    const as = Math.max(0.45, Math.min(1.2, areaScale));
+    const { cx, cy, cz } = wide
+      ? resolvePitBounds(allTargets, target, wideCenter)
+      : { cx: target.x, cy: target.y, cz: target.z };
 
     if (rarity === 'secret' || wide) {
       this.hooks.onArenaDim?.(wide ? 0.55 : 0.42, rarity === 'omega' ? '#1c0408' : '#050b18', 0.65);
@@ -1112,7 +1145,7 @@ export class TierAttackVfxPool3D {
         z: cz,
         color: colorHex,
         s0: 0.9,
-        s1: wide ? 10.5 : 3.4,
+        s1: wide ? 10.5 * as : 3.4,
         life: 0.52,
         flatFloor: true,
         spin: 4.0,
@@ -1131,8 +1164,9 @@ export class TierAttackVfxPool3D {
     const tz = opts.target.z;
     const comboStep = opts.comboStep ?? 0;
     const sc = opts.speedScale ?? 1.0;
+    const as = Math.max(0.45, Math.min(1.2, opts.areaScale ?? 1.0));
     const allTargets = opts.allTargets && opts.allTargets.length > 0 ? opts.allTargets : [opts.target];
-    const { cx, cy, cz, pts } = resolvePitBounds(allTargets, opts.target);
+    const { cx, cy, cz, pts } = resolvePitBounds(allTargets, opts.target, opts.wideCenter);
 
     switch (rarity) {
       case 'common': {
@@ -1332,9 +1366,9 @@ export class TierAttackVfxPool3D {
         }
         this.after(0.28 * sc, () => {
           this.hooks.onImpactFrame?.(1.0, 1.0, color, 0.048);
-          this.spawnRift({ x: tx, y: ty + 1.05, z: tz, color: secondary, coreColor: '#ffffff', rz: 0.4, len: 5.8, height: 1.15, life: 0.54 * sc });
-          this.spawnRift({ x: tx, y: ty + 1.05, z: tz, color, coreColor: '#ffffff', rz: -0.46, len: 5.4, height: 1.1, life: 0.54 * sc });
-          this.spawnDome({ x: tx, y: ty + 0.04, z: tz, color, coreColor: '#ffffff', s0: 0.5, s1: 4.2, yScale: 0.82, life: 0.46 * sc });
+          this.spawnRift({ x: tx, y: ty + 1.05, z: tz, color: secondary, coreColor: '#ffffff', rz: 0.4, len: 5.8 * as, height: 1.15 * as, life: 0.54 * sc });
+          this.spawnRift({ x: tx, y: ty + 1.05, z: tz, color, coreColor: '#ffffff', rz: -0.46, len: 5.4 * as, height: 1.1 * as, life: 0.54 * sc });
+          this.spawnDome({ x: tx, y: ty + 0.04, z: tz, color, coreColor: '#ffffff', s0: 0.5, s1: 4.2 * as, yScale: 0.82, life: 0.46 * sc });
           this.spawnDebrisBurst(tx, ty + 0.75, tz, color, secondary, 8);
         });
         break;
@@ -1348,11 +1382,11 @@ export class TierAttackVfxPool3D {
             const c = idx % 2 === 0 ? color : secondary;
             this.spawnSlash({
               x: n.x, y: n.y + 0.85, z: n.z, color: c, coreColor: '#ffffff',
-              rx: (idx % 2 === 0 ? 1 : -1) * 0.45, ry: idx * 1.2, rz: 0.35, s0: 1.5, s1: 2.9, life: 0.3 * sc, spinSpeed: 4.5,
+              rx: (idx % 2 === 0 ? 1 : -1) * 0.45, ry: idx * 1.2, rz: 0.35, s0: 1.3 * as, s1: 2.7 * as, life: 0.3 * sc, spinSpeed: 4.5,
             });
             this.spawnRift({
               x: n.x, y: n.y + 1.0, z: n.z, color: c, coreColor: '#ffffff',
-              rz: idx % 2 === 0 ? 0.35 : -0.35, len: 3.9, height: 0.78, life: 0.48 * sc,
+              rz: idx % 2 === 0 ? 0.35 : -0.35, len: 3.9 * as, height: 0.78 * as, life: 0.48 * sc,
             });
             for (let k = 0; k < 2; k++) {
               this.spawnWeapon({
@@ -1363,7 +1397,7 @@ export class TierAttackVfxPool3D {
                 endPos: new THREE.Vector3(n.x + (k === 0 ? -0.22 : 0.22), n.y + 0.04, n.z),
                 startRot: new THREE.Euler((k - 0.5) * 0.4, idx, (k - 0.5) * 0.4),
                 endRot: new THREE.Euler((k - 0.5) * 0.4, idx, (k - 0.5) * 0.4),
-                scale: k === 0 ? 1.95 : 1.45,
+                scale: (k === 0 ? 1.95 : 1.45) * Math.max(0.75, as),
                 mode: 'erupt',
                 life: 0.48 * sc,
               });
@@ -1374,9 +1408,9 @@ export class TierAttackVfxPool3D {
 
         this.after(Math.min(0.42, pts.length * 0.06) * sc, () => {
           this.hooks.onImpactFrame?.(1.0, 1.0, secondary, 0.048);
-          this.spawnRift({ x: cx, y: cy + 1.35, z: cz, color: secondary, coreColor: '#ffffff', rz: 0.26, len: 11.8, height: 1.25, life: 0.56 * sc });
-          this.spawnRift({ x: cx, y: cy + 1.35, z: cz, color, coreColor: '#ffffff', rz: -0.26, len: 11.8, height: 1.25, life: 0.56 * sc });
-          this.spawnDome({ x: cx, y: cy + 0.04, z: cz, color, coreColor: secondary, s0: 0.8, s1: 6.2, yScale: 0.58, life: 0.48 * sc });
+          this.spawnRift({ x: cx, y: cy + 1.35, z: cz, color: secondary, coreColor: '#ffffff', rz: 0.26, len: 11.8 * as, height: 1.25 * as, life: 0.56 * sc });
+          this.spawnRift({ x: cx, y: cy + 1.35, z: cz, color, coreColor: '#ffffff', rz: -0.26, len: 11.8 * as, height: 1.25 * as, life: 0.56 * sc });
+          this.spawnDome({ x: cx, y: cy + 0.04, z: cz, color, coreColor: secondary, s0: 0.8 * as, s1: 6.2 * as, yScale: 0.58, life: 0.48 * sc });
         });
         break;
       }
@@ -1384,14 +1418,14 @@ export class TierAttackVfxPool3D {
       case 'limited': {
         // FULL WIDE AoE: Left -> Right 13m Eclipse Moon Slashes + Central Solar Pillar + 6 Golden Spears!
         this.hooks.onArenaDim?.(0.7, '#3b0712', 0.78);
-        this.spawnSlash({ x: cx - 1.5, y: cy + 1.15, z: cz, color: secondary, coreColor: color, rx: 0.35, ry: -0.4, rz: 0.35, s0: 3.0, s1: 6.6, life: 0.42 * sc, spinSpeed: 3.5 });
+        this.spawnSlash({ x: cx - 1.5 * as, y: cy + 1.15, z: cz, color: secondary, coreColor: color, rx: 0.35, ry: -0.4, rz: 0.35, s0: 2.8 * as, s1: 6.6 * as, life: 0.42 * sc, spinSpeed: 3.5 });
         this.after(0.12 * sc, () => {
-          this.spawnSlash({ x: cx + 1.5, y: cy + 1.25, z: cz, color, coreColor: '#ffffff', rx: -0.35, ry: 2.7, rz: -0.35, s0: 3.0, s1: 6.6, life: 0.42 * sc, spinSpeed: -3.5 });
+          this.spawnSlash({ x: cx + 1.5 * as, y: cy + 1.25, z: cz, color, coreColor: '#ffffff', rx: -0.35, ry: 2.7, rz: -0.35, s0: 2.8 * as, s1: 6.6 * as, life: 0.42 * sc, spinSpeed: -3.5 });
         });
         this.after(0.24 * sc, () => {
           this.hooks.onImpactFrame?.(1.0, 0.0, color, 0.05);
-          this.spawnBeam({ x: cx, y: cy, z: cz, color, coreColor: '#ffffff', radius: 1.05, height: 1.05, life: 0.62 * sc });
-          this.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: secondary, coreColor: color, s0: 0.85, s1: 6.6, yScale: 0.54, life: 0.54 * sc });
+          this.spawnBeam({ x: cx, y: cy, z: cz, color, coreColor: '#ffffff', radius: 1.05 * as, height: 1.05, life: 0.62 * sc });
+          this.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: secondary, coreColor: color, s0: 0.85 * as, s1: 6.6 * as, yScale: 0.54, life: 0.54 * sc });
           pts.forEach((n, idx) => {
             this.after(idx * 0.038 * sc, () => {
               this.spawnDirectedWeapon(
@@ -1399,10 +1433,10 @@ export class TierAttackVfxPool3D {
                 new THREE.Vector3(n.x + (idx % 2 === 0 ? -1.6 : 1.6), n.y + 7.0, n.z - 1.8),
                 new THREE.Vector3(n.x, n.y + 0.4, n.z),
                 color,
-                1.68,
+                1.68 * Math.max(0.78, as),
                 0.22 * sc,
                 () => {
-                  this.spawnQuad({ tex: this.ringTex, x: n.x, y: n.y + 0.08, z: n.z, color, s0: 0.55, s1: 3.2, life: 0.34 * sc, flatFloor: true });
+                  this.spawnQuad({ tex: this.ringTex, x: n.x, y: n.y + 0.08, z: n.z, color, s0: 0.55, s1: 3.2 * as, life: 0.34 * sc, flatFloor: true });
                   this.spawnDebrisBurst(n.x, n.y + 0.6, n.z, color, secondary, 4);
                 }
               );
@@ -1419,20 +1453,20 @@ export class TierAttackVfxPool3D {
           this.after(pass * 0.1 * sc, () => {
             const nL = pts[(pass * 2) % pts.length];
             const nR = pts[(pass * 2 + 1) % pts.length];
-            this.spawnSlash({ x: nL.x, y: nL.y + 0.8, z: nL.z, color, coreColor: '#ffffff', rx: 0.4, ry: pass * 1.4, rz: 0.35, s0: 1.5, s1: 2.9, life: 0.28 * sc, spinSpeed: 4.5 });
-            this.spawnSlash({ x: nR.x, y: nR.y + 0.8, z: nR.z, color: secondary, coreColor: '#ffffff', rx: -0.4, ry: -pass * 1.4, rz: -0.35, s0: 1.5, s1: 2.9, life: 0.28 * sc, spinSpeed: -4.5 });
+            this.spawnSlash({ x: nL.x, y: nL.y + 0.8, z: nL.z, color, coreColor: '#ffffff', rx: 0.4, ry: pass * 1.4, rz: 0.35, s0: 1.4 * as, s1: 2.9 * as, life: 0.28 * sc, spinSpeed: 4.5 });
+            this.spawnSlash({ x: nR.x, y: nR.y + 0.8, z: nR.z, color: secondary, coreColor: '#ffffff', rx: -0.4, ry: -pass * 1.4, rz: -0.35, s0: 1.4 * as, s1: 2.9 * as, life: 0.28 * sc, spinSpeed: -4.5 });
             this.spawnDirectedWeapon('blade', new THREE.Vector3(cx, cy + 2.0, cz), new THREE.Vector3(nL.x, nL.y + 0.4, nL.z), color, 1.15, 0.16 * sc);
             this.spawnDirectedWeapon('blade', new THREE.Vector3(cx, cy + 2.0, cz), new THREE.Vector3(nR.x, nR.y + 0.4, nR.z), secondary, 1.15, 0.16 * sc);
           });
         }
         this.after(0.36 * sc, () => {
           this.hooks.onImpactFrame?.(1.0, 0.0, color, 0.048);
-          this.spawnBeam({ x: cx - 0.65, y: cy, z: cz, color, coreColor: '#ffffff', radius: 0.68, height: 1.05, life: 0.56 * sc });
-          this.spawnBeam({ x: cx + 0.65, y: cy, z: cz, color: secondary, coreColor: '#ffffff', radius: 0.68, height: 1.05, life: 0.56 * sc });
-          this.spawnVortex({ x: cx, y: cy + 0.04, z: cz, color, coreColor: secondary, sx: 2.6, sy: 2.1, twist: 8.5, spin: 10.5, life: 0.58 * sc });
-          this.spawnDome({ x: cx, y: cy + 0.04, z: cz, color, coreColor: '#ffffff', s0: 0.75, s1: 6.2, yScale: 0.58, life: 0.5 * sc });
-          this.spawnSlash({ x: cx, y: cy + 1.2, z: cz, color, coreColor: '#ffffff', rx: 0.2, ry: 0, rz: 0.32, s0: 3.2, s1: 7.2, life: 0.46 * sc, spinSpeed: 4.8 });
-          this.spawnSlash({ x: cx, y: cy + 1.4, z: cz, color: secondary, coreColor: '#ffffff', rx: -0.2, ry: Math.PI, rz: -0.32, s0: 3.2, s1: 7.2, life: 0.46 * sc, spinSpeed: -4.8 });
+          this.spawnBeam({ x: cx - 0.65 * as, y: cy, z: cz, color, coreColor: '#ffffff', radius: 0.68 * as, height: 1.05, life: 0.56 * sc });
+          this.spawnBeam({ x: cx + 0.65 * as, y: cy, z: cz, color: secondary, coreColor: '#ffffff', radius: 0.68 * as, height: 1.05, life: 0.56 * sc });
+          this.spawnVortex({ x: cx, y: cy + 0.04, z: cz, color, coreColor: secondary, sx: 2.6 * as, sy: 2.1 * as, twist: 8.5, spin: 10.5, life: 0.58 * sc });
+          this.spawnDome({ x: cx, y: cy + 0.04, z: cz, color, coreColor: '#ffffff', s0: 0.75 * as, s1: 6.2 * as, yScale: 0.58, life: 0.5 * sc });
+          this.spawnSlash({ x: cx, y: cy + 1.2, z: cz, color, coreColor: '#ffffff', rx: 0.2, ry: 0, rz: 0.32, s0: 3.0 * as, s1: 7.2 * as, life: 0.46 * sc, spinSpeed: 4.8 });
+          this.spawnSlash({ x: cx, y: cy + 1.4, z: cz, color: secondary, coreColor: '#ffffff', rx: -0.2, ry: Math.PI, rz: -0.32, s0: 3.0 * as, s1: 7.2 * as, life: 0.46 * sc, spinSpeed: -4.8 });
         });
         break;
       }
@@ -1441,21 +1475,21 @@ export class TierAttackVfxPool3D {
         // FULL WIDE AoE BOSS ULT: Judgement Cut End!
         this.hooks.onArenaDim?.(0.76, '#160307', 0.92);
         const cuts = [
-          { x: cx - 2.8, z: cz - 1.0, rz: 0.35, c: '#ef4444' },
-          { x: cx + 2.8, z: cz + 1.1, rz: -0.4, c: '#fbbf24' },
-          { x: cx + 2.9, z: cz - 0.9, rz: 0.25, c: '#ef4444' },
-          { x: cx - 2.5, z: cz + 1.1, rz: -0.32, c: '#ffffff' },
+          { x: cx - 2.8 * as, z: cz - 1.0 * as, rz: 0.35, c: '#ef4444' },
+          { x: cx + 2.8 * as, z: cz + 1.1 * as, rz: -0.4, c: '#fbbf24' },
+          { x: cx + 2.9 * as, z: cz - 0.9 * as, rz: 0.25, c: '#ef4444' },
+          { x: cx - 2.5 * as, z: cz + 1.1 * as, rz: -0.32, c: '#ffffff' },
           { x: cx, z: cz, rz: -0.18, c: '#ef4444' },
         ];
         cuts.forEach((ct, idx) => {
           this.after(idx * 0.072 * sc, () => {
             this.spawnRift({
               x: ct.x, y: cy + 1.15, z: ct.z, color: ct.c, coreColor: '#ffffff',
-              ry: idx % 2 === 0 ? 0.25 : -0.25, rz: ct.rz, len: idx === 4 ? 13.0 : 5.4, height: idx === 4 ? 1.65 : 0.85, life: 0.72 * sc,
+              ry: idx % 2 === 0 ? 0.25 : -0.25, rz: ct.rz, len: (idx === 4 ? 13.0 : 5.4) * as, height: (idx === 4 ? 1.65 : 0.85) * as, life: 0.72 * sc,
             });
             this.spawnSlash({
               x: ct.x, y: cy + 0.95, z: ct.z, color: ct.c, coreColor: '#ffffff',
-              rx: (idx % 2 === 0 ? 1 : -1) * 0.45, ry: idx * 1.1, rz: ct.rz, s0: idx === 4 ? 3.2 : 1.6, s1: idx === 4 ? 7.2 : 3.2, life: 0.38 * sc, spinSpeed: 4.5,
+              rx: (idx % 2 === 0 ? 1 : -1) * 0.45, ry: idx * 1.1, rz: ct.rz, s0: (idx === 4 ? 3.2 : 1.6) * as, s1: (idx === 4 ? 7.2 : 3.2) * as, life: 0.38 * sc, spinSpeed: 4.5,
             });
           });
         });
@@ -1465,18 +1499,18 @@ export class TierAttackVfxPool3D {
             kind: 'blade',
             color: '#ef4444',
             coreColor: '#fef08a',
-            startPos: new THREE.Vector3(cx - 4.0, cy + 6.2, cz - 1.4),
-            endPos: new THREE.Vector3(cx + 3.4, cy + 0.8, cz + 1.4),
+            startPos: new THREE.Vector3(cx - 4.0 * as, cy + 6.2, cz - 1.4 * as),
+            endPos: new THREE.Vector3(cx + 3.4 * as, cy + 0.8, cz + 1.4 * as),
             startRot: new THREE.Euler(0.45, 0.2, 1.2),
             endRot: new THREE.Euler(-0.35, 0.2, -2.05),
-            scale: 4.9,
+            scale: 4.9 * Math.max(0.7, as),
             mode: 'swing',
             life: 0.24 * sc,
             onArrive: () => {
               this.hooks.onImpactFrame?.(1.0, 0.0, '#ef4444', 0.056);
               this.hooks.onSpeedLines?.(0.95, 0.4);
-              this.spawnBeam({ x: cx, y: cy, z: cz, color: '#ef4444', coreColor: '#fef08a', radius: 1.15, height: 1.1, life: 0.64 * sc });
-              this.spawnDome({ x: cx, y: cy + 0.04, z: cz, color, coreColor: secondary, s0: 0.85, s1: 7.0, yScale: 0.54, life: 0.58 * sc });
+              this.spawnBeam({ x: cx, y: cy, z: cz, color: '#ef4444', coreColor: '#fef08a', radius: 1.15 * as, height: 1.1, life: 0.64 * sc });
+              this.spawnDome({ x: cx, y: cy + 0.04, z: cz, color, coreColor: secondary, s0: 0.85 * as, s1: 7.0 * as, yScale: 0.54, life: 0.58 * sc });
               pts.forEach((n, idx) => {
                 this.after(idx * 0.032 * sc, () => {
                   this.spawnLightning(

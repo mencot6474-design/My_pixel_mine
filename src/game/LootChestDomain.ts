@@ -224,7 +224,8 @@ export function onOreBrokenDomain(
   rng: () => number = Math.random,
   emit: () => void = () => {}
 ): void {
-  const baseRolls = variantKey === 'geode' ? 3 : variantKey === 'vein' ? 2 : 1;
+  // Rebalanced higher base rolls (2/4/6) to reward slower, full-animation mining strikes
+  const baseRolls = variantKey === 'geode' ? 6 : variantKey === 'vein' ? 4 : 2;
   const outputMult = ctx.getTotalOreDropMult();
   const wholeRolls = Math.floor(baseRolls * outputMult);
   const frac = baseRolls * outputMult - wholeRolls;
@@ -250,7 +251,7 @@ export function onOreBrokenDomain(
 
   // Balanced chance to drop a Miner from Rock / Vein / Geode
   const minerChance =
-    (variantKey === 'geode' ? 0.12 : variantKey === 'vein' ? 0.045 : 0.014) * (1 + findBonus);
+    (variantKey === 'geode' ? 0.18 : variantKey === 'vein' ? 0.07 : 0.025) * (1 + findBonus);
   if (rng() < minerChance && added < capLeft) {
     const miner = rollWorldMiner(ctx.activeWorldId, rng, charLuck);
     if (miner) {
@@ -260,8 +261,8 @@ export function onOreBrokenDomain(
     }
   }
 
-  if (variantKey === 'geode' || rng() < 0.18 + findBonus * 0.5) {
-    const baseGem = variantKey === 'geode' ? 3 : 1;
+  if (variantKey === 'geode' || variantKey === 'vein' || rng() < 0.28 + findBonus * 0.5) {
+    const baseGem = variantKey === 'geode' ? 4 : variantKey === 'vein' ? 2 : 1;
     const { gemBonusPct } = ctx.getActiveStarDropAndGemBonus();
     const mult = (1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct) * ctx.getWeatherGemDropMult();
     ctx.gems += Math.max(baseGem, Math.round(baseGem * mult));

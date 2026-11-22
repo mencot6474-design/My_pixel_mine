@@ -57,7 +57,7 @@ export function buildOrePitEnvironmentMeshes(ctx: {
       roughness: 0.85,
       metalness: 0.05,
     });
-    const floorGeo = new THREE.BoxGeometry(11.8, 0.14, 6.8);
+    const floorGeo = new THREE.BoxGeometry(11.8, 0.14, 9.2);
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.position.y = -0.05;
     floor.receiveShadow = true;
@@ -85,20 +85,20 @@ export function buildOrePitEnvironmentMeshes(ctx: {
     });
 
     const pitW = 11.8;
-    const pitD = 6.8;
+    const pitD = 9.2;
     const wallH = 0.86;
-    // Open portals:
+    // Open portals (pit centered at world z=1.85 -> world z=0.15 sits at local z=-1.70):
     // - North center (x in [-1.3, +1.3]) for stepped cyber stairwell descending from deck
-    // - Left spur (z in [-1.25, +0.25] -> world z=0.15) for sloped Drop Shaft shuttle entry
-    // - Right chute (z in [-1.25, +0.25] -> world z=0.15) for inclined Plasma Refinery conveyor exit
+    // - Left spur (local z in [-2.45, -0.95] -> world z=0.15) for sloped Drop Shaft shuttle entry
+    // - Right chute (local z in [-2.45, -0.95] -> world z=0.15) for inclined Plasma Refinery conveyor exit
     const wallSpecs: [number, number, number, number, number][] = [
       [-3.6, -pitD / 2, 4.6, wallH, 0.36],
       [3.6, -pitD / 2, 4.6, wallH, 0.36],
       [0, pitD / 2, pitW, wallH, 0.36],
-      [-pitW / 2, -2.325, 0.36, wallH, 2.15],
-      [-pitW / 2, 1.825, 0.36, wallH, 3.15],
-      [pitW / 2, -2.325, 0.36, wallH, 2.15],
-      [pitW / 2, 1.825, 0.36, wallH, 3.15],
+      [-pitW / 2, -3.525, 0.36, wallH, 2.15],
+      [-pitW / 2, 1.825, 0.36, wallH, 5.55],
+      [pitW / 2, -3.525, 0.36, wallH, 2.15],
+      [pitW / 2, 1.825, 0.36, wallH, 5.55],
     ];
     for (const [wx, wz, ww, wh, wd] of wallSpecs) {
       const wallGeo = new THREE.BoxGeometry(ww, wh, wd);

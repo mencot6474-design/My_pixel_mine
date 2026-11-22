@@ -402,7 +402,7 @@ async function bootstrap(): Promise<void> {
       const st = gameState.getPlotUnitStats(i);
       scene.syncPlotEnchant(i, unit?.enchantId ?? null);
       if (st) {
-        scene.syncPlotUnitStats(i, st.dmg, st.speed, st.miningMult);
+        scene.syncPlotUnitStats(i, st.dmg, st.speed, st.miningMult, st.critChance, st.critMult);
       }
     }
   };

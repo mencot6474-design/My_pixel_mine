@@ -150,6 +150,7 @@ export class ChibiSprite3D {
     maxLife: number;
     face: 1 | -1;
     rz: number;
+    baseScale: number;
   }> = [];
   private readonly blitzCloneMesh: THREE.Mesh;
   private readonly blitzCloneMat: THREE.MeshBasicMaterial;
@@ -260,7 +261,7 @@ export class ChibiSprite3D {
       const bgMesh = new THREE.Mesh(new THREE.PlaneGeometry(spriteHeight * 0.85, spriteHeight), bgMat);
       bgMesh.visible = false;
       this.group.add(bgMesh);
-      this.blitzGhosts.push({ mesh: bgMesh, mat: bgMat, life: 0, maxLife: 0.3, face: 1, rz: 0 });
+      this.blitzGhosts.push({ mesh: bgMesh, mat: bgMat, life: 0, maxLife: 0.3, face: 1, rz: 0, baseScale: 1 });
     }
 
     this.blitzCloneMat = new THREE.MeshBasicMaterial({
@@ -496,6 +497,8 @@ export class ChibiSprite3D {
     durationSec: number;
     colorHex?: string;
     secondaryHex?: string;
+    wideCenter?: WorldPoint3;
+    motionScale?: number;
   }): void {
     if (this.hologramMode) return;
     this.group.updateWorldMatrix(true, false);
@@ -517,20 +520,32 @@ export class ChibiSprite3D {
       { x: opts.targetX, y: opts.targetY, z: opts.targetZ },
       opts.allTargets ?? [{ x: opts.targetX, y: opts.targetY, z: opts.targetZ }],
       col,
-      sec
+      sec,
+      opts.wideCenter,
+      opts.motionScale ?? 1.0
     );
   }
 
-  private spawnBlitzGhost(lx: number, ly: number, lz: number, rz: number, face: 1 | -1, col: string): void {
-    if (this.lowQuality) return;
-    for (let i = 0; i < this.blitzGhosts.length; i++) {
+  private spawnBlitzGhost(
+    lx: number,
+    ly: number,
+    lz: number,
+    rz: number,
+    face: 1 | -1,
+    col: string,
+    baseScale = 1
+  ): void {
+    const maxSlots = this.lowQuality ? Math.min(4, this.blitzGhosts.length) : this.blitzGhosts.length;
+    for (let i = 0; i < maxSlots; i++) {
       const g = this.blitzGhosts[i];
+      if (!g.mat.map) continue;
       if (g.life <= 0) {
-        g.life = 0.28;
-        g.maxLife = 0.28;
+        g.life = this.lowQuality ? 0.24 : 0.28;
+        g.maxLife = g.life;
         g.face = face;
         g.rz = rz;
-        g.mesh.position.set(lx, ly + this.currentSpriteHeight * 0.5, lz);
+        g.baseScale = baseScale;
+        g.mesh.position.set(lx, ly + this.currentSpriteHeight * 0.5 * baseScale, lz);
         g.mat.color.set(col);
         g.mat.opacity = 0.72;
         g.mesh.visible = true;
@@ -741,7 +756,7 @@ export class ChibiSprite3D {
     }
 
     const baseHeightOffset = this.mesh.position.y;
-    const renderGhosts = showGhosts && !this.lowQuality;
+    const renderGhosts = showGhosts;
     for (let i = 0; i < this.ghostMeshes.length; i++) {
       const gm = this.ghostMeshes[i];
       const gMat = this.ghostMats[i];
@@ -768,7 +783,7 @@ export class ChibiSprite3D {
         bg.mesh.quaternion.copy(this.spritePivot.quaternion);
         bg.mesh.rotateZ(bg.rz);
         bg.mat.opacity = gp * 0.72;
-        const sc = 1 + (1 - gp) * 0.22;
+        const sc = bg.baseScale * (1 + (1 - gp) * 0.18);
         bg.mesh.scale.set(bg.face * sc, sc, 1);
         if (bg.life <= 0) bg.mesh.visible = false;
       }
@@ -785,30 +800,40 @@ export class ChibiSprite3D {
       const ly = (cur.y - this.blitzAnchorWorld.y) * invY;
       const lz = (cur.z - this.blitzAnchorWorld.z) * invZ;
 
+      // Shrink chibi slightly as it moves forward (+Z) toward the camera into the pit
+      // to counter perspective bloat and make aerial/blitz leaps look sleek and agile.
+      const forwardDz = Math.max(0, cur.z - this.blitzAnchorWorld.z);
+      const combatScale = 1.0 - Math.min(1, forwardDz / 7.5) * 0.42;
+
       this.spritePivot.position.set(lx, ly, lz);
+      this.spritePivot.scale.setScalar(combatScale);
       if (this.facing !== cur.face) this.setFacing(cur.face);
       if (this.animState !== cur.pose) this.setAnimState(cur.pose);
 
       if (bp > 0.08 && bp < 0.88) {
         this.blitzGhostAccum += dtSec;
-        if (this.blitzGhostAccum >= (cur.snapping ? 0.02 : 0.036)) {
+        const spawnEvery = this.lowQuality ? 0.048 : cur.snapping ? 0.02 : 0.036;
+        if (this.blitzGhostAccum >= spawnEvery) {
           this.blitzGhostAccum = 0;
           const faceFlip = this.mesh.scale.x < 0 ? -1 : 1;
-          this.spawnBlitzGhost(lx, ly, lz, cur.rz, faceFlip, cur.col);
+          this.spawnBlitzGhost(lx, ly, lz, cur.rz, faceFlip, cur.col, combatScale);
         }
       }
 
       if (this.blitzTracks.clone) {
         const cCur = sampleTierMotionWaypoints(this.blitzTracks.clone, bp);
-        this.blitzCloneMesh.visible = cCur.opacity > 0.05 && !this.lowQuality;
+        this.blitzCloneMesh.visible = cCur.opacity > 0.05 && Boolean(this.blitzCloneMat.map);
         if (this.blitzCloneMesh.visible) {
           const clx = (cCur.x - this.blitzAnchorWorld.x) * invX;
           const cly = (cCur.y - this.blitzAnchorWorld.y) * invY;
           const clz = (cCur.z - this.blitzAnchorWorld.z) * invZ;
-          this.blitzCloneMesh.position.set(clx, cly + this.currentSpriteHeight * 0.5, clz);
+          const cForwardDz = Math.max(0, cCur.z - this.blitzAnchorWorld.z);
+          const cCombatScale = 1.0 - Math.min(1, cForwardDz / 7.5) * 0.42;
+          const cloneScale = cCombatScale * Math.min(1.06, cCur.scale);
+          this.blitzCloneMesh.position.set(clx, cly + this.currentSpriteHeight * 0.5 * cloneScale, clz);
           this.blitzCloneMesh.quaternion.copy(this.spritePivot.quaternion);
           this.blitzCloneMesh.rotateZ(cCur.rz);
-          this.blitzCloneMesh.scale.set(cCur.face * cCur.scale, cCur.scale, 1);
+          this.blitzCloneMesh.scale.set(cCur.face * cloneScale, cloneScale, 1);
           this.blitzCloneMat.opacity = cCur.opacity;
         }
       } else {
@@ -817,7 +842,7 @@ export class ChibiSprite3D {
 
       this.shadowDisc.rotation.y = this.spritePivot.rotation.y;
       this.shadowDisc.position.set(lx, 0.012, lz);
-      this.shadowDisc.scale.setScalar(Math.max(0.45, 1 - Math.max(0, ly) * 0.25));
+      this.shadowDisc.scale.setScalar(combatScale * Math.max(0.45, 1 - Math.max(0, ly) * 0.25));
       this.shadowMat.opacity = this.baseShadowOpacity * Math.max(0.25, 1 - Math.max(0, ly) * 0.35);
 
       if (bp >= 1) {
@@ -825,6 +850,7 @@ export class ChibiSprite3D {
         this.blitzTracks = null;
         this.blitzCloneMesh.visible = false;
         this.spritePivot.position.set(0, 0, 0);
+        this.spritePivot.scale.set(1, 1, 1);
         this.setAnimState('attack');
       }
       return;
@@ -833,6 +859,7 @@ export class ChibiSprite3D {
     const yaw = this.spritePivot.rotation.y;
     const heightFactor = Math.max(0.42, 1 - posY * 1.45);
     this.spritePivot.position.set(0, 0, 0);
+    this.spritePivot.scale.set(1, 1, 1);
     this.blitzCloneMesh.visible = false;
     this.shadowDisc.rotation.y = yaw;
     this.shadowDisc.position.x = Math.cos(yaw) * posX * 0.65;
