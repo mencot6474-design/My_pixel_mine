@@ -3259,6 +3259,7 @@ describe('Pure 3D Mine World', () => {
     const roninBack = roninSprite.group.getObjectByName('chibiBackAttachmentGroup');
     const sovBack = sovSprite.group.getObjectByName('chibiBackAttachmentGroup');
     expect(roninBack?.visible).toBe(true);
+    expect(roninBack?.children.length).toBe(9); // 1 Tsuba HUD Halo disc + 8 Floating Katana Fan blades
     expect(sovBack?.visible).toBe(true);
 
     // Idle update keeps Omega back-attachments active and hides them in hologram mode

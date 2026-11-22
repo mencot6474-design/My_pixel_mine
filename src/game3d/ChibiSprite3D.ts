@@ -11,8 +11,9 @@ import { applySharpSpriteTexture } from './MeshHelpers3D';
 import {
   createAbyssalGreatswordGeometry,
   createAcademyWingGeometry,
-  createBladeMeshGeometry,
   createClockworkGearGeometry,
+  createCrimsonKatanaShaderMaterial,
+  createCrimsonTsubaHaloShaderMaterial,
   createEnergyWeaponMaterial,
   createKunaiGeometry,
   createLullabyAngelWingGeometry,
@@ -20,6 +21,7 @@ import {
   createLullabyWhiteWingShaderMaterial,
   createNocturneWingGeometry,
   createNocturneWingShaderMaterial,
+  createRoninKatanaGeometry,
   createSpikedHaloGeometry,
   createYukikageKunaiShaderMaterial,
   createYukikageShrineRingShaderMaterial,
@@ -183,6 +185,16 @@ export class ChibiSprite3D {
   private omegaAuraGeo: THREE.BufferGeometry | null = null;
   private omegaHaloMesh: THREE.Mesh | null = null;
   private readonly omegaOrbitKatanas: THREE.Mesh[] = [];
+  private readonly roninFanKatanas: Array<{
+    mesh: THREE.Mesh;
+    baseX: number;
+    baseY: number;
+    baseZ: number;
+    baseRotZ: number;
+    outX: number;
+    outY: number;
+    phase: number;
+  }> = [];
   private readonly twinWingMeshes: THREE.Mesh[] = [];
   private readonly twinGearMeshes: THREE.Mesh[] = [];
   private readonly twinCustomMats: THREE.ShaderMaterial[] = [];
@@ -357,18 +369,49 @@ export class ChibiSprite3D {
 
     // Omega & Twin unit bespoke 3D back-shader attachments (always-on outside hologram mode)
     if (this.def.id === 'crimson-ronin') {
+      // Custom GLSL Cyber-Samurai Tsuba HUD Halo + 8 Floating Katana Fan Arsenal behind shoulders
       this.omegaAuraGroup = new THREE.Group();
       this.omegaAuraGroup.name = 'chibiBackAttachmentGroup';
-      this.omegaAuraGroup.position.set(0, spriteHeight * 0.54, -0.15);
-      this.omegaAuraMat = createEnergyWeaponMaterial();
-      this.omegaAuraMat.uniforms.uColor.value.set('#ef4444');
-      this.omegaAuraMat.uniforms.uCoreColor.value.set('#fef08a');
-      this.omegaAuraGeo = createBladeMeshGeometry();
-      for (let i = 0; i < 4; i++) {
-        const km = new THREE.Mesh(this.omegaAuraGeo, this.omegaAuraMat);
-        km.scale.setScalar(0.45);
+      this.omegaAuraGroup.position.set(0, spriteHeight * 0.56, -0.15);
+
+      const tsubaHaloMat = createCrimsonTsubaHaloShaderMaterial();
+      const katanaMat = createCrimsonKatanaShaderMaterial();
+      this.omegaAuraMat = katanaMat;
+      this.twinCustomMats.push(tsubaHaloMat);
+
+      const discGeo = new THREE.PlaneGeometry(2.12, 2.12);
+      this.twinCustomGeos.push(discGeo);
+      const tsubaDisc = new THREE.Mesh(discGeo, tsubaHaloMat);
+      tsubaDisc.position.set(0, 0.04, -0.10);
+      this.omegaAuraGroup.add(tsubaDisc);
+
+      this.omegaAuraGeo = createRoninKatanaGeometry();
+      const fanAngles = [0.36, 0.72, 1.06, 1.38, -0.36, -0.72, -1.06, -1.38];
+      for (let i = 0; i < fanAngles.length; i++) {
+        const ang = fanAngles[i];
+        const tierIdx = i % 4;
+        const rad = 0.66 + (tierIdx % 2) * 0.14;
+        const baseX = -Math.sin(ang) * rad * 1.12;
+        const baseY = 0.06 + Math.cos(ang) * rad * 0.78;
+        const baseZ = tierIdx % 2 === 0 ? -0.02 : -0.055;
+        const baseRotZ = ang * 0.92;
+        const s = 0.62 - tierIdx * 0.03;
+
+        const km = new THREE.Mesh(this.omegaAuraGeo, katanaMat);
+        km.position.set(baseX, baseY, baseZ);
+        km.rotation.set(0.06, ang >= 0 ? -0.14 : 0.14, baseRotZ);
+        km.scale.set(ang >= 0 ? -s : s, s, s);
         this.omegaAuraGroup.add(km);
-        this.omegaOrbitKatanas.push(km);
+        this.roninFanKatanas.push({
+          mesh: km,
+          baseX,
+          baseY,
+          baseZ,
+          baseRotZ,
+          outX: -Math.sin(ang),
+          outY: Math.cos(ang),
+          phase: tierIdx * 0.85 + (ang < 0 ? 0.45 : 0),
+        });
       }
       this.omegaAuraGroup.visible = true;
       this.spritePivot.add(this.omegaAuraGroup);
@@ -1289,7 +1332,19 @@ export class ChibiSprite3D {
       this.twinCustomMats[i].uniforms.uTime.value = elapsed;
       this.twinCustomMats[i].uniforms.uOpacity.value = opacity;
     }
-    if (this.omegaOrbitKatanas.length > 0) {
+    if (this.roninFanKatanas.length > 0) {
+      for (let k = 0; k < this.roninFanKatanas.length; k++) {
+        const slot = this.roninFanKatanas[k];
+        const hover = Math.sin(elapsed * 2.4 + slot.phase);
+        const expand = Math.sin(elapsed * 1.8 + slot.phase) * 0.032;
+        slot.mesh.position.set(
+          slot.baseX + slot.outX * expand,
+          slot.baseY + hover * 0.044 + slot.outY * expand,
+          slot.baseZ
+        );
+        slot.mesh.rotation.z = slot.baseRotZ + Math.sin(elapsed * 1.6 + slot.phase) * 0.034;
+      }
+    } else if (this.omegaOrbitKatanas.length > 0) {
       const isYukikage = this.def.id === 'yukikage-twins';
       for (let k = 0; k < this.omegaOrbitKatanas.length; k++) {
         const ang = elapsed * (isYukikage ? 2.4 : 2.8) + (k / this.omegaOrbitKatanas.length) * Math.PI * 2;
