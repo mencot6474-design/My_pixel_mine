@@ -1,13 +1,18 @@
 import { STAGE_PEDESTAL_COUNT } from '../game3d/MineWorldPalette';
 import {
+  createEmptyTeamPresets,
+  isTeamPresetPopulated,
+  TEAM_PRESET_COUNT,
+  type TeamPresetSlots,
+} from './GameStateSave';
+import {
   equipChibiOnPlotSlot,
   PlotUnitsContext,
   removeMinerFromPlotSlot,
 } from './PlotUnitsDomain';
 
-export const TEAM_PRESET_COUNT = 3;
-
-export type TeamPresetSlots = (string | null)[];
+export { createEmptyTeamPresets, isTeamPresetPopulated, TEAM_PRESET_COUNT };
+export type { TeamPresetSlots };
 
 export interface TeamPresetsContext extends PlotUnitsContext {
   teamPresets: TeamPresetSlots[];
@@ -16,17 +21,6 @@ export interface TeamPresetsContext extends PlotUnitsContext {
 export interface ApplyTeamPresetResult {
   equippedCount: number;
   skippedCount: number;
-}
-
-export function createEmptyTeamPresets(): TeamPresetSlots[] {
-  return Array.from({ length: TEAM_PRESET_COUNT }, () =>
-    Array.from({ length: STAGE_PEDESTAL_COUNT }, () => null)
-  );
-}
-
-export function isTeamPresetPopulated(preset: TeamPresetSlots | undefined): boolean {
-  if (!Array.isArray(preset)) return false;
-  return preset.some((id) => typeof id === 'string' && id.length > 0);
 }
 
 export function saveTeamPresetDomain(

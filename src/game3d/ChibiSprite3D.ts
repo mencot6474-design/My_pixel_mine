@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { assetUrl } from '../game/AssetUrl';
 import {
   ChibiAnimState,
   ChibiDef,
@@ -7,27 +6,18 @@ import {
   LEFT_FACING_WALK_IDS,
 } from './ChibiCatalog';
 import { getWindupGlintTexture } from './ProceduralTextures3D';
-import { applySharpSpriteTexture } from './MeshHelpers3D';
 import {
-  createAbyssalGreatswordGeometry,
-  createAcademyWingGeometry,
-  createClockworkGearGeometry,
-  createCrimsonKatanaShaderMaterial,
-  createCrimsonTsubaHaloShaderMaterial,
-  createEnergyWeaponMaterial,
-  createKunaiGeometry,
-  createLullabyAngelWingGeometry,
-  createLullabyPinkAuraShaderMaterial,
-  createLullabyWhiteWingShaderMaterial,
-  createNocturneWingGeometry,
-  createNocturneWingShaderMaterial,
-  createObsidianCrownHaloShaderMaterial,
-  createObsidianGreatswordShaderMaterial,
-  createRoninKatanaGeometry,
-  createSpikedHaloGeometry,
-  createYukikageKunaiShaderMaterial,
-  createYukikageShrineRingShaderMaterial,
-} from './MeshFx3D';
+  type ChibiBackAttachmentHandle,
+  createChibiBackAttachments,
+  disposeChibiBackAttachments,
+  getSoftContactShadowTexture,
+  type LoadedPoseMeta,
+  loadPoseMeta,
+  stateToPoseUrl,
+  stepChibiAttackComboKinematics,
+  updateChibiBackAttachmentGroup,
+  updateOmegaHandBlitzWeapon,
+} from './ChibiBackAttachments3D';
 import {
   buildTierMotionWaypoints,
   getRaritySecondaryColor,
@@ -36,120 +26,7 @@ import {
   type WorldPoint3,
 } from './TierAttackVfx3D';
 
-interface LoadedPoseMeta {
-  texture: THREE.Texture;
-  pixelWidth: number;
-  pixelHeight: number;
-  topTrimRatio: number;
-}
-
 const BASE_CHIBI_PIXEL_HEIGHT = 350;
-const poseCache = new Map<string, Promise<LoadedPoseMeta>>();
-const textureLoader = new THREE.TextureLoader();
-let contactShadowTex: THREE.CanvasTexture | null | undefined;
-
-function getSoftContactShadowTexture(): THREE.CanvasTexture | null {
-  if (contactShadowTex !== undefined) return contactShadowTex;
-  if (typeof document === 'undefined') {
-    contactShadowTex = null;
-    return null;
-  }
-  const size = 64;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    contactShadowTex = null;
-    return null;
-  }
-  const r = size / 2;
-  const grad = ctx.createRadialGradient(r, r, 0, r, r, r);
-  grad.addColorStop(0, 'rgba(2, 6, 23, 0.72)');
-  grad.addColorStop(0.4, 'rgba(2, 6, 23, 0.44)');
-  grad.addColorStop(0.74, 'rgba(2, 6, 23, 0.14)');
-  grad.addColorStop(1, 'rgba(2, 6, 23, 0)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, size, size);
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.needsUpdate = true;
-  contactShadowTex = tex;
-  return tex;
-}
-
-let trimScratchCanvas: HTMLCanvasElement | null = null;
-let trimScratchCtx: CanvasRenderingContext2D | null = null;
-
-function measureTopTrimRatio(img: HTMLImageElement): number {
-  if (typeof document === 'undefined' || !img.width || !img.height) return 0;
-  try {
-    const sw = Math.min(64, img.width);
-    const sh = Math.min(64, img.height);
-    if (!trimScratchCanvas) {
-      trimScratchCanvas = document.createElement('canvas');
-      trimScratchCanvas.width = 64;
-      trimScratchCanvas.height = 64;
-      trimScratchCtx = trimScratchCanvas.getContext('2d', { willReadFrequently: true });
-    }
-    const ctx = trimScratchCtx;
-    if (!ctx) return 0;
-    ctx.clearRect(0, 0, sw, sh);
-    ctx.drawImage(img, 0, 0, sw, sh);
-    const data = ctx.getImageData(0, 0, sw, sh).data;
-    for (let y = 0; y < sh; y++) {
-      const rowOffset = y * sw * 4;
-      for (let x = 0; x < sw; x++) {
-        if (data[rowOffset + x * 4 + 3] > 20) {
-          return Math.min(0.45, Math.max(0, y / sh));
-        }
-      }
-    }
-  } catch {
-    // Fallback cleanly when canvas pixel readback is unavailable
-  }
-  return 0;
-}
-
-function loadPoseMeta(url: string, smoothFilter = false): Promise<LoadedPoseMeta> {
-  const resolved = assetUrl(url);
-  const cacheKey = `${resolved}|${smoothFilter ? 'smooth' : 'pixel'}`;
-  const cached = poseCache.get(cacheKey);
-  if (cached) return cached;
-
-  const promise = new Promise<LoadedPoseMeta>((resolve, reject) => {
-    textureLoader.load(
-      resolved,
-      (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.wrapS = THREE.ClampToEdgeWrapping;
-        tex.wrapT = THREE.ClampToEdgeWrapping;
-        applySharpSpriteTexture(tex, !smoothFilter);
-
-        const img = tex.image as HTMLImageElement;
-        resolve({
-          texture: tex,
-          pixelWidth: img.width,
-          pixelHeight: img.height,
-          topTrimRatio: measureTopTrimRatio(img),
-        });
-      },
-      undefined,
-      (err) => reject(err)
-    );
-  });
-
-  poseCache.set(cacheKey, promise);
-  return promise;
-}
-
-function stateToPoseUrl(def: ChibiDef, state: ChibiAnimState): string {
-  if (state === 'dash') return def.poses.walk;
-  if (state === 'attack') return def.poses.attack;
-  if (state === 'aura') return def.poses.pose;
-  return def.poses.idle;
-}
 
 export class ChibiSprite3D {
   public readonly group = new THREE.Group();
@@ -182,29 +59,7 @@ export class ChibiSprite3D {
   private readonly blitzPoseGeos: Partial<Record<ChibiAnimState, THREE.PlaneGeometry>> = {};
   private readonly glintMesh: THREE.Mesh;
   private readonly glintMat: THREE.MeshBasicMaterial;
-  private omegaAuraGroup: THREE.Group | null = null;
-  private omegaAuraMat: THREE.ShaderMaterial | null = null;
-  private omegaAuraGeo: THREE.BufferGeometry | null = null;
-  private omegaHaloMesh: THREE.Mesh | null = null;
-  private readonly omegaOrbitKatanas: THREE.Mesh[] = [];
-  private readonly roninFanKatanas: Array<{
-    mesh: THREE.Mesh;
-    baseX: number;
-    baseY: number;
-    baseZ: number;
-    baseRotZ: number;
-    outX: number;
-    outY: number;
-    phase: number;
-  }> = [];
-  private readonly twinWingMeshes: THREE.Mesh[] = [];
-  private readonly twinGearMeshes: THREE.Mesh[] = [];
-  private readonly twinCustomMats: THREE.ShaderMaterial[] = [];
-  private readonly twinCustomGeos: THREE.BufferGeometry[] = [];
-  private omegaHandPivot: THREE.Group | null = null;
-  private omegaHandWeaponMesh: THREE.Mesh | null = null;
-  private omegaHandWeaponMat: THREE.ShaderMaterial | null = null;
-  private omegaHandWeaponGeo: THREE.BufferGeometry | null = null;
+  private readonly backAttachments: ChibiBackAttachmentHandle;
 
   private readonly def: ChibiDef;
   private readonly spriteHeight: number;
@@ -288,7 +143,7 @@ export class ChibiSprite3D {
         color: this.accentColorHex,
         transparent: true,
         opacity: 0,
-        blending: THREE.AdditiveBlending,
+        blending: THREE.NormalBlending,
         depthWrite: false,
         side: THREE.DoubleSide,
       });
@@ -307,7 +162,7 @@ export class ChibiSprite3D {
         color: this.accentColorHex,
         transparent: true,
         opacity: 0,
-        blending: THREE.AdditiveBlending,
+        blending: THREE.NormalBlending,
         depthWrite: false,
         side: THREE.DoubleSide,
       });
@@ -321,7 +176,7 @@ export class ChibiSprite3D {
       color: this.secondaryColorHex,
       transparent: true,
       opacity: 0,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
@@ -338,7 +193,7 @@ export class ChibiSprite3D {
       color: this.accentColorHex,
       transparent: true,
       opacity: 0,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
@@ -372,263 +227,12 @@ export class ChibiSprite3D {
     this.group.add(this.shadowDisc);
 
     // Omega & Twin unit bespoke 3D back-shader attachments (always-on outside hologram mode)
-    if (this.def.id === 'crimson-ronin') {
-      // Custom GLSL Cyber-Samurai Tsuba HUD Halo + 8 Floating Katana Fan Arsenal behind shoulders
-      this.omegaAuraGroup = new THREE.Group();
-      this.omegaAuraGroup.name = 'chibiBackAttachmentGroup';
-      this.omegaAuraGroup.position.set(0, spriteHeight * 0.56, -0.15);
-
-      const tsubaHaloMat = createCrimsonTsubaHaloShaderMaterial();
-      const katanaMat = createCrimsonKatanaShaderMaterial();
-      this.omegaAuraMat = katanaMat;
-      this.twinCustomMats.push(tsubaHaloMat);
-
-      const discGeo = new THREE.PlaneGeometry(2.12, 2.12);
-      this.twinCustomGeos.push(discGeo);
-      const tsubaDisc = new THREE.Mesh(discGeo, tsubaHaloMat);
-      tsubaDisc.position.set(0, 0.04, -0.10);
-      this.omegaAuraGroup.add(tsubaDisc);
-
-      this.omegaAuraGeo = createRoninKatanaGeometry();
-      const fanAngles = [0.36, 0.72, 1.06, 1.38, -0.36, -0.72, -1.06, -1.38];
-      for (let i = 0; i < fanAngles.length; i++) {
-        const ang = fanAngles[i];
-        const tierIdx = i % 4;
-        const rad = 0.66 + (tierIdx % 2) * 0.14;
-        const baseX = -Math.sin(ang) * rad * 1.12;
-        const baseY = 0.06 + Math.cos(ang) * rad * 0.78;
-        const baseZ = tierIdx % 2 === 0 ? -0.02 : -0.055;
-        const baseRotZ = ang * 0.92;
-        const s = 0.62 - tierIdx * 0.03;
-
-        const km = new THREE.Mesh(this.omegaAuraGeo, katanaMat);
-        km.position.set(baseX, baseY, baseZ);
-        km.rotation.set(0.06, ang >= 0 ? -0.14 : 0.14, baseRotZ);
-        km.scale.set(ang >= 0 ? -s : s, s, s);
-        this.omegaAuraGroup.add(km);
-        this.roninFanKatanas.push({
-          mesh: km,
-          baseX,
-          baseY,
-          baseZ,
-          baseRotZ,
-          outX: -Math.sin(ang),
-          outY: Math.cos(ang),
-          phase: tierIdx * 0.85 + (ang < 0 ? 0.45 : 0),
-        });
-      }
-      this.omegaAuraGroup.visible = true;
-      this.spritePivot.add(this.omegaAuraGroup);
-    } else if (this.def.id === 'obsidian-sovereign') {
-      // Custom GLSL Abyssal Crown HUD Halo + 3D 7-Spiked Crown + Colossal Back Greatsword + 4 Floating Sovereign Greatswords
-      this.omegaAuraGroup = new THREE.Group();
-      this.omegaAuraGroup.name = 'chibiBackAttachmentGroup';
-      this.omegaAuraGroup.position.set(0, spriteHeight * 0.56, -0.16);
-
-      const crownHaloMat = createObsidianCrownHaloShaderMaterial();
-      const greatswordMat = createObsidianGreatswordShaderMaterial();
-      this.omegaAuraMat = greatswordMat;
-      this.twinCustomMats.push(crownHaloMat);
-
-      const discGeo = new THREE.PlaneGeometry(2.22, 2.22);
-      this.twinCustomGeos.push(discGeo);
-      const crownDisc = new THREE.Mesh(discGeo, crownHaloMat);
-      crownDisc.position.set(0, 0.04, -0.11);
-      this.omegaAuraGroup.add(crownDisc);
-
-      const spikedCrownGeo = createSpikedHaloGeometry();
-      this.twinCustomGeos.push(spikedCrownGeo);
-      this.omegaHaloMesh = new THREE.Mesh(spikedCrownGeo, greatswordMat);
-      this.omegaHaloMesh.position.set(0, 0.04, -0.06);
-      this.omegaHaloMesh.scale.setScalar(0.78);
-      this.omegaAuraGroup.add(this.omegaHaloMesh);
-
-      this.omegaAuraGeo = createAbyssalGreatswordGeometry();
-
-      // 1 Colossal Greatsword slung diagonally across his back
-      const colossalSword = new THREE.Mesh(this.omegaAuraGeo, greatswordMat);
-      colossalSword.position.set(0.24, -0.36, -0.02);
-      colossalSword.rotation.set(0.04, -0.08, 0.62);
-      colossalSword.scale.setScalar(0.56);
-      this.omegaAuraGroup.add(colossalSword);
-      this.roninFanKatanas.push({
-        mesh: colossalSword,
-        baseX: 0.24,
-        baseY: -0.36,
-        baseZ: -0.02,
-        baseRotZ: 0.62,
-        outX: -0.15,
-        outY: 0.45,
-        phase: 0.2,
-      });
-
-      // 4 Flanking Sovereign Greatswords hovering in a menacing V-fan
-      const fanAngles = [0.64, 1.12, -0.64, -1.12];
-      for (let i = 0; i < fanAngles.length; i++) {
-        const ang = fanAngles[i];
-        const tierIdx = i % 2;
-        const rad = 0.72 + tierIdx * 0.14;
-        const baseX = -Math.sin(ang) * rad * 1.16;
-        const baseY = -0.14 + Math.cos(ang) * rad * 0.68;
-        const baseZ = tierIdx === 0 ? -0.03 : -0.055;
-        const baseRotZ = ang * 0.90;
-        const s = 0.36 - tierIdx * 0.03;
-
-        const sm = new THREE.Mesh(this.omegaAuraGeo, greatswordMat);
-        sm.position.set(baseX, baseY, baseZ);
-        sm.rotation.set(0.05, ang >= 0 ? -0.12 : 0.12, baseRotZ);
-        sm.scale.setScalar(s);
-        this.omegaAuraGroup.add(sm);
-        this.roninFanKatanas.push({
-          mesh: sm,
-          baseX,
-          baseY,
-          baseZ,
-          baseRotZ,
-          outX: -Math.sin(ang),
-          outY: Math.cos(ang),
-          phase: 0.8 + i * 0.75,
-        });
-      }
-
-      this.omegaAuraGroup.visible = true;
-      this.spritePivot.add(this.omegaAuraGroup);
-
-      this.omegaHandPivot = new THREE.Group();
-      this.omegaHandPivot.position.set(0.22, spriteHeight * 0.52, 0.16);
-      this.omegaHandWeaponMat = createEnergyWeaponMaterial();
-      this.omegaHandWeaponMat.uniforms.uColor.value.set('#a855f7');
-      this.omegaHandWeaponMat.uniforms.uCoreColor.value.set('#ffffff');
-      this.omegaHandWeaponGeo = createAbyssalGreatswordGeometry();
-      this.omegaHandWeaponMesh = new THREE.Mesh(this.omegaHandWeaponGeo, this.omegaHandWeaponMat);
-      this.omegaHandPivot.add(this.omegaHandWeaponMesh);
-      this.omegaHandPivot.visible = false;
-      this.blitzHeroPivot.add(this.omegaHandPivot);
-    } else if (this.def.id === 'yukikage-twins') {
-      // Custom GLSL Cryo Shinto Shrine Seal Ring + 8 Orbiting Ice-Ink Kunai Daggers
-      this.omegaAuraGroup = new THREE.Group();
-      this.omegaAuraGroup.position.set(0, spriteHeight * 0.54, -0.14);
-      const shrineRingMat = createYukikageShrineRingShaderMaterial();
-      const kunaiMat = createYukikageKunaiShaderMaterial();
-      this.omegaAuraMat = kunaiMat;
-      this.twinCustomMats.push(shrineRingMat, kunaiMat);
-
-      const discGeo = new THREE.PlaneGeometry(1.92, 1.92);
-      this.twinCustomGeos.push(discGeo);
-      const shrineDisc = new THREE.Mesh(discGeo, shrineRingMat);
-      shrineDisc.position.set(0, 0.04, -0.08);
-      this.omegaAuraGroup.add(shrineDisc);
-
-      this.omegaAuraGeo = createKunaiGeometry();
-      for (let i = 0; i < 8; i++) {
-        const km = new THREE.Mesh(this.omegaAuraGeo, kunaiMat);
-        km.scale.setScalar(0.52);
-        this.omegaAuraGroup.add(km);
-        this.omegaOrbitKatanas.push(km);
-      }
-      this.omegaAuraGroup.visible = true;
-      this.spritePivot.add(this.omegaAuraGroup);
-    } else if (this.def.id === 'halcyon-twins') {
-      this.omegaAuraGroup = new THREE.Group();
-      this.omegaAuraGroup.position.set(0, spriteHeight * 0.56, -0.15);
-      this.omegaAuraMat = createEnergyWeaponMaterial();
-      this.omegaAuraMat.uniforms.uColor.value.set('#22d3ee');
-      this.omegaAuraMat.uniforms.uCoreColor.value.set('#fde047');
-      this.twinCustomMats.push(this.omegaAuraMat);
-      this.omegaAuraGeo = createAcademyWingGeometry();
-      const leftWing = new THREE.Mesh(this.omegaAuraGeo, this.omegaAuraMat);
-      leftWing.scale.set(-0.74, 0.74, 0.74);
-      leftWing.position.set(-0.14, 0, 0);
-      const rightWing = new THREE.Mesh(this.omegaAuraGeo, this.omegaAuraMat);
-      rightWing.scale.set(0.74, 0.74, 0.74);
-      rightWing.position.set(0.14, 0, 0);
-      this.omegaAuraGroup.add(leftWing, rightWing);
-      this.twinWingMeshes.push(leftWing, rightWing);
-      this.omegaAuraGroup.visible = true;
-      this.spritePivot.add(this.omegaAuraGroup);
-    } else if (this.def.id === 'lullaby-twins') {
-      // Custom GLSL Radiant Pink Dream-Halo Aura + 4 Pure-White Angel Wings
-      this.omegaAuraGroup = new THREE.Group();
-      this.omegaAuraGroup.position.set(0, spriteHeight * 0.56, -0.15);
-      const whiteWingMat = createLullabyWhiteWingShaderMaterial();
-      const pinkAuraMat = createLullabyPinkAuraShaderMaterial();
-      this.omegaAuraMat = whiteWingMat;
-      this.twinCustomMats.push(whiteWingMat, pinkAuraMat);
-
-      const discGeo = new THREE.PlaneGeometry(1.98, 1.98);
-      this.twinCustomGeos.push(discGeo);
-      const auraDisc = new THREE.Mesh(discGeo, pinkAuraMat);
-      auraDisc.position.set(0, 0.05, -0.08);
-      this.omegaAuraGroup.add(auraDisc);
-
-      this.omegaAuraGeo = createLullabyAngelWingGeometry();
-      const wUpperL = new THREE.Mesh(this.omegaAuraGeo, whiteWingMat);
-      wUpperL.scale.set(-0.80, 0.80, 0.80);
-      wUpperL.position.set(-0.15, 0.08, -0.01);
-      const wUpperR = new THREE.Mesh(this.omegaAuraGeo, whiteWingMat);
-      wUpperR.scale.set(0.80, 0.80, 0.80);
-      wUpperR.position.set(0.15, 0.08, -0.01);
-      const wLowerL = new THREE.Mesh(this.omegaAuraGeo, whiteWingMat);
-      wLowerL.scale.set(-0.58, 0.56, 0.72);
-      wLowerL.position.set(-0.12, -0.13, -0.03);
-      wLowerL.rotation.z = 0.25;
-      const wLowerR = new THREE.Mesh(this.omegaAuraGeo, whiteWingMat);
-      wLowerR.scale.set(0.58, 0.56, 0.72);
-      wLowerR.position.set(0.12, -0.13, -0.03);
-      wLowerR.rotation.z = -0.25;
-
-      this.omegaAuraGroup.add(wUpperL, wUpperR, wLowerL, wLowerR);
-      this.twinWingMeshes.push(wUpperL, wUpperR, wLowerL, wLowerR);
-      this.omegaAuraGroup.visible = true;
-      this.spritePivot.add(this.omegaAuraGroup);
-    } else if (this.def.id === 'nocturne-twins') {
-      // Custom GLSL 4-Wing Dual Pure-White Lunar & Pitch-Black Abyssal Seraph Wings
-      this.omegaAuraGroup = new THREE.Group();
-      this.omegaAuraGroup.position.set(0, spriteHeight * 0.55, -0.15);
-      const whiteWingMat = createNocturneWingShaderMaterial(false);
-      const blackWingMat = createNocturneWingShaderMaterial(true);
-      this.omegaAuraMat = whiteWingMat;
-      this.twinCustomMats.push(whiteWingMat, blackWingMat);
-
-      this.omegaAuraGeo = createNocturneWingGeometry();
-      const wUpperL = new THREE.Mesh(this.omegaAuraGeo, whiteWingMat);
-      wUpperL.scale.set(-0.78, 0.78, 0.78);
-      wUpperL.position.set(-0.15, 0.08, 0);
-      const wUpperR = new THREE.Mesh(this.omegaAuraGeo, blackWingMat);
-      wUpperR.scale.set(0.78, 0.78, 0.78);
-      wUpperR.position.set(0.15, 0.08, 0);
-      const wLowerL = new THREE.Mesh(this.omegaAuraGeo, whiteWingMat);
-      wLowerL.scale.set(-0.56, 0.54, 0.72);
-      wLowerL.position.set(-0.12, -0.13, -0.03);
-      wLowerL.rotation.z = 0.28;
-      const wLowerR = new THREE.Mesh(this.omegaAuraGeo, blackWingMat);
-      wLowerR.scale.set(0.56, 0.54, 0.72);
-      wLowerR.position.set(0.12, -0.13, -0.03);
-      wLowerR.rotation.z = -0.28;
-
-      this.omegaAuraGroup.add(wUpperL, wUpperR, wLowerL, wLowerR);
-      this.twinWingMeshes.push(wUpperL, wUpperR, wLowerL, wLowerR);
-      this.omegaAuraGroup.visible = true;
-      this.spritePivot.add(this.omegaAuraGroup);
-    } else if (this.def.id === 'clockwork-twins') {
-      this.omegaAuraGroup = new THREE.Group();
-      this.omegaAuraGroup.position.set(0, spriteHeight * 0.54, -0.16);
-      this.omegaAuraMat = createEnergyWeaponMaterial();
-      this.omegaAuraMat.uniforms.uColor.value.set('#f59e0b');
-      this.omegaAuraMat.uniforms.uCoreColor.value.set('#2dd4bf');
-      this.twinCustomMats.push(this.omegaAuraMat);
-      this.omegaAuraGeo = createClockworkGearGeometry();
-      const gearL = new THREE.Mesh(this.omegaAuraGeo, this.omegaAuraMat);
-      gearL.scale.setScalar(0.56);
-      gearL.position.set(-0.32, 0.14, 0);
-      const gearR = new THREE.Mesh(this.omegaAuraGeo, this.omegaAuraMat);
-      gearR.scale.setScalar(0.46);
-      gearR.position.set(0.34, -0.06, 0.02);
-      this.omegaAuraGroup.add(gearL, gearR);
-      this.twinGearMeshes.push(gearL, gearR);
-      this.omegaAuraGroup.visible = true;
-      this.spritePivot.add(this.omegaAuraGroup);
-    }
+    this.backAttachments = createChibiBackAttachments(
+      this.def.id,
+      spriteHeight,
+      this.spritePivot,
+      this.blitzHeroPivot
+    );
 
     // Preload all 4 poses for instant state swaps and capture idle height reference
     const smooth = Boolean(this.def.smoothFilter);
@@ -821,8 +425,8 @@ export class ChibiSprite3D {
     }
     this.mesh.castShadow = !enabled && Boolean(this.material.map);
     this.material.needsUpdate = true;
-    if (this.omegaAuraGroup) {
-      this.omegaAuraGroup.visible = this.shouldShowBackAttachment();
+    if (this.backAttachments.omegaAuraGroup) {
+      this.backAttachments.omegaAuraGroup.visible = this.shouldShowBackAttachment();
     }
   }
 
@@ -1023,102 +627,13 @@ export class ChibiSprite3D {
           ghostAlpha = 1 - (p - 0.16) / 0.48;
         }
 
-        if (this.attackComboStep === 1) {
-          // Beat 1: Quick low coil -> wider snap cross dash -> fast settle
-          if (p < 0.18) {
-            const k = p / 0.18;
-            const ease = k * k;
-            posX = -this.facing * 0.13 * ease;
-            posY = 0.01 * ease;
-            rotZ = this.facing * 0.14 * ease;
-            scaleY = 1 - 0.06 * ease;
-            scaleX = 1 + 0.05 * ease;
-            shadowScale = 1.04;
-          } else if (p < 0.44) {
-            const k = (p - 0.18) / 0.26;
-            const snap = 1 - (1 - k) * (1 - k);
-            const arc = Math.sin(k * Math.PI);
-            posX = this.facing * (-0.13 + 0.34 * snap);
-            posY = 0.01 + 0.06 * arc;
-            rotZ = this.facing * (0.14 - 0.38 * snap);
-            scaleY = 0.94 + 0.08 * arc;
-            scaleX = 1.05 + 0.06 * arc;
-            shadowScale = 1.1;
-          } else {
-            const k = (p - 0.44) / 0.56;
-            const rem = 1 - (1 - Math.pow(1 - k, 3));
-            posX = this.facing * 0.21 * rem;
-            posY = 0.015 * rem;
-            rotZ = -this.facing * 0.24 * rem;
-            scaleY = 1 + 0.025 * rem;
-            scaleX = 1 - 0.02 * rem;
-            shadowScale = 1.07 - 0.05 * (1 - rem);
-          }
-        } else if (this.attackComboStep === 2) {
-          // Beat 2: Deep spring crouch -> high airborne jump smash -> landing bounce
-          if (p < 0.22) {
-            const k = p / 0.22;
-            const ease = k * k;
-            posX = -this.facing * 0.14 * ease;
-            posY = 0;
-            rotZ = this.facing * 0.2 * ease;
-            scaleY = 1 - 0.1 * ease;
-            scaleX = 1 + 0.08 * ease;
-            shadowScale = 1.06;
-          } else if (p < 0.48) {
-            const k = (p - 0.22) / 0.26;
-            const snap = 1 - (1 - k) * (1 - k);
-            const arc = Math.sin(k * Math.PI);
-            posX = this.facing * (-0.14 + 0.36 * snap);
-            posY = 0.19 * arc;
-            rotZ = this.facing * (0.2 - 0.48 * snap);
-            scaleY = 0.9 + 0.2 * arc;
-            scaleX = 1.08 - 0.11 * arc;
-            shadowScale = 1.02 - 0.12 * arc;
-          } else {
-            const k = (p - 0.48) / 0.52;
-            const rem = 1 - (1 - Math.pow(1 - k, 3));
-            const landing = Math.sin(Math.min(1, k * 2.2) * Math.PI);
-            posX = this.facing * 0.22 * rem;
-            posY = 0.02 * rem;
-            rotZ = -this.facing * 0.28 * rem;
-            scaleY = 1 - 0.05 * landing + 0.03 * rem;
-            scaleX = 1 + 0.04 * landing;
-            shadowScale = 1.1 - 0.08 * (1 - rem);
-          }
-        } else if (p < 0.2) {
-          // Beat 0 Phase 1: Quick anticipation coil & pullback
-          const k = p / 0.2;
-          const ease = k * k;
-          posX = -this.facing * 0.11 * ease;
-          posY = 0.02 * ease;
-          rotZ = this.facing * 0.16 * ease;
-          scaleY = 1 - 0.04 * ease;
-          scaleX = 1 + 0.03 * ease;
-          shadowScale = 1.02;
-        } else if (p < 0.44) {
-          // Beat 0 Phase 2: Snappy forward strike lunge & upright extension
-          const k = (p - 0.2) / 0.24;
-          const snap = 1 - (1 - k) * (1 - k);
-          const arc = Math.sin(k * Math.PI);
-          posX = this.facing * (-0.11 + 0.27 * snap);
-          posY = 0.02 + 0.1 * arc;
-          rotZ = this.facing * (0.16 - 0.4 * snap);
-          scaleY = 0.96 + 0.12 * arc;
-          scaleX = 1.03 - 0.07 * arc;
-          shadowScale = 1.08;
-        } else {
-          // Beat 0 Phase 3: Smooth follow-through settle into ready stance
-          const k = (p - 0.44) / 0.56;
-          const settle = 1 - Math.pow(1 - k, 3);
-          const rem = 1 - settle;
-          posX = this.facing * 0.16 * rem;
-          posY = 0.02 * rem;
-          rotZ = -this.facing * 0.24 * rem;
-          scaleY = 1 + 0.03 * rem;
-          scaleX = 1 - 0.015 * rem;
-          shadowScale = 1.06 - 0.05 * settle;
-        }
+        const stepK = stepChibiAttackComboKinematics(p, this.attackComboStep, this.facing);
+        posX = stepK.posX;
+        posY = stepK.posY;
+        rotZ = stepK.rotZ;
+        scaleX = stepK.scaleX;
+        scaleY = stepK.scaleY;
+        shadowScale = stepK.shadowScale;
       } else {
         // Alert upright combat-ready bounce between swings
         const ready = (Math.sin(t * 2.5) + 1) * 0.5;
@@ -1186,7 +701,7 @@ export class ChibiSprite3D {
         );
         gm.rotation.z = rotZ * (0.65 - i * 0.22);
         gm.scale.set(this.mesh.scale.x * scaleX, scaleY, 1);
-        gMat.opacity = gMat.map ? Math.max(0, (0.48 - i * 0.18) * ghostAlpha) : 0;
+        gMat.opacity = gMat.map ? Math.max(0, (0.78 - i * 0.24) * ghostAlpha) : 0;
       }
     }
 
@@ -1198,7 +713,7 @@ export class ChibiSprite3D {
         const gp = bg.life / bg.maxLife;
         bg.mesh.quaternion.copy(this.spritePivot.quaternion);
         bg.mesh.rotateZ(bg.rz);
-        bg.mat.opacity = gp * 0.72;
+        bg.mat.opacity = gp * 0.88;
         const sc = bg.baseScale * (1 + (1 - gp) * 0.18);
         bg.mesh.scale.set(bg.face * sc, sc, 1);
         if (bg.life <= 0) bg.mesh.visible = false;
@@ -1240,10 +755,10 @@ export class ChibiSprite3D {
         this.blitzHeroMesh.scale.set(heroFaceFlip, 1, 1);
         this.blitzHeroMat.color.set(cur.col);
         const fade = bp < 0.08 ? bp / 0.08 : bp > 0.86 ? Math.max(0, (1 - bp) / 0.14) : 1;
-        this.blitzHeroMat.opacity = fade * 0.88;
+        this.blitzHeroMat.opacity = fade * 0.96;
       } else {
         this.blitzHeroMesh.visible = false;
-        this.blitzHeroPivot.visible = Boolean(this.omegaHandPivot);
+        this.blitzHeroPivot.visible = Boolean(this.backAttachments.omegaHandPivot);
         this.spritePivot.position.set(lx, ly, lz);
         this.spritePivot.scale.setScalar(combatScale);
         if (this.facing !== cur.face) this.setFacing(cur.face);
@@ -1301,62 +816,22 @@ export class ChibiSprite3D {
       }
 
       // Animate Omega & Twin unit-specific 3D back-shader attachments
-      if (this.omegaAuraGroup && this.omegaAuraMat) {
+      if (this.backAttachments.omegaAuraGroup && this.backAttachments.omegaAuraMat) {
         const showAura = this.shouldShowBackAttachment();
-        this.omegaAuraGroup.visible = showAura;
+        this.backAttachments.omegaAuraGroup.visible = showAura;
         if (showAura) {
           this.updateBackAttachmentGroup(elapsed, 0.96);
         }
       }
 
-      if (this.omegaHandPivot && this.omegaHandWeaponMesh && this.omegaHandWeaponMat) {
-        let showHand = false;
-        let swScale = 1.0;
-        let rx = 0.7;
-        let ry = 0.2;
-        let rz = 0;
-
-        if (bp >= 0.05 && bp < 0.19) {
-          showHand = true;
-          const k = (bp - 0.05) / 0.14;
-          swScale = 0.95;
-          rz = 1.6 - 3.3 * (k * k);
-        } else if (bp >= 0.19 && bp < 0.32) {
-          showHand = true;
-          const k = (bp - 0.19) / 0.13;
-          swScale = 1.02;
-          ry = -0.2;
-          rz = -1.6 + 3.3 * (k * k);
-        } else if (bp >= 0.32 && bp < 0.44) {
-          showHand = true;
-          const k = (bp - 0.32) / 0.12;
-          swScale = 1.12;
-          rx = 0.4;
-          rz = -1.4 + 3.4 * (k * k);
-        } else if (bp >= 0.44 && bp < 0.72) {
-          // Giant Greatsword appears in hand at Sky Leap & carves downward Crescent Moon!
-          showHand = true;
-          swScale = 1.75;
-          rx = 0.15;
-          ry = 0.12;
-          if (bp < 0.56) {
-            rz = 2.35;
-          } else {
-            const k = Math.min(1, (bp - 0.56) / 0.12);
-            rz = 2.35 - 4.0 * (k * k);
-          }
-        }
-
-        this.omegaHandPivot.visible = showHand;
-        if (showHand) {
-          const handFace = this.blitzShadowOnly ? cur.face : this.facing;
-          this.omegaHandPivot.position.set(handFace * 0.22, this.currentSpriteHeight * 0.54, 0.16);
-          this.omegaHandPivot.rotation.set(rx, ry, rz);
-          this.omegaHandWeaponMesh.scale.setScalar(swScale);
-          this.omegaHandWeaponMat.uniforms.uTime.value = elapsed;
-          this.omegaHandWeaponMat.uniforms.uOpacity.value = bp > 0.68 ? Math.max(0, 1 - (bp - 0.68) / 0.04) : 1.0;
-        }
-      }
+      const handFace = this.blitzShadowOnly ? cur.face : this.facing;
+      updateOmegaHandBlitzWeapon(
+        this.backAttachments,
+        bp,
+        elapsed,
+        handFace,
+        this.currentSpriteHeight
+      );
 
       if (bp >= 1) {
         this.blitzActive = false;
@@ -1364,10 +839,10 @@ export class ChibiSprite3D {
         this.blitzHeroPivot.visible = false;
         this.blitzHeroMesh.visible = false;
         this.blitzCloneMesh.visible = false;
-        if (this.omegaAuraGroup) {
-          this.omegaAuraGroup.visible = this.shouldShowBackAttachment();
+        if (this.backAttachments.omegaAuraGroup) {
+          this.backAttachments.omegaAuraGroup.visible = this.shouldShowBackAttachment();
         }
-        if (this.omegaHandPivot) this.omegaHandPivot.visible = false;
+        if (this.backAttachments.omegaHandPivot) this.backAttachments.omegaHandPivot.visible = false;
         this.spritePivot.position.set(0, 0, 0);
         this.spritePivot.scale.set(1, 1, 1);
         if (!this.blitzShadowOnly) {
@@ -1379,15 +854,15 @@ export class ChibiSprite3D {
       this.blitzHeroPivot.visible = false;
       this.blitzHeroMesh.visible = false;
       this.blitzCloneMesh.visible = false;
-      if (this.omegaHandPivot) this.omegaHandPivot.visible = false;
-      if (this.omegaAuraGroup) {
+      if (this.backAttachments.omegaHandPivot) this.backAttachments.omegaHandPivot.visible = false;
+      if (this.backAttachments.omegaAuraGroup) {
         if (this.shouldShowBackAttachment()) {
-          this.omegaAuraGroup.visible = true;
-          this.omegaAuraGroup.scale.setScalar(1 + castPulseAmt * 0.14);
+          this.backAttachments.omegaAuraGroup.visible = true;
+          this.backAttachments.omegaAuraGroup.scale.setScalar(1 + castPulseAmt * 0.14);
           this.updateBackAttachmentGroup(elapsed, Math.min(1, 0.90 + castPulseAmt * 0.10));
         } else {
-          this.omegaAuraGroup.visible = false;
-          this.omegaAuraGroup.scale.setScalar(1);
+          this.backAttachments.omegaAuraGroup.visible = false;
+          this.backAttachments.omegaAuraGroup.scale.setScalar(1);
         }
       }
     }
@@ -1407,56 +882,7 @@ export class ChibiSprite3D {
   }
 
   private updateBackAttachmentGroup(elapsed: number, opacity: number): void {
-    if (this.omegaAuraMat) {
-      this.omegaAuraMat.uniforms.uTime.value = elapsed;
-      this.omegaAuraMat.uniforms.uOpacity.value = opacity;
-    }
-    for (let i = 0; i < this.twinCustomMats.length; i++) {
-      this.twinCustomMats[i].uniforms.uTime.value = elapsed;
-      this.twinCustomMats[i].uniforms.uOpacity.value = opacity;
-    }
-    if (this.roninFanKatanas.length > 0) {
-      for (let k = 0; k < this.roninFanKatanas.length; k++) {
-        const slot = this.roninFanKatanas[k];
-        const hover = Math.sin(elapsed * 2.4 + slot.phase);
-        const expand = Math.sin(elapsed * 1.8 + slot.phase) * 0.032;
-        slot.mesh.position.set(
-          slot.baseX + slot.outX * expand,
-          slot.baseY + hover * 0.044 + slot.outY * expand,
-          slot.baseZ
-        );
-        slot.mesh.rotation.z = slot.baseRotZ + Math.sin(elapsed * 1.6 + slot.phase) * 0.034;
-      }
-      if (this.omegaHaloMesh) {
-        this.omegaHaloMesh.rotation.z = elapsed * 0.45;
-      }
-    } else if (this.omegaOrbitKatanas.length > 0) {
-      const isYukikage = this.def.id === 'yukikage-twins';
-      for (let k = 0; k < this.omegaOrbitKatanas.length; k++) {
-        const ang = elapsed * (isYukikage ? 2.4 : 2.8) + (k / this.omegaOrbitKatanas.length) * Math.PI * 2;
-        const rad = isYukikage ? 0.86 + Math.sin(elapsed * 5.0 + k) * 0.04 : 0.82;
-        this.omegaOrbitKatanas[k].position.set(
-          Math.cos(ang) * rad,
-          isYukikage ? 0.04 + Math.sin(ang) * rad * 0.88 : Math.sin(ang) * rad * 0.72,
-          isYukikage ? -0.04 : 0
-        );
-        this.omegaOrbitKatanas[k].rotation.set(0, 0, ang - Math.PI * 0.5);
-      }
-    } else if (this.omegaHaloMesh) {
-      this.omegaHaloMesh.rotation.z = elapsed * 2.2;
-    } else if (this.twinWingMeshes.length >= 2) {
-      const flap = Math.sin(elapsed * 12) * 0.20;
-      this.twinWingMeshes[0].rotation.y = -0.16 + flap;
-      this.twinWingMeshes[1].rotation.y = 0.16 - flap;
-      if (this.twinWingMeshes.length >= 4) {
-        const subFlap = Math.sin(elapsed * 12 - 0.55) * 0.16;
-        this.twinWingMeshes[2].rotation.y = -0.12 + subFlap;
-        this.twinWingMeshes[3].rotation.y = 0.12 - subFlap;
-      }
-    } else if (this.twinGearMeshes.length === 2) {
-      this.twinGearMeshes[0].rotation.z = elapsed * 3.2;
-      this.twinGearMeshes[1].rotation.z = -elapsed * 4.1;
-    }
+    updateChibiBackAttachmentGroup(this.backAttachments, this.def.id, elapsed, opacity);
   }
 
   public dispose(): void {
@@ -1483,15 +909,6 @@ export class ChibiSprite3D {
     this.blitzHeroMat.dispose();
     this.shadowDisc.geometry.dispose();
     this.shadowMat.dispose();
-    this.omegaAuraGeo?.dispose();
-    this.omegaAuraMat?.dispose();
-    for (let i = 0; i < this.twinCustomMats.length; i++) {
-      this.twinCustomMats[i].dispose();
-    }
-    for (let i = 0; i < this.twinCustomGeos.length; i++) {
-      this.twinCustomGeos[i].dispose();
-    }
-    this.omegaHandWeaponGeo?.dispose();
-    this.omegaHandWeaponMat?.dispose();
+    disposeChibiBackAttachments(this.backAttachments);
   }
 }

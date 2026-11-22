@@ -1599,5 +1599,16 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(reloaded.omegaCores['crimson-ronin'] ?? 0).toBe(0);
       expect(reloaded.chibiStars['crimson-ronin']).toBe(2);
     });
+
+    it('unlocks supplied Chibi IDs in miners and discovered cleanly via unlockChibisByIds', () => {
+      const state = new GameState();
+      const added = state.unlockChibisByIds(['glitch-cheshire', 'halcyon-twins', 'crimson-ronin']);
+      expect(added).toBe(3);
+      expect(state.miners['glitch-cheshire']).toBeGreaterThanOrEqual(1);
+      expect(state.miners['halcyon-twins']).toBeGreaterThanOrEqual(1);
+      expect(state.miners['crimson-ronin']).toBeGreaterThanOrEqual(1);
+      expect(state.discovered.has('halcyon-twins')).toBe(true);
+      expect(state.unlockChibisByIds(['halcyon-twins'])).toBe(0);
+    });
   });
 });

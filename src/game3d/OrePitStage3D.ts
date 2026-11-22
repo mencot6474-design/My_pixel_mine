@@ -1,8 +1,15 @@
 import * as THREE from 'three';
 import { getOresByWorld, type OreDef, type WorldId } from '../game/GameData';
+import { type PitEventKind } from '../game/PitEventsDomain';
 import { createCyberLanternBollardFinial } from './CyberProps3D';
 import { mergeStaticMeshesByMaterial } from './MeshHelpers3D';
-import { type MineWorldPalette, type OreVariantKey, WORLD_PALETTES } from './MineWorldPalette';
+import {
+  BASE_PIT_NODE_COUNT,
+  type MineWorldPalette,
+  type OreVariantDef,
+  type OreVariantKey,
+  WORLD_PALETTES,
+} from './MineWorldPalette';
 import { getWeatherById, type WeatherId } from '../game/WeatherData';
 import type { AttackImpactFxController } from './AttackImpactFx3D';
 import type { OreBillboard2D } from './OreBillboard3D';
@@ -12,6 +19,119 @@ import {
   getQuarryFloorTexture,
   getShockwaveRingTexture,
 } from './ProceduralTextures3D';
+
+export const PIT_NODE_COUNT = BASE_PIT_NODE_COUNT;
+export const PIT_CENTER_Z = 1.85;
+export const PIT_FLOOR_Y = -0.68;
+export const PIT_HALF_W = 4.8;
+export const PIT_HALF_D = 3.45;
+
+/** Balanced 25% nerf from 500 -> 375 so Weather Meteors feel rewarding without dragging. */
+export const METEOR_HP_MULT = 375;
+export const BASE_ORE_RESPAWN_SEC = 3.5;
+export const SWEET_SPOT_MIN_PROGRESS = 0.56;
+export const SWEET_SPOT_MAX_PROGRESS = 0.90;
+export const SWEET_SPOT_DURATION_SEC = 2.25;
+export const SWEET_SPOT_DMG_MULT = 4.5;
+
+/** Returns true when a shrinking Sweet-Spot ring progress (0..1) sits inside the Perfect Strike window. */
+export function isSweetSpotWindowPure(progress: number): boolean {
+  return Number.isFinite(progress) && progress >= SWEET_SPOT_MIN_PROGRESS && progress <= SWEET_SPOT_MAX_PROGRESS;
+}
+
+/** Computes dynamic minimum Meteor HP from current team DPS & tap damage (25% nerfed). */
+export function computeMeteorDynamicHp(totalPlotDps: number, tapDamage: number): number {
+  return Math.round((totalPlotDps * 45 + tapDamage * 150) * 0.75);
+}
+
+export interface DamageableOreState {
+  hp: number;
+  alive: boolean;
+}
+
+export interface PureOreHitResult {
+  broken: boolean;
+  dmgDealt: number;
+}
+
+/** Applies pure damage to a pit ore node and returns hit/break status. */
+export function applyNodeDamagePure(
+  node: DamageableOreState,
+  dmg: number
+): PureOreHitResult | null {
+  if (!node.alive || node.hp <= 0 || dmg <= 0) return null;
+  const dmgDealt = Math.min(node.hp, dmg);
+  node.hp = Math.max(0, node.hp - dmg);
+  if (node.hp > 0) {
+    return {
+      broken: false,
+      dmgDealt,
+    };
+  }
+
+  node.alive = false;
+  return {
+    broken: true,
+    dmgDealt,
+  };
+}
+
+export interface OreHitResult {
+  broken: boolean;
+  variantKey: OreVariantKey;
+  dmgDealt: number;
+  isMeteor?: boolean;
+  meteorWeatherId?: WeatherId;
+  pitEventKind?: PitEventKind;
+  isPerfect?: boolean;
+}
+
+export interface OreAttackFxOptions {
+  accentColor?: string;
+  attackerX?: number;
+  attackerZ?: number;
+  comboStep?: number;
+  isPerfect?: boolean;
+}
+
+export interface SweetSpotPitState {
+  nodeId: number;
+  progress: number;
+  inWindow: boolean;
+  worldX: number;
+  worldY: number;
+  worldZ: number;
+  isMeteor: boolean;
+}
+
+export interface InternalOreNode {
+  id: number;
+  root: THREE.Group;
+  oreSprite: OreBillboard2D;
+  hitMesh: THREE.Mesh;
+  geodeRing: THREE.Mesh;
+  oreDef: OreDef;
+  variant: OreVariantDef;
+  hp: number;
+  maxHp: number;
+  alive: boolean;
+  respawnTimer: number;
+  squashAmt: number;
+  recoilAmt: number;
+  recoilDirX: number;
+  flashTimer: number;
+  spawnScale: number;
+  x: number;
+  z: number;
+  phase: number;
+  isMeteor?: boolean;
+  meteorWeatherId?: WeatherId | null;
+  pitEventKind?: PitEventKind;
+  dropY?: number;
+  dropProgress?: number;
+  dropDuration?: number;
+  trailTimer?: number;
+}
 
 export function resolveWorldIdFromPalette(palette: MineWorldPalette): WorldId {
   for (const [id, p] of Object.entries(WORLD_PALETTES) as Array<[WorldId, MineWorldPalette]>) {

@@ -462,6 +462,7 @@ export class OmegaForgeCutsceneController {
         alpha: false,
         powerPreference: 'high-performance',
       });
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.setPixelRatio(dpr);
       renderer.setSize(w, h, false);
       renderer.domElement.className = 'absolute inset-0 w-full h-full pointer-events-none';

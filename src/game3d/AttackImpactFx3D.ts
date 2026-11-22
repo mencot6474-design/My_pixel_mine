@@ -173,7 +173,7 @@ export class AttackImpactFxController {
       color,
       transparent: true,
       opacity,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
@@ -338,7 +338,7 @@ export class AttackImpactFxController {
       this.sharedShockwaveGeo,
       getShockwaveRingTexture(),
       opts.accentColor,
-      isSmash ? 0.9 : 0.68
+      isSmash ? 0.98 : 0.88
     );
     ringMesh.rotation.x = -Math.PI / 2;
     ringMesh.position.set(opts.targetX, this.floorY, opts.targetZ);

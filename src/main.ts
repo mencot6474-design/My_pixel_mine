@@ -26,7 +26,7 @@ import {
   type TapComboState,
 } from './game/TapComboHelper';
 import { getWeatherById, type WeatherId } from './game/WeatherData';
-import { getChibiById } from './game3d/ChibiCatalog';
+import { CHIBI_CATALOG, getChibiById } from './game3d/ChibiCatalog';
 import { init3dHudIcons } from './game3d/HudIcon3DRenderer';
 import { MineScene3D } from './game3d/MineScene3D';
 import { computeMeteorDynamicHp } from './game3d/OrePit3D';
@@ -489,6 +489,25 @@ async function bootstrap(): Promise<void> {
     }
   );
   hud.setOnModalVisibilityChange((open) => scene.setModalBackdropThrottled(open));
+
+  const isLocalDev = Boolean(
+    (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  );
+  if (isLocalDev) {
+    interface DevDebugWindow extends Window {
+      __unlockAllChibis?: () => number;
+    }
+    const unlockAllLocalChibis = (): number => {
+      const added = gameState.unlockChibisByIds(CHIBI_CATALOG.map((c) => c.id));
+      hud?.pushToast(`Unlocked all ${CHIBI_CATALOG.length} Chibis!`);
+      return added;
+    };
+    (window as DevDebugWindow).__unlockAllChibis = unlockAllLocalChibis;
+    if (window.location.search.includes('unlock=1')) {
+      unlockAllLocalChibis();
+    }
+  }
 
   const applySettings = (s: GameSettingsData): void => {
     audio.setBgmVolumeScale(s.bgmVolume);

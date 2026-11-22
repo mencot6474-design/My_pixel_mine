@@ -5,7 +5,6 @@ import { CaveRailwayHandle, createCaveRailway } from './CaveRailway3D';
 import { ChestVaultStationHandle, createChestVaultStation, disposeObject3D } from './ChestVaultStation3D';
 import { createCyberLanternBollardFinial, createCyberMonolithForkFinial } from './CyberProps3D';
 import { mergeStaticMeshesByMaterial } from './MeshHelpers3D';
-import { loadPublicSpriteTexture } from './OrePit3D';
 import { getCobblePathTexture, getTerrainTexture } from './ProceduralTextures3D';
 import { createWeatherSkyMaterial, WeatherSkyMaterialHandle } from './WeatherSkyShader';
 
@@ -28,7 +27,6 @@ export class MineEnvironment3D {
   private readonly dustGeo: THREE.BufferGeometry;
   private readonly dustMat: THREE.ShaderMaterial;
   private readonly dustPoints: THREE.Points;
-  private readonly bannerMat: THREE.MeshBasicMaterial;
   private lowQuality = false;
 
   private readonly clouds: CloudCluster[] = [];
@@ -111,11 +109,6 @@ export class MineEnvironment3D {
       roughness: 0.18,
       metalness: 0.32,
       flatShading: true,
-    });
-    this.bannerMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0,
     });
 
     const steelMat = new THREE.MeshStandardMaterial({
@@ -251,10 +244,7 @@ export class MineEnvironment3D {
     mergeStaticMeshesByMaterial(deckGroup);
     this.group.add(deckGroup);
 
-    // 5. Rear "My Chibi Minerr" Holographic Stage Gantry (elevated neatly above Chibi nameplates)
-    this.buildSanctuaryGate(darkMetalMat, steelMat);
-
-    // 6. Left Wing: Cyber Mine Elevator / Drop Shaft + Cyan Energy Gate + Maglev Track
+    // 5. Left Wing: Cyber Mine Elevator / Drop Shaft + Cyan Energy Gate + Maglev Track
     this.caveRailway = createCaveRailway({
       crystalColor: palette.crystalColor,
       cliffColor: palette.cliffColor,
@@ -474,121 +464,6 @@ export class MineEnvironment3D {
     this.group.add(this.cableFlowInst);
   }
 
-  private buildSanctuaryGate(
-    darkMetalMat: THREE.Material,
-    steelMat: THREE.Material
-  ): void {
-    const g = new THREE.Group();
-    g.position.set(0, 0.21, -6.45);
-
-    // Grounded Dark Gunmetal Holo-Display Gantry (3:1 banner lifted cleanly above enlarged Chibi podiums)
-    const bannerW = 8.4;
-    const bannerH = 2.68;
-    const bannerCenterY = 4.95;
-
-    const plinthBase = new THREE.Mesh(new THREE.BoxGeometry(11.4, 0.44, 0.96), darkMetalMat);
-    plinthBase.position.set(0, 0.22, 0);
-    plinthBase.castShadow = true;
-    plinthBase.receiveShadow = true;
-
-    const plinthNeon = new THREE.Mesh(new THREE.BoxGeometry(11.44, 0.055, 0.98), this.cyberDeckTrimMat);
-    plinthNeon.position.set(0, 0.46, 0);
-
-    const lowerBackdrop = new THREE.Mesh(new THREE.BoxGeometry(10.4, 3.05, 0.54), this.cliffMat);
-    lowerBackdrop.position.set(0, 1.98, -0.02);
-    lowerBackdrop.castShadow = true;
-    lowerBackdrop.receiveShadow = true;
-
-    const plinthTop = new THREE.Mesh(new THREE.BoxGeometry(10.55, 0.14, 0.72), steelMat);
-    plinthTop.position.set(0, 3.55, 0);
-    plinthTop.receiveShadow = true;
-
-    const wallBacking = new THREE.Mesh(
-      new THREE.BoxGeometry(bannerW + 0.4, bannerH + 0.3, 0.42),
-      darkMetalMat
-    );
-    wallBacking.position.set(0, bannerCenterY, -0.02);
-    wallBacking.castShadow = true;
-    wallBacking.receiveShadow = true;
-
-    const topCornice = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.22, 0.66), darkMetalMat);
-    topCornice.position.set(0, bannerCenterY + bannerH * 0.5 + 0.24, 0);
-    topCornice.castShadow = true;
-
-    const topTrim = new THREE.Mesh(
-      new THREE.BoxGeometry(9.3, 0.08, 0.54),
-      this.cyberDeckTrimMat
-    );
-    topTrim.position.set(0, bannerCenterY + bannerH * 0.5 + 0.12, 0);
-
-    g.add(plinthBase, plinthNeon, lowerBackdrop, plinthTop, wallBacking, topCornice, topTrim);
-
-    // Sleek Gunmetal & Glowing Cyan Side Pilasters Framing the Hologram Wall
-    for (const sx of [-1, 1]) {
-      const px = sx * (bannerW * 0.5 + 0.36);
-      const pilaster = new THREE.Mesh(new THREE.BoxGeometry(0.48, bannerH + 3.68, 0.62), steelMat);
-      pilaster.position.set(px, 3.26, 0.02);
-      pilaster.castShadow = true;
-      pilaster.receiveShadow = true;
-
-      const edgeStrip = new THREE.Mesh(
-        new THREE.BoxGeometry(0.08, bannerH + 3.42, 0.09),
-        this.cyberDeckTrimMat
-      );
-      edgeStrip.position.set(px - sx * 0.25, 3.28, 0.3);
-
-      const cap = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.18, 0.72), darkMetalMat);
-      cap.position.set(px, bannerCenterY + bannerH * 0.5 + 0.36, 0.02);
-      cap.castShadow = true;
-      const pilasterFinial = createCyberMonolithForkFinial({
-        frameMat: darkMetalMat,
-        steelMat,
-        coreMat: this.cyberDeckTrimMat,
-        scale: 0.92,
-      });
-      pilasterFinial.position.set(px, bannerCenterY + bannerH * 0.5 + 0.45, 0.02);
-      g.add(pilaster, edgeStrip, cap, pilasterFinial);
-    }
-
-    // 3:1 Game Banner Plane ("My Chibi Minerr")
-    const bannerPlane = new THREE.Mesh(new THREE.PlaneGeometry(bannerW, bannerH), this.bannerMat);
-    bannerPlane.position.set(0, bannerCenterY, 0.21);
-    g.add(bannerPlane);
-
-    void loadPublicSpriteTexture('/hud/game_banner.webp')
-      .then((tex) => {
-        this.bannerMat.map = tex;
-        this.bannerMat.opacity = 1;
-        this.bannerMat.needsUpdate = true;
-      })
-      .catch(() => {
-        // Safe no-op in headless tests
-      });
-
-    // Twin Cyber Stage Holo-Speaker / Projector Columns Flanking the Widened Rear Stage
-    for (const sx of [-1, 1]) {
-      const proj = new THREE.Group();
-      proj.position.set(sx * 8.25, 0, 0.55);
-
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.36, 0.22, 8), darkMetalMat);
-      base.position.y = 0.11;
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 1.55, 8), steelMat);
-      body.position.y = 0.98;
-      const projFinial = createCyberLanternBollardFinial({
-        frameMat: darkMetalMat,
-        steelMat,
-        coreMat: this.crystalAccentMat,
-        scale: 0.76,
-      });
-      projFinial.position.y = 1.75;
-      proj.add(base, body, projFinial);
-      g.add(proj);
-    }
-
-    mergeStaticMeshesByMaterial(g, new Set<THREE.Object3D>([bannerPlane]));
-    this.group.add(g);
-  }
-
   public setPalette(palette: MineWorldPalette): void {
     this.terrainMat.map = getTerrainTexture(palette.terrainColor, palette.crystalColor);
     this.terrainMat.needsUpdate = true;
@@ -671,7 +546,6 @@ export class MineEnvironment3D {
     this.chestVault.dispose();
     this.dustGeo.dispose();
     this.dustMat.dispose();
-    this.bannerMat.dispose();
     disposeObject3D(this.group);
     this.skyDome.geometry.dispose();
     this.skyHandle.material.dispose();

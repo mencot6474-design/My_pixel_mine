@@ -412,3 +412,46 @@ export function renderMineChromeHtml(opts: {
     ${opts.toastStackHtml}
   `;
 }
+
+/** Updates HUD root CSS zoom & responsive data attributes to fit the current viewport. */
+export function applyHudViewportScale(root: HTMLElement): void {
+  if (typeof window === 'undefined') return;
+  const vw = Math.max(320, window.innerWidth || 1280);
+  const vh = Math.max(240, window.innerHeight || 720);
+  const scale = Math.max(0.5, Math.min(1, vw / 1160, vh / 660));
+  const logicalW = vw / scale;
+  const logicalH = vh / scale;
+
+  if (scale >= 0.999) {
+    root.style.width = '100%';
+    root.style.height = '100%';
+    root.style.transform = 'none';
+    root.style.setProperty('zoom', '1');
+  } else {
+    root.style.width = `${logicalW.toFixed(2)}px`;
+    root.style.height = `${logicalH.toFixed(2)}px`;
+    root.style.transform = 'none';
+    root.style.setProperty('zoom', scale.toFixed(4));
+  }
+  root.style.transformOrigin = 'top left';
+  root.dataset.hudCompact = logicalW < 920 ? 'true' : 'false';
+  root.dataset.hudPotsAbove = logicalW < 1080 ? 'true' : 'false';
+  root.dataset.hudDpsAbove = logicalW < 1140 ? 'true' : 'false';
+  root.dataset.hudShort = logicalH < 640 ? 'true' : 'false';
+
+  const floatScale = Math.max(0.72, Math.min(1, scale));
+  document.documentElement.style.setProperty('--mam-ui-scale', scale.toFixed(4));
+  document.documentElement.style.setProperty('--mam-float-scale', floatScale.toFixed(4));
+}
+
+/** Updates the live FPS pill text and status color inside the HUD root. */
+export function updateFpsBadgeDom(root: HTMLElement, fps: number): void {
+  const valEl = root.querySelector<HTMLElement>('[data-fps-value]');
+  if (valEl) {
+    valEl.textContent = fps > 0 ? String(fps) : '--';
+  }
+  const dotEl = root.querySelector<HTMLElement>('[data-fps-dot]');
+  if (dotEl) {
+    dotEl.style.background = fps >= 50 ? '#22c55e' : fps >= 30 ? '#f59e0b' : '#ef4444';
+  }
+}

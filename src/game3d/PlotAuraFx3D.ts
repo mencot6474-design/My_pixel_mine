@@ -147,13 +147,13 @@ export function getEnchantSigilTexture(): THREE.CanvasTexture | null {
 export function createAnimeAuraShaderMaterial(
   primaryHex: string,
   secondaryHex: string,
-  baseOpacity = 0.68
+  baseOpacity = 0.92
 ): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
     side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
+    blending: THREE.NormalBlending,
     uniforms: {
       uColorA: { value: new THREE.Color(primaryHex) },
       uColorB: { value: new THREE.Color(secondaryHex) },
@@ -184,15 +184,15 @@ export function createAnimeAuraShaderMaterial(
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
         float ndotv = abs(dot(N, V));
-        float rim = pow(clamp(1.0 - ndotv, 0.0, 1.0), 1.12) * 0.9 + 0.1;
-        float vFade = smoothstep(0.0, 0.2, vUv.y) * smoothstep(1.0, 0.24, vUv.y);
+        float rim = pow(clamp(1.0 - ndotv, 0.0, 1.0), 0.95) * 0.94 + 0.14;
+        float vFade = smoothstep(0.0, 0.16, vUv.y) * smoothstep(1.0, 0.20, vUv.y);
         float waveA = 0.5 + 0.5 * sin(vUv.x * 25.1327 + sin(vUv.y * 3.5 - uTime * 1.05) * 0.9);
         float waveB = 0.5 + 0.5 * sin(vUv.x * 12.5663 + vUv.y * 4.5 - uTime * 1.45);
-        float streaks = smoothstep(0.24, 0.92, waveA * 0.56 + waveB * 0.44);
-        float glow = vFade * (0.48 + streaks * 0.72) * rim;
-        vec3 col = mix(uColorB, uColorA, vUv.y * 0.55 + streaks * 0.25);
-        col = mix(col, vec3(1.0), clamp(streaks * rim * 0.36, 0.0, 0.45));
-        gl_FragColor = vec4(col, clamp(glow * uOpacity, 0.0, 1.0));
+        float streaks = smoothstep(0.20, 0.88, waveA * 0.56 + waveB * 0.44);
+        float glow = vFade * (0.62 + streaks * 0.88) * rim;
+        vec3 baseTint = mix(uColorB * 0.72, uColorA * 1.25, vUv.y * 0.55 + streaks * 0.25);
+        vec3 col = mix(baseTint, vec3(1.0), clamp(streaks * rim * 0.48, 0.0, 0.62));
+        gl_FragColor = vec4(col, clamp(glow * uOpacity * 1.38, 0.0, 0.96));
       }
     `,
   });
@@ -251,7 +251,7 @@ function createAnimeParticleShaderMaterial(
         float curve = scaleIn * scaleOut;
         vAlpha = curve;
 
-        float baseSize = aSeed.z > 0.5 ? 21.0 : 17.5 + mod(aSeed.x * 7.3, 1.0) * 8.0;
+        float baseSize = aSeed.z > 0.5 ? 25.0 : 21.0 + mod(aSeed.x * 7.3, 1.0) * 9.0;
         gl_PointSize = baseSize * curve * uPixelRatio * (14.5 / max(1.0, -mvPos.z));
       }
     `,
@@ -285,8 +285,8 @@ function createAnimeParticleShaderMaterial(
         }
 
         vec3 baseCol = mix(uColorA, uColorB, 1.0 - vProgress * 0.65);
-        vec3 finalCol = mix(baseCol, vec3(1.0), clamp(shape * 0.62, 0.0, 0.82));
-        gl_FragColor = vec4(finalCol, clamp(shape * vAlpha * 0.92, 0.0, 1.0));
+        vec3 finalCol = mix(baseCol, vec3(1.0), clamp(shape * 0.68, 0.0, 0.85));
+        gl_FragColor = vec4(finalCol, clamp(shape * vAlpha * 1.25, 0.0, 1.0));
       }
     `,
   });

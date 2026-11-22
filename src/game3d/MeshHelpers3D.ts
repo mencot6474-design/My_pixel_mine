@@ -352,3 +352,24 @@ export function mergeStaticMeshesByMaterial(
     container.add(m);
   }
 }
+
+/** Merges simple un-UV'd BufferGeometries into a single non-indexed geometry and disposes inputs. */
+export function mergeSimpleGeos(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  let totalVerts = 0;
+  const nonIndexed = geos.map((g) => (g.index ? g.toNonIndexed() : g));
+  for (const g of nonIndexed) totalVerts += g.attributes.position.count;
+  const positions = new Float32Array(totalVerts * 3);
+  const normals = new Float32Array(totalVerts * 3);
+  let offset = 0;
+  for (const g of nonIndexed) {
+    g.computeVertexNormals();
+    positions.set(g.attributes.position.array, offset * 3);
+    normals.set(g.attributes.normal.array, offset * 3);
+    offset += g.attributes.position.count;
+    g.dispose();
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+  return out;
+}

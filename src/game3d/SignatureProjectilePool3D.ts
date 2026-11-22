@@ -82,6 +82,12 @@ export function getChibiAttackStyle(def: ChibiDef): PlotAttackStyle {
   if (def.rarity === 'twin' || /twin|dual/.test(def.id)) {
     return 'twin';
   }
+  if (def.rarity === 'fusion') {
+    if (def.id === 'glitch-cheshire') return 'beam';
+    if (def.id === 'aether-monarch') return 'meteor';
+    if (def.id === 'prism-seraph' || def.id === 'monochrome-saint') return 'star';
+    return 'crescent';
+  }
   if (
     def.rarity === 'omega' ||
     /cyber|chrono|void|pulse|prism|neon|laser|rail|circuit|plasma|techno|volt|arc|warden/.test(def.id)
@@ -160,7 +166,7 @@ export class SignatureProjectilePool3D {
         map: this.crescentTex,
         transparent: true,
         opacity: 0,
-        blending: THREE.AdditiveBlending,
+        blending: THREE.NormalBlending,
         depthWrite: false,
         side: THREE.DoubleSide,
       });
@@ -456,10 +462,10 @@ export class SignatureProjectilePool3D {
         const pulse = Math.sin(u * Math.PI);
         const width = p.baseScale * (0.45 + pulse * 0.9);
         p.coreMesh.scale.set(beamLen, width, 1);
-        p.coreMat.opacity = Math.min(1, 0.35 + pulse * 0.65);
+        p.coreMat.opacity = Math.min(1, 0.72 + pulse * 0.28);
 
-        p.trailMesh.scale.set(beamLen, width * 0.38, 1);
-        p.trailMat.opacity = Math.min(1, 0.5 + pulse * 0.5);
+        p.trailMesh.scale.set(beamLen, width * 0.42, 1);
+        p.trailMat.opacity = Math.min(1, 0.68 + pulse * 0.32);
       } else {
         const inv = 1 - u;
         const a = inv * inv;
@@ -478,13 +484,13 @@ export class SignatureProjectilePool3D {
         const s = p.baseScale * scalePulse;
         p.coreMesh.scale.set(s, s, 1);
         p.coreMesh.rotation.z = p.startAngle + p.age * p.spinSpeed;
-        p.coreMat.opacity = u > 0.88 ? Math.max(0.2, 1 - (u - 0.88) * 6.5) : 0.96;
+        p.coreMat.opacity = u > 0.88 ? Math.max(0.28, 1 - (u - 0.88) * 6.0) : 1.0;
 
         if (p.trailMesh.visible) {
           const ts = s * (p.style === 'meteor' ? 1.25 : 0.88);
           p.trailMesh.scale.set(ts, ts, 1);
           p.trailMesh.rotation.z = -p.coreMesh.rotation.z * 0.65;
-          p.trailMat.opacity = p.coreMat.opacity * 0.55;
+          p.trailMat.opacity = p.coreMat.opacity * 0.78;
         }
       }
 

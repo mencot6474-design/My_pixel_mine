@@ -2,15 +2,69 @@ import * as THREE from 'three';
 import { STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
 import { SWEET_SPOT_DMG_MULT } from './OrePit3D';
 import { type PitEventKind } from '../game/PitEventsDomain';
-import { type OverclockTier } from '../game/OverclockDomain';
-import { rollTapCriticalDamage } from './MineScene3D';
-import type { MineSceneCallbacks, SceneMode } from './MineScene3D';
+import { getOverclockTierBuffs, type OverclockTier } from '../game/OverclockDomain';
+import type { MineSceneCallbacks } from './MineScene3D';
 import type { OrePit3D } from './OrePit3D';
 import type { PlotPedestal3D } from './PlotPedestal3D';
 import type { ShopWorld3D } from './ShopWorld3D';
 import type { TowerArena3D } from './TowerArena3D';
 import type { OmegaArena3D } from './OmegaArena3D';
-import { applyCameraOrbitDrag, clampCameraZoomRadius, getDefaultOrbitPitchForMode } from './MineScene3D';
+import {
+  applyCameraOrbitDrag,
+  clampCameraZoomRadius,
+  getDefaultOrbitPitchForMode,
+  type SceneMode,
+} from './MineSceneStage3D';
+
+export const BASE_TAP_CRIT_CHANCE = 0.15;
+export const OVERCLOCK_TAP_CRIT_CHANCE = 0.3;
+export const TAP_CRIT_MULT = 2.5;
+export const HOLD_MINE_INITIAL_DELAY_SEC = 0.22;
+export const HOLD_MINE_INTERVAL_SEC = 0.18;
+
+/** Advances hold-to-mine repeat timer and reports when a strike should fire. */
+export function stepHoldMineTimer(opts: {
+  holding: boolean;
+  elapsedSec: number;
+  firedInitial: boolean;
+  dtSec: number;
+}): { elapsedSec: number; firedInitial: boolean; shouldMine: boolean } {
+  if (!opts.holding) {
+    return { elapsedSec: 0, firedInitial: false, shouldMine: false };
+  }
+  const nextElapsed = Math.max(0, opts.elapsedSec) + Math.max(0, opts.dtSec);
+  const threshold = opts.firedInitial ? HOLD_MINE_INTERVAL_SEC : HOLD_MINE_INITIAL_DELAY_SEC;
+  if (nextElapsed >= threshold) {
+    return {
+      elapsedSec: Math.max(0, nextElapsed - threshold),
+      firedInitial: true,
+      shouldMine: true,
+    };
+  }
+  return {
+    elapsedSec: nextElapsed,
+    firedInitial: opts.firedInitial,
+    shouldMine: false,
+  };
+}
+
+/** Rolls tap critical strike damage using Overclock crit tiers when active. */
+export function rollTapCriticalDamage(
+  baseTapDamage: number,
+  overclockActive: boolean,
+  rng: () => number = Math.random,
+  overclockTier: 0 | OverclockTier = overclockActive ? 1 : 0
+): { damage: number; isCrit: boolean } {
+  const safeBase = Math.max(1, Math.round(baseTapDamage));
+  const critChance = overclockActive
+    ? getOverclockTierBuffs(overclockTier || 1).critChance
+    : BASE_TAP_CRIT_CHANCE;
+  const isCrit = rng() < critChance;
+  return {
+    damage: isCrit ? Math.max(1, Math.round(safeBase * TAP_CRIT_MULT)) : safeBase,
+    isCrit,
+  };
+}
 
 export interface MineInputState {
   isDragging: boolean;

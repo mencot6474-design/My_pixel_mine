@@ -92,8 +92,8 @@ export class ChibiFieldFxController {
       ...(sigilTex ? { map: sigilTex } : {}),
       color: enc.color,
       transparent: true,
-      opacity: 0.8,
-      blending: THREE.AdditiveBlending,
+      opacity: 0.92,
+      blending: THREE.NormalBlending,
       depthWrite: false,
     });
     this.sigilMesh = new THREE.Mesh(
@@ -110,8 +110,8 @@ export class ChibiFieldFxController {
         ...(sigilTex ? { map: sigilTex } : {}),
         color: secHex,
         transparent: true,
-        opacity: 0.36,
-        blending: THREE.AdditiveBlending,
+        opacity: 0.62,
+        blending: THREE.NormalBlending,
         depthWrite: false,
       })
     );

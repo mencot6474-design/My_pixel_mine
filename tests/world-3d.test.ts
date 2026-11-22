@@ -122,6 +122,40 @@ import { ShopWorld3D } from '../src/game3d/ShopWorld3D';
 import { createSeraphimBoss3D } from '../src/game3d/SeraphimBoss3D';
 import { TowerArena3D } from '../src/game3d/TowerArena3D';
 import {
+  createAetherMonarchCrownGeometry,
+  createAetherMonarchCrownShaderMaterial,
+  createAetherNexusSealShaderMaterial,
+  createCheshireGlitchCardShaderMaterial,
+  createCheshireGlitchSealShaderMaterial,
+  createClockworkChronoChassisShaderMaterial,
+  createClockworkSakugaWeaponShaderMaterial,
+  createClockworkScytheHandGeometry,
+  createGlitchPrismShardGeometry,
+  createHalcyonMechanicalWingBladeGeometry,
+  createHalcyonOrbitalSealShaderMaterial,
+  createHalcyonRailBowGeometry,
+  createHalcyonRailPillarGeometry,
+  createHalcyonRailPillarShaderMaterial,
+  createHalcyonValkyrieHaloShaderMaterial,
+  createLullabyMoonCradleArchGeometry,
+  createLullabyMoonCradleShaderMaterial,
+  createLullabyMusicBoxSealShaderMaterial,
+  createMonochromeJudgementObeliskShaderMaterial,
+  createMonochromeObeliskGeometry,
+  createMonochromeSanctuarySealShaderMaterial,
+  createNocturneEclipseCraterShaderMaterial,
+  createNocturneEclipseHaloShaderMaterial,
+  createNocturneEclipseMonolithGeometry,
+  createNocturneEclipseMonolithShaderMaterial,
+  createPrismOctahedronGeometry,
+  createPrismRefractionSealShaderMaterial,
+  createPrismShardColumnShaderMaterial,
+  createSlashShaderMaterial,
+  createThornRoseMandalaShaderMaterial,
+  createThornVineLanceGeometry,
+  createThornVineLanceShaderMaterial,
+} from '../src/game3d/MeshFx3D';
+import {
   buildTierMotionWaypoints,
   splitBarrageDamage,
   TierAttackVfxPool3D,
@@ -1834,10 +1868,13 @@ describe('Pure 3D Mine World', () => {
     const noop = () => {};
     const fakeCtx = new Proxy(
       { createLinearGradient: () => ({ addColorStop: noop }), createRadialGradient: () => ({ addColorStop: noop }) },
-      { get: (t, p) => (p in t ? (t as any)[p] : noop) }
+      { get: (t, p) => (p in t ? Reflect.get(t, p) : noop) }
     );
-    const prevDoc = (globalThis as any).document;
-    (globalThis as any).document = {
+    const globalObj = globalThis as unknown as {
+      document?: { createElement: () => { width: number; height: number; getContext: () => typeof fakeCtx } };
+    };
+    const prevDoc = globalObj.document;
+    globalObj.document = {
       createElement: () => ({ width: 256, height: 256, getContext: () => fakeCtx }),
     };
     try {
@@ -1882,7 +1919,7 @@ describe('Pure 3D Mine World', () => {
       expect(hitRes?.meteorWeatherId).toBe('celestial');
       expect(pit.hasAliveMeteor()).toBe(false);
     } finally {
-      (globalThis as any).document = prevDoc;
+      globalObj.document = prevDoc;
     }
 
     const gs = new GameState();
@@ -2070,7 +2107,17 @@ describe('Pure 3D Mine World', () => {
 
     // Uninitialized CrazyGames SDK on external hosts (e.g. GitHub Pages) where init() rejects
     // and .game / .ad getters throw must never crash startup
-    const prevWin = (globalThis as any).window;
+    const globalObj = globalThis as unknown as {
+      window?: {
+        CrazyGames: { SDK: unknown };
+        setTimeout: typeof setTimeout;
+        clearTimeout: typeof clearTimeout;
+        location: { search: string };
+        self: Record<string, unknown>;
+        top: Record<string, unknown>;
+      };
+    };
+    const prevWin = globalObj.window;
     let gameGetterAccessCount = 0;
     const mockSdk = {
       environment: 'crazygames',
@@ -2084,7 +2131,7 @@ describe('Pure 3D Mine World', () => {
         throw new Error('CrazySDK is not initialized yet.');
       },
     };
-    (globalThis as any).window = {
+    globalObj.window = {
       CrazyGames: { SDK: mockSdk },
       setTimeout,
       clearTimeout,
@@ -2105,7 +2152,7 @@ describe('Pure 3D Mine World', () => {
       }).not.toThrow();
       expect(gameGetterAccessCount).toBe(0);
     } finally {
-      (globalThis as any).window = prevWin;
+      globalObj.window = prevWin;
     }
   });
 
@@ -3402,6 +3449,22 @@ describe('Pure 3D Mine World', () => {
       expect(impactCalls).toBeGreaterThan(0);
 
       const sprite = new ChibiSprite3D(def!);
+      if (id === 'halcyon-twins') {
+        const backGroup = sprite.group.getObjectByName('chibiBackAttachmentGroup');
+        expect(backGroup?.children.length).toBe(7); // Valkyrie Halo + 4 Wing-Blades + 2 Rail-Bows
+      }
+      if (id === 'nocturne-twins') {
+        const backGroup = sprite.group.getObjectByName('chibiBackAttachmentGroup');
+        expect(backGroup?.children.length).toBe(7); // Eclipse Corona Halo + 6 Void/Silver Fan Blades
+      }
+      if (id === 'lullaby-twins') {
+        const backGroup = sprite.group.getObjectByName('chibiBackAttachmentGroup');
+        expect(backGroup?.children.length).toBe(2); // Music-Box Halo + Moon Cradle Arch
+      }
+      if (id === 'clockwork-twins') {
+        const backGroup = sprite.group.getObjectByName('chibiBackAttachmentGroup');
+        expect(backGroup?.children.length).toBe(6); // Chrono-Astrolabe Halo + 3 Gears + 2 Clock Hands
+      }
       // Verify Twin back-shader attachment updates in idle state as well as blitz state
       sprite.update(0.05, 0.25, cam);
       sprite.triggerBlitz({ rarity: 'twin', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
@@ -3409,6 +3472,165 @@ describe('Pure 3D Mine World', () => {
       sprite.dispose();
     }
 
+    const halcyonSeal = createHalcyonOrbitalSealShaderMaterial();
+    const halcyonPillarMat = createHalcyonRailPillarShaderMaterial();
+    const halcyonHaloMat = createHalcyonValkyrieHaloShaderMaterial();
+    const halcyonPillarGeo = createHalcyonRailPillarGeometry();
+    const halcyonBladeGeo = createHalcyonMechanicalWingBladeGeometry();
+    const halcyonBowGeo = createHalcyonRailBowGeometry();
+    for (const m of [halcyonSeal, halcyonPillarMat, halcyonHaloMat]) {
+      expect(m.blending).toBe(THREE.NormalBlending);
+      m.dispose();
+    }
+    for (const g of [halcyonPillarGeo, halcyonBladeGeo, halcyonBowGeo]) {
+      expect(g.getAttribute('position').count).toBeGreaterThan(20);
+      g.dispose();
+    }
+
+    const nocturneHalo = createNocturneEclipseHaloShaderMaterial();
+    const nocturneMonolithMat = createNocturneEclipseMonolithShaderMaterial();
+    const nocturneCrater = createNocturneEclipseCraterShaderMaterial();
+    const nocturneMonolithGeo = createNocturneEclipseMonolithGeometry();
+    for (const m of [nocturneHalo, nocturneMonolithMat, nocturneCrater]) {
+      expect(m.blending).toBe(THREE.NormalBlending);
+      m.dispose();
+    }
+    expect(nocturneMonolithGeo.getAttribute('position').count).toBeGreaterThan(24);
+    nocturneMonolithGeo.dispose();
+
+    const lullabySeal = createLullabyMusicBoxSealShaderMaterial();
+    const lullabyCradleMat = createLullabyMoonCradleShaderMaterial();
+    const lullabyCradleGeo = createLullabyMoonCradleArchGeometry();
+    expect(lullabySeal.blending).toBe(THREE.NormalBlending);
+    expect(lullabyCradleMat.blending).toBe(THREE.NormalBlending);
+    expect(lullabyCradleGeo.getAttribute('position').count).toBeGreaterThan(24);
+    lullabySeal.dispose();
+    lullabyCradleMat.dispose();
+    lullabyCradleGeo.dispose();
+
+    const clockworkChassisMat = createClockworkChronoChassisShaderMaterial();
+    const clockworkWeaponMat = createClockworkSakugaWeaponShaderMaterial();
+    const clockworkHandGeo = createClockworkScytheHandGeometry();
+    expect(clockworkChassisMat.blending).toBe(THREE.NormalBlending);
+    expect(clockworkWeaponMat.blending).toBe(THREE.NormalBlending);
+    expect(clockworkWeaponMat.uniforms.uColor).toBeDefined();
+    expect(clockworkHandGeo.getAttribute('position').count).toBeGreaterThan(24);
+    clockworkChassisMat.dispose();
+    clockworkWeaponMat.dispose();
+    clockworkHandGeo.dispose();
+
+    pool.dispose();
+  });
+
+  it('executes bespoke shaders, 3D geometries, and blitz choreography for all 5 Synchro Fusion chibis', () => {
+    const fusionIds = [
+      'glitch-cheshire',
+      'thorn-maiden',
+      'monochrome-saint',
+      'prism-seraph',
+      'aether-monarch',
+    ] as const;
+
+    const sealMats = [
+      createCheshireGlitchSealShaderMaterial(),
+      createThornRoseMandalaShaderMaterial(),
+      createMonochromeSanctuarySealShaderMaterial(),
+      createPrismRefractionSealShaderMaterial(),
+      createAetherNexusSealShaderMaterial(),
+    ];
+    const propMats = [
+      createCheshireGlitchCardShaderMaterial(),
+      createThornVineLanceShaderMaterial(),
+      createMonochromeJudgementObeliskShaderMaterial(),
+      createPrismShardColumnShaderMaterial(),
+      createAetherMonarchCrownShaderMaterial(),
+    ];
+    const propGeos = [
+      createGlitchPrismShardGeometry(),
+      createThornVineLanceGeometry(),
+      createMonochromeObeliskGeometry(),
+      createPrismOctahedronGeometry(),
+      createAetherMonarchCrownGeometry(),
+    ];
+    for (const m of [...sealMats, ...propMats]) {
+      expect(m.blending).toBe(THREE.NormalBlending);
+      expect(m.uniforms.uOpacity).toBeDefined();
+      m.dispose();
+    }
+    for (const g of propGeos) {
+      expect(g.getAttribute('position').count).toBeGreaterThan(12);
+      g.dispose();
+    }
+    const slashMat = createSlashShaderMaterial();
+    expect(slashMat.blending).toBe(THREE.NormalBlending);
+    slashMat.dispose();
+
+    const anchor = { x: -4, y: 0.4, z: -4 };
+    const target = { x: 0, y: 0.05, z: 0.2 };
+    const allTargets = [
+      { x: -2.4, y: 0.05, z: -0.6 },
+      { x: 0, y: 0.05, z: -0.8 },
+      { x: 2.4, y: 0.05, z: -0.5 },
+    ];
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
+    cam.position.set(0, 11, 15);
+
+    let impactCalls = 0;
+    const pool = new TierAttackVfxPool3D({
+      onImpactFrame: () => {
+        impactCalls++;
+      },
+    });
+
+    for (const id of fusionIds) {
+      const def = getChibiById(id);
+      expect(def).toBeDefined();
+      expect(def?.rarity).toBe('fusion');
+
+      const tracks = buildTierMotionWaypoints('fusion', anchor, target, allTargets, def!.accentColor, '#ffffff', target, 1.0, id);
+      expect(tracks.hero.length).toBeGreaterThanOrEqual(5);
+
+      impactCalls = 0;
+      pool.firePodiumWeaponCast({
+        rarity: 'fusion',
+        chibiId: id,
+        colorHex: def!.accentColor,
+        origin: anchor,
+        target,
+        allTargets,
+        areaScale: 0.72,
+        wideCenter: target,
+      });
+      pool.fireAnticipation('fusion', def!.accentColor, target, allTargets, 0.72, target);
+      pool.fireTierAttack({
+        rarity: 'fusion',
+        chibiId: id,
+        colorHex: def!.accentColor,
+        target,
+        allTargets,
+        areaScale: 0.72,
+        wideCenter: target,
+      });
+      for (let i = 0; i < 16; i++) pool.update(0.05, cam);
+      expect(impactCalls).toBeGreaterThan(0);
+
+      const sprite = new ChibiSprite3D(def!);
+      sprite.triggerBlitz({ rarity: 'fusion', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
+      for (let i = 0; i < 18; i++) sprite.update(0.06, i * 0.06, cam);
+      sprite.dispose();
+    }
+
+    pool.setLowQuality(true);
+    pool.fireTierAttack({
+      rarity: 'fusion',
+      chibiId: 'aether-monarch',
+      colorHex: '#fbbf24',
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
+    for (let i = 0; i < 14; i++) pool.update(0.05, cam);
     pool.dispose();
   });
 });

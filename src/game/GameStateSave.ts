@@ -16,7 +16,6 @@ import {
 import { BountyEntry, isValidBountyEntry } from './BountiesDomain';
 import { isValidIndexMilestoneId } from './IndexRewardsDomain';
 import { ResearchTreeId } from './ResearchData';
-import { createEmptyTeamPresets, TEAM_PRESET_COUNT, TeamPresetSlots } from './TeamPresetsDomain';
 import { TOWER_DICE_PITY_MAX, TOWER_MAX_FLOOR, TOWER_MAX_KEYS, TowerSaveData } from './TowerData';
 import { getOmegaBossById, OMEGA_MAX_KEYS } from './OmegaData';
 import { isValidWeatherId, WeatherId } from './WeatherData';
@@ -196,6 +195,23 @@ export function migrateOreId(id: string): string {
 /** Returns true when an ID represents any catalog ore (world or weather) or chibi (world, weather, fusion, limited, or twin) registered in the Index. */
 export function isValidIndexId(id: string): boolean {
   return Boolean(getOreById(id) || getChibiById(id));
+}
+
+export const TEAM_PRESET_COUNT = 3;
+
+export type TeamPresetSlots = (string | null)[];
+
+/** Creates 3 empty team preset slot arrays sized to `STAGE_PEDESTAL_COUNT`. */
+export function createEmptyTeamPresets(): TeamPresetSlots[] {
+  return Array.from({ length: TEAM_PRESET_COUNT }, () =>
+    Array.from({ length: STAGE_PEDESTAL_COUNT }, () => null)
+  );
+}
+
+/** Returns true when at least one slot in a team preset holds a non-empty chibi ID. */
+export function isTeamPresetPopulated(preset: TeamPresetSlots | undefined): boolean {
+  if (!Array.isArray(preset)) return false;
+  return preset.some((id) => typeof id === 'string' && id.length > 0);
 }
 
 /** Creates an empty per-tree research level record for all 9 research trees. */

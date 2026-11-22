@@ -1,204 +1,84 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import type { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import type { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { ChibiDef, getChibiById } from './ChibiCatalog';
 import { ProceduralChestHandle } from './ChestVaultStation3D';
-import { ImpactFrameShader } from './MeshFx3D';
 import { PlotAttackController3D } from './PlotAttackController3D';
 import { type TierVfxHooks } from './TierAttackVfx3D';
 import { preloadCommonMineModels } from './GlbAssets3D';
 import { MineEnvironment3D } from './MineEnvironment3D';
-import { DEFAULT_WORLD_PALETTE, MineWorldPalette, OreVariantKey, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
+import { DEFAULT_WORLD_PALETTE, MineWorldPalette, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
 import { OrePit3D } from './OrePit3D';
 import { PlotLabelInfo, PlotPedestal3D } from './PlotPedestal3D';
 import { FusionRecipeDef } from '../game/FusionData';
 import { FusionWorld3D } from './FusionWorld3D';
-import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId, ShopWorld3D } from './ShopWorld3D';
-import { TowerArena3D, TowerFighterConfig, TowerOreBarScreen } from './TowerArena3D';
-import { OmegaArena3D, type OmegaTargetScreenAnchor } from './OmegaArena3D';
+import { ShopWorld3D } from './ShopWorld3D';
+import { TowerArena3D, TowerFighterConfig } from './TowerArena3D';
+import { OmegaArena3D } from './OmegaArena3D';
 import type { OmegaBossId } from '../game/OmegaData';
 import type { OmegaBattlePhase, OmegaTargetObject } from '../game/OmegaBossDomain';
 import { TowerWaveOreState } from '../game/TowerData';
 import { GRAPHICS_PRESETS, GraphicsQuality } from '../game/GameSettings';
-import { getOverclockTierBuffs, type OverclockTier } from '../game/OverclockDomain';
+import { type OverclockTier } from '../game/OverclockDomain';
 import { WeatherId } from '../game/WeatherData';
 import { type PitEventKind } from '../game/PitEventsDomain';
 import { WeatherFx3D } from './WeatherFx3D';
-import { applyMineWeatherAtmosphere, buildMineStageAndChest, stepMineSceneCamera } from './MineSceneStage3D';
+import {
+  applyCameraOrbitDrag,
+  applyMineGraphicsQuality,
+  applyMineOverclockVisual,
+  applyMineSceneModeTransition,
+  applyMineWeatherAtmosphere,
+  buildMineStageAndChest,
+  clampCameraZoomRadius,
+  createMineRendererAndLights,
+  getDefaultOrbitPitchForMode,
+  type MineSceneCallbacks,
+  type OreHpScreen,
+  type PlotAnchorScreen,
+  stepMineActiveWorldEntities,
+  stepMinePostFxAndDim,
+  stepMineSceneCamera,
+  type SceneMode,
+  type SweetSpotScreen,
+} from './MineSceneStage3D';
 import { MineSceneProjector } from './MineSceneProjector';
-import { bindMineSceneEvents, getPedestalAtClientPosInScene, performMineTapAtInScene, type MineInputCtx, type MineInputState } from './MineSceneInput';
+import {
+  BASE_TAP_CRIT_CHANCE,
+  bindMineSceneEvents,
+  getPedestalAtClientPosInScene,
+  HOLD_MINE_INITIAL_DELAY_SEC,
+  HOLD_MINE_INTERVAL_SEC,
+  OVERCLOCK_TAP_CRIT_CHANCE,
+  performMineTapAtInScene,
+  rollTapCriticalDamage,
+  stepHoldMineTimer,
+  TAP_CRIT_MULT,
+  type MineInputCtx,
+  type MineInputState,
+} from './MineSceneInput';
 import { configureSceneTextureSharpness } from './MeshHelpers3D';
 
-export type SceneMode = 'mine' | 'shop' | 'altar' | 'fusion' | 'tower' | 'omega';
-
-export function getDefaultOrbitPitchForMode(mode: SceneMode): number {
-  switch (mode) {
-    case 'shop':
-      return 0.02;
-    case 'altar':
-      return -0.18;
-    case 'fusion':
-      return -0.18;
-    case 'tower':
-      return -0.34;
-    case 'omega':
-      return -0.32;
-    default:
-      return 0;
-  }
-}
-
-export function applyCameraOrbitDrag(opts: {
-  cameraLocked: boolean;
-  yaw: number;
-  pitch: number;
-  dx: number;
-  dy: number;
-  defaultYaw?: number;
-  defaultPitch?: number;
-}): { yaw: number; pitch: number } {
-  if (opts.cameraLocked) {
-    return { yaw: opts.defaultYaw ?? 0, pitch: opts.defaultPitch ?? 0 };
-  }
-  return {
-    yaw: Math.max(-1.35, Math.min(1.35, opts.yaw - opts.dx * 0.005)),
-    pitch: Math.max(-0.45, Math.min(0.42, opts.pitch + opts.dy * 0.004)),
-  };
-}
-
-export function clampCameraZoomRadius(radius: number, mode: SceneMode): number {
-  const maxRad = mode === 'shop' ? 38 : mode === 'fusion' ? 34 : 28;
-  return Math.max(9, Math.min(maxRad, radius));
-}
-
-export interface PlotAnchorScreen {
-  slotIndex: number;
-  labelX: number;
-  labelY: number;
-  btnX: number;
-  btnY: number;
-  visible: boolean;
-}
-
-export interface OreHpScreen {
-  id: number;
-  x: number;
-  y: number;
-  hp: number;
-  maxHp: number;
-  variantKey: OreVariantKey;
-  isMeteor?: boolean;
-  meteorWeatherId?: WeatherId;
-  pitEventKind?: PitEventKind;
-}
-
-export interface SweetSpotScreen {
-  nodeId: number;
-  x: number;
-  y: number;
-  progress: number;
-  inWindow: boolean;
-  isMeteor: boolean;
-  isTowerShield?: boolean;
-}
-
-export const BASE_TAP_CRIT_CHANCE = 0.15;
-export const OVERCLOCK_TAP_CRIT_CHANCE = 0.3;
-export const TAP_CRIT_MULT = 2.5;
-export const HOLD_MINE_INITIAL_DELAY_SEC = 0.22;
-export const HOLD_MINE_INTERVAL_SEC = 0.18;
-
-export function stepHoldMineTimer(opts: {
-  holding: boolean;
-  elapsedSec: number;
-  firedInitial: boolean;
-  dtSec: number;
-}): { elapsedSec: number; firedInitial: boolean; shouldMine: boolean } {
-  if (!opts.holding) {
-    return { elapsedSec: 0, firedInitial: false, shouldMine: false };
-  }
-  const nextElapsed = Math.max(0, opts.elapsedSec) + Math.max(0, opts.dtSec);
-  const threshold = opts.firedInitial ? HOLD_MINE_INTERVAL_SEC : HOLD_MINE_INITIAL_DELAY_SEC;
-  if (nextElapsed >= threshold) {
-    return {
-      elapsedSec: Math.max(0, nextElapsed - threshold),
-      firedInitial: true,
-      shouldMine: true,
-    };
-  }
-  return {
-    elapsedSec: nextElapsed,
-    firedInitial: opts.firedInitial,
-    shouldMine: false,
-  };
-}
-
-export function rollTapCriticalDamage(
-  baseTapDamage: number,
-  overclockActive: boolean,
-  rng: () => number = Math.random,
-  overclockTier: 0 | OverclockTier = overclockActive ? 1 : 0
-): { damage: number; isCrit: boolean } {
-  const safeBase = Math.max(1, Math.round(baseTapDamage));
-  const critChance = overclockActive
-    ? getOverclockTierBuffs(overclockTier || 1).critChance
-    : BASE_TAP_CRIT_CHANCE;
-  const isCrit = rng() < critChance;
-  return {
-    damage: isCrit ? Math.max(1, Math.round(safeBase * TAP_CRIT_MULT)) : safeBase,
-    isCrit,
-  };
-}
-
-export interface MineSceneCallbacks {
-  onOreBroken?: (
-    variantKey: OreVariantKey,
-    meteorWeatherId?: WeatherId,
-    pitEventKind?: PitEventKind,
-    screenPos?: { x: number; y: number }
-  ) => void;
-  onOreDamage?: (
-    dmg: number,
-    screenX: number,
-    screenY: number,
-    isClick: boolean,
-    isCrit?: boolean,
-    pitEventKind?: PitEventKind,
-    isMeteor?: boolean,
-    isPerfect?: boolean
-  ) => void;
-  onSweetSpot?: (spot: SweetSpotScreen | null) => void;
-  onHoldMineChange?: (active: boolean) => void;
-  onChestClick?: () => void;
-  onPedestalClick?: (slotIndex: number) => void;
-  onPlotAnchors?: (anchors: PlotAnchorScreen[]) => void;
-  onChestAnchor?: (anchor: { x: number; y: number; visible: boolean }) => void;
-  onOreBars?: (bars: OreHpScreen[]) => void;
-  onShopStationClick?: (station: ShopStationId) => void;
-  onShopAnchors?: (anchors: ShopStationAnchor[]) => void;
-  onShopChibiBubbles?: (bubbles: ShopChibiBubbleAnchor[]) => void;
-  onAltarAnchors?: (anchors: AltarPedestalAnchor[]) => void;
-  onTowerMonolithClick?: () => { dmg: number } | void;
-  onTowerTargetClick?: (
-    targetOreIndex: number | null,
-    opts?: { isShieldBreak?: boolean }
-  ) => { dmg: number; broken?: boolean; isCrit?: boolean; shieldBroken?: boolean; shieldShaved?: boolean } | void;
-  onTowerFighterStrike?: (
-    slotIndex: number,
-    targetOreIndex: number | null,
-    attackInterval: number
-  ) => { dmg: number; broken?: boolean; isCrit?: boolean } | void;
-  onTowerOreBars?: (bars: TowerOreBarScreen[]) => void;
-  onOmegaTargetClick?: (targetId: string) => void;
-  onOmegaBossClick?: () => void;
-  onOmegaEntranceSlam?: () => void;
-  onOmegaFighterStrike?: (slotIndex: number, attackInterval: number) => { dmg: number; isCrit?: boolean } | void;
-  onOmegaArenaOverlay?: (data: { bossHead: { x: number; y: number } | null; targets: OmegaTargetScreenAnchor[] } | null) => void;
-  onFpsUpdate?: (fps: number) => void;
-}
+export {
+  applyCameraOrbitDrag,
+  BASE_TAP_CRIT_CHANCE,
+  clampCameraZoomRadius,
+  getDefaultOrbitPitchForMode,
+  HOLD_MINE_INITIAL_DELAY_SEC,
+  HOLD_MINE_INTERVAL_SEC,
+  OVERCLOCK_TAP_CRIT_CHANCE,
+  rollTapCriticalDamage,
+  stepHoldMineTimer,
+  TAP_CRIT_MULT,
+};
+export type {
+  MineSceneCallbacks,
+  OreHpScreen,
+  PlotAnchorScreen,
+  SceneMode,
+  SweetSpotScreen,
+};
 
 export class MineScene3D {
   private readonly scene = new THREE.Scene();
@@ -316,62 +196,24 @@ export class MineScene3D {
     private readonly callbacks: MineSceneCallbacks = {}
   ) {
     const palette = DEFAULT_WORLD_PALETTE;
-    this.scene.background = new THREE.Color(palette.skyBottom);
-    this.scene.fog = new THREE.Fog(palette.fogColor, 42, 105);
-
-    const w = Math.max(1, mountEl.clientWidth);
-    const h = Math.max(1, mountEl.clientHeight);
-    this.viewportWidth = w;
-    this.viewportHeight = h;
-    this.camera = new THREE.PerspectiveCamera(42, w / h, 1.0, 220);
-    this.camera.position.copy(this.baseCamPos);
-    this.camera.lookAt(this.lookAtPos);
-
-    const isMobileTouch =
-      typeof window !== 'undefined' &&
-      (window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
-    this.renderer = new THREE.WebGLRenderer({ antialias: !isMobileTouch, powerPreference: 'high-performance' });
-    const initialPreset = GRAPHICS_PRESETS[this.graphicsQuality];
-    this.renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio || 1, initialPreset.maxPixelRatio)
-    );
-    this.renderer.setSize(w, h);
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.06;
-    this.renderer.shadowMap.enabled = initialPreset.shadowsEnabled;
-    this.renderer.shadowMap.type = this.graphicsQuality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
-    mountEl.appendChild(this.renderer.domElement);
-
-    this.composer = new EffectComposer(this.renderer);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.24, 0.22, 0.9);
-    this.composer.addPass(this.bloomPass);
-    this.impactPass = new ShaderPass(ImpactFrameShader);
-    this.composer.addPass(this.impactPass);
-    this.composer.addPass(new OutputPass());
-
-    // Urban Night Cyber Hemisphere + Directional Key & Cool Cyan Rim Light
-    this.hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x3b4f6e, 1.18);
-    this.scene.add(this.hemiLight);
-
-    this.sunLight = new THREE.DirectionalLight(0xfffbeb, 1.85);
-    this.sunLight.position.set(11, 18, 12);
-    this.sunLight.castShadow = initialPreset.shadowsEnabled;
-    this.sunLight.shadow.mapSize.set(1024, 1024);
-    this.sunLight.shadow.camera.near = 2;
-    this.sunLight.shadow.camera.far = 48;
-    this.sunLight.shadow.camera.left = -14;
-    this.sunLight.shadow.camera.right = 14;
-    this.sunLight.shadow.camera.top = 12;
-    this.sunLight.shadow.camera.bottom = -12;
-    this.sunLight.shadow.bias = -0.0002;
-    this.sunLight.shadow.normalBias = 0.035;
-    this.scene.add(this.sunLight);
-
-    this.rimLight = new THREE.DirectionalLight(0x38bdf8, 0.72);
-    this.rimLight.position.set(-12, 8, -10);
-    this.scene.add(this.rimLight);
+    const initGfx = createMineRendererAndLights({
+      mountEl,
+      scene: this.scene,
+      palette,
+      graphicsQuality: this.graphicsQuality,
+      baseCamPos: this.baseCamPos,
+      lookAtPos: this.lookAtPos,
+    });
+    this.viewportWidth = initGfx.viewportWidth;
+    this.viewportHeight = initGfx.viewportHeight;
+    this.camera = initGfx.camera;
+    this.renderer = initGfx.renderer;
+    this.composer = initGfx.composer;
+    this.bloomPass = initGfx.bloomPass;
+    this.impactPass = initGfx.impactPass;
+    this.hemiLight = initGfx.hemiLight;
+    this.sunLight = initGfx.sunLight;
+    this.rimLight = initGfx.rimLight;
 
     preloadCommonMineModels();
 
@@ -453,7 +295,7 @@ export class MineScene3D {
       },
       onFlash: (_colorHex, strength) => {
         if (this.graphicsQuality === 'low') return;
-        this.bloomPass.strength = Math.min(0.36, 0.24 + strength * 0.2);
+        this.bloomPass.strength = Math.min(0.18, 0.12 + strength * 0.1);
       },
     };
   }
@@ -620,57 +462,6 @@ export class MineScene3D {
     this.camera.updateMatrixWorld();
 
     const inMine = this.mode === 'mine';
-    const inShopOrAltar = this.mode === 'shop' || this.mode === 'altar';
-
-    if (inMine) {
-      this.env.update(dtSec, this.elapsed, this.inputState.crateHovered, this.inputState.crateBounce);
-      for (let i = 0; i < this.pedestals.length; i++) {
-        this.pedestals[i].update(dtSec, this.elapsed, this.camera);
-      }
-    }
-    this.pit.update(dtSec, this.elapsed, this.camera, inMine);
-    if (inShopOrAltar) {
-      this.shopWorld?.update(dtSec, this.elapsed, this.mode === 'shop' ? 'shop' : 'altar', this.camera);
-    } else if (this.mode === 'fusion') {
-      this.fusionWorld?.update(dtSec, this.elapsed, this.camera);
-    } else if (this.mode === 'tower' && this.towerArena) {
-      const towerArena = this.towerArena;
-      towerArena.update(dtSec, this.elapsed, this.camera, (strike) => {
-        const res = this.callbacks.onTowerFighterStrike?.(
-          strike.slotIndex,
-          strike.targetOreIndex,
-          strike.attackInterval
-        );
-        const shownDmg = res ? res.dmg : strike.dmg;
-        if (res && res.dmg > 0 && strike.targetOreIndex !== null) {
-          towerArena.triggerOreHitBounce(strike.targetOreIndex, Boolean(res.broken), strike);
-        }
-        if (shownDmg > 0) {
-          this.emitDamageScreen(shownDmg, strike.wx, strike.wy, strike.wz, false, Boolean(res?.isCrit));
-        }
-      });
-    } else if (this.mode === 'omega' && this.omegaArena) {
-      const omegaArena = this.omegaArena;
-      omegaArena.update(
-        dtSec,
-        this.elapsed,
-        this.camera,
-        (strike) => {
-          const res = this.callbacks.onOmegaFighterStrike?.(strike.slotIndex, strike.attackInterval);
-          const shownDmg = res ? res.dmg : strike.dmg;
-          if (shownDmg > 0) {
-            omegaArena.triggerBossHitEffect(strike.accentColor, Boolean(res?.isCrit));
-            this.emitDamageScreen(shownDmg, strike.wx, strike.wy, strike.wz, false, Boolean(res?.isCrit));
-          }
-        },
-        () => {
-          this.tapShakeIntensity = Math.max(this.tapShakeIntensity, 0.34);
-          this.callbacks.onOmegaEntranceSlam?.();
-        }
-      );
-    }
-    this.weatherFx.update(dtSec, this.elapsed, inMine || this.mode === 'shop');
-
     const wasHoldFired = this.inputState.holdMineFiredInitial;
     const holdTick = stepHoldMineTimer({
       holding: inMine && this.inputState.holdMineActive && !this.inputState.dragMoved && !this.adPaused,
@@ -687,88 +478,62 @@ export class MineScene3D {
       this.performMineTapAt(this.inputState.holdMineClientX, this.inputState.holdMineClientY, undefined, true);
     }
 
-    const hitCb = inMine
-      ? (dmg: number, wx: number, wy: number, wz: number, isMeteor?: boolean, isCrit?: boolean) =>
-          this.emitDamageScreen(dmg, wx, wy, wz, false, Boolean(isCrit), undefined, isMeteor)
-      : undefined;
-
-    const minerBreakCb = (
-      variantKey: OreVariantKey,
-      meteorWeatherId?: WeatherId,
-      pitEventKind?: PitEventKind,
-      worldPos?: { x: number; y: number; z: number }
-    ): void => {
-      const screenPos = worldPos ? (this.projectWorldToScreen(worldPos.x, worldPos.y, worldPos.z) ?? undefined) : undefined;
-      this.callbacks.onOreBroken?.(variantKey, meteorWeatherId, pitEventKind, screenPos);
-    };
-
-    this.plotAttackController.update(
+    stepMineActiveWorldEntities({
+      mode: this.mode,
       dtSec,
-      this.camera,
-      this.pit,
-      this.pedestals,
+      rawDt,
+      elapsed: this.elapsed,
+      camera: this.camera,
+      env: this.env,
+      pit: this.pit,
+      pedestals: this.pedestals,
+      plotAttackController: this.plotAttackController,
+      weatherFx: this.weatherFx,
+      shopWorld: this.shopWorld,
+      fusionWorld: this.fusionWorld,
+      towerArena: this.towerArena,
+      omegaArena: this.omegaArena,
+      crateGroup: this.crateGroup,
+      chestVisual: this.chestVisual,
+      inputState: this.inputState,
+      onTowerFighterStrike: this.callbacks.onTowerFighterStrike,
+      onOmegaFighterStrike: this.callbacks.onOmegaFighterStrike,
+      onOmegaEntranceSlam: () => {
+        this.tapShakeIntensity = Math.max(this.tapShakeIntensity, 0.34);
+        this.callbacks.onOmegaEntranceSlam?.();
+      },
+      onOreBroken: this.callbacks.onOreBroken,
+      emitDamageScreen: (dmg, wx, wy, wz, isClick, isCrit, pitEventKind, isMeteor) =>
+        this.emitDamageScreen(dmg, wx, wy, wz, isClick, isCrit, pitEventKind, isMeteor),
+      projectWorldToScreen: (wx, wy, wz) => this.projectWorldToScreen(wx, wy, wz),
+    });
+
+    const postFxTimers = {
+      impactFrameCooldown: this.impactFrameCooldown,
+      arenaDimCooldown: this.arenaDimCooldown,
+      impactFrameTimer: this.impactFrameTimer,
+      speedLinesTimer: this.speedLinesTimer,
+      arenaDimTimer: this.arenaDimTimer,
+      arenaDimTarget: this.arenaDimTarget,
+      arenaDimCurrent: this.arenaDimCurrent,
+    };
+    stepMinePostFxAndDim({
+      dtSec,
+      nowMs: now,
       inMine,
-      minerBreakCb,
-      hitCb
-    );
-
-    // If the browser tab was backgrounded/throttled (rawDt > 0.12s), catch up missed mine ticks seamlessly
-    if (rawDt > 0.12 && this.plotAttackController.getUnitCount() > 0) {
-      let rem = Math.min(180, rawDt - dtSec);
-      const step = 0.25;
-      while (rem > 0) {
-        const s = Math.min(step, rem);
-        rem -= s;
-        this.pit.update(s, this.elapsed);
-        this.plotAttackController.update(
-          s,
-          this.camera,
-          this.pit,
-          this.pedestals,
-          false,
-          this.callbacks.onOreBroken,
-          undefined
-        );
-      }
-    }
-
-    if (inMine) {
-      if (this.inputState.crateBounce > 0) {
-        this.inputState.crateBounce = Math.max(0, this.inputState.crateBounce - dtSec * 1.4);
-      }
-      const crateScale = (this.inputState.crateHovered ? 1.07 : 1.0) + this.inputState.crateBounce * 0.32;
-      this.crateGroup.scale.set(crateScale, Math.max(0.84, crateScale - this.inputState.crateBounce * 0.25), crateScale);
-      this.chestVisual.setInteraction(this.inputState.crateHovered, this.inputState.crateBounce, this.elapsed);
-    }
-
-    if (inMine || this.mode === 'shop') {
-      this.env.updateSky(this.elapsed, this.camera.position);
-    }
-
-    // Smooth Domain Dim, Bloom Decay & Sakuga Impact Frame Post-FX
-    this.impactPass.uniforms.uTime.value = now * 0.001;
-    if (this.impactFrameCooldown > 0) this.impactFrameCooldown = Math.max(0, this.impactFrameCooldown - dtSec);
-    if (this.arenaDimCooldown > 0) this.arenaDimCooldown = Math.max(0, this.arenaDimCooldown - dtSec);
-    if (this.impactFrameTimer > 0) {
-      this.impactFrameTimer = Math.max(0, this.impactFrameTimer - dtSec);
-      if (this.impactFrameTimer <= 0) this.impactPass.uniforms.uImpactStrength.value = 0;
-    }
-    if (this.speedLinesTimer > 0) {
-      this.speedLinesTimer = Math.max(0, this.speedLinesTimer - dtSec);
-      if (this.speedLinesTimer <= 0) this.impactPass.uniforms.uSpeedLines.value = 0;
-    }
-    if (this.arenaDimTimer > 0) {
-      this.arenaDimTimer = Math.max(0, this.arenaDimTimer - dtSec);
-      if (this.arenaDimTimer <= 0) this.arenaDimTarget = 0;
-    }
-    const dimRate = this.arenaDimTarget > this.arenaDimCurrent ? 12 : 4.5;
-    this.arenaDimCurrent += (this.arenaDimTarget - this.arenaDimCurrent) * Math.min(1, dtSec * dimRate);
-    if (inMine && (this.arenaDimCurrent > 0.005 || this.arenaDimTarget > 0)) {
-      const k = 1 - this.arenaDimCurrent * 0.52;
-      this.hemiLight.intensity = 1.18 * k;
-      this.sunLight.intensity = 1.85 * k;
-    }
-    this.bloomPass.strength += (0.24 - this.bloomPass.strength) * Math.min(1, dtSec * 7);
+      timers: postFxTimers,
+      impactPass: this.impactPass,
+      bloomPass: this.bloomPass,
+      hemiLight: this.hemiLight,
+      sunLight: this.sunLight,
+    });
+    this.impactFrameCooldown = postFxTimers.impactFrameCooldown;
+    this.arenaDimCooldown = postFxTimers.arenaDimCooldown;
+    this.impactFrameTimer = postFxTimers.impactFrameTimer;
+    this.speedLinesTimer = postFxTimers.speedLinesTimer;
+    this.arenaDimTimer = postFxTimers.arenaDimTimer;
+    this.arenaDimTarget = postFxTimers.arenaDimTarget;
+    this.arenaDimCurrent = postFxTimers.arenaDimCurrent;
 
     const shouldRenderFrame =
       !this.modalBackdropThrottled || now - this.lastThrottledRenderMs >= 33;
@@ -806,113 +571,39 @@ export class MineScene3D {
     this.mode = mode;
     this.lastOverlayEmitMs = 0;
     this.tapShakeIntensity = 0;
-    this.weatherFx.setShopMode(mode === 'shop');
-    this.weatherFx.setFeverTier(mode === 'mine' ? this.overclockTier : 0);
-    if (mode !== 'mine' && mode !== 'tower') {
-      this.renderer.domElement.classList.remove('mam-mining-cursor');
-    }
-    if (mode !== 'altar') {
-      this.shopWorld?.cancelSpin();
-    }
-    if (mode !== 'fusion') {
-      this.fusionWorld?.cancelAnimation();
-    }
-    if (mode === 'shop' || mode === 'altar') {
-      this.ensureShopWorld();
-    } else if (mode === 'fusion') {
-      this.ensureFusionWorld();
-    } else if (mode === 'tower') {
-      this.ensureTowerArena();
-    } else if (mode === 'omega') {
-      this.ensureOmegaArena();
-    }
-    const isMine = mode === 'mine';
-    if (this.shopWorld) {
-      this.shopWorld.shopGroup.visible = mode === 'shop';
-      this.shopWorld.altarGroup.visible = mode === 'altar';
-    }
-    if (this.fusionWorld) {
-      this.fusionWorld.group.visible = mode === 'fusion';
-    }
-    if (this.towerArena) {
-      this.towerArena.group.visible = mode === 'tower';
-    }
-    if (this.omegaArena) {
-      this.omegaArena.group.visible = mode === 'omega';
-    }
-    this.env.group.visible = isMine;
-    this.env.skyDome.visible = mode === 'mine' || mode === 'shop';
-    this.pit.group.visible = isMine;
-    this.crateGroup.visible = isMine;
-    this.pedestals.forEach((p) => {
-      p.group.visible = isMine;
+    applyMineSceneModeTransition({
+      mode,
+      modeChanged,
+      overclockTier: this.overclockTier,
+      scene: this.scene,
+      camera: this.camera,
+      renderer: this.renderer,
+      weatherFx: this.weatherFx,
+      env: this.env,
+      pit: this.pit,
+      crateGroup: this.crateGroup,
+      pedestals: this.pedestals,
+      plotAttackController: this.plotAttackController,
+      shopWorld: this.shopWorld,
+      fusionWorld: this.fusionWorld,
+      towerArena: this.towerArena,
+      omegaArena: this.omegaArena,
+      ensureShopWorld: () => this.ensureShopWorld(),
+      ensureFusionWorld: () => this.ensureFusionWorld(),
+      ensureTowerArena: () => this.ensureTowerArena(),
+      ensureOmegaArena: () => this.ensureOmegaArena(),
+      applyWeatherAtmosphere: () => this.applyWeatherAtmosphere(),
+      syncTowerFighters: () => this.syncTowerFighters(),
+      inputState: this.inputState,
+      lookAtPos: this.lookAtPos,
+      currentLookAt: this.currentLookAt,
+      baseCamPos: this.baseCamPos,
+      setOrbitImmediate: (yaw, pitch, radius) => {
+        this.orbitYaw = yaw;
+        this.orbitPitch = pitch;
+        this.camRadius = radius;
+      },
     });
-    this.plotAttackController.group.visible = isMine;
-
-    if (mode === 'altar') {
-      this.scene.background = new THREE.Color(0x020208);
-      this.scene.fog = new THREE.Fog(0x040312, 34, 86);
-      this.applyWeatherAtmosphere();
-      this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('altar');
-      this.inputState.targetCamRadius = 12.2;
-      this.lookAtPos.set(0, 1.05, -2.4);
-    } else if (mode === 'fusion') {
-      this.scene.background = new THREE.Color(0x0c1422);
-      this.scene.fog = new THREE.Fog(0x0c1422, 46, 112);
-      this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('fusion');
-      this.inputState.targetCamRadius = 23.4;
-      this.lookAtPos.set(0, 2.85, -2.5);
-      this.applyWeatherAtmosphere();
-    } else if (mode === 'tower') {
-      this.scene.background = new THREE.Color(0x7dd3fc);
-      this.scene.fog = new THREE.Fog(0xbae6fd, 34, 96);
-      this.applyWeatherAtmosphere();
-      this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('tower');
-      this.inputState.targetCamRadius = 16.4;
-      this.lookAtPos.set(0, 2.25, -1.6);
-      this.syncTowerFighters();
-      this.towerArena?.resetFloorCharge();
-    } else if (mode === 'omega') {
-      this.scene.background = new THREE.Color(0xfda4af);
-      this.scene.fog = new THREE.Fog(0xfecdd3, 38, 108);
-      this.applyWeatherAtmosphere();
-      this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('omega');
-      this.inputState.targetCamRadius = 16.4;
-      this.lookAtPos.set(0, 2.1, -1.5);
-      this.syncTowerFighters();
-    } else if (mode === 'shop') {
-      const aspect = this.camera.aspect || 1;
-      this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('shop');
-      this.inputState.targetCamRadius = aspect < 0.85 ? 37.6 : aspect < 1.15 ? 33.2 : 30.4;
-      this.lookAtPos.set(0, 2.95, -2.9);
-      this.applyWeatherAtmosphere();
-    } else {
-      this.inputState.targetOrbitYaw = 0;
-      this.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('mine');
-      this.inputState.targetCamRadius = 18.8;
-      this.lookAtPos.set(0, 0.55, 0.35);
-      this.applyWeatherAtmosphere();
-    }
-
-    if (modeChanged) {
-      this.orbitYaw = this.inputState.targetOrbitYaw;
-      this.orbitPitch = this.inputState.targetOrbitPitch;
-      this.camRadius = this.inputState.targetCamRadius;
-      this.currentLookAt.copy(this.lookAtPos);
-      const camY = (this.baseCamPos.y + this.orbitPitch * 7) * (this.camRadius / 16.5);
-      this.camera.position.set(
-        this.lookAtPos.x + Math.sin(this.orbitYaw) * this.camRadius,
-        camY,
-        this.lookAtPos.z + Math.cos(this.orbitYaw) * this.camRadius
-      );
-      this.camera.lookAt(this.currentLookAt);
-      this.camera.updateMatrixWorld();
-    }
   }
 
 
@@ -1193,44 +884,35 @@ export class MineScene3D {
     if (this.overclockActive === active && this.overclockTier === nextTier) return;
     this.overclockActive = active;
     this.overclockTier = nextTier;
-    this.weatherFx.setFeverTier(this.mode === 'mine' ? nextTier : 0);
-    if (active) {
-      const hex = nextTier === 3 ? 0x22d3ee : nextTier === 2 ? 0xfb7185 : 0xf59e0b;
-      this.stageNeonMat.color.setHex(hex);
-      this.stageNeonMat.emissive.setHex(hex);
-      this.stageNeonMat.emissiveIntensity = nextTier === 3 ? 2.4 : nextTier === 2 ? 2.1 : 1.85;
-      this.stageHoloMat.color.setHex(hex);
-      this.rimLight.color.setHex(hex);
-      this.rimLight.intensity = nextTier === 3 ? 1.55 : nextTier === 2 ? 1.4 : 1.25;
-    } else {
-      this.stageNeonMat.color.set(this.activePalette.crystalColor);
-      this.stageNeonMat.emissive.set(this.activePalette.crystalColor);
-      this.stageNeonMat.emissiveIntensity = 1.15;
-      this.stageHoloMat.color.set(this.activePalette.crystalColor);
-      this.rimLight.intensity = 0.72;
-      this.applyWeatherAtmosphere();
-    }
+    applyMineOverclockVisual({
+      active,
+      tier: nextTier,
+      mode: this.mode,
+      activePalette: this.activePalette,
+      weatherFx: this.weatherFx,
+      stageNeonMat: this.stageNeonMat,
+      stageHoloMat: this.stageHoloMat,
+      rimLight: this.rimLight,
+      applyWeatherAtmosphere: () => this.applyWeatherAtmosphere(),
+    });
   }
 
   public setGraphicsQuality(quality: GraphicsQuality): void {
     this.graphicsQuality = quality;
-    const low = quality === 'low';
-    const preset = GRAPHICS_PRESETS[quality];
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.maxPixelRatio));
-    this.renderer.shadowMap.enabled = preset.shadowsEnabled;
-    this.renderer.shadowMap.type = quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
-    this.sunLight.castShadow = preset.shadowsEnabled;
-    this.renderer.shadowMap.needsUpdate = true;
-    this.weatherFx.setQualityScale(preset.weatherParticleScale);
-    this.env.setLowQuality(low);
-    this.pit.setLowQuality(low);
-    this.towerArena?.setLowQuality(low);
-    this.omegaArena?.setLowQuality(low);
-    for (let i = 0; i < this.pedestals.length; i++) {
-      this.pedestals[i].setLowQuality(low);
-    }
-    this.plotAttackController.setLowQuality(low);
-    configureSceneTextureSharpness(this.renderer, this.scene, this.getTextureAnisoCap());
+    applyMineGraphicsQuality({
+      quality,
+      anisoCap: this.getTextureAnisoCap(),
+      scene: this.scene,
+      renderer: this.renderer,
+      sunLight: this.sunLight,
+      weatherFx: this.weatherFx,
+      env: this.env,
+      pit: this.pit,
+      towerArena: this.towerArena,
+      omegaArena: this.omegaArena,
+      pedestals: this.pedestals,
+      plotAttackController: this.plotAttackController,
+    });
   }
 
   public setModalBackdropThrottled(throttled: boolean): void {

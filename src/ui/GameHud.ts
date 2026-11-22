@@ -24,20 +24,23 @@ import { ForgeModalUi } from './ForgeModalUi';
 import { FusionHudUi } from './FusionHudUi';
 import { HotbarHudUi, canDropHotbarOnPlot } from './HotbarHudUi';
 import {
+  applyHudViewportScale,
   renderAudioControlsHtml,
   renderCurrencyRailHtml,
   renderFeverScreenFxHtml,
   renderMineChromeHtml,
   renderMineQuickButtonsHtml,
   syncFeverScreenFxDom,
+  updateFpsBadgeDom,
 } from './HudChromeRenderer';
 import { HudTowerBridge } from './HudTowerBridge';
 import { HudOmegaBridge, type OmegaSceneOps } from './HudOmegaBridge';
 import {
-  buildHudCoordinatorActions,
+  bindHudRootEvents,
   renderActiveModalHtml,
   stepHudFastTick,
   stepHudSlowTick,
+  syncHudLiveSubView,
   updateHudCurrencyAndBadges,
 } from './HudActionRouter';
 import {
@@ -47,7 +50,6 @@ import {
   refreshPotionTimersInDom,
   renderToastBannerHtml,
   restoreRootScrolls,
-  shouldDismissModalBackdrop,
   TW_TOAST_STACK,
 } from './HudShared';
 import { OfflineModalUi } from './OfflineModalUi';
@@ -381,33 +383,19 @@ export class GameHud {
       }
       this.onSyncPlots(this.state.getEquippedPlotMinerIds());
       this.weatherDpsUi.syncActivePotionsHud(this.root);
-
-      if (this.sceneMode === 'altar') {
-        this.altarShopUi.updateAltarLiveValues(this.root);
-      } else if (this.sceneMode === 'fusion') {
-        this.fusionUi.syncCurrentRecipeTo3D();
-      } else if (this.sceneMode === 'tower') {
-        this.towerUi.updateLiveValues(this.root);
-      } else if (this.activeModal === 'chest') {
-        this.chestUi.updateLive(this.root);
-      } else if (this.activeModal === 'pickaxe-shop') {
-        this.shopUi.updatePickaxeShopLive(this.root);
-      } else if (this.activeModal === 'sell-shop') {
-        this.shopUi.updateSellShopLive(this.root);
-      } else if (this.activeModal === 'gem-shop') {
-        this.shopUi.updateGemShopLive(this.root);
-      } else if (this.activeModal === 'premium-shop') {
-        this.shopUi.updatePremiumShopLive(this.root);
-      } else if (this.activeModal === 'index') {
-        this.indexUi.updateLive(this.root);
-      } else if (this.activeModal === 'inventory') {
-        this.inventoryUi.updateLive(this.root);
-      } else if (this.activeModal === 'upgrades') {
-        this.upgradesUi.updateUpgradesLive(this.root);
-      } else if (this.activeModal === 'worlds') {
-        this.upgradesUi.updateWorldsModalLive(this.root);
-      }
-      this.upgradesUi.updateUpgradesBadgeLive(this.root);
+      syncHudLiveSubView({
+        root: this.root,
+        sceneMode: this.sceneMode,
+        activeModal: this.activeModal,
+        altarShopUi: this.altarShopUi,
+        fusionUi: this.fusionUi,
+        towerUi: this.towerUi,
+        chestUi: this.chestUi,
+        shopUi: this.shopUi,
+        indexUi: this.indexUi,
+        inventoryUi: this.inventoryUi,
+        upgradesUi: this.upgradesUi,
+      });
     });
 
     window.addEventListener('keydown', (e) => {
@@ -712,33 +700,7 @@ export class GameHud {
   }
 
   private updateViewportScale(): void {
-    if (typeof window === 'undefined') return;
-    const vw = Math.max(320, window.innerWidth || 1280);
-    const vh = Math.max(240, window.innerHeight || 720);
-    const scale = Math.max(0.5, Math.min(1, vw / 1160, vh / 660));
-    const logicalW = vw / scale;
-    const logicalH = vh / scale;
-
-    if (scale >= 0.999) {
-      this.root.style.width = '100%';
-      this.root.style.height = '100%';
-      this.root.style.transform = 'none';
-      this.root.style.setProperty('zoom', '1');
-    } else {
-      this.root.style.width = `${logicalW.toFixed(2)}px`;
-      this.root.style.height = `${logicalH.toFixed(2)}px`;
-      this.root.style.transform = 'none';
-      this.root.style.setProperty('zoom', scale.toFixed(4));
-    }
-    this.root.style.transformOrigin = 'top left';
-    this.root.dataset.hudCompact = logicalW < 920 ? 'true' : 'false';
-    this.root.dataset.hudPotsAbove = logicalW < 1080 ? 'true' : 'false';
-    this.root.dataset.hudDpsAbove = logicalW < 1140 ? 'true' : 'false';
-    this.root.dataset.hudShort = logicalH < 640 ? 'true' : 'false';
-
-    const floatScale = Math.max(0.72, Math.min(1, scale));
-    document.documentElement.style.setProperty('--mam-ui-scale', scale.toFixed(4));
-    document.documentElement.style.setProperty('--mam-float-scale', floatScale.toFixed(4));
+    applyHudViewportScale(this.root);
   }
 
   private renderAudioToggleBtn(floating = true): string {
@@ -752,14 +714,7 @@ export class GameHud {
 
   public updateFps(fps: number): void {
     this.currentFps = fps;
-    const valEl = this.root.querySelector<HTMLElement>('[data-fps-value]');
-    if (valEl) {
-      valEl.textContent = fps > 0 ? String(fps) : '--';
-    }
-    const dotEl = this.root.querySelector<HTMLElement>('[data-fps-dot]');
-    if (dotEl) {
-      dotEl.style.background = fps >= 50 ? '#22c55e' : fps >= 30 ? '#f59e0b' : '#ef4444';
-    }
+    updateFpsBadgeDom(this.root, fps);
   }
 
   private renderCurrencyRail(opts: {
@@ -988,72 +943,35 @@ export class GameHud {
   }
 
   private bindEvents(): void {
-    const backdrop = this.root.querySelector<HTMLElement>('[data-backdrop="true"]');
-    if (backdrop) {
-      let pointerDownOnBackdrop = false;
-      backdrop.addEventListener('pointerdown', (e) => {
-        pointerDownOnBackdrop = e.target === e.currentTarget;
-      });
-      backdrop.addEventListener('pointercancel', () => {
-        pointerDownOnBackdrop = false;
-      });
-      backdrop.addEventListener('click', (e) => {
-        if (e.target !== e.currentTarget) return;
-        const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
-        if (
-          !shouldDismissModalBackdrop({
-            pointerDownOnSelf: pointerDownOnBackdrop,
-            openedAtMs: this.modalOpenedAtMs,
-            nowMs,
-          })
-        ) {
-          return;
-        }
-        this.openModal('none');
-      });
-    }
-
-    const coordinatorActions = buildHudCoordinatorActions({
+    bindHudRootEvents({
       root: this.root,
       state: this.state,
-      shopUi: this.shopUi,
-      inventoryUi: this.inventoryUi,
-      upgradesUi: this.upgradesUi,
+      getModalOpenedAtMs: () => this.modalOpenedAtMs,
       getActiveModal: () => this.activeModal,
       openModal: (kind) => this.openModal(kind),
       toggleModal: (kind) => this.toggleModal(kind),
       setSceneMode: (mode) => this.setSceneMode(mode),
       pushToast: (msg) => this.pushToast(msg),
       render: () => this.render(),
+      hotbarUi: this.hotbarUi,
+      weatherDpsUi: this.weatherDpsUi,
+      altarShopUi: this.altarShopUi,
+      indexUi: this.indexUi,
+      inventoryUi: this.inventoryUi,
+      chestUi: this.chestUi,
+      forgeUi: this.forgeUi,
+      shopUi: this.shopUi,
+      upgradesUi: this.upgradesUi,
+      towerUi: this.towerUi,
+      settingsUi: this.settingsUi,
+      offlineUi: this.offlineUi,
+      bountiesUi: this.bountiesUi,
+      achievementsUi: this.achievementsUi,
+      dailyLoginUi: this.dailyLoginUi,
+      fusionUi: this.fusionUi,
+      omegaBossUi: this.omegaBossUi,
+      omegaArenaUi: this.omegaArenaUi,
     });
-
-    this.root.querySelectorAll<HTMLElement>('[data-action]').forEach((el) => {
-      const action = el.dataset.action;
-      const handler = action ? coordinatorActions[action] : undefined;
-      if (handler) el.addEventListener('click', handler);
-    });
-
-    this.hotbarUi.bindEvents(this.root);
-    this.upgradesUi.bindUpgradesEvents(this.root);
-    this.upgradesUi.bindWorldsEvents(this.root);
-    this.weatherDpsUi.bindEvents(this.root);
-    this.altarShopUi.bindEvents(this.root);
-    this.indexUi.bindEvents(this.root);
-    this.inventoryUi.bindEvents(this.root);
-    this.chestUi.bindEvents(this.root);
-    this.forgeUi.bindEvents(this.root);
-    this.shopUi.bindEvents(this.root);
-    this.towerUi.bindHubEvents(this.root);
-    this.towerUi.bindArenaEvents(this.root);
-    this.settingsUi.bindEvents(this.root);
-    this.offlineUi.bindEvents(this.root);
-    this.bountiesUi.bindEvents(this.root);
-    this.achievementsUi.bindEvents(this.root);
-    this.dailyLoginUi.bindEvents(this.root);
-    this.fusionUi.bindAltarChoiceEvents(this.root);
-    this.fusionUi.bindFusionWorldEvents(this.root);
-    this.omegaBossUi.bindEvents(this.root);
-    this.omegaArenaUi.bindArenaEvents(this.root);
   }
 
   private updateCurrencyLiveValues(): void {

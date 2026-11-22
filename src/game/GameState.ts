@@ -957,6 +957,19 @@ export class GameState {
     };
   }
 
+  /** Unlocks the given Chibi IDs in `miners` and `discovered`, then saves and notifies listeners. */
+  public unlockChibisByIds(chibiIds: readonly string[]): number {
+    let newlyUnlocked = 0;
+    for (const id of chibiIds) {
+      if (!id) continue;
+      if ((this.miners[id] || 0) < 1) newlyUnlocked++;
+      this.miners[id] = Math.max(1, this.miners[id] || 0);
+      this.discovered.add(id);
+    }
+    this.emit();
+    return newlyUnlocked;
+  }
+
   public touchSaveTimestamp(): void {
     this.save();
   }

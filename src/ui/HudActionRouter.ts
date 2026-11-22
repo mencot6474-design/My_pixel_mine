@@ -16,7 +16,10 @@ import {
   formatCountdownTimer,
   type ModalKind,
   refreshPotionTimersInDom,
+  shouldDismissModalBackdrop,
 } from './HudShared';
+import type { AltarShopHudUi } from './AltarShopHudUi';
+import type { HotbarHudUi } from './HotbarHudUi';
 import type { IndexModalUi } from './IndexModalUi';
 import type { InventoryModalUi } from './InventoryModalUi';
 import type { OfflineModalUi } from './OfflineModalUi';
@@ -390,4 +393,113 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
     }
     ctx.towerUi.updateLiveValues(ctx.root);
   }
+}
+
+export interface HudLiveSubViewContext {
+  root: HTMLElement;
+  sceneMode: SceneMode;
+  activeModal: ModalKind;
+  altarShopUi: AltarShopHudUi;
+  fusionUi: FusionHudUi;
+  towerUi: TowerUi;
+  chestUi: ChestModalUi;
+  shopUi: ShopModalsUi;
+  indexUi: IndexModalUi;
+  inventoryUi: InventoryModalUi;
+  upgradesUi: UpgradesWorldsUi;
+}
+
+/** Updates live values for whichever non-idle scene or modal is currently active. */
+export function syncHudLiveSubView(ctx: HudLiveSubViewContext): void {
+  if (ctx.sceneMode === 'altar') {
+    ctx.altarShopUi.updateAltarLiveValues(ctx.root);
+  } else if (ctx.sceneMode === 'fusion') {
+    ctx.fusionUi.syncCurrentRecipeTo3D();
+  } else if (ctx.sceneMode === 'tower') {
+    ctx.towerUi.updateLiveValues(ctx.root);
+  } else if (ctx.activeModal === 'chest') {
+    ctx.chestUi.updateLive(ctx.root);
+  } else if (ctx.activeModal === 'pickaxe-shop') {
+    ctx.shopUi.updatePickaxeShopLive(ctx.root);
+  } else if (ctx.activeModal === 'sell-shop') {
+    ctx.shopUi.updateSellShopLive(ctx.root);
+  } else if (ctx.activeModal === 'gem-shop') {
+    ctx.shopUi.updateGemShopLive(ctx.root);
+  } else if (ctx.activeModal === 'premium-shop') {
+    ctx.shopUi.updatePremiumShopLive(ctx.root);
+  } else if (ctx.activeModal === 'index') {
+    ctx.indexUi.updateLive(ctx.root);
+  } else if (ctx.activeModal === 'inventory') {
+    ctx.inventoryUi.updateLive(ctx.root);
+  } else if (ctx.activeModal === 'upgrades') {
+    ctx.upgradesUi.updateUpgradesLive(ctx.root);
+  } else if (ctx.activeModal === 'worlds') {
+    ctx.upgradesUi.updateWorldsModalLive(ctx.root);
+  }
+  ctx.upgradesUi.updateUpgradesBadgeLive(ctx.root);
+}
+
+export interface HudBindRootEventsContext extends HudActionRouterContext, HudModalRenderers {
+  getModalOpenedAtMs: () => number;
+  hotbarUi: HotbarHudUi;
+  weatherDpsUi: WeatherDpsHudUi;
+  altarShopUi: AltarShopHudUi;
+  omegaArenaUi: OmegaArenaHudUi;
+}
+
+/** Binds modal backdrop dismissal, coordinator actions, and all sub-UI event handlers. */
+export function bindHudRootEvents(ctx: HudBindRootEventsContext): void {
+  const backdrop = ctx.root.querySelector<HTMLElement>('[data-backdrop="true"]');
+  if (backdrop) {
+    let pointerDownOnBackdrop = false;
+    backdrop.addEventListener('pointerdown', (e) => {
+      pointerDownOnBackdrop = e.target === e.currentTarget;
+    });
+    backdrop.addEventListener('pointercancel', () => {
+      pointerDownOnBackdrop = false;
+    });
+    backdrop.addEventListener('click', (e) => {
+      if (e.target !== e.currentTarget) return;
+      const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      if (
+        !shouldDismissModalBackdrop({
+          pointerDownOnSelf: pointerDownOnBackdrop,
+          openedAtMs: ctx.getModalOpenedAtMs(),
+          nowMs,
+        })
+      ) {
+        return;
+      }
+      ctx.openModal('none');
+    });
+  }
+
+  const coordinatorActions = buildHudCoordinatorActions(ctx);
+  ctx.root.querySelectorAll<HTMLElement>('[data-action]').forEach((el) => {
+    const action = el.dataset.action;
+    const handler = action ? coordinatorActions[action] : undefined;
+    if (handler) el.addEventListener('click', handler);
+  });
+
+  ctx.hotbarUi.bindEvents(ctx.root);
+  ctx.upgradesUi.bindUpgradesEvents(ctx.root);
+  ctx.upgradesUi.bindWorldsEvents(ctx.root);
+  ctx.weatherDpsUi.bindEvents(ctx.root);
+  ctx.altarShopUi.bindEvents(ctx.root);
+  ctx.indexUi.bindEvents(ctx.root);
+  ctx.inventoryUi.bindEvents(ctx.root);
+  ctx.chestUi.bindEvents(ctx.root);
+  ctx.forgeUi.bindEvents(ctx.root);
+  ctx.shopUi.bindEvents(ctx.root);
+  ctx.towerUi.bindHubEvents(ctx.root);
+  ctx.towerUi.bindArenaEvents(ctx.root);
+  ctx.settingsUi.bindEvents(ctx.root);
+  ctx.offlineUi.bindEvents(ctx.root);
+  ctx.bountiesUi.bindEvents(ctx.root);
+  ctx.achievementsUi.bindEvents(ctx.root);
+  ctx.dailyLoginUi.bindEvents(ctx.root);
+  ctx.fusionUi.bindAltarChoiceEvents(ctx.root);
+  ctx.fusionUi.bindFusionWorldEvents(ctx.root);
+  ctx.omegaBossUi.bindEvents(ctx.root);
+  ctx.omegaArenaUi.bindArenaEvents(ctx.root);
 }
