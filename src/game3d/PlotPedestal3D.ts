@@ -46,6 +46,8 @@ export class PlotPedestal3D {
   public readonly group = new THREE.Group();
   public readonly hitMesh: THREE.Mesh;
   public readonly index: number;
+  private readonly visualYaw: number;
+  private readonly podiumBodyGroup = new THREE.Group();
 
   private readonly ringMat: THREE.MeshStandardMaterial;
   private readonly holoDiscMat: THREE.MeshBasicMaterial;
@@ -82,10 +84,13 @@ export class PlotPedestal3D {
   private labelEnabled = true;
   private disposed = false;
 
-  constructor(index: number, x: number, z: number) {
+  constructor(index: number, x: number, z: number, visualYaw = 0) {
     this.index = index;
+    this.visualYaw = visualYaw;
     this.group.position.set(x, 0, z);
     this.group.scale.set(PLOT_PODIUM_SCALE, PLOT_PODIUM_SCALE, PLOT_PODIUM_SCALE);
+    this.podiumBodyGroup.rotation.y = visualYaw;
+    this.group.add(this.podiumBodyGroup);
 
     const armorDarkMat = new THREE.MeshStandardMaterial({
       color: 0x131b2b,
@@ -123,7 +128,7 @@ export class PlotPedestal3D {
     );
     bayDock.receiveShadow = true;
     bayDock.castShadow = true;
-    this.group.add(bayDock);
+    this.podiumBodyGroup.add(bayDock);
 
     // Side Heavy Bumper Guards + Vertical Cooling Louvers
     const guardGeo = createChamferPadGeometry(0.14, 0.11, 1.04, 0.04, 0.012);
@@ -133,12 +138,12 @@ export class PlotPedestal3D {
       guard.position.set(sx * 0.92, 0.055, -0.02);
       guard.castShadow = true;
       guard.receiveShadow = true;
-      this.group.add(guard);
+      this.podiumBodyGroup.add(guard);
 
       for (const vz of [-0.32, 0, 0.32]) {
         const vent = new THREE.Mesh(ventGeo, titaniumMat);
         vent.position.set(sx * 0.995, 0.105, vz);
-        this.group.add(vent);
+        this.podiumBodyGroup.add(vent);
       }
     }
 
@@ -167,7 +172,7 @@ export class PlotPedestal3D {
     topBevelRim.position.y = 0.256;
     topBevelRim.rotation.y = Math.PI / 8;
     topBevelRim.receiveShadow = true;
-    this.group.add(edgeSeamRing, machineryPlinth, topBevelRim);
+    this.podiumBodyGroup.add(edgeSeamRing, machineryPlinth, topBevelRim);
 
     // Tier 3: Sleek Front-Angled Numeric Slot Plaque ("01" .. "05") Mounted Proud on Forward Apron
     const frontApron = new THREE.Mesh(
@@ -187,7 +192,7 @@ export class PlotPedestal3D {
     plaqueFace.position.set(0, 0.099, 0);
     plaqueFace.rotation.x = -Math.PI / 2;
     frontApron.add(plaqueFace);
-    this.group.add(frontApron);
+    this.podiumBodyGroup.add(frontApron);
 
     // Tier 4: ZZZ/HSR Low-Profile Rear Holographic Display Stanchions & Power Manifold (waist height 0.74m)
     const rearManifold = new THREE.Mesh(
@@ -202,7 +207,7 @@ export class PlotPedestal3D {
       this.ringMat
     );
     manifoldGlow.position.set(0, 0.22, -0.78);
-    this.group.add(rearManifold, manifoldGlow);
+    this.podiumBodyGroup.add(rearManifold, manifoldGlow);
 
     const stanchionGeo = createChamferPadGeometry(0.14, 0.56, 0.18, 0.03, 0.012);
     const stanchionCapGeo = createChamferPadGeometry(0.18, 0.06, 0.22, 0.04, 0.01);
@@ -223,7 +228,7 @@ export class PlotPedestal3D {
       glowBlade.position.set(-sx * 0.072, 0.28, 0.045);
 
       pylonPivot.add(body, cap, glowBlade);
-      this.group.add(pylonPivot);
+      this.podiumBodyGroup.add(pylonPivot);
     }
 
     // Core Frosted Emitter Lens & Recessed Octagonal Neon Collar (top y = 0.275 .. 0.282)
@@ -260,10 +265,10 @@ export class PlotPedestal3D {
       claw.castShadow = true;
       const diode = new THREE.Mesh(diodeGeo, this.ringMat);
       diode.position.set(rx, 0.295, rz);
-      this.group.add(claw, diode);
+      this.podiumBodyGroup.add(claw, diode);
     }
 
-    this.group.add(holoLensDisc, ringMesh);
+    this.podiumBodyGroup.add(holoLensDisc, ringMesh);
 
     const hitMesh = new THREE.Mesh(
       new THREE.CylinderGeometry(0.76, 0.76, 1.9, 8),
@@ -274,7 +279,7 @@ export class PlotPedestal3D {
     this.hitMesh = hitMesh;
     this.group.add(hitMesh);
 
-    mergeStaticMeshesByMaterial(this.group, new Set<THREE.Object3D>([holoLensDisc, hitMesh]));
+    mergeStaticMeshesByMaterial(this.podiumBodyGroup, new Set<THREE.Object3D>([holoLensDisc]));
 
     this.labelMat = new THREE.SpriteMaterial({
       transparent: true,
@@ -504,11 +509,16 @@ export class PlotPedestal3D {
     this.chibiSprite?.setFacing(sign);
   }
 
+  public getVisualYaw(): number {
+    return this.visualYaw;
+  }
+
   public getAttackOriginWorldPosition(out: THREE.Vector3): THREE.Vector3 {
+    const fwd = 0.35 * PLOT_PODIUM_SCALE;
     return out.set(
-      this.group.position.x,
+      this.group.position.x + Math.sin(this.visualYaw) * fwd,
       this.group.position.y + 1.35 * PLOT_PODIUM_SCALE,
-      this.group.position.z + 0.35 * PLOT_PODIUM_SCALE
+      this.group.position.z + Math.cos(this.visualYaw) * fwd
     );
   }
 

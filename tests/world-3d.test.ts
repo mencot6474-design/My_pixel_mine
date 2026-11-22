@@ -18,6 +18,7 @@ import {
   HOLD_MINE_INTERVAL_SEC,
   stepHoldMineTimer,
 } from '../src/game3d/MineScene3D';
+import { STAGE_CRESCENT_SLOTS } from '../src/game3d/MineSceneStage3D';
 import { AudioManager } from '../src/audio/AudioManager';
 import {
   PlotAttackController3D,
@@ -2431,7 +2432,11 @@ describe('Pure 3D Mine World', () => {
     }).not.toThrow();
 
     const ped = new PlotPedestal3D(2, 0, -4.28);
-    expect(ped.group.children.length).toBeGreaterThanOrEqual(5);
+    let pedMeshes = 0;
+    ped.group.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) pedMeshes += 1;
+    });
+    expect(pedMeshes).toBeGreaterThanOrEqual(5);
     expect(() => {
       ped.setHovered(true);
       ped.update(0.016, 2.2);
@@ -3632,5 +3637,23 @@ describe('Pure 3D Mine World', () => {
     });
     for (let i = 0; i < 14; i++) pool.update(0.05, cam);
     pool.dispose();
+  });
+
+  it('arranges 5 crescent pedestals with isolated visualYaw and rotated attack origins', () => {
+    expect(STAGE_CRESCENT_SLOTS).toHaveLength(5);
+    expect(STAGE_CRESCENT_SLOTS[2]).toEqual({ x: 0, y: 0.72, z: -6.05, visualYaw: 0 });
+    expect(STAGE_CRESCENT_SLOTS[0]).toEqual({ x: -7.05, y: 0.28, z: -4.35, visualYaw: 0.46 });
+    expect(STAGE_CRESCENT_SLOTS[4]).toEqual({ x: 7.05, y: 0.28, z: -4.35, visualYaw: -0.46 });
+
+    const ped = new PlotPedestal3D(0, -7.05, -4.35, 0.46);
+    ped.group.position.y = 0.28;
+    expect(ped.group.rotation.y).toBe(0);
+    expect(ped.getVisualYaw()).toBeCloseTo(0.46, 4);
+
+    const origin = ped.getAttackOriginWorldPosition(new THREE.Vector3());
+    const localFwd = 0.35 * 1.5;
+    expect(origin.x).toBeCloseTo(-7.05 + Math.sin(0.46) * localFwd, 3);
+    expect(origin.z).toBeCloseTo(-4.35 + Math.cos(0.46) * localFwd, 3);
+    ped.dispose();
   });
 });

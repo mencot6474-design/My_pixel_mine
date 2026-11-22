@@ -5,7 +5,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { createProceduralTreasureChest, ProceduralChestHandle } from './ChestVaultStation3D';
-import { configureSceneTextureSharpness, mergeStaticMeshesByMaterial } from './MeshHelpers3D';
+import { configureSceneTextureSharpness, createChamferSlabGeometry, mergeStaticMeshesByMaterial } from './MeshHelpers3D';
 import { ImpactFrameShader } from './MeshFx3D';
 import type { MineEnvironment3D } from './MineEnvironment3D';
 import { type MineWorldPalette, type OreVariantKey, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
@@ -155,6 +155,22 @@ export function clampCameraZoomRadius(radius: number, mode: SceneMode): number {
 const tmpCamPos = new THREE.Vector3();
 const tmpLookTarget = new THREE.Vector3();
 
+export interface CrescentSlotTransform {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly visualYaw: number;
+}
+
+/** 3-tier curved crescent amphitheater slots framing the 5 Chibi showcase podiums. */
+export const STAGE_CRESCENT_SLOTS: readonly CrescentSlotTransform[] = [
+  { x: -7.05, y: 0.28, z: -4.35, visualYaw: 0.46 },
+  { x: -3.6, y: 0.48, z: -5.45, visualYaw: 0.24 },
+  { x: 0, y: 0.72, z: -6.05, visualYaw: 0 },
+  { x: 3.6, y: 0.48, z: -5.45, visualYaw: -0.24 },
+  { x: 7.05, y: 0.28, z: -4.35, visualYaw: -0.46 },
+] as const;
+
 export function buildMineStageAndChest(ctx: {
   palette: MineWorldPalette;
   scene: THREE.Scene;
@@ -168,169 +184,171 @@ export function buildMineStageAndChest(ctx: {
   chestVisual: ProceduralChestHandle;
 } {
   const { palette } = ctx;
-    // Cyber-Holographic Rear Stage Platform for "My Chibi" Showcase
-    const stageNeonMat = new THREE.MeshStandardMaterial({
-      color: palette.crystalColor,
-      emissive: palette.crystalColor,
-      emissiveIntensity: 1.15,
-      roughness: 0.2,
-      metalness: 0.28,
-      flatShading: true,
-    });
-    const stageHoloMat = new THREE.MeshBasicMaterial({
-      color: palette.crystalColor,
-      transparent: true,
-      opacity: 0.22,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    });
+  // Cyber-Holographic Crescent Amphitheater Stage for Chibi Skill Showcase
+  const stageNeonMat = new THREE.MeshStandardMaterial({
+    color: palette.crystalColor,
+    emissive: palette.crystalColor,
+    emissiveIntensity: 1.15,
+    roughness: 0.2,
+    metalness: 0.28,
+    flatShading: true,
+  });
+  const stageHoloMat = new THREE.MeshBasicMaterial({
+    color: palette.crystalColor,
+    transparent: true,
+    opacity: 0.22,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const tierDarkMat = new THREE.MeshStandardMaterial({
+    color: 0x161f30,
+    roughness: 0.58,
+    metalness: 0.3,
+    flatShading: true,
+  });
+  const tierDeckMat = new THREE.MeshStandardMaterial({
+    color: 0x223047,
+    roughness: 0.44,
+    metalness: 0.36,
+    flatShading: true,
+  });
+  const bayDivMat = new THREE.MeshStandardMaterial({
+    color: 0x131b2b,
+    roughness: 0.45,
+    metalness: 0.5,
+    flatShading: true,
+  });
 
-    const stageBase = new THREE.Mesh(
-      new THREE.BoxGeometry(17.2, 0.16, 3.64),
-      new THREE.MeshStandardMaterial({
-        color: 0x161f30,
-        roughness: 0.62,
-        metalness: 0.28,
-        flatShading: true,
-      })
+  const stageStaticGroup = new THREE.Group();
+  // Stepped Crescent Plinths: Outer Wing (y=0.28), Mid Flank (y=0.48), Ace Centerpiece (y=0.72)
+  const plinthSpecs: ReadonlyArray<{
+    x: number;
+    y: number;
+    z: number;
+    w: number;
+    d: number;
+    yaw: number;
+  }> = [
+    { x: 0, y: 0.72, z: -6.05, w: 3.7, d: 3.1, yaw: 0 },
+    { x: -3.6, y: 0.48, z: -5.45, w: 3.45, d: 2.95, yaw: 0.24 },
+    { x: 3.6, y: 0.48, z: -5.45, w: 3.45, d: 2.95, yaw: -0.24 },
+    { x: -7.05, y: 0.28, z: -4.35, w: 3.3, d: 2.85, yaw: 0.46 },
+    { x: 7.05, y: 0.28, z: -4.35, w: 3.3, d: 2.85, yaw: -0.46 },
+  ];
+  for (const spec of plinthSpecs) {
+    const tierH = spec.y + 0.08;
+    const plinth = new THREE.Mesh(
+      createChamferSlabGeometry(spec.w, tierH, spec.d, 0.38, 0.02),
+      tierDarkMat
     );
-    stageBase.position.set(0, 0.08, -4.85);
-    stageBase.receiveShadow = true;
-    stageBase.castShadow = true;
+    plinth.position.set(spec.x, tierH * 0.5 - 0.08, spec.z);
+    plinth.rotation.y = spec.yaw;
+    plinth.receiveShadow = true;
+    plinth.castShadow = true;
 
-    const rackDeck = new THREE.Mesh(
-      new THREE.BoxGeometry(16.8, 0.12, 3.34),
-      new THREE.MeshStandardMaterial({
-        color: 0x223047,
-        roughness: 0.44,
-        metalness: 0.36,
-        flatShading: true,
-      })
+    const deckPlate = new THREE.Mesh(
+      createChamferSlabGeometry(spec.w - 0.28, 0.06, spec.d - 0.28, 0.3, 0.012),
+      tierDeckMat
     );
-    rackDeck.position.set(0, 0.21, -4.85);
-    rackDeck.receiveShadow = true;
-    rackDeck.castShadow = true;
-    const stageStaticGroup = new THREE.Group();
-    stageStaticGroup.add(stageBase, rackDeck);
-    ctx.envGroup.add(stageStaticGroup);
+    deckPlate.position.set(spec.x, spec.y - 0.02, spec.z);
+    deckPlate.rotation.y = spec.yaw;
+    deckPlate.receiveShadow = true;
 
-    // Clean Rear Stage Holo Underglow Strip + Sculpted Steel Bay Dividers Between Plots (zero pedestal overlap)
-    const holoRunwayStrip = new THREE.Mesh(new THREE.PlaneGeometry(15.6, 0.48), stageHoloMat);
-    holoRunwayStrip.rotation.x = -Math.PI / 2;
-    holoRunwayStrip.position.set(0, 0.273, -5.96);
-    ctx.envGroup.add(holoRunwayStrip);
-
-    const bayDivMat = new THREE.MeshStandardMaterial({
-      color: 0x131b2b,
-      roughness: 0.45,
-      metalness: 0.5,
-      flatShading: true,
-    });
-    const bayDivGeo = new THREE.BoxGeometry(0.09, 0.06, 2.58);
-    const bayDivLedGeo = new THREE.BoxGeometry(0.03, 0.025, 2.4);
-    for (let i = 0; i < STAGE_PEDESTAL_COUNT - 1; i++) {
-      const divX = (i - (STAGE_PEDESTAL_COUNT - 2) / 2) * 3.22;
-      const divBar = new THREE.Mesh(bayDivGeo, bayDivMat);
-      divBar.position.set(divX, 0.298, -4.58);
-      divBar.castShadow = true;
-      divBar.receiveShadow = true;
-      const divLed = new THREE.Mesh(bayDivLedGeo, stageNeonMat);
-      divLed.position.set(divX, 0.33, -4.58);
-      stageStaticGroup.add(divBar, divLed);
-    }
-
-    const rearBusConduit = new THREE.Mesh(new THREE.BoxGeometry(14.8, 0.08, 0.18), bayDivMat);
-    rearBusConduit.position.set(0, 0.305, -5.92);
-    rearBusConduit.castShadow = true;
-    stageStaticGroup.add(rearBusConduit);
-
-    for (const sx of [-1, 1]) {
-      const rackFrontTrim = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.06, 0.1), stageNeonMat);
-      rackFrontTrim.position.set(sx * 4.88, 0.26, -3.22);
-      stageStaticGroup.add(rackFrontTrim);
-    }
-
-    const stageRearTrim = new THREE.Mesh(new THREE.BoxGeometry(16.86, 0.06, 0.09), stageNeonMat);
-    stageRearTrim.position.set(0, 0.26, -6.54);
-    stageStaticGroup.add(stageRearTrim);
-
-    // Futuristic Steel Stairwell & Illuminated Treads Descending into Quarry Pit
-    const cheekMat = new THREE.MeshStandardMaterial({
-      color: 0x1b263b,
-      roughness: 0.5,
-      metalness: 0.36,
-      flatShading: true,
-    });
-    const copingMat = new THREE.MeshStandardMaterial({
-      color: 0x3b4d6b,
-      roughness: 0.36,
-      metalness: 0.44,
-      flatShading: true,
-    });
-    for (const sx of [-1, 1]) {
-      const cheek = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.96, 1.36), cheekMat);
-      cheek.position.set(sx * 1.32, -0.2, -2.52);
-      cheek.castShadow = true;
-      cheek.receiveShadow = true;
-
-      const cheekCap = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.07, 1.4), copingMat);
-      cheekCap.position.set(sx * 1.32, 0.31, -2.52);
-      cheekCap.castShadow = true;
-
-      const cheekLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.035, 1.38), stageNeonMat);
-      cheekLed.position.set(sx * 1.32, 0.36, -2.52);
-      stageStaticGroup.add(cheek, cheekCap, cheekLed);
-    }
-
-    const stairStepCount = 4;
-    for (let s = 0; s < stairStepCount; s++) {
-      const t = (s + 0.5) / stairStepCount;
-      const stepY = 0.2 - t * 0.84;
-      const stepZ = -3.14 + t * 1.24;
-      const stepMesh = new THREE.Mesh(new THREE.BoxGeometry(2.38, 0.18, 0.34), cheekMat);
-      stepMesh.position.set(0, stepY, stepZ);
-      stepMesh.castShadow = true;
-      stepMesh.receiveShadow = true;
-
-      const stepLed = new THREE.Mesh(new THREE.BoxGeometry(2.34, 0.03, 0.05), stageNeonMat);
-      stepLed.position.set(0, stepY + 0.09, stepZ + 0.14);
-      stageStaticGroup.add(stepMesh, stepLed);
-    }
-    mergeStaticMeshesByMaterial(stageStaticGroup);
-
-    // 5 Cyber-Holographic Plot Pedestals Centered Cleanly Away From Side HUD Bars (spacing 3.22m for +50% podiums)
-    for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {
-      const px = (i - (STAGE_PEDESTAL_COUNT - 1) / 2) * 3.22;
-      const pz = -4.58;
-      const ped = new PlotPedestal3D(i, px, pz);
-      ped.group.position.y = 0.27;
-      ctx.pedestals.push(ped);
-      ctx.scene.add(ped.group);
-      ctx.clickableMeshes.push(ped.hitMesh);
-    }
-
-    // Right Wing Cyber Vault Container on Elevated Plasma Refinery Dais (aligned to rail Z = 0.15)
-    ctx.crateGroup.position.set(8.45, 0.48, 0.15);
-    const chestVisual = createProceduralTreasureChest({
-      scale: 1.08,
-      woodColor: 0x1e293b,
-      ironColor: 0x3b4d6b,
-      trimColor: 0x7084a3,
-      gemColor: palette.crystalColor,
-    });
-    chestVisual.group.rotation.y = -Math.PI / 2;
-    ctx.crateGroup.add(chestVisual.group);
-
-    const crateHit = new THREE.Mesh(
-      new THREE.BoxGeometry(2.6, 2.3, 2.6),
-      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+    const frontTrim = new THREE.Mesh(new THREE.BoxGeometry(spec.w - 0.75, 0.045, 0.07), stageNeonMat);
+    const fwdDist = spec.d * 0.5 - 0.14;
+    frontTrim.position.set(
+      spec.x + Math.sin(spec.yaw) * fwdDist,
+      spec.y + 0.015,
+      spec.z + Math.cos(spec.yaw) * fwdDist
     );
-    crateHit.position.y = 0.72;
-    crateHit.userData = { kind: 'chest' };
-    ctx.crateGroup.add(crateHit);
+    frontTrim.rotation.y = spec.yaw;
+    stageStaticGroup.add(plinth, deckPlate, frontTrim);
+  }
 
-    ctx.scene.add(ctx.crateGroup);
-    ctx.clickableMeshes.push(crateHit);
+  // Rear Crescent Conduits & Angled Bay Dividers Between Podiums
+  for (let i = 0; i < STAGE_CRESCENT_SLOTS.length - 1; i++) {
+    const a = STAGE_CRESCENT_SLOTS[i];
+    const b = STAGE_CRESCENT_SLOTS[i + 1];
+    const mx = (a.x + b.x) * 0.5;
+    const my = Math.min(a.y, b.y) + 0.04;
+    const mz = (a.z + b.z) * 0.5;
+    const yaw = (a.visualYaw + b.visualYaw) * 0.5;
+    const divBar = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.07, 2.2), bayDivMat);
+    divBar.position.set(mx, my, mz);
+    divBar.rotation.y = yaw;
+    divBar.castShadow = true;
+    const divLed = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.025, 2.05), stageNeonMat);
+    divLed.position.set(mx, my + 0.04, mz);
+    divLed.rotation.y = yaw;
+    stageStaticGroup.add(divBar, divLed);
+  }
+
+  // Central Main Energy Conduit Channel Replacing Legacy Quarry Stairwell (z = -4.60 -> -2.96)
+  const conduitRampLen = 1.82;
+  const conduitSlope = 0.24;
+  const conduitFrame = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.14, conduitRampLen), tierDarkMat);
+  conduitFrame.position.set(0, 0.36, -3.78);
+  conduitFrame.rotation.x = conduitSlope;
+  conduitFrame.receiveShadow = true;
+  conduitFrame.castShadow = true;
+  stageStaticGroup.add(conduitFrame);
+
+  for (const sx of [-1, 1]) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.2, conduitRampLen), tierDeckMat);
+    rail.position.set(sx * 0.82, 0.42, -3.78);
+    rail.rotation.x = conduitSlope;
+    rail.castShadow = true;
+    const railLed = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.04, conduitRampLen - 0.08), stageNeonMat);
+    railLed.position.set(sx * 0.82, 0.52, -3.78);
+    railLed.rotation.x = conduitSlope;
+    stageStaticGroup.add(rail, railLed);
+  }
+
+  const conduitCore = new THREE.Mesh(new THREE.PlaneGeometry(1.12, conduitRampLen - 0.1), stageHoloMat);
+  conduitCore.position.set(0, 0.445, -3.78);
+  conduitCore.rotation.x = -Math.PI / 2 + conduitSlope;
+  ctx.envGroup.add(conduitCore);
+
+  mergeStaticMeshesByMaterial(stageStaticGroup);
+  ctx.envGroup.add(stageStaticGroup);
+
+  // 5 Stepped Crescent Plot Pedestals (visualYaw isolates podium rotation from ChibiSprite3D blitz axes)
+  for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {
+    const slot = STAGE_CRESCENT_SLOTS[i] ?? {
+      x: (i - (STAGE_PEDESTAL_COUNT - 1) / 2) * 3.22,
+      y: 0.27,
+      z: -4.58,
+      visualYaw: 0,
+    };
+    const ped = new PlotPedestal3D(i, slot.x, slot.z, slot.visualYaw);
+    ped.group.position.y = slot.y;
+    ctx.pedestals.push(ped);
+    ctx.scene.add(ped.group);
+    ctx.clickableMeshes.push(ped.hitMesh);
+  }
+
+  // Right Wing Cyber Vault Container on Vault Core Dais (aligned to Z = 0.15, angled toward center)
+  ctx.crateGroup.position.set(8.45, 0.48, 0.15);
+  const chestVisual = createProceduralTreasureChest({
+    scale: 1.08,
+    woodColor: 0x1e293b,
+    ironColor: 0x3b4d6b,
+    trimColor: 0x7084a3,
+    gemColor: palette.crystalColor,
+  });
+  chestVisual.group.rotation.y = -Math.PI / 2 - 0.18;
+  ctx.crateGroup.add(chestVisual.group);
+
+  const crateHit = new THREE.Mesh(
+    new THREE.BoxGeometry(2.6, 2.3, 2.6),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+  );
+  crateHit.position.y = 0.72;
+  crateHit.userData = { kind: 'chest' };
+  ctx.crateGroup.add(crateHit);
+
+  ctx.scene.add(ctx.crateGroup);
+  ctx.clickableMeshes.push(crateHit);
   return { stageNeonMat, stageHoloMat, chestVisual };
 }
 
