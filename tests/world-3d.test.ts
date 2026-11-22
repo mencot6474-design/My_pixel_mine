@@ -3256,12 +3256,48 @@ describe('Pure 3D Mine World', () => {
     const sovDef = getChibiById('obsidian-sovereign')!;
     const roninSprite = new ChibiSprite3D(roninDef);
     const sovSprite = new ChibiSprite3D(sovDef);
+    const roninBack = roninSprite.group.getObjectByName('chibiBackAttachmentGroup');
+    const sovBack = sovSprite.group.getObjectByName('chibiBackAttachmentGroup');
+    expect(roninBack?.visible).toBe(true);
+    expect(sovBack?.visible).toBe(true);
+
+    // Idle update keeps Omega back-attachments active and hides them in hologram mode
+    roninSprite.update(0.05, 0.25, cam);
+    sovSprite.update(0.05, 0.25, cam);
+    expect(roninBack?.visible).toBe(true);
+    expect(sovBack?.visible).toBe(true);
+
+    roninSprite.setHologramMode(true);
+    expect(roninBack?.visible).toBe(false);
+    roninSprite.setHologramMode(false);
+    expect(roninBack?.visible).toBe(true);
+
     roninSprite.triggerBlitz({ rarity: 'omega', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
     sovSprite.triggerBlitz({ rarity: 'omega', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
-    for (let i = 0; i < 12; i++) {
+    const roninBlitzPivot = roninSprite.group.getObjectByName('chibiBlitzHeroPivot');
+    const sovBlitzPivot = sovSprite.group.getObjectByName('chibiBlitzHeroPivot');
+    const roninMainPivot = roninSprite.group.children[0];
+    expect(roninBlitzPivot).toBeDefined();
+    expect(sovBlitzPivot).toBeDefined();
+
+    // Advance mid-blitz: shadow moves to target while real podium chibi stays stationary at (0,0,0)
+    for (let i = 0; i < 6; i++) {
       roninSprite.update(0.06, i * 0.06, cam);
       sovSprite.update(0.06, i * 0.06, cam);
     }
+    expect(roninBlitzPivot?.visible).toBe(true);
+    expect(sovBlitzPivot?.visible).toBe(true);
+    expect(roninMainPivot.position.lengthSq()).toBe(0);
+
+    // Finish blitz: shadow hides cleanly, Omega back-attachment remains visible on podium
+    for (let i = 6; i < 20; i++) {
+      roninSprite.update(0.06, i * 0.06, cam);
+      sovSprite.update(0.06, i * 0.06, cam);
+    }
+    expect(roninBlitzPivot?.visible).toBe(false);
+    expect(sovBlitzPivot?.visible).toBe(false);
+    expect(roninBack?.visible).toBe(true);
+    expect(sovBack?.visible).toBe(true);
 
     roninSprite.dispose();
     sovSprite.dispose();

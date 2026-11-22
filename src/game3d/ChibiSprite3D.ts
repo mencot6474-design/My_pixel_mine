@@ -170,6 +170,12 @@ export class ChibiSprite3D {
   }> = [];
   private readonly blitzCloneMesh: THREE.Mesh;
   private readonly blitzCloneMat: THREE.MeshBasicMaterial;
+  private readonly blitzHeroPivot = new THREE.Group();
+  private readonly blitzHeroMesh: THREE.Mesh;
+  private readonly blitzHeroMat: THREE.MeshBasicMaterial;
+  private readonly defaultBlitzHeroGeo: THREE.PlaneGeometry;
+  private readonly blitzPoseMetas: Partial<Record<ChibiAnimState, LoadedPoseMeta>> = {};
+  private readonly blitzPoseGeos: Partial<Record<ChibiAnimState, THREE.PlaneGeometry>> = {};
   private readonly glintMesh: THREE.Mesh;
   private readonly glintMat: THREE.MeshBasicMaterial;
   private omegaAuraGroup: THREE.Group | null = null;
@@ -203,6 +209,8 @@ export class ChibiSprite3D {
   private attackComboStep = 0;
   private nextComboStep = 0;
   private blitzActive = false;
+  private blitzShadowOnly = true;
+  private blitzLastPoseApplied: ChibiAnimState | null = null;
   private blitzTimer = 0;
   private blitzDuration = 0.65;
   private blitzGhostAccum = 0;
@@ -308,6 +316,24 @@ export class ChibiSprite3D {
     this.blitzCloneMesh.visible = false;
     this.group.add(this.blitzCloneMesh);
 
+    this.blitzHeroPivot.name = 'chibiBlitzHeroPivot';
+    this.blitzHeroPivot.visible = false;
+    this.blitzHeroMat = new THREE.MeshBasicMaterial({
+      color: this.accentColorHex,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    this.defaultBlitzHeroGeo = new THREE.PlaneGeometry(spriteHeight * 0.85, spriteHeight);
+    this.blitzHeroMesh = new THREE.Mesh(this.defaultBlitzHeroGeo, this.blitzHeroMat);
+    this.blitzHeroMesh.name = 'chibiBlitzHeroShadow';
+    this.blitzHeroMesh.position.y = spriteHeight * 0.5;
+    this.blitzHeroMesh.visible = false;
+    this.blitzHeroPivot.add(this.blitzHeroMesh);
+    this.group.add(this.blitzHeroPivot);
+
     const shadowTex = getSoftContactShadowTexture();
     this.baseShadowOpacity = shadowTex ? 0.85 : 0.3;
     this.shadowMat = new THREE.MeshBasicMaterial({
@@ -329,9 +355,10 @@ export class ChibiSprite3D {
     this.shadowDisc.position.y = 0.012;
     this.group.add(this.shadowDisc);
 
-    // Omega unit bespoke 3D attachments (active only during blitz)
+    // Omega & Twin unit bespoke 3D back-shader attachments (always-on outside hologram mode)
     if (this.def.id === 'crimson-ronin') {
       this.omegaAuraGroup = new THREE.Group();
+      this.omegaAuraGroup.name = 'chibiBackAttachmentGroup';
       this.omegaAuraGroup.position.set(0, spriteHeight * 0.54, -0.15);
       this.omegaAuraMat = createEnergyWeaponMaterial();
       this.omegaAuraMat.uniforms.uColor.value.set('#ef4444');
@@ -343,10 +370,11 @@ export class ChibiSprite3D {
         this.omegaAuraGroup.add(km);
         this.omegaOrbitKatanas.push(km);
       }
-      this.omegaAuraGroup.visible = false;
+      this.omegaAuraGroup.visible = true;
       this.spritePivot.add(this.omegaAuraGroup);
     } else if (this.def.id === 'obsidian-sovereign') {
       this.omegaAuraGroup = new THREE.Group();
+      this.omegaAuraGroup.name = 'chibiBackAttachmentGroup';
       this.omegaAuraGroup.position.set(0, spriteHeight * 0.56, -0.16);
       this.omegaAuraMat = createEnergyWeaponMaterial();
       this.omegaAuraMat.uniforms.uColor.value.set('#a855f7');
@@ -355,7 +383,7 @@ export class ChibiSprite3D {
       this.omegaHaloMesh = new THREE.Mesh(this.omegaAuraGeo, this.omegaAuraMat);
       this.omegaHaloMesh.scale.setScalar(0.76);
       this.omegaAuraGroup.add(this.omegaHaloMesh);
-      this.omegaAuraGroup.visible = false;
+      this.omegaAuraGroup.visible = true;
       this.spritePivot.add(this.omegaAuraGroup);
 
       this.omegaHandPivot = new THREE.Group();
@@ -367,7 +395,7 @@ export class ChibiSprite3D {
       this.omegaHandWeaponMesh = new THREE.Mesh(this.omegaHandWeaponGeo, this.omegaHandWeaponMat);
       this.omegaHandPivot.add(this.omegaHandWeaponMesh);
       this.omegaHandPivot.visible = false;
-      this.spritePivot.add(this.omegaHandPivot);
+      this.blitzHeroPivot.add(this.omegaHandPivot);
     } else if (this.def.id === 'yukikage-twins') {
       // Custom GLSL Cryo Shinto Shrine Seal Ring + 8 Orbiting Ice-Ink Kunai Daggers
       this.omegaAuraGroup = new THREE.Group();
@@ -498,13 +526,30 @@ export class ChibiSprite3D {
     const smooth = Boolean(this.def.smoothFilter);
     void loadPoseMeta(this.def.poses.idle, smooth).then(
       (meta) => {
-        if (!this.disposed) this.idlePixelHeight = meta.pixelHeight;
+        if (this.disposed) return;
+        this.idlePixelHeight = meta.pixelHeight;
+        this.blitzPoseMetas.idle = meta;
       },
       () => {}
     );
-    void loadPoseMeta(this.def.poses.walk, smooth).catch(() => {});
-    void loadPoseMeta(this.def.poses.attack, smooth).catch(() => {});
-    void loadPoseMeta(this.def.poses.pose, smooth).catch(() => {});
+    void loadPoseMeta(this.def.poses.walk, smooth).then(
+      (meta) => {
+        if (!this.disposed) this.blitzPoseMetas.dash = meta;
+      },
+      () => {}
+    );
+    void loadPoseMeta(this.def.poses.attack, smooth).then(
+      (meta) => {
+        if (!this.disposed) this.blitzPoseMetas.attack = meta;
+      },
+      () => {}
+    );
+    void loadPoseMeta(this.def.poses.pose, smooth).then(
+      (meta) => {
+        if (!this.disposed) this.blitzPoseMetas.aura = meta;
+      },
+      () => {}
+    );
     void this.applyPose('idle');
   }
 
@@ -520,18 +565,9 @@ export class ChibiSprite3D {
         this.idlePixelHeight = idleMeta.pixelHeight;
       }
       if (this.disposed || this.animState !== state) return;
+      this.blitzPoseMetas[state] = meta;
 
-      const idlePx = this.idlePixelHeight ?? meta.pixelHeight;
-      const refPx = idlePx * 0.65 + BASE_CHIBI_PIXEL_HEIGHT * 0.35;
-      const unitPerPx = this.spriteHeight / Math.max(1, refPx);
-      const rawH = meta.pixelHeight * unitPerPx;
-
-      // Prevent shorter walk/attack frames from shrinking vertically ("gepeng")
-      // while preserving exact 1:1 pixel aspect ratio.
-      const h =
-        state === 'aura'
-          ? Math.min(Math.max(rawH, this.spriteHeight * 1.02), this.spriteHeight * 1.18)
-          : Math.min(Math.max(rawH, this.spriteHeight * 0.96), this.spriteHeight * 1.14);
+      const h = this.computeNormalizedHeight(meta, state);
       const width = h * (meta.pixelWidth / Math.max(1, meta.pixelHeight));
       this.currentSpriteHeight = h;
       this.topTrimRatio = meta.topTrimRatio;
@@ -600,13 +636,59 @@ export class ChibiSprite3D {
     this.applyFacing();
   }
 
+  private isPoseLeftFacing(state: ChibiAnimState): boolean {
+    if (state === 'dash') {
+      return this.def.walkFacesLeft ?? LEFT_FACING_WALK_IDS.has(this.def.id);
+    }
+    if (state === 'attack') {
+      return LEFT_FACING_ATTACK_IDS.has(this.def.id);
+    }
+    return false;
+  }
+
+  private computeNormalizedHeight(meta: LoadedPoseMeta, state: ChibiAnimState): number {
+    const idlePx = this.idlePixelHeight ?? meta.pixelHeight;
+    const refPx = idlePx * 0.65 + BASE_CHIBI_PIXEL_HEIGHT * 0.35;
+    const unitPerPx = this.spriteHeight / Math.max(1, refPx);
+    const rawH = meta.pixelHeight * unitPerPx;
+    return state === 'aura'
+      ? Math.min(Math.max(rawH, this.spriteHeight * 1.02), this.spriteHeight * 1.18)
+      : Math.min(Math.max(rawH, this.spriteHeight * 0.96), this.spriteHeight * 1.14);
+  }
+
+  private syncBlitzShadowPose(state: ChibiAnimState): void {
+    const meta = this.blitzPoseMetas[state] ?? this.blitzPoseMetas.attack ?? this.blitzPoseMetas.idle;
+    if (!meta) {
+      if (this.material.map && this.blitzHeroMat.map !== this.material.map) {
+        this.blitzHeroMat.map = this.material.map;
+        this.blitzHeroMat.needsUpdate = true;
+      }
+      return;
+    }
+    let geo = this.blitzPoseGeos[state];
+    if (!geo) {
+      const h = this.computeNormalizedHeight(meta, state);
+      const w = h * (meta.pixelWidth / Math.max(1, meta.pixelHeight));
+      geo = new THREE.PlaneGeometry(w, h);
+      this.blitzPoseGeos[state] = geo;
+    }
+    if (this.blitzHeroMesh.geometry !== geo) {
+      this.blitzHeroMesh.geometry = geo;
+      const h = (geo.parameters as { height?: number }).height ?? this.currentSpriteHeight;
+      this.blitzHeroMesh.position.y = h * 0.5;
+    }
+    if (this.blitzHeroMat.map !== meta.texture) {
+      this.blitzHeroMat.map = meta.texture;
+      this.blitzHeroMat.needsUpdate = true;
+    }
+    if (this.blitzCloneMat.map !== meta.texture) {
+      this.blitzCloneMat.map = meta.texture;
+      this.blitzCloneMat.needsUpdate = true;
+    }
+  }
+
   private applyFacing(): void {
-    const invert =
-      this.animState === 'dash'
-        ? (this.def.walkFacesLeft ?? LEFT_FACING_WALK_IDS.has(this.def.id))
-        : this.animState === 'attack'
-          ? LEFT_FACING_ATTACK_IDS.has(this.def.id)
-          : false;
+    const invert = this.isPoseLeftFacing(this.animState);
     this.mesh.scale.x = invert ? -this.facing : this.facing;
   }
 
@@ -631,6 +713,13 @@ export class ChibiSprite3D {
     }
     this.mesh.castShadow = !enabled && Boolean(this.material.map);
     this.material.needsUpdate = true;
+    if (this.omegaAuraGroup) {
+      this.omegaAuraGroup.visible = this.shouldShowBackAttachment();
+    }
+  }
+
+  private shouldShowBackAttachment(): boolean {
+    return !this.hologramMode && (this.def.rarity === 'twin' || this.def.rarity === 'omega');
   }
 
   public isHologramMode(): boolean {
@@ -693,6 +782,7 @@ export class ChibiSprite3D {
     secondaryHex?: string;
     wideCenter?: WorldPoint3;
     motionScale?: number;
+    shadowOnly?: boolean;
   }): void {
     if (this.hologramMode) return;
     this.group.updateWorldMatrix(true, false);
@@ -704,6 +794,8 @@ export class ChibiSprite3D {
     this.secondaryColorHex = sec;
     this.blitzCloneMat.color.set(sec);
 
+    this.blitzShadowOnly = opts.shadowOnly ?? true;
+    this.blitzLastPoseApplied = null;
     this.blitzDuration = Math.max(0.28, opts.durationSec);
     this.blitzTimer = 0;
     this.blitzGhostAccum = 0;
@@ -728,11 +820,16 @@ export class ChibiSprite3D {
     rz: number,
     face: 1 | -1,
     col: string,
-    baseScale = 1
+    baseScale = 1,
+    poseTex: THREE.Texture | null = null
   ): void {
     const maxSlots = this.lowQuality ? Math.min(4, this.blitzGhosts.length) : this.blitzGhosts.length;
     for (let i = 0; i < maxSlots; i++) {
       const g = this.blitzGhosts[i];
+      if (poseTex && g.mat.map !== poseTex) {
+        g.mat.map = poseTex;
+        g.mat.needsUpdate = true;
+      }
       if (!g.mat.map) continue;
       if (g.life <= 0) {
         g.life = this.lowQuality ? 0.24 : 0.28;
@@ -1000,18 +1097,55 @@ export class ChibiSprite3D {
       const forwardDz = Math.max(0, cur.z - this.blitzAnchorWorld.z);
       const combatScale = 1.0 - Math.min(1, forwardDz / 7.5) * 0.42;
 
-      this.spritePivot.position.set(lx, ly, lz);
-      this.spritePivot.scale.setScalar(combatScale);
-      if (this.facing !== cur.face) this.setFacing(cur.face);
-      if (this.animState !== cur.pose) this.setAnimState(cur.pose);
+      this.blitzHeroPivot.position.set(lx, ly, lz);
+      this.blitzHeroPivot.scale.setScalar(combatScale);
+      this.blitzHeroPivot.quaternion.copy(this.spritePivot.quaternion);
+
+      if (this.blitzLastPoseApplied !== cur.pose) {
+        this.blitzLastPoseApplied = cur.pose;
+        this.syncBlitzShadowPose(cur.pose);
+      }
+
+      const heroFaceFlip = this.isPoseLeftFacing(cur.pose) ? (-cur.face as 1 | -1) : cur.face;
+      if (this.blitzShadowOnly) {
+        this.spritePivot.position.set(0, 0, 0);
+        this.spritePivot.scale.set(1, 1, 1);
+        this.blitzHeroPivot.visible = true;
+        this.blitzHeroMesh.visible = Boolean(this.blitzHeroMat.map);
+        this.blitzHeroMesh.rotation.z = cur.rz;
+        this.blitzHeroMesh.scale.set(heroFaceFlip, 1, 1);
+        this.blitzHeroMat.color.set(cur.col);
+        const fade = bp < 0.08 ? bp / 0.08 : bp > 0.86 ? Math.max(0, (1 - bp) / 0.14) : 1;
+        this.blitzHeroMat.opacity = fade * 0.88;
+      } else {
+        this.blitzHeroMesh.visible = false;
+        this.blitzHeroPivot.visible = Boolean(this.omegaHandPivot);
+        this.spritePivot.position.set(lx, ly, lz);
+        this.spritePivot.scale.setScalar(combatScale);
+        if (this.facing !== cur.face) this.setFacing(cur.face);
+        if (this.animState !== cur.pose) this.setAnimState(cur.pose);
+      }
 
       if (bp > 0.08 && bp < 0.88) {
         this.blitzGhostAccum += dtSec;
         const spawnEvery = this.lowQuality ? 0.048 : cur.snapping ? 0.02 : 0.036;
         if (this.blitzGhostAccum >= spawnEvery) {
           this.blitzGhostAccum = 0;
-          const faceFlip = this.mesh.scale.x < 0 ? -1 : 1;
-          this.spawnBlitzGhost(lx, ly, lz, cur.rz, faceFlip, cur.col, combatScale);
+          const faceFlip = this.blitzShadowOnly
+            ? heroFaceFlip
+            : this.mesh.scale.x < 0
+              ? -1
+              : 1;
+          this.spawnBlitzGhost(
+            lx,
+            ly,
+            lz,
+            cur.rz,
+            faceFlip,
+            cur.col,
+            combatScale,
+            this.blitzHeroMat.map
+          );
         }
       }
 
@@ -1035,19 +1169,19 @@ export class ChibiSprite3D {
         this.blitzCloneMesh.visible = false;
       }
 
-      this.shadowDisc.rotation.y = this.spritePivot.rotation.y;
-      this.shadowDisc.position.set(lx, 0.012, lz);
-      this.shadowDisc.scale.setScalar(combatScale * Math.max(0.45, 1 - Math.max(0, ly) * 0.25));
-      this.shadowMat.opacity = this.baseShadowOpacity * Math.max(0.25, 1 - Math.max(0, ly) * 0.35);
+      if (!this.blitzShadowOnly) {
+        this.shadowDisc.rotation.y = this.spritePivot.rotation.y;
+        this.shadowDisc.position.set(lx, 0.012, lz);
+        this.shadowDisc.scale.setScalar(combatScale * Math.max(0.45, 1 - Math.max(0, ly) * 0.25));
+        this.shadowMat.opacity = this.baseShadowOpacity * Math.max(0.25, 1 - Math.max(0, ly) * 0.35);
+      }
 
       // Animate Omega & Twin unit-specific 3D back-shader attachments
       if (this.omegaAuraGroup && this.omegaAuraMat) {
-        const isTwin = this.def.rarity === 'twin';
-        const showAura = isTwin ? !this.hologramMode : bp < 0.88;
+        const showAura = this.shouldShowBackAttachment();
         this.omegaAuraGroup.visible = showAura;
         if (showAura) {
-          const op = isTwin ? 0.96 : (bp > 0.76 ? Math.max(0, 1 - (bp - 0.76) / 0.12) : 0.95);
-          this.updateBackAttachmentGroup(elapsed, op);
+          this.updateBackAttachmentGroup(elapsed, 0.96);
         }
       }
 
@@ -1091,7 +1225,8 @@ export class ChibiSprite3D {
 
         this.omegaHandPivot.visible = showHand;
         if (showHand) {
-          this.omegaHandPivot.position.set(this.facing * 0.22, this.currentSpriteHeight * 0.54, 0.16);
+          const handFace = this.blitzShadowOnly ? cur.face : this.facing;
+          this.omegaHandPivot.position.set(handFace * 0.22, this.currentSpriteHeight * 0.54, 0.16);
           this.omegaHandPivot.rotation.set(rx, ry, rz);
           this.omegaHandWeaponMesh.scale.setScalar(swScale);
           this.omegaHandWeaponMat.uniforms.uTime.value = elapsed;
@@ -1102,31 +1237,39 @@ export class ChibiSprite3D {
       if (bp >= 1) {
         this.blitzActive = false;
         this.blitzTracks = null;
+        this.blitzHeroPivot.visible = false;
+        this.blitzHeroMesh.visible = false;
         this.blitzCloneMesh.visible = false;
-        if (this.omegaAuraGroup && this.def.rarity !== 'twin') this.omegaAuraGroup.visible = false;
+        if (this.omegaAuraGroup) {
+          this.omegaAuraGroup.visible = this.shouldShowBackAttachment();
+        }
         if (this.omegaHandPivot) this.omegaHandPivot.visible = false;
         this.spritePivot.position.set(0, 0, 0);
         this.spritePivot.scale.set(1, 1, 1);
-        this.setAnimState('attack');
+        if (!this.blitzShadowOnly) {
+          this.setAnimState('attack');
+        }
       }
-      return;
-    }
-
-    if (this.omegaAuraGroup) {
-      if (this.def.rarity === 'twin' && !this.hologramMode) {
-        this.omegaAuraGroup.visible = true;
-        this.updateBackAttachmentGroup(elapsed, 0.90);
-      } else {
-        this.omegaAuraGroup.visible = false;
+      if (!this.blitzShadowOnly) return;
+    } else {
+      this.blitzHeroPivot.visible = false;
+      this.blitzHeroMesh.visible = false;
+      this.blitzCloneMesh.visible = false;
+      if (this.omegaHandPivot) this.omegaHandPivot.visible = false;
+      if (this.omegaAuraGroup) {
+        if (this.shouldShowBackAttachment()) {
+          this.omegaAuraGroup.visible = true;
+          this.updateBackAttachmentGroup(elapsed, 0.90);
+        } else {
+          this.omegaAuraGroup.visible = false;
+        }
       }
     }
-    if (this.omegaHandPivot) this.omegaHandPivot.visible = false;
 
     const yaw = this.spritePivot.rotation.y;
     const heightFactor = Math.max(0.42, 1 - posY * 1.45);
     this.spritePivot.position.set(0, 0, 0);
     this.spritePivot.scale.set(1, 1, 1);
-    this.blitzCloneMesh.visible = false;
     this.shadowDisc.rotation.y = yaw;
     this.shadowDisc.position.x = Math.cos(yaw) * posX * 0.65;
     this.shadowDisc.position.z = -Math.sin(yaw) * posX * 0.65;
@@ -1192,6 +1335,11 @@ export class ChibiSprite3D {
     }
     this.blitzCloneMesh.geometry.dispose();
     this.blitzCloneMat.dispose();
+    this.defaultBlitzHeroGeo.dispose();
+    for (const geo of Object.values(this.blitzPoseGeos)) {
+      geo?.dispose();
+    }
+    this.blitzHeroMat.dispose();
     this.shadowDisc.geometry.dispose();
     this.shadowMat.dispose();
     this.omegaAuraGeo?.dispose();

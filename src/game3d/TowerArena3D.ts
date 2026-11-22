@@ -14,7 +14,13 @@ import {
   type SignatureProjectileArrival,
   SignatureProjectilePool3D,
 } from './SignatureProjectilePool3D';
-import { TierAttackVfxPool3D, type TierVfxHooks, type WorldPoint3 } from './TierAttackVfx3D';
+import {
+  CHIBI_ATTACK_ANIM_SEC,
+  computeAttackVfxSpeedScale,
+  TierAttackVfxPool3D,
+  type TierVfxHooks,
+  type WorldPoint3,
+} from './TierAttackVfx3D';
 import {
   BossGravityRockSeed,
   BossHaloArcHandle,
@@ -349,7 +355,7 @@ export class TowerArena3D {
         sprite.group.userData = { chibiId: cfg.def.id };
         const spawnPos = this.getSpawnPos(cfg.slotIndex);
         sprite.group.position.copy(spawnPos);
-        sprite.setAnimState('attack');
+        sprite.setAnimState('idle');
         sprite.setFacing(spawnPos.x <= 0 ? 1 : -1);
         sprite.setAccentColor(cfg.def.accentColor);
         sprite.setLowQuality(this.lowQuality);
@@ -366,7 +372,7 @@ export class TowerArena3D {
           spawnPos,
           targetOreIndex: -1,
           dmg: cfg.dmg,
-          attackInterval: Math.max(0.32, 0.85 / Math.max(1, cfg.miningMult)),
+          attackInterval: Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / Math.max(1, cfg.miningMult))),
           attackCooldown: 0.14 + cfg.slotIndex * 0.08,
           comboStep: 0,
           enchantId: null,
@@ -375,7 +381,7 @@ export class TowerArena3D {
         this.fighters.set(cfg.slotIndex, existing);
       } else {
         existing.dmg = Math.max(1, cfg.dmg);
-        existing.attackInterval = Math.max(0.32, 0.85 / Math.max(1, cfg.miningMult));
+        existing.attackInterval = Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / Math.max(1, cfg.miningMult)));
       }
 
       this.applyFighterEnchant(existing, cfg.enchantId);
@@ -419,7 +425,7 @@ export class TowerArena3D {
     this.projectiles.clear();
     for (const f of this.fighters.values()) {
       f.sprite.group.position.copy(f.spawnPos);
-      f.sprite.setAnimState(this.paused ? 'aura' : 'attack');
+      f.sprite.setAnimState('idle');
       f.sprite.setFacing(f.spawnPos.x <= 0 ? 1 : -1);
       f.targetOreIndex = -1;
       f.attackCooldown = 0.14 + f.slotIndex * 0.08;
@@ -559,7 +565,7 @@ export class TowerArena3D {
 
     if (opts.paused) {
       for (const f of this.fighters.values()) {
-        f.sprite.setAnimState('aura');
+        f.sprite.setAnimState('idle');
       }
     }
   }
@@ -901,7 +907,7 @@ export class TowerArena3D {
     const handleProjectileArrival = (a: SignatureProjectileArrival): void => {
       if (this.paused) return;
       const fighter = this.fighters.get(a.slotIndex);
-      const speedScale = Math.max(0.48, Math.min(1.05, a.attackInterval / 0.85));
+      const speedScale = computeAttackVfxSpeedScale(a.attackInterval);
       if (a.isBoss) {
         if (!this.bossWave) return;
         this.bounceTimer = Math.max(this.bounceTimer, 0.09);
@@ -988,17 +994,12 @@ export class TowerArena3D {
       const pos = f.sprite.group.position;
       pos.copy(f.spawnPos);
 
+      f.sprite.setAnimState('idle');
       if (this.paused) {
-        f.sprite.setAnimState('aura');
+        // Keep podium chibi idle while paused
       } else if (!this.bossWave) {
         const targetRock = this.pickTargetOreForFighter(f);
-        if (!targetRock) {
-          f.sprite.setAnimState('idle');
-        } else {
-          if (Math.abs(targetRock.x - pos.x) > 0.04) {
-            f.sprite.setFacing(targetRock.x >= pos.x ? 1 : -1);
-          }
-          f.sprite.setAnimState('attack');
+        if (targetRock) {
           f.attackCooldown -= safeDt;
           if (f.attackCooldown <= 0) {
             f.attackCooldown = f.attackInterval;
@@ -1010,9 +1011,8 @@ export class TowerArena3D {
               if (wr.alive) this.targetPtsScratch.push({ x: wr.x, y: 0.45, z: wr.z });
             }
             const targetPt: WorldPoint3 = { x: targetRock.x, y: 0.45, z: targetRock.z };
-            const blitzDur = Math.min(Math.max(0.42, f.attackInterval * 0.92), f.def.rarity === 'omega' ? 1.1 : 0.82);
+            const blitzDur = CHIBI_ATTACK_ANIM_SEC;
 
-            f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), step);
             f.sprite.triggerBlitz({
               rarity: f.def.rarity,
               targetX: targetRock.x,
@@ -1021,6 +1021,7 @@ export class TowerArena3D {
               allTargets: this.targetPtsScratch,
               durationSec: blitzDur,
               colorHex: f.colorHex,
+              shadowOnly: true,
             });
             this.tierVfx.fireAnticipation(f.def.rarity, f.colorHex, targetPt, this.targetPtsScratch);
 
@@ -1046,19 +1047,14 @@ export class TowerArena3D {
           }
         }
       } else {
-        if (Math.abs(-pos.x) > 0.04) {
-          f.sprite.setFacing(pos.x <= 0 ? 1 : -1);
-        }
-        f.sprite.setAnimState('attack');
         f.attackCooldown -= safeDt;
         if (f.attackCooldown <= 0) {
           f.attackCooldown = f.attackInterval;
           const step = f.comboStep;
           f.comboStep = (f.comboStep + 1) % 3;
           const bossPt: WorldPoint3 = { x: 0, y: 0.8, z: BOSS_CENTER_Z + 0.85 };
-          const blitzDur = Math.min(Math.max(0.42, f.attackInterval * 0.92), f.def.rarity === 'omega' ? 1.1 : 0.82);
+          const blitzDur = CHIBI_ATTACK_ANIM_SEC;
 
-          f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), step);
           f.sprite.triggerBlitz({
             rarity: f.def.rarity,
             targetX: bossPt.x,
@@ -1067,6 +1063,7 @@ export class TowerArena3D {
             allTargets: [bossPt],
             durationSec: blitzDur,
             colorHex: f.colorHex,
+            shadowOnly: true,
           });
           this.tierVfx.fireAnticipation(f.def.rarity, f.colorHex, bossPt, [bossPt]);
 

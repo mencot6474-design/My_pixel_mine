@@ -548,7 +548,7 @@ export class PlotPedestal3D {
 
     const sprite = new ChibiSprite3D(def, 2.05, this.index * 0.75);
     sprite.group.position.y = 0.28;
-    sprite.setAnimState('aura');
+    sprite.setAnimState('idle');
     sprite.setLowQuality(this.lowQuality);
     this.chibiSprite = sprite;
     this.group.add(sprite.group);
@@ -723,6 +723,7 @@ export class PlotPedestal3D {
     colorHex?: string;
     wideCenter?: { x: number; y: number; z: number };
     motionScale?: number;
+    shadowOnly?: boolean;
   }): void {
     this.chibiSprite?.triggerBlitz(opts);
   }
@@ -749,7 +750,7 @@ export class PlotPedestal3D {
   }
 
   public triggerChibiShowcase(_durationSec = 1.4): void {
-    this.chibiSprite?.setAnimState('aura');
+    this.chibiSprite?.setAnimState('idle');
   }
 
   public setHovered(hover: boolean): void {

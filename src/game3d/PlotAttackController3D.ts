@@ -10,6 +10,8 @@ import {
   type PlotAttackStyle,
 } from './SignatureProjectilePool3D';
 import {
+  CHIBI_ATTACK_ANIM_SEC,
+  computeAttackVfxSpeedScale,
   TierAttackVfxPool3D,
   type TierVfxHooks,
   type WorldPoint3,
@@ -89,24 +91,11 @@ function getAoeSplashDamageMult(rarity: string): number {
 
 function getMineAttackIntervalSec(miningMult: number): number {
   const safeMult = Math.max(1, miningMult);
-  return Math.max(1.28, Math.min(2.05, 1.85 / (1 + (safeMult - 1) * 0.25)));
+  return Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / (1 + (safeMult - 1) * 0.15)));
 }
 
-function getMineBlitzDurationSec(rarity: string, attackInterval: number): number {
-  let target = 1.02;
-  if (rarity === 'fusion' || rarity === 'limited' || rarity === 'twin' || rarity === 'omega') {
-    target = 1.42;
-  } else if (
-    rarity === 'epic' ||
-    rarity === 'legendary' ||
-    rarity === 'rainbow' ||
-    rarity === 'mythic' ||
-    rarity === 'exotic' ||
-    rarity === 'secret'
-  ) {
-    target = 1.2;
-  }
-  return Math.max(0.88, Math.min(attackInterval * 0.94, target));
+function getMineBlitzDurationSec(_rarity: string, _attackInterval: number): number {
+  return CHIBI_ATTACK_ANIM_SEC;
 }
 
 function computeZoneWideCenter(
@@ -367,7 +356,7 @@ export class PlotAttackController3D {
           const an = alive[ai];
           this.alivePointScratch.push({ x: an.worldX, y: an.worldY, z: an.worldZ });
         }
-        const speedScale = Math.max(0.9, Math.min(1.24, a.attackInterval / 1.45));
+        const speedScale = computeAttackVfxSpeedScale(a.attackInterval);
         const targetPt: WorldPoint3 = { x: a.ex, y: Math.max(-0.68, a.ey - 0.65), z: a.ez };
         const wideCenter = computeZoneWideCenter(targetPt, this.alivePointScratch);
         this.tierVfx.fireTierAttack({
@@ -453,8 +442,7 @@ export class PlotAttackController3D {
           const accentColor = ped.getActiveAccentColor();
           const blitzDur = getMineBlitzDurationSec(unit.def.rarity, attackInterval);
 
-          ped.setChibiFacing(target.worldX < pedX ? -1 : 1);
-          ped.triggerChibiAttack(Math.min(0.65, attackInterval * 0.55), unit.comboStep);
+          ped.setChibiAnimState('idle');
           ped.triggerChibiBlitz({
             rarity: unit.def.rarity,
             targetX: targetPt.x,
@@ -465,6 +453,7 @@ export class PlotAttackController3D {
             colorHex: accentColor,
             wideCenter,
             motionScale: MINE_PIT_MOTION_SCALE,
+            shadowOnly: true,
           });
           this.tierVfx.fireAnticipation(
             unit.def.rarity,
@@ -488,7 +477,7 @@ export class PlotAttackController3D {
             ey: target.worldY + 0.65,
             ez: target.worldZ,
             attackInterval,
-            delayLeft: Math.max(0.18, blitzDur * 0.18),
+            delayLeft: Math.max(0.18, blitzDur * 0.16),
           });
         } else {
           this.applyImpact(

@@ -109,6 +109,12 @@ function lerpNum(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
+export const CHIBI_ATTACK_ANIM_SEC = 2.5;
+
+export function computeAttackVfxSpeedScale(attackInterval: number): number {
+  return Math.max(1.32, Math.min(1.5, attackInterval / 1.8));
+}
+
 export function getRaritySecondaryColor(rarity: string): string {
   switch (rarity) {
     case 'uncommon':

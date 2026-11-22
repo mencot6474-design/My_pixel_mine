@@ -26,7 +26,13 @@ import {
   type SignatureProjectileArrival,
   SignatureProjectilePool3D,
 } from './SignatureProjectilePool3D';
-import { TierAttackVfxPool3D, type TierVfxHooks, type WorldPoint3 } from './TierAttackVfx3D';
+import {
+  CHIBI_ATTACK_ANIM_SEC,
+  computeAttackVfxSpeedScale,
+  TierAttackVfxPool3D,
+  type TierVfxHooks,
+  type WorldPoint3,
+} from './TierAttackVfx3D';
 
 export interface OmegaStrikeEvent {
   slotIndex: number;
@@ -745,10 +751,10 @@ export class OmegaArena3D {
       const existing = this.fighters.get(cfg.slotIndex);
       if (existing && existing.chibiId === cfg.def.id) {
         existing.dmg = cfg.dmg;
-        existing.attackInterval = Math.max(0.32, 0.9 / Math.max(0.4, cfg.miningMult));
+        existing.attackInterval = Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / Math.max(0.4, cfg.miningMult)));
         existing.fx.setEnchant(cfg.enchantId);
         existing.sprite.setAccentColor(cfg.def.accentColor);
-        existing.sprite.setAnimState('attack');
+        existing.sprite.setAnimState('idle');
         continue;
       }
       if (existing) {
@@ -761,7 +767,7 @@ export class OmegaArena3D {
       const standY = playerPod ? playerPod.topY : 0.26;
       const sprite = new ChibiSprite3D(cfg.def);
       sprite.group.position.set(sx, standY, sz);
-      sprite.setAnimState(this.battlePhase === 'active' ? 'attack' : 'idle');
+      sprite.setAnimState('idle');
       sprite.setFacing(sx <= 0 ? 1 : -1);
       sprite.setLowQuality(this.lowQuality);
       const fx = new ChibiFieldFxController(sprite.group, cfg.def.accentColor, cfg.slotIndex);
@@ -778,7 +784,7 @@ export class OmegaArena3D {
         fx,
         spawnPos: new THREE.Vector3(sx, standY, sz),
         dmg: cfg.dmg,
-        attackInterval: Math.max(0.32, 0.9 / Math.max(0.4, cfg.miningMult)),
+        attackInterval: Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / Math.max(0.4, cfg.miningMult))),
         attackCooldown: 0.08 + cfg.slotIndex * 0.1,
         comboStep: 0,
         colorHex: cfg.def.accentColor,
@@ -1031,7 +1037,7 @@ export class OmegaArena3D {
       const fighter = this.fighters.get(a.slotIndex);
       if (fighter) {
         const bossPt: WorldPoint3 = { x: 0, y: this.bossStageY, z: BOSS_POS_Z + 0.25 };
-        const speedScale = Math.max(0.48, Math.min(1.05, a.attackInterval / 0.85));
+        const speedScale = computeAttackVfxSpeedScale(a.attackInterval);
         this.tierVfx.fireTierAttack({
           rarity: fighter.rarity,
           chibiId: fighter.chibiId,
@@ -1058,17 +1064,16 @@ export class OmegaArena3D {
       f.colorHex = f.fx.getAccentColor();
       f.sprite.setAccentColor(f.colorHex);
       f.sprite.group.position.copy(f.spawnPos);
+      f.sprite.setAnimState('idle');
       if (canAttack) {
-        f.sprite.setAnimState('attack');
         f.attackCooldown -= safeDt;
         if (f.attackCooldown <= 0) {
           f.attackCooldown = f.attackInterval;
           const step = f.comboStep;
           f.comboStep = (f.comboStep + 1) % 3;
           const bossPt: WorldPoint3 = { x: 0, y: this.bossStageY, z: BOSS_POS_Z + 0.25 };
-          const blitzDur = Math.min(Math.max(0.42, f.attackInterval * 0.92), f.rarity === 'omega' ? 1.1 : 0.82);
+          const blitzDur = CHIBI_ATTACK_ANIM_SEC;
 
-          f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), step);
           f.sprite.triggerBlitz({
             rarity: f.rarity,
             targetX: bossPt.x,
@@ -1077,6 +1082,7 @@ export class OmegaArena3D {
             allTargets: [bossPt],
             durationSec: blitzDur,
             colorHex: f.colorHex,
+            shadowOnly: true,
           });
           this.tierVfx.fireAnticipation(f.rarity, f.colorHex, bossPt, [bossPt]);
 
