@@ -909,6 +909,7 @@ export class TowerArena3D {
           const bossPt: WorldPoint3 = { x: 0, y: 0.8, z: BOSS_CENTER_Z + 0.85 };
           this.tierVfx.fireTierAttack({
             rarity: fighter.def.rarity,
+            chibiId: fighter.def.id,
             colorHex: a.accentColor,
             target: bossPt,
             allTargets: [bossPt],
@@ -955,6 +956,7 @@ export class TowerArena3D {
           }
           this.tierVfx.fireTierAttack({
             rarity: fighter.def.rarity,
+            chibiId: fighter.def.id,
             colorHex: a.accentColor,
             target: { x: rock.x, y: 0.45, z: rock.z },
             allTargets: this.targetPtsScratch,

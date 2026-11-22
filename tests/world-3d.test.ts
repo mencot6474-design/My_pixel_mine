@@ -121,6 +121,10 @@ import { createShopCyberPlaza } from '../src/game3d/ShopCyberPlaza3D';
 import { ShopWorld3D } from '../src/game3d/ShopWorld3D';
 import { createSeraphimBoss3D } from '../src/game3d/SeraphimBoss3D';
 import { TowerArena3D } from '../src/game3d/TowerArena3D';
+import {
+  buildTierMotionWaypoints,
+  TierAttackVfxPool3D,
+} from '../src/game3d/TierAttackVfx3D';
 import { createTowerCityEnvironment } from '../src/game3d/TowerCityEnvironment3D';
 import { WeatherFx3D } from '../src/game3d/WeatherFx3D';
 import { createWeatherSkyMaterial } from '../src/game3d/WeatherSkyShader';
@@ -3207,5 +3211,119 @@ describe('Pure 3D Mine World', () => {
     controller.dispose();
     peds.forEach((p) => p.dispose());
     pit.dispose();
+  });
+
+  it('executes bespoke Omega attack animations for crimson-ronin and obsidian-sovereign without rune circles, cracks, or lightning', () => {
+    const anchor = { x: -4, y: 0.4, z: -4 };
+    const target = { x: 0, y: 0.05, z: 0.2 };
+    const allTargets = [
+      { x: -2.4, y: 0.05, z: -0.6 },
+      { x: 0, y: 0.05, z: -0.8 },
+      { x: 2.4, y: 0.05, z: -0.5 },
+    ];
+
+    const roninTrack = buildTierMotionWaypoints('omega', anchor, target, allTargets, '#ef4444', '#fbbf24', target, 1.0, 'crimson-ronin');
+    const sovTrack = buildTierMotionWaypoints('omega', anchor, target, allTargets, '#e2e8f0', '#e879f9', target, 1.0, 'obsidian-sovereign');
+    expect(roninTrack.hero.length).toBeGreaterThanOrEqual(7);
+    expect(sovTrack.hero.length).toBeGreaterThanOrEqual(8);
+    expect(Math.max(...sovTrack.hero.map((w) => w.y))).toBeGreaterThan(3.5);
+
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
+    cam.position.set(0, 11, 15);
+    let camPushCalls = 0;
+    let impactCalls = 0;
+    const pool = new TierAttackVfxPool3D({
+      onCameraPush: () => {
+        camPushCalls++;
+      },
+      onImpactFrame: () => {
+        impactCalls++;
+      },
+    });
+
+    pool.fireAnticipation('omega', '#ef4444', target, allTargets, 0.72, target);
+    pool.fireTierAttack({ rarity: 'omega', chibiId: 'crimson-ronin', colorHex: '#ef4444', target, allTargets, areaScale: 0.72, wideCenter: target });
+    for (let i = 0; i < 16; i++) pool.update(0.05, cam);
+    expect(impactCalls).toBeGreaterThan(0);
+
+    impactCalls = 0;
+    pool.fireTierAttack({ rarity: 'omega', chibiId: 'obsidian-sovereign', colorHex: '#e2e8f0', target, allTargets, areaScale: 0.72, wideCenter: target });
+    for (let i = 0; i < 24; i++) pool.update(0.05, cam);
+    expect(impactCalls).toBeGreaterThan(0);
+    expect(camPushCalls).toBe(0);
+
+    const roninDef = getChibiById('crimson-ronin')!;
+    const sovDef = getChibiById('obsidian-sovereign')!;
+    const roninSprite = new ChibiSprite3D(roninDef);
+    const sovSprite = new ChibiSprite3D(sovDef);
+    roninSprite.triggerBlitz({ rarity: 'omega', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
+    sovSprite.triggerBlitz({ rarity: 'omega', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
+    for (let i = 0; i < 12; i++) {
+      roninSprite.update(0.06, i * 0.06, cam);
+      sovSprite.update(0.06, i * 0.06, cam);
+    }
+
+    roninSprite.dispose();
+    sovSprite.dispose();
+    pool.dispose();
+  });
+
+  it('executes bespoke shaders, 3D geometries, and Hero+Clone blitz choreography for all 5 Tier TWIN chibis', () => {
+    const twinIds = [
+      'yukikage-twins',
+      'halcyon-twins',
+      'nocturne-twins',
+      'lullaby-twins',
+      'clockwork-twins',
+    ] as const;
+    const anchor = { x: -4, y: 0.4, z: -4 };
+    const target = { x: 0, y: 0.05, z: 0.2 };
+    const allTargets = [
+      { x: -2.4, y: 0.05, z: -0.6 },
+      { x: 0, y: 0.05, z: -0.8 },
+      { x: 2.4, y: 0.05, z: -0.5 },
+    ];
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
+    cam.position.set(0, 11, 15);
+
+    let impactCalls = 0;
+    const pool = new TierAttackVfxPool3D({
+      onImpactFrame: () => {
+        impactCalls++;
+      },
+    });
+
+    for (const id of twinIds) {
+      const def = getChibiById(id);
+      expect(def).toBeDefined();
+      expect(def?.rarity).toBe('twin');
+
+      const tracks = buildTierMotionWaypoints('twin', anchor, target, allTargets, def!.accentColor, '#ffffff', target, 1.0, id);
+      expect(tracks.hero.length).toBeGreaterThanOrEqual(5);
+      expect(tracks.clone?.length).toBeGreaterThanOrEqual(5);
+
+      impactCalls = 0;
+      pool.fireAnticipation('twin', def!.accentColor, target, allTargets, 0.72, target);
+      pool.fireTierAttack({
+        rarity: 'twin',
+        chibiId: id,
+        colorHex: def!.accentColor,
+        target,
+        allTargets,
+        areaScale: 0.72,
+        wideCenter: target,
+      });
+      for (let i = 0; i < 16; i++) pool.update(0.05, cam);
+      expect(impactCalls).toBeGreaterThan(0);
+
+      const sprite = new ChibiSprite3D(def!);
+      // Verify Twin back-shader attachment updates in idle state as well as blitz state
+      sprite.update(0.05, 0.25, cam);
+      sprite.triggerBlitz({ rarity: 'twin', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
+      for (let i = 0; i < 18; i++) sprite.update(0.06, i * 0.06, cam);
+      sprite.dispose();
+    }
+
+    pool.dispose();
   });
 });

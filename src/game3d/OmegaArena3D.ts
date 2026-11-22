@@ -1034,6 +1034,7 @@ export class OmegaArena3D {
         const speedScale = Math.max(0.48, Math.min(1.05, a.attackInterval / 0.85));
         this.tierVfx.fireTierAttack({
           rarity: fighter.rarity,
+          chibiId: fighter.chibiId,
           colorHex: a.accentColor,
           target: bossPt,
           allTargets: [bossPt],

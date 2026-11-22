@@ -372,6 +372,7 @@ export class PlotAttackController3D {
         const wideCenter = computeZoneWideCenter(targetPt, this.alivePointScratch);
         this.tierVfx.fireTierAttack({
           rarity: unit.def.rarity,
+          chibiId: unit.def.id,
           colorHex: a.accentColor,
           target: targetPt,
           allTargets: this.alivePointScratch,
