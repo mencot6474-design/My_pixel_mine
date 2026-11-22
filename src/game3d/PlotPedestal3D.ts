@@ -288,7 +288,10 @@ export class PlotPedestal3D {
   private chibiSprite: ChibiSprite3D | null = null;
 
   private enchantId: string | null = null;
+  private enchantColorHex: string | null = null;
   private enchantIsRainbow = false;
+  private lastElapsed = 0;
+  private readonly activeColorHelper = new THREE.Color('#22d3ee');
   private auraGroup: THREE.Group | null = null;
   private auraSigilMesh: THREE.Mesh | null = null;
   private auraGroundMat: THREE.MeshBasicMaterial | null = null;
@@ -571,12 +574,14 @@ export class PlotPedestal3D {
     }
 
     this.enchantId = targetId;
+    this.enchantColorHex = null;
     this.enchantIsRainbow = false;
     if (!targetId || !this.chibiDef) {
       if (this.chibiDef) {
         this.ringMat.color.set(this.chibiDef.accentColor);
         this.ringMat.emissive.set(this.chibiDef.accentColor);
         this.holoDiscMat.color.set(this.chibiDef.accentColor);
+        this.chibiSprite?.setAccentColor(this.chibiDef.accentColor);
       } else {
         this.ringMat.color.setHex(0x22d3ee);
         this.ringMat.emissive.setHex(0x22d3ee);
@@ -589,7 +594,9 @@ export class PlotPedestal3D {
     const enc = getEnchantById(targetId);
     if (!enc) return;
 
+    this.enchantColorHex = enc.color;
     this.enchantIsRainbow = enc.rarity === 'rainbow';
+    this.chibiSprite?.setAccentColor(enc.color);
     const secondaryHex = ENCHANT_SECONDARY_COLOR[enc.id] ?? enc.color;
 
     this.ringMat.color.set(enc.color);
@@ -689,6 +696,31 @@ export class PlotPedestal3D {
     this.chibiSprite?.setAnimState(state);
   }
 
+  public triggerChibiAttack(durationSec = 0.42, comboStep?: number): void {
+    if (!this.chibiSprite) return;
+    this.chibiSprite.setAnimState('attack');
+    this.chibiSprite.triggerAttack(durationSec, comboStep);
+  }
+
+  public setChibiFacing(sign: 1 | -1): void {
+    this.chibiSprite?.setFacing(sign);
+  }
+
+  public getAttackOriginWorldPosition(out: THREE.Vector3): THREE.Vector3 {
+    this.group.updateWorldMatrix(true, false);
+    out.set(0, 1.35, 0.35);
+    return this.group.localToWorld(out);
+  }
+
+  public getActiveAccentColor(): string {
+    if (this.enchantIsRainbow) {
+      const hue = ((this.lastElapsed + this.index * 0.65) * 0.08) % 1;
+      this.activeColorHelper.setHSL(hue, 0.85, 0.62);
+      return `#${this.activeColorHelper.getHexString()}`;
+    }
+    return this.enchantColorHex ?? this.chibiDef?.accentColor ?? '#22d3ee';
+  }
+
   public triggerChibiShowcase(_durationSec = 1.4): void {
     this.chibiSprite?.setAnimState('aura');
   }
@@ -700,6 +732,7 @@ export class PlotPedestal3D {
   }
 
   public update(dtSec: number, elapsed = 0, camera?: THREE.Camera): void {
+    this.lastElapsed = elapsed;
     const safeDt = Math.min(Math.max(0, dtSec), 0.1);
     const targetScale = (this.hovered ? 1.06 : 1) * PLOT_PODIUM_SCALE;
     this.tmpScale.set(targetScale, PLOT_PODIUM_SCALE, targetScale);

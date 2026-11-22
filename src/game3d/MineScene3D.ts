@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ChibiDef, getChibiById } from './ChibiCatalog';
 import { ProceduralChestHandle } from './ChestVaultStation3D';
-import { FieldMiner3D } from './FieldMiner3D';
+import { PlotAttackController3D } from './PlotAttackController3D';
 import { preloadCommonMineModels } from './GlbAssets3D';
 import { MineEnvironment3D } from './MineEnvironment3D';
 import { DEFAULT_WORLD_PALETTE, MineWorldPalette, OreVariantKey, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
@@ -201,7 +201,7 @@ export class MineScene3D {
   private readonly pointer = new THREE.Vector2();
 
   private readonly pedestals: PlotPedestal3D[] = [];
-  private readonly fieldMiners = new Map<number, FieldMiner3D>();
+  private readonly plotAttackController = new PlotAttackController3D();
   private readonly slotEnchants: (string | null)[] = Array(STAGE_PEDESTAL_COUNT).fill(null);
   private readonly slotCombatStats = new Map<number, { dmg: number; speed: number; miningMult: number }>();
   private readonly env: MineEnvironment3D;
@@ -373,6 +373,8 @@ export class MineScene3D {
     for (const m of this.pit.clickableMeshes) {
       this.clickableMeshes.push(m);
     }
+    this.plotAttackController.setLowQuality(this.graphicsQuality === 'low');
+    this.scene.add(this.plotAttackController.group);
 
     this.projector = new MineSceneProjector({
       mountEl: this.mountEl,
@@ -639,21 +641,33 @@ export class MineScene3D {
       inMine && this.overclockActive
         ? dtSec * getOverclockTierBuffs(this.overclockTier || 1).speedMult
         : dtSec;
-    for (const fm of this.fieldMiners.values()) {
-      fm.update(minerDt, this.elapsed, this.camera, this.pit, minerBreakCb, hitCb, inMine);
-    }
+    this.plotAttackController.update(
+      minerDt,
+      this.camera,
+      this.pit,
+      this.pedestals,
+      inMine,
+      minerBreakCb,
+      hitCb
+    );
 
     // If the browser tab was backgrounded/throttled (rawDt > 0.12s), catch up missed mine ticks seamlessly
-    if (rawDt > 0.12 && this.fieldMiners.size > 0) {
+    if (rawDt > 0.12 && this.plotAttackController.getUnitCount() > 0) {
       let rem = Math.min(180, rawDt - dtSec);
       const step = 0.25;
       while (rem > 0) {
         const s = Math.min(step, rem);
         rem -= s;
         this.pit.update(s, this.elapsed);
-        for (const fm of this.fieldMiners.values()) {
-          fm.update(s, this.elapsed, this.camera, this.pit, this.callbacks.onOreBroken, undefined, false);
-        }
+        this.plotAttackController.update(
+          s,
+          this.camera,
+          this.pit,
+          this.pedestals,
+          false,
+          this.callbacks.onOreBroken,
+          undefined
+        );
       }
     }
 
@@ -742,9 +756,7 @@ export class MineScene3D {
     this.pedestals.forEach((p) => {
       p.group.visible = isMine;
     });
-    for (const fm of this.fieldMiners.values()) {
-      fm.sprite.group.visible = isMine;
-    }
+    this.plotAttackController.group.visible = isMine;
 
     if (mode === 'altar') {
       this.scene.background = new THREE.Color(0x020208);
@@ -1034,7 +1046,7 @@ export class MineScene3D {
 
   public syncPlotUnitStats(slotIndex: number, dmg: number, speed: number, miningMult: number): void {
     this.slotCombatStats.set(slotIndex, { dmg, speed, miningMult });
-    this.fieldMiners.get(slotIndex)?.setCombatStats(dmg, speed, miningMult);
+    this.plotAttackController.setSlotStats(slotIndex, dmg, speed, miningMult);
     if (this.mode === 'tower') this.syncTowerFighters();
   }
 
@@ -1042,7 +1054,6 @@ export class MineScene3D {
     if (slotIndex < 0 || slotIndex >= STAGE_PEDESTAL_COUNT) return;
     this.slotEnchants[slotIndex] = enchantId;
     this.pedestals[slotIndex]?.setEnchant(enchantId);
-    this.fieldMiners.get(slotIndex)?.setEnchant(enchantId);
     if (this.mode === 'tower') this.syncTowerFighters();
   }
 
@@ -1066,20 +1077,10 @@ export class MineScene3D {
     const activeEnchant = def ? this.slotEnchants[slotIndex] ?? null : null;
     ped.setEnchant(activeEnchant);
 
-    const existing = this.fieldMiners.get(slotIndex);
-    if (existing) {
-      this.scene.remove(existing.sprite.group);
-      existing.dispose();
-      this.fieldMiners.delete(slotIndex);
-    }
-
     if (def) {
-      const fm = new FieldMiner3D(def, slotIndex);
-      fm.setLowQuality(this.graphicsQuality === 'low');
-      fm.setEnchant(activeEnchant);
-      this.fieldMiners.set(slotIndex, fm);
-      this.scene.add(fm.sprite.group);
+      this.plotAttackController.setSlotUnit(slotIndex, def, this.slotCombatStats.get(slotIndex));
     } else {
+      this.plotAttackController.setSlotUnit(slotIndex, null);
       this.slotCombatStats.delete(slotIndex);
     }
     this.syncTowerFighters();
@@ -1129,9 +1130,7 @@ export class MineScene3D {
     for (let i = 0; i < this.pedestals.length; i++) {
       this.pedestals[i].setLowQuality(low);
     }
-    for (const fm of this.fieldMiners.values()) {
-      fm.setLowQuality(low);
-    }
+    this.plotAttackController.setLowQuality(low);
     configureSceneTextureSharpness(this.renderer, this.scene, this.getTextureAnisoCap());
   }
 
@@ -1174,6 +1173,7 @@ export class MineScene3D {
       this.rafId = 0;
     }
     this.pedestals.forEach((p) => p.dispose());
+    this.plotAttackController.dispose();
     this.chestVisual.dispose();
     this.env.dispose();
     this.pit.dispose();

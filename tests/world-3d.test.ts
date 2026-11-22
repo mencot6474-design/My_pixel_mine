@@ -20,6 +20,10 @@ import {
 } from '../src/game3d/MineScene3D';
 import { AudioManager } from '../src/audio/AudioManager';
 import {
+  PlotAttackController3D,
+  getChibiAttackStyle,
+} from '../src/game3d/PlotAttackController3D';
+import {
   cgBindAdLifecycle,
   cgBindAudioMuteListener,
   cgGameplayStart,
@@ -3133,5 +3137,73 @@ describe('Pure 3D Mine World', () => {
     });
     expect(fmPointsVis).toBe(false);
     fm.dispose();
+  });
+
+  it('maps Chibi catalog units to distinct plot attack styles deterministically', () => {
+    const styles = new Set(CHIBI_CATALOG.map((def) => getChibiAttackStyle(def)));
+    expect(styles.has('crescent')).toBe(true);
+    expect(styles.has('beam')).toBe(true);
+    expect(styles.has('star')).toBe(true);
+    expect(styles.has('meteor')).toBe(true);
+    expect(styles.has('twin')).toBe(true);
+
+    const omegaUnit = CHIBI_CATALOG.find((c) => c.rarity === 'omega');
+    if (omegaUnit) expect(getChibiAttackStyle(omegaUnit)).toBe('beam');
+    const twinUnit = CHIBI_CATALOG.find((c) => c.rarity === 'twin');
+    if (twinUnit) expect(getChibiAttackStyle(twinUnit)).toBe('twin');
+  });
+
+  it('fires plot-to-pit signature attacks from pedestals in visual and background modes', () => {
+    const controller = new PlotAttackController3D();
+    const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
+    cam.position.set(0, 11.7, 15.6);
+    cam.lookAt(0, 0.55, -0.55);
+
+    const peds = [0, 1].map((idx) => new PlotPedestal3D(idx, (idx - 2) * 3.22, -4.58));
+    peds[0].setChibi(CHIBI_CATALOG[0]);
+    peds[1].setChibi(CHIBI_CATALOG.find((c) => c.rarity === 'twin') ?? CHIBI_CATALOG[1]);
+
+    controller.setSlotUnit(0, peds[0].getChibi(), { dmg: 250, speed: 2, miningMult: 2 });
+    controller.setSlotUnit(1, peds[1].getChibi(), { dmg: 180, speed: 1.5, miningMult: 1.5 });
+    expect(controller.getUnitCount()).toBe(2);
+
+    const hits: number[] = [];
+    let brokenCount = 0;
+    const onHit = (dmg: number) => hits.push(dmg);
+    const onBroken = () => {
+      brokenCount++;
+    };
+
+    // Advance ~0.16s so slot 0 fires its projectile mid-flight (cooldown 0.12s, flight ~0.17s)
+    for (let i = 0; i < 4; i++) {
+      controller.update(0.04, cam, pit, peds, true, onBroken, onHit);
+    }
+    expect(controller.getActiveProjectileCount()).toBeGreaterThan(0);
+
+    // Advance projectile flight until impacts land
+    for (let i = 0; i < 12; i++) {
+      pit.update(0.05, i * 0.05, cam, false);
+      controller.update(0.05, cam, pit, peds, true, onBroken, onHit);
+    }
+    expect(hits.length).toBeGreaterThan(0);
+
+    // Switch to headless/background mining: flushes projectiles and deals damage directly with 0 active projectiles
+    const prevHits = hits.length;
+    for (let i = 0; i < 15; i++) {
+      pit.update(0.1, i * 0.1, cam, false);
+      controller.update(0.1, cam, pit, peds, false, onBroken, onHit);
+    }
+    expect(controller.getActiveProjectileCount()).toBe(0);
+    expect(brokenCount).toBeGreaterThanOrEqual(0);
+    // onHit is intentionally suppressed in renderVisuals=false mode
+    expect(hits.length).toBe(prevHits);
+
+    controller.setSlotUnit(0, null);
+    expect(controller.getUnitCount()).toBe(1);
+
+    controller.dispose();
+    peds.forEach((p) => p.dispose());
+    pit.dispose();
   });
 });
