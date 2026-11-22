@@ -10,6 +10,7 @@ import type { OmegaArena3D } from './OmegaArena3D';
 
 export interface MineProjectorCtx {
   mountEl: HTMLElement;
+  getViewportSize?: () => { width: number; height: number };
   camera: THREE.PerspectiveCamera;
   projVec: THREE.Vector3;
   pit: OrePit3D;
@@ -26,9 +27,16 @@ export class MineSceneProjector {
 
   constructor(private readonly ctx: MineProjectorCtx) {}
 
+  private getViewportSize(): { width: number; height: number } {
+    if (this.ctx.getViewportSize) return this.ctx.getViewportSize();
+    return {
+      width: this.ctx.mountEl.clientWidth || 1,
+      height: this.ctx.mountEl.clientHeight || 1,
+    };
+  }
+
   public projectWorldToScreen(wx: number, wy: number, wz: number): { x: number; y: number } | null {
-    const w = this.ctx.mountEl.clientWidth || 1;
-    const h = this.ctx.mountEl.clientHeight || 1;
+    const { width: w, height: h } = this.getViewportSize();
     this.ctx.projVec.set(wx, wy, wz).project(this.ctx.camera);
     if (this.ctx.projVec.z <= -1 || this.ctx.projVec.z >= 1) return null;
     return {
@@ -136,8 +144,7 @@ export class MineSceneProjector {
 
   public emitPlotAnchors(): void {
     if (!this.ctx.callbacks.onPlotAnchors) return;
-    const w = this.ctx.mountEl.clientWidth || 1;
-    const h = this.ctx.mountEl.clientHeight || 1;
+    const { width: w, height: h } = this.getViewportSize();
     const anchors: PlotAnchorScreen[] = [];
 
     for (const ped of this.ctx.pedestals) {
@@ -217,27 +224,23 @@ export class MineSceneProjector {
       this.emitOreBars();
       this.emitSweetSpot();
     } else if (mode === 'shop' && shopWorld) {
-      const w = this.ctx.mountEl.clientWidth || 1;
-      const h = this.ctx.mountEl.clientHeight || 1;
+      const { width: w, height: h } = this.getViewportSize();
       this.ctx.callbacks.onShopAnchors?.(shopWorld.getShopAnchors(this.ctx.camera, w, h, this.ctx.projVec));
       this.ctx.callbacks.onShopChibiBubbles?.(shopWorld.getPlazaBubbleAnchors(this.ctx.camera, w, h));
     } else if (mode === 'altar' && shopWorld) {
-      const w = this.ctx.mountEl.clientWidth || 1;
-      const h = this.ctx.mountEl.clientHeight || 1;
+      const { width: w, height: h } = this.getViewportSize();
       this.ctx.callbacks.onAltarAnchors?.(shopWorld.getAltarAnchors(this.ctx.camera, w, h, this.ctx.projVec));
     } else if (mode === 'tower') {
       this.emitTowerSweetSpot();
       const towerArena = this.ctx.getTowerArena();
       if (towerArena) {
-        const w = this.ctx.mountEl.clientWidth || 1;
-        const h = this.ctx.mountEl.clientHeight || 1;
+        const { width: w, height: h } = this.getViewportSize();
         this.ctx.callbacks.onTowerOreBars?.(towerArena.getAliveOreScreenBars(this.ctx.camera, w, h, this.ctx.projVec));
       }
     } else if (mode === 'omega') {
       const omegaArena = this.ctx.getOmegaArena();
       if (omegaArena && this.ctx.callbacks.onOmegaArenaOverlay) {
-        const w = this.ctx.mountEl.clientWidth || 1;
-        const h = this.ctx.mountEl.clientHeight || 1;
+        const { width: w, height: h } = this.getViewportSize();
         this.ctx.callbacks.onOmegaArenaOverlay({
           bossHead: omegaArena.getBossHeadScreenAnchor(this.ctx.camera, w, h),
           targets: omegaArena.getTargetScreenAnchors(this.ctx.camera, w, h),
@@ -247,8 +250,7 @@ export class MineSceneProjector {
       if (fusionWorld.isAnimating() || fusionWorld.isRevealHolding()) {
         this.ctx.callbacks.onShopChibiBubbles?.([]);
       } else {
-        const w = this.ctx.mountEl.clientWidth || 1;
-        const h = this.ctx.mountEl.clientHeight || 1;
+        const { width: w, height: h } = this.getViewportSize();
         this.ctx.callbacks.onShopChibiBubbles?.(fusionWorld.getNpcBubbleAnchors(this.ctx.camera, w, h));
       }
     }

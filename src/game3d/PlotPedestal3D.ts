@@ -4,7 +4,7 @@ import { getEnchantById } from '../game/GameData';
 import { ChibiAnimState, ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
 import { disposeObject3D } from './ChestVaultStation3D';
-import { createChamferSlabGeometry } from './MeshHelpers3D';
+import { createChamferSlabGeometry, mergeStaticMeshesByMaterial } from './MeshHelpers3D';
 
 import {
   createAnimeAuraShaderMaterial,
@@ -294,8 +294,11 @@ export class PlotPedestal3D {
   private auraGroundMat: THREE.MeshBasicMaterial | null = null;
   private auraVeilMat: THREE.ShaderMaterial | null = null;
   private auraOuterVeilMat: THREE.ShaderMaterial | null = null;
+  private auraOuterVeilMesh: THREE.Mesh | null = null;
   private auraMoteGeo: THREE.BufferGeometry | null = null;
   private auraMoteMat: THREE.ShaderMaterial | null = null;
+  private auraMotePoints: THREE.Points | null = null;
+  private lowQuality = false;
   private readonly tmpScale = new THREE.Vector3(1, 1, 1);
 
   private readonly labelMat: THREE.SpriteMaterial;
@@ -500,6 +503,8 @@ export class PlotPedestal3D {
     this.hitMesh = hitMesh;
     this.group.add(hitMesh);
 
+    mergeStaticMeshesByMaterial(this.group, new Set<THREE.Object3D>([holoLensDisc, hitMesh]));
+
     this.labelMat = new THREE.SpriteMaterial({
       transparent: true,
       depthWrite: false,
@@ -556,10 +561,12 @@ export class PlotPedestal3D {
       this.auraGroundMat = null;
       this.auraVeilMat = null;
       this.auraOuterVeilMat = null;
+      this.auraOuterVeilMesh = null;
       this.auraMoteGeo?.dispose();
       this.auraMoteGeo = null;
       this.auraMoteMat?.dispose();
       this.auraMoteMat = null;
+      this.auraMotePoints = null;
     }
 
     this.enchantId = targetId;
@@ -630,6 +637,8 @@ export class PlotPedestal3D {
     auraGroup.add(auraVeil, outerAuraVeil);
     this.auraVeilMat = veilMat;
     this.auraOuterVeilMat = outerVeilMat;
+    this.auraOuterVeilMesh = outerAuraVeil;
+    outerAuraVeil.visible = !this.lowQuality;
 
     // 3. GPU Lifetime-Shaded Anime Aura Wisps & Vertical Energy Streaks (smooth birth/death fade)
     const particles = createAnimeParticlePoints(enc.color, secondaryHex, {
@@ -639,12 +648,24 @@ export class PlotPedestal3D {
       baseY: 0.28,
       sizeScale: 1,
     });
+    particles.points.visible = !this.lowQuality;
     auraGroup.add(particles.points);
     this.auraMoteGeo = particles.geo;
     this.auraMoteMat = particles.mat;
+    this.auraMotePoints = particles.points;
 
     this.auraGroup = auraGroup;
     this.group.add(auraGroup);
+  }
+
+  public setLowQuality(low: boolean): void {
+    this.lowQuality = low;
+    if (this.auraOuterVeilMesh) {
+      this.auraOuterVeilMesh.visible = !low;
+    }
+    if (this.auraMotePoints) {
+      this.auraMotePoints.visible = !low;
+    }
   }
 
   public getChibi(): ChibiDef | null {
@@ -707,14 +728,14 @@ export class PlotPedestal3D {
         this.auraVeilMat.uniforms.uTime.value = phase;
         this.auraVeilMat.uniforms.uOpacity.value = 0.7 + Math.sin(phase * 1.8) * 0.12;
       }
-      if (this.auraOuterVeilMat) {
+      if (!this.lowQuality && this.auraOuterVeilMat) {
         this.auraOuterVeilMat.uniforms.uTime.value = phase + 0.7;
         this.auraOuterVeilMat.uniforms.uOpacity.value = 0.4 + Math.sin(phase * 1.8) * 0.08;
       }
       if (this.auraGroundMat) {
         this.auraGroundMat.opacity = 0.76 + Math.sin(phase * 1.8) * 0.12;
       }
-      if (this.auraMoteMat) {
+      if (!this.lowQuality && this.auraMoteMat) {
         this.auraMoteMat.uniforms.uTime.value = phase;
       }
     }

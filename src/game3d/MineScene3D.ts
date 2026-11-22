@@ -274,9 +274,13 @@ export class MineScene3D {
   private readonly projVec = new THREE.Vector3();
   private readonly projector: MineSceneProjector;
   private mountResizeObserver: ResizeObserver | null = null;
+  private viewportWidth = 1;
+  private viewportHeight = 1;
   private readonly handleViewportResize = (): void => {
     const w = Math.max(1, this.mountEl.clientWidth);
     const h = Math.max(1, this.mountEl.clientHeight);
+    this.viewportWidth = w;
+    this.viewportHeight = h;
     const preset = GRAPHICS_PRESETS[this.graphicsQuality];
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
@@ -294,11 +298,16 @@ export class MineScene3D {
 
     const w = Math.max(1, mountEl.clientWidth);
     const h = Math.max(1, mountEl.clientHeight);
+    this.viewportWidth = w;
+    this.viewportHeight = h;
     this.camera = new THREE.PerspectiveCamera(42, w / h, 1.0, 220);
     this.camera.position.copy(this.baseCamPos);
     this.camera.lookAt(this.lookAtPos);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    const isMobileTouch =
+      typeof window !== 'undefined' &&
+      (window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+    this.renderer = new THREE.WebGLRenderer({ antialias: !isMobileTouch, powerPreference: 'high-performance' });
     const initialPreset = GRAPHICS_PRESETS[this.graphicsQuality];
     this.renderer.setPixelRatio(
       Math.min(window.devicePixelRatio || 1, initialPreset.maxPixelRatio)
@@ -337,6 +346,7 @@ export class MineScene3D {
 
     // Dark Basalt / Cyber-Industrial Mine Island Environment
     this.env = new MineEnvironment3D(palette);
+    this.env.setLowQuality(this.graphicsQuality === 'low');
     this.scene.add(this.env.group);
     // Keep Sky Dome directly in scene so both Mine and Shop World share the weather sky
     this.scene.add(this.env.skyDome);
@@ -364,6 +374,7 @@ export class MineScene3D {
 
     this.projector = new MineSceneProjector({
       mountEl: this.mountEl,
+      getViewportSize: () => ({ width: this.viewportWidth, height: this.viewportHeight }),
       camera: this.camera,
       projVec: this.projVec,
       pit: this.pit,
@@ -1057,6 +1068,7 @@ export class MineScene3D {
 
     if (def) {
       const fm = new FieldMiner3D(def, slotIndex);
+      fm.setLowQuality(this.graphicsQuality === 'low');
       fm.setEnchant(activeEnchant);
       this.fieldMiners.set(slotIndex, fm);
       this.scene.add(fm.sprite.group);
@@ -1096,6 +1108,7 @@ export class MineScene3D {
 
   public setGraphicsQuality(quality: GraphicsQuality): void {
     this.graphicsQuality = quality;
+    const low = quality === 'low';
     const preset = GRAPHICS_PRESETS[quality];
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.maxPixelRatio));
     this.renderer.shadowMap.enabled = preset.shadowsEnabled;
@@ -1103,6 +1116,13 @@ export class MineScene3D {
     this.sunLight.castShadow = preset.shadowsEnabled;
     this.renderer.shadowMap.needsUpdate = true;
     this.weatherFx.setQualityScale(preset.weatherParticleScale);
+    this.env.setLowQuality(low);
+    for (let i = 0; i < this.pedestals.length; i++) {
+      this.pedestals[i].setLowQuality(low);
+    }
+    for (const fm of this.fieldMiners.values()) {
+      fm.setLowQuality(low);
+    }
     configureSceneTextureSharpness(this.renderer, this.scene, this.getTextureAnisoCap());
   }
 

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { assetUrl } from '../game/AssetUrl';
 import { type WeatherId } from '../game/WeatherData';
-import { applySharpSpriteTexture } from './MeshHelpers3D';
+import { applySharpSpriteTexture, mergeStaticMeshesByMaterial } from './MeshHelpers3D';
 
 const spriteTexCache = new Map<string, Promise<THREE.Texture>>();
 const spriteTexLoader = new THREE.TextureLoader();
@@ -13,6 +13,68 @@ const sharedCollarRockGeo = new THREE.DodecahedronGeometry(0.18, 0);
 const sharedCollarPebbleGeo = new THREE.DodecahedronGeometry(0.105, 0);
 const sharedCollarCrystalGeo = new THREE.CylinderGeometry(0.012, 0.056, 0.24, 5);
 let sharedCollarRockMat: THREE.MeshStandardMaterial | null = null;
+let sharedCollarRockMergedGeo: THREE.BufferGeometry | null = null;
+let sharedCollarCrystalMergedGeo: THREE.BufferGeometry | null = null;
+
+function getSharedCollarGeometries(): {
+  rockGeo: THREE.BufferGeometry;
+  crystalGeo: THREE.BufferGeometry;
+} {
+  if (sharedCollarRockMergedGeo && sharedCollarCrystalMergedGeo) {
+    return { rockGeo: sharedCollarRockMergedGeo, crystalGeo: sharedCollarCrystalMergedGeo };
+  }
+  const tmpRockGroup = new THREE.Group();
+  const tmpMat = new THREE.MeshBasicMaterial();
+  const chunkSpecs: readonly [number, number, number, number, number, number, number, number][] = [
+    [-0.02, 0.088, 0.33, 1.24, 0.72, 0.9, 0.16, 0.22],
+    [-0.25, 0.082, 0.32, 1.12, 0.68, 0.86, 0.28, -0.35],
+    [0.25, 0.084, 0.31, 1.08, 0.68, 0.86, -0.22, 0.42],
+    [-0.42, 0.09, 0.12, 0.98, 0.78, 0.9, 0.4, 0.85],
+    [0.42, 0.092, 0.11, 1.0, 0.8, 0.88, -0.34, -0.75],
+    [-0.36, 0.095, -0.22, 1.06, 0.84, 0.92, 0.15, 1.4],
+    [0.36, 0.095, -0.21, 1.04, 0.82, 0.92, -0.18, -1.2],
+    [0.01, 0.096, -0.36, 1.2, 0.78, 0.86, 0.12, 0.65],
+  ];
+  for (const [cx, cy, cz, sx, sy, sz, rx, ry] of chunkSpecs) {
+    const chunk = new THREE.Mesh(sharedCollarRockGeo, tmpMat);
+    chunk.position.set(cx, cy, cz);
+    chunk.scale.set(sx, sy, sz);
+    chunk.rotation.set(rx, ry, rx * 0.6);
+    tmpRockGroup.add(chunk);
+  }
+  const pebbleSpecs: readonly [number, number, number, number][] = [
+    [-0.56, 0.044, 0.28, 1.02],
+    [0.56, 0.042, 0.29, 0.95],
+    [-0.14, 0.046, 0.49, 0.92],
+    [0.18, 0.044, 0.48, 0.84],
+  ];
+  for (const [px, py, pz, s] of pebbleSpecs) {
+    const p = new THREE.Mesh(sharedCollarPebbleGeo, tmpMat);
+    p.position.set(px, py, pz);
+    p.scale.set(s * 1.15, s * 0.58, s);
+    p.rotation.set(px, pz * 2, py * 3);
+    tmpRockGroup.add(p);
+  }
+  mergeStaticMeshesByMaterial(tmpRockGroup);
+  sharedCollarRockMergedGeo = (tmpRockGroup.children[0] as THREE.Mesh).geometry;
+
+  const tmpCrystalGroup = new THREE.Group();
+  const crystalSpecs: readonly [number, number, number, number, number][] = [
+    [-0.33, 0.12, 0.26, 0.36, 0.28],
+    [0.34, 0.125, 0.25, -0.34, -0.28],
+    [0.02, 0.135, -0.34, 0.12, -0.3],
+  ];
+  for (const [kx, ky, kz, rz, rx] of crystalSpecs) {
+    const shard = new THREE.Mesh(sharedCollarCrystalGeo, tmpMat);
+    shard.position.set(kx, ky, kz);
+    shard.rotation.set(rx, ky * 3, rz);
+    tmpCrystalGroup.add(shard);
+  }
+  mergeStaticMeshesByMaterial(tmpCrystalGroup);
+  sharedCollarCrystalMergedGeo = (tmpCrystalGroup.children[0] as THREE.Mesh).geometry;
+  tmpMat.dispose();
+  return { rockGeo: sharedCollarRockMergedGeo, crystalGeo: sharedCollarCrystalMergedGeo };
+}
 
 function getSharedCollarRockMaterial(): THREE.MeshStandardMaterial {
   if (!sharedCollarRockMat) {
@@ -316,55 +378,13 @@ export class OreBillboard2D {
       flatShading: true,
     });
 
-    const chunkSpecs: readonly [number, number, number, number, number, number, number, number][] = [
-      // Tightly hugging front & flank basalt chunks physically bridge the bottom seam of every sprite
-      [-0.02, 0.088, 0.33, 1.24, 0.72, 0.9, 0.16, 0.22],
-      [-0.25, 0.082, 0.32, 1.12, 0.68, 0.86, 0.28, -0.35],
-      [0.25, 0.084, 0.31, 1.08, 0.68, 0.86, -0.22, 0.42],
-      [-0.42, 0.09, 0.12, 0.98, 0.78, 0.9, 0.4, 0.85],
-      [0.42, 0.092, 0.11, 1.0, 0.8, 0.88, -0.34, -0.75],
-      [-0.36, 0.095, -0.22, 1.06, 0.84, 0.92, 0.15, 1.4],
-      [0.36, 0.095, -0.21, 1.04, 0.82, 0.92, -0.18, -1.2],
-      [0.01, 0.096, -0.36, 1.2, 0.78, 0.86, 0.12, 0.65],
-    ];
-    for (const [cx, cy, cz, sx, sy, sz, rx, ry] of chunkSpecs) {
-      const chunk = new THREE.Mesh(sharedCollarRockGeo, rockMat);
-      chunk.position.set(cx, cy, cz);
-      chunk.scale.set(sx, sy, sz);
-      chunk.rotation.set(rx, ry, rx * 0.6);
-      chunk.castShadow = true;
-      chunk.receiveShadow = true;
-      this.rockSkirtGroup.add(chunk);
-    }
-
-    const pebbleSpecs: readonly [number, number, number, number][] = [
-      [-0.56, 0.044, 0.28, 1.02],
-      [0.56, 0.042, 0.29, 0.95],
-      [-0.14, 0.046, 0.49, 0.92],
-      [0.18, 0.044, 0.48, 0.84],
-    ];
-    for (const [px, py, pz, s] of pebbleSpecs) {
-      const p = new THREE.Mesh(sharedCollarPebbleGeo, rockMat);
-      p.position.set(px, py, pz);
-      p.scale.set(s * 1.15, s * 0.58, s);
-      p.rotation.set(px, pz * 2, py * 3);
-      p.castShadow = true;
-      p.receiveShadow = true;
-      this.rockSkirtGroup.add(p);
-    }
-
-    const crystalSpecs: readonly [number, number, number, number, number][] = [
-      [-0.33, 0.12, 0.26, 0.36, 0.28],
-      [0.34, 0.125, 0.25, -0.34, -0.28],
-      [0.02, 0.135, -0.34, 0.12, -0.3],
-    ];
-    for (const [kx, ky, kz, rz, rx] of crystalSpecs) {
-      const shard = new THREE.Mesh(sharedCollarCrystalGeo, this.collarCrystalMat);
-      shard.position.set(kx, ky, kz);
-      shard.rotation.set(rx, ky * 3, rz);
-      shard.castShadow = true;
-      this.rockSkirtGroup.add(shard);
-    }
+    const { rockGeo, crystalGeo } = getSharedCollarGeometries();
+    const rockSkirtMesh = new THREE.Mesh(rockGeo, rockMat);
+    rockSkirtMesh.castShadow = true;
+    rockSkirtMesh.receiveShadow = true;
+    const collarCrystalMesh = new THREE.Mesh(crystalGeo, this.collarCrystalMat);
+    collarCrystalMesh.castShadow = true;
+    this.rockSkirtGroup.add(rockSkirtMesh, collarCrystalMesh);
 
     this.root.add(this.rockSkirtGroup);
     const initScale = initialSize / 1.45;

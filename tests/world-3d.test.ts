@@ -118,6 +118,7 @@ import { createSeraphimBoss3D } from '../src/game3d/SeraphimBoss3D';
 import { TowerArena3D } from '../src/game3d/TowerArena3D';
 import { createTowerCityEnvironment } from '../src/game3d/TowerCityEnvironment3D';
 import { WeatherFx3D } from '../src/game3d/WeatherFx3D';
+import { createWeatherSkyMaterial } from '../src/game3d/WeatherSkyShader';
 import { enchantAuraIconHtml, enchantDiceIconHtml, gemPotionIconHtml, hudIconHtml, oreIconSvg, pickaxeIconHtml, towerIconHtml, weatherIconHtml } from '../src/ui/HudIcons';
 import {
   getGlobalGemGainBonus,
@@ -3082,5 +3083,55 @@ describe('Pure 3D Mine World', () => {
     }
     expect(pit.getAliveNodesInfo().some((n) => n.id === target.id)).toBe(true);
     pit.dispose();
+  });
+
+  it('toggles low-quality mode optimizations on WeatherSkyShader, MineEnvironment3D, PlotPedestal3D, and FieldMiner3D', () => {
+    const sky = createWeatherSkyMaterial('celestial');
+    expect(sky.material.uniforms.uLowQuality.value).toBe(0);
+    sky.setLowQuality(true);
+    expect(sky.material.uniforms.uLowQuality.value).toBe(1);
+    sky.setLowQuality(false);
+    expect(sky.material.uniforms.uLowQuality.value).toBe(0);
+    sky.material.dispose();
+
+    const env = new MineEnvironment3D(DEFAULT_WORLD_PALETTE);
+    env.setLowQuality(true);
+    let pointsVis = true;
+    env.group.traverse((obj) => {
+      if (obj instanceof THREE.Points) pointsVis = obj.visible;
+    });
+    expect(pointsVis).toBe(false);
+    env.setLowQuality(false);
+    env.group.traverse((obj) => {
+      if (obj instanceof THREE.Points) pointsVis = obj.visible;
+    });
+    expect(pointsVis).toBe(true);
+    env.dispose();
+
+    const ped = new PlotPedestal3D(0, 0, -4.5);
+    ped.setChibi(CHIBI_CATALOG[0]);
+    ped.setEnchant('spellbound');
+    ped.setLowQuality(true);
+    let pedPointsVis = true;
+    ped.group.traverse((obj) => {
+      if (obj instanceof THREE.Points) pedPointsVis = obj.visible;
+    });
+    expect(pedPointsVis).toBe(false);
+    ped.setLowQuality(false);
+    ped.group.traverse((obj) => {
+      if (obj instanceof THREE.Points) pedPointsVis = obj.visible;
+    });
+    expect(pedPointsVis).toBe(true);
+    ped.dispose();
+
+    const fm = new FieldMiner3D(CHIBI_CATALOG[0], 0);
+    fm.setEnchant('spellbound');
+    fm.setLowQuality(true);
+    let fmPointsVis = true;
+    fm.sprite.group.traverse((obj) => {
+      if (obj instanceof THREE.Points) fmPointsVis = obj.visible;
+    });
+    expect(fmPointsVis).toBe(false);
+    fm.dispose();
   });
 });

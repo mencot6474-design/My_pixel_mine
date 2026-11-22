@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { getOresByWorld, type OreDef, type WorldId } from '../game/GameData';
 import { createCyberLanternBollardFinial } from './CyberProps3D';
+import { mergeStaticMeshesByMaterial } from './MeshHelpers3D';
 import { type MineWorldPalette, type OreVariantKey, WORLD_PALETTES } from './MineWorldPalette';
 import { getWeatherById, type WeatherId } from '../game/WeatherData';
 import type { AttackImpactFxController } from './AttackImpactFx3D';
@@ -49,6 +50,7 @@ export function buildOrePitEnvironmentMeshes(ctx: {
   pitNeonMat: THREE.MeshStandardMaterial;
 } {
   const { palette } = ctx;
+  const pitEnvGroup = new THREE.Group();
     // Sunlit Textured Sunken Quarry Floor (sits cleanly 0.68m below courtyard deck y=0)
     const floorMat = new THREE.MeshStandardMaterial({
       map: getQuarryFloorTexture(palette.pitFloorColor, palette.crystalColor),
@@ -56,11 +58,10 @@ export function buildOrePitEnvironmentMeshes(ctx: {
       metalness: 0.05,
     });
     const floorGeo = new THREE.BoxGeometry(11.8, 0.14, 6.8);
-    ctx.ownedGeos.push(floorGeo);
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.position.y = -0.05;
     floor.receiveShadow = true;
-    ctx.group.add(floor);
+    pitEnvGroup.add(floor);
 
     // Full-Height Excavated Cyber-Slate Retaining Walls + Hazard Collar + Thin Neon Rim
     const wallMat = new THREE.MeshStandardMaterial({
@@ -105,20 +106,19 @@ export function buildOrePitEnvironmentMeshes(ctx: {
       wall.position.set(wx, wh * 0.5, wz);
       wall.castShadow = true;
       wall.receiveShadow = true;
-      ctx.group.add(wall);
+      pitEnvGroup.add(wall);
 
       const trimGeo = new THREE.BoxGeometry(ww > wd ? ww : 0.34, 0.11, wd > ww ? wd : 0.34);
       const trim = new THREE.Mesh(trimGeo, trimMat);
       trim.position.set(wx, wh + 0.04, wz);
       trim.castShadow = true;
-      ctx.group.add(trim);
+      pitEnvGroup.add(trim);
 
       const isHoriz = ww > wd;
       const neonGeo = new THREE.BoxGeometry(isHoriz ? ww + 0.04 : 0.06, 0.035, isHoriz ? 0.06 : wd + 0.04);
       const neonRim = new THREE.Mesh(neonGeo, pitNeonMat);
       neonRim.position.set(wx, wh + 0.115, wz);
-      ctx.group.add(neonRim);
-      ctx.ownedGeos.push(wallGeo, trimGeo, neonGeo);
+      pitEnvGroup.add(neonRim);
     }
 
     // Stepped inner basalt retaining ledge along bottom perimeter
@@ -129,12 +129,11 @@ export function buildOrePitEnvironmentMeshes(ctx: {
     ];
     for (const [bx, bz, bw, bd] of benchSpecs) {
       const benchGeo = new THREE.BoxGeometry(bw, 0.26, bd);
-      ctx.ownedGeos.push(benchGeo);
       const bench = new THREE.Mesh(benchGeo, wallMat);
       bench.position.set(bx, 0.13, bz);
       bench.receiveShadow = true;
       bench.castShadow = true;
-      ctx.group.add(bench);
+      pitEnvGroup.add(bench);
     }
 
     // Corner Cyber Steel Anchor Pylons + Glowing Beacon Collars framing the excavated pit rim
@@ -151,9 +150,7 @@ export function buildOrePitEnvironmentMeshes(ctx: {
       flatShading: true,
     });
     const postGeo = new THREE.CylinderGeometry(0.24, 0.28, 1.04, 8);
-    ctx.ownedGeos.push(postGeo);
     ctx.ownedMats.push(postMat, steelCapMat);
-    const trackedCornerGeos = new Set<THREE.BufferGeometry>();
     for (const sx of [-1, 1]) {
       for (const sz of [-1, 1]) {
         const px = sx * (pitW / 2);
@@ -168,15 +165,16 @@ export function buildOrePitEnvironmentMeshes(ctx: {
           scale: 0.86,
         });
         finial.position.set(px, 1.02, pz);
-        finial.traverse((child) => {
-          if (child instanceof THREE.Mesh && !trackedCornerGeos.has(child.geometry)) {
-            trackedCornerGeos.add(child.geometry);
-            ctx.ownedGeos.push(child.geometry);
-          }
-        });
-        ctx.group.add(post, finial);
+        pitEnvGroup.add(post, finial);
       }
     }
+    mergeStaticMeshesByMaterial(pitEnvGroup);
+    pitEnvGroup.traverse((child) => {
+      if (child instanceof THREE.Mesh && !ctx.ownedGeos.includes(child.geometry)) {
+        ctx.ownedGeos.push(child.geometry);
+      }
+    });
+    ctx.group.add(pitEnvGroup);
   return { floorMat, wallMat, trimMat, pitNeonMat };
 }
 

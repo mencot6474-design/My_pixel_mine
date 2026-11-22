@@ -35,6 +35,8 @@ export class ChibiFieldFxController {
   private sigilMat: THREE.MeshBasicMaterial | null = null;
   private moteGeo: THREE.BufferGeometry | null = null;
   private moteMat: THREE.ShaderMaterial | null = null;
+  private motePoints: THREE.Points | null = null;
+  private lowQuality = false;
 
   constructor(hostGroup: THREE.Group, defAccentColor: string, slotIndex: number) {
     this.hostGroup = hostGroup;
@@ -125,12 +127,21 @@ export class ChibiFieldFxController {
       baseY: 0.08,
       sizeScale: 0.92,
     });
+    particles.points.visible = !this.lowQuality;
     this.moteGeo = particles.geo;
     this.moteMat = particles.mat;
+    this.motePoints = particles.points;
     g.add(particles.points);
 
     this.auraGroup = g;
     this.hostGroup.add(g);
+  }
+
+  public setLowQuality(low: boolean): void {
+    this.lowQuality = low;
+    if (this.motePoints) {
+      this.motePoints.visible = !low;
+    }
   }
 
   private clearEnchantFx(): void {
@@ -144,6 +155,7 @@ export class ChibiFieldFxController {
     this.sigilMat = null;
     this.moteGeo = null;
     this.moteMat = null;
+    this.motePoints = null;
   }
 
   public update(elapsed: number): void {
@@ -151,7 +163,7 @@ export class ChibiFieldFxController {
     if (this.sigilMesh) {
       this.sigilMesh.rotation.z = -elapsed * 0.12 - this.slotIndex * 0.6;
     }
-    if (this.moteMat) {
+    if (!this.lowQuality && this.moteMat) {
       this.moteMat.uniforms.uTime.value = elapsed;
     }
     if (this.enchantRainbow) {
@@ -204,6 +216,10 @@ export class FieldMiner3D {
 
   public setEnchant(enchantId: string | null): void {
     this.fx.setEnchant(enchantId);
+  }
+
+  public setLowQuality(low: boolean): void {
+    this.fx.setLowQuality(low);
   }
 
   public setCombatStats(dmg: number, speed: number, miningMult: number): void {

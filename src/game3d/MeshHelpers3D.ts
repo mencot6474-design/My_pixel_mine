@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 let activeTextureAnisotropy = 4;
 
@@ -244,4 +245,110 @@ export function createLatheProfileGeometry(
   const geo = new THREE.LatheGeometry(vecs, radialSegments);
   geo.computeVertexNormals();
   return geo;
+}
+
+/**
+ * Merges static sibling/nested meshes sharing identical material and shadow flags
+ * inside `container` into one draw call per bucket while leaving `skipObjects` intact.
+ */
+export function mergeStaticMeshesByMaterial(
+  container: THREE.Object3D,
+  skipObjects?: ReadonlySet<THREE.Object3D>
+): void {
+  container.updateMatrixWorld(true);
+  const invRoot = container.matrixWorld.clone().invert();
+  const relMatrix = new THREE.Matrix4();
+
+  const isSkipped = (obj: THREE.Object3D): boolean => {
+    if (!skipObjects || skipObjects.size === 0) return false;
+    let cur: THREE.Object3D | null = obj;
+    while (cur) {
+      if (skipObjects.has(cur)) return true;
+      if (cur === container) break;
+      cur = cur.parent;
+    }
+    return false;
+  };
+
+  interface Bucket {
+    mat: THREE.Material;
+    castShadow: boolean;
+    receiveShadow: boolean;
+    hasUv: boolean;
+    meshes: THREE.Mesh[];
+  }
+
+  const buckets = new Map<string, Bucket>();
+  const allMeshes: THREE.Mesh[] = [];
+
+  container.traverse((child) => {
+    if (!(child instanceof THREE.Mesh) || child instanceof THREE.InstancedMesh) return;
+    allMeshes.push(child);
+    if (!child.visible || Array.isArray(child.material) || isSkipped(child)) return;
+    const geo = child.geometry;
+    if (!geo?.attributes?.position) return;
+    const hasUv = Boolean(geo.attributes.uv);
+    const key = `${child.material.uuid}|${child.castShadow ? 1 : 0}|${child.receiveShadow ? 1 : 0}|${hasUv ? 1 : 0}`;
+    let b = buckets.get(key);
+    if (!b) {
+      b = {
+        mat: child.material,
+        castShadow: child.castShadow,
+        receiveShadow: child.receiveShadow,
+        hasUv,
+        meshes: [],
+      };
+      buckets.set(key, b);
+    }
+    b.meshes.push(child);
+  });
+
+  const removedSet = new Set<THREE.Mesh>();
+  const addedMeshes: THREE.Mesh[] = [];
+
+  for (const bucket of buckets.values()) {
+    if (bucket.meshes.length < 2) continue;
+    const geos: THREE.BufferGeometry[] = [];
+    for (const m of bucket.meshes) {
+      const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+      if (!g.attributes.normal) {
+        g.computeVertexNormals();
+      }
+      for (const attrName of Object.keys(g.attributes)) {
+        if (attrName !== 'position' && attrName !== 'normal' && !(bucket.hasUv && attrName === 'uv')) {
+          g.deleteAttribute(attrName);
+        }
+      }
+      relMatrix.multiplyMatrices(invRoot, m.matrixWorld);
+      g.applyMatrix4(relMatrix);
+      geos.push(g);
+    }
+
+    const merged = mergeGeometries(geos, false);
+    for (const g of geos) g.dispose();
+    if (!merged) continue;
+
+    const mergedMesh = new THREE.Mesh(merged, bucket.mat);
+    mergedMesh.castShadow = bucket.castShadow;
+    mergedMesh.receiveShadow = bucket.receiveShadow;
+    addedMeshes.push(mergedMesh);
+    for (const m of bucket.meshes) {
+      m.parent?.remove(m);
+      removedSet.add(m);
+    }
+  }
+
+  const keptGeos = new Set<THREE.BufferGeometry>();
+  for (const m of allMeshes) {
+    if (!removedSet.has(m)) keptGeos.add(m.geometry);
+  }
+  for (const m of removedSet) {
+    if (!keptGeos.has(m.geometry)) {
+      keptGeos.add(m.geometry);
+      m.geometry.dispose();
+    }
+  }
+  for (const m of addedMeshes) {
+    container.add(m);
+  }
 }

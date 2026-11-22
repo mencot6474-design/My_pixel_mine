@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { disposeObject3D } from './ChestVaultStation3D';
 import { createCyberRadarArray } from './CyberProps3D';
-import { createChamferSlabGeometry, enableShadows } from './MeshHelpers3D';
+import { createChamferSlabGeometry, enableShadows, mergeStaticMeshesByMaterial } from './MeshHelpers3D';
 
 export interface CaveRailwayOptions {
   crystalColor?: number | string;
@@ -864,6 +864,14 @@ export function createCaveRailway(options: CaveRailwayOptions = {}): CaveRailway
   const dispose = (): void => {
     disposeObject3D(group);
   };
+
+  mergeStaticMeshesByMaterial(leadCart.group, new Set<THREE.Object3D>(leadCart.wheels));
+  mergeStaticMeshesByMaterial(elevatorPod, new Set<THREE.Object3D>([cagePayload]));
+  mergeStaticMeshesByMaterial(roofRadar.rotorGroup);
+  mergeStaticMeshesByMaterial(
+    group,
+    new Set<THREE.Object3D>([leadCart.group, elevatorPod, roofRadar.rotorGroup, sleeperInst])
+  );
 
   return {
     group,

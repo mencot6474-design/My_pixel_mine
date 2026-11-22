@@ -264,6 +264,7 @@ export class WorldOverlayHudUi {
   private shopBubbleLayerEl: HTMLElement | null = null;
   private omegaLayerEl: HTMLElement | null = null;
   private readonly lastPlotLabelKeys = new Map<number, string>();
+  private readonly plotLabelCache = new Map<number, { el: HTMLElement; x: number; y: number }>();
 
   constructor(
     private readonly state: GameState,
@@ -366,6 +367,7 @@ export class WorldOverlayHudUi {
         if (this.plotLayerEl.innerHTML !== '') {
           this.plotLayerEl.innerHTML = '';
           this.plotLayerEl.dataset.keys = '';
+          this.plotLabelCache.clear();
         }
       } else {
         const items: Array<{ slotIndex: number; rarity: ReturnType<typeof getMinerRarity>; x: number; y: number }> = [];
@@ -390,11 +392,21 @@ export class WorldOverlayHudUi {
                 `<div class="absolute top-0 left-0 flex items-end justify-center leading-none pointer-events-none select-none will-change-transform origin-bottom" data-label-slot="${item.slotIndex}">${renderRarityBadgeHtml(item.rarity, '!ml-0')}</div>`
             )
             .join('');
+          this.plotLabelCache.clear();
         }
         for (const item of items) {
-          const el = this.plotLayerEl.querySelector<HTMLElement>(`[data-label-slot="${item.slotIndex}"]`);
-          if (!el) continue;
-          el.style.transform = `translate3d(${item.x}px, ${item.y}px, 0) translate(-50%, -100%)`;
+          let cached = this.plotLabelCache.get(item.slotIndex);
+          if (!cached) {
+            const el = this.plotLayerEl.querySelector<HTMLElement>(`[data-label-slot="${item.slotIndex}"]`);
+            if (!el) continue;
+            cached = { el, x: NaN, y: NaN };
+            this.plotLabelCache.set(item.slotIndex, cached);
+          }
+          if (cached.x !== item.x || cached.y !== item.y) {
+            cached.x = item.x;
+            cached.y = item.y;
+            cached.el.style.transform = `translate3d(${item.x}px, ${item.y}px, 0) translate(-50%, -100%)`;
+          }
         }
       }
     }
@@ -586,9 +598,11 @@ export class WorldOverlayHudUi {
     isCrit = false,
     isPerfect = false
   ): void {
-    if (!this.settings.get().showDamagePopups) return;
+    const settings = this.settings.get();
+    if (!settings.showDamagePopups) return;
     if (!this.dmgLayerEl || this.getUiContext().inspectedSlot !== null) return;
-    if (this.dmgLayerEl.childElementCount >= 24) {
+    const maxPopups = settings.graphicsQuality === 'low' ? 10 : 24;
+    if (this.dmgLayerEl.childElementCount >= maxPopups) {
       this.dmgLayerEl.firstElementChild?.remove();
     }
     const el = document.createElement('div');

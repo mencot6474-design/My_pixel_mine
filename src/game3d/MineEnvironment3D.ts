@@ -4,6 +4,7 @@ import type { MineWorldPalette } from './MineWorldPalette';
 import { CaveRailwayHandle, createCaveRailway } from './CaveRailway3D';
 import { ChestVaultStationHandle, createChestVaultStation, disposeObject3D } from './ChestVaultStation3D';
 import { createCyberLanternBollardFinial, createCyberMonolithForkFinial } from './CyberProps3D';
+import { mergeStaticMeshesByMaterial } from './MeshHelpers3D';
 import { loadPublicSpriteTexture } from './OrePit3D';
 import { getCobblePathTexture, getTerrainTexture } from './ProceduralTextures3D';
 import { createWeatherSkyMaterial, WeatherSkyMaterialHandle } from './WeatherSkyShader';
@@ -26,7 +27,9 @@ export class MineEnvironment3D {
   private readonly crystalAccentMat: THREE.MeshStandardMaterial;
   private readonly dustGeo: THREE.BufferGeometry;
   private readonly dustMat: THREE.ShaderMaterial;
+  private readonly dustPoints: THREE.Points;
   private readonly bannerMat: THREE.MeshBasicMaterial;
+  private lowQuality = false;
 
   private readonly clouds: CloudCluster[] = [];
   private readonly cableCurves: THREE.CatmullRomCurve3[] = [];
@@ -140,7 +143,8 @@ export class MineEnvironment3D {
       this.cyberDeckTrimMat
     );
     hullNeonBand.position.set(0, -1.06, -0.35);
-    this.group.add(cliffLower, cliffUpper, hullNeonBand);
+    const deckGroup = new THREE.Group();
+    deckGroup.add(cliffLower, cliffUpper, hullNeonBand);
 
     // 4. Dark Basalt Courtyard Armor Slabs Framing Sunken Pit + Stairwell Bay + Drop Shaft & Refinery Channels
     // Pit hole: x [-5.78..5.78], z [-2.63..3.93]
@@ -163,11 +167,11 @@ export class MineEnvironment3D {
       const slab = new THREE.Mesh(new THREE.BoxGeometry(cw, 0.28, cd), this.cobbleMat);
       slab.position.set(cx, -0.14, cz);
       slab.receiveShadow = true;
-      this.group.add(slab);
+      deckGroup.add(slab);
 
       const underSkirt = new THREE.Mesh(new THREE.BoxGeometry(cw, 0.5, cd), this.cliffMat);
       underSkirt.position.set(cx, -0.54, cz);
-      this.group.add(underSkirt);
+      deckGroup.add(underSkirt);
     }
 
     // Sunken Basalt Trench Floors Under Left Track & Right Escalator (y = -0.74, z = 0.15)
@@ -175,7 +179,7 @@ export class MineEnvironment3D {
     leftTrench.position.set(-6.465, -0.74, 0.15);
     const rightTrench = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.14, 1.44), this.cliffMat);
     rightTrench.position.set(6.45, -0.74, 0.15);
-    this.group.add(leftTrench, rightTrench);
+    deckGroup.add(leftTrench, rightTrench);
 
     // Dark Basalt / Cyber-Industrial Outer Deck Terraces cleanly abutting courtyard x = +-9.80 (zero overlap!)
     // Split wingLeft around the Drop Shaft & Maglev Track corridor (z in [-1.85 .. +2.15]) so terrain never clips rails
@@ -202,7 +206,7 @@ export class MineEnvironment3D {
     const backDeck = new THREE.Mesh(new THREE.BoxGeometry(19.6, 0.99, 3.6), this.terrainMat);
     backDeck.position.set(0, -0.285, -7.8);
     backDeck.receiveShadow = true;
-    this.group.add(wingLeftNorth, wingLeftBay, wingLeftSouth, wingRight, frontDeck, backDeck);
+    deckGroup.add(wingLeftNorth, wingLeftBay, wingLeftSouth, wingRight, frontDeck, backDeck);
 
     // Retaining Gunmetal Curbs + Thin Perimeter Neon Trim Strips (segmented cleanly around Drop Shaft & Refinery Vault)
     const addSideCurbSeg = (cx: number, zCenter: number, lenZ: number): void => {
@@ -216,7 +220,7 @@ export class MineEnvironment3D {
         this.cyberDeckTrimMat
       );
       trim.position.set(cx, 0.24, zCenter);
-      this.group.add(curb, trim);
+      deckGroup.add(curb, trim);
     };
     addSideCurbSeg(-9.66, -4.875, 6.05);
     addSideCurbSeg(-9.66, 4.625, 4.95);
@@ -229,7 +233,7 @@ export class MineEnvironment3D {
         this.cyberDeckTrimMat
       );
       outerFlankTrim.position.set(sx * 14.96, 0.2, -0.4);
-      this.group.add(outerFlankTrim);
+      deckGroup.add(outerFlankTrim);
     }
 
     // Front & Back Deck Thin Perimeter Neon Strips
@@ -243,7 +247,9 @@ export class MineEnvironment3D {
       this.cyberDeckTrimMat
     );
     frontOuterTrim.position.set(0, 0.04, 9.06);
-    this.group.add(frontPerimeterTrim, frontOuterTrim);
+    deckGroup.add(frontPerimeterTrim, frontOuterTrim);
+    mergeStaticMeshesByMaterial(deckGroup);
+    this.group.add(deckGroup);
 
     // 5. Rear "My Chibi Minerr" Holographic Stage Gantry (elevated neatly above Chibi nameplates)
     this.buildSanctuaryGate(darkMetalMat, steelMat);
@@ -318,8 +324,8 @@ export class MineEnvironment3D {
         }
       `,
     });
-    const dustPoints = new THREE.Points(this.dustGeo, this.dustMat);
-    this.group.add(dustPoints);
+    this.dustPoints = new THREE.Points(this.dustGeo, this.dustMat);
+    this.group.add(this.dustPoints);
 
     this.setPalette(palette);
   }
@@ -363,6 +369,7 @@ export class MineEnvironment3D {
       finial.position.y = 1.62;
 
       bg.add(body, finial);
+      mergeStaticMeshesByMaterial(bg);
       this.group.add(bg);
     }
   }
@@ -420,6 +427,7 @@ export class MineEnvironment3D {
       crownRelay.position.y = topY + 0.22;
 
       tg.add(body, crown, ring, crownRelay);
+      mergeStaticMeshesByMaterial(tg);
       this.group.add(tg);
     }
 
@@ -572,6 +580,7 @@ export class MineEnvironment3D {
       g.add(proj);
     }
 
+    mergeStaticMeshesByMaterial(g, new Set<THREE.Object3D>([bannerPlane]));
     this.group.add(g);
   }
 
@@ -601,6 +610,15 @@ export class MineEnvironment3D {
     this.cloudMat.emissive.copy(cc);
   }
 
+  public setLowQuality(low: boolean): void {
+    this.lowQuality = low;
+    this.skyHandle.setLowQuality(low);
+    this.dustPoints.visible = !low;
+    if (this.cableFlowInst) {
+      this.cableFlowInst.visible = !low;
+    }
+  }
+
   public updateSky(elapsed: number, camPos: THREE.Vector3): void {
     this.skyHandle.update(elapsed);
     this.skyDome.position.copy(camPos);
@@ -621,9 +639,11 @@ export class MineEnvironment3D {
     this.chestVault.update(dtSec, elapsed, chestHovered, chestBounce);
 
     this.cyberDeckTrimMat.emissiveIntensity = 1.0 + Math.sin(elapsed * 2.2) * 0.14;
-    this.dustMat.uniforms.uTime.value = elapsed;
+    if (!this.lowQuality) {
+      this.dustMat.uniforms.uTime.value = elapsed;
+    }
 
-    if (this.cableFlowInst && this.cableCurves.length > 0) {
+    if (!this.lowQuality && this.cableFlowInst && this.cableCurves.length > 0) {
       let idx = 0;
       for (let c = 0; c < this.cableCurves.length; c++) {
         const curve = this.cableCurves[c];

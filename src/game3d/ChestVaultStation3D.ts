@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createCyberLanternBollardFinial } from './CyberProps3D';
+import { mergeStaticMeshesByMaterial } from './MeshHelpers3D';
 import {
   createExtrudedSlabGeometry,
   createProceduralTreasureChest,
@@ -594,6 +595,16 @@ export function createChestVaultStation(
   const dispose = (): void => {
     disposeObject3D(group);
   };
+
+  mergeStaticMeshesByMaterial(
+    group,
+    new Set<THREE.Object3D>([
+      cleatInstances,
+      ...refineryRings,
+      ...conduitPulses.map((p) => p.mesh),
+      ...packets.map((p) => p.group),
+    ])
+  );
 
   return {
     group,

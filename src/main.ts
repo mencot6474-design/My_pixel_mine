@@ -488,6 +488,7 @@ async function bootstrap(): Promise<void> {
     audio.setSfxVolumeScale(s.sfxVolume);
     scene.setGraphicsQuality(s.graphicsQuality);
     scene.setCameraLocked(s.cameraLocked);
+    document.body.classList.toggle('mam-quality-low', s.graphicsQuality === 'low');
   };
   applySettings(gameSettings.get());
   gameSettings.subscribe(applySettings);

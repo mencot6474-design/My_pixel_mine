@@ -4,6 +4,7 @@ import { getWeatherById, WeatherId } from '../game/WeatherData';
 export interface WeatherSkyMaterialHandle {
   material: THREE.ShaderMaterial;
   setWeather: (weatherId: WeatherId) => void;
+  setLowQuality: (low: boolean) => void;
   update: (elapsed: number) => void;
 }
 
@@ -27,6 +28,7 @@ const VERTEX_SHADER = /* glsl */ `
 const FRAGMENT_SHADER = /* glsl */ `
   uniform float uTime;
   uniform float uWeatherType;
+  uniform float uLowQuality;
   uniform vec3 uZenithColor;
   uniform vec3 uMidColor;
   uniform vec3 uHorizonColor;
@@ -68,6 +70,12 @@ const FRAGMENT_SHADER = /* glsl */ `
     return v;
   }
 
+  float fbmLow(vec2 p) {
+    float v = 0.5 * noise2(p);
+    p = mat2(0.8, 0.6, -0.6, 0.8) * p * 2.04 + vec2(17.1, 31.7);
+    return v + 0.25 * noise2(p);
+  }
+
   void main() {
     vec3 dir = normalize(vLocalPos);
 
@@ -100,7 +108,7 @@ const FRAGMENT_SHADER = /* glsl */ `
     }
 
     // Northern Aurora / Cosmic Nebula ribbons (Snow Rain = 1, Void = 3, Celestial = 4)
-    if (uWeatherType > 0.5 && (abs(uWeatherType - 1.0) < 0.2 || uWeatherType > 2.5)) {
+    if (uLowQuality < 0.5 && uWeatherType > 0.5 && (abs(uWeatherType - 1.0) < 0.2 || uWeatherType > 2.5)) {
       float wave = sin(az * 2.6 + uTime * 0.22 + fbm(vec2(az * 1.4, uTime * 0.06)) * 2.2);
       float band = smoothstep(0.35, 0.0, abs(hNorm - 0.34 - wave * 0.075));
       float shimmer = fbm(vec2(az * 5.0 - uTime * 0.09, hNorm * 4.5));
@@ -150,8 +158,8 @@ const FRAGMENT_SHADER = /* glsl */ `
     }
 
     // Layered FBM drifting volumetric sky clouds — clouds naturally veil stars AND celestial body!
-    float cloudNoise1 = fbm(cloudUv);
-    float cloudNoise2 = fbm(cloudUv * 1.9 + vec2(-uTime * 0.024, 4.3));
+    float cloudNoise1 = uLowQuality > 0.5 ? fbmLow(cloudUv) : fbm(cloudUv);
+    float cloudNoise2 = uLowQuality > 0.5 ? cloudNoise1 : fbm(cloudUv * 1.9 + vec2(-uTime * 0.024, 4.3));
     float cloudBase = cloudNoise1 * 0.68 + cloudNoise2 * 0.32;
 
     float stormBias = abs(uWeatherType) < 0.2 ? 0.40 : 0.49;
@@ -186,6 +194,7 @@ export function createWeatherSkyMaterial(initialWeather: WeatherId): WeatherSkyM
     uniforms: {
       uTime: { value: 0 },
       uWeatherType: { value: WEATHER_TYPE_INDEX[initialWeather] ?? 0 },
+      uLowQuality: { value: 0 },
       uZenithColor: { value: new THREE.Color('#0f172a') },
       uMidColor: { value: new THREE.Color('#1e293b') },
       uHorizonColor: { value: new THREE.Color('#475569') },
@@ -230,6 +239,9 @@ export function createWeatherSkyMaterial(initialWeather: WeatherId): WeatherSkyM
   return {
     material: mat,
     setWeather,
+    setLowQuality: (low: boolean) => {
+      mat.uniforms.uLowQuality.value = low ? 1 : 0;
+    },
     update: (elapsed: number) => {
       mat.uniforms.uTime.value = elapsed;
     },

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createProceduralTreasureChest, ProceduralChestHandle } from './ChestVaultStation3D';
+import { mergeStaticMeshesByMaterial } from './MeshHelpers3D';
 import type { MineEnvironment3D } from './MineEnvironment3D';
 import { type MineWorldPalette, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
 import { PlotPedestal3D } from './PlotPedestal3D';
@@ -66,7 +67,9 @@ export function buildMineStageAndChest(ctx: {
     rackDeck.position.set(0, 0.21, -4.85);
     rackDeck.receiveShadow = true;
     rackDeck.castShadow = true;
-    ctx.envGroup.add(stageBase, rackDeck);
+    const stageStaticGroup = new THREE.Group();
+    stageStaticGroup.add(stageBase, rackDeck);
+    ctx.envGroup.add(stageStaticGroup);
 
     // Clean Rear Stage Holo Underglow Strip + Sculpted Steel Bay Dividers Between Plots (zero pedestal overlap)
     const holoRunwayStrip = new THREE.Mesh(new THREE.PlaneGeometry(15.6, 0.48), stageHoloMat);
@@ -90,23 +93,23 @@ export function buildMineStageAndChest(ctx: {
       divBar.receiveShadow = true;
       const divLed = new THREE.Mesh(bayDivLedGeo, stageNeonMat);
       divLed.position.set(divX, 0.33, -4.58);
-      ctx.envGroup.add(divBar, divLed);
+      stageStaticGroup.add(divBar, divLed);
     }
 
     const rearBusConduit = new THREE.Mesh(new THREE.BoxGeometry(14.8, 0.08, 0.18), bayDivMat);
     rearBusConduit.position.set(0, 0.305, -5.92);
     rearBusConduit.castShadow = true;
-    ctx.envGroup.add(rearBusConduit);
+    stageStaticGroup.add(rearBusConduit);
 
     for (const sx of [-1, 1]) {
       const rackFrontTrim = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.06, 0.1), stageNeonMat);
       rackFrontTrim.position.set(sx * 4.88, 0.26, -3.22);
-      ctx.envGroup.add(rackFrontTrim);
+      stageStaticGroup.add(rackFrontTrim);
     }
 
     const stageRearTrim = new THREE.Mesh(new THREE.BoxGeometry(16.86, 0.06, 0.09), stageNeonMat);
     stageRearTrim.position.set(0, 0.26, -6.54);
-    ctx.envGroup.add(stageRearTrim);
+    stageStaticGroup.add(stageRearTrim);
 
     // Futuristic Steel Stairwell & Illuminated Treads Descending into Quarry Pit
     const cheekMat = new THREE.MeshStandardMaterial({
@@ -133,7 +136,7 @@ export function buildMineStageAndChest(ctx: {
 
       const cheekLed = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.035, 1.38), stageNeonMat);
       cheekLed.position.set(sx * 1.32, 0.36, -2.52);
-      ctx.envGroup.add(cheek, cheekCap, cheekLed);
+      stageStaticGroup.add(cheek, cheekCap, cheekLed);
     }
 
     const stairStepCount = 4;
@@ -148,8 +151,9 @@ export function buildMineStageAndChest(ctx: {
 
       const stepLed = new THREE.Mesh(new THREE.BoxGeometry(2.34, 0.03, 0.05), stageNeonMat);
       stepLed.position.set(0, stepY + 0.09, stepZ + 0.14);
-      ctx.envGroup.add(stepMesh, stepLed);
+      stageStaticGroup.add(stepMesh, stepLed);
     }
+    mergeStaticMeshesByMaterial(stageStaticGroup);
 
     // 5 Cyber-Holographic Plot Pedestals Centered Cleanly Away From Side HUD Bars (spacing 3.22m for +50% podiums)
     for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {

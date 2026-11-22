@@ -586,4 +586,19 @@
     flex-shrink: 0;
   }
 
+  /* Low graphics preset: disable continuous ring/text animations & GPU drop-shadows on floating 3D scene overlays */
+  body.mam-quality-low #plotOverlayLayer .mam-rarity-badge::before,
+  body.mam-quality-low #plotOverlayLayer .mam-rarity-sparkle {
+    animation: none;
+  }
+
+  body.mam-quality-low #plotOverlayLayer .mam-rarity-text {
+    animation: none;
+    filter: none;
+  }
+
+  body.mam-quality-low #dmgPopupLayer * {
+    filter: none !important;
+  }
+
 }
