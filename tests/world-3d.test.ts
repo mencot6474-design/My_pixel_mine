@@ -3643,21 +3643,28 @@ describe('Pure 3D Mine World', () => {
     pool.dispose();
   });
 
-  it('arranges 5 crescent pedestals with isolated visualYaw and rotated attack origins', () => {
+  it('arranges 5 floating crescent pedestals with anti-grav thrusters, isolated hover bob, and rotated attack origins', () => {
     expect(STAGE_CRESCENT_SLOTS).toHaveLength(5);
-    expect(STAGE_CRESCENT_SLOTS[2]).toEqual({ x: 0, y: 0.72, z: -6.05, visualYaw: 0 });
-    expect(STAGE_CRESCENT_SLOTS[0]).toEqual({ x: -7.05, y: 0.28, z: -4.35, visualYaw: 0.46 });
-    expect(STAGE_CRESCENT_SLOTS[4]).toEqual({ x: 7.05, y: 0.28, z: -4.35, visualYaw: -0.46 });
+    expect(STAGE_CRESCENT_SLOTS[2]).toEqual({ x: 0, y: 1.38, z: -5.9, visualYaw: 0 });
+    expect(STAGE_CRESCENT_SLOTS[0]).toEqual({ x: -7.35, y: 0.72, z: -3.15, visualYaw: 0.58 });
+    expect(STAGE_CRESCENT_SLOTS[4]).toEqual({ x: 7.35, y: 0.72, z: -3.15, visualYaw: -0.58 });
 
-    const ped = new PlotPedestal3D(0, -7.05, -4.35, 0.46);
-    ped.group.position.y = 0.28;
+    const ped = new PlotPedestal3D(0, -7.35, -3.15, 0.58);
+    ped.group.position.y = 0.72;
+    ped.group.updateMatrixWorld(true);
+    const pedBox = new THREE.Box3().setFromObject(ped.group);
+    expect(pedBox.min.y).toBeLessThan(0.5);
     expect(ped.group.rotation.y).toBe(0);
-    expect(ped.getVisualYaw()).toBeCloseTo(0.46, 4);
+    expect(ped.getVisualYaw()).toBeCloseTo(0.58, 4);
+
+    ped.update(0.05, 0.85);
+    expect(ped.group.position.y).toBe(0.72);
+    expect(Math.abs(ped.getHoverBobOffset())).toBeGreaterThan(0.005);
 
     const origin = ped.getAttackOriginWorldPosition(new THREE.Vector3());
     const localFwd = 0.35 * 1.5;
-    expect(origin.x).toBeCloseTo(-7.05 + Math.sin(0.46) * localFwd, 3);
-    expect(origin.z).toBeCloseTo(-4.35 + Math.cos(0.46) * localFwd, 3);
+    expect(origin.x).toBeCloseTo(-7.35 + Math.sin(0.58) * localFwd, 3);
+    expect(origin.z).toBeCloseTo(-3.15 + Math.cos(0.58) * localFwd, 3);
     ped.dispose();
   });
 
@@ -3831,7 +3838,7 @@ describe('Pure 3D Mine World', () => {
     expect(locked).toEqual({ yaw: 0, pitch: -0.22 });
   });
 
-  it('grounds crescent plinths flush beneath each pedestal elevation without swallowing podiums', () => {
+  it('floats crescent pedestals and chest cleanly with zero ground plinths in envGroup', () => {
     const stageScene = new THREE.Scene();
     const envGroup = new THREE.Group();
     const pedestals: PlotPedestal3D[] = [];
@@ -3845,17 +3852,13 @@ describe('Pure 3D Mine World', () => {
       clickableMeshes,
       crateGroup,
     });
-    envGroup.updateMatrixWorld(true);
 
-    for (const slot of STAGE_CRESCENT_SLOTS) {
-      const ray = new THREE.Raycaster(new THREE.Vector3(slot.x, 5, slot.z), new THREE.Vector3(0, -1, 0));
-      const hits = ray.intersectObject(envGroup, true);
-      expect(hits.length).toBeGreaterThan(0);
-      expect(hits[0].point.y).toBeCloseTo(slot.y, 2);
-    }
-
-    const stageBox = new THREE.Box3().setFromObject(envGroup);
-    expect(stageBox.min.y).toBeLessThanOrEqual(0);
+    expect(envGroup.children).toHaveLength(0);
+    expect(pedestals).toHaveLength(5);
+    expect(pedestals[2].group.position.y).toBe(1.38);
+    expect(crateGroup.position.x).toBeCloseTo(10.25, 2);
+    expect(crateGroup.position.y).toBeCloseTo(1.03, 2);
+    expect(crateGroup.position.z).toBeCloseTo(1.65, 2);
     pedestals.forEach((p) => p.dispose());
     built.chestVisual.dispose();
   });
