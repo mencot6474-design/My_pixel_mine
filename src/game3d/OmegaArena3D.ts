@@ -20,6 +20,11 @@ import {
   type OmegaRooftopEnvironmentHandle,
 } from './OmegaRooftopEnvironment3D';
 import type { TowerFighterConfig } from './TowerArena3D';
+import {
+  getChibiAttackStyle,
+  type PlotAttackStyle,
+  SignatureProjectilePool3D,
+} from './SignatureProjectilePool3D';
 
 export interface OmegaStrikeEvent {
   slotIndex: number;
@@ -41,15 +46,14 @@ export interface OmegaTargetScreenAnchor {
 interface OmegaFighterEntry {
   slotIndex: number;
   chibiId: string;
+  style: PlotAttackStyle;
   sprite: ChibiSprite3D;
   fx: ChibiFieldFxController;
   spawnPos: THREE.Vector3;
-  attackPos: THREE.Vector3;
   dmg: number;
   attackInterval: number;
   attackCooldown: number;
   comboStep: number;
-  lungeTimer: number;
   colorHex: string;
 }
 
@@ -196,7 +200,9 @@ export class OmegaArena3D {
   private readonly targetEntries = new Map<string, OmegaTargetMeshEntry>();
   private readonly targetsGroup = new THREE.Group();
   private readonly impactFx = new AttackImpactFxController();
+  private readonly projectiles = new SignatureProjectilePool3D();
   private readonly projVec = new THREE.Vector3();
+  private lowQuality = false;
 
   private battlePhase: OmegaBattlePhase | 'ended' = 'active';
   private entranceElapsed = 0;
@@ -358,7 +364,7 @@ export class OmegaArena3D {
     this.podiumMats.push(this.entranceDropMat, this.entranceTargetMat, this.invulShieldMat);
     this.group.add(this.entranceDropBeam, this.entranceTargetRing, this.invulShieldMesh);
 
-    this.group.add(this.targetsGroup, this.impactFx.group);
+    this.group.add(this.targetsGroup, this.impactFx.group, this.projectiles.group);
     this.setBossId('crimson-ronin');
   }
 
@@ -602,7 +608,24 @@ export class OmegaArena3D {
       this.bossSprite.group.position.set(0, this.bossStageY, BOSS_POS_Z);
       this.bossSprite.group.scale.setScalar(3.15);
       this.bossSprite.setFacing(-1);
+      this.bossSprite.setLowQuality(this.lowQuality);
       this.group.add(this.bossSprite.group);
+    }
+  }
+
+  public setLowQuality(low: boolean): void {
+    this.lowQuality = low;
+    this.impactFx.setLowQuality(low);
+    this.projectiles.setLowQuality(low);
+    this.bossSprite?.setLowQuality(low);
+    this.bossPodium?.setLowQuality(low);
+    this.emberPoints.visible = !low;
+    for (let i = 0; i < this.playerPodiums.length; i++) {
+      this.playerPodiums[i].setLowQuality(low);
+    }
+    for (const f of this.fighters.values()) {
+      f.sprite.setLowQuality(low);
+      f.fx.setLowQuality(low);
     }
   }
 
@@ -620,8 +643,8 @@ export class OmegaArena3D {
       this.bossSprite.group.scale.set(3.15 * 0.85, 3.15 * 1.25, 3.15);
       this.bossSprite.setAnimState('idle');
     }
+    this.projectiles.clear();
     for (const f of this.fighters.values()) {
-      f.lungeTimer = 0;
       f.sprite.setAnimState('idle');
       f.sprite.group.position.copy(f.spawnPos);
     }
@@ -645,8 +668,8 @@ export class OmegaArena3D {
       });
     }
     if (phase !== 'active') {
+      this.projectiles.clear();
       for (const f of this.fighters.values()) {
-        f.lungeTimer = 0;
         f.sprite.setAnimState('idle');
         if (phase === 'ended') {
           f.sprite.group.position.copy(f.spawnPos);
@@ -731,24 +754,23 @@ export class OmegaArena3D {
       sprite.group.position.set(sx, standY, sz);
       sprite.setAnimState(this.battlePhase === 'active' ? 'attack' : 'idle');
       sprite.setFacing(sx <= 0 ? 1 : -1);
+      sprite.setLowQuality(this.lowQuality);
       const fx = new ChibiFieldFxController(sprite.group, cfg.def.accentColor, cfg.slotIndex);
       fx.setEnchant(cfg.enchantId);
+      fx.setLowQuality(this.lowQuality);
       this.group.add(sprite.group);
 
-      const angleToBoss = Math.atan2(sz - BOSS_POS_Z, sx);
-      const attackPos = new THREE.Vector3(Math.cos(angleToBoss) * 1.9, standY + 0.14, BOSS_POS_Z + Math.sin(angleToBoss) * 1.7);
       this.fighters.set(cfg.slotIndex, {
         slotIndex: cfg.slotIndex,
         chibiId: cfg.def.id,
+        style: getChibiAttackStyle(cfg.def),
         sprite,
         fx,
         spawnPos: new THREE.Vector3(sx, standY, sz),
-        attackPos,
         dmg: cfg.dmg,
         attackInterval: Math.max(0.32, 0.9 / Math.max(0.4, cfg.miningMult)),
-        attackCooldown: 0.15 + cfg.slotIndex * 0.14,
+        attackCooldown: 0.08 + cfg.slotIndex * 0.1,
         comboStep: 0,
-        lungeTimer: 0,
         colorHex: cfg.def.accentColor,
       });
     }
@@ -965,13 +987,15 @@ export class OmegaArena3D {
     this.shrineCrownCrystal.position.y = this.shrineCrownCrystalBaseY + Math.sin(elapsed * 2.2) * 0.14;
     this.rooftopEnv.update(safeDt, elapsed);
 
-    const emberAttr = this.emberPoints.geometry.getAttribute('position') as THREE.BufferAttribute;
-    for (let i = 0; i < EMBER_COUNT; i++) {
-      let py = this.emberPositions[i * 3 + 1] + safeDt * (0.9 + (i % 4) * 0.22);
-      if (py > 8.2) py = 0.2;
-      this.emberPositions[i * 3 + 1] = py;
+    if (!this.lowQuality) {
+      const emberAttr = this.emberPoints.geometry.getAttribute('position') as THREE.BufferAttribute;
+      for (let i = 0; i < EMBER_COUNT; i++) {
+        let py = this.emberPositions[i * 3 + 1] + safeDt * (0.9 + (i % 4) * 0.22);
+        if (py > 8.2) py = 0.2;
+        this.emberPositions[i * 3 + 1] = py;
+      }
+      emberAttr.needsUpdate = true;
     }
-    emberAttr.needsUpdate = true;
 
     for (const entry of this.targetEntries.values()) {
       entry.root.rotation.y = elapsed * (entry.kind === 'obsidian_pillar' ? 0.8 : 2.2);
@@ -988,43 +1012,77 @@ export class OmegaArena3D {
     }
 
     const canAttack = this.battlePhase === 'active';
+    if (!canAttack) {
+      this.projectiles.clear();
+    }
     for (const f of this.fighters.values()) {
+      f.fx.update(elapsed);
+      f.colorHex = f.fx.getAccentColor();
+      f.sprite.setAccentColor(f.colorHex);
+      f.sprite.group.position.copy(f.spawnPos);
       if (canAttack) {
         f.sprite.setAnimState('attack');
         f.attackCooldown -= safeDt;
-        if (f.lungeTimer > 0) f.lungeTimer = Math.max(0, f.lungeTimer - safeDt);
-
         if (f.attackCooldown <= 0) {
           f.attackCooldown = f.attackInterval;
-          f.lungeTimer = 0.24;
+          const step = f.comboStep;
           f.comboStep = (f.comboStep + 1) % 3;
-          f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), f.comboStep);
-          onStrike?.({
-            slotIndex: f.slotIndex,
-            attackInterval: f.attackInterval,
-            dmg: f.dmg,
-            wx: (Math.random() - 0.5) * 0.9,
-            wy: this.bossStageY + 1.85,
-            wz: BOSS_POS_Z,
-            accentColor: f.colorHex,
-          });
+          f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), step);
+          this.projectiles.launch(
+            {
+              style: f.style,
+              slotIndex: f.slotIndex,
+              targetId: -1,
+              dmg: f.dmg,
+              comboStep: step,
+              accentColor: f.colorHex,
+              sx: f.spawnPos.x,
+              sy: f.spawnPos.y + 1.25,
+              sz: f.spawnPos.z,
+              ex: (Math.random() - 0.5) * 0.9,
+              ey: this.bossStageY + 1.85,
+              ez: BOSS_POS_Z + 0.25,
+              attackInterval: f.attackInterval,
+              isBoss: true,
+            },
+            (a) => {
+              onStrike?.({
+                slotIndex: a.slotIndex,
+                attackInterval: a.attackInterval,
+                dmg: a.dmg,
+                wx: a.ex,
+                wy: a.ey,
+                wz: a.ez,
+                accentColor: a.accentColor,
+              });
+            }
+          );
         }
-
-        const t = f.lungeTimer > 0 ? Math.sin((f.lungeTimer / 0.24) * Math.PI) * 0.24 : 0;
-        f.sprite.group.position.lerpVectors(f.spawnPos, f.attackPos, t);
       } else {
-        f.lungeTimer = 0;
         f.sprite.setAnimState('idle');
-        f.sprite.group.position.lerp(f.spawnPos, Math.min(1, safeDt * 12));
       }
-      f.fx.update(elapsed);
       f.sprite.update(safeDt, elapsed, camera);
+    }
+
+    if (canAttack) {
+      this.projectiles.step(safeDt, camera, (a) => {
+        onStrike?.({
+          slotIndex: a.slotIndex,
+          attackInterval: a.attackInterval,
+          dmg: a.dmg,
+          wx: a.ex,
+          wy: a.ey,
+          wz: a.ez,
+          accentColor: a.accentColor,
+        });
+      });
     }
 
     this.impactFx.update(safeDt, camera);
   }
 
   public dispose(): void {
+    this.projectiles.dispose();
     if (this.bossSprite) {
       this.bossSprite.dispose();
       this.bossSprite = null;

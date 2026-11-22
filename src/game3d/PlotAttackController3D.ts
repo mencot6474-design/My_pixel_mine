@@ -6,13 +6,13 @@ import { type OreVariantKey } from './MineWorldPalette';
 import { type OrePit3D } from './OrePit3D';
 import { type PlotPedestal3D } from './PlotPedestal3D';
 import {
-  getDualSlashArcTexture,
-  getHitSparkStarTexture,
-  getShockwaveRingTexture,
-  getSparkStreakTexture,
-} from './ProceduralTextures3D';
+  getChibiAttackStyle,
+  type PlotAttackStyle,
+  type SignatureProjectileArrival,
+  SignatureProjectilePool3D,
+} from './SignatureProjectilePool3D';
 
-export type PlotAttackStyle = 'crescent' | 'beam' | 'star' | 'twin' | 'meteor';
+export { getChibiAttackStyle, type PlotAttackStyle };
 
 export type PlotOreBrokenCb = (
   variantKey: OreVariantKey,
@@ -41,167 +41,24 @@ interface PlotUnitState {
   targetOreId: number | null;
 }
 
-interface PooledProjectile {
-  group: THREE.Group;
-  coreMesh: THREE.Mesh;
-  coreMat: THREE.MeshBasicMaterial;
-  trailMesh: THREE.Mesh;
-  trailMat: THREE.MeshBasicMaterial;
-  active: boolean;
-  style: PlotAttackStyle;
-  slotIndex: number;
-  targetOreId: number;
-  strikeDamage: number;
-  comboStep: number;
-  accentColor: string;
-  startX: number;
-  startY: number;
-  startZ: number;
-  ctrlX: number;
-  ctrlY: number;
-  ctrlZ: number;
-  endX: number;
-  endY: number;
-  endZ: number;
-  age: number;
-  duration: number;
-  baseScale: number;
-  spinSpeed: number;
-  startAngle: number;
-}
-
 type AliveNodeTarget = ReturnType<OrePit3D['getAliveNodesInfo']>[number];
-
-const POOL_CAPACITY = 20;
-const LOW_QUALITY_POOL_CAP = 12;
-
-/**
- * Classifies each Chibi into one of 5 distinct plot-to-pit attack signatures.
- */
-export function getChibiAttackStyle(def: ChibiDef): PlotAttackStyle {
-  if (def.rarity === 'twin' || /twin|dual/.test(def.id)) {
-    return 'twin';
-  }
-  if (
-    def.rarity === 'omega' ||
-    /cyber|chrono|void|pulse|prism|neon|laser|rail|circuit|plasma|techno|volt|arc|warden/.test(def.id)
-  ) {
-    return 'beam';
-  }
-  if (
-    def.rarity === 'rainbow' ||
-    def.rarity === 'secret' ||
-    def.rarity === 'limited' ||
-    /astral|star|seraph|celestial|esper|monarch|comet|nova|luna|oracle|angel|fairy|dream|queen/.test(
-      def.id
-    )
-  ) {
-    return 'star';
-  }
-  if (
-    def.rarity === 'exotic' ||
-    def.rarity === 'mythic' ||
-    /magma|pyre|abyssal|crimson|obsidian|titan|dragon|inferno|lava|flame|guardian|golem|vanguard|iron|quake|forge/.test(
-      def.id
-    )
-  ) {
-    return 'meteor';
-  }
-  return 'crescent';
-}
 
 export class PlotAttackController3D {
   public readonly group = new THREE.Group();
 
   private readonly units = new Map<number, PlotUnitState>();
-  private readonly sharedQuadGeo = new THREE.PlaneGeometry(1, 1);
-  private readonly pool: PooledProjectile[] = [];
-
-  private readonly crescentTex: THREE.Texture | null;
-  private readonly streakTex: THREE.Texture | null;
-  private readonly starTex: THREE.Texture | null;
-  private readonly ringTex: THREE.Texture | null;
-
+  private readonly projectiles = new SignatureProjectilePool3D();
   private readonly originVec = new THREE.Vector3();
-  private readonly midVec = new THREE.Vector3();
-  private readonly alongVec = new THREE.Vector3();
-  private readonly toCamVec = new THREE.Vector3();
-  private readonly binormalVec = new THREE.Vector3();
-  private readonly normalVec = new THREE.Vector3();
-  private readonly basisMat = new THREE.Matrix4();
   private readonly tmpWorldPos = { x: 0, y: 0, z: 0 };
 
-  private lowQuality = false;
   private disposed = false;
 
   constructor() {
-    this.crescentTex = getDualSlashArcTexture();
-    this.streakTex = getSparkStreakTexture();
-    this.starTex = getHitSparkStarTexture();
-    this.ringTex = getShockwaveRingTexture();
-
-    for (let i = 0; i < POOL_CAPACITY; i++) {
-      const pGroup = new THREE.Group();
-      pGroup.visible = false;
-
-      const coreMat = new THREE.MeshBasicMaterial({
-        color: '#ffffff',
-        map: this.crescentTex,
-        transparent: true,
-        opacity: 0,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-      });
-      const coreMesh = new THREE.Mesh(this.sharedQuadGeo, coreMat);
-      pGroup.add(coreMesh);
-
-      const trailMat = new THREE.MeshBasicMaterial({
-        color: '#ffffff',
-        map: this.streakTex,
-        transparent: true,
-        opacity: 0,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-      });
-      const trailMesh = new THREE.Mesh(this.sharedQuadGeo, trailMat);
-      pGroup.add(trailMesh);
-
-      this.group.add(pGroup);
-      this.pool.push({
-        group: pGroup,
-        coreMesh,
-        coreMat,
-        trailMesh,
-        trailMat,
-        active: false,
-        style: 'crescent',
-        slotIndex: 0,
-        targetOreId: -1,
-        strikeDamage: 0,
-        comboStep: 0,
-        accentColor: '#38bdf8',
-        startX: 0,
-        startY: 0,
-        startZ: 0,
-        ctrlX: 0,
-        ctrlY: 0,
-        ctrlZ: 0,
-        endX: 0,
-        endY: 0,
-        endZ: 0,
-        age: 0,
-        duration: 0.18,
-        baseScale: 1,
-        spinSpeed: 0,
-        startAngle: 0,
-      });
-    }
+    this.group.add(this.projectiles.group);
   }
 
   public setLowQuality(low: boolean): void {
-    this.lowQuality = low;
+    this.projectiles.setLowQuality(low);
   }
 
   public setSlotUnit(
@@ -243,19 +100,11 @@ export class PlotAttackController3D {
   }
 
   public getActiveProjectileCount(): number {
-    let count = 0;
-    for (let i = 0; i < this.pool.length; i++) {
-      if (this.pool[i].active) count++;
-    }
-    return count;
+    return this.projectiles.getActiveCount();
   }
 
   public clearProjectiles(): void {
-    for (let i = 0; i < this.pool.length; i++) {
-      const p = this.pool[i];
-      p.active = false;
-      p.group.visible = false;
-    }
+    this.projectiles.clear();
   }
 
   private pickTarget(
@@ -274,7 +123,6 @@ export class PlotAttackController3D {
         }
       }
     }
-    // Prefer spreading across pit nodes near pedestal X while balancing slot index
     let best = alive[(unit.slotIndex * 3) % alive.length];
     let bestScore = Infinity;
     for (let i = 0; i < alive.length; i++) {
@@ -290,14 +138,6 @@ export class PlotAttackController3D {
     }
     unit.targetOreId = best.id;
     return best;
-  }
-
-  private acquireProjectile(): PooledProjectile | null {
-    const cap = this.lowQuality ? LOW_QUALITY_POOL_CAP : POOL_CAPACITY;
-    for (let i = 0; i < cap; i++) {
-      if (!this.pool[i].active) return this.pool[i];
-    }
-    return null;
   }
 
   private applyImpact(
@@ -359,319 +199,30 @@ export class PlotAttackController3D {
     }
   }
 
-  private spawnAttackProjectile(
-    unit: PlotUnitState,
-    pedestal: PlotPedestal3D,
-    target: AliveNodeTarget,
-    strikeDamage: number,
+  private handleArrival(
+    a: SignatureProjectileArrival,
     pit: OrePit3D,
+    pedestals: readonly PlotPedestal3D[],
+    renderVisuals: boolean,
     onOreBroken?: PlotOreBrokenCb,
     onOreHit?: PlotOreHitCb
   ): void {
-    pedestal.getAttackOriginWorldPosition(this.originVec);
-    const sx = this.originVec.x;
-    const sy = this.originVec.y;
-    const sz = this.originVec.z;
-    const ex = target.worldX;
-    const ey = target.worldY + 0.65;
-    const ez = target.worldZ;
-    const accentColor = pedestal.getActiveAccentColor();
-
-    const p1 = this.acquireProjectile();
-    if (!p1) {
-      // Fallback: if visual pool saturated under extreme speed, still deal damage reliably
-      this.applyImpact(
-        pit,
-        target.id,
-        target,
-        strikeDamage,
-        accentColor,
-        sx,
-        sz,
-        unit.comboStep,
-        true,
-        onOreBroken,
-        onOreHit
-      );
-      return;
-    }
-
-    const comboOffset = (unit.comboStep - 1) * 0.9;
-    this.configureProjectile(
-      p1,
-      unit.style,
-      unit.slotIndex,
-      target.id,
-      strikeDamage,
-      unit.comboStep,
-      accentColor,
-      sx,
-      sy,
-      sz,
-      ex,
-      ey,
-      ez,
-      comboOffset,
-      false
+    const ped = pedestals[a.slotIndex];
+    const originX = ped ? ped.group.position.x : a.sx;
+    const originZ = ped ? ped.group.position.z : a.sz;
+    this.applyImpact(
+      pit,
+      a.targetId,
+      null,
+      a.dmg,
+      a.accentColor,
+      originX,
+      originZ,
+      a.comboStep,
+      renderVisuals,
+      onOreBroken,
+      onOreHit
     );
-
-    // Twin units fire a mirrored partner bolt in normal/high quality for signature crossed strike
-    if (unit.style === 'twin' && !this.lowQuality) {
-      const p2 = this.acquireProjectile();
-      if (p2) {
-        this.configureProjectile(
-          p2,
-          'twin',
-          unit.slotIndex,
-          target.id,
-          0,
-          (unit.comboStep + 1) % 3,
-          accentColor,
-          sx + 0.25,
-          sy + 0.15,
-          sz,
-          ex,
-          ey,
-          ez,
-          -1.35,
-          true
-        );
-      }
-    }
-  }
-
-  private configureProjectile(
-    p: PooledProjectile,
-    style: PlotAttackStyle,
-    slotIndex: number,
-    targetOreId: number,
-    strikeDamage: number,
-    comboStep: number,
-    accentColor: string,
-    sx: number,
-    sy: number,
-    sz: number,
-    ex: number,
-    ey: number,
-    ez: number,
-    curveLateral: number,
-    isTwinMirror: boolean
-  ): void {
-    p.active = true;
-    p.style = style;
-    p.slotIndex = slotIndex;
-    p.targetOreId = targetOreId;
-    p.strikeDamage = strikeDamage;
-    p.comboStep = comboStep;
-    p.accentColor = accentColor;
-    p.startX = sx;
-    p.startY = sy;
-    p.startZ = sz;
-    p.endX = ex;
-    p.endY = ey;
-    p.endZ = ez;
-    p.age = 0;
-
-    const midX = (sx + ex) * 0.5;
-    const midY = (sy + ey) * 0.5;
-    const midZ = (sz + ez) * 0.5;
-
-    p.coreMat.color.set(accentColor);
-    p.trailMat.color.set('#ffffff').lerp(p.coreMat.color, 0.45);
-    p.trailMesh.visible = false;
-    p.coreMesh.rotation.set(0, 0, 0);
-    p.trailMesh.rotation.set(0, 0, 0);
-    p.group.rotation.set(0, 0, 0);
-
-    if (style === 'beam') {
-      p.duration = 0.12;
-      p.ctrlX = midX;
-      p.ctrlY = midY;
-      p.ctrlZ = midZ;
-      p.baseScale = 0.68;
-      p.spinSpeed = 0;
-      p.startAngle = 0;
-      p.coreMat.map = this.streakTex;
-      p.trailMat.map = this.streakTex;
-      p.trailMesh.visible = true;
-    } else if (style === 'meteor') {
-      p.duration = 0.24;
-      p.ctrlX = sx * 0.35 + ex * 0.65;
-      p.ctrlY = Math.max(sy, ey) + 4.3;
-      p.ctrlZ = midZ;
-      p.baseScale = 1.55;
-      p.spinSpeed = 9.5;
-      p.startAngle = comboStep * 0.9;
-      p.coreMat.map = this.starTex;
-      p.trailMat.map = this.ringTex;
-      p.trailMesh.visible = !this.lowQuality;
-    } else if (style === 'star') {
-      p.duration = 0.21;
-      p.ctrlX = midX + curveLateral * 1.15;
-      p.ctrlY = Math.max(sy, ey) + 2.1;
-      p.ctrlZ = midZ;
-      p.baseScale = 1.35;
-      p.spinSpeed = comboStep % 2 === 0 ? 11.5 : -11.5;
-      p.startAngle = slotIndex * 0.5;
-      p.coreMat.map = this.starTex;
-      p.trailMat.map = this.ringTex;
-      p.trailMesh.visible = !this.lowQuality;
-    } else if (style === 'twin') {
-      p.duration = 0.16;
-      const side = isTwinMirror ? -1.25 : 1.25;
-      p.ctrlX = midX + side;
-      p.ctrlY = midY + 1.05;
-      p.ctrlZ = midZ;
-      p.baseScale = this.lowQuality ? 1.45 : 1.15;
-      p.spinSpeed = isTwinMirror ? -14 : 14;
-      p.startAngle = isTwinMirror ? -0.6 : 0.6;
-      p.coreMat.map = this.crescentTex;
-      p.trailMat.map = this.starTex;
-      p.trailMesh.visible = false;
-    } else {
-      // 'crescent' slash wave
-      p.duration = 0.17;
-      p.ctrlX = midX + curveLateral * 0.75;
-      p.ctrlY = midY + 0.75;
-      p.ctrlZ = midZ;
-      p.baseScale = 1.5;
-      p.spinSpeed = comboStep % 2 === 0 ? 13.5 : -13.5;
-      p.startAngle = (comboStep - 1) * 0.7;
-      p.coreMat.map = this.crescentTex;
-      p.trailMat.map = this.streakTex;
-      p.trailMesh.visible = !this.lowQuality;
-    }
-
-    p.group.position.set(sx, sy, sz);
-    p.group.visible = true;
-  }
-
-  private flushAllPendingForHeadless(
-    pit: OrePit3D,
-    pedestals: readonly PlotPedestal3D[],
-    onOreBroken?: PlotOreBrokenCb,
-    onOreHit?: PlotOreHitCb
-  ): void {
-    for (let i = 0; i < this.pool.length; i++) {
-      const p = this.pool[i];
-      if (!p.active) continue;
-      if (p.strikeDamage > 0) {
-        const ped = pedestals[p.slotIndex];
-        const originX = ped ? ped.group.position.x : p.startX;
-        const originZ = ped ? ped.group.position.z : p.startZ;
-        this.applyImpact(
-          pit,
-          p.targetOreId,
-          null,
-          p.strikeDamage,
-          p.accentColor,
-          originX,
-          originZ,
-          p.comboStep,
-          false,
-          onOreBroken,
-          onOreHit
-        );
-      }
-      p.active = false;
-      p.group.visible = false;
-    }
-  }
-
-  private stepActiveProjectiles(
-    safeDt: number,
-    camera: THREE.Camera,
-    pit: OrePit3D,
-    pedestals: readonly PlotPedestal3D[],
-    onOreBroken?: PlotOreBrokenCb,
-    onOreHit?: PlotOreHitCb
-  ): void {
-    for (let i = 0; i < this.pool.length; i++) {
-      const p = this.pool[i];
-      if (!p.active) continue;
-
-      p.age += safeDt;
-      const u = Math.min(1, p.age / p.duration);
-
-      if (p.style === 'beam') {
-        const mx = (p.startX + p.endX) * 0.5;
-        const my = (p.startY + p.endY) * 0.5;
-        const mz = (p.startZ + p.endZ) * 0.5;
-        p.group.position.set(mx, my, mz);
-
-        this.alongVec.set(p.endX - p.startX, p.endY - p.startY, p.endZ - p.startZ);
-        const beamLen = Math.max(0.4, this.alongVec.length());
-        this.alongVec.multiplyScalar(1 / beamLen);
-
-        this.midVec.set(mx, my, mz);
-        this.toCamVec.subVectors(camera.position, this.midVec).normalize();
-        this.binormalVec.crossVectors(this.toCamVec, this.alongVec);
-        if (this.binormalVec.lengthSq() < 0.0001) {
-          this.binormalVec.set(0, 1, 0);
-        } else {
-          this.binormalVec.normalize();
-        }
-        this.normalVec.crossVectors(this.alongVec, this.binormalVec).normalize();
-        this.basisMat.makeBasis(this.alongVec, this.binormalVec, this.normalVec);
-        p.group.quaternion.setFromRotationMatrix(this.basisMat);
-
-        const pulse = Math.sin(u * Math.PI);
-        const width = p.baseScale * (0.45 + pulse * 0.9);
-        p.coreMesh.scale.set(beamLen, width, 1);
-        p.coreMat.opacity = Math.min(1, 0.35 + pulse * 0.65);
-
-        p.trailMesh.scale.set(beamLen, width * 0.38, 1);
-        p.trailMat.opacity = Math.min(1, 0.5 + pulse * 0.5);
-      } else {
-        // Quadratic Bezier interpolation: (1-u)^2 * P0 + 2(1-u)u * P1 + u^2 * P2
-        const inv = 1 - u;
-        const a = inv * inv;
-        const b = 2 * inv * u;
-        const c = u * u;
-        p.group.position.set(
-          a * p.startX + b * p.ctrlX + c * p.endX,
-          a * p.startY + b * p.ctrlY + c * p.endY,
-          a * p.startZ + b * p.ctrlZ + c * p.endZ
-        );
-        p.group.quaternion.copy(camera.quaternion);
-
-        const scalePulse = u < 0.2 ? 0.6 + u * 2.5 : u > 0.85 ? 1.1 - (u - 0.85) * 2.0 : 1.05;
-        const s = p.baseScale * scalePulse;
-        p.coreMesh.scale.set(s, s, 1);
-        p.coreMesh.rotation.z = p.startAngle + p.age * p.spinSpeed;
-        p.coreMat.opacity = u > 0.88 ? Math.max(0.2, 1 - (u - 0.88) * 6.5) : 0.96;
-
-        if (p.trailMesh.visible) {
-          const ts = s * (p.style === 'meteor' ? 1.25 : 0.88);
-          p.trailMesh.scale.set(ts, ts, 1);
-          p.trailMesh.rotation.z = -p.coreMesh.rotation.z * 0.65;
-          p.trailMat.opacity = p.coreMat.opacity * 0.55;
-        }
-      }
-
-      if (u >= 1) {
-        if (p.strikeDamage > 0) {
-          const ped = pedestals[p.slotIndex];
-          const originX = ped ? ped.group.position.x : p.startX;
-          const originZ = ped ? ped.group.position.z : p.startZ;
-          this.applyImpact(
-            pit,
-            p.targetOreId,
-            null,
-            p.strikeDamage,
-            p.accentColor,
-            originX,
-            originZ,
-            p.comboStep,
-            true,
-            onOreBroken,
-            onOreHit
-          );
-        }
-        p.active = false;
-        p.group.visible = false;
-      }
-    }
   }
 
   public update(
@@ -687,7 +238,9 @@ export class PlotAttackController3D {
     const safeDt = Math.min(Math.max(0, dtSec), 0.1);
 
     if (!renderVisuals) {
-      this.flushAllPendingForHeadless(pit, pedestals, onOreBroken, onOreHit);
+      this.projectiles.flushPending((a) =>
+        this.handleArrival(a, pit, pedestals, false, onOreBroken, onOreHit)
+      );
     }
 
     const alive = pit.getAliveNodesInfo();
@@ -714,14 +267,24 @@ export class PlotAttackController3D {
         if (renderVisuals && ped) {
           ped.setChibiFacing(target.worldX < pedX ? -1 : 1);
           ped.triggerChibiAttack(Math.min(0.45, attackInterval * 0.92), unit.comboStep);
-          this.spawnAttackProjectile(
-            unit,
-            ped,
-            target,
-            strikeDamage,
-            pit,
-            onOreBroken,
-            onOreHit
+          ped.getAttackOriginWorldPosition(this.originVec);
+          const accentColor = ped.getActiveAccentColor();
+          this.projectiles.launch(
+            {
+              style: unit.style,
+              slotIndex: unit.slotIndex,
+              targetId: target.id,
+              dmg: strikeDamage,
+              comboStep: unit.comboStep,
+              accentColor,
+              sx: this.originVec.x,
+              sy: this.originVec.y,
+              sz: this.originVec.z,
+              ex: target.worldX,
+              ey: target.worldY + 0.65,
+              ez: target.worldZ,
+            },
+            (a) => this.handleArrival(a, pit, pedestals, true, onOreBroken, onOreHit)
           );
         } else {
           this.applyImpact(
@@ -743,19 +306,16 @@ export class PlotAttackController3D {
     }
 
     if (renderVisuals) {
-      this.stepActiveProjectiles(safeDt, camera, pit, pedestals, onOreBroken, onOreHit);
+      this.projectiles.step(safeDt, camera, (a) =>
+        this.handleArrival(a, pit, pedestals, true, onOreBroken, onOreHit)
+      );
     }
   }
 
   public dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    this.clearProjectiles();
     this.units.clear();
-    this.sharedQuadGeo.dispose();
-    for (let i = 0; i < this.pool.length; i++) {
-      this.pool[i].coreMat.dispose();
-      this.pool[i].trailMat.dispose();
-    }
+    this.projectiles.dispose();
   }
 }

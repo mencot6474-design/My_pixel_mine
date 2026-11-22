@@ -9,6 +9,12 @@ import { getGeodeGlowTexture, isSweetSpotWindowPure, OreBillboard2D } from './Or
 import { createTowerCityEnvironment, TowerCityEnvironmentHandle } from './TowerCityEnvironment3D';
 import type { CyberShowcasePodiumHandle } from './FusionWorldPodium3D';
 import {
+  getChibiAttackStyle,
+  type PlotAttackStyle,
+  type SignatureProjectileArrival,
+  SignatureProjectilePool3D,
+} from './SignatureProjectilePool3D';
+import {
   BossGravityRockSeed,
   BossHaloArcHandle,
   buildTowerArenaStage,
@@ -77,17 +83,16 @@ interface TowerWaveRockSlot {
 
 interface TowerChibiFighter {
   slotIndex: number;
+  def: ChibiDef;
+  style: PlotAttackStyle;
   sprite: ChibiSprite3D;
   fx: ChibiFieldFxController;
   spawnPos: THREE.Vector3;
-  attackPos: THREE.Vector3;
   targetOreIndex: number;
   dmg: number;
-  walkSpeed: number;
   attackInterval: number;
   attackCooldown: number;
   comboStep: number;
-  lungeTimer: number;
   enchantId: string | null;
   colorHex: string;
 }
@@ -95,7 +100,6 @@ interface TowerChibiFighter {
 const ARENA_CENTER_Z = -1.6;
 const BOSS_CENTER_Z = ARENA_CENTER_Z - 3.25;
 const SUMMON_RADIUS = 5.55;
-const ATTACK_RADIUS = 2.65;
 
 const WAVE_ORE_POSITIONS: ReadonlyArray<[number, number]> = [
   [-3.7, ARENA_CENTER_Z + 1.55],
@@ -141,6 +145,7 @@ export class TowerArena3D {
   private readonly fightersGroup = new THREE.Group();
   private readonly fighters = new Map<number, TowerChibiFighter>();
   private readonly impactFx = new AttackImpactFxController({ floorY: 0.11 });
+  private readonly projectiles = new SignatureProjectilePool3D();
   private readonly shardGroup = new THREE.Group();
   private readonly sharedShardGeo = new THREE.OctahedronGeometry(0.14, 0);
   private readonly sharedRockGeo = new THREE.DodecahedronGeometry(0.125, 0);
@@ -215,6 +220,7 @@ export class TowerArena3D {
     this.group.add(this.fightersGroup);
     this.sharedShardGeo.scale(0.75, 1.45, 0.75);
     this.group.add(this.impactFx.group);
+    this.group.add(this.projectiles.group);
     this.group.add(this.shardGroup);
 
     // 7. Boss Monolith Raycast Hitbox (keep at index 0 of clickables)
@@ -311,15 +317,6 @@ export class TowerArena3D {
     );
   }
 
-  private getAttackPos(slotIndex: number): THREE.Vector3 {
-    const ang = (0.14 + (slotIndex / 4) * 0.72) * Math.PI;
-    return new THREE.Vector3(
-      Math.cos(ang) * ATTACK_RADIUS,
-      0.08,
-      ARENA_CENTER_Z + Math.sin(ang) * ATTACK_RADIUS
-    );
-  }
-
   public syncFighters(configs: TowerFighterConfig[]): void {
     this.fighterConfigs = configs;
     const incoming = new Map(configs.map((c) => [c.slotIndex, c]));
@@ -347,9 +344,8 @@ export class TowerArena3D {
         const sprite = new ChibiSprite3D(cfg.def, 1.92, cfg.slotIndex * 0.9);
         sprite.group.userData = { chibiId: cfg.def.id };
         const spawnPos = this.getSpawnPos(cfg.slotIndex);
-        const attackPos = this.getAttackPos(cfg.slotIndex);
         sprite.group.position.copy(spawnPos);
-        sprite.setAnimState('dash');
+        sprite.setAnimState('attack');
         sprite.setFacing(spawnPos.x <= 0 ? 1 : -1);
         sprite.setAccentColor(cfg.def.accentColor);
         sprite.setLowQuality(this.lowQuality);
@@ -359,24 +355,22 @@ export class TowerArena3D {
 
         existing = {
           slotIndex: cfg.slotIndex,
+          def: cfg.def,
+          style: getChibiAttackStyle(cfg.def),
           sprite,
           fx,
           spawnPos,
-          attackPos,
           targetOreIndex: -1,
           dmg: cfg.dmg,
-          walkSpeed: 4.1 + Math.max(0, cfg.speed - 10) * 0.14,
           attackInterval: Math.max(0.32, 0.85 / Math.max(1, cfg.miningMult)),
           attackCooldown: 0.14 + cfg.slotIndex * 0.08,
           comboStep: 0,
-          lungeTimer: 0,
           enchantId: null,
           colorHex: cfg.def.accentColor,
         };
         this.fighters.set(cfg.slotIndex, existing);
       } else {
         existing.dmg = Math.max(1, cfg.dmg);
-        existing.walkSpeed = 4.1 + Math.max(0, cfg.speed - 10) * 0.14;
         existing.attackInterval = Math.max(0.32, 0.85 / Math.max(1, cfg.miningMult));
       }
 
@@ -418,13 +412,13 @@ export class TowerArena3D {
   }
 
   public resetFloorCharge(): void {
+    this.projectiles.clear();
     for (const f of this.fighters.values()) {
       f.sprite.group.position.copy(f.spawnPos);
-      f.sprite.setAnimState('dash');
+      f.sprite.setAnimState(this.paused ? 'aura' : 'attack');
       f.sprite.setFacing(f.spawnPos.x <= 0 ? 1 : -1);
       f.targetOreIndex = -1;
-      f.attackCooldown = 0.12 + f.slotIndex * 0.08;
-      f.lungeTimer = 0;
+      f.attackCooldown = 0.14 + f.slotIndex * 0.08;
     }
   }
 
@@ -505,9 +499,9 @@ export class TowerArena3D {
         if (floorChanged || opts.isBossWave) {
           this.resetFloorCharge();
         } else {
+          this.projectiles.clear();
           for (const f of this.fighters.values()) {
             f.targetOreIndex = -1;
-            f.lungeTimer = 0;
           }
         }
       }
@@ -588,7 +582,11 @@ export class TowerArena3D {
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
     this.impactFx.setLowQuality(low);
+    this.projectiles.setLowQuality(low);
     this.bossSprite?.setLowQuality(low);
+    for (let i = 0; i < this.spawnPodiums.length; i++) {
+      this.spawnPodiums[i].setLowQuality(low);
+    }
     for (const f of this.fighters.values()) {
       f.sprite.setLowQuality(low);
       f.fx.setLowQuality(low);
@@ -886,12 +884,69 @@ export class TowerArena3D {
     stepTowerShardPool(safeDt, { shardPool: this.shardPool, shardGroup: this.shardGroup });
     stepTowerSpawnPodiums(elapsed, this.spawnPodiums);
 
-    // Update Animated Chibi Fighters (dash to target -> attack -> deal damage ONLY on real swing)
+    if (this.paused) {
+      this.projectiles.clear();
+    }
+
+    const handleProjectileArrival = (a: SignatureProjectileArrival): void => {
+      if (this.paused) return;
+      if (a.isBoss) {
+        if (!this.bossWave) return;
+        this.bounceTimer = Math.max(this.bounceTimer, 0.09);
+        this.impactFx.spawnImpact({
+          targetX: a.ex,
+          targetY: 2.45,
+          targetZ: BOSS_CENTER_Z + 1.05,
+          accentColor: a.accentColor,
+          comboStep: a.comboStep,
+          attackerX: a.sx,
+          attackerZ: a.sz,
+          shockwaveScale: 1.45,
+        });
+        this.spawnTowerShardsAt(a.ex, 2.2, BOSS_CENTER_Z + 1.05, a.accentColor, 4, false, true);
+        onFighterStrike?.({
+          slotIndex: a.slotIndex,
+          targetOreIndex: null,
+          attackInterval: a.attackInterval,
+          dmg: a.dmg,
+          wx: a.ex,
+          wy: a.ey,
+          wz: ARENA_CENTER_Z + 0.45,
+          accentColor: a.accentColor,
+          comboStep: a.comboStep,
+          attackerX: a.sx,
+          attackerZ: a.sz,
+        });
+      } else {
+        if (this.bossWave) return;
+        let rock = this.waveRocks[a.targetId];
+        if (!rock || !rock.alive) {
+          rock = this.waveRocks.find((r) => r.alive) ?? rock;
+        }
+        if (!rock || !rock.alive) return;
+        onFighterStrike?.({
+          slotIndex: a.slotIndex,
+          targetOreIndex: rock.index,
+          attackInterval: a.attackInterval,
+          dmg: a.dmg,
+          wx: rock.x,
+          wy: 1.05,
+          wz: rock.z,
+          accentColor: a.accentColor,
+          comboStep: a.comboStep,
+          attackerX: a.sx,
+          attackerZ: a.sz,
+        });
+      }
+    };
+
+    // Update Stationary Podium Chibi Fighters firing signature projectiles
     for (const f of this.fighters.values()) {
       f.fx.update(elapsed);
       f.colorHex = f.fx.getAccentColor();
       f.sprite.setAccentColor(f.colorHex);
       const pos = f.sprite.group.position;
+      pos.copy(f.spawnPos);
 
       if (this.paused) {
         f.sprite.setAnimState('aura');
@@ -900,133 +955,69 @@ export class TowerArena3D {
         if (!targetRock) {
           f.sprite.setAnimState('idle');
         } else {
-          const flankSlots: readonly { side: 1 | -1; rx: number; oz: number }[] = [
-            { side: -1, rx: 1.28, oz: 0.34 },
-            { side: 1, rx: 1.28, oz: 0.34 },
-            { side: -1, rx: 1.34, oz: 0.52 },
-            { side: 1, rx: 1.34, oz: 0.52 },
-            { side: -1, rx: 1.44, oz: 0.22 },
-          ];
-          const flank = flankSlots[f.slotIndex % flankSlots.length];
-          const desiredX = targetRock.x + flank.side * flank.rx;
-          const desiredZ = targetRock.z + flank.oz;
-          const dx = desiredX - pos.x;
-          const dz = desiredZ - pos.z;
-          const dist = Math.hypot(dx, dz);
-
           if (Math.abs(targetRock.x - pos.x) > 0.04) {
             f.sprite.setFacing(targetRock.x >= pos.x ? 1 : -1);
           }
-
-          if (dist > 0.22 && f.lungeTimer <= 0) {
-            const step = Math.min(dist, f.walkSpeed * safeDt);
-            pos.x += (dx / dist) * step;
-            pos.z += (dz / dist) * step;
-            const stepDist = Math.hypot(pos.x - f.spawnPos.x, pos.z - f.spawnPos.z);
-            pos.y = stepDist < 0.75 ? THREE.MathUtils.lerp(f.spawnPos.y, 0.08, stepDist / 0.75) : 0.08;
-            f.sprite.setAnimState('dash');
-          } else {
-            f.sprite.setAnimState('attack');
-            f.attackCooldown -= safeDt;
-            if (f.attackCooldown <= 0) {
-              f.attackCooldown = f.attackInterval;
-              f.lungeTimer = 0.18;
-              const step = f.comboStep;
-              f.comboStep = (f.comboStep + 1) % 3;
-              f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), step);
-              onFighterStrike?.({
+          f.sprite.setAnimState('attack');
+          f.attackCooldown -= safeDt;
+          if (f.attackCooldown <= 0) {
+            f.attackCooldown = f.attackInterval;
+            const step = f.comboStep;
+            f.comboStep = (f.comboStep + 1) % 3;
+            f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), step);
+            this.projectiles.launch(
+              {
+                style: f.style,
                 slotIndex: f.slotIndex,
-                targetOreIndex: targetRock.index,
-                attackInterval: f.attackInterval,
+                targetId: targetRock.index,
                 dmg: Math.max(1, Math.round(f.dmg * f.attackInterval)),
-                wx: targetRock.x,
-                wy: 1.05,
-                wz: targetRock.z,
-                accentColor: f.colorHex,
                 comboStep: step,
-                attackerX: pos.x,
-                attackerZ: pos.z,
-              });
-            }
-
-            if (f.lungeTimer > 0) {
-              f.lungeTimer = Math.max(0, f.lungeTimer - safeDt);
-              const t = Math.sin((f.lungeTimer / 0.18) * Math.PI);
-              const toRockX = targetRock.x - desiredX;
-              const toRockZ = targetRock.z - desiredZ;
-              const len = Math.max(0.01, Math.hypot(toRockX, toRockZ));
-              pos.x = desiredX + (toRockX / len) * t * 0.08;
-              pos.z = desiredZ + (toRockZ / len) * t * 0.08;
-            } else {
-              pos.x = desiredX;
-              pos.z = desiredZ;
-            }
+                accentColor: f.colorHex,
+                sx: pos.x,
+                sy: pos.y + 1.25,
+                sz: pos.z,
+                ex: targetRock.x,
+                ey: 1.05,
+                ez: targetRock.z,
+                attackInterval: f.attackInterval,
+                isBoss: false,
+              },
+              handleProjectileArrival
+            );
           }
         }
       } else {
         if (Math.abs(-pos.x) > 0.04) {
           f.sprite.setFacing(pos.x <= 0 ? 1 : -1);
         }
-
-        const dx = f.attackPos.x - pos.x;
-        const dz = f.attackPos.z - pos.z;
-        const dist = Math.hypot(dx, dz);
-
-        if (dist > 0.2 && f.lungeTimer <= 0) {
-          const step = Math.min(dist, f.walkSpeed * safeDt);
-          pos.x += (dx / dist) * step;
-          pos.z += (dz / dist) * step;
-          const stepDist = Math.hypot(pos.x - f.spawnPos.x, pos.z - f.spawnPos.z);
-          pos.y = stepDist < 0.75 ? THREE.MathUtils.lerp(f.spawnPos.y, 0.08, stepDist / 0.75) : 0.08;
-          f.sprite.setAnimState('dash');
-        } else {
-          f.sprite.setAnimState('attack');
-          f.attackCooldown -= safeDt;
-          if (f.attackCooldown <= 0) {
-            f.attackCooldown = f.attackInterval;
-            f.lungeTimer = 0.18;
-            const step = f.comboStep;
-            f.comboStep = (f.comboStep + 1) % 3;
-            f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), step);
-            this.bounceTimer = Math.max(this.bounceTimer, 0.09);
-            this.impactFx.spawnImpact({
-              targetX: (Math.random() - 0.5) * 0.55,
-              targetY: 2.45,
-              targetZ: BOSS_CENTER_Z + 1.05,
-              accentColor: f.colorHex,
-              comboStep: step,
-              attackerX: pos.x,
-              attackerZ: pos.z,
-              shockwaveScale: 1.45,
-            });
-            this.spawnTowerShardsAt((Math.random() - 0.5) * 0.55, 2.2, BOSS_CENTER_Z + 1.05, f.colorHex, 4, false, true);
-            onFighterStrike?.({
+        f.sprite.setAnimState('attack');
+        f.attackCooldown -= safeDt;
+        if (f.attackCooldown <= 0) {
+          f.attackCooldown = f.attackInterval;
+          const step = f.comboStep;
+          f.comboStep = (f.comboStep + 1) % 3;
+          f.sprite.triggerAttack(Math.min(0.44, f.attackInterval * 0.75), step);
+          const bossTargetX = (Math.random() - 0.5) * 0.65;
+          const bossTargetY = 2.15 + Math.random() * 0.45;
+          this.projectiles.launch(
+            {
+              style: f.style,
               slotIndex: f.slotIndex,
-              targetOreIndex: null,
-              attackInterval: f.attackInterval,
+              targetId: -1,
               dmg: Math.max(1, Math.round(f.dmg * f.attackInterval)),
-              wx: (Math.random() - 0.5) * 1.1,
-              wy: 2.15 + Math.random() * 0.45,
-              wz: ARENA_CENTER_Z + 0.45,
-              accentColor: f.colorHex,
               comboStep: step,
-              attackerX: pos.x,
-              attackerZ: pos.z,
-            });
-          }
-
-          if (f.lungeTimer > 0) {
-            f.lungeTimer = Math.max(0, f.lungeTimer - safeDt);
-            const t = Math.sin((f.lungeTimer / 0.18) * Math.PI);
-            const toCenterX = -f.attackPos.x;
-            const toCenterZ = ARENA_CENTER_Z - f.attackPos.z;
-            const len = Math.max(0.01, Math.hypot(toCenterX, toCenterZ));
-            pos.x = f.attackPos.x + (toCenterX / len) * t * 0.26;
-            pos.z = f.attackPos.z + (toCenterZ / len) * t * 0.26;
-          } else {
-            pos.x = f.attackPos.x;
-            pos.z = f.attackPos.z;
-          }
+              accentColor: f.colorHex,
+              sx: pos.x,
+              sy: pos.y + 1.25,
+              sz: pos.z,
+              ex: bossTargetX,
+              ey: bossTargetY,
+              ez: BOSS_CENTER_Z + 0.85,
+              attackInterval: f.attackInterval,
+              isBoss: true,
+            },
+            handleProjectileArrival
+          );
         }
       }
 
@@ -1034,10 +1025,15 @@ export class TowerArena3D {
         f.sprite.update(safeDt, elapsed, camera);
       }
     }
+
+    if (!this.paused) {
+      this.projectiles.step(safeDt, camera, handleProjectileArrival);
+    }
   }
 
   public dispose(): void {
     this.impactFx.dispose();
+    this.projectiles.dispose();
     for (const p of this.shardPool) {
       this.shardGroup.remove(p.mesh);
       if (p.ownsMat) (p.mesh.material as THREE.Material).dispose();

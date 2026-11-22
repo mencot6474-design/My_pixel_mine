@@ -440,6 +440,7 @@ export class MineScene3D {
   private ensureOmegaArena(): OmegaArena3D {
     if (!this.omegaArena) {
       const oa = new OmegaArena3D();
+      oa.setLowQuality(this.graphicsQuality === 'low');
       this.omegaArena = oa;
       this.scene.add(oa.group);
       configureSceneTextureSharpness(this.renderer, oa.group, this.getTextureAnisoCap());
@@ -1123,6 +1124,7 @@ export class MineScene3D {
     this.env.setLowQuality(low);
     this.pit.setLowQuality(low);
     this.towerArena?.setLowQuality(low);
+    this.omegaArena?.setLowQuality(low);
     for (let i = 0; i < this.pedestals.length; i++) {
       this.pedestals[i].setLowQuality(low);
     }

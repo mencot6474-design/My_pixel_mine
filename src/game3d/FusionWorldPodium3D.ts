@@ -30,6 +30,7 @@ export interface CyberShowcasePodiumHandle {
   auraOuterVeilMat: THREE.ShaderMaterial;
   particleMat: THREE.ShaderMaterial;
   auraGroup: THREE.Group;
+  setLowQuality: (low: boolean) => void;
   topY: number;
 }
 
@@ -302,6 +303,11 @@ export function createCyberShowcasePodium(
     auraOuterVeilMat,
     particleMat: particles.mat,
     auraGroup,
+    setLowQuality: (low: boolean) => {
+      auraVeil.visible = !low;
+      outerAuraVeil.visible = !low;
+      particles.points.visible = !low;
+    },
     topY: 0.285 * scale,
   };
 }
@@ -531,6 +537,11 @@ export function createLabTubePodium(
     auraOuterVeilMat,
     particleMat: particles.mat,
     auraGroup,
+    setLowQuality: (low: boolean) => {
+      auraVeil.visible = !low;
+      outerAuraVeil.visible = !low;
+      particles.points.visible = !low;
+    },
     topY: 0.285 * scale,
   };
 }
