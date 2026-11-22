@@ -104,7 +104,7 @@ export function buildMineOreBarsHtml(bars: OreHpScreen[]): string {
                   <span class="mam-pill-xs rounded text-[8.5px] uppercase tracking-wider bg-[#fde047] text-[#14111d] border border-[#14111d]">Meteor</span>
                 </div>
                 <div class="relative w-[184px] @max-[720px]:w-[156px] h-[22px] rounded-lg border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center">
-                  <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${wDef.glowColor},${wDef.accentColor})" data-ore-fill="true"></div>
+                  <div class="absolute inset-y-0 left-0 w-full origin-left will-change-transform transition-transform duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${wDef.glowColor},${wDef.accentColor})" data-ore-fill="true"></div>
                   <div class="absolute inset-x-0 top-0 h-[44%] bg-gradient-to-b from-white/30 to-transparent pointer-events-none z-[1]"></div>
                   <div class="absolute inset-0 flex justify-evenly pointer-events-none z-[1]">
                     <span class="w-px h-full bg-black/35"></span>
@@ -124,7 +124,7 @@ export function buildMineOreBarsHtml(bars: OreHpScreen[]): string {
               <span class="text-[9.5px] font-black uppercase tracking-[0.06em] leading-none text-[#14111d]">${ev.badgeText}</span>
             </div>
             <div class="relative w-28 h-[17px] rounded-md border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center">
-              <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${ev.colorHex}bb,${ev.colorHex})" data-ore-fill="true"></div>
+              <div class="absolute inset-y-0 left-0 w-full origin-left will-change-transform transition-transform duration-[80ms] ease-linear" style="background:linear-gradient(90deg,${ev.colorHex}bb,${ev.colorHex})" data-ore-fill="true"></div>
               <div class="relative z-[2] text-[10.5px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
             </div>
           </div>
@@ -132,7 +132,7 @@ export function buildMineOreBarsHtml(bars: OreHpScreen[]): string {
       }
       return `
           <div class="absolute w-24 h-4 rounded-md border-2 border-[#14111d] bg-[#1e293b] overflow-hidden flex items-center justify-center" data-ore-bar="${b.id}">
-            <div class="absolute left-0 top-0 bottom-0 bg-[linear-gradient(180deg,#38bdf8,#0284c7)] transition-[width] duration-[80ms] ease-linear" data-ore-fill="true"></div>
+            <div class="absolute inset-y-0 left-0 w-full origin-left will-change-transform bg-[linear-gradient(180deg,#38bdf8,#0284c7)] transition-transform duration-[80ms] ease-linear" data-ore-fill="true"></div>
             <div class="relative z-[2] text-[10.5px] font-extrabold tabular-nums text-white leading-none mam-outline-sm" data-ore-text="true"></div>
           </div>
         `;
@@ -148,7 +148,7 @@ export function buildTowerOreBarsHtml(bars: TowerOreBarScreen[]): string {
           <div class="absolute flex flex-col items-center gap-1 pointer-events-none" data-tower-ore-bar="${b.index}">
             <div class="mam-pill-xs rounded-md bg-[#fff8e7] border-[1.5px] border-[#14111d] text-[10.5px] text-[#14111d]">${b.name}</div>
             <div class="w-[104px] h-[18px] rounded-md border-2 border-[#14111d] bg-[#1e293b] overflow-hidden relative flex items-center justify-center">
-              <div class="absolute left-0 top-0 bottom-0 transition-[width] duration-[60ms] ease-linear" style="background:linear-gradient(180deg,${b.color},${b.color}cc)" data-ore-fill="true"></div>
+              <div class="absolute inset-y-0 left-0 w-full origin-left will-change-transform transition-transform duration-[60ms] ease-linear" style="background:linear-gradient(180deg,${b.color},${b.color}cc)" data-ore-fill="true"></div>
               <div class="absolute inset-x-0 top-0 h-[42%] bg-gradient-to-b from-white/30 to-transparent pointer-events-none z-[1]"></div>
               <div class="absolute inset-0 flex justify-evenly pointer-events-none z-[1]">
                 <span class="w-px h-full bg-black/45"></span>
@@ -260,6 +260,7 @@ export class WorldOverlayHudUi {
   private sweetSpotWrapEl: HTMLElement | null = null;
   private sweetSpotRingEl: HTMLElement | null = null;
   private sweetSpotTagEl: HTMLElement | null = null;
+  private lastSweetSpotTag = '';
   private shopLayerEl: HTMLElement | null = null;
   private shopBubbleLayerEl: HTMLElement | null = null;
   private omegaLayerEl: HTMLElement | null = null;
@@ -452,11 +453,11 @@ export class WorldOverlayHudUi {
       entry.wrap.style.transform = `translate3d(${rx}px, ${ry}px, 0) scale(var(--mam-float-scale, 1)) translate(-50%, -100%)`;
     }
 
-    const pctNum = Math.max(0, Math.min(100, (hp / Math.max(1, maxHp)) * 100));
-    const pctStr = `${pctNum.toFixed(1)}%`;
+    const pctNum = Math.max(0, Math.min(1, hp / Math.max(1, maxHp)));
+    const pctStr = pctNum.toFixed(3);
     if (entry.fill && pctStr !== entry.pct) {
       entry.pct = pctStr;
-      entry.fill.style.width = pctStr;
+      entry.fill.style.transform = `scaleX(${pctStr})`;
     }
 
     const textStr = `${fmtShort(Math.ceil(hp))} / ${fmtShort(Math.ceil(maxHp))}`;
@@ -582,10 +583,16 @@ export class WorldOverlayHudUi {
       this.sweetSpotRingEl.style.transform = `scale(${ringScale.toFixed(3)})`;
     }
     if (this.sweetSpotTagEl) {
-      if (spot.isTowerShield) {
-        this.sweetSpotTagEl.textContent = spot.inWindow ? 'BREAK!' : 'SHIELD';
-      } else {
-        this.sweetSpotTagEl.textContent = spot.inWindow ? 'STRIKE!' : 'WAIT';
+      const nextTag = spot.isTowerShield
+        ? spot.inWindow
+          ? 'BREAK!'
+          : 'SHIELD'
+        : spot.inWindow
+          ? 'STRIKE!'
+          : 'WAIT';
+      if (nextTag !== this.lastSweetSpotTag) {
+        this.lastSweetSpotTag = nextTag;
+        this.sweetSpotTagEl.textContent = nextTag;
       }
     }
   }

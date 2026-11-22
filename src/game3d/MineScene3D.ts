@@ -364,6 +364,7 @@ export class MineScene3D {
     this.chestVisual = builtStage.chestVisual;
 
     this.pit = new OrePit3D(palette);
+    this.pit.setLowQuality(this.graphicsQuality === 'low');
     this.pit.onMeteorLanded = () => {
       this.tapShakeIntensity = Math.max(this.tapShakeIntensity, 0.34);
     };
@@ -1117,6 +1118,7 @@ export class MineScene3D {
     this.renderer.shadowMap.needsUpdate = true;
     this.weatherFx.setQualityScale(preset.weatherParticleScale);
     this.env.setLowQuality(low);
+    this.pit.setLowQuality(low);
     for (let i = 0; i < this.pedestals.length; i++) {
       this.pedestals[i].setLowQuality(low);
     }

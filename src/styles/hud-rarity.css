@@ -597,7 +597,8 @@
     filter: none;
   }
 
-  body.mam-quality-low #dmgPopupLayer * {
+  body.mam-quality-low #dmgPopupLayer *,
+  body.mam-quality-low .mam-3d-icon {
     filter: none !important;
   }
 

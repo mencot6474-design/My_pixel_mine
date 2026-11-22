@@ -79,6 +79,8 @@ export class GameHud {
   private lastReturnRushActive = false;
   private lastOverclockActive = false;
   private lastOverclockTier: 0 | OverclockTier = 0;
+  private lastMineSubSyncMs = 0;
+  private mineSubSyncTimer: number | null = null;
 
   private readonly shopUi: ShopModalsUi;
   private readonly forgeUi: ForgeModalUi;
@@ -337,17 +339,47 @@ export class GameHud {
 
     this.worldOverlayUi.mountLayers();
 
-    this.state.subscribe(() => {
+    const flushMineSubSync = (): void => {
+      this.lastMineSubSyncMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
       this.onSyncPlots(this.state.getEquippedPlotMinerIds());
+      this.weatherDpsUi.syncActivePotionsHud(this.root);
+      this.upgradesUi.updateUpgradesBadgeLive(this.root);
+    };
+
+    this.state.subscribe(() => {
       const hotbarChanged = this.hotbarUi.checkHotbarChanged();
 
       if (this.inspectedSlot !== null) {
+        this.onSyncPlots(this.state.getEquippedPlotMinerIds());
         this.plotInspectUi.updateLiveValues(this.root);
         return;
       }
 
       this.updateCurrencyLiveValues();
       if (hotbarChanged) this.hotbarUi.updateHotbarLive(this.root);
+
+      if (this.sceneMode === 'mine' && this.activeModal === 'none') {
+        const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        if (nowMs - this.lastMineSubSyncMs >= 250) {
+          if (this.mineSubSyncTimer !== null) {
+            window.clearTimeout(this.mineSubSyncTimer);
+            this.mineSubSyncTimer = null;
+          }
+          flushMineSubSync();
+        } else if (this.mineSubSyncTimer === null) {
+          this.mineSubSyncTimer = window.setTimeout(() => {
+            this.mineSubSyncTimer = null;
+            flushMineSubSync();
+          }, 250);
+        }
+        return;
+      }
+
+      if (this.mineSubSyncTimer !== null) {
+        window.clearTimeout(this.mineSubSyncTimer);
+        this.mineSubSyncTimer = null;
+      }
+      this.onSyncPlots(this.state.getEquippedPlotMinerIds());
       this.weatherDpsUi.syncActivePotionsHud(this.root);
 
       if (this.sceneMode === 'altar') {

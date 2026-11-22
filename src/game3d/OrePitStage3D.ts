@@ -372,9 +372,10 @@ export interface OrePitShardParticle {
       rockChipMat: THREE.Material;
       sharedShardGeo: THREE.BufferGeometry;
       sharedRockGeo: THREE.BufferGeometry;
+      maxCap?: number;
     }
   ): void {
-    const maxCap = 36;
+    const maxCap = ctx.maxCap ?? 36;
     for (let i = 0; i < count; i++) {
       if (ctx.shardPool.length >= maxCap) {
         const oldest = ctx.shardPool.shift();

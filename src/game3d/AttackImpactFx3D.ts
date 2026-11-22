@@ -112,9 +112,14 @@ export class AttackImpactFxController {
   private readonly tmpCamUp = new THREE.Vector3();
   private readonly tmpVel = new THREE.Vector3();
   private lastCamera?: THREE.Camera;
+  private lowQuality = false;
 
   constructor(opts?: { floorY?: number }) {
     this.floorY = opts?.floorY ?? 0.045;
+  }
+
+  public setLowQuality(low: boolean): void {
+    this.lowQuality = low;
   }
 
   private pushPooled<T extends PooledMeshBase>(
@@ -244,7 +249,7 @@ export class AttackImpactFxController {
       const tiltX = (Math.random() - 0.5) * 0.35;
       mesh.scale.set(startScale * flipX, startScale, startScale);
       this.orientBillboard(mesh, roll, tiltX, activeCam);
-      this.pushPooled(this.slashes, this.slashFree, MAX_SLASHES, {
+      this.pushPooled(this.slashes, this.slashFree, this.lowQuality ? 6 : MAX_SLASHES, {
         mesh,
         mat,
         age: 0,
@@ -280,7 +285,7 @@ export class AttackImpactFxController {
     this.orientBillboard(sparkMesh, sparkRoll, 0, activeCam);
     const peakSparkScale = isSmash ? 1.48 : 1.08;
     sparkMesh.scale.setScalar(0.42);
-    this.pushPooled(this.hitsparks, this.hitsparkFree, MAX_HITSPARKS, {
+    this.pushPooled(this.hitsparks, this.hitsparkFree, this.lowQuality ? 6 : MAX_HITSPARKS, {
       mesh: sparkMesh,
       mat: sparkMat,
       age: 0,
@@ -292,7 +297,7 @@ export class AttackImpactFxController {
 
     // 3. Directional Spark Streaks
     const streakTex = getSparkStreakTexture();
-    const streakCount = isSmash ? 8 : 3;
+    const streakCount = this.lowQuality ? (isSmash ? 3 : 1) : isSmash ? 8 : 3;
     const baseAngle = Math.atan2(toAttackerZ, toAttackerX);
     for (let i = 0; i < streakCount; i++) {
       const spread = (Math.random() - 0.5) * Math.PI * 1.55;
@@ -324,7 +329,7 @@ export class AttackImpactFxController {
         baseScale,
       };
       this.orientStreak(streakItem, activeCam);
-      this.pushPooled(this.streaks, this.streakFree, MAX_STREAKS, streakItem);
+      this.pushPooled(this.streaks, this.streakFree, this.lowQuality ? 12 : MAX_STREAKS, streakItem);
     }
 
     // 4. Ground Shockwave Ring
@@ -340,7 +345,7 @@ export class AttackImpactFxController {
     const swScale = opts.shockwaveScale ?? 1.0;
     const startSw = (isSmash ? 0.72 : 0.56) * swScale;
     ringMesh.scale.setScalar(startSw);
-    this.pushPooled(this.shockwaves, this.shockwaveFree, MAX_SHOCKWAVES, {
+    this.pushPooled(this.shockwaves, this.shockwaveFree, this.lowQuality ? 4 : MAX_SHOCKWAVES, {
       mesh: ringMesh,
       mat: ringMat,
       age: 0,
@@ -352,7 +357,7 @@ export class AttackImpactFxController {
 
     // 5. Rising Luminescent Hit Motes
     const moteTex = getHitSparkStarTexture();
-    const moteCount = isSmash ? 2 : 1;
+    const moteCount = this.lowQuality ? 0 : isSmash ? 2 : 1;
     for (let i = 0; i < moteCount; i++) {
       const mColor = i % 2 === 0 ? opts.accentColor : '#ffffff';
       const { mesh: mMesh, mat: mMat } = this.acquireMesh(this.moteFree, this.sharedMoteGeo, moteTex, mColor, 0.9);
@@ -398,7 +403,7 @@ export class AttackImpactFxController {
       mesh.position.set(opts.targetX, opts.targetY, opts.targetZ + zOff);
       mesh.scale.setScalar(0.5);
       this.orientBillboard(mesh, roll, 0, activeCam);
-      this.pushPooled(this.hitsparks, this.hitsparkFree, MAX_HITSPARKS, {
+      this.pushPooled(this.hitsparks, this.hitsparkFree, this.lowQuality ? 6 : MAX_HITSPARKS, {
         mesh,
         mat,
         age: 0,
@@ -418,7 +423,7 @@ export class AttackImpactFxController {
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(opts.targetX, this.floorY + yOff, opts.targetZ);
       mesh.scale.setScalar(startS);
-      this.pushPooled(this.shockwaves, this.shockwaveFree, MAX_SHOCKWAVES, {
+      this.pushPooled(this.shockwaves, this.shockwaveFree, this.lowQuality ? 4 : MAX_SHOCKWAVES, {
         mesh,
         mat,
         age: 0,
@@ -434,7 +439,7 @@ export class AttackImpactFxController {
 
     // 3. 360-Degree Explosive Radial Spark Spray
     const streakTex = getSparkStreakTexture();
-    const streakCount = isMeteor ? 22 : 14;
+    const streakCount = this.lowQuality ? (isMeteor ? 8 : 5) : isMeteor ? 22 : 14;
     for (let i = 0; i < streakCount; i++) {
       const ang = (i / streakCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.28;
       const speed = (isMeteor ? 5.8 : 4.2) + Math.random() * 3.6;
@@ -464,11 +469,11 @@ export class AttackImpactFxController {
         baseScale,
       };
       this.orientStreak(item, activeCam);
-      this.pushPooled(this.streaks, this.streakFree, MAX_STREAKS, item);
+      this.pushPooled(this.streaks, this.streakFree, this.lowQuality ? 12 : MAX_STREAKS, item);
     }
 
     // 4. Rising Luminescent Crystal Loot Motes
-    const moteCount = isMeteor ? 10 : 6;
+    const moteCount = this.lowQuality ? 0 : isMeteor ? 10 : 6;
     for (let i = 0; i < moteCount; i++) {
       const ang = Math.random() * Math.PI * 2;
       const rad = 0.15 + Math.random() * (isMeteor ? 0.9 : 0.55);

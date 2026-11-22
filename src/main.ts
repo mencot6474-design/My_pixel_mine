@@ -95,8 +95,9 @@ async function bootstrap(): Promise<void> {
 
   const triggerPickaxeSwing = (): void => {
     pickaxeCursorEl.classList.remove('is-swinging');
-    void pickaxeCursorEl.offsetWidth;
-    pickaxeCursorEl.classList.add('is-swinging');
+    requestAnimationFrame(() => {
+      pickaxeCursorEl.classList.add('is-swinging');
+    });
   };
 
   const triggerTapCombo = (isCrit: boolean, sx: number, sy: number): void => {
@@ -145,8 +146,9 @@ async function bootstrap(): Promise<void> {
       <span class="mam-pickaxe-combo-bar"></span>
     `;
     pickaxeComboEl.style.display = 'flex';
-    void pickaxeComboEl.offsetWidth;
-    pickaxeComboEl.classList.add('is-pop', 'is-draining');
+    requestAnimationFrame(() => {
+      pickaxeComboEl.classList.add('is-pop', 'is-draining');
+    });
   };
 
   const syncPickaxeCursor = (e: PointerEvent): void => {

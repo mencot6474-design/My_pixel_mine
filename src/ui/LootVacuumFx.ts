@@ -28,6 +28,10 @@ const activeOrbs: ActiveLootOrb[] = [];
 let orbLoopRaf = 0;
 let orbLayerEl: HTMLElement | null = null;
 const rollStates = new WeakMap<HTMLElement, RollState>();
+const orbTargetCache = new Map<
+  LootOrbKind,
+  { x: number; y: number; bounceEl: HTMLElement | null; atMs: number }
+>();
 
 /** Pure burst particle plan for ore/meteor/event breaks (3-6 flying orbs). */
 export function getLootVacuumBurstPlan(kind: LootVacuumBreakKind): readonly LootOrbKind[] {
@@ -60,14 +64,23 @@ function ensureOrbLayer(): HTMLElement | null {
 export function bounceHudPill(target: HTMLElement | null): void {
   if (!target) return;
   target.classList.remove('is-hud-bounce');
-  void target.offsetWidth;
-  target.classList.add('is-hud-bounce');
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => target.classList.add('is-hud-bounce'));
+  } else {
+    target.classList.add('is-hud-bounce');
+  }
 }
 
 function resolveOrbTarget(
   root: HTMLElement,
-  kind: LootOrbKind
+  kind: LootOrbKind,
+  nowMs: number
 ): { x: number; y: number; bounceEl: HTMLElement | null } {
+  const cached = orbTargetCache.get(kind);
+  if (cached && nowMs - cached.atMs < 1500 && (!cached.bounceEl || cached.bounceEl.isConnected)) {
+    return { x: cached.x, y: cached.y, bounceEl: cached.bounceEl };
+  }
+
   const vw = typeof window !== 'undefined' ? window.innerWidth || 1280 : 1280;
   const vh = typeof window !== 'undefined' ? window.innerHeight || 720 : 720;
 
@@ -87,7 +100,9 @@ function resolveOrbTarget(
   if (el && typeof el.getBoundingClientRect === 'function') {
     const r = el.getBoundingClientRect();
     if (r.width > 0 && r.height > 0) {
-      return { x: r.left + r.width * 0.5, y: r.top + r.height * 0.5, bounceEl };
+      const res = { x: r.left + r.width * 0.5, y: r.top + r.height * 0.5, bounceEl };
+      orbTargetCache.set(kind, { ...res, atMs: nowMs });
+      return res;
     }
   }
 
@@ -143,15 +158,18 @@ export function spawnLootVacuumParticles(
   const layer = ensureOrbLayer();
   if (!layer) return;
 
-  const plan = getLootVacuumBurstPlan(kind);
+  const isLow = document.body.classList.contains('mam-quality-low');
+  const rawPlan = getLootVacuumBurstPlan(kind);
+  const plan = isLow ? rawPlan.slice(0, 2) : rawPlan;
+  const maxOrbs = isLow ? 8 : MAX_ACTIVE_ORBS;
   const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
 
   plan.forEach((orbKind, idx) => {
-    if (activeOrbs.length >= MAX_ACTIVE_ORBS) {
+    if (activeOrbs.length >= maxOrbs) {
       const oldest = activeOrbs.shift();
       oldest?.el.remove();
     }
-    const target = resolveOrbTarget(root, orbKind);
+    const target = resolveOrbTarget(root, orbKind, nowMs);
     const el = document.createElement('div');
     el.className = 'mam-vacuum-orb';
     el.innerHTML = buildOrbMarkup(orbKind);

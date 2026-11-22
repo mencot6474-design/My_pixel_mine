@@ -186,6 +186,7 @@ export class OrePit3D {
   private respawnSpeedMult = 1;
   private activeNodeCount = PIT_NODE_COUNT;
   private hpScale = 1;
+  private lowQuality = false;
   private meteorNode: InternalOreNode;
   private readonly meteorEntryGroup = new THREE.Group();
   private readonly meteorCoreMat: THREE.MeshBasicMaterial;
@@ -614,10 +615,12 @@ export class OrePit3D {
       const fxAccent = isPerfect
         ? '#fde047'
         : eventColor ?? attackFx?.accentColor ?? (heavy ? '#fbbf24' : this.activePalette.crystalColor);
+      const lowShardCount = pure.broken ? (node.isMeteor ? 5 : 3) : 1;
+      const normalShardCount = pure.broken ? (node.isMeteor ? 16 : 9) : isPerfect ? 7 : shardCount;
       this.spawnShardsAt(
         node.x,
         node.z,
-        pure.broken ? (node.isMeteor ? 16 : 9) : isPerfect ? 7 : shardCount,
+        this.lowQuality ? lowShardCount : normalShardCount,
         pure.broken || isPerfect,
         node.isMeteor
       );
@@ -682,6 +685,11 @@ export class OrePit3D {
     return this.impactFx.getActiveCounts();
   }
 
+  public setLowQuality(low: boolean): void {
+    this.lowQuality = low;
+    this.impactFx.setLowQuality(low);
+  }
+
   private spawnShardsAt(lx: number, lz: number, count: number, isShatter = false, isMeteor = false): void {
     spawnOrePitShards(lx, lz, count, isShatter, isMeteor, {
       group: this.group,
@@ -692,6 +700,7 @@ export class OrePit3D {
       rockChipMat: this.rockChipMat,
       sharedShardGeo: this.sharedShardGeo,
       sharedRockGeo: this.sharedRockGeo,
+      maxCap: this.lowQuality ? 8 : 36,
     });
   }
 
