@@ -10,8 +10,10 @@ import {
   type PlotAttackStyle,
 } from './SignatureProjectilePool3D';
 import {
+  BARRAGE_FOLLOWUP_DELAYS,
   CHIBI_ATTACK_ANIM_SEC,
   computeAttackVfxSpeedScale,
+  splitBarrageDamage,
   TierAttackVfxPool3D,
   type TierVfxHooks,
   type WorldPoint3,
@@ -32,6 +34,7 @@ interface PendingBlitzStrike {
   ez: number;
   attackInterval: number;
   delayLeft: number;
+  fireShader: boolean;
 }
 
 export type PlotOreBrokenCb = (
@@ -67,7 +70,6 @@ interface PlotUnitState {
 type AliveNodeTarget = ReturnType<OrePit3D['getAliveNodesInfo']>[number];
 
 const MINE_PIT_VFX_SCALE = 0.72;
-const MINE_PIT_MOTION_SCALE = 0.84;
 
 /** Minimum 3 ore nodes hit per AoE attack, scaling up to 6 for wide-AoE apex rarities. */
 export function getAoeTargetCount(rarity: string): number {
@@ -92,10 +94,6 @@ function getAoeSplashDamageMult(rarity: string): number {
 function getMineAttackIntervalSec(miningMult: number): number {
   const safeMult = Math.max(1, miningMult);
   return Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / (1 + (safeMult - 1) * 0.15)));
-}
-
-function getMineBlitzDurationSec(_rarity: string, _attackInterval: number): number {
-  return CHIBI_ATTACK_ANIM_SEC;
 }
 
 function computeZoneWideCenter(
@@ -347,7 +345,7 @@ export class PlotAttackController3D {
     const ped = pedestals[a.slotIndex];
     const originX = ped ? ped.group.position.x : a.sx;
     const originZ = ped ? ped.group.position.z : a.sz;
-    if (renderVisuals) {
+    if (renderVisuals && a.fireShader) {
       const unit = this.units.get(a.slotIndex);
       if (unit) {
         const alive = pit.getAliveNodesInfo();
@@ -440,20 +438,19 @@ export class PlotAttackController3D {
           const targetPt: WorldPoint3 = { x: target.worldX, y: target.worldY, z: target.worldZ };
           const wideCenter = computeZoneWideCenter(targetPt, this.alivePointScratch);
           const accentColor = ped.getActiveAccentColor();
-          const blitzDur = getMineBlitzDurationSec(unit.def.rarity, attackInterval);
 
           ped.setChibiAnimState('idle');
-          ped.triggerChibiBlitz({
+          ped.triggerChibiCast(0.45);
+          ped.getAttackOriginWorldPosition(this.originVec);
+          this.tierVfx.firePodiumWeaponCast({
             rarity: unit.def.rarity,
-            targetX: targetPt.x,
-            targetY: targetPt.y,
-            targetZ: targetPt.z,
-            allTargets: this.alivePointScratch,
-            durationSec: blitzDur,
+            chibiId: unit.def.id,
             colorHex: accentColor,
+            origin: { x: ped.group.position.x, y: ped.group.position.y, z: ped.group.position.z },
+            target: targetPt,
+            allTargets: this.alivePointScratch,
+            areaScale: MINE_PIT_VFX_SCALE,
             wideCenter,
-            motionScale: MINE_PIT_MOTION_SCALE,
-            shadowOnly: true,
           });
           this.tierVfx.fireAnticipation(
             unit.def.rarity,
@@ -464,21 +461,28 @@ export class PlotAttackController3D {
             wideCenter
           );
 
-          ped.getAttackOriginWorldPosition(this.originVec);
-          this.pendingStrikes.push({
-            slotIndex: unit.slotIndex,
-            targetId: target.id,
-            dmg: strikeDamage,
-            comboStep: unit.comboStep,
-            accentColor,
-            sx: this.originVec.x,
-            sz: this.originVec.z,
-            ex: target.worldX,
-            ey: target.worldY + 0.65,
-            ez: target.worldZ,
-            attackInterval,
-            delayLeft: Math.max(0.18, blitzDur * 0.16),
-          });
+          const [d0, d1, d2] = splitBarrageDamage(strikeDamage);
+          const beatDmgs = [d0, d1, d2] as const;
+          const beatDelays = [0.2, 0.2 + BARRAGE_FOLLOWUP_DELAYS[0], 0.2 + BARRAGE_FOLLOWUP_DELAYS[1]] as const;
+          for (let bi = 0; bi < 3; bi++) {
+            const beatDmg = beatDmgs[bi];
+            if (beatDmg <= 0) continue;
+            this.pendingStrikes.push({
+              slotIndex: unit.slotIndex,
+              targetId: target.id,
+              dmg: beatDmg,
+              comboStep: (unit.comboStep + bi) % 3,
+              accentColor,
+              sx: this.originVec.x,
+              sz: this.originVec.z,
+              ex: target.worldX,
+              ey: target.worldY + 0.65,
+              ez: target.worldZ,
+              attackInterval,
+              delayLeft: beatDelays[bi],
+              fireShader: bi === 0,
+            });
+          }
         } else {
           this.applyImpact(
             pit,

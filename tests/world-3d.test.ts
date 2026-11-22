@@ -123,6 +123,7 @@ import { createSeraphimBoss3D } from '../src/game3d/SeraphimBoss3D';
 import { TowerArena3D } from '../src/game3d/TowerArena3D';
 import {
   buildTierMotionWaypoints,
+  splitBarrageDamage,
   TierAttackVfxPool3D,
 } from '../src/game3d/TierAttackVfx3D';
 import { createTowerCityEnvironment } from '../src/game3d/TowerCityEnvironment3D';
@@ -3193,6 +3194,17 @@ describe('Pure 3D Mine World', () => {
       controller.update(0.05, cam, pit, peds, true, onBroken, onHit);
     }
     expect(hits.length).toBeGreaterThanOrEqual(3);
+    const hitsAfterBeat0 = hits.length;
+
+    // Advance through follow-up barrage beats (0.95s & 1.75s) so 100% strike damage lands across 3 beats
+    const [b0, b1, b2] = splitBarrageDamage(1000);
+    expect([b0, b1, b2]).toEqual([250, 300, 450]);
+    expect(b0 + b1 + b2).toBe(1000);
+    for (let i = 0; i < 26; i++) {
+      pit.update(0.05, 0.6 + i * 0.05, cam, false);
+      controller.update(0.05, cam, pit, peds, true, onBroken, onHit);
+    }
+    expect(hits.length).toBeGreaterThan(hitsAfterBeat0);
 
     // Switch to headless/background mining: flushes projectiles and deals damage directly with 0 active projectiles
     const prevHits = hits.length;
@@ -3241,6 +3253,26 @@ describe('Pure 3D Mine World', () => {
       },
     });
 
+    pool.firePodiumWeaponCast({
+      rarity: 'omega',
+      chibiId: 'crimson-ronin',
+      colorHex: '#ef4444',
+      origin: anchor,
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
+    pool.firePodiumWeaponCast({
+      rarity: 'omega',
+      chibiId: 'obsidian-sovereign',
+      colorHex: '#a855f7',
+      origin: anchor,
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
     pool.fireAnticipation('omega', '#ef4444', target, allTargets, 0.72, target);
     pool.fireTierAttack({ rarity: 'omega', chibiId: 'crimson-ronin', colorHex: '#ef4444', target, allTargets, areaScale: 0.72, wideCenter: target });
     for (let i = 0; i < 16; i++) pool.update(0.05, cam);
@@ -3261,6 +3293,7 @@ describe('Pure 3D Mine World', () => {
     expect(roninBack?.visible).toBe(true);
     expect(roninBack?.children.length).toBe(9); // 1 Tsuba HUD Halo disc + 8 Floating Katana Fan blades
     expect(sovBack?.visible).toBe(true);
+    expect(sovBack?.children.length).toBe(7); // 1 Crown HUD disc + 1 Spiked Crown + 1 Colossal Greatsword + 4 Floating Greatswords
 
     // Idle update keeps Omega back-attachments active and hides them in hologram mode
     roninSprite.update(0.05, 0.25, cam);
@@ -3273,11 +3306,16 @@ describe('Pure 3D Mine World', () => {
     roninSprite.setHologramMode(false);
     expect(roninBack?.visible).toBe(true);
 
+    const roninMainPivot = roninSprite.group.children[0];
+    roninSprite.triggerPodiumCast(0.45);
+    roninSprite.update(0.1, 0.35, cam);
+    expect(roninBack?.scale.x).toBeGreaterThan(1.0);
+    expect(roninMainPivot.position.lengthSq()).toBe(0);
+
     roninSprite.triggerBlitz({ rarity: 'omega', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
     sovSprite.triggerBlitz({ rarity: 'omega', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
     const roninBlitzPivot = roninSprite.group.getObjectByName('chibiBlitzHeroPivot');
     const sovBlitzPivot = sovSprite.group.getObjectByName('chibiBlitzHeroPivot');
-    const roninMainPivot = roninSprite.group.children[0];
     expect(roninBlitzPivot).toBeDefined();
     expect(sovBlitzPivot).toBeDefined();
 
@@ -3340,6 +3378,16 @@ describe('Pure 3D Mine World', () => {
       expect(tracks.clone?.length).toBeGreaterThanOrEqual(5);
 
       impactCalls = 0;
+      pool.firePodiumWeaponCast({
+        rarity: 'twin',
+        chibiId: id,
+        colorHex: def!.accentColor,
+        origin: anchor,
+        target,
+        allTargets,
+        areaScale: 0.72,
+        wideCenter: target,
+      });
       pool.fireAnticipation('twin', def!.accentColor, target, allTargets, 0.72, target);
       pool.fireTierAttack({
         rarity: 'twin',

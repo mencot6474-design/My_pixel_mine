@@ -15,6 +15,8 @@ import {
   SignatureProjectilePool3D,
 } from './SignatureProjectilePool3D';
 import {
+  BARRAGE_BEAT_WEIGHTS,
+  BARRAGE_FOLLOWUP_DELAYS,
   CHIBI_ATTACK_ANIM_SEC,
   computeAttackVfxSpeedScale,
   TierAttackVfxPool3D,
@@ -153,6 +155,22 @@ export class TowerArena3D {
   private readonly fighters = new Map<number, TowerChibiFighter>();
   private readonly impactFx = new AttackImpactFxController({ floorY: 0.11 });
   private readonly projectiles = new SignatureProjectilePool3D();
+  private readonly pendingBarrages: Array<{
+    slotIndex: number;
+    targetOreIndex: number;
+    isBoss: boolean;
+    beatIndex: number;
+    delayLeft: number;
+    beatInterval: number;
+    dmg: number;
+    accentColor: string;
+    comboStep: number;
+    sx: number;
+    sz: number;
+    ex: number;
+    ey: number;
+    ez: number;
+  }> = [];
   private readonly tierVfx = new TierAttackVfxPool3D();
   private readonly targetPtsScratch: WorldPoint3[] = [];
   private readonly shardGroup = new THREE.Group();
@@ -423,6 +441,7 @@ export class TowerArena3D {
 
   public resetFloorCharge(): void {
     this.projectiles.clear();
+    this.pendingBarrages.length = 0;
     for (const f of this.fighters.values()) {
       f.sprite.group.position.copy(f.spawnPos);
       f.sprite.setAnimState('idle');
@@ -901,13 +920,114 @@ export class TowerArena3D {
 
     if (this.paused) {
       this.projectiles.clear();
+      this.pendingBarrages.length = 0;
       this.tierVfx.clear();
     }
+
+    const resolveBarrageBeat = (
+      b: {
+        slotIndex: number;
+        targetOreIndex: number;
+        isBoss: boolean;
+        beatIndex: number;
+        beatInterval: number;
+        dmg: number;
+        accentColor: string;
+        comboStep: number;
+        sx: number;
+        sz: number;
+        ex: number;
+        ey: number;
+        ez: number;
+      }
+    ): void => {
+      if (this.paused || b.isBoss !== this.bossWave) return;
+      if (b.isBoss) {
+        this.bounceTimer = Math.max(this.bounceTimer, 0.09);
+        this.impactFx.spawnImpact({
+          targetX: b.ex,
+          targetY: 2.45,
+          targetZ: BOSS_CENTER_Z + 1.05,
+          accentColor: b.accentColor,
+          comboStep: b.comboStep,
+          attackerX: b.sx,
+          attackerZ: b.sz,
+          shockwaveScale: b.beatIndex === 2 ? 1.65 : 1.25,
+        });
+        this.spawnTowerShardsAt(b.ex, 2.2, BOSS_CENTER_Z + 1.05, b.accentColor, b.beatIndex === 2 ? 5 : 3, false, true);
+        onFighterStrike?.({
+          slotIndex: b.slotIndex,
+          targetOreIndex: null,
+          attackInterval: b.beatInterval,
+          dmg: b.dmg,
+          wx: b.ex,
+          wy: b.ey,
+          wz: ARENA_CENTER_Z + 0.45,
+          accentColor: b.accentColor,
+          comboStep: b.comboStep,
+          attackerX: b.sx,
+          attackerZ: b.sz,
+        });
+      } else {
+        let rock = this.waveRocks[b.targetOreIndex];
+        if (!rock || !rock.alive) {
+          rock = this.waveRocks.find((r) => r.alive) ?? rock;
+        }
+        if (!rock || !rock.alive) return;
+        this.impactFx.spawnImpact({
+          targetX: rock.x,
+          targetY: 1.05,
+          targetZ: rock.z,
+          accentColor: b.accentColor,
+          comboStep: b.comboStep,
+          attackerX: b.sx,
+          attackerZ: b.sz,
+          shockwaveScale: b.beatIndex === 2 ? 1.35 : 0.95,
+        });
+        this.spawnTowerShardsAt(rock.x, 0.85, rock.z, b.accentColor, b.beatIndex === 2 ? 5 : 3, false);
+        onFighterStrike?.({
+          slotIndex: b.slotIndex,
+          targetOreIndex: rock.index,
+          attackInterval: b.beatInterval,
+          dmg: b.dmg,
+          wx: rock.x,
+          wy: 1.05,
+          wz: rock.z,
+          accentColor: b.accentColor,
+          comboStep: b.comboStep,
+          attackerX: b.sx,
+          attackerZ: b.sz,
+        });
+      }
+    };
 
     const handleProjectileArrival = (a: SignatureProjectileArrival): void => {
       if (this.paused) return;
       const fighter = this.fighters.get(a.slotIndex);
       const speedScale = computeAttackVfxSpeedScale(a.attackInterval);
+      const beat0Interval = a.attackInterval * BARRAGE_BEAT_WEIGHTS[0];
+      const beat0Dmg = Math.max(1, Math.round(a.dmg * BARRAGE_BEAT_WEIGHTS[0]));
+
+      for (let bi = 1; bi <= 2; bi++) {
+        const w = BARRAGE_BEAT_WEIGHTS[bi];
+        this.pendingBarrages.push({
+          slotIndex: a.slotIndex,
+          targetOreIndex: a.targetId,
+          isBoss: a.isBoss,
+          beatIndex: bi,
+          delayLeft: BARRAGE_FOLLOWUP_DELAYS[bi - 1],
+          beatInterval: a.attackInterval * w,
+          dmg: Math.max(1, Math.round(a.dmg * w)),
+          accentColor: a.accentColor,
+          comboStep: (a.comboStep + bi) % 3,
+          sx: a.sx,
+          sz: a.sz,
+          ex: a.ex,
+          ey: a.ey,
+          ez: a.ez,
+        });
+      }
+
       if (a.isBoss) {
         if (!this.bossWave) return;
         this.bounceTimer = Math.max(this.bounceTimer, 0.09);
@@ -937,8 +1057,8 @@ export class TowerArena3D {
         onFighterStrike?.({
           slotIndex: a.slotIndex,
           targetOreIndex: null,
-          attackInterval: a.attackInterval,
-          dmg: a.dmg,
+          attackInterval: beat0Interval,
+          dmg: beat0Dmg,
           wx: a.ex,
           wy: a.ey,
           wz: ARENA_CENTER_Z + 0.45,
@@ -973,8 +1093,8 @@ export class TowerArena3D {
         onFighterStrike?.({
           slotIndex: a.slotIndex,
           targetOreIndex: rock.index,
-          attackInterval: a.attackInterval,
-          dmg: a.dmg,
+          attackInterval: beat0Interval,
+          dmg: beat0Dmg,
           wx: rock.x,
           wy: 1.05,
           wz: rock.z,
@@ -1011,17 +1131,15 @@ export class TowerArena3D {
               if (wr.alive) this.targetPtsScratch.push({ x: wr.x, y: 0.45, z: wr.z });
             }
             const targetPt: WorldPoint3 = { x: targetRock.x, y: 0.45, z: targetRock.z };
-            const blitzDur = CHIBI_ATTACK_ANIM_SEC;
 
-            f.sprite.triggerBlitz({
+            f.sprite.triggerPodiumCast(0.45);
+            this.tierVfx.firePodiumWeaponCast({
               rarity: f.def.rarity,
-              targetX: targetRock.x,
-              targetY: 0.45,
-              targetZ: targetRock.z,
-              allTargets: this.targetPtsScratch,
-              durationSec: blitzDur,
+              chibiId: f.def.id,
               colorHex: f.colorHex,
-              shadowOnly: true,
+              origin: { x: pos.x, y: pos.y, z: pos.z },
+              target: targetPt,
+              allTargets: this.targetPtsScratch,
             });
             this.tierVfx.fireAnticipation(f.def.rarity, f.colorHex, targetPt, this.targetPtsScratch);
 
@@ -1053,17 +1171,15 @@ export class TowerArena3D {
           const step = f.comboStep;
           f.comboStep = (f.comboStep + 1) % 3;
           const bossPt: WorldPoint3 = { x: 0, y: 0.8, z: BOSS_CENTER_Z + 0.85 };
-          const blitzDur = CHIBI_ATTACK_ANIM_SEC;
 
-          f.sprite.triggerBlitz({
+          f.sprite.triggerPodiumCast(0.45);
+          this.tierVfx.firePodiumWeaponCast({
             rarity: f.def.rarity,
-            targetX: bossPt.x,
-            targetY: bossPt.y,
-            targetZ: bossPt.z,
-            allTargets: [bossPt],
-            durationSec: blitzDur,
+            chibiId: f.def.id,
             colorHex: f.colorHex,
-            shadowOnly: true,
+            origin: { x: pos.x, y: pos.y, z: pos.z },
+            target: bossPt,
+            allTargets: [bossPt],
           });
           this.tierVfx.fireAnticipation(f.def.rarity, f.colorHex, bossPt, [bossPt]);
 
@@ -1098,6 +1214,14 @@ export class TowerArena3D {
 
     if (!this.paused) {
       this.projectiles.step(safeDt, camera, handleProjectileArrival);
+      for (let i = this.pendingBarrages.length - 1; i >= 0; i--) {
+        const b = this.pendingBarrages[i];
+        b.delayLeft -= safeDt;
+        if (b.delayLeft <= 0) {
+          this.pendingBarrages.splice(i, 1);
+          resolveBarrageBeat(b);
+        }
+      }
       if (camera) {
         this.tierVfx.update(safeDt, camera);
       }

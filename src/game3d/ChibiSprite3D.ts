@@ -21,6 +21,8 @@ import {
   createLullabyWhiteWingShaderMaterial,
   createNocturneWingGeometry,
   createNocturneWingShaderMaterial,
+  createObsidianCrownHaloShaderMaterial,
+  createObsidianGreatswordShaderMaterial,
   createRoninKatanaGeometry,
   createSpikedHaloGeometry,
   createYukikageKunaiShaderMaterial,
@@ -216,6 +218,8 @@ export class ChibiSprite3D {
   private accentColorHex: string;
   private secondaryColorHex: string;
   private showcaseTimer = 0;
+  private castPulseTimer = 0;
+  private castPulseDuration = 0.42;
   private attackSwingTimer = 0;
   private attackSwingDuration = 0.42;
   private attackComboStep = 0;
@@ -416,16 +420,77 @@ export class ChibiSprite3D {
       this.omegaAuraGroup.visible = true;
       this.spritePivot.add(this.omegaAuraGroup);
     } else if (this.def.id === 'obsidian-sovereign') {
+      // Custom GLSL Abyssal Crown HUD Halo + 3D 7-Spiked Crown + Colossal Back Greatsword + 4 Floating Sovereign Greatswords
       this.omegaAuraGroup = new THREE.Group();
       this.omegaAuraGroup.name = 'chibiBackAttachmentGroup';
       this.omegaAuraGroup.position.set(0, spriteHeight * 0.56, -0.16);
-      this.omegaAuraMat = createEnergyWeaponMaterial();
-      this.omegaAuraMat.uniforms.uColor.value.set('#a855f7');
-      this.omegaAuraMat.uniforms.uCoreColor.value.set('#f8fafc');
-      this.omegaAuraGeo = createSpikedHaloGeometry();
-      this.omegaHaloMesh = new THREE.Mesh(this.omegaAuraGeo, this.omegaAuraMat);
-      this.omegaHaloMesh.scale.setScalar(0.76);
+
+      const crownHaloMat = createObsidianCrownHaloShaderMaterial();
+      const greatswordMat = createObsidianGreatswordShaderMaterial();
+      this.omegaAuraMat = greatswordMat;
+      this.twinCustomMats.push(crownHaloMat);
+
+      const discGeo = new THREE.PlaneGeometry(2.22, 2.22);
+      this.twinCustomGeos.push(discGeo);
+      const crownDisc = new THREE.Mesh(discGeo, crownHaloMat);
+      crownDisc.position.set(0, 0.04, -0.11);
+      this.omegaAuraGroup.add(crownDisc);
+
+      const spikedCrownGeo = createSpikedHaloGeometry();
+      this.twinCustomGeos.push(spikedCrownGeo);
+      this.omegaHaloMesh = new THREE.Mesh(spikedCrownGeo, greatswordMat);
+      this.omegaHaloMesh.position.set(0, 0.04, -0.06);
+      this.omegaHaloMesh.scale.setScalar(0.78);
       this.omegaAuraGroup.add(this.omegaHaloMesh);
+
+      this.omegaAuraGeo = createAbyssalGreatswordGeometry();
+
+      // 1 Colossal Greatsword slung diagonally across his back
+      const colossalSword = new THREE.Mesh(this.omegaAuraGeo, greatswordMat);
+      colossalSword.position.set(0.24, -0.36, -0.02);
+      colossalSword.rotation.set(0.04, -0.08, 0.62);
+      colossalSword.scale.setScalar(0.56);
+      this.omegaAuraGroup.add(colossalSword);
+      this.roninFanKatanas.push({
+        mesh: colossalSword,
+        baseX: 0.24,
+        baseY: -0.36,
+        baseZ: -0.02,
+        baseRotZ: 0.62,
+        outX: -0.15,
+        outY: 0.45,
+        phase: 0.2,
+      });
+
+      // 4 Flanking Sovereign Greatswords hovering in a menacing V-fan
+      const fanAngles = [0.64, 1.12, -0.64, -1.12];
+      for (let i = 0; i < fanAngles.length; i++) {
+        const ang = fanAngles[i];
+        const tierIdx = i % 2;
+        const rad = 0.72 + tierIdx * 0.14;
+        const baseX = -Math.sin(ang) * rad * 1.16;
+        const baseY = -0.14 + Math.cos(ang) * rad * 0.68;
+        const baseZ = tierIdx === 0 ? -0.03 : -0.055;
+        const baseRotZ = ang * 0.90;
+        const s = 0.36 - tierIdx * 0.03;
+
+        const sm = new THREE.Mesh(this.omegaAuraGeo, greatswordMat);
+        sm.position.set(baseX, baseY, baseZ);
+        sm.rotation.set(0.05, ang >= 0 ? -0.12 : 0.12, baseRotZ);
+        sm.scale.setScalar(s);
+        this.omegaAuraGroup.add(sm);
+        this.roninFanKatanas.push({
+          mesh: sm,
+          baseX,
+          baseY,
+          baseZ,
+          baseRotZ,
+          outX: -Math.sin(ang),
+          outY: Math.cos(ang),
+          phase: 0.8 + i * 0.75,
+        });
+      }
+
       this.omegaAuraGroup.visible = true;
       this.spritePivot.add(this.omegaAuraGroup);
 
@@ -810,6 +875,13 @@ export class ChibiSprite3D {
     this.showcaseTimer = durationSec;
   }
 
+  /** Triggers a clean on-podium aura & glint pulse when casting weapons from behind the chibi. */
+  public triggerPodiumCast(durationSec = 0.42): void {
+    if (this.hologramMode) return;
+    this.castPulseDuration = Math.max(0.22, durationSec);
+    this.castPulseTimer = this.castPulseDuration;
+  }
+
   /**
    * Triggers Rainbow-standard world-space multi-teleport blitz choreography across
    * pit / tower / boss arenas without disturbing animGroup tests or pedestal scaling.
@@ -1081,12 +1153,21 @@ export class ChibiSprite3D {
     this.animGroup.rotation.z = rotZ;
     this.animGroup.scale.set(scaleX, scaleY, 1);
 
+    let castPulseAmt = 0;
+    if (this.castPulseTimer > 0) {
+      this.castPulseTimer = Math.max(0, this.castPulseTimer - dtSec);
+      const cp = 1 - this.castPulseTimer / this.castPulseDuration;
+      castPulseAmt = Math.sin(cp * Math.PI);
+      showGlint = true;
+      glintProgress = cp;
+    }
+
     this.glintMesh.visible = showGlint;
     if (showGlint) {
       const pulse = Math.sin(glintProgress * Math.PI);
-      this.glintMesh.position.x = -this.facing * 0.16;
+      this.glintMesh.position.x = castPulseAmt > 0 ? 0 : -this.facing * 0.16;
       this.glintMesh.rotation.z = glintProgress * Math.PI * 0.75;
-      this.glintMesh.scale.setScalar(0.36 + pulse * 0.84);
+      this.glintMesh.scale.setScalar((castPulseAmt > 0 ? 0.55 : 0.36) + pulse * 0.92);
       this.glintMat.opacity = 0.94 * pulse;
     }
 
@@ -1302,9 +1383,11 @@ export class ChibiSprite3D {
       if (this.omegaAuraGroup) {
         if (this.shouldShowBackAttachment()) {
           this.omegaAuraGroup.visible = true;
-          this.updateBackAttachmentGroup(elapsed, 0.90);
+          this.omegaAuraGroup.scale.setScalar(1 + castPulseAmt * 0.14);
+          this.updateBackAttachmentGroup(elapsed, Math.min(1, 0.90 + castPulseAmt * 0.10));
         } else {
           this.omegaAuraGroup.visible = false;
+          this.omegaAuraGroup.scale.setScalar(1);
         }
       }
     }
@@ -1343,6 +1426,9 @@ export class ChibiSprite3D {
           slot.baseZ
         );
         slot.mesh.rotation.z = slot.baseRotZ + Math.sin(elapsed * 1.6 + slot.phase) * 0.034;
+      }
+      if (this.omegaHaloMesh) {
+        this.omegaHaloMesh.rotation.z = elapsed * 0.45;
       }
     } else if (this.omegaOrbitKatanas.length > 0) {
       const isYukikage = this.def.id === 'yukikage-twins';

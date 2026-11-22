@@ -303,6 +303,7 @@ export class PlotPedestal3D {
   private auraMoteMat: THREE.ShaderMaterial | null = null;
   private auraMotePoints: THREE.Points | null = null;
   private lowQuality = false;
+  private castRingPulse = 0;
   private readonly tmpScale = new THREE.Vector3(1, 1, 1);
 
   private readonly labelMat: THREE.SpriteMaterial;
@@ -713,6 +714,11 @@ export class PlotPedestal3D {
     this.chibiSprite.triggerAttack(durationSec, comboStep);
   }
 
+  public triggerChibiCast(durationSec = 0.42): void {
+    this.chibiSprite?.triggerPodiumCast(durationSec);
+    this.castRingPulse = 1.0;
+  }
+
   public triggerChibiBlitz(opts: {
     rarity: string;
     targetX: number;
@@ -762,6 +768,12 @@ export class PlotPedestal3D {
   public update(dtSec: number, elapsed = 0, camera?: THREE.Camera): void {
     this.lastElapsed = elapsed;
     const safeDt = Math.min(Math.max(0, dtSec), 0.1);
+    if (this.castRingPulse > 0) {
+      this.castRingPulse = Math.max(0, this.castRingPulse - safeDt * 2.6);
+    }
+    const baseRingIntensity = this.hovered ? 1.3 : this.enchantId ? 1.05 : 0.85;
+    this.ringMat.emissiveIntensity = baseRingIntensity + this.castRingPulse * 0.95;
+    this.holoDiscMat.opacity = Math.min(0.95, (this.hovered ? 0.86 : 0.68) + this.castRingPulse * 0.22);
     const targetScale = (this.hovered ? 1.06 : 1) * PLOT_PODIUM_SCALE;
     this.tmpScale.set(targetScale, PLOT_PODIUM_SCALE, targetScale);
     this.group.scale.lerp(this.tmpScale, Math.min(1, safeDt * 12));

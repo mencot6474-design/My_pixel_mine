@@ -27,6 +27,8 @@ import {
   SignatureProjectilePool3D,
 } from './SignatureProjectilePool3D';
 import {
+  BARRAGE_BEAT_WEIGHTS,
+  BARRAGE_FOLLOWUP_DELAYS,
   CHIBI_ATTACK_ANIM_SEC,
   computeAttackVfxSpeedScale,
   TierAttackVfxPool3D,
@@ -210,6 +212,20 @@ export class OmegaArena3D {
   private readonly targetsGroup = new THREE.Group();
   private readonly impactFx = new AttackImpactFxController();
   private readonly projectiles = new SignatureProjectilePool3D();
+  private readonly pendingBarrages: Array<{
+    slotIndex: number;
+    beatIndex: number;
+    delayLeft: number;
+    beatInterval: number;
+    dmg: number;
+    accentColor: string;
+    comboStep: number;
+    sx: number;
+    sz: number;
+    ex: number;
+    ey: number;
+    ez: number;
+  }> = [];
   private readonly tierVfx = new TierAttackVfxPool3D();
   private readonly projVec = new THREE.Vector3();
   private lowQuality = false;
@@ -1030,6 +1046,7 @@ export class OmegaArena3D {
     const canAttack = this.battlePhase === 'active';
     if (!canAttack) {
       this.projectiles.clear();
+      this.pendingBarrages.length = 0;
       this.tierVfx.clear();
     }
 
@@ -1048,10 +1065,27 @@ export class OmegaArena3D {
           speedScale,
         });
       }
+      for (let bi = 1; bi <= 2; bi++) {
+        const w = BARRAGE_BEAT_WEIGHTS[bi];
+        this.pendingBarrages.push({
+          slotIndex: a.slotIndex,
+          beatIndex: bi,
+          delayLeft: BARRAGE_FOLLOWUP_DELAYS[bi - 1],
+          beatInterval: a.attackInterval * w,
+          dmg: Math.max(1, Math.round(a.dmg * w)),
+          accentColor: a.accentColor,
+          comboStep: (a.comboStep + bi) % 3,
+          sx: a.sx,
+          sz: a.sz,
+          ex: a.ex,
+          ey: a.ey,
+          ez: a.ez,
+        });
+      }
       onStrike?.({
         slotIndex: a.slotIndex,
-        attackInterval: a.attackInterval,
-        dmg: a.dmg,
+        attackInterval: a.attackInterval * BARRAGE_BEAT_WEIGHTS[0],
+        dmg: Math.max(1, Math.round(a.dmg * BARRAGE_BEAT_WEIGHTS[0])),
         wx: a.ex,
         wy: a.ey,
         wz: a.ez,
@@ -1072,17 +1106,15 @@ export class OmegaArena3D {
           const step = f.comboStep;
           f.comboStep = (f.comboStep + 1) % 3;
           const bossPt: WorldPoint3 = { x: 0, y: this.bossStageY, z: BOSS_POS_Z + 0.25 };
-          const blitzDur = CHIBI_ATTACK_ANIM_SEC;
 
-          f.sprite.triggerBlitz({
+          f.sprite.triggerPodiumCast(0.45);
+          this.tierVfx.firePodiumWeaponCast({
             rarity: f.rarity,
-            targetX: bossPt.x,
-            targetY: bossPt.y,
-            targetZ: bossPt.z,
-            allTargets: [bossPt],
-            durationSec: blitzDur,
+            chibiId: f.chibiId,
             colorHex: f.colorHex,
-            shadowOnly: true,
+            origin: { x: f.spawnPos.x, y: f.spawnPos.y, z: f.spawnPos.z },
+            target: bossPt,
+            allTargets: [bossPt],
           });
           this.tierVfx.fireAnticipation(f.rarity, f.colorHex, bossPt, [bossPt]);
 
@@ -1114,6 +1146,33 @@ export class OmegaArena3D {
 
     if (canAttack) {
       this.projectiles.step(safeDt, camera, handleOmegaArrival);
+      for (let i = this.pendingBarrages.length - 1; i >= 0; i--) {
+        const b = this.pendingBarrages[i];
+        b.delayLeft -= safeDt;
+        if (b.delayLeft <= 0) {
+          this.pendingBarrages.splice(i, 1);
+          this.bossHitBounce = Math.max(this.bossHitBounce, 0.08);
+          this.impactFx.spawnImpact({
+            targetX: b.ex,
+            targetY: b.ey,
+            targetZ: b.ez,
+            accentColor: b.accentColor,
+            comboStep: b.comboStep,
+            attackerX: b.sx,
+            attackerZ: b.sz,
+            shockwaveScale: b.beatIndex === 2 ? 1.5 : 1.1,
+          });
+          onStrike?.({
+            slotIndex: b.slotIndex,
+            attackInterval: b.beatInterval,
+            dmg: b.dmg,
+            wx: b.ex,
+            wy: b.ey,
+            wz: b.ez,
+            accentColor: b.accentColor,
+          });
+        }
+      }
       if (camera) {
         this.tierVfx.update(safeDt, camera);
       }

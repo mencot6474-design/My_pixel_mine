@@ -16,17 +16,19 @@ import {
   createGothicMirrorCageShaderMaterial,
   createHalcyonPortalRippleShaderMaterial,
   createHalcyonRainShaderMaterial,
-  createHeldFrostSlashShaderMaterial,
   createInvertedClocktowerGeometry,
+  createKunaiGeometry,
   createNocturneCometTailShaderMaterial,
   createNocturneEclipseCraterShaderMaterial,
   createNocturneMeteorShaderMaterial,
   createOrbitalBeamMaterial,
+  createRoninKatanaGeometry,
   createSlashArcGeometry,
   createSlashShaderMaterial,
   createSpatialRiftMaterial,
   createSpearGeometry,
   createVortexConeMaterial,
+  createYukikageFrostSealShaderMaterial,
 } from './MeshFx3D';
 import {
   getFlamePuffTexture,
@@ -110,9 +112,21 @@ function lerpNum(a: number, b: number, t: number): number {
 }
 
 export const CHIBI_ATTACK_ANIM_SEC = 2.5;
+export const CHIBI_BLITZ_SHADOW_SEC = 0.88;
+export const BARRAGE_BEAT_WEIGHTS = [0.25, 0.3, 0.45] as const;
+export const BARRAGE_FOLLOWUP_DELAYS = [0.75, 1.55] as const;
+
+export function splitBarrageDamage(totalDmg: number): [number, number, number] {
+  const safe = Math.max(1, Math.round(totalDmg));
+  if (safe < 3) return [safe, 0, 0];
+  const d0 = Math.max(1, Math.round(safe * BARRAGE_BEAT_WEIGHTS[0]));
+  const d1 = Math.max(1, Math.round(safe * BARRAGE_BEAT_WEIGHTS[1]));
+  const d2 = Math.max(0, safe - d0 - d1);
+  return [d0, d1, d2];
+}
 
 export function computeAttackVfxSpeedScale(attackInterval: number): number {
-  return Math.max(1.32, Math.min(1.5, attackInterval / 1.8));
+  return Math.max(1.65, Math.min(1.95, attackInterval / 1.35));
 }
 
 export function getRaritySecondaryColor(rarity: string): string {
@@ -391,7 +405,7 @@ export function buildTierMotionWaypoints(
             clone: [
               { t: 0.0, x: ax, y: ay, z: az, face: -1, rz: 0, pose: 'attack', snap: false, col: '#38bdf8', scale: 1, opacity: 0 },
               { t: 0.14, x: cx + 3.0 * ms, y: cy + 0.65, z: cz - 0.8 * ms, face: -1, rz: 0.34, pose: 'attack', snap: true, col: '#38bdf8', scale: 1.14, opacity: 0.92 },
-              { t: 0.34, x: cx - 2.9 * ms, y: cy + 0.85, z: cz + 0.9 * ms, face: 1, rz: -0.34, pose: 'attack', snap: true, col: '#f472b6', scale: 1.14, opacity: 0.92 },
+              { t: 0.34, x: cx - 2.9 * ms, y: cy + 0.85, z: cz + 0.9 * ms, face: 1, rz: -0.34, pose: 'attack', snap: true, col: '#e0f2fe', scale: 1.14, opacity: 0.92 },
               { t: 0.56, x: cx + 0.7, y: cy + 1.55, z: cz, face: -1, rz: 0.15, pose: 'aura', snap: true, col: '#38bdf8', scale: 1.2, opacity: 0.92 },
               { t: 0.82, x: cx + 0.85, y: cy + 1.1, z: cz + 0.15, face: -1, rz: 0, pose: 'attack', snap: false, col: '#e0f2fe', scale: 1.14, opacity: 0.78 },
               { t: 1.0, x: ax, y: ay, z: az, face: -1, rz: 0, pose: 'attack', snap: false, col: '#38bdf8', scale: 1, opacity: 0 },
@@ -541,18 +555,18 @@ export function sampleTierMotionWaypoints(track: readonly TierMotionWaypoint[], 
       const span = Math.max(0.0001, b.t - a.t);
       const localT = (p - a.t) / span;
       if (b.snap) {
-        const ease = localT < 0.42 ? 0 : easeOutCubic((localT - 0.42) / 0.58);
+        const ease = localT < 0.2 ? 0 : easeOutCubic((localT - 0.2) / 0.8);
         return {
           x: lerpNum(a.x, b.x, ease),
           y: lerpNum(a.y, b.y, ease),
           z: lerpNum(a.z, b.z, ease),
-          face: localT < 0.42 ? a.face : b.face,
+          face: localT < 0.2 ? a.face : b.face,
           rz: lerpNum(a.rz, b.rz, ease),
-          pose: localT < 0.42 ? a.pose : b.pose,
-          col: localT < 0.42 ? a.col : b.col,
+          pose: localT < 0.2 ? a.pose : b.pose,
+          col: localT < 0.2 ? a.col : b.col,
           scale: lerpNum(a.scale, b.scale, ease),
           opacity: lerpNum(a.opacity ?? 1, b.opacity ?? 1, ease),
-          snapping: localT >= 0.38 && localT <= 0.78,
+          snapping: localT >= 0.18 && localT <= 0.68,
         };
       }
       const ease = easeOutCubic(localT);
@@ -623,7 +637,7 @@ interface RiftSlot {
   height: number;
 }
 interface WeaponSlot {
-  kind: 'blade' | 'spear' | 'crystal' | 'greatsword' | 'gear';
+  kind: 'blade' | 'spear' | 'crystal' | 'greatsword' | 'gear' | 'katana' | 'kunai' | 'arrow';
   mesh: THREE.Mesh;
   mat: THREE.ShaderMaterial;
   active: boolean;
@@ -646,18 +660,6 @@ interface ClockDialSlot {
   life: number;
   s0: number;
   s1: number;
-}
-interface HeldFrostSlashSlot {
-  mesh: THREE.Mesh;
-  mat: THREE.ShaderMaterial;
-  active: boolean;
-  age: number;
-  holdDur: number;
-  shatterDur: number;
-  len: number;
-  height: number;
-  shattering: boolean;
-  shatterAge: number;
 }
 interface HalcyonPortalSlot {
   mesh: THREE.Mesh;
@@ -830,7 +832,7 @@ export class TierAttackVfxPool3D {
   private readonly rifts: RiftSlot[] = [];
   private readonly weapons: WeaponSlot[] = [];
   private readonly clockDials: ClockDialSlot[] = [];
-  private readonly heldFrostSlashes: HeldFrostSlashSlot[] = [];
+  private readonly frostSeals: ClockDialSlot[] = [];
   private readonly halcyonPortals: HalcyonPortalSlot[] = [];
   private readonly halcyonRain: HalcyonRainSlot[] = [];
   private readonly nocturneMeteors: NocturneMeteorSlot[] = [];
@@ -874,6 +876,8 @@ export class TierAttackVfxPool3D {
     const riftGeo = new THREE.PlaneGeometry(1, 0.34);
     const bladeGeo = createBladeMeshGeometry();
     const arrowGeo = createArrowGeometry();
+    const kunaiGeo = createKunaiGeometry();
+    const katanaGeo = createRoninKatanaGeometry();
     const spearGeo = createSpearGeometry();
     const crystalGeo = createCrystalSpikeGeometry();
     const greatswordGeo = createAbyssalGreatswordGeometry();
@@ -894,7 +898,7 @@ export class TierAttackVfxPool3D {
     this.arrowGeo = arrowGeo;
 
     this.sharedGeos.push(
-      slashGeo, domeGeo, beamGeo, vortexGeo, riftGeo, bladeGeo, arrowGeo, spearGeo, crystalGeo, greatswordGeo, gearGeo,
+      slashGeo, domeGeo, beamGeo, vortexGeo, riftGeo, bladeGeo, arrowGeo, kunaiGeo, katanaGeo, spearGeo, crystalGeo, greatswordGeo, gearGeo,
       meteorGeo, cometTailGeo, mirrorCageGeo, crescentMoonGeo, clocktowerGeo, boltGeo, chunkGeo, quadGeo, orbGeo
     );
 
@@ -941,7 +945,7 @@ export class TierAttackVfxPool3D {
     const addWeaponPool = (
       geo: THREE.BufferGeometry,
       count: number,
-      kind: 'blade' | 'spear' | 'crystal' | 'greatsword' | 'gear'
+      kind: WeaponSlot['kind']
     ): void => {
       for (let i = 0; i < count; i++) {
         const mat = createEnergyWeaponMaterial();
@@ -971,6 +975,9 @@ export class TierAttackVfxPool3D {
     addWeaponPool(crystalGeo, 24, 'crystal');
     addWeaponPool(greatswordGeo, 6, 'greatsword');
     addWeaponPool(gearGeo, 8, 'gear');
+    addWeaponPool(katanaGeo, 8, 'katana');
+    addWeaponPool(kunaiGeo, 10, 'kunai');
+    addWeaponPool(arrowGeo, 10, 'arrow');
 
     for (let i = 0; i < 4; i++) {
       const mat = createClockworkDialShaderMaterial();
@@ -981,15 +988,13 @@ export class TierAttackVfxPool3D {
       this.clockDials.push({ mesh, mat, active: false, age: 0, life: 0.9, s0: 2.0, s1: 7.0 });
     }
 
-    for (let i = 0; i < 18; i++) {
-      const mat = createHeldFrostSlashShaderMaterial();
+    for (let i = 0; i < 4; i++) {
+      const mat = createYukikageFrostSealShaderMaterial();
       const mesh = new THREE.Mesh(quadGeo, mat);
+      mesh.rotation.x = -Math.PI / 2;
       mesh.visible = false;
       this.group.add(mesh);
-      this.heldFrostSlashes.push({
-        mesh, mat, active: false, age: 0, holdDur: 0.5, shatterDur: 0.38,
-        len: 6.5, height: 1.0, shattering: false, shatterAge: 0,
-      });
+      this.frostSeals.push({ mesh, mat, active: false, age: 0, life: 1.0, s0: 2.0, s1: 8.4 });
     }
 
     for (let i = 0; i < 14; i++) {
@@ -1177,7 +1182,7 @@ export class TierAttackVfxPool3D {
     resetArr(this.rifts);
     resetArr(this.weapons);
     resetArr(this.clockDials);
-    resetArr(this.heldFrostSlashes);
+    resetArr(this.frostSeals);
     resetArr(this.halcyonPortals);
     resetArr(this.halcyonRain);
     resetArr(this.nocturneMeteors);
@@ -1243,40 +1248,22 @@ export class TierAttackVfxPool3D {
     slot.mesh.visible = true;
   }
 
-  private spawnHeldFrostSlash(opts: {
-    x: number; y: number; z: number; color?: string; coreColor?: string;
-    rx?: number; ry?: number; rz?: number; len?: number; height?: number;
-    holdDur?: number; shatterDur?: number;
+  private spawnFrostSeal(opts: {
+    x: number; y: number; z: number; s0?: number; s1?: number; life?: number;
   }): void {
-    const slot = this.heldFrostSlashes.find((h) => !h.active) ?? this.heldFrostSlashes[0];
+    const slot = this.frostSeals.find((d) => !d.active) ?? this.frostSeals[0];
     if (!slot) return;
     slot.active = true;
     slot.age = 0;
-    slot.holdDur = opts.holdDur ?? 0.52;
-    slot.shatterDur = opts.shatterDur ?? 0.36;
-    slot.len = opts.len ?? 6.2;
-    slot.height = opts.height ?? 1.0;
-    slot.shattering = false;
-    slot.shatterAge = 0;
-    slot.mat.uniforms.uColor.value.set(opts.color ?? '#38bdf8');
-    slot.mat.uniforms.uCoreColor.value.set(opts.coreColor ?? '#e0f2fe');
-    slot.mat.uniforms.uDraw.value = 0;
-    slot.mat.uniforms.uShatter.value = 0;
+    slot.life = opts.life ?? 1.1;
+    slot.s0 = opts.s0 ?? 2.0;
+    slot.s1 = opts.s1 ?? 8.8;
+    slot.mat.uniforms.uTime.value = this.time;
+    slot.mat.uniforms.uProgress.value = 0;
     slot.mat.uniforms.uOpacity.value = 1;
-    slot.mat.uniforms.uSeed.value = Math.random() * 15;
     slot.mesh.position.set(opts.x, opts.y, opts.z);
-    slot.mesh.rotation.set(opts.rx ?? 0, opts.ry ?? 0, opts.rz ?? 0);
-    slot.mesh.scale.set(slot.len, slot.height, 1);
+    slot.mesh.scale.setScalar(slot.s0);
     slot.mesh.visible = true;
-  }
-
-  private shatterAllHeldFrostSlashes(): void {
-    for (let i = 0; i < this.heldFrostSlashes.length; i++) {
-      const h = this.heldFrostSlashes[i];
-      if (!h.active || h.shattering) continue;
-      h.shattering = true;
-      h.shatterAge = 0;
-    }
   }
 
   private spawnHalcyonBabylonPortals(opts: {
@@ -1567,7 +1554,7 @@ export class TierAttackVfxPool3D {
   }
 
   private spawnWeapon(opts: {
-    kind: 'blade' | 'spear' | 'crystal' | 'greatsword' | 'gear';
+    kind: WeaponSlot['kind'];
     color: string;
     coreColor?: string;
     startPos: THREE.Vector3;
@@ -1602,7 +1589,7 @@ export class TierAttackVfxPool3D {
   }
 
   private spawnDirectedWeapon(
-    kind: 'blade' | 'spear',
+    kind: 'blade' | 'spear' | 'katana' | 'kunai' | 'arrow' | 'greatsword' | 'crystal',
     fromVec: THREE.Vector3,
     toVec: THREE.Vector3,
     color: string,
@@ -1804,6 +1791,149 @@ export class TierAttackVfxPool3D {
     } else if (rarity !== 'common') {
       this.hooks.onSpeedLines?.(0.35, 0.18);
     }
+  }
+
+  /** Launches bespoke 3D weapons directly from behind the podium chibi toward the target(s). */
+  public firePodiumWeaponCast(opts: {
+    rarity: string;
+    chibiId?: string;
+    colorHex: string;
+    origin: WorldPoint3;
+    target: WorldPoint3;
+    allTargets?: readonly WorldPoint3[];
+    areaScale?: number;
+    wideCenter?: WorldPoint3;
+  }): void {
+    const { rarity, chibiId, colorHex, origin, target } = opts;
+    const secondary = getRaritySecondaryColor(rarity);
+    const wide = isWideAoeRarity(rarity);
+    const allTargets = opts.allTargets && opts.allTargets.length > 0 ? opts.allTargets : [target];
+    let destX = target.x;
+    let destY = target.y;
+    let destZ = target.z;
+    if (wide) {
+      const b = resolvePitBounds(allTargets, target, opts.wideCenter);
+      destX = b.cx;
+      destY = b.cy;
+      destZ = b.cz;
+    }
+    const dest = new THREE.Vector3(destX, destY + 0.65, destZ);
+    const ox = origin.x;
+    const oy = origin.y + 1.45;
+    const oz = origin.z - 0.12;
+
+    if (rarity === 'omega' && chibiId === 'obsidian-sovereign') {
+      this.spawnDirectedWeapon(
+        'greatsword',
+        new THREE.Vector3(ox, oy + 0.55, oz),
+        dest,
+        '#a855f7',
+        0.95,
+        0.26,
+        () => this.spawnSparks(dest.x, dest.y, dest.z, '#f8fafc', '#a855f7', 6, 5.2)
+      );
+      return;
+    }
+
+    if (rarity === 'omega' && chibiId === 'crimson-ronin') {
+      const offsets = [-0.65, 0, 0.65];
+      offsets.forEach((dx, idx) => {
+        const end = new THREE.Vector3(dest.x + dx * 0.9, dest.y, dest.z + (idx === 1 ? 0 : 0.25));
+        this.spawnDirectedWeapon(
+          'katana',
+          new THREE.Vector3(ox + dx, oy + 0.25 + (idx === 1 ? 0.35 : 0), oz),
+          end,
+          idx === 1 ? '#fef08a' : '#ef4444',
+          1.25,
+          0.22,
+          () => this.spawnSparks(end.x, end.y, end.z, '#ef4444', '#fef08a', 4, 4.8)
+        );
+      });
+      return;
+    }
+
+    if (rarity === 'twin') {
+      if (chibiId === 'clockwork-twins') {
+        [-0.55, 0.55].forEach((dx, idx) => {
+          this.spawnWeapon({
+            kind: 'gear',
+            color: idx === 0 ? '#f59e0b' : '#2dd4bf',
+            coreColor: '#fef08a',
+            startPos: new THREE.Vector3(ox + dx, oy + 0.2, oz),
+            endPos: new THREE.Vector3(dest.x + dx * 0.8, dest.y, dest.z),
+            startRot: new THREE.Euler(0.35, 0, 0),
+            endRot: new THREE.Euler(0.35, 0, (idx === 0 ? 1 : -1) * Math.PI * 3),
+            scale: 0.95,
+            mode: 'swing',
+            life: 0.24,
+          });
+        });
+        return;
+      }
+      const twinKind: 'kunai' | 'arrow' | 'blade' | 'spear' =
+        chibiId === 'yukikage-twins'
+          ? 'kunai'
+          : chibiId === 'halcyon-twins'
+            ? 'arrow'
+            : chibiId === 'lullaby-twins'
+              ? 'spear'
+              : 'blade';
+      const twinColA =
+        chibiId === 'yukikage-twins'
+          ? '#38bdf8'
+          : chibiId === 'halcyon-twins'
+            ? '#22d3ee'
+            : chibiId === 'nocturne-twins'
+              ? '#f8fafc'
+              : '#e879f9';
+      const twinColB =
+        chibiId === 'yukikage-twins'
+          ? '#e0f2fe'
+          : chibiId === 'halcyon-twins'
+            ? '#fde047'
+            : chibiId === 'nocturne-twins'
+              ? '#a855f7'
+              : '#38bdf8';
+      const offsets = twinKind === 'kunai' || twinKind === 'arrow' ? [-0.6, 0, 0.6] : [-0.45, 0.45];
+      offsets.forEach((dx, idx) => {
+        const end = new THREE.Vector3(dest.x + dx * 0.75, dest.y, dest.z);
+        this.spawnDirectedWeapon(
+          twinKind,
+          new THREE.Vector3(ox + dx, oy + 0.25 + (idx === 1 ? 0.25 : 0), oz),
+          end,
+          idx % 2 === 0 ? twinColA : twinColB,
+          1.15,
+          0.22
+        );
+      });
+      return;
+    }
+
+    if (rarity === 'fusion' || rarity === 'limited' || rarity === 'secret' || rarity === 'mythic' || rarity === 'exotic') {
+      const kind: 'blade' | 'spear' | 'crystal' =
+        rarity === 'secret' || rarity === 'exotic' ? 'crystal' : rarity === 'mythic' ? 'spear' : 'blade';
+      [-0.5, 0, 0.5].forEach((dx, idx) => {
+        this.spawnDirectedWeapon(
+          kind,
+          new THREE.Vector3(ox + dx, oy + 0.2, oz),
+          new THREE.Vector3(dest.x + dx * 0.65, dest.y, dest.z),
+          idx === 1 ? secondary : colorHex,
+          1.05,
+          0.22
+        );
+      });
+      return;
+    }
+
+    const kind: 'blade' | 'spear' = rarity === 'rare' || rarity === 'legendary' || rarity === 'rainbow' ? 'spear' : 'blade';
+    this.spawnDirectedWeapon(
+      kind,
+      new THREE.Vector3(ox, oy + 0.15, oz),
+      dest,
+      colorHex,
+      0.98,
+      0.2
+    );
   }
 
   public fireTierAttack(opts: TierAttackFireOpts): void {
@@ -2100,57 +2230,84 @@ export class TierAttackVfxPool3D {
       case 'twin': {
         switch (opts.chibiId) {
           case 'yukikage-twins': {
-            // 1. YUKIKAGE TWINS: 12 Rapid Held Frost-Ink Slashes -> Freeze/Stop -> Custom Voronoi Shatter Shader BOOM! (No vertical beams)
-            this.hooks.onArenaDim?.(0.72, '#041322', 0.92 * sc);
-            const cutSpecs = [
-              { ox: -2.2, oy: 1.0, oz: -0.6, rx: 0.25, ry: 0.4, rz: 0.42, len: 6.4, col: '#38bdf8' },
-              { ox: 2.1, oy: 1.2, oz: 0.7, rx: -0.2, ry: -0.3, rz: -0.38, len: 6.4, col: '#e0f2fe' },
-              { ox: 0.1, oy: 1.4, oz: -0.8, rx: 0.32, ry: 0.1, rz: 0.68, len: 7.4, col: '#38bdf8' },
-              { ox: -0.2, oy: 1.1, oz: 0.8, rx: -0.28, ry: -0.15, rz: -0.62, len: 7.4, col: '#f472b6' },
-              { ox: -1.9, oy: 1.6, oz: 0.4, rx: 0.15, ry: 0.65, rz: -0.25, len: 5.8, col: '#38bdf8' },
-              { ox: 1.9, oy: 1.5, oz: -0.4, rx: -0.15, ry: -0.65, rz: 0.28, len: 5.8, col: '#e0f2fe' },
-              { ox: 0.0, oy: 1.7, oz: 0.0, rx: 0.18, ry: 0.0, rz: 0.16, len: 9.2, col: '#38bdf8' },
-              { ox: 0.0, oy: 1.3, oz: 0.2, rx: -0.18, ry: 0.2, rz: -0.18, len: 9.2, col: '#e0f2fe' },
-              { ox: -1.2, oy: 0.85, oz: 0.25, rx: 0.4, ry: 0.8, rz: 0.52, len: 5.6, col: '#f472b6' },
-              { ox: 1.2, oy: 0.95, oz: -0.25, rx: -0.4, ry: -0.8, rz: -0.52, len: 5.6, col: '#38bdf8' },
-              { ox: 0.25, oy: 2.0, oz: -0.15, rx: 0.1, ry: -0.2, rz: 0.82, len: 6.8, col: '#e0f2fe' },
-              { ox: -0.25, oy: 1.85, oz: 0.3, rx: -0.1, ry: 0.2, rz: -0.82, len: 6.8, col: '#38bdf8' },
-            ];
-            cutSpecs.forEach((c, idx) => {
-              this.after(idx * 0.026 * sc, () => {
-                this.spawnHeldFrostSlash({
-                  x: cx + c.ox * as,
-                  y: cy + c.oy,
-                  z: cz + c.oz * as,
-                  color: c.col,
-                  coreColor: '#ffffff',
-                  rx: c.rx,
-                  ry: c.ry,
-                  rz: c.rz,
-                  len: c.len * as,
-                  height: 1.05 * as,
-                  holdDur: (0.62 - idx * 0.024) * sc,
-                  shatterDur: 0.42 * sc,
-                });
+            // 1. YUKIKAGE TWINS (Option A): Sumi-e Ink Slashes + Glacial Crystal Spires Crown -> Absolute Zero Shatter!
+            this.hooks.onArenaDim?.(0.72, '#041322', 0.98 * sc);
+            this.spawnFrostSeal({
+              x: cx, y: cy + 0.08, z: cz,
+              s0: 2.0 * as, s1: 9.2 * as, life: 1.18 * sc,
+            });
+
+            // Phase 1 (Black Twin): 3 sweeping Sumi-e Ink + Frost-White curved slashes
+            this.spawnSlash({
+              x: cx - 0.35 * as, y: cy + 1.05, z: cz + 0.2 * as,
+              color: '#38bdf8', coreColor: '#e0f2fe',
+              rx: 0.24, ry: 0.25, rz: 0.28, s0: 2.3 * as, s1: 6.8 * as, life: 0.34 * sc, spinSpeed: 4.8, shaderMode: 2, darkCore: true,
+            });
+            this.after(0.12 * sc, () => {
+              this.spawnSlash({
+                x: cx + 0.35 * as, y: cy + 1.2, z: cz - 0.1 * as,
+                color: '#e0f2fe', coreColor: '#38bdf8',
+                rx: -0.26, ry: Math.PI - 0.3, rz: -0.32, s0: 2.5 * as, s1: 7.2 * as, life: 0.34 * sc, spinSpeed: -4.8, shaderMode: 2, darkCore: true,
+              });
+              this.spawnSparks(cx, cy + 1.0, cz, '#e0f2fe', '#38bdf8', 7, 5.4);
+            });
+            this.after(0.24 * sc, () => {
+              this.spawnSlash({
+                x: cx, y: cy + 1.35, z: cz,
+                color: '#38bdf8', coreColor: '#ffffff',
+                rx: 0.44, ry: 0.72, rz: 0.46, s0: 2.7 * as, s1: 7.8 * as, life: 0.36 * sc, spinSpeed: 5.2, shaderMode: 2, darkCore: true,
               });
             });
-            // Phase 3: All 12 Held Slashes Shatter simultaneously via Custom GLSL Voronoi Shatter Shader + Frost Dome (ZERO vertical beams!)
-            this.after(0.56 * sc, () => {
-              this.shatterAllHeldFrostSlashes();
-              this.hooks.onImpactFrame?.(1.0, 1.0, '#38bdf8', 0.058);
+
+            // Phase 2 (White Twin): 8 Glacial Ice Crystal Spires erupting in a frost crown
+            this.after(0.28 * sc, () => {
+              this.hooks.onSpeedLines?.(0.85, 0.28);
+              const spireCount = this.lowQuality ? 6 : 8;
+              for (let s = 0; s < spireCount; s++) {
+                const ang = (s / spireCount) * Math.PI * 2;
+                const radX = (2.45 + (s % 2) * 0.65) * as;
+                const radZ = (1.75 + (s % 2) * 0.45) * as;
+                const sx = cx + Math.cos(ang) * radX;
+                const sz = cz + Math.sin(ang) * radZ;
+                const tiltOut = 0.26;
+                const rot = new THREE.Euler(
+                  Math.sin(ang) * tiltOut,
+                  ang,
+                  -Math.cos(ang) * tiltOut
+                );
+                this.spawnWeapon({
+                  kind: 'crystal',
+                  color: s % 2 === 0 ? '#38bdf8' : '#e0f2fe',
+                  coreColor: '#ffffff',
+                  startPos: new THREE.Vector3(sx, cy - 1.2, sz),
+                  endPos: new THREE.Vector3(sx, cy + 0.02, sz),
+                  startRot: rot,
+                  endRot: rot,
+                  scale: (2.1 + (s % 2) * 0.65) * Math.max(0.75, as),
+                  mode: 'erupt',
+                  life: 0.74 * sc,
+                });
+              }
+              this.spawnSparks(cx, cy + 0.55, cz, '#38bdf8', '#ffffff', 9, 6.0);
+            });
+
+            // Phase 3: Absolute Zero Shatter Climax (Sakuga Impact Frame + Dual Frost-Ink Domes + Ice Cross-Cut)
+            this.after(0.62 * sc, () => {
+              this.hooks.onImpactFrame?.(1.0, 1.0, '#38bdf8', 0.056);
               this.hooks.onSpeedLines?.(1.0, 0.44);
-              this.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#38bdf8', coreColor: '#e0f2fe', s0: 0.85 * as, s1: 7.4 * as, yScale: 0.56, life: 0.56 * sc });
+              this.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#0f172a', coreColor: '#e0f2fe', s0: 0.9 * as, s1: 8.0 * as, yScale: 0.56, life: 0.56 * sc });
+              this.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#38bdf8', coreColor: '#ffffff', s0: 0.65 * as, s1: 6.4 * as, yScale: 0.62, life: 0.48 * sc });
               this.spawnSlash({
                 x: cx, y: cy + 1.15, z: cz, color: '#38bdf8', coreColor: '#ffffff',
-                rx: 0.16, ry: 0, rz: 0.28, s0: 3.1 * as, s1: 8.2 * as, life: 0.44 * sc, spinSpeed: 5.2, shaderMode: 2,
+                rx: 0.14, ry: 0, rz: 0.28, s0: 3.0 * as, s1: 8.6 * as, life: 0.46 * sc, spinSpeed: 5.4, shaderMode: 2, darkCore: true,
               });
               this.spawnSlash({
-                x: cx, y: cy + 1.35, z: cz, color: '#e0f2fe', coreColor: '#f472b6',
-                rx: -0.16, ry: Math.PI, rz: -0.28, s0: 3.1 * as, s1: 8.2 * as, life: 0.44 * sc, spinSpeed: -5.2, shaderMode: 2,
+                x: cx, y: cy + 1.35, z: cz, color: '#e0f2fe', coreColor: '#38bdf8',
+                rx: -0.14, ry: Math.PI, rz: -0.28, s0: 3.0 * as, s1: 8.6 * as, life: 0.46 * sc, spinSpeed: -5.4, shaderMode: 2, darkCore: true,
               });
               pts.forEach((n) => {
                 this.spawnDebrisBurst(n.x, n.y + 0.65, n.z, '#38bdf8', '#e0f2fe', 6);
-                this.spawnSparks(n.x, n.y + 0.75, n.z, '#e0f2fe', '#38bdf8', 8, 6.4);
+                this.spawnSparks(n.x, n.y + 0.75, n.z, '#e0f2fe', '#38bdf8', 8, 6.6);
               });
             });
             break;
@@ -2629,41 +2786,22 @@ export class TierAttackVfxPool3D {
       if (p >= 1) { r.active = false; r.mesh.visible = false; }
     }
 
-    for (let i = 0; i < this.clockDials.length; i++) {
-      const d = this.clockDials[i];
-      if (!d.active) continue;
-      d.age += dt;
-      const p = Math.min(1, d.age / d.life);
-      const sc = d.s0 + (d.s1 - d.s0) * easeOutCubic(Math.min(1, p / 0.4));
-      d.mesh.scale.setScalar(sc);
-      d.mat.uniforms.uTime.value = this.time;
-      d.mat.uniforms.uProgress.value = p;
-      d.mat.uniforms.uOpacity.value = p > 0.7 ? 1 - (p - 0.7) / 0.3 : 1;
-      if (p >= 1) { d.active = false; d.mesh.visible = false; }
-    }
-
-    for (let i = 0; i < this.heldFrostSlashes.length; i++) {
-      const h = this.heldFrostSlashes[i];
-      if (!h.active) continue;
-      h.age += dt;
-      h.mat.uniforms.uTime.value = this.time;
-      h.mat.uniforms.uDraw.value = Math.min(1, h.age / 0.12);
-      if (h.shattering) {
-        h.shatterAge += dt;
-        const sp = Math.min(1, h.shatterAge / h.shatterDur);
-        h.mat.uniforms.uShatter.value = sp;
-        h.mat.uniforms.uOpacity.value = 1 - sp * sp;
-        h.mesh.scale.set(h.len * (1 + sp * 0.12), h.height * (1 + sp * 0.85), 1);
-        if (sp >= 1) { h.active = false; h.mesh.visible = false; }
-      } else {
-        const vib = Math.sin(this.time * 48 + h.age * 10) * 0.03;
-        h.mesh.scale.set(h.len, h.height * (1 + vib), 1);
-        if (h.age >= h.holdDur) {
-          h.shattering = true;
-          h.shatterAge = 0;
-        }
+    const stepFloorSealSlots = (slots: ClockDialSlot[]): void => {
+      for (let i = 0; i < slots.length; i++) {
+        const d = slots[i];
+        if (!d.active) continue;
+        d.age += dt;
+        const p = Math.min(1, d.age / d.life);
+        const sc = d.s0 + (d.s1 - d.s0) * easeOutCubic(Math.min(1, p / 0.4));
+        d.mesh.scale.setScalar(sc);
+        d.mat.uniforms.uTime.value = this.time;
+        d.mat.uniforms.uProgress.value = p;
+        d.mat.uniforms.uOpacity.value = p > 0.7 ? 1 - (p - 0.7) / 0.3 : 1;
+        if (p >= 1) { d.active = false; d.mesh.visible = false; }
       }
-    }
+    };
+    stepFloorSealSlots(this.clockDials);
+    stepFloorSealSlots(this.frostSeals);
 
     for (let i = 0; i < this.halcyonPortals.length; i++) {
       const p = this.halcyonPortals[i];
@@ -3019,7 +3157,7 @@ export class TierAttackVfxPool3D {
     for (const r of this.rifts) mats.add(r.mat);
     for (const w of this.weapons) mats.add(w.mat);
     for (const d of this.clockDials) mats.add(d.mat);
-    for (const h of this.heldFrostSlashes) mats.add(h.mat);
+    for (const f of this.frostSeals) mats.add(f.mat);
     for (const p of this.halcyonPortals) mats.add(p.mat);
     for (const r of this.halcyonRain) mats.add(r.mat);
     for (const m of this.nocturneMeteors) {
