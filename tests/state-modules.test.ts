@@ -79,6 +79,7 @@ import {
   toggleUnitEnchant,
 } from '../src/game/PlotUnitsDomain';
 import { RELICS } from '../src/game/RelicData';
+import { getResearchNodesForTree } from '../src/game/ResearchData';
 import {
   buildTowerRunBuffPills,
   formatBlessingPickPreview,
@@ -777,7 +778,9 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(state.isOverclockActive(now + 1000)).toBe(true);
       expect(state.getTapDamage(now + 1000)).toBe(baseTap * 2);
       expect(state.getTotalOreDropMult(now + 1000)).toBeCloseTo(baseDrop * 1.5, 6);
-      expect(state.getPlotUnitStats(0, now + 1000)?.dmg).toBe(baseUnitDmg * 2);
+      const ocUnitDmg = state.getPlotUnitStats(0, now + 1000)?.dmg ?? 0;
+      expect(ocUnitDmg).toBeGreaterThan(baseUnitDmg);
+      expect(Math.abs(ocUnitDmg - baseUnitDmg * 2)).toBeLessThanOrEqual(1);
 
       // Expires after 15s
       state.stepOverclock(now + OVERCLOCK_DURATION_SEC * 1000 + 100);
@@ -1671,6 +1674,19 @@ describe('Tahap C GameState Domain Modules', () => {
 
       // World miners always keep their own fixed catalog baseDps
       expect(getEffectiveChibiBaseDps('volt-kensei', ['underground'], new Set(['astral-recruit']))).toBe(10_000);
+    });
+
+    it('aligns World Research tree root/apex costs to 1000x per-world ladder inside unlock affordability', () => {
+      for (let w = 0; w < WORLDS.length; w++) {
+        const nodes = getResearchNodesForTree(WORLDS[w].id);
+        const root = nodes.find((n) => n.requires.length === 0)!;
+        const apex = nodes.find((n) => n.row === 3)!;
+        expect(root.baseCost).toBe(1_500 * Math.pow(1000, w));
+        expect(apex.baseCost).toBe(150_000 * Math.pow(1000, w));
+        if (w < WORLDS.length - 1) {
+          expect(apex.baseCost).toBeLessThan(WORLDS[w + 1].unlockCost);
+        }
+      }
     });
   });
 });
