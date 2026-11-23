@@ -317,7 +317,7 @@ export class IndexInspectorUi {
         <div class="flex items-center gap-2 flex-wrap">
           ${renderRarityBadgeHtml(rarity)}
           <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black border-2 border-[#14111d] ${unlocked ? 'bg-[#6ee7b7] text-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e]'}">${unlocked ? 'Discovered' : 'Locked • Full Preview'}</span>
-          <span class="text-[12px] font-black text-[#5b526e]">${worldDef.name} • Base DPS <span class="text-[#d97706] font-black">${fmtShort(chibi.baseDps)}/s</span></span>
+          <span class="text-[12px] font-black text-[#5b526e]">${worldDef.name} • Base DPS <span class="text-[#d97706] font-black">${fmtShort(this.state.getEffectiveChibiDps(chibi.id))}/s</span></span>
         </div>
       </div>
 

@@ -84,7 +84,12 @@ export class ShopModalsUi {
     if (!cs) return '';
     const item = getPremiumShopItemByChibiId(cs.chibiId) ?? PREMIUM_SHOP_ITEMS[0];
     if (!item) return '';
-    return buildTwinFullscreenRevealDomHtml(cs, item, getChibiById(item.chibiId));
+    return buildTwinFullscreenRevealDomHtml(
+      cs,
+      item,
+      getChibiById(item.chibiId),
+      this.state.getEffectiveChibiDps(item.chibiId)
+    );
   }
 
   private buildPickaxeInspectorHtml(): string {
@@ -640,11 +645,16 @@ export class ShopModalsUi {
         if (res === 'bought') {
           const ownedCount = this.state.miners[chibiId] || 1;
           this.updatePremiumShopLive(root);
-          this.twinCutscene.start(chibiId, ownedCount, () => {
-            audio.playSfx('ui-click');
-            this.pushToast(`✨ ${chibi?.name ?? 'Twin Chibi'} unlocked!`);
-            this.onRequestRender?.();
-          });
+          this.twinCutscene.start(
+            chibiId,
+            ownedCount,
+            () => {
+              audio.playSfx('ui-click');
+              this.pushToast(`✨ ${chibi?.name ?? 'Twin Chibi'} unlocked!`);
+              this.onRequestRender?.();
+            },
+            this.state.getEffectiveChibiDps(chibiId)
+          );
           return;
         }
         if (res === 'no_coins') {

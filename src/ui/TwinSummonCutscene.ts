@@ -219,8 +219,10 @@ function hexToRgbVec3(hex: string): THREE.Vector3 {
 export function buildTwinFullscreenRevealDomHtml(
   cs: TwinSummonCutsceneState,
   item: PremiumShopItemDef,
-  chibi: ChibiDef | undefined
+  chibi: ChibiDef | undefined,
+  effectiveBaseDps?: number
 ): string {
+  const displayBaseDps = effectiveBaseDps ?? chibi?.baseDps ?? 0;
   const poseSrc = chibi ? assetUrl(chibi.poses.pose) : '';
   const chibiName = chibi?.name ?? item.chibiId;
   const twinBadgeHtml = renderRarityBadgeHtml('twin', 'is-compact !ml-0');
@@ -328,7 +330,7 @@ export function buildTwinFullscreenRevealDomHtml(
             <span class="mam-pill rounded-full bg-[#e0f2fe] text-[#0369a1] tracking-wider uppercase">
               ✦ ${item.titleTag} ✦
             </span>
-            ${chibi ? `<span class="mam-pill-xs bg-white text-[#b45309] border-[1.5px] border-[#14111d]">⚡ ${fmtShort(chibi.baseDps)}/s Base</span>` : ''}
+            ${chibi ? `<span class="mam-pill-xs bg-white text-[#b45309] border-[1.5px] border-[#14111d]">⚡ ${fmtShort(displayBaseDps)}/s Base</span>` : ''}
           </div>
           <div class="w-full grid grid-cols-3 gap-2">${passiveChips}</div>
           <div class="text-[11.5px] font-black text-[#0369a1] leading-snug">
@@ -369,6 +371,7 @@ export class TwinSummonCutsceneController {
   private impactCueFired = false;
   private colorCueFired = false;
   private onConfirmHandler: (() => void) | null = null;
+  private effectiveBaseDps: number | undefined;
 
   private glRenderer: THREE.WebGLRenderer | null = null;
   private glScene: THREE.Scene | null = null;
@@ -380,7 +383,12 @@ export class TwinSummonCutsceneController {
     return this.state;
   }
 
-  public start(chibiId: string, ownedCount: number, onConfirm: () => void): void {
+  public start(
+    chibiId: string,
+    ownedCount: number,
+    onConfirm: () => void,
+    effectiveBaseDps?: number
+  ): void {
     this.clear();
     const item = getPremiumShopItemByChibiId(chibiId) ?? PREMIUM_SHOP_ITEMS[0];
     if (!item) {
@@ -389,6 +397,7 @@ export class TwinSummonCutsceneController {
     }
     this.state = { chibiId: item.chibiId, ownedCount, phase: 'animating' };
     this.onConfirmHandler = onConfirm;
+    this.effectiveBaseDps = effectiveBaseDps;
     this.elapsedSec = 0;
     this.lastFrameMs = 0;
     this.orbitCueFired = false;
@@ -438,6 +447,7 @@ export class TwinSummonCutsceneController {
     }
     this.state = null;
     this.onConfirmHandler = null;
+    this.effectiveBaseDps = undefined;
   }
 
   private mountFullscreenDom(item: PremiumShopItemDef): void {
@@ -452,7 +462,7 @@ export class TwinSummonCutsceneController {
 
     const uiWrap = document.createElement('div');
     uiWrap.className = 'relative z-10 w-full h-full';
-    uiWrap.innerHTML = buildTwinFullscreenRevealDomHtml(this.state, item, chibi);
+    uiWrap.innerHTML = buildTwinFullscreenRevealDomHtml(this.state, item, chibi, this.effectiveBaseDps);
     layer.appendChild(uiWrap);
 
     document.body.appendChild(layer);

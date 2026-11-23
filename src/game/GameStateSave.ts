@@ -332,7 +332,7 @@ export function deserializeSaveJson(
   try {
     const data = JSON.parse(raw) as Partial<SavePayload>;
     if (typeof data.cash === 'number' && Number.isFinite(data.cash)) {
-      state.cash = data.cash > 1e16 ? 1e12 : Math.max(0, data.cash);
+      state.cash = data.cash > 1e36 ? 1e24 : Math.max(0, data.cash);
     }
     if (typeof data.gems === 'number' && Number.isFinite(data.gems)) {
       state.gems = data.gems > 10_000_000 ? 250_000 : Math.max(0, Math.round(data.gems));

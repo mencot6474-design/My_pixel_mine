@@ -223,8 +223,10 @@ function hexToRgbVec3(hex: string): THREE.Vector3 {
 export function buildFullscreenRevealDomHtml(
   cs: OmegaForgeCutsceneState,
   boss: OmegaBossDef,
-  chibi: ChibiDef | undefined
+  chibi: ChibiDef | undefined,
+  effectiveBaseDps?: number
 ): string {
+  const displayBaseDps = effectiveBaseDps ?? chibi?.baseDps ?? 0;
   const starScale = getOmegaPassiveStarScale(cs.targetStars);
   const poseSrc = chibi ? assetUrl(chibi.poses.pose) : '';
   const omegaBadgeHtml = renderRarityBadgeHtml('omega', 'is-compact !ml-0');
@@ -303,7 +305,7 @@ export function buildFullscreenRevealDomHtml(
             <span class="mam-pill rounded-full bg-[#fde047] text-[#14111d] tracking-wider uppercase">
               ${cs.kind === 'awaken' ? `✦ OMEGA AWAKENING ★${cs.targetStars} COMPLETE! ✦` : '✦ OMEGA FORGE COMPLETE! ✦'}
             </span>
-            ${chibi ? `<span class="mam-pill-xs bg-white text-[#b45309] border-[1.5px] border-[#14111d]">⚡ ${fmtShort(chibi.baseDps)}/s Base</span>` : ''}
+            ${chibi ? `<span class="mam-pill-xs bg-white text-[#b45309] border-[1.5px] border-[#14111d]">⚡ ${fmtShort(displayBaseDps)}/s Base</span>` : ''}
           </div>
           <div class="w-full grid grid-cols-3 gap-2">${passiveChips}</div>
           <div class="text-[11.5px] font-black text-[#15803d] leading-snug">
@@ -350,6 +352,7 @@ export class OmegaForgeCutsceneController {
   private impactCueFired = false;
   private colorCueFired = false;
   private onConfirmHandler: (() => void) | null = null;
+  private effectiveBaseDps: number | undefined;
 
   private glRenderer: THREE.WebGLRenderer | null = null;
   private glScene: THREE.Scene | null = null;
@@ -365,11 +368,13 @@ export class OmegaForgeCutsceneController {
     kind: 'unlock' | 'awaken',
     bossId: OmegaBossId,
     targetStars: number,
-    onConfirm: () => void
+    onConfirm: () => void,
+    effectiveBaseDps?: number
   ): void {
     this.clear();
     this.state = { kind, bossId, targetStars, phase: 'animating' };
     this.onConfirmHandler = onConfirm;
+    this.effectiveBaseDps = effectiveBaseDps;
     this.elapsedSec = 0;
     this.lastFrameMs = 0;
     this.meteorCueFired = false;
@@ -420,6 +425,7 @@ export class OmegaForgeCutsceneController {
     }
     this.state = null;
     this.onConfirmHandler = null;
+    this.effectiveBaseDps = undefined;
   }
 
   private mountFullscreenDom(boss: OmegaBossDef): void {
@@ -434,7 +440,7 @@ export class OmegaForgeCutsceneController {
 
     const uiWrap = document.createElement('div');
     uiWrap.className = 'relative z-10 w-full h-full';
-    uiWrap.innerHTML = buildFullscreenRevealDomHtml(this.state, boss, chibi);
+    uiWrap.innerHTML = buildFullscreenRevealDomHtml(this.state, boss, chibi, this.effectiveBaseDps);
     layer.appendChild(uiWrap);
 
     document.body.appendChild(layer);

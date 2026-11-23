@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { shouldStopAutoMutationRoll } from '../src/ui/PlotInspectUi';
+import { PlotInspectUi, shouldStopAutoMutationRoll } from '../src/ui/PlotInspectUi';
 import { AudioManager, getMusicalScaleRate, MUSICAL_SCALE_SEMITONES } from '../src/audio/AudioManager';
 import { IndexModalUi } from '../src/ui/IndexModalUi';
 import { getIndexTabEntryIds } from '../src/game/IndexRewardsDomain';
@@ -1578,10 +1578,40 @@ describe('Tahap B HUD Modules', () => {
       expect(confirmHtml).toContain('data-twin-confirm="true"');
       expect(confirmHtml).toContain('Confirm &amp; Collect');
       expect(confirmHtml).toContain('Yukikage Twins Ready for Deployment');
+      expect(confirmHtml).toContain('23/s Base');
+      expect(confirmHtml).not.toContain('230Sx');
 
       shopUi.clearPremiumCutscene();
       expect(shopUi.getPremiumCutsceneState()).toBeNull();
       expect(shopUi.renderFullscreenCutsceneHtml()).toBe('');
+    });
+
+    it('renders W1-capped upgrade costs in PlotInspectUi instead of leaked W8 Sx prices', () => {
+      const state = new GameState();
+      state.unlockedWorlds = ['underground'];
+      state.miners['yukikage-twins'] = 1;
+      state.plotMiners[0] = 'yukikage-twins';
+      state.plotUnits[0] = {
+        chibiId: 'yukikage-twins',
+        damageLevel: 1,
+        speedLevel: 1,
+        miningSpeedLevel: 1,
+        pickaxeId: '',
+        mutationId: 'normal',
+        enchantId: null,
+      };
+      const ui = new PlotInspectUi(
+        state,
+        () => {},
+        () => {},
+        () => {},
+        () => '',
+        () => {}
+      );
+      const fakeRoot = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] } as unknown as HTMLElement;
+      ui.render(fakeRoot, 0);
+      expect(fakeRoot.innerHTML).toContain('$550');
+      expect(fakeRoot.innerHTML).not.toContain('Sx');
     });
   });
 });

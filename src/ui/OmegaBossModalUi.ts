@@ -109,15 +109,27 @@ export class OmegaBossModalUi {
     const cs = this.forgeCutscene.getState();
     if (!cs) return '';
     const boss = getOmegaBossById(cs.bossId) ?? OMEGA_BOSS_DEFS[0];
-    return buildFullscreenRevealDomHtml(cs, boss, getChibiById(boss.chibiId));
+    return buildFullscreenRevealDomHtml(
+      cs,
+      boss,
+      getChibiById(boss.chibiId),
+      this.state.getEffectiveChibiDps(boss.chibiId)
+    );
   }
 
   private startForgeCutscene(kind: 'unlock' | 'awaken', bossId: OmegaBossId, targetStars: number): void {
-    this.forgeCutscene.start(kind, bossId, targetStars, () => {
-      audio.playSfx('ui-click');
-      this.onToast?.(kind === 'awaken' ? 'OMEGA Awakened! Passives Boosted!' : 'OMEGA Chibi Forged & Unlocked!');
-      this.onRequestRender();
-    });
+    const boss = getOmegaBossById(bossId) ?? OMEGA_BOSS_DEFS[0];
+    this.forgeCutscene.start(
+      kind,
+      bossId,
+      targetStars,
+      () => {
+        audio.playSfx('ui-click');
+        this.onToast?.(kind === 'awaken' ? 'OMEGA Awakened! Passives Boosted!' : 'OMEGA Chibi Forged & Unlocked!');
+        this.onRequestRender();
+      },
+      this.state.getEffectiveChibiDps(boss.chibiId)
+    );
     this.onRequestRender();
   }
 

@@ -282,7 +282,11 @@ export class PlotInspectUi {
       const dmgMax = unit.damageLevel >= 100;
       const spdMax = unit.speedLevel >= 17;
       const minMax = unit.miningSpeedLevel >= 16;
-      const costMult = getChibiUpgradeCostMult(unit.chibiId);
+      const costMult = getChibiUpgradeCostMult(
+        unit.chibiId,
+        this.state.unlockedWorlds,
+        this.state.discovered
+      );
       const dmgPlan = computeBulkUpgradePlan({
         currentLevel: unit.damageLevel,
         maxLevel: 100,

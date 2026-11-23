@@ -1688,5 +1688,49 @@ describe('Tahap C GameState Domain Modules', () => {
         }
       }
     });
+
+    it('preserves W6-W8 endgame cash >= 1e24 on save/reload, caps Twin upgrade cost, and avoids tap Overclock double-counting', () => {
+      const state = new GameState();
+      state.cash = 2.5e25;
+      state.unlockedWorlds = ['underground'];
+      state.miners['yukikage-twins'] = 1;
+      state.plotMiners[0] = 'yukikage-twins';
+      state.plotUnits[0] = {
+        chibiId: 'yukikage-twins',
+        damageLevel: 1,
+        speedLevel: 1,
+        miningSpeedLevel: 1,
+        pickaxeId: '',
+        mutationId: 'normal',
+        enchantId: null,
+      };
+
+      const raw = JSON.stringify(serializeSavePayload(state));
+      const reloaded = new GameState();
+      deserializeSaveJson(reloaded, raw);
+      expect(reloaded.cash).toBe(2.5e25);
+      expect(getChibiUpgradeCostMult('yukikage-twins', reloaded.unlockedWorlds, reloaded.discovered)).toBe(11);
+      expect(reloaded.getPlotUnitStats(0)?.dmgCost).toBe(550);
+
+      // W8 Chrono Seraph on plot: Overclock Tier 1 doubles tap damage cleanly without 4x double-counting
+      reloaded.unlockedWorlds = WORLDS.map((w) => w.id);
+      reloaded.miners['chrono-seraph'] = 1;
+      reloaded.plotMiners[0] = 'chrono-seraph';
+      reloaded.plotUnits[0] = {
+        chibiId: 'chrono-seraph',
+        damageLevel: 1,
+        speedLevel: 1,
+        miningSpeedLevel: 1,
+        pickaxeId: '',
+        mutationId: 'normal',
+        enchantId: null,
+      };
+      const now = 5_000_000;
+      const baseTap = reloaded.getTapDamage(now);
+      expect(reloaded.chargeOverclock(100, now)).toBe(true);
+      const ocTap = reloaded.getTapDamage(now + 1000);
+      expect(ocTap).toBeGreaterThanOrEqual(baseTap * 2 - 1);
+      expect(ocTap).toBeLessThanOrEqual(baseTap * 2 + 1);
+    });
   });
 });
