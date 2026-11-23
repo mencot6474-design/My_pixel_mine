@@ -37,6 +37,7 @@ import {
   deserializeSaveJson,
   isValidIndexId,
   migrateOreId,
+  type PlotUnitState,
   serializeSavePayload,
 } from '../src/game/GameStateSave';
 import {
@@ -1771,8 +1772,8 @@ describe('Tahap C GameState Domain Modules', () => {
           null,
           null,
           null,
-        ],
-        stashedUnits: {} as Record<string, any[]>,
+        ] as (PlotUnitState | null)[],
+        stashedUnits: {} as Record<string, PlotUnitState[]>,
         ownedPickaxes: {} as Record<string, number>,
         teamPresets: [
           [null, null, null, null, null],
