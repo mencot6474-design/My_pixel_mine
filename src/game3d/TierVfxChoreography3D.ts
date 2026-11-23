@@ -7,6 +7,7 @@ import {
   resolvePitBounds,
   type TierAttackFireOpts,
   type TierVfxHooks,
+  type WorldPoint3,
 } from './TierMotionPath3D';
 import type { WeaponSlot } from './TierVfxUpdate3D';
 
@@ -130,6 +131,12 @@ export interface TierVfxChoreoContext {
     trailColor?: string; s0?: number; s1?: number; life?: number; onArrive?: () => void;
   }) => void;
   spawnSparks: (x: number, y: number, z: number, color: string, secondary: string, count?: number, speed?: number) => void;
+  fireCrimsonRoninSakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
+  }) => void;
+  fireObsidianSovereignSakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
+  }) => void;
 }
 
 export function fireTierAttackChoreography(
@@ -397,152 +404,34 @@ export function fireTierAttackChoreography(
 
     case 'omega': {
       if (opts.chibiId === 'obsidian-sovereign') {
-        // OBSIDIAN SOVEREIGN ULT: 3 Giant Slashes -> Overhead Crescent Moon Slash -> BOOOOM!
-        // (Clean arena: no floor magic circle, no ground spikes, no floor cracks, no lightning)
-        ctx.hooks.onArenaDim?.(0.8, '#05020c', 1.1 * sc);
-
-        // Slash I: Wide Dark-Ink + Blinding Silver-White Crescent
-        ctx.spawnSlash({
-          x: cx - 0.3 * as, y: cy + 1.05, z: cz + 0.2 * as,
-          color: '#a855f7', coreColor: '#ffffff',
-          rx: 0.24, ry: 0.35, rz: 0.32, s0: 2.3 * as, s1: 6.4 * as, life: 0.32 * sc, spinSpeed: 5.2, darkCore: true,
-        });
-        ctx.spawnSlash({
-          x: cx - 0.3 * as, y: cy + 1.08, z: cz + 0.2 * as,
-          color: '#f8fafc', coreColor: '#e879f9',
-          rx: 0.24, ry: 0.45, rz: 0.32, s0: 2.1 * as, s1: 6.1 * as, life: 0.26 * sc, spinSpeed: 5.6,
-        });
-        ctx.spawnSparks(cx - 1.0 * as, cy + 0.9, cz, '#f8fafc', '#e879f9', 8, 6.2);
-
-        // Slash II: Reverse Giant Crescent
-        ctx.after(0.22 * sc, () => {
-          ctx.hooks.onSpeedLines?.(0.85, 0.26);
-          ctx.spawnSlash({
-            x: cx + 0.3 * as, y: cy + 1.15, z: cz,
-            color: '#e879f9', coreColor: '#ffffff',
-            rx: -0.26, ry: Math.PI - 0.35, rz: -0.34, s0: 2.5 * as, s1: 6.8 * as, life: 0.32 * sc, spinSpeed: -5.4, darkCore: true,
-          });
-          ctx.spawnSlash({
-            x: cx + 0.3 * as, y: cy + 1.18, z: cz,
-            color: '#ffffff', coreColor: '#a855f7',
-            rx: -0.26, ry: Math.PI - 0.45, rz: -0.34, s0: 2.3 * as, s1: 6.5 * as, life: 0.26 * sc, spinSpeed: -5.8,
-          });
-          ctx.spawnSparks(cx + 1.0 * as, cy + 1.0, cz, '#f8fafc', '#e879f9', 8, 6.2);
-        });
-
-        // Slash III: Rising Cross-Moon Cleave + Micro Impact Frame
-        ctx.after(0.44 * sc, () => {
-          ctx.hooks.onImpactFrame?.(0.85, 0.0, '#e879f9', 0.036);
-          ctx.spawnSlash({
-            x: cx, y: cy + 1.3, z: cz,
-            color: '#ffffff', coreColor: '#e879f9',
-            rx: 0.52, ry: 0.7, rz: 0.55, s0: 2.7 * as, s1: 7.4 * as, life: 0.34 * sc, spinSpeed: 5.8, darkCore: true,
-          });
-          ctx.spawnSlash({
-            x: cx, y: cy + 1.3, z: cz,
-            color: '#a855f7', coreColor: '#ffffff',
-            rx: -0.45, ry: -0.7, rz: -0.52, s0: 2.7 * as, s1: 7.4 * as, life: 0.34 * sc, spinSpeed: -5.8,
-          });
-        });
-
-        // Phase 2: Overhead Vertical Crescent Moon Slash from above
-        ctx.after(0.68 * sc, () => {
-          ctx.hooks.onSpeedLines?.(1.0, 0.4);
-          ctx.spawnQuad({
-            tex: ctx.ringTex, x: cx, y: cy + 3.6, z: cz - 0.25,
-            color: '#f8fafc', s0: 4.2 * as, s1: 0.25 * as, life: 0.26 * sc, alpha: 0.9,
-          });
-          ctx.spawnSlash({
-            x: cx, y: cy + 2.1, z: cz + 0.15,
-            color: '#a855f7', coreColor: '#ffffff',
-            rx: Math.PI * 0.44, ry: 0.08, rz: 0.16, s0: 3.1 * as, s1: 9.2 * as, life: 0.4 * sc, spinSpeed: -4.2, darkCore: true,
-          });
-          ctx.spawnSlash({
-            x: cx, y: cy + 2.12, z: cz + 0.2,
-            color: '#f8fafc', coreColor: '#e879f9',
-            rx: Math.PI * 0.44, ry: 0.14, rz: 0.16, s0: 3.25 * as, s1: 9.5 * as, life: 0.34 * sc, spinSpeed: -4.6,
-          });
-        });
-
-        // Phase 3: CRESCENT MOON BOOOOM!!
-        ctx.after(0.86 * sc, () => {
-          ctx.hooks.onImpactFrame?.(1.0, 1.0, '#e879f9', 0.068);
-          ctx.hooks.onSpeedLines?.(1.0, 0.46);
-          ctx.spawnBeam({ x: cx, y: cy, z: cz, color: '#a855f7', coreColor: '#ffffff', radius: 1.65 * as, height: 1.25, life: 0.72 * sc });
-          ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#e879f9', coreColor: '#ffffff', s0: 0.95 * as, s1: 8.4 * as, yScale: 0.54, life: 0.62 * sc });
-          ctx.spawnSlash({
-            x: cx, y: cy + 0.58, z: cz,
-            color: '#e879f9', coreColor: '#ffffff',
-            rx: 0.05, ry: 0, rz: 0, s0: 2.9 * as, s1: 8.6 * as, life: 0.46 * sc, spinSpeed: -5.4, darkCore: true,
-          });
-          pts.forEach((n) => {
-            ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#09090b', '#e879f9', 6);
-            ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#f8fafc', '#e879f9', 8, 7.2);
-          });
+        ctx.fireObsidianSovereignSakuga({
+          cx,
+          cy,
+          cz,
+          areaScale: as,
+          pts,
+          onImpact: () => {
+            pts.forEach((n) => {
+              ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#09090b', '#e879f9', 6);
+              ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#f8fafc', '#e879f9', 8, 7.2);
+            });
+          },
         });
         break;
       }
 
-      // CRIMSON RONIN ULT: Iaijutsu Crimson Dimension Sever
-      // (Clean arena: no floor magic circle, no floor cracks, no lightning)
-      ctx.hooks.onArenaDim?.(0.76, '#160307', 0.95 * sc);
-      const cutPalette = ['#ef4444', '#22d3ee', '#ef4444', '#fbbf24', '#ef4444'];
-      pts.slice(0, 5).forEach((n, idx) => {
-        ctx.after(idx * 0.065 * sc, () => {
-          const c = cutPalette[idx % cutPalette.length];
-          ctx.spawnRift({
-            x: n.x, y: n.y + 1.15 + (idx % 2) * 0.25, z: n.z, color: c, coreColor: '#ffffff',
-            ry: idx % 2 === 0 ? 0.3 : -0.3, rz: idx % 2 === 0 ? 0.36 : -0.4, len: 4.8 * as, height: 0.9 * as, life: 0.78 * sc,
+      ctx.fireCrimsonRoninSakuga({
+        cx,
+        cy,
+        cz,
+        areaScale: as,
+        pts,
+        onImpact: () => {
+          pts.forEach((n) => {
+            ctx.spawnDebrisBurst(n.x, n.y + 0.8, n.z, '#ef4444', '#fbbf24', 6);
+            ctx.spawnSparks(n.x, n.y + 0.9, n.z, '#fef08a', '#ffffff', 8, 7.0);
           });
-          ctx.spawnSlash({
-            x: n.x, y: n.y + 0.95, z: n.z, color: c, coreColor: '#ffffff',
-            rx: (idx % 2 === 0 ? 1 : -1) * 0.48, ry: idx * 1.15, rz: idx % 2 === 0 ? 0.4 : -0.36,
-            s0: 1.3 * as, s1: 3.1 * as, life: 0.32 * sc, spinSpeed: (idx % 2 === 0 ? 1 : -1) * 5.0,
-          });
-          ctx.spawnSparks(n.x, n.y + 0.85, n.z, c, '#fef08a', 6, 5.8);
-        });
-      });
-
-      ctx.after(0.32 * sc, () => {
-        // Master pit rift + contracting golden parry ring
-        ctx.spawnRift({
-          x: cx, y: cy + 2.0, z: cz, color: '#ef4444', coreColor: '#fef08a',
-          ry: 0.1, rz: -0.22, len: 11.8 * as, height: 1.55 * as, life: 0.72 * sc,
-        });
-        ctx.spawnQuad({
-          tex: ctx.ringTex, x: cx, y: cy + 2.6, z: cz - 0.3,
-          color: '#fbbf24', s0: 4.5 * as, s1: 0.28 * as, life: 0.28 * sc, alpha: 0.92,
-        });
-        ctx.spawnWeapon({
-          kind: 'blade',
-          color: '#ef4444',
-          coreColor: '#fef08a',
-          startPos: new THREE.Vector3(cx - 4.4 * as, cy + 6.4, cz - 1.2 * as),
-          endPos: new THREE.Vector3(cx + 3.6 * as, cy + 0.7, cz + 1.4 * as),
-          startRot: new THREE.Euler(0.45, 0.2, 1.35),
-          endRot: new THREE.Euler(-0.35, 0.2, -2.18),
-          scale: 4.8 * Math.max(0.7, as),
-          mode: 'swing',
-          life: 0.24 * sc,
-          onArrive: () => {
-            ctx.hooks.onImpactFrame?.(1.0, 1.0, '#ef4444', 0.06);
-            ctx.hooks.onSpeedLines?.(1.0, 0.44);
-            ctx.spawnSlash({
-              x: cx, y: cy + 1.35, z: cz, color: '#ef4444', coreColor: '#fef08a',
-              rx: 0.22, ry: 0, rz: -0.35, s0: 2.8 * as, s1: 7.8 * as, life: 0.44 * sc, spinSpeed: 5.2,
-            });
-            ctx.spawnSlash({
-              x: cx, y: cy + 1.5, z: cz, color: '#22d3ee', coreColor: '#ffffff',
-              rx: -0.25, ry: Math.PI * 0.6, rz: 0.42, s0: 2.7 * as, s1: 7.4 * as, life: 0.44 * sc, spinSpeed: -5.2,
-            });
-            ctx.spawnBeam({ x: cx, y: cy, z: cz, color: '#ef4444', coreColor: '#fef08a', radius: 1.35 * as, height: 1.15, life: 0.66 * sc });
-            ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#ef4444', coreColor: '#22d3ee', s0: 0.85 * as, s1: 7.6 * as, yScale: 0.54, life: 0.58 * sc });
-            pts.forEach((n) => {
-              ctx.spawnDebrisBurst(n.x, n.y + 0.8, n.z, '#ef4444', '#22d3ee', 6);
-              ctx.spawnSparks(n.x, n.y + 0.9, n.z, '#fef08a', '#ffffff', 8, 7.0);
-            });
-          },
-        });
+        },
       });
       break;
     }
