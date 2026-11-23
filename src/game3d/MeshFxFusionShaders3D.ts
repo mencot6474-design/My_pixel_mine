@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeSimpleGeos } from './MeshHelpers3D';
+export * from './MeshFxFusionBackShaders3D';
 
 export type FusionChibiVariant =
   | 'glitch-cheshire'

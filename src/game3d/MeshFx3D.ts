@@ -625,48 +625,85 @@ export function createCrystalSpikeGeometry(): THREE.BufferGeometry {
   return geo;
 }
 
-/** Colossal winged-crossguard Abyssal Greatsword geometry for Obsidian Sovereign. */
+/** Colossal winged-crossguard Abyssal Greatsword + pommel chain pendant geometry for Obsidian Sovereign. */
 export function createAbyssalGreatswordGeometry(): THREE.BufferGeometry {
   const shape = new THREE.Shape();
-  shape.moveTo(-0.035, -0.62);
-  shape.lineTo(0.035, -0.62);
-  shape.lineTo(0.038, -0.08);
-  shape.lineTo(0.32, 0.06);
-  shape.lineTo(0.24, -0.02);
-  shape.lineTo(0.11, 0.08);
-  shape.lineTo(0.16, 0.24);
-  shape.lineTo(0.13, 1.85);
-  shape.lineTo(0.0, 2.38);
-  shape.lineTo(-0.13, 1.85);
-  shape.lineTo(-0.16, 0.24);
-  shape.lineTo(-0.11, 0.08);
-  shape.lineTo(-0.24, -0.02);
-  shape.lineTo(-0.32, 0.06);
-  shape.lineTo(-0.038, -0.08);
+  shape.moveTo(-0.038, -0.64);
+  shape.lineTo(0.038, -0.64);
+  shape.lineTo(0.042, -0.08);
+  shape.lineTo(0.36, 0.08);
+  shape.lineTo(0.26, -0.02);
+  shape.lineTo(0.12, 0.08);
+  shape.lineTo(0.18, 0.25);
+  shape.lineTo(0.14, 1.88);
+  shape.lineTo(0.0, 2.42);
+  shape.lineTo(-0.14, 1.88);
+  shape.lineTo(-0.18, 0.25);
+  shape.lineTo(-0.12, 0.08);
+  shape.lineTo(-0.26, -0.02);
+  shape.lineTo(-0.36, 0.08);
+  shape.lineTo(-0.042, -0.08);
   shape.closePath();
 
-  const geo = new THREE.ExtrudeGeometry(shape, {
+  const bladeGeo = new THREE.ExtrudeGeometry(shape, {
     depth: 0.055,
     bevelEnabled: true,
     bevelThickness: 0.022,
     bevelSize: 0.018,
     bevelSegments: 1,
   });
-  geo.translate(0, 0, -0.0275);
-  geo.computeVertexNormals();
-  return geo;
+  bladeGeo.translate(0, 0, -0.0275);
+
+  const guardDiamond = new THREE.OctahedronGeometry(0.095, 0);
+  guardDiamond.scale(0.85, 1.35, 0.65);
+  guardDiamond.translate(0, 0.06, 0);
+
+  const pommelSpire = new THREE.OctahedronGeometry(0.085, 0);
+  pommelSpire.scale(0.85, 1.4, 0.65);
+  pommelSpire.translate(0, -0.70, 0);
+
+  const chainStem = new THREE.CylinderGeometry(0.014, 0.014, 0.24, 6);
+  chainStem.rotateZ(0.55);
+  chainStem.translate(0.07, -0.82, 0);
+
+  const charmPendant = new THREE.OctahedronGeometry(0.078, 0);
+  charmPendant.scale(0.75, 1.45, 0.45);
+  charmPendant.rotateZ(0.55);
+  charmPendant.translate(0.14, -0.94, 0);
+
+  return mergeSimpleGeos([bladeGeo, guardDiamond, pommelSpire, chainStem, charmPendant]);
 }
 
-/** Seven-spiked iron halo ring geometry matching Obsidian Sovereign's crown halo. */
+/** Nine-spearhead forged dark-steel halo ring geometry matching Obsidian Sovereign's canonical halo. */
 export function createSpikedHaloGeometry(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  parts.push(new THREE.TorusGeometry(1.0, 0.048, 8, 36));
-  for (let i = 0; i < 7; i++) {
-    const angle = (i / 7) * Math.PI * 2 + Math.PI / 2;
-    const spike = new THREE.ConeGeometry(0.075, 0.56, 4);
-    spike.translate(0, 1.24, 0);
-    spike.rotateZ(angle - Math.PI / 2);
-    parts.push(spike);
+  parts.push(new THREE.TorusGeometry(0.96, 0.046, 8, 36));
+
+  // 9 radial diamond-barbed spearheads across the upper & side arc (matching idle.webp & pose.webp)
+  const spearOffsets = [0, 0.44, -0.44, 0.88, -0.88, 1.32, -1.32, 1.74, -1.74];
+  for (let i = 0; i < spearOffsets.length; i++) {
+    const offset = spearOffsets[i];
+    const isApex = i === 0;
+    const outerTip = new THREE.ConeGeometry(isApex ? 0.088 : 0.068, isApex ? 0.66 : 0.52, 4);
+    outerTip.scale(0.85, 1.0, 0.45);
+    outerTip.translate(0, 0.98 + (isApex ? 0.30 : 0.24), 0);
+    outerTip.rotateZ(-offset);
+    parts.push(outerTip);
+
+    // Inner counter-barb piercing inward through the iron ring
+    const innerBarb = new THREE.ConeGeometry(isApex ? 0.056 : 0.044, isApex ? 0.26 : 0.20, 4);
+    innerBarb.scale(0.82, 1.0, 0.42);
+    innerBarb.rotateX(Math.PI);
+    innerBarb.translate(0, 0.94 - (isApex ? 0.12 : 0.09), 0);
+    innerBarb.rotateZ(-offset);
+    parts.push(innerBarb);
+
+    // Riveted diamond collar on the ring
+    const collar = new THREE.OctahedronGeometry(isApex ? 0.082 : 0.066, 0);
+    collar.scale(1.1, 0.75, 0.55);
+    collar.translate(0, 0.96, 0);
+    collar.rotateZ(-offset);
+    parts.push(collar);
   }
   return mergeSimpleGeos(parts);
 }

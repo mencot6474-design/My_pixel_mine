@@ -152,10 +152,16 @@ import {
   getPlazaSkyDomeTexture,
 } from '../src/game3d/WorldSkyTextures3D';
 import {
+  createAetherDivineBroadSwordGeometry,
   createAetherMonarchCrownGeometry,
   createAetherMonarchCrownShaderMaterial,
   createAetherNexusSealShaderMaterial,
+  createAetherSpectrumSwordBackShaderMaterial,
+  createAetherSunburstBackHaloShaderMaterial,
+  createCheshireCyberBackHaloShaderMaterial,
   createCheshireGlitchCardShaderMaterial,
+  createCheshireGlitchClawBackShaderMaterial,
+  createCheshireGlitchPixelWingGeometry,
   createCheshireGlitchSealShaderMaterial,
   createClockworkChronoChassisShaderMaterial,
   createClockworkSakugaWeaponShaderMaterial,
@@ -170,20 +176,41 @@ import {
   createLullabyMoonCradleArchGeometry,
   createLullabyMoonCradleShaderMaterial,
   createLullabyMusicBoxSealShaderMaterial,
+  createMonochromeCruciformBackShaderMaterial,
+  createMonochromeCruciformSwordGeometry,
   createMonochromeJudgementObeliskShaderMaterial,
   createMonochromeObeliskGeometry,
   createMonochromeSanctuarySealShaderMaterial,
+  createMonochromeSumiBackHaloShaderMaterial,
   createNocturneEclipseCraterShaderMaterial,
   createNocturneEclipseHaloShaderMaterial,
   createNocturneEclipseMonolithGeometry,
   createNocturneEclipseMonolithShaderMaterial,
+  createObsidianCrownHaloShaderMaterial,
+  createObsidianGreatswordShaderMaterial,
+  createObsidianMonolithShardShaderMaterial,
+  createObsidianShatterMonolithGeometry,
+  createPrismHexagramBackHaloShaderMaterial,
+  createPrismIridescentBackShaderMaterial,
   createPrismOctahedronGeometry,
   createPrismRefractionSealShaderMaterial,
   createPrismShardColumnShaderMaterial,
+  createPrismTriangleCrownHaloGeometry,
+  createPrismWingDiamondGeometry,
   createSlashShaderMaterial,
+  createThornBrambleSpikeBladeGeometry,
+  createThornGothicBrambleBackShaderMaterial,
+  createThornIronWheelBackHaloShaderMaterial,
   createThornRoseMandalaShaderMaterial,
+  createThornSpiritCrownGeometry,
   createThornVineLanceGeometry,
   createThornVineLanceShaderMaterial,
+  createYukikageGlacialClusterGeometry,
+  createYukikageHitodamaLanternGeometry,
+  createYukikageKunaiShaderMaterial,
+  createYukikageShrineRingShaderMaterial,
+  createYukikageWagasaShaderMaterial,
+  createYukikageWagasaUmbrellaGeometry,
 } from '../src/game3d/MeshFx3D';
 import {
   buildTierMotionWaypoints,
@@ -3375,7 +3402,20 @@ describe('Pure 3D Mine World', () => {
     expect(roninBack?.visible).toBe(true);
     expect(roninBack?.children.length).toBe(9); // 1 Tsuba HUD Halo disc + 8 Floating Katana Fan blades
     expect(sovBack?.visible).toBe(true);
-    expect(sovBack?.children.length).toBe(7); // 1 Crown HUD disc + 1 Spiked Crown + 1 Colossal Greatsword + 4 Floating Greatswords
+    expect(sovBack?.children.length).toBe(7); // 1 Black-Flame & White-Lightning Aura disc + 1 9-Spearhead Iron Halo + 1 Colossal Greatsword + 4 Shattered Obsidian Monolith Crags
+
+    const obsHaloMat = createObsidianCrownHaloShaderMaterial();
+    const obsSwordMat = createObsidianGreatswordShaderMaterial();
+    const obsMonolithMat = createObsidianMonolithShardShaderMaterial();
+    const obsMonolithGeo = createObsidianShatterMonolithGeometry();
+    for (const m of [obsHaloMat, obsSwordMat, obsMonolithMat]) {
+      expect(m.blending).toBe(THREE.NormalBlending);
+      expect(m.uniforms.uOpacity).toBeDefined();
+      expect(m.uniforms.uTime).toBeDefined();
+      m.dispose();
+    }
+    expect(obsMonolithGeo.getAttribute('position').count).toBeGreaterThan(20);
+    obsMonolithGeo.dispose();
 
     // Idle update keeps Omega back-attachments active and hides them in hologram mode
     roninSprite.update(0.05, 0.25, cam);
@@ -3484,6 +3524,10 @@ describe('Pure 3D Mine World', () => {
       expect(impactCalls).toBeGreaterThan(0);
 
       const sprite = new ChibiSprite3D(def!);
+      if (id === 'yukikage-twins') {
+        const backGroup = sprite.group.getObjectByName('chibiBackAttachmentGroup');
+        expect(backGroup?.children.length).toBe(7); // Wagasa Frost-Ink Halo + 1 Wagasa Umbrella + 2 Hitodama Lanterns + 3 Glacial Clusters
+      }
       if (id === 'halcyon-twins') {
         const backGroup = sprite.group.getObjectByName('chibiBackAttachmentGroup');
         expect(backGroup?.children.length).toBe(7); // Valkyrie Halo + 4 Wing-Blades + 2 Rail-Bows
@@ -3508,6 +3552,27 @@ describe('Pure 3D Mine World', () => {
     }
 
     const halcyonSeal = createHalcyonOrbitalSealShaderMaterial();
+    const yukikageHaloMat = createYukikageShrineRingShaderMaterial();
+    const yukikageCryoMat = createYukikageKunaiShaderMaterial();
+    const yukikageWagasaMat = createYukikageWagasaShaderMaterial();
+    const yukikageWagasaGeo = createYukikageWagasaUmbrellaGeometry();
+    const yukikageHitodamaGeo = createYukikageHitodamaLanternGeometry();
+    const yukikageGlacialGeo = createYukikageGlacialClusterGeometry();
+    for (const m of [yukikageHaloMat, yukikageCryoMat, yukikageWagasaMat]) {
+      expect(m.blending).toBe(THREE.NormalBlending);
+      expect(m.uniforms.uOpacity).toBeDefined();
+      expect(m.uniforms.uTime).toBeDefined();
+      m.dispose();
+    }
+    for (const g of [yukikageWagasaGeo, yukikageHitodamaGeo, yukikageGlacialGeo]) {
+      expect(g.getAttribute('position').count).toBeGreaterThan(20);
+    }
+    yukikageWagasaGeo.computeBoundingBox();
+    expect(yukikageWagasaGeo.boundingBox!.max.z).toBeLessThanOrEqual(0.08);
+    expect(yukikageWagasaGeo.boundingBox!.min.z).toBeGreaterThanOrEqual(-0.08);
+    for (const g of [yukikageWagasaGeo, yukikageHitodamaGeo, yukikageGlacialGeo]) {
+      g.dispose();
+    }
     const halcyonPillarMat = createHalcyonRailPillarShaderMaterial();
     const halcyonHaloMat = createHalcyonValkyrieHaloShaderMaterial();
     const halcyonPillarGeo = createHalcyonRailPillarGeometry();
@@ -3587,12 +3652,36 @@ describe('Pure 3D Mine World', () => {
       createPrismOctahedronGeometry(),
       createAetherMonarchCrownGeometry(),
     ];
-    for (const m of [...sealMats, ...propMats]) {
+    const backHaloMats = [
+      createCheshireCyberBackHaloShaderMaterial(),
+      createThornIronWheelBackHaloShaderMaterial(),
+      createMonochromeSumiBackHaloShaderMaterial(),
+      createPrismHexagramBackHaloShaderMaterial(),
+      createAetherSunburstBackHaloShaderMaterial(),
+    ];
+    const backPropMats = [
+      createCheshireGlitchClawBackShaderMaterial(),
+      createThornGothicBrambleBackShaderMaterial(),
+      createMonochromeCruciformBackShaderMaterial(),
+      createPrismIridescentBackShaderMaterial(),
+      createAetherSpectrumSwordBackShaderMaterial(),
+    ];
+    const backPropGeos = [
+      createCheshireGlitchPixelWingGeometry(),
+      createThornSpiritCrownGeometry(),
+      createThornBrambleSpikeBladeGeometry(),
+      createMonochromeCruciformSwordGeometry(),
+      createPrismTriangleCrownHaloGeometry(),
+      createPrismWingDiamondGeometry(),
+      createAetherDivineBroadSwordGeometry(),
+    ];
+    for (const m of [...sealMats, ...propMats, ...backHaloMats, ...backPropMats]) {
       expect(m.blending).toBe(THREE.NormalBlending);
       expect(m.uniforms.uOpacity).toBeDefined();
+      expect(m.uniforms.uTime).toBeDefined();
       m.dispose();
     }
-    for (const g of propGeos) {
+    for (const g of [...propGeos, ...backPropGeos]) {
       expect(g.getAttribute('position').count).toBeGreaterThan(12);
       g.dispose();
     }
@@ -3650,8 +3739,35 @@ describe('Pure 3D Mine World', () => {
       expect(impactCalls).toBeGreaterThan(0);
 
       const sprite = new ChibiSprite3D(def!);
+      const backGroup = sprite.group.getObjectByName('chibiBackAttachmentGroup');
+      expect(backGroup).toBeDefined();
+      expect(backGroup?.visible).toBe(true);
+      if (id === 'glitch-cheshire') {
+        expect(backGroup?.children.length).toBe(7); // 1 Cyber-Glitch Ring Halo + 6 Cyber-Claw Pixel Shards
+      } else if (id === 'thorn-maiden') {
+        expect(backGroup?.children.length).toBe(8); // 1 Spiked Iron Wheel Halo + 1 Spirit Crown + 6 Barbed Thorn Blades
+      } else if (id === 'monochrome-saint') {
+        expect(backGroup?.children.length).toBe(7); // 1 Sumi-e Ink Ribbon Halo + 6 Upright Cruciform Sword-Crosses
+      } else if (id === 'prism-seraph') {
+        expect(backGroup?.children.length).toBe(8); // 1 Hexagram Crystal Ring Halo + 1 Triangle Crown Halo + 6 Diamond Wing Shards
+      } else if (id === 'aether-monarch') {
+        expect(backGroup?.children.length).toBe(10); // 1 Golden Sunburst Astrolabe Halo + 9 Radially Fanned Divine Broadswords
+      }
+
+      sprite.update(0.05, 0.25, cam);
+      expect(backGroup?.visible).toBe(true);
+      sprite.setHologramMode(true);
+      expect(backGroup?.visible).toBe(false);
+      sprite.setHologramMode(false);
+      expect(backGroup?.visible).toBe(true);
+
+      sprite.triggerPodiumCast(0.42);
+      sprite.update(0.1, 0.35, cam);
+      expect(backGroup?.scale.x).toBeGreaterThan(1.0);
+
       sprite.triggerBlitz({ rarity: 'fusion', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
       for (let i = 0; i < 18; i++) sprite.update(0.06, i * 0.06, cam);
+      expect(backGroup?.visible).toBe(true);
       sprite.dispose();
     }
 

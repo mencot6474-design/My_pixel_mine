@@ -634,12 +634,16 @@ export function createHeldFrostSlashShaderMaterial(): THREE.ShaderMaterial {
   });
 }
 
-/** Yukikage Twins Back-Shader 1: Cryo Shinto Shrine Seal Ring (Frost-Cyan & Shrine-Ink Drum Halo). */
+/**
+ * Yukikage Twins Back-Shader 1: Sakuga 24-Ribbed Black Wagasa Canopy, Dual Sumi-Ink & Voronoi
+ * Cryo-Frost Crescent Streams, 6-Fold Snowflakes & Hitodama Spirit Wisps (2.5s 3-Phase Cycle).
+ */
 export function createYukikageShrineRingShaderMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
       uOpacity: { value: 1.0 },
       uTime: { value: 0.0 },
+      uProgress: { value: 0.0 },
     },
     vertexShader: `
       varying vec2 vUv;
@@ -651,40 +655,137 @@ export function createYukikageShrineRingShaderMaterial(): THREE.ShaderMaterial {
     fragmentShader: `
       uniform float uOpacity;
       uniform float uTime;
+      uniform float uProgress;
       varying vec2 vUv;
+
+      float ykHash21(vec2 p) {
+        p = fract(p * vec2(127.1, 311.7));
+        p += dot(p, p + 41.23);
+        return fract(p.x * p.y);
+      }
+
+      float ykVnoise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        float a = ykHash21(i);
+        float b = ykHash21(i + vec2(1.0, 0.0));
+        float c = ykHash21(i + vec2(0.0, 1.0));
+        float d = ykHash21(i + vec2(1.0, 1.0));
+        return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+      }
+
+      float ykFbm(vec2 p) {
+        float v = 0.0;
+        float a = 0.5;
+        mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
+        for (int i = 0; i < 3; i++) {
+          v += a * ykVnoise(p);
+          p = rot * p * 2.04 + vec2(1.9, 6.7);
+          a *= 0.5;
+        }
+        return v;
+      }
+
+      vec2 ykVoronoi(vec2 p) {
+        vec2 n = floor(p);
+        vec2 f = fract(p);
+        float f1 = 8.0;
+        float f2 = 8.0;
+        for (int j = -1; j <= 1; j++) {
+          for (int i = -1; i <= 1; i++) {
+            vec2 g = vec2(float(i), float(j));
+            vec2 o = vec2(ykHash21(n + g), ykHash21(n + g + vec2(19.3, 47.1)));
+            o = 0.5 + 0.42 * sin(6.2831853 * o + uTime * 0.65);
+            vec2 diff = g + o - f;
+            float d = dot(diff, diff);
+            if (d < f1) {
+              f2 = f1;
+              f1 = d;
+            } else if (d < f2) {
+              f2 = d;
+            }
+          }
+        }
+        return vec2(sqrt(f1), sqrt(f2));
+      }
 
       void main() {
         vec2 p = (vUv - 0.5) * 2.0;
         float r = length(p);
-        if (r > 0.99 || r < 0.22) discard;
-        float angle = atan(p.y, p.x);
+        if (r > 0.99 || r < 0.14) discard;
+        float ang = atan(p.y, p.x);
 
-        float outerRing = exp(-pow((r - 0.82) * 24.0, 2.0));
-        float midRing = exp(-pow((r - 0.64) * 26.0, 2.0));
-        float innerRing = exp(-pow((r - 0.44) * 28.0, 2.0));
+        // 2.5s 3-Phase Sakuga Timeline: 0.0-0.2 Charge, 0.2-0.5 Snappy Strike Surge, 0.5-1.0 Voronoi/Ink Dissolve
+        float cycle = fract(uTime * 0.4 + uProgress);
+        float charge = smoothstep(0.0, 0.2, cycle);
+        float strike = 1.0 - pow(1.0 - clamp((cycle - 0.2) / 0.3, 0.0, 1.0), 3.0);
+        float dissolveT = clamp((cycle - 0.5) / 0.5, 0.0, 1.0);
 
-        float nodeAng = mod(angle + uTime * 0.8 + 0.3927, 0.785398) - 0.3927;
-        vec2 nodeP = vec2(r - 0.73, nodeAng * 0.73);
-        float drumNode = smoothstep(0.095, 0.04, length(nodeP));
-        float drumRing = exp(-pow((length(nodeP) - 0.095) * 38.0, 2.0));
+        // 1. 24-Ribbed Black Bamboo Wagasa Umbrella Canopy Wheel (centered slightly upper-left behind Yuki)
+        vec2 wagP = p - vec2(-0.14, 0.12);
+        float wagR = length(wagP);
+        float wagAng = atan(wagP.y, wagP.x) + uTime * 0.28;
+        float wagasaCanopy = smoothstep(0.76, 0.72, wagR) * smoothstep(0.10, 0.18, wagR);
+        float wagasaRim = smoothstep(0.024, 0.004, abs(wagR - 0.74));
+        float bambooHub = smoothstep(0.022, 0.004, abs(wagR - 0.26)) + smoothstep(0.018, 0.003, abs(wagR - 0.32));
+        float bambooRibs = pow(max(0.0, cos(wagAng * 12.0)), 18.0) * wagasaCanopy;
 
-        float ticks = smoothstep(0.55, 0.95, cos(angle * 16.0 - uTime * 1.6))
-          * smoothstep(0.45, 0.50, r) * smoothstep(0.63, 0.58, r);
-        float iceSpokes = pow(max(0.0, cos(angle * 6.0 + uTime * 1.1)), 10.0)
-          * smoothstep(0.88, 0.36, r) * smoothstep(0.28, 0.44, r);
+        // 2. Sweeping Left Sumi-Ink & Dark-Teal Brush Slash Crescent (matching attack.webp left twin)
+        float inkFbm = ykFbm(vec2(ang * 2.8 - uTime * 1.1, r * 5.2 - uTime * 0.7));
+        float leftArcGate = smoothstep(0.35, -0.45, p.x);
+        float inkCrescent = smoothstep(0.11, 0.018, abs(r - (0.81 + (inkFbm - 0.5) * 0.12))) * leftArcGate;
+        float inkTealEdge = smoothstep(0.045, 0.008, abs(r - (0.84 + (inkFbm - 0.5) * 0.10))) * leftArcGate;
 
-        float inkBand = smoothstep(0.88, 0.68, r) * smoothstep(0.36, 0.52, r) * 0.78;
-        vec3 inkBlack = vec3(0.02, 0.05, 0.11);
-        vec3 frostCyan = vec3(0.16, 0.74, 0.98);
-        vec3 iceWhite = vec3(0.90, 0.97, 1.0);
+        // 3. Sweeping Right Voronoi Cryo-Crystal & 6-Fold Snowflake Stream (matching attack.webp right twin)
+        vec2 vor = ykVoronoi(p * 6.2 + vec2(-uTime * 0.4, uTime * 0.3));
+        float crystalFacet = smoothstep(0.14, 0.02, vor.y - vor.x);
+        float rightArcGate = smoothstep(-0.35, 0.45, p.x);
+        float frostCrescent = smoothstep(0.12, 0.02, abs(r - (0.80 + (vor.x - 0.4) * 0.10))) * rightArcGate;
+        float frostCore = crystalFacet * frostCrescent;
 
-        float brightMask = clamp(outerRing + midRing * 0.9 + innerRing * 0.75 + drumNode + drumRing * 0.9 + ticks * 0.85 + iceSpokes * 0.7, 0.0, 1.0);
-        vec3 col = mix(inkBlack, frostCyan, brightMask);
-        col = mix(col, iceWhite, clamp(drumNode * 0.85 + outerRing * 0.45 + ticks * 0.4, 0.0, 1.0));
+        // 6-Fold Crystalline Snowflake Spokes & Barbs
+        float snowAng = ang - uTime * 0.35;
+        float snowSpoke = pow(max(0.0, cos(snowAng * 3.0)), 22.0) * smoothstep(0.92, 0.32, r) * smoothstep(0.24, 0.42, r);
+        float frostDissolve = smoothstep(dissolveT - 0.12, dissolveT + 0.12, mix(inkFbm, 1.0 - vor.x, 0.5));
+        float activeSnow = (snowSpoke + frostCore) * (0.62 + 0.38 * charge * frostDissolve);
 
-        float edgeFade = smoothstep(0.99, 0.86, r) * smoothstep(0.22, 0.34, r);
-        float alpha = clamp((inkBand * 1.18 + brightMask * 1.12) * edgeFade * uOpacity, 0.0, 0.98);
-        if (alpha < 0.01) discard;
+        // 4. Orbiting Dark-Teal Hitodama Spirit Wisps (idle.webp) & Warm Amber Lantern Fireflies (pose.webp)
+        float hitodamaGlow = 0.0;
+        float lanternFirefly = 0.0;
+        for (int i = 0; i < 2; i++) {
+          float fi = float(i);
+          float wAng = uTime * 0.95 + fi * 3.14159265;
+          vec2 wPos = vec2(cos(wAng) * 0.84, sin(wAng) * 0.72);
+          float dWisp = length(p - wPos);
+          hitodamaGlow += smoothstep(0.11, 0.025, dWisp);
+
+          float fAng = -uTime * 0.75 + fi * 3.14159265 + 0.9;
+          vec2 fPos = vec2(cos(fAng) * 0.64, sin(fAng) * 0.64);
+          lanternFirefly += smoothstep(0.075, 0.012, length(p - fPos));
+        }
+
+        vec3 sumiInk = vec3(0.025, 0.05, 0.11);
+        vec3 darkTeal = vec3(0.08, 0.58, 0.68);
+        vec3 cryoCyan = vec3(0.22, 0.78, 0.98) * (1.28 + strike * 0.42);
+        vec3 snowWhite = vec3(0.95, 0.99, 1.0) * (1.35 + strike * 0.45);
+        vec3 bambooAmber = vec3(0.99, 0.78, 0.22) * 1.42;
+
+        vec3 col = sumiInk;
+        // Wagasa bamboo ribs & hub rings
+        col = mix(col, mix(sumiInk, bambooAmber, 0.55), bambooRibs * 0.75);
+        col = mix(col, bambooAmber, clamp(bambooHub * wagasaCanopy * 1.2 + lanternFirefly * 1.1, 0.0, 1.0));
+        // Left Sumi-Ink & Dark-Teal slash stream
+        col = mix(col, darkTeal * 1.35, clamp(inkTealEdge + hitodamaGlow * 0.85, 0.0, 1.0));
+        col = mix(col, sumiInk, inkCrescent * (1.0 - inkTealEdge * 0.65));
+        // Right Cryo-Frost & Voronoi Ice stream
+        col = mix(col, cryoCyan, clamp(frostCrescent + wagasaRim * 0.85 + activeSnow * 0.75, 0.0, 1.0));
+        col = mix(col, snowWhite, clamp(activeSnow * 0.9 + hitodamaGlow * 0.55 + lanternFirefly * 0.45, 0.0, 1.0));
+
+        float structureMask = clamp(wagasaCanopy * 0.86 + inkCrescent + inkTealEdge + frostCrescent + activeSnow + hitodamaGlow + lanternFirefly, 0.0, 1.0);
+        float edgeFade = smoothstep(0.99, 0.89, r) * smoothstep(0.14, 0.24, r);
+        float alpha = clamp(structureMask * 1.18 * edgeFade * uOpacity, 0.0, 0.98);
+        if (alpha < 0.015) discard;
         gl_FragColor = vec4(col, alpha);
       }
     `,
@@ -695,8 +796,104 @@ export function createYukikageShrineRingShaderMaterial(): THREE.ShaderMaterial {
   });
 }
 
-/** Yukikage Twins Back-Shader 2: Frost-Ink Kunai Blade Custom GLSL Shader. */
+/**
+ * Yukikage Twins Back-Shader 2: Voronoi Glacial Ice-Crystal, Sumi-Ink Cel-Rim & Specular Glint Shader
+ * for the 3 erupting Glacial Ice-Crystal Clusters (and frost-ink blade props).
+ */
 export function createYukikageKunaiShaderMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uOpacity: { value: 1.0 },
+      uTime: { value: 0.0 },
+    },
+    vertexShader: `
+      varying vec3 vNormalView;
+      varying vec3 vViewPos;
+      varying vec3 vLocalPos;
+      void main() {
+        vLocalPos = position;
+        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+        vViewPos = -mvPos.xyz;
+        vNormalView = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * mvPos;
+      }
+    `,
+    fragmentShader: `
+      uniform float uOpacity;
+      uniform float uTime;
+      varying vec3 vNormalView;
+      varying vec3 vViewPos;
+      varying vec3 vLocalPos;
+
+      float ykPropHash(vec2 p) {
+        p = fract(p * vec2(127.1, 311.7));
+        p += dot(p, p + 41.23);
+        return fract(p.x * p.y);
+      }
+
+      float ykPropVoronoi(vec2 p) {
+        vec2 n = floor(p);
+        vec2 f = fract(p);
+        float f1 = 8.0;
+        float f2 = 8.0;
+        for (int j = -1; j <= 1; j++) {
+          for (int i = -1; i <= 1; i++) {
+            vec2 g = vec2(float(i), float(j));
+            vec2 o = vec2(ykPropHash(n + g), ykPropHash(n + g + vec2(17.3, 31.7)));
+            o = 0.5 + 0.38 * sin(6.2831853 * o);
+            vec2 d = g + o - f;
+            float dist = dot(d, d);
+            if (dist < f1) {
+              f2 = f1;
+              f1 = dist;
+            } else if (dist < f2) {
+              f2 = dist;
+            }
+          }
+        }
+        return sqrt(f2) - sqrt(f1);
+      }
+
+      void main() {
+        vec3 N = normalize(vNormalView);
+        vec3 V = normalize(vViewPos);
+        vec3 L = normalize(vec3(0.42, 0.86, 0.52));
+        float ndv = abs(dot(N, V));
+        float ndl = 0.45 + 0.55 * max(0.0, dot(N, L));
+        float rim = pow(max(0.0001, 1.0 - ndv), 1.55);
+        float inkBorder = smoothstep(0.24, 0.10, ndv);
+
+        float vorEdge = ykPropVoronoi(vLocalPos.xy * 6.5 + vec2(0.0, -uTime * 0.8));
+        float crystalRidge = smoothstep(0.14, 0.02, vorEdge);
+        float frostPulse = 0.72 + 0.28 * sin(vLocalPos.y * 12.0 - uTime * 9.0);
+        float tipSnow = smoothstep(0.18, 0.78, vLocalPos.y);
+
+        vec3 sumiInk = vec3(0.025, 0.055, 0.13);
+        vec3 glacialBlue = vec3(0.14, 0.68, 0.96);
+        vec3 cryoCyan = vec3(0.45, 0.90, 1.0);
+        vec3 pureSnow = vec3(0.96, 0.99, 1.0);
+
+        vec3 col = mix(sumiInk, glacialBlue * (0.85 + 0.35 * ndl), 0.55 + tipSnow * 0.35);
+        col = mix(col, cryoCyan * 1.38, clamp(rim * 0.85 + crystalRidge * 0.75 * frostPulse, 0.0, 1.0));
+        col = mix(col, pureSnow * 1.45, clamp(pow(rim, 2.4) * 0.82 + crystalRidge * tipSnow * 0.7, 0.0, 1.0));
+        col = mix(col, sumiInk, inkBorder * 0.78);
+
+        float alpha = clamp(0.97 * uOpacity, 0.0, 0.99);
+        if (alpha < 0.01) discard;
+        gl_FragColor = vec4(col, alpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: true,
+    side: THREE.DoubleSide,
+    blending: THREE.NormalBlending,
+  });
+}
+
+/**
+ * Yukikage Twins Back-Shader 3: Black Bamboo Wagasa Umbrella & Warm Amber-Teal Hitodama Lantern Shader.
+ */
+export function createYukikageWagasaShaderMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
       uOpacity: { value: 1.0 },
@@ -724,28 +921,31 @@ export function createYukikageKunaiShaderMaterial(): THREE.ShaderMaterial {
       void main() {
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
-        vec3 L = normalize(vec3(0.4, 0.85, 0.5));
+        vec3 L = normalize(vec3(0.38, 0.86, 0.52));
         float ndv = abs(dot(N, V));
-        float ndl = 0.45 + 0.55 * dot(N, L);
-        float rim = pow(max(0.0001, 1.0 - ndv), 1.6);
+        float ndl = 0.42 + 0.58 * max(0.0, dot(N, L));
+        float rim = pow(max(0.0001, 1.0 - ndv), 1.55);
 
-        float isBlade = smoothstep(-0.08, 0.05, vLocalPos.y);
-        float fullerGroove = smoothstep(0.075, 0.02, abs(vLocalPos.x)) * smoothstep(0.75, 0.05, vLocalPos.y);
-        float frostStream = smoothstep(0.35, 0.92, sin(vLocalPos.y * 16.0 - uTime * 14.0));
+        float ang = atan(vLocalPos.y, vLocalPos.x);
+        float rad = length(vLocalPos.xy);
+        // 24 radial bamboo ribs on the camera-facing XY Wagasa canopy + warm lantern/hub core
+        float bambooRib = pow(max(0.0, cos(ang * 12.0)), 14.0) * smoothstep(0.08, 0.52, rad);
+        float hubAmber = smoothstep(0.22, 0.04, rad) * (0.75 + 0.25 * sin(uTime * 6.5));
+        float snowRim = smoothstep(0.38, 0.56, rad) * (0.55 + 0.45 * rim);
 
-        vec3 darkInk = vec3(0.03, 0.06, 0.13);
-        vec3 frostCyan = vec3(0.18, 0.76, 0.98);
-        vec3 iceWhite = vec3(0.92, 0.98, 1.0);
+        vec3 sumiCanopy = vec3(0.035, 0.05, 0.10);
+        vec3 charcoalPaper = vec3(0.14, 0.17, 0.24);
+        vec3 bambooGold = vec3(0.96, 0.72, 0.22);
+        vec3 frostTeal = vec3(0.24, 0.86, 0.98);
+        vec3 snowWhite = vec3(0.95, 0.99, 1.0);
 
-        vec3 bladeCol = mix(frostCyan * 0.75, iceWhite, 0.35 + 0.65 * ndl);
-        bladeCol = mix(bladeCol, darkInk, fullerGroove * 0.82);
-        bladeCol += frostCyan * (rim * 0.45 + frostStream * 0.25);
+        vec3 col = mix(sumiCanopy, charcoalPaper, ndl * 0.65);
+        col = mix(col, bambooGold * 1.35, clamp(bambooRib * 0.72 + hubAmber * 0.85, 0.0, 1.0));
+        col = mix(col, frostTeal * 1.38, clamp(rim * 0.78, 0.0, 1.0));
+        col = mix(col, snowWhite * 1.45, clamp(snowRim * 0.85 + pow(rim, 2.5) * 0.65, 0.0, 1.0));
 
-        vec3 hiltCol = mix(darkInk, frostCyan * 0.65, rim * 0.6 + frostStream * 0.25);
-        vec3 col = mix(hiltCol, bladeCol, isBlade);
-
-        float alpha = clamp(0.95 * uOpacity, 0.0, 1.0);
-        if (alpha < 0.01) discard;
+        float alpha = clamp(0.98 * uOpacity, 0.0, 0.99);
+        if (alpha < 0.015) discard;
         gl_FragColor = vec4(col, alpha);
       }
     `,
@@ -754,6 +954,117 @@ export function createYukikageKunaiShaderMaterial(): THREE.ShaderMaterial {
     side: THREE.DoubleSide,
     blending: THREE.NormalBlending,
   });
+}
+
+/**
+ * Sculpted Multi-Part 3D Traditional Japanese Bamboo Wagasa Umbrella Geometry
+ * oriented in the XY plane (shallow Z profile so it stays 100% behind the 2D chibi sprite without clipping).
+ */
+export function createYukikageWagasaUmbrellaGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+
+  // 1. 16-sided shallow oil-paper Wagasa canopy cone facing the camera in the XY plane
+  const canopy = new THREE.ConeGeometry(0.58, 0.11, 16, 1, true);
+  canopy.rotateX(Math.PI / 2);
+  parts.push(canopy);
+
+  // 2. Center wooden rokurō hub & finial cap
+  const topCap = new THREE.ConeGeometry(0.13, 0.07, 12);
+  topCap.rotateX(Math.PI / 2);
+  topCap.translate(0, 0, 0.035);
+  parts.push(topCap);
+
+  // 3. Inner bamboo stretcher ring & outer rim ring in the XY plane
+  const bambooRing = new THREE.TorusGeometry(0.25, 0.016, 6, 16);
+  bambooRing.translate(0, 0, 0.01);
+  parts.push(bambooRing);
+
+  const outerRim = new THREE.TorusGeometry(0.57, 0.016, 6, 16);
+  outerRim.translate(0, 0, -0.045);
+  parts.push(outerRim);
+
+  // 4. Sculpted 3D radial bamboo rib spokes inside the XY canopy plane
+  for (let i = 0; i < 6; i++) {
+    const spoke = new THREE.CylinderGeometry(0.009, 0.009, 1.12, 6);
+    spoke.rotateZ((i / 6) * Math.PI);
+    spoke.translate(0, 0, -0.015);
+    parts.push(spoke);
+  }
+
+  return mergeSimpleGeos(parts);
+}
+
+/**
+ * Sculpted Multi-Part 3D Hitodama Spirit Flame & Shinto Tōrō Lantern Wisp Geometry
+ * matching the floating spirit wisps & snow-topped stone lantern in idle.webp & pose.webp.
+ */
+export function createYukikageHitodamaLanternGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+
+  // 1. Glowing octahedral spirit lantern core
+  const lanternCore = new THREE.OctahedronGeometry(0.14, 0);
+  lanternCore.scale(0.85, 1.15, 0.85);
+  parts.push(lanternCore);
+
+  // 2. Snow-capped hexagonal Tōrō pagoda roof & finial jewel (宝珠 hōju)
+  const roof = new THREE.ConeGeometry(0.20, 0.11, 6);
+  roof.translate(0, 0.14, 0);
+  parts.push(roof);
+
+  const hojuGem = new THREE.OctahedronGeometry(0.055, 0);
+  hojuGem.scale(0.8, 1.35, 0.8);
+  hojuGem.translate(0, 0.23, 0);
+  parts.push(hojuGem);
+
+  // 3. Curling 2-part Hitodama soul-flame tail wisp below the core
+  const tailUpper = new THREE.ConeGeometry(0.095, 0.26, 5);
+  tailUpper.rotateX(Math.PI);
+  tailUpper.rotateZ(0.22);
+  tailUpper.translate(0.03, -0.18, 0);
+  parts.push(tailUpper);
+
+  const tailTip = new THREE.ConeGeometry(0.055, 0.22, 4);
+  tailTip.rotateX(Math.PI);
+  tailTip.rotateZ(-0.36);
+  tailTip.translate(0.01, -0.32, 0);
+  parts.push(tailTip);
+
+  return mergeSimpleGeos(parts);
+}
+
+/**
+ * Sculpted Multi-Part 3D Glacial Ice-Crystal Cluster Geometry (asymmetric 3-spire jagged
+ * Voronoi cryo shards + base frost diamond) matching the erupting ice crystals in attack.webp.
+ */
+export function createYukikageGlacialClusterGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+
+  // 1. Tall central faceted cryo crystal spire
+  const mainCrystal = new THREE.ConeGeometry(0.12, 0.88, 5);
+  mainCrystal.scale(0.78, 1.0, 0.52);
+  mainCrystal.translate(0, 0.36, 0);
+  parts.push(mainCrystal);
+
+  // 2. Left & right canted secondary glacial shards
+  const leftShard = new THREE.ConeGeometry(0.088, 0.56, 5);
+  leftShard.scale(0.75, 1.0, 0.48);
+  leftShard.rotateZ(0.38);
+  leftShard.translate(-0.14, 0.18, 0.02);
+  parts.push(leftShard);
+
+  const rightShard = new THREE.ConeGeometry(0.082, 0.48, 4);
+  rightShard.scale(0.75, 1.0, 0.48);
+  rightShard.rotateZ(-0.44);
+  rightShard.translate(0.13, 0.14, -0.02);
+  parts.push(rightShard);
+
+  // 3. Faceted frost root crystal
+  const basePrism = new THREE.OctahedronGeometry(0.13, 0);
+  basePrism.scale(1.15, 0.85, 0.65);
+  basePrism.translate(0, -0.04, 0);
+  parts.push(basePrism);
+
+  return mergeSimpleGeos(parts);
 }
 
 /** 3D Ninja Kunai Geometry for Yukikage Twins (ring pommel + wrapped grip + 4-faceted diamond kunai blade). */

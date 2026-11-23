@@ -439,7 +439,10 @@ export class ChibiSprite3D {
   }
 
   private shouldShowBackAttachment(): boolean {
-    return !this.hologramMode && (this.def.rarity === 'twin' || this.def.rarity === 'omega');
+    return (
+      !this.hologramMode &&
+      (this.def.rarity === 'fusion' || this.def.rarity === 'twin' || this.def.rarity === 'omega')
+    );
   }
 
   public isHologramMode(): boolean {
