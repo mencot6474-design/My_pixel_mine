@@ -19,6 +19,7 @@ import {
   createRoundaboutShadowTexture,
 } from './ShopCyberPlazaAssets3D';
 import { buildPlazaCyberKiosks } from './ShopCyberPlazaKiosks3D';
+import { addPlazaDistantSkyline } from './ShopCyberPlazaSkyline3D';
 
 export interface ShopCyberPlazaHandle {
   group: THREE.Group;
@@ -47,6 +48,7 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
   const ownedTextures: THREE.Texture[] = [];
   const ownedGeos: THREE.BufferGeometry[] = [];
   const ownedMats: THREE.Material[] = [];
+  const ownedInstanced: THREE.InstancedMesh[] = [];
   const animatedCrystals: THREE.Object3D[] = [];
   const animatedRings: THREE.Object3D[] = [];
   const omegaPodiums: CyberShowcasePodiumHandle[] = [];
@@ -807,6 +809,16 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     })
   );
 
+  // =========================================================================
+  // 5. DISTANT GOLDEN-BLUE HOUR CITY SKYLINE RING (InstancedMesh, non-raycast)
+  // =========================================================================
+  addPlazaDistantSkyline({
+    group,
+    ownedGeos,
+    ownedMats,
+    ownedInstanced,
+  });
+
   const update = (dtSec: number, elapsed: number): void => {
     const safeDt = Math.min(Math.max(0, dtSec), 0.1);
     const t = elapsed + safeDt * 0.001;
@@ -842,11 +854,13 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
 
   const dispose = (): void => {
     disposeObject3D(group);
+    for (const inst of ownedInstanced) inst.dispose();
     for (const geo of ownedGeos) geo.dispose();
     for (const mat of ownedMats) mat.dispose();
     for (const tex of ownedTextures) {
       tex.dispose();
     }
+    ownedInstanced.length = 0;
     ownedGeos.length = 0;
     ownedMats.length = 0;
     ownedTextures.length = 0;

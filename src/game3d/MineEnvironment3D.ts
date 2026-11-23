@@ -7,8 +7,8 @@ import {
   type VaultCoreDaisHandle,
 } from './ArenaWings3D';
 import { disposeObject3D } from './ChestVaultStation3D';
-import { getSkyDomeTexture } from './ProceduralTextures3D';
 import { SkyMetropolis3D } from './SkyMetropolis3D';
+import { getMiningSkyDomeTexture, getPlazaSkyDomeTexture } from './WorldSkyTextures3D';
 
 interface VoidShardSeed {
   angle: number;
@@ -16,12 +16,6 @@ interface VoidShardSeed {
   baseY: number;
   scale: number;
   speed: number;
-}
-
-function getCleanSkyColors(palette: MineWorldPalette): { topHex: string; bottomHex: string } {
-  const topHex = '#' + new THREE.Color(palette.skyTop).lerp(new THREE.Color(0x091124), 0.72).getHexString();
-  const bottomHex = '#' + new THREE.Color(palette.fogColor).lerp(new THREE.Color(0x162544), 0.68).getHexString();
-  return { topHex, bottomHex };
 }
 
 export class MineEnvironment3D {
@@ -35,6 +29,8 @@ export class MineEnvironment3D {
   private readonly dustGeo: THREE.BufferGeometry;
   private readonly dustMat: THREE.ShaderMaterial;
   private readonly dustPoints: THREE.Points;
+  private currentPalette: MineWorldPalette;
+  private skyMode: 'mine' | 'shop' = 'mine';
   private lowQuality = false;
 
   private readonly voidShardsInst: THREE.InstancedMesh;
@@ -43,10 +39,10 @@ export class MineEnvironment3D {
   private readonly vaultDais: VaultCoreDaisHandle;
 
   constructor(palette: MineWorldPalette) {
-    // 1. Lightweight Static Gradient Sky Dome (zero per-pixel weather shader or cloud overhead)
-    const { topHex, bottomHex } = getCleanSkyColors(palette);
+    this.currentPalette = palette;
+    // 1. Lightweight Cached Sky Dome (zero per-pixel weather shader overhead; switches cleanly between Mine & Plaza)
     this.skyMat = new THREE.MeshBasicMaterial({
-      map: getSkyDomeTexture(topHex, bottomHex),
+      map: getMiningSkyDomeTexture(palette),
       side: THREE.BackSide,
       depthWrite: false,
       fog: false,
@@ -180,10 +176,27 @@ export class MineEnvironment3D {
     return this.metropolis;
   }
 
-  public setPalette(palette: MineWorldPalette): void {
-    const { topHex, bottomHex } = getCleanSkyColors(palette);
-    this.skyMat.map = getSkyDomeTexture(topHex, bottomHex);
+  private refreshSkyMap(): void {
+    this.skyMat.map =
+      this.skyMode === 'shop'
+        ? getPlazaSkyDomeTexture()
+        : getMiningSkyDomeTexture(this.currentPalette);
     this.skyMat.needsUpdate = true;
+  }
+
+  public setSkyMode(mode: 'mine' | 'shop'): void {
+    if (this.skyMode === mode) return;
+    this.skyMode = mode;
+    this.refreshSkyMap();
+  }
+
+  public getSkyMode(): 'mine' | 'shop' {
+    return this.skyMode;
+  }
+
+  public setPalette(palette: MineWorldPalette): void {
+    this.currentPalette = palette;
+    this.refreshSkyMap();
 
     this.cliffMat.color.setHex(0x24334a).lerp(new THREE.Color(palette.cliffColor), 0.28);
     this.cyberDeckTrimMat.color.set(palette.crystalColor);

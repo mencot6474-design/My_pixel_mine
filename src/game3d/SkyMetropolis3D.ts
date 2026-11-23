@@ -116,12 +116,12 @@ function buildCitySeeds(): SkyscraperSeed[] {
       const w = ring.wRange[0] + (((idx * 13) % 5) / 4) * (ring.wRange[1] - ring.wRange[0]);
       const d = w * (0.84 + ((idx * 7) % 4) * 0.11);
       const archetype = (idx % 3) as TowerArchetype;
-      const hasSetback = rIdx >= 1 && idx % 3 !== 2;
-      const setbackH = hasSetback ? 2.6 + ((idx * 11) % 4) * 0.65 : 0;
-      const hasFins = hasSetback && idx % 2 === 0;
-      const hasCrown = idx % 2 === 0;
-      const hasRing = archetype === 2 || idx % 4 === 0;
-      const hasAntenna = topY > -7.5 && idx % 2 === 1;
+      const hasSetback = rIdx >= 1 && idx % 4 !== 3;
+      const setbackH = hasSetback ? 2.4 + ((idx * 11) % 4) * 0.65 : 0;
+      const hasFins = hasSetback && idx % 3 !== 2;
+      const hasCrown = archetype === 2 || idx % 4 !== 3;
+      const hasRing = true;
+      const hasAntenna = topY > -11.5 && (idx % 2 === 1 || idx % 3 === 0);
 
       let holoLabel: HoloBillboardLabel | null = null;
       if (rIdx >= 1 && z < -6 && Math.abs(x) > 9.5 && topY > -6.5 && holoCount < 8 && idx % 3 === 1) {
@@ -173,7 +173,9 @@ export class SkyMetropolis3D {
   private readonly setbackInst: THREE.InstancedMesh;
   private readonly finInst: THREE.InstancedMesh;
   private readonly crownInst: THREE.InstancedMesh;
+  private readonly rooftopMechInst: THREE.InstancedMesh;
   private readonly ringInst: THREE.InstancedMesh;
+  private readonly octaTrimInst: THREE.InstancedMesh;
   private readonly antennaInst: THREE.InstancedMesh;
   private readonly beaconInst: THREE.InstancedMesh;
   private readonly skyTrafficInst: THREE.InstancedMesh;
@@ -287,13 +289,18 @@ export class SkyMetropolis3D {
     const setbackSeeds = this.seeds.filter((s) => s.hasSetback);
     const finSeeds = this.seeds.filter((s) => s.hasFins);
     const crownSeeds = this.seeds.filter((s) => s.hasCrown);
-    const ringSeeds = this.seeds.filter((s) => s.hasRing);
+    const rectTrimSeeds = this.seeds.filter((s) => s.hasRing && s.archetype !== 2);
+    const octaTrimSeeds = this.seeds.filter((s) => s.hasRing && s.archetype === 2);
     const antennaSeeds = this.seeds.filter((s) => s.hasAntenna);
 
     const chamferGeo = createSkyscraperShaftGeometry();
     const octaGeo = new THREE.CylinderGeometry(0.46, 0.56, 1, 8);
-    const ringGeo = new THREE.RingGeometry(0.32, 0.46, 16);
-    ringGeo.rotateX(-Math.PI / 2);
+    // Razor-thin hollow neon parapet rim (4-sided for rectangular towers, 8-sided for octagonal arcologies)
+    const rectTrimGeo = new THREE.RingGeometry(0.46, 0.495, 4);
+    rectTrimGeo.rotateX(-Math.PI / 2);
+    rectTrimGeo.rotateY(Math.PI / 4);
+    const octaTrimGeo = new THREE.RingGeometry(0.435, 0.475, 8);
+    octaTrimGeo.rotateX(-Math.PI / 2);
 
     this.curtainShaftInst = new THREE.InstancedMesh(chamferGeo, this.curtainMat, Math.max(1, curtainSeeds.length));
     this.diagridShaftInst = new THREE.InstancedMesh(chamferGeo, this.diagridMat, Math.max(1, diagridSeeds.length));
@@ -305,7 +312,9 @@ export class SkyMetropolis3D {
       Math.max(1, finSeeds.length * 2)
     );
     this.crownInst = new THREE.InstancedMesh(chamferGeo, this.crownMat, Math.max(1, crownSeeds.length));
-    this.ringInst = new THREE.InstancedMesh(ringGeo, this.cityNeonMat, Math.max(1, ringSeeds.length));
+    this.rooftopMechInst = new THREE.InstancedMesh(chamferGeo, this.crownMat, Math.max(1, this.seeds.length * 2));
+    this.ringInst = new THREE.InstancedMesh(rectTrimGeo, this.cityNeonMat, Math.max(1, rectTrimSeeds.length));
+    this.octaTrimInst = new THREE.InstancedMesh(octaTrimGeo, this.cityNeonMat, Math.max(1, octaTrimSeeds.length));
     this.antennaInst = new THREE.InstancedMesh(
       new THREE.CylinderGeometry(0.035, 0.09, 1, 6),
       this.cityNeonMat,
@@ -323,7 +332,9 @@ export class SkyMetropolis3D {
     this.setbackInst.count = setbackSeeds.length;
     this.finInst.count = finSeeds.length * 2;
     this.crownInst.count = crownSeeds.length;
-    this.ringInst.count = ringSeeds.length;
+    this.rooftopMechInst.count = this.seeds.length * 2;
+    this.ringInst.count = rectTrimSeeds.length;
+    this.octaTrimInst.count = octaTrimSeeds.length;
     this.antennaInst.count = antennaSeeds.length;
     this.beaconInst.count = antennaSeeds.length;
 
@@ -332,11 +343,14 @@ export class SkyMetropolis3D {
     let setbackIdx = 0;
     let finIdx = 0;
     let crownIdx = 0;
+    let mechIdx = 0;
     let ringIdx = 0;
+    let octaTrimIdx = 0;
     let antIdx = 0;
     const holoPlaneGeo = new THREE.PlaneGeometry(3.3, 1.65);
 
-    for (const s of this.seeds) {
+    for (let sIdx = 0; sIdx < this.seeds.length; sIdx++) {
+      const s = this.seeds[sIdx];
       const shaftTop = s.topY - s.setbackH;
       const h = Math.max(4, shaftTop - CITY_BASE_Y);
       dummy.position.set(s.x, CITY_BASE_Y + h * 0.5, s.z);
@@ -378,26 +392,54 @@ export class SkyMetropolis3D {
 
       const roofW = s.hasSetback ? s.w * 0.68 : s.w;
       const roofD = s.hasSetback ? s.d * 0.68 : s.d;
+      const crownH = 0.95 + (sIdx % 3) * 0.25;
       if (s.hasCrown) {
-        const crownH = 1.1;
         dummy.position.set(s.x, s.topY + crownH * 0.5, s.z);
         dummy.rotation.set(0, s.rotY, 0);
-        dummy.scale.set(roofW * 0.72, crownH, roofD * 0.72);
+        dummy.scale.set(roofW * 0.68, crownH, roofD * 0.68);
         dummy.updateMatrix();
         this.crownInst.setMatrixAt(crownIdx++, dummy.matrix);
       }
-      if (s.hasRing) {
-        const ringY = s.hasCrown ? s.topY + 1.14 : s.topY + 0.06;
-        const ringScale = Math.min(roofW, roofD) * 0.82;
-        dummy.position.set(s.x, ringY, s.z);
-        dummy.rotation.set(0, 0, 0);
-        dummy.scale.setScalar(ringScale);
+      // Offset HVAC / mechanical rooftop units on every building so no roof looks flat/bare
+      const deckY = s.hasCrown ? s.topY + crownH : s.topY;
+      const mechBaseW = s.hasCrown ? roofW * 0.68 : roofW;
+      const mechBaseD = s.hasCrown ? roofD * 0.68 : roofD;
+      const cosR = Math.cos(s.rotY);
+      const sinR = Math.sin(s.rotY);
+      for (const mSide of [-1, 1]) {
+        const ox = mSide * mechBaseW * 0.2;
+        const oz = (sIdx % 2 === 0 ? 1 : -1) * mSide * mechBaseD * 0.14;
+        const mh = mSide < 0 ? 0.52 + (sIdx % 3) * 0.16 : 0.34 + (sIdx % 2) * 0.14;
+        dummy.position.set(
+          s.x + ox * cosR + oz * sinR,
+          deckY + mh * 0.5,
+          s.z - ox * sinR + oz * cosR
+        );
+        dummy.rotation.set(0, s.rotY, 0);
+        dummy.scale.set(mechBaseW * 0.28, mh, mechBaseD * 0.32);
         dummy.updateMatrix();
-        this.ringInst.setMatrixAt(ringIdx++, dummy.matrix);
+        this.rooftopMechInst.setMatrixAt(mechIdx++, dummy.matrix);
+      }
+
+      if (s.hasRing) {
+        const ringY = s.topY + 0.04;
+        dummy.position.set(s.x, ringY, s.z);
+        if (s.archetype === 2) {
+          const octScale = s.hasSetback ? Math.min(roofW, roofD) * 0.96 : Math.min(roofW, roofD) * 0.92;
+          dummy.rotation.set(0, s.rotY, 0);
+          dummy.scale.setScalar(octScale);
+          dummy.updateMatrix();
+          this.octaTrimInst.setMatrixAt(octaTrimIdx++, dummy.matrix);
+        } else {
+          dummy.rotation.set(0, s.rotY, 0);
+          dummy.scale.set(roofW * 1.42, 1, roofD * 1.42);
+          dummy.updateMatrix();
+          this.ringInst.setMatrixAt(ringIdx++, dummy.matrix);
+        }
       }
       if (s.hasAntenna) {
-        const antH = 2.0;
-        const antBaseY = s.hasCrown ? s.topY + 1.1 : s.topY;
+        const antH = 1.65 + (sIdx % 4) * 0.32;
+        const antBaseY = s.hasCrown ? s.topY + crownH : s.topY;
         dummy.position.set(s.x, antBaseY + antH * 0.5, s.z);
         dummy.rotation.set(0, 0, 0);
         dummy.scale.set(1, antH, 1);
@@ -412,7 +454,7 @@ export class SkyMetropolis3D {
       }
 
       if (s.holoLabel) {
-        const baseY = Math.min(2.8, (s.hasCrown ? s.topY + 1.1 : s.topY) + 1.35);
+        const baseY = Math.min(2.8, (s.hasCrown ? s.topY + crownH : s.topY) + 1.35);
         const signMesh = new THREE.Mesh(holoPlaneGeo, this.holoSignMats[s.holoLabel]);
         signMesh.position.set(s.x, baseY, s.z + roofD * 0.25);
         signMesh.rotation.y = -Math.atan2(s.x, Math.max(8, 20 - s.z)) * 0.65;
@@ -433,7 +475,9 @@ export class SkyMetropolis3D {
       this.setbackInst,
       this.finInst,
       this.crownInst,
+      this.rooftopMechInst,
       this.ringInst,
+      this.octaTrimInst,
       this.antennaInst,
       this.beaconInst,
     ]) {
@@ -737,7 +781,9 @@ export class SkyMetropolis3D {
       this.setbackInst,
       this.finInst,
       this.crownInst,
+      this.rooftopMechInst,
       this.ringInst,
+      this.octaTrimInst,
       this.antennaInst,
       this.beaconInst,
       this.skyTrafficInst,

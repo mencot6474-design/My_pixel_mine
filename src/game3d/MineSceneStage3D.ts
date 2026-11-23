@@ -29,6 +29,7 @@ import type {
 } from './ShopWorld3D';
 import type { TowerArena3D, TowerOreBarScreen } from './TowerArena3D';
 import type { WeatherFx3D } from './WeatherFx3D';
+import { getHarmonizedWorldFogColor } from './WorldSkyTextures3D';
 
 export type SceneMode = 'mine' | 'shop' | 'altar' | 'fusion' | 'tower' | 'omega';
 
@@ -282,13 +283,16 @@ export function applyMineWeatherAtmosphere(ctx: {
     );
 
     if (ctx.mode !== 'mine' && !isShop) return;
-    const fogColor = new THREE.Color(ctx.activePalette?.fogColor ?? weather.fogTintHex);
-    fogColor.lerp(new THREE.Color(0x162544), isShop ? 0.66 : 0.68);
+    const fogColor = getHarmonizedWorldFogColor(
+      ctx.activePalette,
+      weather.fogTintHex,
+      isShop ? 'shop' : 'mine'
+    );
     ctx.scene.background = fogColor;
-    // Softly blend distant skyline horizon into the clean static sky gradient
+    // Softly blend distant skyline horizon into the stylized world sky dome
     ctx.scene.fog = isShop
-      ? new THREE.Fog(fogColor, 50, 108)
-      : new THREE.Fog(fogColor, 46, 114);
+      ? new THREE.Fog(fogColor, 68, 140)
+      : new THREE.Fog(fogColor, 48, 118);
 }
 
 export function stepMineSceneCamera(ctx: {
@@ -506,6 +510,9 @@ export function applyMineSceneModeTransition(ctx: {
 
   ctx.env.group.visible = isMine;
   ctx.env.skyDome.visible = mode === 'mine' || mode === 'shop';
+  if (mode === 'mine' || mode === 'shop') {
+    ctx.env.setSkyMode(mode);
+  }
   ctx.pit.group.visible = isMine;
   ctx.crateGroup.visible = isMine;
   ctx.pedestals.forEach((p) => {

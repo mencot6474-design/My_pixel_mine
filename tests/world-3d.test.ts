@@ -101,7 +101,12 @@ import {
   configureSceneTextureSharpness,
 } from '../src/game3d/MeshHelpers3D';
 import { MineEnvironment3D } from '../src/game3d/MineEnvironment3D';
-import { DEFAULT_WORLD_PALETTE, rollOreVariant, STAGE_PEDESTAL_COUNT } from '../src/game3d/MineWorldPalette';
+import {
+  DEFAULT_WORLD_PALETTE,
+  rollOreVariant,
+  STAGE_PEDESTAL_COUNT,
+  WORLD_PALETTES,
+} from '../src/game3d/MineWorldPalette';
 import {
   applyNodeDamagePure,
   BASE_ORE_RESPAWN_SEC,
@@ -136,6 +141,11 @@ import {
 } from '../src/game3d/SkyMetropolisAssets3D';
 import { createSeraphimBoss3D } from '../src/game3d/SeraphimBoss3D';
 import { TowerArena3D } from '../src/game3d/TowerArena3D';
+import {
+  getHarmonizedWorldFogColor,
+  getMiningSkyDomeTexture,
+  getPlazaSkyDomeTexture,
+} from '../src/game3d/WorldSkyTextures3D';
 import {
   createAetherMonarchCrownGeometry,
   createAetherMonarchCrownShaderMaterial,
@@ -4002,5 +4012,54 @@ describe('Pure 3D Mine World', () => {
 
     pool.setPitBounds(null);
     pool.dispose();
+  });
+
+  it('generates distinct cached per-world Mining skies, Golden-Blue Hour Plaza sky, and Plaza distant skyline backdrop', () => {
+    const mineDefault = getMiningSkyDomeTexture(WORLD_PALETTES.underground);
+    const mineMagma = getMiningSkyDomeTexture(WORLD_PALETTES.magma);
+    const plazaTex = getPlazaSkyDomeTexture();
+    expect(mineDefault).toBeInstanceOf(THREE.Texture);
+    expect(mineMagma).toBeInstanceOf(THREE.Texture);
+    expect(plazaTex).toBeInstanceOf(THREE.Texture);
+    expect(mineDefault).toBe(getMiningSkyDomeTexture(WORLD_PALETTES.underground));
+    expect(mineDefault).not.toBe(mineMagma);
+    expect(plazaTex).not.toBe(mineDefault);
+
+    const mineFog = getHarmonizedWorldFogColor(WORLD_PALETTES.magma, '#fb923c', 'mine');
+    const shopFog = getHarmonizedWorldFogColor(WORLD_PALETTES.magma, '#fb923c', 'shop');
+    expect(mineFog.getHexString()).not.toBe(shopFog.getHexString());
+
+    const env = new MineEnvironment3D(WORLD_PALETTES.underground);
+    expect(env.getSkyMode()).toBe('mine');
+    const mat = env.skyDome.material as THREE.MeshBasicMaterial;
+    expect(mat.map).toBe(mineDefault);
+    env.setSkyMode('shop');
+    expect(env.getSkyMode()).toBe('shop');
+    expect(mat.map).toBe(plazaTex);
+    env.setSkyMode('mine');
+    expect(mat.map).toBe(mineDefault);
+    env.setPalette(WORLD_PALETTES.magma);
+    expect(mat.map).toBe(mineMagma);
+    env.dispose();
+
+    const plaza = createShopCyberPlaza();
+    let instancedCount = 0;
+    let skylineTrimInstances = 0;
+    let spireInstances = 0;
+    plaza.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) {
+        instancedCount++;
+        if (obj.geometry instanceof THREE.RingGeometry && obj.instanceColor) {
+          skylineTrimInstances += obj.count;
+        }
+        if (obj.geometry instanceof THREE.CylinderGeometry) {
+          spireInstances += obj.count;
+        }
+      }
+    });
+    expect(instancedCount).toBeGreaterThanOrEqual(12);
+    expect(skylineTrimInstances).toBeGreaterThanOrEqual(20);
+    expect(spireInstances).toBeGreaterThanOrEqual(10);
+    plaza.dispose();
   });
 });
