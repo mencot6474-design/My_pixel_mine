@@ -4,7 +4,7 @@ import type { TierVfxHooks, WorldPoint3 } from '../TierMotionPath3D';
 
 const SKILL_DURATION_SEC = 2.5;
 const POOL_SIZE = 2;
-const BARRAGE_SLASH_COUNT = 6;
+const BARRAGE_BEAT_COUNT = 6;
 const ORE_FLASH_COUNT = 6;
 const SPARK_PARTICLE_COUNT = 36;
 
@@ -75,60 +75,6 @@ const CLOCKWORK_NOISE_GLSL = `
     return smoothstep(-0.15, 0.25, wave);
   }
 `;
-
-/**
- * Bold, wide-cambered crescent blade geometry so slashes read strongly from the elevated 3D camera.
- */
-function createBoldCrescentSlashGeometry(
-  innerR = 0.42,
-  outerR = 1.06,
-  sweepRad = Math.PI * 1.24,
-  segments = 36
-): THREE.BufferGeometry {
-  const cols = segments + 1;
-  const rows = 4;
-  const positions = new Float32Array(cols * rows * 3);
-  const uvs = new Float32Array(cols * rows * 2);
-  const indices: number[] = [];
-
-  for (let i = 0; i < cols; i++) {
-    const u = i / segments;
-    const angle = (u - 0.5) * sweepRad;
-    const taper = Math.pow(Math.sin(u * Math.PI), 0.36);
-    const curInner = outerR - (outerR - innerR) * taper;
-    const cosA = Math.cos(angle);
-    const sinA = Math.sin(angle);
-
-    for (let j = 0; j < rows; j++) {
-      const v = j / (rows - 1);
-      const r = curInner + (outerR - curInner) * v;
-      const camber = Math.sin(v * Math.PI) * 0.14 * taper;
-      const idx = i * rows + j;
-      positions[idx * 3] = cosA * r;
-      positions[idx * 3 + 1] = camber;
-      positions[idx * 3 + 2] = sinA * r;
-      uvs[idx * 2] = u;
-      uvs[idx * 2 + 1] = v;
-    }
-  }
-
-  for (let i = 0; i < segments; i++) {
-    for (let j = 0; j < rows - 1; j++) {
-      const a = i * rows + j;
-      const b = (i + 1) * rows + j;
-      const c = (i + 1) * rows + (j + 1);
-      const d = i * rows + (j + 1);
-      indices.push(a, b, c, a, c, d);
-    }
-  }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-  geo.setIndex(indices);
-  geo.computeVertexNormals();
-  return geo;
-}
 
 /**
  * Bold 16-tooth Steampunk Chrono-Cogwheel geometry for flanking rings.
@@ -282,77 +228,6 @@ function createSkyClockBackdropMaterial(): THREE.ShaderMaterial {
 
         float dissolve = smoothstep(dissolveT - 0.10, dissolveT + 0.10, vor.z * 0.78 + vor.y * 0.32);
         float alpha = clamp((max(max(mR, mG), mB) * 0.95 + glowField + crackEdge) * smoothstep(1.0, 0.88, r) * charge * dissolve, 0.0, 1.0);
-        if (alpha < 0.02) discard;
-        gl_FragColor = vec4(col * alpha, alpha);
-      }
-    `,
-    transparent: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
-  });
-}
-
-/**
- * Layer 2A Shader: Bold High-Contrast Chrono-Slash Crescent (RGB split + blazing white razor edge + cog notches).
- */
-function createBoldChronoSlashMaterial(): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    uniforms: {
-      uProgress: { value: 0.0 },
-      uTime: { value: 0.0 },
-      uLocalT: { value: 0.0 },
-      uSeed: { value: 1.0 },
-      uColor: { value: new THREE.Color('#fbbf24') },
-      uCoreColor: { value: new THREE.Color('#f472b6') },
-    },
-    vertexShader: `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform float uProgress;
-      uniform float uTime;
-      uniform float uLocalT;
-      uniform float uSeed;
-      uniform vec3 uColor;
-      uniform vec3 uCoreColor;
-      varying vec2 vUv;
-      ${CLOCKWORK_NOISE_GLSL}
-
-      float slashBand(vec2 uv, float head, float tail) {
-        float h = smoothstep(head + 0.08, head - 0.02, uv.x);
-        float t = smoothstep(tail - 0.10, tail + 0.06, uv.x);
-        float body = smoothstep(0.05, 0.38, uv.y) * smoothstep(1.0, 0.90, uv.y);
-        float cog = smoothstep(0.35, 0.85, cos(uv.x * 48.0 - uTime * 14.0)) * smoothstep(0.55, 0.12, uv.y);
-        return clamp((body + cog * 0.45 * body) * h * t, 0.0, 1.0);
-      }
-
-      void main() {
-        float dissolveT = clamp((uProgress - 0.5) / 0.5, 0.0, 1.0);
-        // Snappy instant whip (reaches full arc in first 25% of local window!)
-        float head = 1.0 - pow(1.0 - clamp(uLocalT * 4.0, 0.0, 1.0), 4.0);
-        float tail = max(0.0, (uLocalT - 0.25) * 1.4);
-
-        float split = 0.032 * (1.0 - uLocalT * 0.4);
-        float bR = slashBand(vUv + vec2(split, 0.015), head, tail);
-        float bG = slashBand(vUv, head, tail);
-        float bB = slashBand(vUv - vec2(split, -0.015), head, tail);
-
-        float razorWhite = smoothstep(0.62, 0.93, vUv.y) * smoothstep(1.0, 0.90, vUv.y) * bG;
-        vec3 vor = cwVoronoi(vec2(vUv.x * 10.0 + uSeed, vUv.y * 4.0), 0.3);
-        float dissolve = smoothstep(dissolveT - 0.10, dissolveT + 0.10, vor.z * 0.72 + vUv.y * 0.32);
-
-        vec3 col = vec3(bR, 0.0, 0.0) * (uColor * 1.85)
-                 + vec3(0.0, bG, 0.0) * (uCoreColor * 1.85)
-                 + vec3(0.0, 0.0, bB) * vec3(0.7, 0.45, 1.0) * 1.85
-                 + mix(uColor, uCoreColor, 0.5) * bG * 1.1
-                 + vec3(1.0) * razorWhite * 1.5;
-
-        float alpha = clamp(max(max(bR, bG), bB) * 1.2 * dissolve, 0.0, 1.0);
         if (alpha < 0.02) discard;
         gl_FragColor = vec4(col * alpha, alpha);
       }
@@ -672,12 +547,8 @@ function createExplosiveSparkStreakMaterial(): THREE.ShaderMaterial {
   });
 }
 
-interface BarrageSlashSlot {
-  mesh: THREE.Mesh;
-  mat: THREE.ShaderMaterial;
+interface BarrageBeatSlot {
   delay: number;
-  baseScale: number;
-  spinSpeed: number;
   beatFired: boolean;
   targetIndex: number;
 }
@@ -721,7 +592,7 @@ interface ClockworkSkillInstance {
   rightGearMesh: THREE.Mesh;
   leftGearMat: THREE.ShaderMaterial;
   rightGearMat: THREE.ShaderMaterial;
-  barrageSlashes: BarrageSlashSlot[];
+  barrageBeats: BarrageBeatSlot[];
   oreFlashes: OreFlashSlot[];
   hourScytheMesh: THREE.Mesh;
   minuteScytheMesh: THREE.Mesh;
@@ -755,12 +626,11 @@ export class ClockworkTwinsSkillVfxPool {
   constructor(hooks: TierVfxHooks = {}) {
     this.hooks = hooks;
     const planeGeo = new THREE.PlaneGeometry(1, 1);
-    const slashGeo = createBoldCrescentSlashGeometry(0.42, 1.06, Math.PI * 1.24, 36);
     const gearGeo = createChronoFlankGearGeometry();
     const scytheGeo = createColossalClockScytheGeometry();
     const pillarGeo = new THREE.CylinderGeometry(0.95, 1.35, 9.5, 24, 10, true);
     pillarGeo.translate(0, 4.75, 0);
-    this.sharedGeos.push(planeGeo, slashGeo, gearGeo, scytheGeo, pillarGeo);
+    this.sharedGeos.push(planeGeo, gearGeo, scytheGeo, pillarGeo);
 
     for (let p = 0; p < POOL_SIZE; p++) {
       const root = new THREE.Group();
@@ -785,20 +655,10 @@ export class ClockworkTwinsSkillVfxPool {
       root.add(rightGearMesh);
       this.allMats.push(leftGearMat, rightGearMat);
 
-      const barrageSlashes: BarrageSlashSlot[] = [];
-      for (let i = 0; i < BARRAGE_SLASH_COUNT; i++) {
-        const mat = createBoldChronoSlashMaterial();
-        mat.uniforms.uSeed.value = (i + 1) * 3.17;
-        const mesh = new THREE.Mesh(slashGeo, mat);
-        mesh.visible = false;
-        root.add(mesh);
-        this.allMats.push(mat);
-        barrageSlashes.push({
-          mesh,
-          mat,
+      const barrageBeats: BarrageBeatSlot[] = [];
+      for (let i = 0; i < BARRAGE_BEAT_COUNT; i++) {
+        barrageBeats.push({
           delay: 0.22 + i * 0.068,
-          baseScale: 4.5,
-          spinSpeed: 12.0,
           beatFired: false,
           targetIndex: i,
         });
@@ -901,7 +761,7 @@ export class ClockworkTwinsSkillVfxPool {
         rightGearMesh,
         leftGearMat,
         rightGearMat,
-        barrageSlashes,
+        barrageBeats,
         oreFlashes,
         hourScytheMesh,
         minuteScytheMesh,
@@ -1006,28 +866,12 @@ export class ClockworkTwinsSkillVfxPool {
     inst.rightGearMesh.scale.setScalar(0.01);
     inst.rightGearMat.uniforms.uProgress.value = 0;
 
-    const slashLimit = this.lowQuality ? 3 : BARRAGE_SLASH_COUNT;
-    for (let i = 0; i < inst.barrageSlashes.length; i++) {
-      const slot = inst.barrageSlashes[i];
-      slot.beatFired = false;
-      if (i >= slashLimit) {
-        slot.mesh.visible = false;
-        continue;
-      }
-      const isLeft = i % 2 === 0;
-      const tgt = inst.pts[i % inst.pts.length];
+    const beatLimit = this.lowQuality ? 3 : BARRAGE_BEAT_COUNT;
+    for (let i = 0; i < inst.barrageBeats.length; i++) {
+      const slot = inst.barrageBeats[i];
+      slot.beatFired = i >= beatLimit;
       slot.targetIndex = i % inst.pts.length;
       slot.delay = 0.22 + i * 0.068;
-      slot.baseScale = (3.6 + (i % 3) * 0.65) * opts.areaScale;
-      slot.spinSpeed = (isLeft ? 1 : -1) * (13.5 + i * 0.8);
-      slot.mesh.position.set(tgt.x, tgt.y + 0.88 + (i % 2) * 0.18, tgt.z);
-      slot.mesh.rotation.set((isLeft ? 1 : -1) * 0.34, i * 1.15, (isLeft ? 1 : -1) * 0.42);
-      slot.mesh.scale.setScalar(0.01);
-      slot.mesh.visible = false;
-      slot.mat.uniforms.uColor.value.set(isLeft ? '#fbbf24' : '#2dd4bf');
-      slot.mat.uniforms.uCoreColor.value.set(isLeft ? '#f472b6' : '#c084fc');
-      slot.mat.uniforms.uProgress.value = 0;
-      slot.mat.uniforms.uLocalT.value = 0;
     }
 
     for (let i = 0; i < inst.oreFlashes.length; i++) {
@@ -1097,12 +941,11 @@ export class ClockworkTwinsSkillVfxPool {
       inst.rightGearMat.uniforms.uProgress.value = uProgress;
       inst.rightGearMat.uniforms.uTime.value = timeSec;
 
-      // ACT 1 (0.22s -> 0.62s): Snappy 6-Hit Per-Ore Blitz Barrage (with direct ore hit-flash & ballistic sparks!)
-      const slashLimit = this.lowQuality ? 3 : BARRAGE_SLASH_COUNT;
-      for (let i = 0; i < slashLimit; i++) {
-        const slot = inst.barrageSlashes[i];
+      // ACT 1 (0.22s -> 0.62s): Snappy 6-Hit Per-Ore Hit Flashes, Sparks & Lightning (slash shaders removed)
+      const beatLimit = this.lowQuality ? 3 : BARRAGE_BEAT_COUNT;
+      for (let i = 0; i < beatLimit; i++) {
+        const slot = inst.barrageBeats[i];
         if (inst.elapsed < slot.delay) continue;
-        slot.mesh.visible = true;
         if (!slot.beatFired) {
           slot.beatFired = true;
           const pt = inst.pts[slot.targetIndex];
@@ -1111,13 +954,6 @@ export class ClockworkTwinsSkillVfxPool {
           this.launchSparkBurst(inst, this.tmpTargetPos, (i * 2) % 12, 2, 0.88);
           inst.onSlashBeatCallback?.(i, pt);
         }
-        const localT = Math.min(1, (inst.elapsed - slot.delay) / 0.24);
-        const sEase = 1 - Math.pow(1 - localT, 4);
-        slot.mesh.scale.setScalar(slot.baseScale * (0.48 + 0.62 * sEase));
-        slot.mesh.rotation.y += slot.spinSpeed * dt;
-        slot.mat.uniforms.uProgress.value = uProgress;
-        slot.mat.uniforms.uTime.value = timeSec;
-        slot.mat.uniforms.uLocalT.value = localT;
       }
 
       // ACT 2 (0.60s -> 0.76s): Violent easeInExpo Twin Great-Scythe Slam!

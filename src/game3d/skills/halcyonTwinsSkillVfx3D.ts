@@ -4,7 +4,7 @@ import type { TierVfxHooks, WorldPoint3 } from '../TierMotionPath3D';
 
 const SKILL_DURATION_SEC = 2.5;
 const POOL_SIZE = 2;
-const SKY_SWORD_COUNT = 10;
+const SKY_SWORD_COUNT = 8;
 const RAIL_LANCE_COUNT = 3;
 const ORE_FLASH_COUNT = 6;
 const SHARD_PARTICLE_COUNT = 36;
@@ -33,14 +33,26 @@ const HALCYON_GLSL = `
     );
   }
 
+  float hcFbm(vec2 p) {
+    float v = 0.0;
+    float a = 0.5;
+    mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
+    for (int i = 0; i < 3; i++) {
+      v += a * hcVnoise(p);
+      p = rot * p * 2.04 + vec2(1.9, 6.3);
+      a *= 0.5;
+    }
+    return v;
+  }
+
   float hcRidged(vec2 p) {
     float v = 0.0;
-    float a = 0.58;
+    float a = 0.56;
     float freq = 1.0;
     for (int i = 0; i < 3; i++) {
       float n = 1.0 - abs(hcVnoise(p * freq) * 2.0 - 1.0);
-      v += (n * n * n * n) * a;
-      freq *= 2.25;
+      v += (n * n * n) * a;
+      freq *= 2.18;
       a *= 0.5;
     }
     return v;
@@ -71,112 +83,189 @@ const HALCYON_GLSL = `
     return vec3(sqrt(d1), sqrt(d2) - sqrt(d1), id);
   }
 
+  mat2 hcRot(float a) {
+    float c = cos(a);
+    float s = sin(a);
+    return mat2(c, -s, s, c);
+  }
+
   float hcSdStar4(vec2 p, float r, float sharpness) {
-    vec2 q = abs(p);
+    vec2 q = max(abs(p), vec2(0.0001));
     return pow(pow(q.x, sharpness) + pow(q.y, sharpness), 1.0 / sharpness) - r;
   }
 
   float hcSdCelestialCrest(vec2 p, float scale) {
     vec2 q = p / scale;
-    float dStar = hcSdStar4(q, 0.85, 0.44);
-    float dDia = (abs(q.x) + abs(q.y)) - 0.44;
-    return min(dStar, dDia * 1.12);
+    float dStar = hcSdStar4(q, 0.85, 0.46);
+    float dDia = (abs(q.x) + abs(q.y)) * 0.7071 - 0.38;
+    return min(dStar, dDia);
+  }
+
+  float hcSdBox(vec2 p, vec2 b) {
+    vec2 d = abs(p) - b;
+    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
   }
 `;
 
 /**
  * Heavy Sculpted Royal Knight Standard Spear Pole & Razor Cross-Fleur Head.
- * Pivot y = 0 at spear tip for clean supersonic pit-slam!
+ * Pivot y = 0 at spear tip for clean vertical ground-plant.
  */
 function createBannerPoleGeometry(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  const pole = new THREE.CylinderGeometry(0.042, 0.058, 3.85, 6);
-  pole.translate(0, 1.925, 0);
+  const pole = new THREE.CylinderGeometry(0.038, 0.052, 3.65, 6);
+  pole.translate(0, 1.825, 0);
   parts.push(pole);
 
-  const spearHead = new THREE.ConeGeometry(0.22, 0.78, 4);
+  const spearHead = new THREE.ConeGeometry(0.20, 0.72, 4);
   spearHead.scale(0.9, 1.0, 0.34);
-  spearHead.translate(0, 4.22, 0);
+  spearHead.translate(0, 4.0, 0);
   parts.push(spearHead);
 
   for (const sx of [-1, 1]) {
-    const sideWing = new THREE.ConeGeometry(0.11, 0.44, 4);
+    const sideWing = new THREE.ConeGeometry(0.10, 0.40, 4);
     sideWing.rotateZ(sx * -Math.PI * 0.5);
-    sideWing.translate(sx * 0.26, 3.84, 0);
+    sideWing.translate(sx * 0.24, 3.65, 0);
     parts.push(sideWing);
   }
 
-  const crossbar = new THREE.CylinderGeometry(0.032, 0.032, 1.48, 6);
+  const crossbar = new THREE.CylinderGeometry(0.028, 0.028, 1.38, 6);
   crossbar.rotateZ(Math.PI / 2);
-  crossbar.translate(0.68, 3.55, 0);
+  crossbar.translate(0.64, 3.38, 0);
   parts.push(crossbar);
 
-  const collarRing = new THREE.OctahedronGeometry(0.14, 0);
+  const collarRing = new THREE.OctahedronGeometry(0.13, 0);
   collarRing.scale(0.9, 1.4, 0.55);
-  collarRing.translate(0, 3.84, 0);
+  collarRing.translate(0, 3.65, 0);
   parts.push(collarRing);
 
   return mergeSimpleGeos(parts);
 }
 
 /**
- * Sculpted Dark-Steel Paladin Excalibur Broadsword.
- * Pivot (0, 0, 0) at grip tang; blade extends along +Y up to 2.65 units.
+ * Downward-Pointing Sacred Knight Sword Geometry (for disciplined Sword Choir formation).
+ * Pivot (0, 0, 0) at NEEDLE TIP! Blade rises vertically along +Y up to 2.25 units, hilt at top.
+ * That way zero rotation flips are needed to plunge straight downward into the pit.
  */
-function createPaladinBroadswordGeometry(): THREE.BufferGeometry {
+function createDownwardChoirSwordGeometry(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
   const bladeShape = new THREE.Shape();
-  bladeShape.moveTo(-0.046, -0.62);
-  bladeShape.lineTo(0.046, -0.62);
-  bladeShape.lineTo(0.052, -0.05);
-  bladeShape.lineTo(0.38, 0.08);
-  bladeShape.lineTo(0.22, -0.04);
-  bladeShape.lineTo(0.12, 0.08);
-  bladeShape.lineTo(0.18, 0.26);
-  bladeShape.lineTo(0.16, 2.02);
-  bladeShape.lineTo(0.0, 2.65);
-  bladeShape.lineTo(-0.16, 2.02);
-  bladeShape.lineTo(-0.18, 0.26);
-  bladeShape.lineTo(-0.12, 0.08);
-  bladeShape.lineTo(-0.22, -0.04);
-  bladeShape.lineTo(-0.38, 0.08);
-  bladeShape.lineTo(-0.052, -0.05);
+  bladeShape.moveTo(0.0, 0.0); // Razor tip at y = 0!
+  bladeShape.lineTo(0.105, 0.38);
+  bladeShape.lineTo(0.125, 1.66);
+  bladeShape.lineTo(0.32, 1.74); // Swept winged crossguard right
+  bladeShape.lineTo(0.20, 1.83);
+  bladeShape.lineTo(0.045, 1.80);
+  bladeShape.lineTo(0.040, 2.24); // Grip
+  bladeShape.lineTo(-0.040, 2.24);
+  bladeShape.lineTo(-0.045, 1.80);
+  bladeShape.lineTo(-0.20, 1.83);
+  bladeShape.lineTo(-0.32, 1.74); // Swept winged crossguard left
+  bladeShape.lineTo(-0.125, 1.66);
+  bladeShape.lineTo(-0.105, 0.38);
   bladeShape.closePath();
 
   const bladeGeo = new THREE.ExtrudeGeometry(bladeShape, {
-    depth: 0.046,
+    depth: 0.036,
     bevelEnabled: true,
-    bevelThickness: 0.024,
-    bevelSize: 0.018,
+    bevelThickness: 0.018,
+    bevelSize: 0.014,
     bevelSegments: 1,
   });
-  bladeGeo.translate(0, 0, -0.023);
+  bladeGeo.translate(0, 0, -0.018);
   parts.push(bladeGeo);
 
-  const guardGem = new THREE.OctahedronGeometry(0.12, 0);
-  guardGem.scale(0.9, 1.4, 0.55);
-  guardGem.translate(0, 0.05, 0);
+  // Center ridge spine along blade
+  const spine = new THREE.ConeGeometry(0.048, 1.65, 4);
+  spine.scale(0.75, 1.0, 0.65);
+  spine.rotateX(Math.PI);
+  spine.translate(0, 0.90, 0);
+  parts.push(spine);
+
+  const guardGem = new THREE.OctahedronGeometry(0.095, 0);
+  guardGem.scale(0.85, 1.35, 0.55);
+  guardGem.translate(0, 1.75, 0);
   parts.push(guardGem);
 
-  const pommel = new THREE.OctahedronGeometry(0.10, 0);
+  const pommel = new THREE.OctahedronGeometry(0.085, 0);
   pommel.scale(0.9, 1.45, 0.55);
-  pommel.translate(0, -0.70, 0);
+  pommel.translate(0, 2.32, 0);
   parts.push(pommel);
 
   return mergeSimpleGeos(parts);
 }
 
 /**
- * Towering Curved 3D Guillotine Shockwave Blade Wall (sharp vertical height + razor taper, ZERO flat pancake!).
+ * Monumental Downward-Pointing Sacred Excalibur Greatsword Geometry (Center Plunge).
+ * Pivot (0, 0, 0) EXACTLY at the razor blade tip! Extends straight UP along +Y to 4.25 units.
+ * Drops straight vertically downward (rotation = 0,0,0) so the full colossal blade & angelic crossguard
+ * tower majestically above the pit floor instead of burying underground.
  */
-function createGuillotineCrescentGeometry(
-  innerR = 0.22,
-  outerR = 1.25,
-  sweepRad = Math.PI * 1.18,
-  segments = 40
+function createVerticalExcaliburGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const bladeShape = new THREE.Shape();
+  bladeShape.moveTo(0.0, 0.0); // Exact razor tip at y = 0
+  bladeShape.lineTo(0.24, 0.68);
+  bladeShape.lineTo(0.29, 2.95);
+  // Swept double-wing paladin crossguard
+  bladeShape.lineTo(0.84, 3.24);
+  bladeShape.lineTo(0.56, 3.04);
+  bladeShape.lineTo(0.22, 3.16);
+  bladeShape.lineTo(0.42, 3.40);
+  bladeShape.lineTo(0.095, 3.30);
+  bladeShape.lineTo(0.085, 4.10); // Long two-handed grip
+  bladeShape.lineTo(-0.085, 4.10);
+  bladeShape.lineTo(-0.095, 3.30);
+  bladeShape.lineTo(-0.42, 3.40);
+  bladeShape.lineTo(-0.22, 3.16);
+  bladeShape.lineTo(-0.56, 3.04);
+  bladeShape.lineTo(-0.84, 3.24);
+  bladeShape.lineTo(-0.29, 2.95);
+  bladeShape.lineTo(-0.24, 0.68);
+  bladeShape.closePath();
+
+  const bladeGeo = new THREE.ExtrudeGeometry(bladeShape, {
+    depth: 0.08,
+    bevelEnabled: true,
+    bevelThickness: 0.042,
+    bevelSize: 0.032,
+    bevelSegments: 2,
+  });
+  bladeGeo.translate(0, 0, -0.04);
+  parts.push(bladeGeo);
+
+  // Raised glowing fuller ridge running down the blade spine
+  const fuller = new THREE.CylinderGeometry(0.055, 0.015, 2.75, 4);
+  fuller.scale(0.8, 1.0, 1.45);
+  fuller.translate(0, 1.62, 0);
+  parts.push(fuller);
+
+  // Guard core jewel & crown pommel crystal
+  const guardJewel = new THREE.OctahedronGeometry(0.21, 0);
+  guardJewel.scale(0.85, 1.45, 0.55);
+  guardJewel.translate(0, 3.12, 0);
+  parts.push(guardJewel);
+
+  const pommel = new THREE.OctahedronGeometry(0.18, 0);
+  pommel.scale(0.9, 1.55, 0.6);
+  pommel.translate(0, 4.24, 0);
+  parts.push(pommel);
+
+  return mergeSimpleGeos(parts);
+}
+
+/**
+ * High-Segment Smooth 3D Sakuga Excalibur Sweep Wave Geometry (Fate/UBW + HSR Phainon style).
+ * Sweeps cleanly around the arena with sculpted vertical blade-camber & razor-tapered ends.
+ */
+function createGrandExcaliburSweepGeometry(
+  innerR = 0.44,
+  outerR = 1.24,
+  sweepRad = Math.PI * 1.42,
+  segments = 56
 ): THREE.BufferGeometry {
   const cols = segments + 1;
-  const rows = 4;
+  const rows = 10;
   const positions = new Float32Array(cols * rows * 3);
   const uvs = new Float32Array(cols * rows * 2);
   const indices: number[] = [];
@@ -184,7 +273,9 @@ function createGuillotineCrescentGeometry(
   for (let i = 0; i < cols; i++) {
     const u = i / segments;
     const angle = (u - 0.5) * sweepRad;
-    const taper = Math.pow(Math.sin(u * Math.PI), 0.30);
+    // Skewed anime smear envelope: razor needle start -> wide sweeping belly -> sharp leading tip
+    const belly = Math.pow(Math.sin(u * Math.PI), 0.34) * (0.62 + 0.52 * u);
+    const taper = Math.min(1.0, belly);
     const curInner = outerR - (outerR - innerR) * taper;
     const cosA = Math.cos(angle);
     const sinA = Math.sin(angle);
@@ -192,8 +283,10 @@ function createGuillotineCrescentGeometry(
     for (let j = 0; j < rows; j++) {
       const v = j / (rows - 1);
       const r = curInner + (outerR - curInner) * v;
-      // High kinetic wall curvature so the cleave looks colossal in 3D perspective
-      const liftY = (1.0 - v) * 0.42 * taper + Math.sin(v * Math.PI) * 0.32 * taper;
+      // Smooth dynamic 3D wave wall rising gracefully on inner edge & curving out to razor outer edge
+      const liftY =
+        Math.pow(1.0 - v, 1.5) * 0.28 * taper +
+        Math.sin(v * Math.PI) * 0.24 * taper;
       const idx = i * rows + j;
       positions[idx * 3] = cosA * r;
       positions[idx * 3 + 1] = liftY;
@@ -222,7 +315,7 @@ function createGuillotineCrescentGeometry(
 }
 
 /**
- * Crisp Twin-Split Knight Pennant Shader: Snaps taut in shockwave wind pressure (NO floppy cloth!).
+ * Crisp Twin-Split Knight Pennant Shader: Snaps taut in shockwave wind pressure.
  */
 function createBannerPennantMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
@@ -237,8 +330,7 @@ function createBannerPennantMaterial(): THREE.ShaderMaterial {
         vUv = uv;
         vec3 p = position;
         float free = smoothstep(0.0, 0.25, uv.x);
-        // Tight supersonic wind flutter rather than mushy waving
-        float whip = sin(uv.x * 16.0 - uTime * 28.0) * 0.032 * free;
+        float whip = sin(uv.x * 16.0 - uTime * 28.0) * 0.030 * free;
         p.z += whip;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
       }
@@ -250,12 +342,11 @@ function createBannerPennantMaterial(): THREE.ShaderMaterial {
       ${HALCYON_GLSL}
 
       void main() {
-        float dissolveT = clamp((uProgress - 0.65) / 0.35, 0.0, 1.0);
-        // Razor swallow-tail cutout on right tip
+        float dissolveT = clamp((uProgress - 0.66) / 0.34, 0.0, 1.0);
         if (vUv.x > 0.62 && abs(vUv.y - 0.5) < (vUv.x - 0.62) * 1.18) discard;
 
         vec2 cUv = (vUv - vec2(0.36, 0.5)) * 2.15;
-        float crest = smoothstep(0.025, 0.0, hcSdCelestialCrest(cUv, 0.58));
+        float crest = smoothstep(0.024, 0.0, hcSdCelestialCrest(cUv, 0.58));
         float trim = step(min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y)), 0.055);
         float energyStreak = smoothstep(0.55, 0.92, sin(vUv.x * 22.0 - uTime * 22.0));
 
@@ -266,7 +357,7 @@ function createBannerPennantMaterial(): THREE.ShaderMaterial {
 
         vec3 col = mix(navyInk, royalBlue, step(0.35, vUv.y));
         col += azure * energyStreak * 0.45 * vUv.x;
-        col = mix(col, gold * 1.5, trim);
+        col = mix(col, gold * 1.45, trim);
         col = mix(col, vec3(1.0, 0.99, 0.92) * 1.65, crest);
 
         float shard = hcHash21(floor(vUv * 12.0));
@@ -283,14 +374,15 @@ function createBannerPennantMaterial(): THREE.ShaderMaterial {
 }
 
 /**
- * Hard-Edged Anime Ink & Electric Paladin Steel Material (NormalBlending).
+ * Hard-Edged Anime Cel-Shaded Paladin Steel Material w/ Glowing Center Fuller Core.
  */
-function createPaladinSteelMaterial(isAzureSword = true): THREE.ShaderMaterial {
+function createPaladinSteelMaterial(isAzureSword = true, isExcalibur = false): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
       uProgress: { value: 0.0 },
       uTime: { value: 0.0 },
       uIsAzure: { value: isAzureSword ? 1.0 : 0.0 },
+      uIsExcalibur: { value: isExcalibur ? 1.0 : 0.0 },
     },
     vertexShader: `
       varying vec3 vNormalView;
@@ -308,34 +400,41 @@ function createPaladinSteelMaterial(isAzureSword = true): THREE.ShaderMaterial {
       uniform float uProgress;
       uniform float uTime;
       uniform float uIsAzure;
+      uniform float uIsExcalibur;
       varying vec3 vNormalView;
       varying vec3 vViewPos;
       varying vec3 vLocalPos;
       ${HALCYON_GLSL}
 
       void main() {
-        float dissolveT = clamp((uProgress - 0.66) / 0.34, 0.0, 1.0);
+        float dissolveT = clamp((uProgress - 0.68) / 0.32, 0.0, 1.0);
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
         vec3 L = normalize(vec3(0.45, 0.85, 0.50));
         float ndv = abs(dot(N, V));
-        float cel = step(0.32, dot(N, L));
-        float inkRim = step(ndv, 0.24);
-        float edgeGlow = step(0.24, ndv) * step(ndv, 0.42);
-        float bolt = step(0.74, hcRidged(vec2(vLocalPos.y * 5.0 - uTime * 14.0, vLocalPos.x * 7.0)));
+        float cel = smoothstep(0.28, 0.36, dot(N, L));
+        float inkRim = smoothstep(0.24, 0.14, ndv);
+        float edgeGlow = smoothstep(0.20, 0.30, ndv) * (1.0 - smoothstep(0.38, 0.48, ndv));
 
-        vec3 blackSteel = vec3(0.025, 0.045, 0.14);
-        vec3 silverSteel = vec3(0.74, 0.88, 1.0);
+        // Glowing golden-azure central fuller rune channel along Excalibur blade
+        float bladeZone = step(0.18, vLocalPos.y) * (1.0 - step(2.98, vLocalPos.y));
+        float fullerCore = smoothstep(0.065, 0.015, abs(vLocalPos.x)) * bladeZone * uIsExcalibur;
+        float surge = 0.7 + 0.3 * sin(vLocalPos.y * 8.0 - uTime * 18.0);
+        float bolt = smoothstep(0.72, 0.86, hcRidged(vec2(vLocalPos.y * 4.5 - uTime * 12.0, vLocalPos.x * 6.5)));
+
+        vec3 darkSteel = vec3(0.04, 0.075, 0.20);
+        vec3 brightSteel = vec3(0.80, 0.92, 1.0);
         vec3 azure = vec3(0.14, 0.86, 1.0);
         vec3 gold = vec3(1.0, 0.88, 0.28);
 
-        vec3 col = mix(blackSteel, silverSteel, cel);
-        col = mix(col, mix(gold * 1.45, azure * 1.85, uIsAzure), max(edgeGlow * 0.85, bolt));
-        col = mix(col, vec3(0.01, 0.018, 0.05), inkRim * 0.92);
-        col += vec3(1.0) * bolt * 0.75;
+        vec3 col = mix(darkSteel, brightSteel, cel);
+        col = mix(col, mix(gold * 1.45, azure * 1.85, uIsAzure), max(edgeGlow * 0.82, bolt * 0.85));
+        col = mix(col, mix(azure, gold, 0.45) * (1.75 * surge), fullerCore * 0.92);
+        col = mix(col, vec3(0.012, 0.022, 0.065), inkRim * 0.90);
+        col += vec3(1.0) * (fullerCore * 0.55 + bolt * 0.45);
 
-        vec3 vor = hcVoronoi(vLocalPos.xy * 5.0, 0.2);
-        float dissolve = step(dissolveT, vor.z * 0.82 + 0.15);
+        vec3 vor = hcVoronoi(vLocalPos.xy * 4.2, 0.2);
+        float dissolve = step(dissolveT, vor.z * 0.80 + 0.16);
         if (dissolve < 0.5) discard;
         gl_FragColor = vec4(col, 0.99);
       }
@@ -348,9 +447,13 @@ function createPaladinSteelMaterial(isAzureSword = true): THREE.ShaderMaterial {
 }
 
 /**
- * ACT 0 Shader: Cracked Lightning Fissure & Sharp Precision Rail-Gate Seal on Pit Floor.
+ * ACT 0 Shader: Open-Air Sacred Paladin Astrolabe Seal (Fate / HSR Phainon & Sunday inspired).
+ * ZERO ugly opaque black sticker disc! Three counter-rotating precision SDF layers:
+ * 1) Outer Cathedral Halo Ring w/ 16 precision compass ticks & 8 star nodes
+ * 2) Counter-rotating 8-Pointed Sacred Paladin Octagram (two overlapping squares)
+ * 3) Core Halcyon 4-Point Royal Cross-Crest + delicate Voronoi lightning fissures & shock rings.
  */
-function createShockFissureFloorMaterial(): THREE.ShaderMaterial {
+function createPaladinSacredSealMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
       uProgress: { value: 0.0 },
@@ -375,41 +478,78 @@ function createShockFissureFloorMaterial(): THREE.ShaderMaterial {
         vec2 p = (vUv - 0.5) * 2.0;
         float r = length(p);
         if (r > 0.99) discard;
-        float ang = atan(p.y, p.x);
 
-        float snapIn = 1.0 - pow(1.0 - clamp(uProgress / 0.04, 0.0, 1.0), 4.0);
-        float dissolveT = clamp((uProgress - 0.65) / 0.35, 0.0, 1.0);
+        // Crisp 55ms explosive seal expansion from center
+        float deploy = 1.0 - pow(1.0 - clamp(uProgress / 0.032, 0.0, 1.0), 4.0);
+        float dissolveT = clamp((uProgress - 0.66) / 0.34, 0.0, 1.0);
+        vec2 dp = p / max(0.08, deploy);
+        float dr = length(dp);
 
-        // Razor Voronoi ground cracks bursting out from Spear Slam
-        vec3 vor = hcVoronoi(vec2(ang * 2.2, r * 6.0), 0.1);
-        float crackLine = smoothstep(0.065, 0.015, vor.y) * smoothstep(0.96, 0.14, r);
+        // Layer 1: Outer Cathedral Ring (clockwise) + precision 16-tick gauge & segmented arc dashes
+        vec2 pOuter = hcRot(uTime * 0.32) * dp;
+        float angO = atan(pOuter.y, pOuter.x);
+        float outerRailA = smoothstep(0.015, 0.004, abs(dr - 0.92));
+        float outerRailB = smoothstep(0.010, 0.003, abs(dr - 0.84));
+        float outerDashes = smoothstep(0.012, 0.003, abs(dr - 0.88)) * smoothstep(0.15, 0.35, sin(angO * 8.0));
+        float ticks16 = smoothstep(0.74, 0.86, abs(cos(angO * 8.0))) * smoothstep(0.042, 0.012, abs(dr - 0.88));
+        // 4 Royal Diamond Nodes on outer cardinal points
+        float secO = mod(angO + 3.14159265, 1.5707963) - 0.78539816;
+        vec2 nodeP = vec2(cos(secO), sin(secO)) * dr - vec2(0.88, 0.0);
+        float cardNode = smoothstep(0.014, 0.002, hcSdStar4(nodeP, 0.055, 0.52));
 
-        // Precision Orbital Rail-Gate Rings + Tick Marks
-        float outerRing = step(abs(r - 0.90), 0.016);
-        float midRing = step(abs(r - 0.62), 0.014);
-        float ticks = step(0.82, abs(sin(ang * 12.0 + uTime * 1.8))) * step(abs(r - 0.76), 0.055);
-        float cardinalCross = step(hcSdCelestialCrest(p, 0.28), 0.012);
+        // Layer 2: Counter-Rotating 8-Pointed Paladin Octagram (2 rotated squares + inner ring)
+        vec2 pOct = hcRot(-uTime * 0.48) * dp;
+        float sq1 = abs(max(abs(pOct.x), abs(pOct.y)) - 0.58);
+        vec2 pOct45 = hcRot(0.78539816) * pOct;
+        float sq2 = abs(max(abs(pOct45.x), abs(pOct45.y)) - 0.58);
+        float octagram = smoothstep(0.014, 0.003, min(sq1, sq2));
+        float midRing = smoothstep(0.011, 0.003, abs(dr - 0.58));
 
-        // Expanding Supersonic Ring Waves (triggered on Banner Slam, Excalibur Guillotine, Finale)
-        float waveR = fract(uBlastT) * 0.96;
-        float sonicWave = exp(-pow((r - waveR) * 28.0, 2.0)) * (1.0 - smoothstep(0.65, 1.0, waveR));
+        // 8 delicate radial lance lines connecting core to octagram tips
+        float angOct = atan(pOct.y, pOct.x);
+        float radMask = smoothstep(0.24, 0.30, dr) * (1.0 - smoothstep(0.76, 0.82, dr));
+        float spokes = smoothstep(0.96, 0.992, abs(cos(angOct * 4.0))) * radMask;
 
-        float shardDissolve = step(dissolveT, vor.z * 0.78 + (1.0 - r) * 0.25);
+        // Layer 3: Core Halcyon Royal 4-Point Cross-Crest (matches pose.webp flag crest!)
+        vec2 pCore = hcRot(uTime * 0.22) * dp;
+        float coreRing = smoothstep(0.013, 0.003, abs(dr - 0.29));
+        float crestLine = smoothstep(0.014, 0.002, abs(hcSdCelestialCrest(pCore, 0.27)));
+        float crestFill = smoothstep(0.010, -0.015, hcSdCelestialCrest(pCore, 0.16));
+
+        // Subtle Voronoi Lightning Cracks radiating from center impact (open-air, NOT muddy black disc!)
+        vec3 vor = hcVoronoi(vec2(atan(p.y, p.x) * 2.4, r * 6.5), 0.12);
+        float fissures = smoothstep(0.036, 0.006, vor.y) * smoothstep(0.92, 0.12, r) * smoothstep(0.04, 0.14, r);
+
+        // Expanding Supersonic Ring Wave on impacts
+        float waveR = fract(uBlastT) * 0.95;
+        float sonicWave = exp(-pow((r - waveR) * 30.0, 2.0)) * step(0.01, uBlastT) * (1.0 - smoothstep(0.68, 1.0, waveR));
+
+        float shardDissolve = step(dissolveT, vor.z * 0.82 + (1.0 - r) * 0.18);
         if (shardDissolve < 0.5) discard;
 
-        vec3 inkBase = vec3(0.015, 0.032, 0.11);
+        // Thin ink border hugging ONLY the glowing geometry (keeps pit floor & ores clearly visible!)
+        float lineSum = clamp(
+          outerRailA + outerRailB + outerDashes + ticks16 + cardNode +
+          octagram + midRing + spokes + coreRing + crestLine + crestFill + fissures * 0.85,
+          0.0, 1.0
+        );
+        float centerTint = exp(-r * r * 10.0) * 0.38;
+
+        vec3 inkNavy = vec3(0.015, 0.035, 0.12);
         vec3 azure = vec3(0.14, 0.86, 1.0);
         vec3 gold = vec3(1.0, 0.88, 0.30);
+        vec3 whiteHot = vec3(1.0, 0.99, 0.95);
 
-        float inkDisc = smoothstep(0.95, 0.62, r) * 0.88;
-        float highEnergy = clamp(crackLine * 1.2 + outerRing + midRing + ticks + cardinalCross + sonicWave * 1.4, 0.0, 1.5);
+        float goldMask = clamp(outerDashes + octagram * 0.9 + cardNode + coreRing + crestLine, 0.0, 1.0);
+        float azureMask = clamp(outerRailA + outerRailB + ticks16 + midRing + spokes + fissures * 1.2 + sonicWave * 1.5, 0.0, 1.0);
+        float whiteMask = clamp(crestFill + cardNode * 0.7 + sonicWave * 0.9 + fissures * 0.55, 0.0, 1.0);
 
-        vec3 col = inkBase
-          + azure * (crackLine * 1.7 + sonicWave * 1.9 + outerRing * 1.1)
-          + gold * (midRing * 1.4 + ticks * 1.35 + cardinalCross * 1.4)
-          + vec3(1.0) * (crackLine * 0.85 + sonicWave * 0.95);
+        vec3 col = inkNavy * 0.9;
+        col += azure * azureMask * 1.65;
+        col += gold * goldMask * 1.65;
+        col += whiteHot * whiteMask * 1.4;
 
-        float alpha = clamp(max(inkDisc, min(1.0, highEnergy)) * smoothstep(0.99, 0.90, r) * snapIn, 0.0, 0.97);
+        float alpha = clamp(max(centerTint, max(lineSum, sonicWave)) * smoothstep(0.99, 0.93, r) * deploy, 0.0, 0.96);
         if (alpha < 0.02) discard;
         gl_FragColor = vec4(col, alpha);
       }
@@ -422,7 +562,106 @@ function createShockFissureFloorMaterial(): THREE.ShaderMaterial {
 }
 
 /**
- * ACT 1 Shader: Razor-Sharp High-Contrast Thunder-Rail Beam Cleaves (Solo Leveling / HSR Lightning-Rail!).
+ * Gate of Babylon / Celestial Sky Halo Ring Material (used for Main Sky Gate & 8 Mini Sword Gates).
+ */
+function createSkyGateHaloMaterial(isMainGate: boolean): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uLocalT: { value: 0.0 },
+      uTime: { value: 0.0 },
+      uIsMain: { value: isMainGate ? 1.0 : 0.0 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uLocalT;
+      uniform float uTime;
+      uniform float uIsMain;
+      varying vec2 vUv;
+      ${HALCYON_GLSL}
+
+      void main() {
+        vec2 p = (vUv - 0.5) * 2.0;
+        float r = length(p);
+        if (r > 0.99) discard;
+
+        float openSnap = 1.0 - pow(1.0 - clamp(uLocalT * 5.0, 0.0, 1.0), 3.0);
+        float closeFade = 1.0 - smoothstep(0.70, 1.0, uLocalT);
+        vec2 rp = hcRot(uTime * (1.2 + uIsMain * 0.4)) * p;
+        float ang = atan(rp.y, rp.x);
+
+        float outerRing = smoothstep(0.045, 0.010, abs(r - 0.84 * openSnap));
+        float innerRing = smoothstep(0.032, 0.008, abs(r - 0.52 * openSnap));
+        float ticks = smoothstep(0.55, 0.85, sin(ang * 8.0)) * smoothstep(0.07, 0.02, abs(r - 0.68 * openSnap));
+        float vortexCore = exp(-r * r * (7.5 - uIsMain * 2.0)) * (0.65 + 0.35 * sin(r * 16.0 - uTime * 12.0));
+
+        vec3 azure = vec3(0.16, 0.88, 1.0) * 1.75;
+        vec3 gold = vec3(1.0, 0.88, 0.30) * 1.85;
+        vec3 col = mix(azure, gold, clamp(outerRing + ticks * 0.8, 0.0, 1.0)) + vec3(1.0) * (vortexCore * 0.8 + innerRing * 0.7);
+
+        float alpha = clamp((outerRing + innerRing + ticks * 0.7 + vortexCore * 0.75) * smoothstep(0.99, 0.85, r) * closeFade, 0.0, 1.0);
+        if (alpha < 0.02) discard;
+        gl_FragColor = vec4(col * alpha, alpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+  });
+}
+
+/**
+ * Vertical Plunge Speed-Beam Sheath guiding Excalibur straight down into the Pit.
+ */
+function createPlungeGuideBeamMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uLocalT: { value: 0.0 },
+      uTime: { value: 0.0 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uLocalT;
+      uniform float uTime;
+      varying vec2 vUv;
+      ${HALCYON_GLSL}
+
+      void main() {
+        float xDist = abs(vUv.x - 0.5) * 2.0;
+        float coreBeam = smoothstep(0.26, 0.02, xDist);
+        float outerGlow = exp(-xDist * xDist * 7.5);
+        float streak = smoothstep(0.45, 0.88, hcRidged(vec2(vUv.x * 8.0, vUv.y * 5.0 + uTime * 22.0)));
+        float vMask = smoothstep(0.0, 0.08, vUv.y) * smoothstep(1.0, 0.82, vUv.y);
+        float fade = 1.0 - smoothstep(0.55, 1.0, uLocalT);
+
+        vec3 col = mix(vec3(0.14, 0.86, 1.0) * 1.75, vec3(1.0, 0.90, 0.35) * 1.85, streak * 0.65);
+        col += vec3(1.0) * coreBeam * 1.4;
+        float alpha = clamp((coreBeam + outerGlow * 0.65 + streak * 0.45) * vMask * fade, 0.0, 1.0);
+        if (alpha < 0.02) discard;
+        gl_FragColor = vec4(col * alpha, alpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+  });
+}
+
+/**
+ * ACT 1 Shader: Razor-Sharp High-Contrast Thunder-Rail Beam Cleaves.
  */
 function createThunderRailLanceMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
@@ -447,17 +686,15 @@ function createThunderRailLanceMaterial(): THREE.ShaderMaterial {
 
       void main() {
         vec2 p = vec2((vUv.x - 0.5) * 2.0, vUv.y);
-        // Snappy high-frequency stepped zigzag spine
         float tick = floor(uTime * 36.0 + uSeed);
-        float jag = (hcHash21(vec2(floor(p.y * 14.0), tick)) - 0.5) * 0.34;
-        float widthMask = (1.0 - smoothstep(0.0, 0.38, uLocalT)) * 0.28 + 0.07;
+        float jag = (hcHash21(vec2(floor(p.y * 14.0), tick)) - 0.5) * 0.30;
+        float widthMask = (1.0 - smoothstep(0.0, 0.38, uLocalT)) * 0.25 + 0.065;
         float distMain = abs(p.x - jag);
 
-        float inkOuter = smoothstep(widthMask * 1.65, widthMask * 1.25, distMain);
-        float azureBody = step(distMain, widthMask * 1.15);
-        float whiteRazorCore = step(distMain, widthMask * 0.42);
-        // Side rail shock-fins
-        float fins = step(abs(abs(p.x - jag) - widthMask * 1.85), 0.028) * step(0.55, sin(p.y * 36.0));
+        float inkOuter = smoothstep(widthMask * 1.60, widthMask * 1.20, distMain);
+        float azureBody = smoothstep(widthMask * 1.15, widthMask * 0.85, distMain);
+        float whiteRazorCore = smoothstep(widthMask * 0.45, widthMask * 0.20, distMain);
+        float fins = smoothstep(0.032, 0.006, abs(abs(p.x - jag) - widthMask * 1.80)) * step(0.55, sin(p.y * 36.0));
 
         float vMask = smoothstep(0.0, 0.05, p.y) * smoothstep(1.0, 0.88, p.y);
         float snapFade = 1.0 - smoothstep(0.45, 1.0, uLocalT);
@@ -478,9 +715,136 @@ function createThunderRailLanceMaterial(): THREE.ShaderMaterial {
 }
 
 /**
- * ACT 2 Shader: High-Contrast Guillotine Excalibur Crescent Wall (Ink border + Razor Golden-White Core + Electric Teeth!).
+ * ACT 2 & 3 Grand Excalibur Crescent Sweep Shader (Ufotable Fate + HSR Phainon style):
+ * Smooth tapered razor white-gold leading edge + domain-warped electric azure plasma flames +
+ * carved cel-cut negative dark pockets (NO blocky flat UV stripes!).
  */
-function createGuillotineCrescentMaterial(): THREE.ShaderMaterial {
+function createGrandExcaliburSweepMaterial(isGoldDominant: boolean): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uLocalT: { value: 0.0 },
+      uTime: { value: 0.0 },
+      uIsGold: { value: isGoldDominant ? 1.0 : 0.0 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uLocalT;
+      uniform float uTime;
+      uniform float uIsGold;
+      varying vec2 vUv;
+      ${HALCYON_GLSL}
+
+      void main() {
+        float head = 1.0 - pow(1.0 - clamp(uLocalT * 4.2, 0.0, 1.0), 4.0);
+        float tail = max(0.0, (uLocalT - 0.22) * 1.32);
+
+        float headMask = smoothstep(head + 0.06, head - 0.02, vUv.x);
+        float tailMask = smoothstep(tail - 0.14, tail + 0.08, vUv.x);
+        float arcMask = headMask * tailMask;
+
+        // Domain-warped Sakuga plasma streaks along the sweep arc
+        vec2 warpUv = vec2(vUv.x * 16.0 - uTime * 9.0, vUv.y * 5.5);
+        float warp = hcFbm(warpUv);
+        float ridged = hcRidged(warpUv + warp * 0.85);
+
+        // Smooth organic blade envelope + carved cel-ink negative flame cutouts
+        float outerEnvelope = smoothstep(0.02, 0.28, vUv.y) * smoothstep(1.0, 0.88, vUv.y);
+        float carvedVoid = smoothstep(0.24, 0.56, vUv.y) * (1.0 - smoothstep(0.56, 0.82, vUv.y)) * smoothstep(0.42, 0.58, warp);
+        float razorCore = smoothstep(0.72, 0.92, vUv.y) * smoothstep(1.0, 0.90, vUv.y);
+        float crackle = smoothstep(0.66, 0.88, ridged) * smoothstep(0.18, 0.72, vUv.y);
+
+        vec3 azure = vec3(0.12, 0.84, 1.0) * 1.95;
+        vec3 gold = vec3(1.0, 0.86, 0.26) * 2.05;
+        vec3 primaryCol = mix(azure, gold, uIsGold);
+        vec3 accentCol = mix(gold, azure, uIsGold);
+        vec3 whiteCore = vec3(1.0, 0.99, 0.95) * 2.35;
+
+        vec3 col = mix(primaryCol, accentCol, clamp(warp * 0.75 + crackle * 0.5, 0.0, 1.0));
+        col = mix(col, whiteCore, clamp(razorCore * 1.05 + crackle * 0.65, 0.0, 1.0));
+
+        float lifeFade = 1.0 - smoothstep(0.62, 1.0, uLocalT);
+        float alpha = clamp(outerEnvelope * (1.0 - carvedVoid * 0.68) * arcMask * lifeFade, 0.0, 1.0);
+        if (alpha < 0.02) discard;
+        gl_FragColor = vec4(col * alpha, alpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+  });
+}
+
+/**
+ * ACT 3 Shader: 3D Volumetric Celestial Excalibur Light Pillar erupting around the planted greatsword!
+ */
+function createCelestialLightPillarMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uLocalT: { value: 0.0 },
+      uTime: { value: 0.0 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      varying vec3 vNormalView;
+      varying vec3 vViewPos;
+      void main() {
+        vUv = uv;
+        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+        vViewPos = -mvPos.xyz;
+        vNormalView = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * mvPos;
+      }
+    `,
+    fragmentShader: `
+      uniform float uLocalT;
+      uniform float uTime;
+      varying vec2 vUv;
+      varying vec3 vNormalView;
+      varying vec3 vViewPos;
+      ${HALCYON_GLSL}
+
+      void main() {
+        vec3 N = normalize(vNormalView);
+        vec3 V = normalize(vViewPos);
+        float rim = abs(dot(N, V));
+        float radialWall = pow(rim, 0.55);
+
+        // Rising vertical celestial plasma streaks
+        float spiralA = hcRidged(vec2(vUv.x * 10.0 + uTime * 1.4, vUv.y * 3.5 - uTime * 9.0));
+        float spiralB = hcFbm(vec2(vUv.x * 6.0 - uTime * 2.0, vUv.y * 5.0 - uTime * 12.0));
+        float rays = smoothstep(0.28, 0.85, spiralA * 0.65 + spiralB * 0.55);
+
+        float vMask = smoothstep(0.0, 0.10, vUv.y) * smoothstep(1.0, 0.15, vUv.y);
+        float fade = 1.0 - smoothstep(0.42, 1.0, uLocalT);
+
+        vec3 azure = vec3(0.14, 0.86, 1.0) * 1.9;
+        vec3 gold = vec3(1.0, 0.88, 0.30) * 2.0;
+        vec3 col = mix(azure, gold, smoothstep(0.3, 0.85, spiralB));
+        col += vec3(1.0, 0.99, 0.94) * (pow(rim, 2.2) * 1.2 + rays * 0.75);
+
+        float alpha = clamp((radialWall * 0.65 + rays * 0.75) * vMask * fade, 0.0, 1.0);
+        if (alpha < 0.02) discard;
+        gl_FragColor = vec4(col * alpha, alpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+  });
+}
+
+/**
+ * ACT 3 Ground Shockwave Crown Ring Material (replaces flat 2D cross sticker with crisp expanding arena shockwave!).
+ */
+function createFinalShockRingMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
       uLocalT: { value: 0.0 },
@@ -500,75 +864,25 @@ function createGuillotineCrescentMaterial(): THREE.ShaderMaterial {
       ${HALCYON_GLSL}
 
       void main() {
-        float head = 1.0 - pow(1.0 - clamp(uLocalT * 4.8, 0.0, 1.0), 4.0);
-        float tail = max(0.0, (uLocalT - 0.24) * 1.35);
-        float arcMask = step(vUv.x, head) * step(tail, vUv.x);
-
-        float jag = hcRidged(vec2(vUv.x * 22.0 - uTime * 16.0, vUv.y * 6.0));
-        float bladeBody = step(0.14, vUv.y + jag * 0.18) * step(vUv.y, 0.96);
-        float razorEdge = step(0.72, vUv.y) * step(vUv.y, 0.96);
-        float goldTrim = step(0.50, vUv.y) * step(vUv.y, 0.72);
-        float inkShadow = step(0.08, vUv.y) * step(vUv.y, 0.34);
-
-        vec3 azure = vec3(0.14, 0.88, 1.0) * 1.95;
-        vec3 gold = vec3(1.0, 0.88, 0.30) * 1.95;
-        vec3 whiteCore = vec3(1.0, 1.0, 0.96) * 2.25;
-        vec3 inkCol = vec3(0.015, 0.03, 0.12);
-
-        vec3 col = mix(azure, gold, goldTrim);
-        col = mix(col, inkCol, inkShadow * 0.75);
-        col = mix(col, whiteCore, max(razorEdge, step(0.84, jag)));
-
-        float lifeFade = 1.0 - smoothstep(0.68, 1.0, uLocalT);
-        float alpha = clamp(max(bladeBody, razorEdge) * arcMask * lifeFade, 0.0, 1.0);
-        if (alpha < 0.02) discard;
-        gl_FragColor = vec4(col * alpha, alpha);
-      }
-    `,
-    transparent: true,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
-  });
-}
-
-/**
- * ACT 3 Shader: Razor Celestial 4-Point Cross Pillar & Sonic Boom Flash!
- */
-function createCelestialCrossNovaMaterial(): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    uniforms: {
-      uLocalT: { value: 0.0 },
-    },
-    vertexShader: `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform float uLocalT;
-      varying vec2 vUv;
-      ${HALCYON_GLSL}
-
-      void main() {
         vec2 p = (vUv - 0.5) * 2.0;
         float r = length(p);
         if (r > 0.99) discard;
+        float ang = atan(p.y, p.x);
 
-        float expand = 1.0 - pow(1.0 - clamp(uLocalT * 3.8, 0.0, 1.0), 4.0);
-        float ring = exp(-pow((r - mix(0.10, 0.92, expand)) * 26.0, 2.0));
-        // Razor diamond blades instead of soft blurred cross
-        float bladeH = step(abs(p.y), 0.11 * (1.0 - abs(p.x))) * step(abs(p.x), 0.96);
-        float bladeV = step(abs(p.x), 0.11 * (1.0 - abs(p.y))) * step(abs(p.y), 0.96);
-        float crest = step(hcSdCelestialCrest(p * 1.45, 0.76), 0.015);
+        float expand = 1.0 - pow(1.0 - clamp(uLocalT * 2.4, 0.0, 1.0), 4.0);
+        float ringPos = mix(0.12, 0.92, expand);
+        float mainRing = exp(-pow((r - ringPos) * 22.0, 2.0));
+        float trailRing = exp(-pow((r - max(0.05, ringPos - 0.14)) * 14.0, 2.0)) * 0.65;
 
-        vec3 col = mix(vec3(0.14, 0.88, 1.0) * 1.85, vec3(1.0, 0.88, 0.30) * 1.95, ring);
-        col += vec3(1.0) * max(max(bladeH, bladeV), crest) * 1.4;
+        // Dynamic radial speed-teeth around expanding crown
+        float teeth = smoothstep(0.35, 0.85, hcRidged(vec2(ang * 4.5, r * 6.0 - uTime * 8.0)));
+        float burstMask = (mainRing + trailRing) * (0.65 + 0.55 * teeth);
 
         float fade = 1.0 - smoothstep(0.45, 1.0, uLocalT);
-        float alpha = clamp((ring + bladeH + bladeV + crest) * smoothstep(0.99, 0.84, r) * fade, 0.0, 1.0);
+        vec3 col = mix(vec3(0.14, 0.88, 1.0) * 1.85, vec3(1.0, 0.88, 0.30) * 1.95, mainRing);
+        col += vec3(1.0) * mainRing * 0.85;
+
+        float alpha = clamp(burstMask * smoothstep(0.99, 0.84, r) * fade, 0.0, 1.0);
         if (alpha < 0.02) discard;
         gl_FragColor = vec4(col * alpha, alpha);
       }
@@ -633,7 +947,7 @@ function createHalcyonHitFlashMaterial(): THREE.ShaderMaterial {
 }
 
 /**
- * Layer 5 Shader: High-Velocity Crystal Shards & Razor Electric Sparks (NO floppy feathers!).
+ * Layer 5 Shader: High-Velocity Crystal Shards & Razor Electric Sparks.
  */
 function createRazorShardParticleMaterial(isGoldSpark: boolean): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
@@ -660,7 +974,6 @@ function createRazorShardParticleMaterial(isGoldSpark: boolean): THREE.ShaderMat
 
       void main() {
         vec2 p = (vUv - 0.5) * 2.0;
-        // Sharp crystal diamond shard elongated along X
         float shardD = abs(p.x) * 0.55 + abs(p.y) * 1.35 - 0.52;
         if (shardD > 0.0) discard;
 
@@ -694,6 +1007,8 @@ interface RailLanceSlot {
 
 interface SkySwordSlot {
   mesh: THREE.Mesh;
+  gateMesh: THREE.Mesh;
+  gateMat: THREE.ShaderMaterial;
   delay: number;
   startPos: THREE.Vector3;
   endPos: THREE.Vector3;
@@ -738,6 +1053,10 @@ interface HalcyonSkillInstance {
   pts: WorldPoint3[];
   sealMesh: THREE.Mesh;
   sealMat: THREE.ShaderMaterial;
+  skyGateMesh: THREE.Mesh;
+  skyGateMat: THREE.ShaderMaterial;
+  plungeBeamMesh: THREE.Mesh;
+  plungeBeamMat: THREE.ShaderMaterial;
   bannerPoleMesh: THREE.Mesh;
   bannerPoleMat: THREE.ShaderMaterial;
   bannerPennantMesh: THREE.Mesh;
@@ -746,10 +1065,15 @@ interface HalcyonSkillInstance {
   skySwords: SkySwordSlot[];
   swordMat: THREE.ShaderMaterial;
   excaliburMesh: THREE.Mesh;
-  crescentMesh: THREE.Mesh;
-  crescentMat: THREE.ShaderMaterial;
-  novaMesh: THREE.Mesh;
-  novaMat: THREE.ShaderMaterial;
+  excaliburMat: THREE.ShaderMaterial;
+  crescentAMesh: THREE.Mesh;
+  crescentAMat: THREE.ShaderMaterial;
+  crescentBMesh: THREE.Mesh;
+  crescentBMat: THREE.ShaderMaterial;
+  pillarMesh: THREE.Mesh;
+  pillarMat: THREE.ShaderMaterial;
+  shockRingMesh: THREE.Mesh;
+  shockRingMat: THREE.ShaderMaterial;
   oreFlashes: OreFlashSlot[];
   particles: ShardParticleSlot[];
   onSlashBeatCallback: ((beatIdx: number, pt: WorldPoint3) => void) | null;
@@ -757,12 +1081,15 @@ interface HalcyonSkillInstance {
 }
 
 /**
- * Self-contained 2.5s High-Dopamine Sakuga Skill Pool for Halcyon Twins
- * ("Divine Rail-Judgment: Photon Thunder-Guillotine" — Zero soft drift, razor-sharp crisp beats:
- *  Act 0 (0.00s->0.14s): Supersonic Banner Spear Slam (70ms snap + floor crack fissure + micro hit-stop + camera recoil)
- *  Act 1 (0.14s->0.44s): 3 Staccato Diagonal Thunder-Rail Lances with ink-white contrast + per-ore cross-flashes
- *  Act 2 (0.44s->0.78s, Climax 0.61s): 10 Aim-Locked Orbital Broadswords + Colossal Excalibur 50ms Guillotine Slam -> 0.088s Hit-Stop + B&W Invert Impact Frame + Towering 3D Crescent Shockwave
- *  Act 3 (0.68s->1.18s, Detonate 0.94s): 10-Sword Railgun Impale Barrage -> Giant Celestial Cross Nova + Second B&W Impact Frame + 36 Razor Shrapnel Shards!).
+ * Self-contained 2.5s Sakuga Skill Pool for Halcyon Twins
+ * ("Luminosité Excalibur: Gate of Heaven & Sacred Plunge" — Fate/UBW + HSR Phainon/Sunday inspired):
+ * - Act 0 (0.00s->0.14s): Open-Air Cathedral Octagram Astrolabe Seal + Royal Knight Banner Slam (left-back flank)
+ * - Act 1 (0.14s->0.44s): 3 Staccato Thunder-Rail Lances + Symmetrical 8-Sword Sky Crown Choir w/ Gate Ripples
+ * - Act 2 (0.38s->0.96s, Climax 0.61s): Colossal Excalibur 100% Straight Vertical Plunge from Sky Gate Halo
+ *   (tip at y=0 plunges cleanly into pit center so full blade + wing crossguard tower upward!) ->
+ *   0.088s Hit-Stop + B&W Invert Impact Frame + Grand Sweeping Azure-Gold Crescent #1
+ * - Act 3 (0.68s->1.45s, Finale 0.94s): Symmetrical Left-Right Sword Choir Volley planting into a neat
+ *   Sanctuary Ring -> Grand Cross Sweep #2 + 3D Volumetric Celestial Light Pillar + Shockwave Crown + 36 Shards!
  */
 export class HalcyonTwinsSkillVfxPool {
   public readonly group = new THREE.Group();
@@ -778,24 +1105,48 @@ export class HalcyonTwinsSkillVfxPool {
   constructor(hooks: TierVfxHooks = {}) {
     this.hooks = hooks;
     const planeGeo = new THREE.PlaneGeometry(1, 1);
-    const pennantGeo = new THREE.PlaneGeometry(1.38, 0.72, 8, 2);
-    pennantGeo.translate(0.69, 0, 0);
+    const pennantGeo = new THREE.PlaneGeometry(1.32, 0.68, 8, 2);
+    pennantGeo.translate(0.66, 0, 0);
     const bannerPoleGeo = createBannerPoleGeometry();
-    const swordGeo = createPaladinBroadswordGeometry();
-    const crescentGeo = createGuillotineCrescentGeometry(0.22, 1.25, Math.PI * 1.18, 40);
-    this.sharedGeos.push(planeGeo, pennantGeo, bannerPoleGeo, swordGeo, crescentGeo);
+    const choirSwordGeo = createDownwardChoirSwordGeometry();
+    const excaliburGeo = createVerticalExcaliburGeometry();
+    const crescentGeo = createGrandExcaliburSweepGeometry(0.44, 1.24, Math.PI * 1.42, 56);
+    const pillarGeo = new THREE.CylinderGeometry(1.05, 0.62, 10.5, 24, 1, true);
+    pillarGeo.translate(0, 5.25, 0);
+    this.sharedGeos.push(
+      planeGeo,
+      pennantGeo,
+      bannerPoleGeo,
+      choirSwordGeo,
+      excaliburGeo,
+      crescentGeo,
+      pillarGeo
+    );
 
     for (let p = 0; p < POOL_SIZE; p++) {
       const root = new THREE.Group();
       root.visible = false;
 
-      const sealMat = createShockFissureFloorMaterial();
+      const sealMat = createPaladinSacredSealMaterial();
       const sealMesh = new THREE.Mesh(planeGeo, sealMat);
       sealMesh.rotation.x = -Math.PI / 2;
       root.add(sealMesh);
       this.allMats.push(sealMat);
 
-      const bannerPoleMat = createPaladinSteelMaterial(false);
+      const skyGateMat = createSkyGateHaloMaterial(true);
+      const skyGateMesh = new THREE.Mesh(planeGeo, skyGateMat);
+      skyGateMesh.rotation.x = -Math.PI / 2;
+      skyGateMesh.visible = false;
+      root.add(skyGateMesh);
+      this.allMats.push(skyGateMat);
+
+      const plungeBeamMat = createPlungeGuideBeamMaterial();
+      const plungeBeamMesh = new THREE.Mesh(planeGeo, plungeBeamMat);
+      plungeBeamMesh.visible = false;
+      root.add(plungeBeamMesh);
+      this.allMats.push(plungeBeamMat);
+
+      const bannerPoleMat = createPaladinSteelMaterial(false, false);
       const bannerPoleMesh = new THREE.Mesh(bannerPoleGeo, bannerPoleMat);
       bannerPoleMesh.visible = false;
       root.add(bannerPoleMesh);
@@ -823,17 +1174,27 @@ export class HalcyonTwinsSkillVfxPool {
         });
       }
 
-      const swordMat = createPaladinSteelMaterial(true);
+      const swordMat = createPaladinSteelMaterial(true, false);
       this.allMats.push(swordMat);
 
       const skySwords: SkySwordSlot[] = [];
       for (let i = 0; i < SKY_SWORD_COUNT; i++) {
-        const sMesh = new THREE.Mesh(swordGeo, swordMat);
+        const sMesh = new THREE.Mesh(choirSwordGeo, swordMat);
         sMesh.visible = false;
         root.add(sMesh);
+
+        const gMat = createSkyGateHaloMaterial(false);
+        const gMesh = new THREE.Mesh(planeGeo, gMat);
+        gMesh.rotation.x = -Math.PI / 2;
+        gMesh.visible = false;
+        root.add(gMesh);
+        this.allMats.push(gMat);
+
         skySwords.push({
           mesh: sMesh,
-          delay: 0.68 + i * 0.018,
+          gateMesh: gMesh,
+          gateMat: gMat,
+          delay: 0.68,
           startPos: new THREE.Vector3(),
           endPos: new THREE.Vector3(),
           aimQuat: new THREE.Quaternion(),
@@ -842,22 +1203,37 @@ export class HalcyonTwinsSkillVfxPool {
         });
       }
 
-      // Colossal Guillotine Excalibur Sword
-      const excaliburMesh = new THREE.Mesh(swordGeo, swordMat);
+      // Colossal Vertical Excalibur Greatsword (tip at y=0, straight vertical plunge!)
+      const excaliburMat = createPaladinSteelMaterial(true, true);
+      const excaliburMesh = new THREE.Mesh(excaliburGeo, excaliburMat);
       excaliburMesh.visible = false;
       root.add(excaliburMesh);
+      this.allMats.push(excaliburMat);
 
-      const crescentMat = createGuillotineCrescentMaterial();
-      const crescentMesh = new THREE.Mesh(crescentGeo, crescentMat);
-      crescentMesh.visible = false;
-      root.add(crescentMesh);
-      this.allMats.push(crescentMat);
+      const crescentAMat = createGrandExcaliburSweepMaterial(false);
+      const crescentAMesh = new THREE.Mesh(crescentGeo, crescentAMat);
+      crescentAMesh.visible = false;
+      root.add(crescentAMesh);
+      this.allMats.push(crescentAMat);
 
-      const novaMat = createCelestialCrossNovaMaterial();
-      const novaMesh = new THREE.Mesh(planeGeo, novaMat);
-      novaMesh.visible = false;
-      root.add(novaMesh);
-      this.allMats.push(novaMat);
+      const crescentBMat = createGrandExcaliburSweepMaterial(true);
+      const crescentBMesh = new THREE.Mesh(crescentGeo, crescentBMat);
+      crescentBMesh.visible = false;
+      root.add(crescentBMesh);
+      this.allMats.push(crescentBMat);
+
+      const pillarMat = createCelestialLightPillarMaterial();
+      const pillarMesh = new THREE.Mesh(pillarGeo, pillarMat);
+      pillarMesh.visible = false;
+      root.add(pillarMesh);
+      this.allMats.push(pillarMat);
+
+      const shockRingMat = createFinalShockRingMaterial();
+      const shockRingMesh = new THREE.Mesh(planeGeo, shockRingMat);
+      shockRingMesh.rotation.x = -Math.PI / 2;
+      shockRingMesh.visible = false;
+      root.add(shockRingMesh);
+      this.allMats.push(shockRingMat);
 
       const oreFlashes: OreFlashSlot[] = [];
       for (let i = 0; i < ORE_FLASH_COUNT; i++) {
@@ -915,6 +1291,10 @@ export class HalcyonTwinsSkillVfxPool {
         pts: [],
         sealMesh,
         sealMat,
+        skyGateMesh,
+        skyGateMat,
+        plungeBeamMesh,
+        plungeBeamMat,
         bannerPoleMesh,
         bannerPoleMat,
         bannerPennantMesh,
@@ -923,10 +1303,15 @@ export class HalcyonTwinsSkillVfxPool {
         skySwords,
         swordMat,
         excaliburMesh,
-        crescentMesh,
-        crescentMat,
-        novaMesh,
-        novaMat,
+        excaliburMat,
+        crescentAMesh,
+        crescentAMat,
+        crescentBMesh,
+        crescentBMat,
+        pillarMesh,
+        pillarMat,
+        shockRingMesh,
+        shockRingMat,
         oreFlashes,
         particles,
         onSlashBeatCallback: null,
@@ -1008,26 +1393,32 @@ export class HalcyonTwinsSkillVfxPool {
 
     inst.root.visible = true;
 
-    inst.sealMesh.position.set(opts.cx, opts.cy + 0.08, opts.cz);
-    inst.sealMesh.scale.setScalar(12.6 * opts.areaScale);
+    const as = opts.areaScale;
+    const safeAs = Math.max(0.75, as);
+
+    // 1. Open-Air Cathedral Octagram Seal on Pit Floor
+    inst.sealMesh.position.set(opts.cx, opts.cy + 0.05, opts.cz);
+    inst.sealMesh.scale.setScalar(11.6 * as);
     inst.sealMat.uniforms.uProgress.value = 0;
     inst.sealMat.uniforms.uBlastT.value = 0;
 
-    // Banner Spear positioned high for immediate 70ms Supersonic Pit-Slam
-    const bannerS = 1.42 * Math.max(0.75, opts.areaScale);
-    inst.bannerPoleMesh.position.set(opts.cx, opts.cy + 8.5, opts.cz - 0.9 * opts.areaScale);
-    inst.bannerPoleMesh.rotation.set(0.05, 0, -0.04);
+    // 2. Royal Banner Spear planted cleanly on left-back flank (never blocking center Excalibur!)
+    const bannerS = 1.28 * safeAs;
+    const bx = opts.cx - 1.55 * as;
+    const bz = opts.cz - 1.35 * as;
+    inst.bannerPoleMesh.position.set(bx, opts.cy + 8.5, bz);
+    inst.bannerPoleMesh.rotation.set(0.03, 0, -0.04);
     inst.bannerPoleMesh.scale.setScalar(bannerS);
     inst.bannerPoleMesh.visible = true;
 
-    inst.bannerPennantMesh.position.set(opts.cx, opts.cy + 8.5 + 3.12 * bannerS, opts.cz - 0.9 * opts.areaScale);
-    inst.bannerPennantMesh.rotation.set(0.05, 0.18, -0.04);
+    inst.bannerPennantMesh.position.set(bx, opts.cy + 8.5 + 2.95 * bannerS, bz);
+    inst.bannerPennantMesh.rotation.set(0.03, 0.16, -0.04);
     inst.bannerPennantMesh.scale.setScalar(bannerS);
     inst.bannerPennantMesh.visible = true;
 
-    // 3 Diagonal Thunder-Rail Beam Lances
+    // 3. 3 Diagonal Thunder-Rail Beam Lances
     const lanceLimit = this.lowQuality ? 2 : RAIL_LANCE_COUNT;
-    const angles = [-0.58, 0.62, -0.22];
+    const angles = [-0.52, 0.56, -0.18];
     for (let i = 0; i < inst.railLances.length; i++) {
       const lb = inst.railLances[i];
       lb.fired = false;
@@ -1039,55 +1430,100 @@ export class HalcyonTwinsSkillVfxPool {
       lb.targetIndex = i % inst.pts.length;
       lb.delay = 0.14 + i * 0.10;
       lb.mesh.position.set(tgt.x, tgt.y + 3.4, tgt.z + 0.12);
-      lb.mesh.rotation.set(-0.24, (i - 1) * 0.28, angles[i % angles.length]);
-      lb.mesh.scale.set(2.35 * opts.areaScale, 8.8, 1);
+      lb.mesh.rotation.set(-0.22, (i - 1) * 0.25, angles[i % angles.length]);
+      lb.mesh.scale.set(2.25 * as, 8.6, 1);
       lb.mesh.visible = false;
       lb.mat.uniforms.uLocalT.value = 0;
     }
 
-    // 10 Aim-Locked Orbital Knight Broadswords aiming aggressively at ores
-    const swordLimit = this.lowQuality ? 5 : SKY_SWORD_COUNT;
+    // 4. Symmetrical Sword Choir Crown (Gate of Babylon / HSR Phainon style):
+    // Arranged in a balanced semi-circular crown arch flanking the center, pointing cleanly straight down-inward!
+    const swordLimit = this.lowQuality ? 4 : SKY_SWORD_COUNT;
+    const crownRadius = 4.35 * as;
+    const ringTargetRadius = 2.65 * as;
     for (let i = 0; i < inst.skySwords.length; i++) {
       const sw = inst.skySwords[i];
       sw.landed = false;
       if (i >= swordLimit) {
         sw.mesh.visible = false;
+        sw.gateMesh.visible = false;
         continue;
       }
-      const arcFrac = swordLimit > 1 ? i / (swordLimit - 1) - 0.5 : 0;
-      const sx = opts.cx + arcFrac * 7.8 * opts.areaScale;
-      const sy = opts.cy + 4.8 + (1.0 - Math.abs(arcFrac) * 1.6) * 1.45;
-      const sz = opts.cz - 1.55 * opts.areaScale;
-      const tgt = inst.pts[i % inst.pts.length];
-      sw.targetIndex = i % inst.pts.length;
-      sw.delay = 0.68 + i * 0.018;
-      sw.startPos.set(sx, sy, sz);
-      sw.endPos.set(tgt.x, tgt.y + 0.08, tgt.z);
+      // Symmetrical pair index (0 = outermost pair, higher = inner pair)
+      const pairIdx = Math.floor(i / 2);
+      const pairCount = Math.max(1, Math.ceil(swordLimit / 2));
+      const side = i % 2 === 0 ? -1 : 1;
+      const frac = pairCount > 1 ? pairIdx / (pairCount - 1) : 0; // 0 = outer, 1 = inner
+      // Fan cleanly from +/- 112 deg (outer wings) to +/- 26 deg (inner crown flanking center)
+      const az = side * THREE.MathUtils.lerp(1.95, 0.45, frac);
+      const sx = opts.cx + Math.sin(az) * crownRadius;
+      const sz = opts.cz - Math.cos(az) * crownRadius * 0.72 - 0.35 * as;
+      const sy = opts.cy + 4.35 + frac * 1.15;
 
-      // Compute exact directional quaternion so sword +Y tip aims straight at target!
-      this.tmpDir.subVectors(sw.endPos, sw.startPos).normalize();
+      // Symmetrical Sanctuary Ring landing positions around center Excalibur (clean & harmonious!)
+      const ex = opts.cx + Math.sin(az) * ringTargetRadius;
+      const ez = opts.cz - Math.cos(az) * ringTargetRadius * 0.78;
+      const ey = opts.cy + 0.04;
+
+      sw.targetIndex = i % inst.pts.length;
+      // Fire in symmetrical left-right pairs from outer to inner!
+      sw.delay = 0.68 + pairIdx * 0.042;
+      sw.startPos.set(sx, sy, sz);
+      sw.endPos.set(ex, ey, ez);
+
+      // Geometry tip is at y = 0 pointing straight down when local +Y points straight UP (0,1,0).
+      // Align local -Y (blade tip direction) along (endPos - startPos), i.e. local +Y along (startPos - endPos)!
+      this.tmpDir.subVectors(sw.startPos, sw.endPos).normalize();
       sw.aimQuat.setFromUnitVectors(this.tmpUp, this.tmpDir);
+
       sw.mesh.position.copy(sw.startPos);
       sw.mesh.quaternion.copy(sw.aimQuat);
-      sw.mesh.scale.setScalar(1.22 * Math.max(0.75, opts.areaScale));
+      sw.mesh.scale.setScalar(1.08 * safeAs);
       sw.mesh.visible = false;
+
+      // Mini Gate Ripple right behind each sword's hilt along its launch axis
+      sw.gateMesh.position.copy(sw.startPos).addScaledVector(this.tmpDir, 2.05 * safeAs);
+      sw.gateMesh.scale.setScalar(1.55 * safeAs);
+      sw.gateMesh.visible = false;
+      sw.gateMat.uniforms.uLocalT.value = 0;
     }
 
-    // Colossal Excalibur Greatsword + Towering 3D Guillotine Crescent Wall
-    inst.excaliburMesh.position.set(opts.cx, opts.cy + 7.2, opts.cz + 0.15);
-    inst.excaliburMesh.rotation.set(0, 0, Math.PI + 0.18);
-    inst.excaliburMesh.scale.setScalar(3.55 * Math.max(0.75, opts.areaScale));
+    // 5. Colossal Vertical Excalibur + Sky Gate Halo + Vertical Plunge Beam
+    const exScale = 1.62 * safeAs;
+    inst.excaliburMesh.position.set(opts.cx, opts.cy + 5.6, opts.cz);
+    inst.excaliburMesh.rotation.set(0, 0, 0); // 100% STRAIGHT VERTICAL!
+    inst.excaliburMesh.scale.setScalar(exScale);
     inst.excaliburMesh.visible = false;
 
-    inst.crescentMesh.position.set(opts.cx, opts.cy + 0.85, opts.cz);
-    inst.crescentMesh.rotation.set(0.46, -Math.PI * 0.5, 0.24);
-    inst.crescentMesh.scale.setScalar(0.01);
-    inst.crescentMesh.visible = false;
+    inst.skyGateMesh.position.set(opts.cx, opts.cy + 8.9, opts.cz);
+    inst.skyGateMesh.scale.setScalar(5.4 * as);
+    inst.skyGateMesh.visible = false;
+    inst.skyGateMat.uniforms.uLocalT.value = 0;
 
-    inst.novaMesh.position.set(opts.cx, opts.cy + 1.15, opts.cz + 0.2);
-    inst.novaMesh.rotation.set(-0.38, 0, 0);
-    inst.novaMesh.scale.setScalar(0.01);
-    inst.novaMesh.visible = false;
+    inst.plungeBeamMesh.position.set(opts.cx, opts.cy + 4.4, opts.cz);
+    inst.plungeBeamMesh.scale.set(1.85 * as, 9.0, 1);
+    inst.plungeBeamMesh.visible = false;
+    inst.plungeBeamMat.uniforms.uLocalT.value = 0;
+
+    // 6. Grand Excalibur Sweeps (#1 Azure-Dominant, #2 Gold-Dominant Cross Sweep)
+    inst.crescentAMesh.position.set(opts.cx, opts.cy + 0.72, opts.cz);
+    inst.crescentAMesh.rotation.set(0.18, -Math.PI * 0.45, 0.14);
+    inst.crescentAMesh.scale.setScalar(0.01);
+    inst.crescentAMesh.visible = false;
+
+    inst.crescentBMesh.position.set(opts.cx, opts.cy + 0.92, opts.cz);
+    inst.crescentBMesh.rotation.set(-0.22, Math.PI * 0.35, -0.18);
+    inst.crescentBMesh.scale.setScalar(0.01);
+    inst.crescentBMesh.visible = false;
+
+    // 7. 3D Volumetric Celestial Light Pillar & Ground Shockwave Crown
+    inst.pillarMesh.position.set(opts.cx, opts.cy + 0.04, opts.cz);
+    inst.pillarMesh.scale.set(1.25 * as, 1.0, 1.25 * as);
+    inst.pillarMesh.visible = false;
+
+    inst.shockRingMesh.position.set(opts.cx, opts.cy + 0.10, opts.cz);
+    inst.shockRingMesh.scale.setScalar(0.01);
+    inst.shockRingMesh.visible = false;
 
     for (let i = 0; i < inst.oreFlashes.length; i++) {
       inst.oreFlashes[i].active = false;
@@ -1117,18 +1553,20 @@ export class HalcyonTwinsSkillVfxPool {
       inst.elapsed += dt;
       const uProgress = Math.min(1, inst.elapsed / SKILL_DURATION_SEC);
       const as = inst.areaScale;
+      const safeAs = Math.max(0.75, as);
 
       inst.sealMat.uniforms.uProgress.value = uProgress;
       inst.sealMat.uniforms.uTime.value = timeSec;
-      inst.sealMesh.rotation.z = timeSec * 0.52;
 
-      // ACT 0 (0.00s -> 0.07s): 70ms Supersonic Banner Spear Slam into Ground!
+      // ACT 0 (0.00s -> 0.07s): Banner Spear Slam on left-back flank
       const slamT = Math.min(1, inst.elapsed / 0.07);
       const slamSnap = slamT * slamT * slamT;
-      const bannerS = 1.42 * Math.max(0.75, as);
-      const bannerY = THREE.MathUtils.lerp(inst.cy + 8.5, inst.cy - 0.12, slamSnap);
-      inst.bannerPoleMesh.position.set(inst.cx, bannerY, inst.cz - 0.9 * as);
-      inst.bannerPennantMesh.position.set(inst.cx, bannerY + 3.12 * bannerS, inst.cz - 0.9 * as);
+      const bannerS = 1.28 * safeAs;
+      const bx = inst.cx - 1.55 * as;
+      const bz = inst.cz - 1.35 * as;
+      const bannerY = THREE.MathUtils.lerp(inst.cy + 8.5, inst.cy - 0.06, slamSnap);
+      inst.bannerPoleMesh.position.set(bx, bannerY, bz);
+      inst.bannerPennantMesh.position.set(bx, bannerY + 2.95 * bannerS, bz);
       inst.bannerPoleMat.uniforms.uProgress.value = uProgress;
       inst.bannerPoleMat.uniforms.uTime.value = timeSec;
       inst.bannerPennantMat.uniforms.uProgress.value = uProgress;
@@ -1136,15 +1574,15 @@ export class HalcyonTwinsSkillVfxPool {
 
       if (!inst.bannerSlamFired && inst.elapsed >= 0.07) {
         inst.bannerSlamFired = true;
-        inst.hitStopTimer = 0.028;
-        this.hooks.onImpactFrame?.(0.85, 0.0, '#38bdf8', 0.036);
-        this.hooks.onCameraPush?.(-0.22, -0.025);
-        this.hooks.onFlash?.('#e0f2fe', 0.45);
-        this.tmpTargetPos.set(inst.cx, inst.cy + 0.6, inst.cz - 0.9 * as);
-        this.launchShardBurst(inst, this.tmpTargetPos, 0, 6, 0.95);
+        inst.hitStopTimer = 0.026;
+        this.hooks.onImpactFrame?.(0.85, 0.0, '#38bdf8', 0.034);
+        this.hooks.onCameraPush?.(-0.20, -0.024);
+        this.hooks.onFlash?.('#e0f2fe', 0.42);
+        this.tmpTargetPos.set(bx, inst.cy + 0.55, bz);
+        this.launchShardBurst(inst, this.tmpTargetPos, 0, 6, 0.92);
       }
 
-      // Pulse Shockwave Ring Timer across Acts
+      // Pulse Shockwave Timer on Seal across Acts
       if (inst.elapsed >= 0.07 && inst.elapsed < 0.58) {
         inst.sealMat.uniforms.uBlastT.value = Math.min(1, (inst.elapsed - 0.07) / 0.42);
       } else if (inst.elapsed >= 0.61 && inst.elapsed < 0.94) {
@@ -1174,52 +1612,57 @@ export class HalcyonTwinsSkillVfxPool {
         if (lt >= 1) lb.mesh.visible = false;
       }
 
-      // ACT 2 (0.42s -> 0.92s): Orbital Aim-Lock + Colossal Excalibur 50ms Guillotine Slam -> 0.088s Hit-Stop & Crescent!
-      inst.swordMat.uniforms.uProgress.value = uProgress;
-      inst.swordMat.uniforms.uTime.value = timeSec;
+      // Sky Gate Halo above Center Pit (0.34s -> 0.85s)
+      if (inst.elapsed >= 0.34 && inst.elapsed < 0.86) {
+        inst.skyGateMesh.visible = true;
+        inst.skyGateMat.uniforms.uLocalT.value = Math.min(1, (inst.elapsed - 0.34) / 0.52);
+        inst.skyGateMat.uniforms.uTime.value = timeSec;
+      } else {
+        inst.skyGateMesh.visible = false;
+      }
 
-      if (inst.elapsed >= 0.42 && inst.elapsed < 1.15) {
+      // Vertical Plunge Guide Beam (0.44s -> 0.72s)
+      if (inst.elapsed >= 0.44 && inst.elapsed < 0.74) {
+        inst.plungeBeamMesh.visible = true;
+        inst.plungeBeamMat.uniforms.uLocalT.value = Math.min(1, (inst.elapsed - 0.44) / 0.30);
+        inst.plungeBeamMat.uniforms.uTime.value = timeSec;
+      } else {
+        inst.plungeBeamMesh.visible = false;
+      }
+
+      // ACT 2: Colossal Vertical Excalibur Straight Plunge (0.38s -> 2.50s w/ dissolve at 0.68+)
+      inst.excaliburMat.uniforms.uProgress.value = uProgress;
+      inst.excaliburMat.uniforms.uTime.value = timeSec;
+      if (inst.elapsed >= 0.38) {
         inst.excaliburMesh.visible = true;
         if (inst.elapsed < 0.56) {
-          // Anticipation coil: pulls UP sharply and trembles with raw tension!
-          const coilT = (inst.elapsed - 0.42) / 0.14;
-          const coilY = THREE.MathUtils.lerp(inst.cy + 6.4, inst.cy + 9.4, 1 - Math.pow(1 - coilT, 3));
-          const tremor = Math.sin(timeSec * 85.0) * 0.08 * coilT;
-          inst.excaliburMesh.position.set(inst.cx + tremor, coilY, inst.cz + 0.15);
-          inst.excaliburMesh.rotation.set(0.12, 0, Math.PI + 0.16);
+          // Coil straight up inside the Sky Gate before piercing vertically downward!
+          const coilT = (inst.elapsed - 0.38) / 0.18;
+          const coilEase = 1 - Math.pow(1 - coilT, 3);
+          const coilY = THREE.MathUtils.lerp(inst.cy + 5.2, inst.cy + 6.1, coilEase);
+          inst.excaliburMesh.position.set(inst.cx, coilY, inst.cz);
+          inst.excaliburMesh.rotation.set(0, 0, 0);
         } else if (inst.elapsed < 0.61) {
-          // 50ms SUPERSONIC GUILLOTINE SLAM STRAIGHT INTO THE PIT!
+          // 50ms 100% STRAIGHT VERTICAL PLUNGE straight into pit center!
           const dropT = (inst.elapsed - 0.56) / 0.05;
-          const slamEase = dropT * dropT * dropT;
-          const slamY = THREE.MathUtils.lerp(inst.cy + 9.4, inst.cy + 2.3, slamEase);
-          inst.excaliburMesh.position.set(inst.cx, slamY, inst.cz + 0.15);
-          inst.excaliburMesh.rotation.set(0.18, 0, Math.PI + 0.08);
+          const slamEase = dropT * dropT * dropT * dropT;
+          const slamY = THREE.MathUtils.lerp(inst.cy + 6.1, inst.cy - 0.04, slamEase);
+          inst.excaliburMesh.position.set(inst.cx, slamY, inst.cz);
+          inst.excaliburMesh.rotation.set(0, 0, 0);
         } else {
-          // Embedded violently in impact posture until dissolve!
-          inst.excaliburMesh.position.set(inst.cx, inst.cy + 2.3, inst.cz + 0.15);
-          inst.excaliburMesh.rotation.set(0.18, 0, Math.PI + 0.08);
+          // Planted monolithically upright at pit center (tip at cy - 0.04, full blade & crossguard towering up!)
+          inst.excaliburMesh.position.set(inst.cx, inst.cy - 0.04, inst.cz);
+          inst.excaliburMesh.rotation.set(0, 0, 0);
         }
       } else {
         inst.excaliburMesh.visible = false;
       }
 
-      if (inst.elapsed >= 0.59 && inst.elapsed < 0.94) {
-        const wt = Math.min(1, (inst.elapsed - 0.59) / 0.28);
-        const wEase = 1 - Math.pow(1 - wt, 4);
-        inst.crescentMesh.visible = true;
-        inst.crescentMesh.scale.setScalar((2.4 + 6.8 * wEase) * as);
-        inst.crescentMesh.rotation.y = THREE.MathUtils.lerp(-2.2, -0.85, wEase);
-        inst.crescentMat.uniforms.uLocalT.value = wt;
-        inst.crescentMat.uniforms.uTime.value = timeSec;
-      } else {
-        inst.crescentMesh.visible = false;
-      }
-
-      // Climax Guillotine Impact (0.61s): LONG 0.088s Hit-Stop + B&W Inverted Sakuga Impact Frame!
+      // Climax Excalibur Impact (0.61s): 0.088s Hit-Stop + B&W Impact Frame!
       if (!inst.guillotineImpactFired && inst.elapsed >= 0.61) {
         inst.guillotineImpactFired = true;
         inst.hitStopTimer = 0.088;
-        this.tmpTargetPos.set(inst.cx, inst.cy + 1.15, inst.cz);
+        this.tmpTargetPos.set(inst.cx, inst.cy + 1.05, inst.cz);
         this.launchShardBurst(inst, this.tmpTargetPos, 12, this.lowQuality ? 8 : 16, 1.55);
         this.hooks.onImpactFrame?.(1.0, 1.0, '#ffffff', 0.092);
         this.hooks.onSpeedLines?.(1.0, 0.65);
@@ -1228,33 +1671,63 @@ export class HalcyonTwinsSkillVfxPool {
         inst.onImpactCallback?.();
       }
 
-      // 10 Aim-Locked Orbital Knight Broadswords -> Machine-Gun Rail Impale!
-      const swordLimit = this.lowQuality ? 5 : SKY_SWORD_COUNT;
+      // Grand Excalibur Crescent Sweep #1 (0.60s -> 1.02s): Fluid Azure-Gold Sakuga Arc
+      if (inst.elapsed >= 0.60 && inst.elapsed < 1.02) {
+        const wt = Math.min(1, (inst.elapsed - 0.60) / 0.42);
+        const wEase = 1 - Math.pow(1 - wt, 4);
+        inst.crescentAMesh.visible = true;
+        inst.crescentAMesh.scale.setScalar((2.8 + 4.2 * wEase) * as);
+        inst.crescentAMesh.rotation.y = THREE.MathUtils.lerp(-2.3, 0.25, wEase);
+        inst.crescentAMat.uniforms.uLocalT.value = wt;
+        inst.crescentAMat.uniforms.uTime.value = timeSec;
+      } else {
+        inst.crescentAMesh.visible = false;
+      }
+
+      // Symmetrical Sword Choir Crown (0.24s -> end):
+      // Forms neat symmetric arc with Mini Gate Ripples -> fires in clean outer-to-inner pairs -> plants in neat ring!
+      inst.swordMat.uniforms.uProgress.value = uProgress;
+      inst.swordMat.uniforms.uTime.value = timeSec;
+      const swordLimit = this.lowQuality ? 4 : SKY_SWORD_COUNT;
       for (let i = 0; i < swordLimit; i++) {
         const sw = inst.skySwords[i];
-        if (inst.elapsed >= 0.44 && inst.elapsed < sw.delay) {
-          sw.mesh.visible = true;
-          sw.mesh.position.copy(sw.startPos);
-          // Tense jitter while locked onto ore before firing
-          sw.mesh.position.y += Math.sin(timeSec * 65.0 + i * 2.1) * 0.045;
-          continue;
+        // Mini Gate Ripple lifecycle (0.24s -> sw.delay + 0.18s)
+        if (inst.elapsed >= 0.24 && inst.elapsed < sw.delay + 0.18) {
+          sw.gateMesh.visible = true;
+          sw.gateMat.uniforms.uLocalT.value = Math.min(1, (inst.elapsed - 0.24) / (sw.delay + 0.18 - 0.24));
+          sw.gateMat.uniforms.uTime.value = timeSec;
+        } else {
+          sw.gateMesh.visible = false;
         }
-        if (inst.elapsed < sw.delay) {
+
+        if (inst.elapsed < 0.28) {
           sw.mesh.visible = false;
           continue;
         }
+        if (inst.elapsed < sw.delay) {
+          sw.mesh.visible = true;
+          // Smooth materialize drop-out from gate ripple + unified gentle hover pulse
+          const spawnT = Math.min(1, (inst.elapsed - 0.28) / 0.14);
+          const spawnEase = 1 - Math.pow(1 - spawnT, 3);
+          const hover = Math.sin(timeSec * 6.5) * 0.055 * spawnEase;
+          sw.mesh.position.copy(sw.startPos);
+          sw.mesh.position.y += (1 - spawnEase) * 0.65 + hover;
+          sw.mesh.quaternion.copy(sw.aimQuat);
+          continue;
+        }
         sw.mesh.visible = true;
-        const pt = Math.min(1, (inst.elapsed - sw.delay) / 0.075);
+        const pt = Math.min(1, (inst.elapsed - sw.delay) / 0.070);
         const railEase = pt * pt * pt;
         sw.mesh.position.lerpVectors(sw.startPos, sw.endPos, railEase);
+        sw.mesh.quaternion.copy(sw.aimQuat);
         if (pt >= 1 && !sw.landed) {
           sw.landed = true;
-          const targetPt = inst.pts[sw.targetIndex];
-          this.triggerOreFlash(inst, i % ORE_FLASH_COUNT, targetPt, 3.2 * as, i % 2 === 0);
+          const flashPt: WorldPoint3 = { x: sw.endPos.x, y: sw.endPos.y, z: sw.endPos.z };
+          this.triggerOreFlash(inst, i % ORE_FLASH_COUNT, flashPt, 2.8 * as, i % 2 === 0);
         }
       }
 
-      // ACT 3 (0.94s -> 1.24s): Celestial Cross Nova + Second Inverted Impact Frame!
+      // ACT 3 (0.94s -> 1.48s): Grand Cross Sweep #2 + 3D Volumetric Light Pillar + Shockwave Crown!
       if (!inst.finaleFired && inst.elapsed >= 0.94) {
         inst.finaleFired = true;
         this.tmpTargetPos.set(inst.cx, inst.cy + 1.2, inst.cz);
@@ -1262,21 +1735,36 @@ export class HalcyonTwinsSkillVfxPool {
         for (let i = 0; i < Math.min(inst.pts.length, ORE_FLASH_COUNT); i++) {
           this.triggerOreFlash(inst, i, inst.pts[i], 4.2 * as, i % 2 === 1);
         }
-        this.hooks.onImpactFrame?.(0.96, 1.0, '#38bdf8', 0.058);
+        this.hooks.onImpactFrame?.(0.96, 1.0, '#fde047', 0.058);
         this.hooks.onCameraPush?.(0.32, 0.048);
         this.hooks.onFlash?.('#fde047', 0.85);
         this.hooks.onSpeedLines?.(1.0, 0.45);
         inst.onImpactCallback?.();
       }
 
-      if (inst.elapsed >= 0.94 && inst.elapsed < 1.26) {
-        const nt = Math.min(1, (inst.elapsed - 0.94) / 0.30);
-        const nPop = 1 - Math.pow(1 - nt, 4);
-        inst.novaMesh.visible = true;
-        inst.novaMesh.scale.setScalar((3.5 + 8.5 * nPop) * as);
-        inst.novaMat.uniforms.uLocalT.value = nt;
+      if (inst.elapsed >= 0.94 && inst.elapsed < 1.44) {
+        const ct = Math.min(1, (inst.elapsed - 0.94) / 0.50);
+        const cEase = 1 - Math.pow(1 - ct, 4);
+        inst.crescentBMesh.visible = true;
+        inst.crescentBMesh.scale.setScalar((3.2 + 4.8 * cEase) * as);
+        inst.crescentBMesh.rotation.y = THREE.MathUtils.lerp(2.4, -0.35, cEase);
+        inst.crescentBMat.uniforms.uLocalT.value = ct;
+        inst.crescentBMat.uniforms.uTime.value = timeSec;
+
+        inst.pillarMesh.visible = true;
+        const pScaleR = (0.85 + 0.65 * cEase) * as;
+        inst.pillarMesh.scale.set(pScaleR, 0.75 + 0.45 * cEase, pScaleR);
+        inst.pillarMat.uniforms.uLocalT.value = ct;
+        inst.pillarMat.uniforms.uTime.value = timeSec;
+
+        inst.shockRingMesh.visible = true;
+        inst.shockRingMesh.scale.setScalar((3.8 + 8.6 * cEase) * as);
+        inst.shockRingMat.uniforms.uLocalT.value = ct;
+        inst.shockRingMat.uniforms.uTime.value = timeSec;
       } else {
-        inst.novaMesh.visible = false;
+        inst.crescentBMesh.visible = false;
+        inst.pillarMesh.visible = false;
+        inst.shockRingMesh.visible = false;
       }
 
       for (let i = 0; i < inst.oreFlashes.length; i++) {
@@ -1307,7 +1795,6 @@ export class HalcyonTwinsSkillVfxPool {
           sp.vel.y = Math.abs(sp.vel.y) * 0.22;
         }
         sp.mesh.position.copy(sp.pos);
-        // Stretch razor shard cleanly along its velocity vector!
         const speedMag = Math.min(2.2, 0.8 + sp.vel.length() * 0.10);
         sp.mesh.scale.set(sp.baseScale * speedMag, sp.baseScale * 0.32, 1);
         sp.mesh.rotation.set(0, Math.atan2(-sp.vel.z, sp.vel.x), Math.atan2(sp.vel.y, Math.hypot(sp.vel.x, sp.vel.z)));
