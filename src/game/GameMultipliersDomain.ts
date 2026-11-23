@@ -40,6 +40,7 @@ export interface GameMultipliersContext {
   getActiveResearchBonus: (effectType: ResearchEffectType) => number;
   getWeatherDamageMult: () => number;
   getWeatherOreDropMult: () => number;
+  getBasePlotDps?: () => number;
   isOverclockActive: (nowMs?: number) => boolean;
   getOverclockTier?: (nowMs?: number) => 0 | OverclockTier;
   getActiveStarDropAndGemBonus: () => { oreDropBonusPct: number; sellBonusPct: number; gemBonusPct: number };
@@ -93,10 +94,16 @@ export function getTapDamageDomain(ctx: GameMultipliersContext, nowMs = Date.now
       ? 1
       : 0;
   const overclockMult = getOverclockTierBuffs(tier).tapMult;
-  return Math.max(
+  const basePlotShare = Math.round((ctx.getBasePlotDps ? ctx.getBasePlotDps() : 0) * 0.03);
+  const preOverclock = Math.max(
     1,
-    Math.round((20 + ctx.getActiveResearchBonus('tapDamageFlat')) * tapMult * ctx.getWeatherDamageMult() * overclockMult)
+    Math.round(
+      (20 + ctx.getActiveResearchBonus('tapDamageFlat') + basePlotShare) *
+        tapMult *
+        ctx.getWeatherDamageMult()
+    )
   );
+  return Math.max(1, Math.round(preOverclock * overclockMult));
 }
 
 export function getMaxChestCapacityDomain(ctx: GameMultipliersContext): number {

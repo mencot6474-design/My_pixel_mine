@@ -1309,9 +1309,9 @@ describe('Tahap B HUD Modules', () => {
       expect(hubHtml).toContain('data-modal-theme="omega-boss"');
       expect(hubHtml).toContain('Crimson Ronin');
       expect(hubHtml).toContain('Obsidian Sovereign');
-      expect(hubHtml).toContain('HP 100Qa');
-      expect(hubHtml).toContain('HP 10Qi');
-      expect(hubHtml).toContain('HP 10Sp');
+      expect(hubHtml).toContain('HP 20Sp');
+      expect(hubHtml).toContain('HP 2Oc');
+      expect(hubHtml).toContain('HP 200Oc');
       expect(hubHtml).toContain('10% • 1 Core');
       expect(hubHtml).toContain('32.5% • 1–2 Cores');
       expect(hubHtml).toContain('50% • 2–3 Cores');

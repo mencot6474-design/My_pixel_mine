@@ -5,6 +5,7 @@ import {
   computeWorldResonances,
   ENCHANTS,
   getChibiStarTier,
+  getEffectiveChibiBaseDps,
   getEnchantById,
   getLatestWorldScaleAnchor,
   getMinersByWorld,
@@ -12,6 +13,7 @@ import {
   getMutationById,
   getNextChibiStarTier,
   getPickaxeById,
+  getUnlockedWorldScaleAnchor,
   getWorldUpgradeCostScale,
   ItemRarity,
   PICKAXES,
@@ -97,6 +99,8 @@ export interface PlotUnitsContext {
   activeBoosts?: Record<string, number>;
   claimedIndexRewards?: ReadonlySet<string>;
   claimedAchievements?: ReadonlySet<string>;
+  unlockedWorlds?: readonly WorldId[];
+  discovered?: ReadonlySet<string>;
   getActiveResearchBonus(effectType: ResearchEffectType): number;
   getRelicBonus(stat: RelicEffectStat): number;
   getWeatherDamageMult(): number;
@@ -107,19 +111,24 @@ export interface PlotUnitsContext {
 }
 
 const WEATHER_UPGRADE_COST_SCALE: Record<WeatherId, number> = {
-  light_rain: 1_200,
-  snow_rain: 25_000,
-  bloodmoon: 750_000,
-  void: 15_000_000,
-  celestial: 35_000_000,
+  light_rain: 2,
+  snow_rain: 2_000,
+  bloodmoon: 2_000_000,
+  void: 2_000_000_000_000,
+  celestial: 2_000_000_000_000_000,
 };
 
 /**
  * Scales plot upgrade costs by the chibi's home world (or weather meteor) economy
  * and a mild intra-world rarity premium (`+12%` per baseDps multiple above anchor)
  * so Exotic/Secret chibis stay slightly pricier without punishing progression.
+ * Global progression units (`Twin`, `Omega`, `Limited`) honor unlocked-world scaling when provided.
  */
-export function getChibiUpgradeCostMult(chibiId: string): number {
+export function getChibiUpgradeCostMult(
+  chibiId: string,
+  unlockedWorlds?: readonly WorldId[],
+  discovered?: ReadonlySet<string>
+): number {
   const chibi = getChibiById(chibiId);
   if (!chibi) return 1;
   const worldId = getMinerWorldId(chibiId);
@@ -128,22 +137,23 @@ export function getChibiUpgradeCostMult(chibiId: string): number {
     if (fusionRecipe) {
       return fusionRecipe.upgradeCostScale;
     }
+    const anchor =
+      unlockedWorlds && unlockedWorlds.length > 0
+        ? getUnlockedWorldScaleAnchor(unlockedWorlds, discovered)
+        : getLatestWorldScaleAnchor();
     const premiumItem = getPremiumShopItemByChibiId(chibiId);
     if (premiumItem) {
-      return computeTwinUpgradeCostScale(
-        getLatestWorldScaleAnchor().upgradeCostScale,
-        premiumItem.upgradeCostMult
-      );
+      return computeTwinUpgradeCostScale(anchor.upgradeCostScale, premiumItem.upgradeCostMult);
     }
     const omegaBoss = getOmegaBossByChibiId(chibiId);
     if (omegaBoss) {
-      return computeOmegaUpgradeCostScale(
-        getLatestWorldScaleAnchor().upgradeCostScale,
-        omegaBoss.upgradeCostMult
-      );
+      return computeOmegaUpgradeCostScale(anchor.upgradeCostScale, omegaBoss.upgradeCostMult);
     }
     const dailyReward = getDailyLoginRewardByChibiId(chibiId);
     if (dailyReward?.upgradeCostScale !== undefined) {
+      if (unlockedWorlds && unlockedWorlds.length > 0) {
+        return Math.min(dailyReward.upgradeCostScale, Math.max(2, anchor.upgradeCostScale * 2));
+      }
       return dailyReward.upgradeCostScale;
     }
     for (const [weatherId, entries] of Object.entries(WEATHER_METEOR_CHIBIS) as Array<
@@ -303,26 +313,21 @@ export function getActiveEnchantBonuses(
   return { oreDropPct, sellValuePct };
 }
 
-/** Computes effective DPS, next level DPS, speed, mining multiplier, worth, and upgrade costs for a plot slot. */
-export function computePlotUnitStats(
+/** Computes pre-weather, pre-overclock effective base damage for a placed slot unit. */
+function computeUnitBaseDmgParts(
   ctx: PlotUnitsContext,
-  slotIndex: number,
-  nowMs = Date.now()
-): PlotUnitStatsResult | null {
-  const unit = ctx.plotUnits[slotIndex];
-  if (!unit) return null;
+  unit: PlotUnitState
+): { effBaseDps: number; baseDmg: number; nextBaseDmg: number; dmgMult: number; nextDmgMult: number } | null {
   const chibi = getChibiById(unit.chibiId);
   if (!chibi) return null;
-
+  const effBaseDps = getEffectiveChibiBaseDps(chibi.id, ctx.unlockedWorlds, ctx.discovered);
   const pick = unit.pickaxeId ? getPickaxeById(unit.pickaxeId) : null;
   const pickMult = pick ? pick.dmgMult : 1;
   const mut = getMutationById(unit.mutationId);
   const enc = getEnchantById(unit.enchantId);
   const encMult = enc ? enc.dmgMult : 1;
-
   const lvlScale = (lvl: number) => Math.pow(1.28, lvl - 1);
   const dmgResearchMult = 1 + ctx.getActiveResearchBonus('minerDmgPct') + ctx.getRelicBonus('minerDmgPct');
-  const weatherDmgMult = ctx.getWeatherDamageMult();
   const starTier = getChibiStarTier(getChibiStarCount(ctx, chibi.id));
   const resonanceDmgMult = 1 + getWorldResonanceDmgPct(ctx, getMinerWorldId(chibi.id));
   const fusionTeamDmgMult =
@@ -339,9 +344,8 @@ export function computePlotUnitStats(
     unit.speedLevel >= 17
       ? dmgMult
       : Number((1 + unit.speedLevel * CHIBI_DMG_MULT_PER_LEVEL).toFixed(2));
-  const baseDmg =
-    chibi.baseDps *
-    lvlScale(unit.damageLevel) *
+  const sharedMult =
+    effBaseDps *
     dmgMult *
     pickMult *
     mut.mult *
@@ -351,25 +355,37 @@ export function computePlotUnitStats(
     resonanceDmgMult *
     fusionTeamDmgMult *
     indexAllDmgMult;
+  return {
+    effBaseDps,
+    baseDmg: sharedMult * lvlScale(unit.damageLevel),
+    nextBaseDmg: sharedMult * lvlScale(unit.damageLevel + 1),
+    dmgMult,
+    nextDmgMult,
+  };
+}
+
+/** Computes effective DPS, next level DPS, speed, mining multiplier, worth, and upgrade costs for a plot slot. */
+export function computePlotUnitStats(
+  ctx: PlotUnitsContext,
+  slotIndex: number,
+  nowMs = Date.now()
+): PlotUnitStatsResult | null {
+  const unit = ctx.plotUnits[slotIndex];
+  if (!unit) return null;
+  const chibi = getChibiById(unit.chibiId);
+  if (!chibi) return null;
+  const parts = computeUnitBaseDmgParts(ctx, unit);
+  if (!parts) return null;
+  const { effBaseDps, baseDmg, nextBaseDmg, dmgMult, nextDmgMult } = parts;
+
+  const enc = getEnchantById(unit.enchantId);
+  const weatherDmgMult = ctx.getWeatherDamageMult();
+  const starTier = getChibiStarTier(getChibiStarCount(ctx, chibi.id));
   const ocActive = ctx.isOverclockActive ? ctx.isOverclockActive(nowMs) : false;
   const ocTier = ocActive ? (ctx.getOverclockTier ? ctx.getOverclockTier(nowMs) : 1) : 0;
   const ocChibiDmgMult = ocActive ? getOverclockTierBuffs(ocTier || 1).chibiDmgMult : 1;
   const dmg = Math.round(baseDmg * weatherDmgMult * ocChibiDmgMult);
-  const nextDmg = Math.round(
-    chibi.baseDps *
-      lvlScale(unit.damageLevel + 1) *
-      dmgMult *
-      pickMult *
-      mut.mult *
-      encMult *
-      dmgResearchMult *
-      starTier.dmgMult *
-      resonanceDmgMult *
-      fusionTeamDmgMult *
-      indexAllDmgMult *
-      weatherDmgMult *
-      ocChibiDmgMult
-  );
+  const nextDmg = Math.round(nextBaseDmg * weatherDmgMult * ocChibiDmgMult);
   const returnRushSpeed =
     (ctx.activeBoosts?.[RETURN_RUSH_BOOST_ID] ?? 0) > nowMs ? RETURN_RUSH_SPEED_BONUS : 0;
   const speed = Math.round((10 + (unit.speedLevel - 1) * 2) * (1 + returnRushSpeed));
@@ -399,11 +415,14 @@ export function computePlotUnitStats(
   const critMult = CHIBI_CRIT_DMG_MULT;
   const worth = Math.round(baseDmg * 12);
 
-  const upgradeCostMult = getChibiUpgradeCostMult(chibi.id);
+  const upgradeCostMult = getChibiUpgradeCostMult(chibi.id, ctx.unlockedWorlds, ctx.discovered);
   const dmgCost = Math.round(50 * Math.pow(1.32, unit.damageLevel - 1) * upgradeCostMult);
   const speedCost = Math.round(75 * Math.pow(1.42, unit.speedLevel - 1) * upgradeCostMult);
   const miningCost = Math.round(90 * Math.pow(1.45, unit.miningSpeedLevel - 1) * upgradeCostMult);
-  const mutationCost = Math.max(10, Math.round(8 + Math.pow(chibi.baseDps, 0.35) * 2.2));
+  const mutationCost = Math.max(
+    10,
+    Math.round(12 + Math.pow(Math.max(0, Math.log10(Math.max(10, effBaseDps))), 2.35) * 0.8)
+  );
 
   return {
     dmg,
@@ -421,6 +440,17 @@ export function computePlotUnitStats(
     miningCost,
     mutationCost,
   };
+}
+
+export function computeBasePlotDps(ctx: PlotUnitsContext): number {
+  let total = 0;
+  for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {
+    const unit = ctx.plotUnits[i];
+    if (!unit) continue;
+    const parts = computeUnitBaseDmgParts(ctx, unit);
+    if (parts) total += Math.round(parts.baseDmg);
+  }
+  return total;
 }
 
 export function computeTotalPlotDps(ctx: PlotUnitsContext): number {
@@ -463,8 +493,12 @@ export function computeDpsBreakdown(ctx: PlotUnitsContext): DpsBreakdownResult {
   return { tapDamage, totalPlotDps, units };
 }
 
-function getUnitRankScore(ctx: Pick<PlotUnitsContext, 'chibiStars'>, u: PlotUnitState): number {
+function getUnitRankScore(
+  ctx: Pick<PlotUnitsContext, 'chibiStars' | 'unlockedWorlds' | 'discovered'>,
+  u: PlotUnitState
+): number {
   const chibi = getChibiById(u.chibiId) ?? CHIBI_CATALOG[0];
+  const effBaseDps = getEffectiveChibiBaseDps(chibi.id, ctx.unlockedWorlds, ctx.discovered);
   const pick = u.pickaxeId ? getPickaxeById(u.pickaxeId) : null;
   const pickMult = pick ? pick.dmgMult : 1;
   const mut = getMutationById(u.mutationId);
@@ -472,7 +506,7 @@ function getUnitRankScore(ctx: Pick<PlotUnitsContext, 'chibiStars'>, u: PlotUnit
   const encMult = enc ? enc.dmgMult : 1;
   const starMult = getChibiStarTier(getChibiStarCount(ctx, u.chibiId)).dmgMult;
   const lvlScale = Math.pow(1.22, u.damageLevel - 1);
-  return chibi.baseDps * lvlScale * pickMult * mut.mult * encMult * starMult;
+  return effBaseDps * lvlScale * pickMult * mut.mult * encMult * starMult;
 }
 
 export function trimStashedUnits(
@@ -764,7 +798,7 @@ export function equipBestUnitsToPlots(
         chibiId: def.id,
         unit,
         score: getUnitRankScore(ctx, unit),
-        baseDps: def.baseDps,
+        baseDps: getEffectiveChibiBaseDps(def.id, ctx.unlockedWorlds, ctx.discovered),
       });
     }
   }

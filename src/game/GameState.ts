@@ -5,7 +5,7 @@ import * as IndexRewards from './IndexRewardsDomain';
 import type { IndexMilestoneDef, IndexPassiveBonuses, IndexRewardClaimResult, IndexTabId, IndexTabProgress } from './IndexRewardsDomain';
 import * as TeamPresets from './TeamPresetsDomain';
 import type { ApplyTeamPresetResult, TeamPresetSlots } from './TeamPresetsDomain';
-import { DEFAULT_PICKAXE_STOCK, ENCHANT_DICE_GEM_COST, EnchantDef, ItemRarity, PICKAXE_RESTOCK_MS, rollEnchantDef, WorldId, WorldResonanceStatus } from './GameData';
+import { DEFAULT_PICKAXE_STOCK, ENCHANT_DICE_GEM_COST, EnchantDef, getEffectiveChibiBaseDps, ItemRarity, PICKAXE_RESTOCK_MS, rollEnchantDef, WorldId, WorldResonanceStatus } from './GameData';
 import * as Multipliers from './GameMultipliersDomain';
 import { getResearchTreeMaxPoints, ResearchEffectType, ResearchTreeId } from './ResearchData';
 import { RelicEffectStat } from './RelicData';
@@ -249,6 +249,14 @@ export class GameState {
 
   public getPlotUnitStats(slotIndex: number, nowMs = Date.now()) {
     return PlotUnits.computePlotUnitStats(this, slotIndex, nowMs);
+  }
+
+  public getBasePlotDps(): number {
+    return PlotUnits.computeBasePlotDps(this);
+  }
+
+  public getEffectiveChibiDps(chibiId: string): number {
+    return getEffectiveChibiBaseDps(chibiId, this.unlockedWorlds, this.discovered);
   }
 
   public getTotalPlotDps(): number {

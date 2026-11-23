@@ -255,7 +255,7 @@ export class ShopModalsUi {
       badgesHtml: `<span class="mam-pill rounded-full bg-[#fef08a] border-2 border-[#14111d] text-[10px] font-black text-[#14111d]">${def.passiveSummary}</span>`,
       artHtml: chibiPortraitHtml(chibi, { usePose: true }),
       stats: [
-        ['Base DPS', `${fmtShort(chibi.baseDps)}/s`, 'text-[#dc2626]'],
+        ['Base DPS', `${fmtShort(this.state.getEffectiveChibiDps(chibi.id))}/s`, 'text-[#dc2626]'],
         ['Cost', `${fmtInt(def.coinCost)} Coins`, 'text-[#b45309]'],
         ['Owned', `x${fmtInt(owned)}`, 'text-[#14111d]'],
         ['Source', 'Battle Tower', 'text-[#0284c7]'],
@@ -294,7 +294,7 @@ export class ShopModalsUi {
           <div class="w-full flex flex-col items-center gap-0.5 min-h-0">
             <div class="w-full px-0.5 text-center text-[14.5px] font-black leading-[1.15] whitespace-nowrap overflow-hidden text-ellipsis text-[#14111d]" title="${chibi.name}">${chibi.name}</div>
             <div class="text-[11px] font-extrabold leading-[1.2] text-center ${subTextCls}">
-              ${fmtShort(chibi.baseDps)} DPS • ${item.passiveSummary}
+              ${fmtShort(this.state.getEffectiveChibiDps(chibi.id))} DPS • ${item.passiveSummary}
             </div>
             <div class="min-h-[14px] text-[11px] font-black text-center ${ownedTextCls}" data-premium-owned="${item.chibiId}">
               ${owned > 0 ? `Owned: x${fmtInt(owned)}` : 'Not Owned'}

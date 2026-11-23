@@ -50,7 +50,7 @@ export class ChestModalUi {
           </div>
           <div class="mam-card-name truncate px-1">${def.name}</div>
           <div class="mam-card-bottom">
-            <span class="mam-card-dps">${fmtShort(def.baseDps)}</span>
+            <span class="mam-card-dps">${fmtShort(this.state.getEffectiveChibiDps(def.id))}</span>
             <span class="mam-card-qty" data-chest-qty="miner:${def.id}">x${fmtInt(qty)}</span>
           </div>
         </div>

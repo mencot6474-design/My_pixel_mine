@@ -69,7 +69,7 @@ export class IndexInspectorUi {
           badgesHtml: statusBadge,
           artHtml: chibiPortraitHtml(chibi, { usePose: true }),
           stats: [
-            ['Base DPS', `${fmtShort(chibi.baseDps)}/s`, 'text-[#b45309]'],
+            ['Base DPS', `${fmtShort(this.state.getEffectiveChibiDps(chibi.id))}/s`, 'text-[#b45309]'],
             ['Triple Passive', boss.passiveSummary, 'text-[#dc2626]'],
             ['Unlock Cost', `${boss.unlockCoreCost} ${boss.coreName}s (Have ${cores})`, 'text-[#0369a1]'],
             ['Owned', `${fmtInt(owned)} (${onPlot}/5)`, 'text-[#14111d]'],
@@ -94,7 +94,7 @@ export class IndexInspectorUi {
           badgesHtml: statusBadge,
           artHtml: chibiPortraitHtml(chibi, { usePose: true }),
           stats: [
-            ['Base DPS', `${fmtShort(chibi.baseDps)}/s`, 'text-[#b45309]'],
+            ['Base DPS', `${fmtShort(this.state.getEffectiveChibiDps(chibi.id))}/s`, 'text-[#b45309]'],
             ['Passive', item.passiveSummary, 'text-[#0369a1]'],
             ['Shop Cost', `${fmtInt(item.coinCost)} Coins`, 'text-[#be123c]'],
             ['Owned', `${fmtInt(owned)} (${onPlot}/5)`, 'text-[#14111d]'],
@@ -119,7 +119,7 @@ export class IndexInspectorUi {
           badgesHtml: statusBadge,
           artHtml: chibiPortraitHtml(chibi, { usePose: true }),
           stats: [
-            ['Base DPS', `${fmtShort(chibi.baseDps)}/s`, 'text-[#b45309]'],
+            ['Base DPS', `${fmtShort(this.state.getEffectiveChibiDps(chibi.id))}/s`, 'text-[#b45309]'],
             ['Stars', '★★★★★ 5★', 'text-[#b45309]'],
             ['Trade', 'Non-Sellable', 'text-[#be123c]'],
             ['Owned', `${fmtInt(owned)} (${onPlot}/5)`, 'text-[#14111d]'],

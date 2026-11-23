@@ -1344,8 +1344,8 @@ describe('Pure 3D Mine World', () => {
     const nebula = inspectCosts('nebula-archon');
     const chrono = inspectCosts('chrono-sovereign');
 
-    expect(volt.dmgCost).toBe(2_000);
-    expect(nebula.dmgCost).toBe(37_500_000);
+    expect(volt.dmgCost).toBe(50_000);
+    expect(nebula.dmgCost).toBe(50_000_000_000_000);
     expect(zephyr.dmgCost).toBeGreaterThan(volt.dmgCost);
     expect(vesper.dmgCost).toBeGreaterThan(zephyr.dmgCost);
     expect(seraph.dmgCost).toBeGreaterThan(vesper.dmgCost);
@@ -1354,19 +1354,20 @@ describe('Pure 3D Mine World', () => {
 
   it('applies +35% Full-Chest Sell Bonus when selling chest ores at >=95% capacity', () => {
     const gs = new GameState();
+    const runestoneVal = getOreById('runestone')!.sellValue;
     gs.cash = 0;
     gs.chestCapacity = 100;
     gs.chestOres = { runestone: 95 };
     const fullRes = gs.sellAllChestOres();
     expect(fullRes.bonusApplied).toBe(true);
-    expect(fullRes.earned).toBe(Math.round(200_000 * 95 * 1.35));
+    expect(fullRes.earned).toBe(Math.round(runestoneVal * 95 * 1.35));
     expect(gs.chestOres).toEqual({});
 
     gs.cash = 0;
     gs.chestOres = { runestone: 50 };
     const partialRes = gs.sellAllChestOres();
     expect(partialRes.bonusApplied).toBe(false);
-    expect(partialRes.earned).toBe(200_000 * 50);
+    expect(partialRes.earned).toBe(runestoneVal * 50);
   });
 
   it('flags Frozen and higher mutations as protected high-tier rolls', () => {
@@ -1999,7 +2000,7 @@ describe('Pure 3D Mine World', () => {
     expect(gs.discovered.has('singularity')).toBe(true);
 
     // Weather Limited Chibi upgrade cost scales monotonically by tier instead of falling back to 1
-    expect(getChibiUpgradeCostMult('stormwraith')).toBeGreaterThan(1000);
+    expect(getChibiUpgradeCostMult('stormwraith')).toBeGreaterThan(1);
     expect(getChibiUpgradeCostMult('frostblood')).toBeGreaterThan(getChibiUpgradeCostMult('stormwraith'));
     expect(getChibiUpgradeCostMult('glitch-monarch')).toBeGreaterThan(getChibiUpgradeCostMult('frostblood'));
     expect(getChibiUpgradeCostMult('singularity')).toBeGreaterThan(getChibiUpgradeCostMult('glitch-monarch'));
@@ -4341,5 +4342,47 @@ describe('Pure 3D Mine World', () => {
     // Calling unlockWorld again never double-grants
     expect(gs.unlockWorld('crystal')).toBe(false);
     expect(gs.miners['volt-kensei']).toBe(1);
+  });
+
+  it('bounds mutationCost logarithmically for 100Sx units, equips W2 starter via equipBestMiners, and scales tap damage modestly', () => {
+    const gs = new GameState();
+    gs.cash = 1e12;
+    expect(gs.getPlotUnitStats(0)?.mutationCost).toBeGreaterThanOrEqual(10);
+    expect(gs.getPlotUnitStats(0)?.mutationCost).toBeLessThanOrEqual(50);
+
+    // W8 Secret (1e23 baseDps) mutationCost stays bounded in reasonable Gem range (< 5_000)
+    gs.unlockedWorlds = WORLDS.map((w) => w.id);
+    gs.miners['chrono-seraph'] = 1;
+    gs.plotMiners[0] = 'chrono-seraph';
+    gs.plotUnits[0] = {
+      chibiId: 'chrono-seraph',
+      damageLevel: 1,
+      speedLevel: 1,
+      miningSpeedLevel: 1,
+      pickaxeId: '',
+      mutationId: 'normal',
+      enchantId: null,
+    };
+    expect(gs.getPlotUnitStats(0)!.mutationCost).toBeLessThan(5_000);
+
+    // High-tier plot DPS scales tap damage above flat 20 while staying below 10% of plot DPS
+    const scaledTap = gs.getTapDamage();
+    expect(scaledTap).toBeGreaterThan(1_000);
+    expect(scaledTap).toBeLessThan(gs.getTotalPlotDps() * 0.1);
+
+    // Fresh W1->W2 progression: equipBestMiners prioritizes newly granted W2 starter over W1 unit
+    const fresh = new GameState();
+    fresh.cash = 1e12;
+    fresh.miners['cyber-ki-brawler'] = 1;
+    fresh.equipBestMiners();
+    expect(fresh.plotMiners[0]).toBe('cyber-ki-brawler');
+    for (const node of getResearchNodesForTree('underground')) {
+      while (fresh.getResearchLevel(node.id) < node.maxLevel) {
+        fresh.upgradeResearch(node.id);
+      }
+    }
+    expect(fresh.unlockWorld('crystal')).toBe(true);
+    fresh.equipBestMiners();
+    expect(fresh.plotMiners[0]).toBe('volt-kensei');
   });
 });

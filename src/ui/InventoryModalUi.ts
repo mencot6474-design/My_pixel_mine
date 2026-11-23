@@ -57,7 +57,7 @@ export class InventoryModalUi {
         .map(([id]) => getChibiById(id))
         .filter((d): d is NonNullable<typeof d> => Boolean(d))
         .filter((d) => !q || d.name.toLowerCase().includes(q))
-        .sort((a, b) => b.baseDps - a.baseDps)[0];
+        .sort((a, b) => this.state.getEffectiveChibiDps(b.id) - this.state.getEffectiveChibiDps(a.id))[0];
       if (firstMiner) {
         this.invInspectTarget = { kind: 'miner', id: firstMiner.id };
         return this.invInspectTarget;
@@ -124,7 +124,7 @@ export class InventoryModalUi {
         artHtml: chibiPortraitHtml(def),
         stats: [
           ['Owned', `x${fmtInt(qty)} (${fmtInt(spare)} spare)`, 'text-[#14111d]'],
-          ['Effective DPS', `${fmtShort(Math.round(def.baseDps * starTier.dmgMult))}/s`, 'text-[#d97706]'],
+          ['Effective DPS', `${fmtShort(Math.round(this.state.getEffectiveChibiDps(def.id) * starTier.dmgMult))}/s`, 'text-[#d97706]'],
           ['Star Bonus', star > 0 ? starBonusParts.join(' • ') : 'None (★0)', star > 0 ? 'text-[#b45309]' : 'text-[#5b526e]'],
           ['On Plot', `${fmtInt(onPlot)} placed`, 'text-[#0284c7]'],
         ],
@@ -227,7 +227,7 @@ export class InventoryModalUi {
         .map(([id, qty]) => {
           const def = getChibiById(id) ?? CHIBI_CATALOG[0];
           const star = this.state.getChibiStar(def.id);
-          const effDps = Math.round(def.baseDps * getChibiStarTier(star).dmgMult);
+          const effDps = Math.round(this.state.getEffectiveChibiDps(def.id) * getChibiStarTier(star).dmgMult);
           return { def, qty, star, effDps };
         })
         .sort((a, b) => b.effDps - a.effDps);

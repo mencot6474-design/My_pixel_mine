@@ -384,7 +384,7 @@ export class OmegaBossModalUi {
                     </div>
                     <div class="flex items-center gap-2">
                       ${renderRarityBadgeHtml('omega', 'is-compact !ml-0')}
-                      <span class="mam-pill-xs bg-white text-[#b45309] border-[1.5px] border-[#14111d]">${fmtShort(chibi.baseDps)}/s Base</span>
+                      <span class="mam-pill-xs bg-white text-[#b45309] border-[1.5px] border-[#14111d]">${fmtShort(this.state.getEffectiveChibiDps(chibi.id))}/s Base</span>
                     </div>
                   </div>`
                 : ''
