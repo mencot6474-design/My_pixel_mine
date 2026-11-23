@@ -58,7 +58,7 @@ export function fireFusionChibiChoreography(
         });
       });
 
-      const cardCount = ctx.lowQuality ? 4 : 6;
+      const cardCount = 6;
       for (let k = 0; k < cardCount; k++) {
         const tgt = pts[k % pts.length];
         const ang = (k / cardCount) * Math.PI * 2;
@@ -108,7 +108,7 @@ export function fireFusionChibiChoreography(
         life: 1.18 * sc,
       });
 
-      const lanceCount = ctx.lowQuality ? 6 : 8;
+      const lanceCount = 8;
       for (let k = 0; k < lanceCount; k++) {
         const tgt = pts[k % pts.length];
         const ang = (k / lanceCount) * Math.PI * 2;
@@ -184,7 +184,7 @@ export function fireFusionChibiChoreography(
         life: 1.18 * sc,
       });
 
-      const obeliskTargets = ctx.lowQuality ? pts.slice(0, 3) : pts.slice(0, 5);
+      const obeliskTargets = pts.slice(0, 5);
       obeliskTargets.forEach((n, idx) => {
         ctx.after(idx * 0.065 * sc, () => {
           ctx.spawnSlash({
@@ -245,7 +245,7 @@ export function fireFusionChibiChoreography(
         life: 1.18 * sc,
       });
 
-      const prismCount = ctx.lowQuality ? 4 : 6;
+      const prismCount = 6;
       const apexCenter = new THREE.Vector3(cx, cy + 1.1, cz);
       for (let k = 0; k < prismCount; k++) {
         const ang = (k / prismCount) * Math.PI * 2;

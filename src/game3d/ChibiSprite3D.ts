@@ -32,6 +32,7 @@ export class ChibiSprite3D {
   public readonly group = new THREE.Group();
   private readonly spritePivot = new THREE.Group();
   private readonly animGroup = new THREE.Group();
+  private sharedSpriteGeo: THREE.PlaneGeometry;
   private readonly mesh: THREE.Mesh;
   private readonly material: THREE.MeshBasicMaterial;
   private readonly depthMaterial: THREE.MeshDepthMaterial;
@@ -92,6 +93,7 @@ export class ChibiSprite3D {
   private hologramMode = false;
   private hologramTintHex = '#38bdf8';
   private lowQuality = false;
+  private blitzPosesPreloaded = false;
   private disposed = false;
 
   constructor(def: ChibiDef, spriteHeight = 1.24, phaseOffset = 0) {
@@ -116,7 +118,8 @@ export class ChibiSprite3D {
       side: THREE.DoubleSide,
     });
 
-    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(spriteHeight * 0.85, spriteHeight), this.material);
+    this.sharedSpriteGeo = new THREE.PlaneGeometry(spriteHeight * 0.85, spriteHeight);
+    this.mesh = new THREE.Mesh(this.sharedSpriteGeo, this.material);
     this.mesh.position.y = spriteHeight * 0.5;
     this.mesh.customDepthMaterial = this.depthMaterial;
     this.mesh.castShadow = false;
@@ -147,7 +150,7 @@ export class ChibiSprite3D {
         depthWrite: false,
         side: THREE.DoubleSide,
       });
-      const gMesh = new THREE.Mesh(new THREE.PlaneGeometry(spriteHeight * 0.85, spriteHeight), gMat);
+      const gMesh = new THREE.Mesh(this.sharedSpriteGeo, gMat);
       gMesh.position.set(0, spriteHeight * 0.5, -0.04 - i * 0.03);
       gMesh.visible = false;
       this.ghostMats.push(gMat);
@@ -166,7 +169,7 @@ export class ChibiSprite3D {
         depthWrite: false,
         side: THREE.DoubleSide,
       });
-      const bgMesh = new THREE.Mesh(new THREE.PlaneGeometry(spriteHeight * 0.85, spriteHeight), bgMat);
+      const bgMesh = new THREE.Mesh(this.sharedSpriteGeo, bgMat);
       bgMesh.visible = false;
       this.group.add(bgMesh);
       this.blitzGhosts.push({ mesh: bgMesh, mat: bgMat, life: 0, maxLife: 0.3, face: 1, rz: 0, baseScale: 1 });
@@ -181,7 +184,7 @@ export class ChibiSprite3D {
       side: THREE.DoubleSide,
     });
     this.blitzCloneMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(spriteHeight * 0.85, spriteHeight),
+      this.sharedSpriteGeo,
       this.blitzCloneMat
     );
     this.blitzCloneMesh.visible = false;
@@ -234,7 +237,7 @@ export class ChibiSprite3D {
       this.blitzHeroPivot
     );
 
-    // Preload all 4 poses for instant state swaps and capture idle height reference
+    // Preload idle pose immediately; blitz/combat poses are loaded lazily on demand
     const smooth = Boolean(this.def.smoothFilter);
     void loadPoseMeta(this.def.poses.idle, smooth).then(
       (meta) => {
@@ -244,6 +247,13 @@ export class ChibiSprite3D {
       },
       () => {}
     );
+    void this.applyPose('idle');
+  }
+
+  private ensureBlitzPosesPreloaded(): void {
+    if (this.blitzPosesPreloaded) return;
+    this.blitzPosesPreloaded = true;
+    const smooth = Boolean(this.def.smoothFilter);
     void loadPoseMeta(this.def.poses.walk, smooth).then(
       (meta) => {
         if (!this.disposed) this.blitzPoseMetas.dash = meta;
@@ -262,7 +272,6 @@ export class ChibiSprite3D {
       },
       () => {}
     );
-    void this.applyPose('idle');
   }
 
   private async applyPose(state: ChibiAnimState): Promise<void> {
@@ -284,15 +293,16 @@ export class ChibiSprite3D {
       this.currentSpriteHeight = h;
       this.topTrimRatio = meta.topTrimRatio;
 
-      this.mesh.geometry.dispose();
-      this.mesh.geometry = new THREE.PlaneGeometry(width, h);
+      const nextGeo = new THREE.PlaneGeometry(width, h);
+      this.sharedSpriteGeo.dispose();
+      this.sharedSpriteGeo = nextGeo;
+      this.mesh.geometry = nextGeo;
       this.mesh.position.y = h * 0.5;
       this.glintMesh.position.y = h * 0.56;
 
       for (let i = 0; i < this.ghostMeshes.length; i++) {
         const gm = this.ghostMeshes[i];
-        gm.geometry.dispose();
-        gm.geometry = new THREE.PlaneGeometry(width, h);
+        gm.geometry = nextGeo;
         gm.position.y = h * 0.5;
         this.ghostMats[i].map = meta.texture;
         this.ghostMats[i].needsUpdate = true;
@@ -300,13 +310,11 @@ export class ChibiSprite3D {
 
       for (let i = 0; i < this.blitzGhosts.length; i++) {
         const bg = this.blitzGhosts[i];
-        bg.mesh.geometry.dispose();
-        bg.mesh.geometry = new THREE.PlaneGeometry(width, h);
+        bg.mesh.geometry = nextGeo;
         bg.mat.map = meta.texture;
         bg.mat.needsUpdate = true;
       }
-      this.blitzCloneMesh.geometry.dispose();
-      this.blitzCloneMesh.geometry = new THREE.PlaneGeometry(width, h);
+      this.blitzCloneMesh.geometry = nextGeo;
       this.blitzCloneMat.map = meta.texture;
       this.blitzCloneMat.needsUpdate = true;
 
@@ -504,6 +512,7 @@ export class ChibiSprite3D {
     shadowOnly?: boolean;
   }): void {
     if (this.hologramMode) return;
+    this.ensureBlitzPosesPreloaded();
     this.group.updateWorldMatrix(true, false);
     this.group.getWorldPosition(this.blitzAnchorWorld);
     this.group.getWorldScale(this.blitzScaleWorld);
@@ -887,20 +896,17 @@ export class ChibiSprite3D {
 
   public dispose(): void {
     this.disposed = true;
-    this.mesh.geometry.dispose();
+    this.sharedSpriteGeo.dispose();
     this.material.dispose();
     this.depthMaterial.dispose();
     this.glintMesh.geometry.dispose();
     this.glintMat.dispose();
-    for (let i = 0; i < this.ghostMeshes.length; i++) {
-      this.ghostMeshes[i].geometry.dispose();
+    for (let i = 0; i < this.ghostMats.length; i++) {
       this.ghostMats[i].dispose();
     }
     for (let i = 0; i < this.blitzGhosts.length; i++) {
-      this.blitzGhosts[i].mesh.geometry.dispose();
       this.blitzGhosts[i].mat.dispose();
     }
-    this.blitzCloneMesh.geometry.dispose();
     this.blitzCloneMat.dispose();
     this.defaultBlitzHeroGeo.dispose();
     for (const geo of Object.values(this.blitzPoseGeos)) {

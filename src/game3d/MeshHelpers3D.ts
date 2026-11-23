@@ -21,17 +21,17 @@ export function getActiveTextureAnisotropy(): number {
 }
 
 /**
- * Configures crisp billboard/sprite texture filtering while keeping mipmaps enabled
- * so textures remain sharp without shimmering or blurry trilinear down-blending.
+ * Configures crisp HD Mip-0 billboard/sprite texture filtering with mipmaps disabled
+ * so 2D Chibi and Ore sprites always sample 100% native resolution without dropping to half-res mip levels.
  */
 export function applySharpSpriteTexture<T extends THREE.Texture>(tex: T, pixelArt = false): T {
-  tex.generateMipmaps = true;
+  tex.generateMipmaps = false;
   if (pixelArt) {
     tex.magFilter = THREE.NearestFilter;
-    tex.minFilter = THREE.NearestMipmapNearestFilter;
+    tex.minFilter = THREE.NearestFilter;
   } else {
     tex.magFilter = THREE.LinearFilter;
-    tex.minFilter = THREE.LinearMipmapNearestFilter;
+    tex.minFilter = THREE.LinearFilter;
     tex.anisotropy = activeTextureAnisotropy;
   }
   tex.needsUpdate = true;

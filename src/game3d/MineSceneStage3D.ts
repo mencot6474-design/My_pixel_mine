@@ -434,12 +434,17 @@ export function createMineRendererAndLights(opts: {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.06;
   renderer.shadowMap.enabled = initialPreset.shadowsEnabled;
+  renderer.shadowMap.autoUpdate = opts.graphicsQuality === 'high';
+  renderer.shadowMap.needsUpdate = initialPreset.shadowsEnabled;
   renderer.shadowMap.type = opts.graphicsQuality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   opts.mountEl.appendChild(renderer.domElement);
 
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(opts.scene, camera));
-  const bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.12, 0.22, 0.9);
+  const bloomW = Math.max(1, Math.round(w * 0.5));
+  const bloomH = Math.max(1, Math.round(h * 0.5));
+  const bloomPass = new UnrealBloomPass(new THREE.Vector2(bloomW, bloomH), 0.12, 0.22, 0.9);
+  bloomPass.enabled = opts.graphicsQuality === 'high';
   composer.addPass(bloomPass);
   const impactPass = new ShaderPass(ImpactFrameShader);
   composer.addPass(impactPass);
@@ -604,6 +609,9 @@ export function applyMineSceneModeTransition(ctx: {
   }
 
   if (ctx.modeChanged) {
+    if (ctx.renderer.shadowMap?.enabled) {
+      ctx.renderer.shadowMap.needsUpdate = true;
+    }
     const yaw = ctx.inputState.targetOrbitYaw;
     const pitch = ctx.inputState.targetOrbitPitch;
     const radius = ctx.inputState.targetCamRadius;
@@ -835,6 +843,7 @@ export function applyMineGraphicsQuality(ctx: {
   anisoCap: number;
   scene: THREE.Scene;
   renderer: THREE.WebGLRenderer;
+  bloomPass?: UnrealBloomPass;
   sunLight: THREE.DirectionalLight;
   weatherFx: WeatherFx3D;
   env: MineEnvironment3D;
@@ -848,9 +857,13 @@ export function applyMineGraphicsQuality(ctx: {
   const preset = GRAPHICS_PRESETS[ctx.quality];
   ctx.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.maxPixelRatio));
   ctx.renderer.shadowMap.enabled = preset.shadowsEnabled;
+  ctx.renderer.shadowMap.autoUpdate = ctx.quality === 'high';
   ctx.renderer.shadowMap.type = ctx.quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   ctx.sunLight.castShadow = preset.shadowsEnabled;
-  ctx.renderer.shadowMap.needsUpdate = true;
+  ctx.renderer.shadowMap.needsUpdate = preset.shadowsEnabled;
+  if (ctx.bloomPass) {
+    ctx.bloomPass.enabled = ctx.quality === 'high';
+  }
   // Disable sky weather rain/snow particle system across presets to maximize FPS
   ctx.weatherFx.setQualityScale(0);
   ctx.env.setLowQuality(low);

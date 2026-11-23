@@ -728,6 +728,16 @@ export class SkyMetropolis3D {
     this.searchlightMat.opacity = low ? 0.06 : 0.12;
     this.mistMat.opacity = low ? 0.12 : 0.22;
     this.skyTrafficInst.visible = !low;
+    this.rooftopMechInst.visible = !low;
+    this.finInst.visible = !low;
+    this.antennaInst.visible = !low;
+    this.beaconInst.visible = !low;
+    for (const b of this.searchlights) {
+      b.pivot.visible = !low;
+    }
+    for (const sign of this.holoBillboards) {
+      sign.mesh.visible = !low;
+    }
   }
 
   public update(dtSec: number, elapsed: number): void {
@@ -738,6 +748,10 @@ export class SkyMetropolis3D {
     this.blimpScrollOffset = (this.blimpScrollOffset + safeDt * (this.overclockTier > 0 ? 0.24 : 0.15)) % 1;
     if (this.blimpScreenMat.map) {
       this.blimpScreenMat.map.offset.x = this.blimpScrollOffset;
+    }
+
+    if (this.lowQuality) {
+      return;
     }
 
     // Spin 4 zeppelin turbofan rotors & bank escort drones
@@ -762,9 +776,7 @@ export class SkyMetropolis3D {
       sign.mesh.position.y = sign.baseY + Math.sin(elapsed * 1.6 + sign.phase) * 0.12;
     }
 
-    if (!this.lowQuality) {
-      this.updateSkyTraffic(elapsed);
-    }
+    this.updateSkyTraffic(elapsed);
 
     // Sweep searchlight beams across the skyline
     for (const b of this.searchlights) {

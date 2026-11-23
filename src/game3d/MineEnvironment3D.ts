@@ -219,7 +219,10 @@ export class MineEnvironment3D {
     this.metropolis.setLowQuality(low);
     this.vaultDais.setLowQuality(low);
     this.dustPoints.visible = !low;
-    this.updateVoidShards(0);
+    this.voidShardsInst.visible = !low;
+    if (!low) {
+      this.updateVoidShards(0);
+    }
   }
 
   public updateSky(_elapsed: number, camPos: THREE.Vector3): void {

@@ -59,6 +59,7 @@ import {
   type RiftSlot,
   type SlashSlot,
   stepTierAttackVfxPool,
+  type TierVfxPoolUpdateState,
   type VortexSlot,
   type WeaponSlot,
 } from './TierVfxUpdate3D';
@@ -134,6 +135,7 @@ export class TierAttackVfxPool3D {
   private readonly tmpUp = new THREE.Vector3(0, 1, 0);
   private readonly tmpQuat = new THREE.Quaternion();
   private readonly pitClipUniforms: PitArenaClipUniforms = createPitArenaClipUniforms();
+  private readonly updateState: TierVfxPoolUpdateState;
 
   constructor(hooks: TierVfxHooks = {}) {
     this.hooks = hooks;
@@ -171,6 +173,40 @@ export class TierAttackVfxPool3D {
     this.debris = pools.debris;
     this.quads = pools.quads;
     this.orbs = pools.orbs;
+
+    this.updateState = {
+      disposed: false,
+      time: 0,
+      events: this.events,
+      slashes: this.slashes,
+      domes: this.domes,
+      beams: this.beams,
+      vortices: this.vortices,
+      rifts: this.rifts,
+      weapons: this.weapons,
+      clockDials: this.clockDials,
+      frostSeals: this.frostSeals,
+      lullabySeals: this.lullabySeals,
+      halcyonSeals: this.halcyonSeals,
+      fusionSeals: this.fusionSeals,
+      fusionProps: this.fusionProps,
+      halcyonPillars: this.halcyonPillars,
+      halcyonRain: this.halcyonRain,
+      nocturneEclipses: this.nocturneEclipses,
+      nocturneCraters: this.nocturneCraters,
+      lullabyMirrorCages: this.lullabyMirrorCages,
+      lullabyCrescentMoons: this.lullabyCrescentMoons,
+      clocktowers: this.clocktowers,
+      boltSegs: this.boltSegs,
+      debris: this.debris,
+      quads: this.quads,
+      orbs: this.orbs,
+      flameTex: this.flameTex,
+      tmpDir: this.tmpDir,
+      tmpUp: this.tmpUp,
+      spawnDebrisBurst: (x, y, z, c, s, cnt) => this.spawnDebrisBurst(x, y, z, c, s, cnt),
+      spawnQuad: (o) => this.spawnQuad(o),
+    };
 
     patchTierVfxPoolMaterialsWithPitClip(pools, this.pitClipUniforms);
   }
@@ -926,42 +962,10 @@ export class TierAttackVfxPool3D {
   }
 
   public update(dtSec: number, camera: THREE.Camera): void {
-    const state = {
-      disposed: this.disposed,
-      time: this.time,
-      events: this.events,
-      slashes: this.slashes,
-      domes: this.domes,
-      beams: this.beams,
-      vortices: this.vortices,
-      rifts: this.rifts,
-      weapons: this.weapons,
-      clockDials: this.clockDials,
-      frostSeals: this.frostSeals,
-      lullabySeals: this.lullabySeals,
-      halcyonSeals: this.halcyonSeals,
-      fusionSeals: this.fusionSeals,
-      fusionProps: this.fusionProps,
-      halcyonPillars: this.halcyonPillars,
-      halcyonRain: this.halcyonRain,
-      nocturneEclipses: this.nocturneEclipses,
-      nocturneCraters: this.nocturneCraters,
-      lullabyMirrorCages: this.lullabyMirrorCages,
-      lullabyCrescentMoons: this.lullabyCrescentMoons,
-      clocktowers: this.clocktowers,
-      boltSegs: this.boltSegs,
-      debris: this.debris,
-      quads: this.quads,
-      orbs: this.orbs,
-      flameTex: this.flameTex,
-      tmpDir: this.tmpDir,
-      tmpUp: this.tmpUp,
-      spawnDebrisBurst: (x: number, y: number, z: number, c: string, s: string, cnt?: number) =>
-        this.spawnDebrisBurst(x, y, z, c, s, cnt),
-      spawnQuad: (o: Parameters<TierAttackVfxPool3D['spawnQuad']>[0]) => this.spawnQuad(o),
-    };
-    stepTierAttackVfxPool(state, dtSec, camera);
-    this.time = state.time;
+    this.updateState.disposed = this.disposed;
+    this.updateState.time = this.time;
+    stepTierAttackVfxPool(this.updateState, dtSec, camera);
+    this.time = this.updateState.time;
   }
 
   public dispose(): void {

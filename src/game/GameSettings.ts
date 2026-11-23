@@ -18,12 +18,12 @@ export const SETTINGS_STORAGE_KEY = 'mam_settings_v1';
 
 export const GRAPHICS_PRESETS: Record<GraphicsQuality, GraphicsPreset> = {
   low: {
-    maxPixelRatio: 1.25,
+    maxPixelRatio: 1.5,
     shadowsEnabled: false,
     weatherParticleScale: 0,
   },
   medium: {
-    maxPixelRatio: 1.5,
+    maxPixelRatio: 1.75,
     shadowsEnabled: true,
     weatherParticleScale: 0.5,
   },

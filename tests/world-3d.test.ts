@@ -3141,15 +3141,15 @@ describe('Pure 3D Mine World', () => {
     expect(sceneTex.anisotropy).toBe(8);
 
     const smoothTex = applySharpSpriteTexture(new THREE.Texture(), false);
-    expect(smoothTex.generateMipmaps).toBe(true);
+    expect(smoothTex.generateMipmaps).toBe(false);
     expect(smoothTex.magFilter).toBe(THREE.LinearFilter);
-    expect(smoothTex.minFilter).toBe(THREE.LinearMipmapNearestFilter);
+    expect(smoothTex.minFilter).toBe(THREE.LinearFilter);
     expect(smoothTex.anisotropy).toBe(8);
 
     const pixelTex = applySharpSpriteTexture(new THREE.Texture(), true);
-    expect(pixelTex.generateMipmaps).toBe(true);
+    expect(pixelTex.generateMipmaps).toBe(false);
     expect(pixelTex.magFilter).toBe(THREE.NearestFilter);
-    expect(pixelTex.minFilter).toBe(THREE.NearestMipmapNearestFilter);
+    expect(pixelTex.minFilter).toBe(THREE.NearestFilter);
 
     sceneTex.dispose();
     smoothTex.dispose();

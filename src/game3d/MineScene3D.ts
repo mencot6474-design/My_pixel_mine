@@ -189,7 +189,7 @@ export class MineScene3D {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.maxPixelRatio));
     this.renderer.setSize(w, h);
     this.composer.setSize(w, h);
-    this.bloomPass.setSize(w, h);
+    this.bloomPass.setSize(Math.max(1, Math.round(w * 0.5)), Math.max(1, Math.round(h * 0.5)));
   };
 
   constructor(
@@ -544,7 +544,10 @@ export class MineScene3D {
       !this.modalBackdropThrottled || now - this.lastThrottledRenderMs >= 33;
     if (shouldRenderFrame) {
       this.lastThrottledRenderMs = now;
-      if (this.graphicsQuality === 'low') {
+      const postFxActive =
+        this.graphicsQuality === 'high' ||
+        (this.graphicsQuality === 'medium' && (this.impactFrameTimer > 0 || this.speedLinesTimer > 0));
+      if (!postFxActive) {
         this.renderer.render(this.scene, this.camera);
       } else {
         this.composer.render();
@@ -667,6 +670,9 @@ export class MineScene3D {
       this.stageHoloMat.color.set(palette.crystalColor);
       this.chestVisual.setAccentColor(palette.crystalColor);
       this.pit.setPalette(palette, true);
+      if (this.renderer.shadowMap.enabled) {
+        this.renderer.shadowMap.needsUpdate = true;
+      }
       this.applyWeatherAtmosphere();
       this.callbacks.onOreBars?.([]);
     }
@@ -916,6 +922,7 @@ export class MineScene3D {
       anisoCap: this.getTextureAnisoCap(),
       scene: this.scene,
       renderer: this.renderer,
+      bloomPass: this.bloomPass,
       sunLight: this.sunLight,
       weatherFx: this.weatherFx,
       env: this.env,

@@ -56,7 +56,7 @@ export function fireTwinChibiChoreography(
 
       ctx.after(0.28 * sc, () => {
         ctx.hooks.onSpeedLines?.(0.88, 0.32);
-        const spireCount = ctx.lowQuality ? 6 : 8;
+        const spireCount = 8;
         for (let s = 0; s < spireCount; s++) {
           const ang = (s / spireCount) * Math.PI * 2;
           const sx = cx + Math.cos(ang) * (2.45 + (s % 2) * 0.65) * as;
@@ -151,7 +151,7 @@ export function fireTwinChibiChoreography(
         });
 
         // Rapid crossfire salvo from all 4 pillars
-        const totalSalvo = ctx.lowQuality ? 20 : 32;
+        const totalSalvo = 32;
         for (let k = 0; k < totalSalvo; k++) {
           const delay = Math.floor(k / 4) * 0.028 * sc;
           ctx.after(delay, () => {
@@ -241,7 +241,7 @@ export function fireTwinChibiChoreography(
       });
 
       // Wave 2: Opposing Black vs Silver Broadswords plunging into pit + Monolith Eclipse crest
-      const swordSalvo = ctx.lowQuality ? 6 : 8;
+      const swordSalvo = 8;
       for (let s = 0; s < swordSalvo; s++) {
         const isBlack = s % 2 === 1;
         const tgt = pts[s % pts.length];
@@ -321,7 +321,7 @@ export function fireTwinChibiChoreography(
         });
       }
 
-      const chimeCount = ctx.lowQuality ? 10 : 16;
+      const chimeCount = 16;
       for (let k = 0; k < chimeCount; k++) {
         ctx.after((0.14 + Math.floor(k / 3) * 0.048) * sc, () => {
           const tgt = pts[k % pts.length];
@@ -348,7 +348,7 @@ export function fireTwinChibiChoreography(
             ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#f472b6', coreColor: '#ffffff', s0: 0.9 * as, s1: 8.0 * as, yScale: 0.58, life: 0.58 * sc });
             ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#38bdf8', coreColor: '#fbcfe8', s0: 0.65 * as, s1: 6.4 * as, yScale: 0.64, life: 0.5 * sc });
 
-            const petalCrystals = ctx.lowQuality ? 8 : 12;
+            const petalCrystals = 12;
             for (let c = 0; c < petalCrystals; c++) {
               const ringIdx = Math.floor(c / 6);
               const ang = (c / 6) * Math.PI * 2 + ringIdx * 0.52;
@@ -435,7 +435,7 @@ export function fireTwinChibiChoreography(
               rx: -0.22, ry: Math.PI + 0.4, rz: -0.34, s0: 2.8 * as, s1: 7.4 * as, life: 0.38 * sc, spinSpeed: -5.8, shaderMode: 6, darkCore: true,
             });
             // 8 Giant Sakuga Clock-Hand Scythes pinning radially around the embedded Clocktower
-            const handCount = ctx.lowQuality ? 6 : 8;
+            const handCount = 8;
             for (let s = 0; s < handCount; s++) {
               const ang = (s / handCount) * Math.PI * 2;
               const sx = cx + Math.cos(ang) * 2.65 * as;
@@ -483,7 +483,7 @@ export function fireTwinChibiChoreography(
             });
 
             // 14 Spinning Sakuga Gears + 4 Giant Clock-Hand Scythes erupting cleanly outward
-            const gearCount = ctx.lowQuality ? 8 : 14;
+            const gearCount = 14;
             for (let g = 0; g < gearCount; g++) {
               const ang = (g / gearCount) * Math.PI * 2;
               const rad = (2.8 + (g % 2) * 1.6) * as;
