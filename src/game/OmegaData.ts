@@ -132,11 +132,11 @@ export const OMEGA_BOSS_DEFS: readonly OmegaBossDef[] = [
     oreDropPct: 1.2,
     oreSellPct: 0.8,
     tiers: buildTiers([
-      100_000_000_000_000_000,
-      10_000_000_000_000_000_000,
-      1_000_000_000_000_000_000_000,
-      100_000_000_000_000_000_000_000,
-      10_000_000_000_000_000_000_000_000,
+      20_000_000_000_000_000_000_000_000,
+      200_000_000_000_000_000_000_000_000,
+      2_000_000_000_000_000_000_000_000_000,
+      20_000_000_000_000_000_000_000_000_000,
+      200_000_000_000_000_000_000_000_000_000,
     ]),
   },
   {
@@ -162,11 +162,11 @@ export const OMEGA_BOSS_DEFS: readonly OmegaBossDef[] = [
     oreDropPct: 0.9,
     oreSellPct: 1.4,
     tiers: buildTiers([
-      150_000_000_000_000_000,
-      15_000_000_000_000_000_000,
-      1_500_000_000_000_000_000_000,
-      150_000_000_000_000_000_000_000,
-      15_000_000_000_000_000_000_000_000,
+      30_000_000_000_000_000_000_000_000,
+      300_000_000_000_000_000_000_000_000,
+      3_000_000_000_000_000_000_000_000_000,
+      30_000_000_000_000_000_000_000_000_000,
+      300_000_000_000_000_000_000_000_000_000,
     ]),
   },
 ] as const;
@@ -177,7 +177,7 @@ export function computeOmegaScaledBaseDps(secretBaseDps: number, dpsMult: number
   if (!Number.isFinite(raw) || raw <= 0) return 1;
   if (raw < 100) return Math.max(1, Math.round(Number(raw.toPrecision(12))));
   const step = Math.pow(10, Math.floor(Math.log10(raw) + 1e-12) - 1);
-  return Math.round(Number((raw / step).toPrecision(12))) * step;
+  return Number((Math.round(Number((raw / step).toPrecision(12))) * step).toPrecision(2));
 }
 
 /** Scales an OMEGA Chibi plot upgrade cost multiplier from the latest World's upgrade cost scale. */

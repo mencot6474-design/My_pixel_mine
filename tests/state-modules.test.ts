@@ -11,9 +11,11 @@ import { computeBulkUpgradePlan, getPlotStatUpgradeCost } from '../src/game/Upgr
 import { getIndexTabEntryIds } from '../src/game/IndexRewardsDomain';
 import { rollTapCriticalDamage, TAP_CRIT_MULT } from '../src/game3d/MineScene3D';
 import {
+  getEffectiveChibiBaseDps,
   getLatestWorldScaleAnchor,
   getMinersByWorld,
   getOreById,
+  getUnlockedWorldScaleAnchor,
   getWorldStarterChibiId,
   getWorldUpgradeCostScale,
   ORES,
@@ -879,12 +881,12 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(state.miners[recipe.requiredMiners[0].chibiId]).toBe(1);
       expect(state.plotMiners[0]).toBe(recipe.requiredMiners[0].chibiId);
 
-      // Verify balanced Fusion upgrade cost scaling & all 4 unique Fusion Passives
-      expect(getChibiUpgradeCostMult('glitch-cheshire')).toBe(85_000);
-      expect(getChibiUpgradeCostMult('thorn-maiden')).toBe(1_800_000);
-      expect(getChibiUpgradeCostMult('monochrome-saint')).toBe(28_000_000);
-      expect(getChibiUpgradeCostMult('prism-seraph')).toBe(65_000_000);
-      expect(getChibiUpgradeCostMult('aether-monarch')).toBe(55_000_000_000);
+      // Verify balanced Fusion upgrade cost scaling & all 5 unique Fusion Passives
+      expect(getChibiUpgradeCostMult('glitch-cheshire')).toBe(1_500);
+      expect(getChibiUpgradeCostMult('thorn-maiden')).toBe(1_500_000_000);
+      expect(getChibiUpgradeCostMult('monochrome-saint')).toBe(1_500_000_000_000);
+      expect(getChibiUpgradeCostMult('prism-seraph')).toBe(1_500_000_000_000_000);
+      expect(getChibiUpgradeCostMult('aether-monarch')).toBe(1_500_000_000_000_000_000_000);
 
       const baseSell = state.getOreValueMult();
       const baseDrop = state.getOreOutputMult();
@@ -949,13 +951,13 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(reloaded.chibiStars['cosmic-monarch']).toBe(5);
 
       // Verify balanced Daily Login Limited Chibi upgrade cost scaling (Days 1..7)
-      expect(getChibiUpgradeCostMult('cosmic-monarch')).toBe(12);
-      expect(getChibiUpgradeCostMult('crimson-eye-sovereign')).toBe(450);
-      expect(getChibiUpgradeCostMult('crimson-gaze-maiden')).toBe(12_000);
-      expect(getChibiUpgradeCostMult('kasa-watcher')).toBe(250_000);
-      expect(getChibiUpgradeCostMult('prism-fracture-eye')).toBe(3_500_000);
-      expect(getChibiUpgradeCostMult('chrono-maiden')).toBe(14_000_000);
-      expect(getChibiUpgradeCostMult('ink-seraph')).toBe(42_000_000);
+      expect(getChibiUpgradeCostMult('cosmic-monarch')).toBe(2);
+      expect(getChibiUpgradeCostMult('crimson-eye-sovereign')).toBe(2_000);
+      expect(getChibiUpgradeCostMult('crimson-gaze-maiden')).toBe(2_000_000);
+      expect(getChibiUpgradeCostMult('kasa-watcher')).toBe(2_000_000_000);
+      expect(getChibiUpgradeCostMult('prism-fracture-eye')).toBe(2_000_000_000_000);
+      expect(getChibiUpgradeCostMult('chrono-maiden')).toBe(2_000_000_000_000_000);
+      expect(getChibiUpgradeCostMult('ink-seraph')).toBe(2_000_000_000_000_000_000);
     });
   });
 
@@ -1359,20 +1361,20 @@ describe('Tahap C GameState Domain Modules', () => {
     it('matches current W8 Twin baseDps and upgradeCostScale from latest world anchor', () => {
       const anchor = getLatestWorldScaleAnchor();
       expect(anchor.worldId).toBe('chrono');
-      expect(anchor.secretBaseDps).toBe(4_400_000);
-      expect(anchor.upgradeCostScale).toBe(20_000_000_000);
+      expect(anchor.secretBaseDps).toBe(1e23);
+      expect(anchor.upgradeCostScale).toBe(1e21);
 
-      expect(getChibiById('yukikage-twins')?.baseDps).toBe(10_000_000);
-      expect(getChibiById('halcyon-twins')?.baseDps).toBe(12_000_000);
-      expect(getChibiById('nocturne-twins')?.baseDps).toBe(14_000_000);
-      expect(getChibiById('lullaby-twins')?.baseDps).toBe(16_000_000);
-      expect(getChibiById('clockwork-twins')?.baseDps).toBe(18_000_000);
+      expect(getChibiById('yukikage-twins')?.baseDps).toBe(2.3e23);
+      expect(getChibiById('halcyon-twins')?.baseDps).toBe(2.8e23);
+      expect(getChibiById('nocturne-twins')?.baseDps).toBe(3.2e23);
+      expect(getChibiById('lullaby-twins')?.baseDps).toBe(3.7e23);
+      expect(getChibiById('clockwork-twins')?.baseDps).toBe(4.1e23);
 
-      expect(getChibiUpgradeCostMult('yukikage-twins')).toBe(220_000_000_000);
-      expect(getChibiUpgradeCostMult('halcyon-twins')).toBe(280_000_000_000);
-      expect(getChibiUpgradeCostMult('nocturne-twins')).toBe(350_000_000_000);
-      expect(getChibiUpgradeCostMult('lullaby-twins')).toBe(420_000_000_000);
-      expect(getChibiUpgradeCostMult('clockwork-twins')).toBe(500_000_000_000);
+      expect(getChibiUpgradeCostMult('yukikage-twins')).toBe(1.1e22);
+      expect(getChibiUpgradeCostMult('halcyon-twins')).toBe(1.4e22);
+      expect(getChibiUpgradeCostMult('nocturne-twins')).toBe(1.75e22);
+      expect(getChibiUpgradeCostMult('lullaby-twins')).toBe(2.1e22);
+      expect(getChibiUpgradeCostMult('clockwork-twins')).toBe(2.5e22);
     });
 
     it('computes clean scaled Twin DPS and upgrade costs for boundaries and simulated W9+', () => {
@@ -1387,20 +1389,20 @@ describe('Tahap C GameState Domain Modules', () => {
       const simW10Id = 'celestia_w10' as unknown as (typeof WORLDS)[number]['id'];
       const simWorlds = [
         ...WORLDS,
-        { id: simW9Id, name: 'W9', iconColor: '#fff', unlockCost: 1e23, oreHpMult: 1e14 },
-        { id: simW10Id, name: 'W10', iconColor: '#fff', unlockCost: 1e26, oreHpMult: 1e16 },
+        { id: simW9Id, name: 'W9', iconColor: '#fff', unlockCost: 1e27, oreHpMult: Math.pow(2000, 8) },
+        { id: simW10Id, name: 'W10', iconColor: '#fff', unlockCost: 1e30, oreHpMult: Math.pow(2000, 9) },
       ];
-      expect(getWorldUpgradeCostScale(simW9Id, simWorlds)).toBe(600_000_000_000);
-      expect(getWorldUpgradeCostScale(simW10Id, simWorlds)).toBe(18_000_000_000_000);
+      expect(getWorldUpgradeCostScale(simW9Id, simWorlds)).toBe(1e24);
+      expect(getWorldUpgradeCostScale(simW10Id, simWorlds)).toBe(1e27);
 
-      // W9 added to WORLDS without miners yet falls back to latest populated world (chrono 4.4M)
+      // W9 added to WORLDS without miners yet falls back to latest populated world (chrono 1e23)
       const noMinerAnchor = getLatestWorldScaleAnchor(simWorlds, WORLD_MINERS);
-      expect(noMinerAnchor.secretBaseDps).toBe(4_400_000);
-      expect(noMinerAnchor.upgradeCostScale).toBe(18_000_000_000_000);
+      expect(noMinerAnchor.secretBaseDps).toBe(1e23);
+      expect(noMinerAnchor.upgradeCostScale).toBe(1e27);
 
-      // W9 with a 25M Secret miner scales anchor and Twin catalog while leaving Fusion untouched
+      // W9 with a 1e26 Secret miner scales anchor and Twin catalog while leaving Fusion untouched
       const simCatalogLookup = (id: string) =>
-        id === 'w9-secret' ? { baseDps: 25_000_000 } : getChibiById(id);
+        id === 'w9-secret' ? { baseDps: 1e26 } : getChibiById(id);
       const simMiners = [
         ...WORLD_MINERS,
         { chibiId: 'w9-secret', worldId: simW9Id, chancePct: 0.01, rarity: 'secret' as const },
@@ -1411,22 +1413,20 @@ describe('Tahap C GameState Domain Modules', () => {
         simCatalogLookup
       );
       expect(w9Anchor.worldId).toBe(simW9Id);
-      expect(w9Anchor.secretBaseDps).toBe(25_000_000);
-      expect(w9Anchor.upgradeCostScale).toBe(600_000_000_000);
-      expect(computeTwinUpgradeCostScale(w9Anchor.upgradeCostScale, PREMIUM_SHOP_ITEMS[0].upgradeCostMult)).toBe(
-        6_600_000_000_000
-      );
+      expect(w9Anchor.secretBaseDps).toBe(1e26);
+      expect(w9Anchor.upgradeCostScale).toBe(1e24);
+      expect(computeTwinUpgradeCostScale(w9Anchor.upgradeCostScale, PREMIUM_SHOP_ITEMS[0].upgradeCostMult)).toBe(1.1e25);
 
       const aetherBefore = getChibiById('aether-monarch')?.baseDps;
       try {
         syncTwinCatalogDpsFromAnchor(w9Anchor);
-        expect(getChibiById('yukikage-twins')?.baseDps).toBe(58_000_000);
-        expect(getChibiById('clockwork-twins')?.baseDps).toBe(100_000_000);
+        expect(getChibiById('yukikage-twins')?.baseDps).toBe(2.3e26);
+        expect(getChibiById('clockwork-twins')?.baseDps).toBe(4.1e26);
         expect(getChibiById('aether-monarch')?.baseDps).toBe(aetherBefore);
       } finally {
         syncTwinCatalogDpsFromAnchor();
       }
-      expect(getChibiById('yukikage-twins')?.baseDps).toBe(10_000_000);
+      expect(getChibiById('yukikage-twins')?.baseDps).toBe(2.3e23);
     });
 
     it('blocks all Twin chibis from selling even with unplaced excess duplicates or custom twin rarity entries', () => {
@@ -1485,8 +1485,8 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(state.omegaKeys).toBe(2);
       state.omegaKeys = OMEGA_MAX_KEYS;
       expect(OMEGA_BOSS_DEFS.map((b) => b.tiers.map((t) => t.bossHp))).toEqual([
-        [100_000_000_000_000_000, 10_000_000_000_000_000_000, 1_000_000_000_000_000_000_000, 100_000_000_000_000_000_000_000, 10_000_000_000_000_000_000_000_000],
-        [150_000_000_000_000_000, 15_000_000_000_000_000_000, 1_500_000_000_000_000_000_000, 150_000_000_000_000_000_000_000, 15_000_000_000_000_000_000_000_000],
+        [2e25, 2e26, 2e27, 2e28, 2e29],
+        [3e25, 3e26, 3e27, 3e28, 3e29],
       ]);
       expect(OMEGA_BOSS_DEFS.map((b) => b.tiers.map((t) => t.coreDropChance))).toEqual([
         [0.1, 0.2, 0.325, 0.425, 0.5],
@@ -1638,6 +1638,39 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(getWorldStarterChibiId('underground')).toBe('astral-recruit');
       expect(getWorldStarterChibiId('crystal')).toBe('volt-kensei');
       expect(getWorldStarterChibiId('chrono')).toBe('glitch-warden');
+    });
+
+    it('caps Twin, Omega, and Limited effective baseDps via unlocked-world anchor while preserving catalog sync', () => {
+      const anchor = getLatestWorldScaleAnchor();
+      expect(anchor.secretBaseDps).toBe(100_000_000_000_000_000_000_000);
+      expect(getChibiById('yukikage-twins')?.baseDps).toBe(
+        computeTwinScaledBaseDps(100_000_000_000_000_000_000_000, 2.3)
+      );
+
+      // W1 with only starter discovered: anchor sits at W1 starter (10 baseDps)
+      const w1Anchor = getUnlockedWorldScaleAnchor(['underground'], new Set(['astral-recruit']));
+      expect(w1Anchor.worldId).toBe('underground');
+      expect(w1Anchor.secretBaseDps).toBe(10);
+      expect(w1Anchor.upgradeCostScale).toBe(1);
+      expect(getEffectiveChibiBaseDps('yukikage-twins', ['underground'], new Set(['astral-recruit']))).toBe(23);
+
+      // Discovering W1 Secret raises W1 anchor to 100
+      expect(
+        getEffectiveChibiBaseDps('yukikage-twins', ['underground'], new Set(['astral-recruit', 'cyber-ki-brawler']))
+      ).toBe(230);
+
+      // Newly unlocking W2 with only W2 starter discovered anchors at W2 starter (10_000) -> 23_000 Twin
+      expect(getEffectiveChibiBaseDps('yukikage-twins', ['underground', 'crystal'], new Set(['volt-kensei']))).toBe(
+        23_000
+      );
+
+      // Day 7 Limited unit is capped inside W1 capability when only W1 is unlocked
+      const cappedInk = getEffectiveChibiBaseDps('ink-seraph', ['underground'], new Set(['astral-recruit']));
+      expect(cappedInk).toBeLessThan(1_000);
+      expect(cappedInk).toBeLessThanOrEqual(getChibiById('ink-seraph')!.baseDps);
+
+      // World miners always keep their own fixed catalog baseDps
+      expect(getEffectiveChibiBaseDps('volt-kensei', ['underground'], new Set(['astral-recruit']))).toBe(10_000);
     });
   });
 });

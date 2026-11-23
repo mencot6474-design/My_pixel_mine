@@ -1,4 +1,5 @@
 import { CHIBI_CATALOG, ChibiDef, ChibiRarity, getChibiById } from '../game3d/ChibiCatalog';
+import { getDailyLoginRewardByChibiId } from './DailyLoginData';
 import { computeOmegaScaledBaseDps, OMEGA_BOSS_DEFS } from './OmegaData';
 import { computeTwinScaledBaseDps, PREMIUM_SHOP_ITEMS } from './PremiumShopData';
 import { WeatherId } from './WeatherData';
@@ -186,6 +187,78 @@ export function getLatestWorldScaleAnchor(
     secretBaseDps: Math.max(1, secretBaseDps),
     upgradeCostScale: getWorldUpgradeCostScale(latestWorld.id, worlds),
   };
+}
+
+/**
+ * Resolves the active progression anchor from the player's highest unlocked World
+ * and discovered miners within that World (falling back to that World's starter miner).
+ */
+export function getUnlockedWorldScaleAnchor(
+  unlockedWorlds: readonly WorldId[],
+  discovered?: ReadonlySet<string>,
+  worlds: readonly WorldDef[] = WORLDS,
+  worldMiners: readonly WorldMinerEntry[] = WORLD_MINERS,
+  lookupChibi: (id: string) => { baseDps: number } | undefined = getChibiById
+): LatestWorldScaleAnchor {
+  let highestIdx = 0;
+  for (let i = worlds.length - 1; i >= 0; i--) {
+    if (unlockedWorlds.includes(worlds[i].id)) {
+      highestIdx = i;
+      break;
+    }
+  }
+  const highestWorld = worlds[highestIdx] ?? WORLDS[0];
+  let anchorDps = 0;
+  let starterDps = 0;
+  for (const entry of worldMiners) {
+    if (entry.worldId !== highestWorld.id) continue;
+    const dps = lookupChibi(entry.chibiId)?.baseDps ?? 0;
+    if (dps <= 0) continue;
+    if (starterDps === 0 || dps < starterDps) starterDps = dps;
+    if (!discovered || discovered.has(entry.chibiId)) {
+      if (dps > anchorDps) anchorDps = dps;
+    }
+  }
+  return {
+    worldId: highestWorld.id,
+    secretBaseDps: Math.max(1, anchorDps > 0 ? anchorDps : starterDps),
+    upgradeCostScale: getWorldUpgradeCostScale(highestWorld.id, worlds),
+  };
+}
+
+/**
+ * Computes effective Chibi baseDps, capping global progression-scaled units
+ * (`twin`, `omega`, `limited`) by the player's highest unlocked World progression.
+ */
+export function getEffectiveChibiBaseDps(
+  chibiId: string,
+  unlockedWorlds?: readonly WorldId[],
+  discovered?: ReadonlySet<string>
+): number {
+  const chibi = getChibiById(chibiId);
+  if (!chibi) return 0;
+  if (!unlockedWorlds || unlockedWorlds.length === 0) return chibi.baseDps;
+
+  const premium = PREMIUM_SHOP_ITEMS.find((p) => p.chibiId === chibiId);
+  if (premium) {
+    const anchor = getUnlockedWorldScaleAnchor(unlockedWorlds, discovered);
+    return Math.min(chibi.baseDps, computeTwinScaledBaseDps(anchor.secretBaseDps, premium.dpsMult));
+  }
+
+  const omega = OMEGA_BOSS_DEFS.find((o) => o.chibiId === chibiId);
+  if (omega) {
+    const anchor = getUnlockedWorldScaleAnchor(unlockedWorlds, discovered);
+    return Math.min(chibi.baseDps, computeOmegaScaledBaseDps(anchor.secretBaseDps, omega.dpsMult));
+  }
+
+  const daily = getDailyLoginRewardByChibiId(chibiId);
+  if (daily) {
+    const anchor = getUnlockedWorldScaleAnchor(unlockedWorlds, discovered);
+    const dayMult = 1.2 + Math.max(0, daily.day - 1) * 0.15;
+    return Math.min(chibi.baseDps, Math.max(1, Math.round(anchor.secretBaseDps * dayMult)));
+  }
+
+  return chibi.baseDps;
 }
 
 /** Syncs all Twin & Omega Chibi baseDps values in CHIBI_CATALOG against the latest World anchor. */

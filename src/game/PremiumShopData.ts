@@ -89,7 +89,7 @@ export function computeTwinScaledBaseDps(secretBaseDps: number, dpsMult: number)
   if (!Number.isFinite(raw) || raw <= 0) return 1;
   if (raw < 100) return Math.max(1, Math.round(Number(raw.toPrecision(12))));
   const step = Math.pow(10, Math.floor(Math.log10(raw) + 1e-12) - 1);
-  return Math.round(Number((raw / step).toPrecision(12))) * step;
+  return Number((Math.round(Number((raw / step).toPrecision(12))) * step).toPrecision(2));
 }
 
 /** Scales a TWIN Chibi plot upgrade cost multiplier from the latest World's upgrade cost scale. */

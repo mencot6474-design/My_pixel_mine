@@ -38,7 +38,7 @@ export const FUSION_RECIPES: readonly FusionRecipeDef[] = [
     subtitle: 'Cyber-Phantom Synchro • 2-Unit Fusion',
     accentColor: '#22d3ee',
     glowColor: '#d946ef',
-    upgradeCostScale: 85_000,
+    upgradeCostScale: 1_500,
     passive: {
       stat: 'teamDmgPct',
       value: 0.3,
@@ -61,7 +61,7 @@ export const FUSION_RECIPES: readonly FusionRecipeDef[] = [
     subtitle: 'Crimson Sovereign Synchro • 3-Unit Fusion',
     accentColor: '#f43f5e',
     glowColor: '#fb7185',
-    upgradeCostScale: 1_800_000,
+    upgradeCostScale: 1_500_000_000,
     passive: {
       stat: 'oreDropPct',
       value: 1.5,
@@ -85,7 +85,7 @@ export const FUSION_RECIPES: readonly FusionRecipeDef[] = [
     subtitle: 'Void Ascetic Synchro • 3-Unit Fusion',
     accentColor: '#e2e8f0',
     glowColor: '#94a3b8',
-    upgradeCostScale: 28_000_000,
+    upgradeCostScale: 1_500_000_000_000,
     passive: {
       stat: 'oreSellPct',
       value: 2.0,
@@ -109,7 +109,7 @@ export const FUSION_RECIPES: readonly FusionRecipeDef[] = [
     subtitle: 'Apex Celestial Synchro • 3-Unit Fusion',
     accentColor: '#facc15',
     glowColor: '#38bdf8',
-    upgradeCostScale: 65_000_000,
+    upgradeCostScale: 1_500_000_000_000_000,
     passive: {
       stat: 'teamDmgPct',
       value: 0.5,
@@ -133,7 +133,7 @@ export const FUSION_RECIPES: readonly FusionRecipeDef[] = [
     subtitle: 'Nexus Crown Synchro • 3-Unit Fusion',
     accentColor: '#fbbf24',
     glowColor: '#22d3ee',
-    upgradeCostScale: 55_000_000_000,
+    upgradeCostScale: 1_500_000_000_000_000_000_000,
     passive: {
       stat: 'teamDmgPct',
       value: 0.75,
