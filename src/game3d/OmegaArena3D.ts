@@ -754,7 +754,12 @@ export class OmegaArena3D {
     if (canAttack) {
       this.projectiles.step(safeDt, camera, handleOmegaArrival);
       for (let i = this.pendingBarrages.length - 1; i >= 0; i--) {
+        if (this.battlePhase !== 'active' || this.pendingBarrages.length === 0) break;
+        if (i >= this.pendingBarrages.length) {
+          i = this.pendingBarrages.length - 1;
+        }
         const b = this.pendingBarrages[i];
+        if (!b) continue;
         b.delayLeft -= safeDt;
         if (b.delayLeft <= 0) {
           this.pendingBarrages.splice(i, 1);

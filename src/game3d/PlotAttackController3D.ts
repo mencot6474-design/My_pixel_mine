@@ -562,7 +562,12 @@ export class PlotAttackController3D {
 
     if (renderVisuals) {
       for (let i = this.pendingStrikes.length - 1; i >= 0; i--) {
+        if (this.pendingStrikes.length === 0) break;
+        if (i >= this.pendingStrikes.length) {
+          i = this.pendingStrikes.length - 1;
+        }
         const st = this.pendingStrikes[i];
+        if (!st) continue;
         st.delayLeft -= safeDt;
         if (st.delayLeft <= 0) {
           this.pendingStrikes.splice(i, 1);

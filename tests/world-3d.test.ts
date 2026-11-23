@@ -140,10 +140,12 @@ import { createShopCyberPlaza } from '../src/game3d/ShopCyberPlaza3D';
 import { ShopWorld3D } from '../src/game3d/ShopWorld3D';
 import { SkyMetropolis3D } from '../src/game3d/SkyMetropolis3D';
 import {
+  BLIMP_HOLO_LABELS,
   getCityMistTexture,
   getRooftopHoloSignTexture,
   getSearchlightBeamTexture,
   getSkyscraperVariantTexture,
+  getZeppelinHoloTickerTexture,
 } from '../src/game3d/SkyMetropolisAssets3D';
 import { createSeraphimBoss3D } from '../src/game3d/SeraphimBoss3D';
 import { TowerArena3D } from '../src/game3d/TowerArena3D';
@@ -1124,6 +1126,60 @@ describe('Pure 3D Mine World', () => {
       strikeCount++;
     });
     expect(strikeCount).toBe(beforePauseStrikes);
+    arena.dispose();
+  });
+
+  it('transitions cleanly from Wave 9 to Wave 10 Boss when a mid-barrage beat clears Wave 9 and clears pendingBarrages', () => {
+    const arena = new TowerArena3D();
+    arena.group.visible = true;
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    arena.syncFighters(
+      [0, 1, 2, 3, 4].map((slotIndex) => ({
+        slotIndex,
+        def: CHIBI_CATALOG[slotIndex],
+        enchantId: null,
+        dmg: 100,
+        speed: 10,
+        miningMult: 1,
+      }))
+    );
+    arena.syncWaveState({
+      floor: 1,
+      wave: 9,
+      isBossWave: false,
+      isCheckpointFloor: false,
+      waveOres: rollTowerWaveOres(1, 9),
+      anomalyColorHex: '#38bdf8',
+      equippedMinerCount: 5,
+      paused: false,
+    });
+
+    let switchedToBoss = false;
+    let bossStrikes = 0;
+    for (let i = 0; i < 60; i++) {
+      arena.update(0.05, (i + 1) * 0.05, cam, () => {
+        if (!switchedToBoss && i >= 12) {
+          switchedToBoss = true;
+          // Simulates Wave 9 -> Wave 10 Boss transition mid-barrage (clears pendingBarrages inside callback)
+          arena.syncWaveState({
+            floor: 1,
+            wave: 10,
+            isBossWave: true,
+            isCheckpointFloor: false,
+            waveOres: [],
+            anomalyColorHex: '#f43f5e',
+            equippedMinerCount: 5,
+            paused: false,
+            bossShieldActive: true,
+          });
+        } else if (switchedToBoss) {
+          bossStrikes++;
+        }
+      });
+    }
+    expect(switchedToBoss).toBe(true);
+    expect(bossStrikes).toBeGreaterThan(0);
+    arena.dispose();
   });
 
   it('keeps FieldMiner3D mining and breaking ores in background mode when player is in Shop/Altar/Tower', () => {
@@ -3581,7 +3637,7 @@ describe('Pure 3D Mine World', () => {
     expect(roninBack?.visible).toBe(true);
     expect(roninBack?.children.length).toBe(9); // 1 Tsuba HUD Halo disc + 8 Floating Katana Fan blades
     expect(sovBack?.visible).toBe(true);
-    expect(sovBack?.children.length).toBe(7); // 1 Black-Flame & White-Lightning Aura disc + 1 9-Spearhead Iron Halo + 1 Colossal Greatsword + 4 Shattered Obsidian Monolith Crags
+    expect(sovBack?.children.length).toBe(6); // 1 Black-Flame & White-Lightning Aura disc + 1 9-Spearhead Iron Halo + 4 Shattered Obsidian Monolith Crags
 
     const obsHaloMat = createObsidianCrownHaloShaderMaterial();
     const obsSwordMat = createObsidianGreatswordShaderMaterial();
@@ -4240,16 +4296,27 @@ describe('Pure 3D Mine World', () => {
     expect(getSearchlightBeamTexture()).toBeInstanceOf(THREE.Texture);
     expect(getBroadcastBannerTexture('#38bdf8', false)).toBeInstanceOf(THREE.Texture);
     expect(getBroadcastBannerTexture('#fbbf24', true)).toBeInstanceOf(THREE.Texture);
+    expect(getZeppelinHoloTickerTexture('HAPPY TIME!', '#38bdf8', false)).toBeInstanceOf(THREE.Texture);
 
     const city = new SkyMetropolis3D(DEFAULT_WORLD_PALETTE);
     expect(city.getBuildingCount()).toBeGreaterThanOrEqual(45);
     expect(city.isScreenFogDisabled()).toBe(true);
+    const initialHoloLabel = city.getCurrentBlimpHoloLabel();
+    expect(BLIMP_HOLO_LABELS).toContain(initialHoloLabel);
 
     const startX = city.getBlimpWorldPosition().x;
     city.update(0.05, 1.0);
     const nextX = city.getBlimpWorldPosition().x;
     // Moves continuously from Right (+X) to Left (-X)
     expect(nextX).toBeLessThan(startX);
+
+    // Advance > 4.2s across frames so Zeppelin holographic ticker rotates to a new label
+    for (let i = 0; i < 45; i++) {
+      city.update(0.1, 1.1 + i * 0.1);
+    }
+    const rotatedHoloLabel = city.getCurrentBlimpHoloLabel();
+    expect(BLIMP_HOLO_LABELS).toContain(rotatedHoloLabel);
+    expect(rotatedHoloLabel).not.toBe(initialHoloLabel);
 
     // Non-interactive raycast safety
     const ray = new THREE.Raycaster(new THREE.Vector3(0, 10, 0), new THREE.Vector3(0, -1, 0));

@@ -565,7 +565,12 @@ export function stepTowerFightersAndBarrages(ctx: {
   if (!ctx.paused) {
     ctx.projectiles.step(ctx.safeDt, ctx.camera, handleProjectileArrival);
     for (let i = ctx.pendingBarrages.length - 1; i >= 0; i--) {
+      if (ctx.paused || ctx.pendingBarrages.length === 0) break;
+      if (i >= ctx.pendingBarrages.length) {
+        i = ctx.pendingBarrages.length - 1;
+      }
       const b = ctx.pendingBarrages[i];
+      if (!b) continue;
       b.delayLeft -= ctx.safeDt;
       if (b.delayLeft <= 0) {
         ctx.pendingBarrages.splice(i, 1);

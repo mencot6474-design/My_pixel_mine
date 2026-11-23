@@ -4,14 +4,19 @@ import { disposeObject3D } from './ChestVaultStation3D';
 import type { MineWorldPalette } from './MineWorldPalette';
 import { getBroadcastBannerTexture, getSkyscraperFacadeTexture } from './ProceduralTextures3D';
 import {
+  BLIMP_HOLO_LABELS,
   buildCyberZeppelin,
   createSkyscraperShaftGeometry,
   getCityMistTexture,
   getRooftopHoloSignTexture,
   getSearchlightBeamTexture,
   getSkyscraperVariantTexture,
+  getZeppelinHoloTickerTexture,
+  type BlimpHoloLabel,
   type HoloBillboardLabel,
 } from './SkyMetropolisAssets3D';
+
+const BLIMP_HOLO_SWITCH_SEC = 4.2;
 
 type TowerArchetype = 0 | 1 | 2; // 0: Curtain Megatower, 1: Diagrid Tower, 2: Octagonal Arcology
 
@@ -198,6 +203,8 @@ export class SkyMetropolis3D {
   private activeAccentHex: string;
   private overclockTier: 0 | OverclockTier = 0;
   private blimpScrollOffset = 0;
+  private blimpHoloTimer = 0;
+  private blimpHoloIndex = 0;
   private lowQuality = false;
 
   constructor(palette: MineWorldPalette) {
@@ -666,6 +673,30 @@ export class SkyMetropolis3D {
     return this.blimpScreenMat.fog === false;
   }
 
+  public getCurrentBlimpHoloLabel(): BlimpHoloLabel {
+    return BLIMP_HOLO_LABELS[this.blimpHoloIndex] ?? BLIMP_HOLO_LABELS[0];
+  }
+
+  private getActiveBlimpAccent(): { accent: string; feverActive: boolean } {
+    const feverActive = this.overclockTier > 0;
+    const accent =
+      this.overclockTier === 3
+        ? '#22d3ee'
+        : this.overclockTier === 2
+          ? '#fb7185'
+          : this.overclockTier === 1
+            ? '#fbbf24'
+            : this.activeAccentHex;
+    return { accent, feverActive };
+  }
+
+  private refreshHoloTickerTexture(): void {
+    const { accent, feverActive } = this.getActiveBlimpAccent();
+    const label = this.getCurrentBlimpHoloLabel();
+    this.blimpHoloBeamMat.map = getZeppelinHoloTickerTexture(label, accent, feverActive);
+    this.blimpHoloBeamMat.needsUpdate = true;
+  }
+
   public setPalette(palette: MineWorldPalette): void {
     this.activeAccentHex = palette.crystalColor;
 
@@ -698,15 +729,7 @@ export class SkyMetropolis3D {
   }
 
   private refreshBannerTexture(): void {
-    const feverActive = this.overclockTier > 0;
-    const accent =
-      this.overclockTier === 3
-        ? '#22d3ee'
-        : this.overclockTier === 2
-          ? '#fb7185'
-          : this.overclockTier === 1
-            ? '#fbbf24'
-            : this.activeAccentHex;
+    const { accent, feverActive } = this.getActiveBlimpAccent();
     const nextTex = getBroadcastBannerTexture(accent, feverActive);
     nextTex.offset.x = this.blimpScrollOffset;
     this.blimpScreenMat.map = nextTex;
@@ -715,7 +738,7 @@ export class SkyMetropolis3D {
     this.blimpTrimMat.color.set(accent);
     this.blimpTrimMat.emissive.set(accent);
     this.blimpTrimMat.emissiveIntensity = feverActive ? 1.7 : 1.2;
-    this.blimpHoloBeamMat.color.set(accent);
+    this.refreshHoloTickerTexture();
 
     const facadeBoost = feverActive ? 0.2 : 0;
     this.curtainMat.emissiveIntensity = 0.78 + facadeBoost;
@@ -748,6 +771,17 @@ export class SkyMetropolis3D {
     this.blimpScrollOffset = (this.blimpScrollOffset + safeDt * (this.overclockTier > 0 ? 0.24 : 0.15)) % 1;
     if (this.blimpScreenMat.map) {
       this.blimpScreenMat.map.offset.x = this.blimpScrollOffset;
+    }
+
+    // Cycle holographic label beneath the Zeppelin LED TV every ~4.2s
+    this.blimpHoloTimer += safeDt;
+    if (this.blimpHoloTimer >= BLIMP_HOLO_SWITCH_SEC) {
+      this.blimpHoloTimer %= BLIMP_HOLO_SWITCH_SEC;
+      if (BLIMP_HOLO_LABELS.length > 1) {
+        const step = 1 + Math.floor(Math.random() * (BLIMP_HOLO_LABELS.length - 1));
+        this.blimpHoloIndex = (this.blimpHoloIndex + step) % BLIMP_HOLO_LABELS.length;
+        this.refreshHoloTickerTexture();
+      }
     }
 
     if (this.lowQuality) {

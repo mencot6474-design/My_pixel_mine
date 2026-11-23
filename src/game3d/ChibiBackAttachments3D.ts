@@ -254,24 +254,6 @@ export function createChibiBackAttachments(
     handle.omegaHaloMesh.scale.setScalar(0.74);
     handle.omegaAuraGroup.add(handle.omegaHaloMesh);
 
-    // Single Colossal Diagonal Abyssal Greatsword with Pommel Chain Charm (matching idle.webp)
-    handle.omegaAuraGeo = createAbyssalGreatswordGeometry();
-    const colossalSword = new THREE.Mesh(handle.omegaAuraGeo, greatswordMat);
-    colossalSword.position.set(0.28, -0.34, -0.02);
-    colossalSword.rotation.set(0.04, -0.08, 0.72);
-    colossalSword.scale.setScalar(0.60);
-    handle.omegaAuraGroup.add(colossalSword);
-    handle.roninFanKatanas.push({
-      mesh: colossalSword,
-      baseX: 0.28,
-      baseY: -0.34,
-      baseZ: -0.02,
-      baseRotZ: 0.72,
-      outX: -0.12,
-      outY: 0.38,
-      phase: 0.2,
-    });
-
     // 4 Levitating Shattered Obsidian Monolith Crags flanking the black-flame cloak (matching pose.webp)
     const monolithSpecs: ReadonlyArray<{ x: number; y: number; z: number; rz: number; sc: number; phase: number }> = [
       { x: -0.86, y: -0.18, z: -0.03, rz: 0.22, sc: 0.56, phase: 0.0 },
@@ -1225,12 +1207,12 @@ export function updateChibiBackAttachmentGroup(
           ? (k % 2 === 0 ? 1 : -1) * 0.026
           : 0;
       const monolithTremor =
-        (isObsidianMonolith && k >= 1) || isSecretTier
+        isObsidianMonolith || isSecretTier
           ? Math.sin(elapsed * 26.0 + k * 3.1) * 0.007
           : 0;
       slot.mesh.position.set(
         slot.baseX + slot.outX * expand + glitchJump + epicSnap + monolithTremor,
-        slot.baseY + hover * (isObsidianMonolith && k >= 1 ? 0.068 : isCommonTier ? 0.024 : 0.044) + slot.outY * expand,
+        slot.baseY + hover * (isObsidianMonolith ? 0.068 : isCommonTier ? 0.024 : 0.044) + slot.outY * expand,
         slot.baseZ
       );
       slot.mesh.rotation.z = isMonochrome

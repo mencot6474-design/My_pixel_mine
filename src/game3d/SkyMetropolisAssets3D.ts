@@ -9,6 +9,17 @@ import { paintCachedTexture } from './ProceduralTextures3D';
 export type SkyscraperFacadeVariant = 'curtain' | 'diagrid' | 'megacorp';
 export type HoloBillboardLabel = 'MINE' | 'CYBER' | 'NEXUS';
 
+export const BLIMP_HOLO_LABELS = [
+  'HAPPY TIME!',
+  'FEVER MINING!',
+  'LUCKY STRIKE!',
+  'CHIBI POWER!',
+  'JACKPOT RUSH!',
+  'DIG & SHINE!',
+] as const;
+
+export type BlimpHoloLabel = (typeof BLIMP_HOLO_LABELS)[number];
+
 export interface CyberZeppelinBuildResult {
   fanRotors: THREE.Group[];
   escortDrones: Array<{ group: THREE.Group; basePos: THREE.Vector3; phase: number }>;
@@ -162,6 +173,79 @@ export function getRooftopHoloSignTexture(label: HoloBillboardLabel, accentHex: 
   });
 }
 
+/** Holographic projection ticker texture displayed beneath the Zeppelin LED TV. */
+export function getZeppelinHoloTickerTexture(
+  label: BlimpHoloLabel,
+  accentHex: string,
+  feverActive = false
+): THREE.Texture {
+  const key = `sky-blimp-holo-v1|${label}|${accentHex}|${feverActive ? 1 : 0}`;
+  return paintCachedTexture(key, 512, 136, 1, 1, [8, 20, 44, 150], (ctx) => {
+    const W = 512;
+    const H = 136;
+    const primary = feverActive ? '#fde047' : accentHex;
+    const secondary = feverActive ? '#fb7185' : '#38bdf8';
+    ctx.clearRect(0, 0, W, H);
+
+    // Translucent holographic projection backdrop
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0.0, 'rgba(6, 16, 38, 0.72)');
+    bg.addColorStop(0.5, 'rgba(12, 32, 68, 0.52)');
+    bg.addColorStop(1.0, 'rgba(6, 16, 38, 0.18)');
+    ctx.fillStyle = bg;
+    ctx.fillRect(10, 8, W - 20, H - 16);
+
+    // Subtle holo scanlines
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+    for (let y = 14; y < H - 14; y += 6) {
+      ctx.fillRect(14, y, W - 28, 2);
+    }
+
+    // Glowing top/bottom holo rails + corner brackets
+    ctx.fillStyle = primary;
+    ctx.shadowColor = primary;
+    ctx.shadowBlur = 10;
+    ctx.fillRect(12, 8, W - 24, 4);
+    ctx.fillStyle = secondary;
+    ctx.fillRect(12, H - 12, W - 24, 3);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(12, 8, 22, 4);
+    ctx.fillRect(W - 34, 8, 22, 4);
+    ctx.fillRect(12, H - 12, 22, 3);
+    ctx.fillRect(W - 34, H - 12, 22, 3);
+
+    // Flanking 4-point sparkle stars
+    const drawSparkle = (cx: number, cy: number, r: number, col: string) => {
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - r);
+      ctx.lineTo(cx + r * 0.34, cy - r * 0.34);
+      ctx.lineTo(cx + r, cy);
+      ctx.lineTo(cx + r * 0.34, cy + r * 0.34);
+      ctx.lineTo(cx, cy + r);
+      ctx.lineTo(cx - r * 0.34, cy + r * 0.34);
+      ctx.lineTo(cx - r, cy);
+      ctx.lineTo(cx - r * 0.34, cy - r * 0.34);
+      ctx.closePath();
+      ctx.fill();
+    };
+    drawSparkle(44, H * 0.5, 16, primary);
+    drawSparkle(W - 44, H * 0.5, 16, primary);
+
+    // Crisp glowing holo label
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.font = '900 42px "Fredoka", "Rubik", "Segoe UI", sans-serif';
+    ctx.shadowColor = primary;
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(label, W * 0.5, H * 0.52, W - 128);
+    ctx.shadowBlur = 0;
+  });
+}
+
 /** Soft vertical fade texture for searchlight beams so cones dissolve cleanly into the sky. */
 export function getSearchlightBeamTexture(): THREE.Texture {
   return paintCachedTexture('sky-searchlight-grad-v1', 32, 128, 1, 1, [255, 255, 255, 180], (ctx) => {
@@ -209,16 +293,17 @@ export function buildCyberZeppelin(opts: {
 }): CyberZeppelinBuildResult {
   const { blimpGroup, hullMat, trimMat, darkFrameMat, screenMat, beaconMat, fadableMats } = opts;
 
+  const trimHex = `#${trimMat.color.getHexString()}`;
   const holoBeamMat = new THREE.MeshBasicMaterial({
-    color: trimMat.color.clone(),
-    map: getSearchlightBeamTexture(),
+    color: 0xffffff,
+    map: getZeppelinHoloTickerTexture(BLIMP_HOLO_LABELS[0], trimHex, false),
     transparent: true,
-    opacity: 0.16,
-    blending: THREE.AdditiveBlending,
+    opacity: 0.88,
     depthWrite: false,
     side: THREE.DoubleSide,
+    fog: false,
   });
-  fadableMats.push({ mat: holoBeamMat, baseOpacity: 0.16 });
+  fadableMats.push({ mat: holoBeamMat, baseOpacity: 0.88 });
 
   // 1. Sculpted Ribbed Dirigible Envelope (LatheGeometry aligned along X; nose points -X)
   const hullProfile: ReadonlyArray<readonly [number, number]> = [
@@ -386,11 +471,11 @@ export function buildCyberZeppelin(opts: {
   screenGeo.translate(0, 0, -curveRadius);
   const screenMesh = new THREE.Mesh(screenGeo, screenMat);
 
-  // Subtle downward holographic light projection fan below the banner
-  const holoFanGeo = new THREE.PlaneGeometry(9.2, 3.6);
+  // Holographic projection ticker panel below the curved LED banner
+  const holoFanGeo = new THREE.PlaneGeometry(8.8, 2.35);
   const holoFan = new THREE.Mesh(holoFanGeo, holoBeamMat);
-  holoFan.position.set(0, -3.35, -0.45);
-  holoFan.rotation.x = -0.22;
+  holoFan.position.set(0, -3.02, -0.22);
+  holoFan.rotation.x = -0.14;
 
   tvBoard.add(backShield, topRail, botRail, screenMesh, holoFan);
   blimpGroup.add(tvBoard);
