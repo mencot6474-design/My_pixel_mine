@@ -126,7 +126,7 @@ export function createCrimsonKatanaShaderMaterial(): THREE.ShaderMaterial {
         vec3 L = normalize(vec3(0.45, 0.82, 0.55));
         float ndv = abs(dot(N, V));
         float ndl = 0.42 + 0.58 * max(0.0, dot(N, L));
-        float rim = pow(1.0 - ndv, 1.7);
+        float rim = pow(max(0.0001, 1.0 - ndv), 1.7);
 
         float isBlade = smoothstep(-0.02, 0.04, vLocalPos.y);
         float isTsuba = smoothstep(0.055, 0.015, abs(vLocalPos.y)) * smoothstep(0.04, 0.09, abs(vLocalPos.x));
@@ -390,7 +390,7 @@ export function createObsidianGreatswordShaderMaterial(): THREE.ShaderMaterial {
         vec3 L = normalize(vec3(0.42, 0.85, 0.55));
         float ndv = abs(dot(N, V));
         float ndl = 0.42 + 0.58 * max(0.0, dot(N, L));
-        float rim = pow(1.0 - ndv, 1.65);
+        float rim = pow(max(0.0001, 1.0 - ndv), 1.65);
 
         float isBlade = smoothstep(0.06, 0.22, vLocalPos.y);
         float isGuard = smoothstep(0.14, 0.04, abs(vLocalPos.y - 0.04)) * smoothstep(0.06, 0.14, abs(vLocalPos.x));

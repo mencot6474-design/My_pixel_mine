@@ -32,7 +32,7 @@ export function createNocturneWingShaderMaterial(isBlack = false): THREE.ShaderM
       void main() {
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
-        float rim = pow(1.0 - abs(dot(N, V)), 1.5);
+        float rim = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.5);
         float sweep = smoothstep(0.42, 0.50, sin(vLocalPos.y * 8.0 - uTime * 9.0));
         float edgeBevel = smoothstep(0.06, 0.015, abs(vLocalPos.x));
 
@@ -174,7 +174,7 @@ export function createNocturneEclipseMonolithShaderMaterial(): THREE.ShaderMater
       void main() {
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
-        float rim = pow(1.0 - abs(dot(N, V)), 1.45);
+        float rim = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.45);
         float isLeft = step(0.0, -vLocalPos.x);
         float severCut = smoothstep(0.14, 0.01, abs(vLocalPos.y - 2.15 - vLocalPos.x * 0.25)) * uSever;
 
@@ -412,7 +412,7 @@ export function createLullabyMoonCradleShaderMaterial(): THREE.ShaderMaterial {
       void main() {
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
-        float rim = pow(1.0 - abs(dot(N, V)), 1.5);
+        float rim = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.5);
         float notePulse = 0.5 + 0.5 * sin(vLocalPos.x * 7.0 - uTime * 5.0);
 
         vec3 deepIndigo = vec3(0.08, 0.03, 0.18);
@@ -548,7 +548,7 @@ export function createGothicMirrorCageShaderMaterial(): THREE.ShaderMaterial {
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
         vec3 L = normalize(vec3(0.35, 0.85, 0.5));
-        float rim = pow(1.0 - abs(dot(N, V)), 1.45);
+        float rim = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.45);
         float ndl = 0.42 + 0.58 * max(0.0, dot(N, L));
 
         float rHoriz = length(vLocalPos.xz);
@@ -615,7 +615,7 @@ export function createCrescentMoonShaderMaterial(): THREE.ShaderMaterial {
         vec3 L = normalize(vec3(0.4, 0.85, 0.55));
         float ndv = abs(dot(N, V));
         float ndl = 0.45 + 0.55 * max(0.0, dot(N, L));
-        float rim = pow(1.0 - ndv, 1.5);
+        float rim = pow(max(0.0001, 1.0 - ndv), 1.5);
 
         float fracture = abs(sin(vLocalPos.x * 5.2 + vLocalPos.y * 4.8) * cos(vLocalPos.z * 5.5 - vLocalPos.y * 4.4));
         float goldenCrack = smoothstep(0.20, 0.03, fracture) * smoothstep(0.15, 0.95, uCharge);

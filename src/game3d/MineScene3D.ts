@@ -576,6 +576,11 @@ export class MineScene3D {
     this.mode = mode;
     this.lastOverlayEmitMs = 0;
     this.tapShakeIntensity = 0;
+    if (modeChanged) {
+      this.focusPlot(null);
+      this.tutorialFocusChest = false;
+      this.tutorialFocusSellShop = false;
+    }
     applyMineSceneModeTransition({
       mode,
       modeChanged,

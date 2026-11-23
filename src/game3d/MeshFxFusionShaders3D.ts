@@ -163,7 +163,7 @@ export function createCheshireGlitchCardShaderMaterial(): THREE.ShaderMaterial {
     void main() {
       vec3 N = normalize(vNormalView);
       vec3 V = normalize(vViewPos);
-      float fresnel = pow(1.0 - max(0.0, abs(dot(N, V))), 1.75);
+      float fresnel = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.75);
       float scan = step(0.45, fract(vLocalPos.y * 12.0 - uTime * 9.0 + uSeed));
       float stripe = smoothstep(0.38, 0.62, sin((vLocalPos.x + vLocalPos.y) * 16.0 + uTime * 6.0));
       float frame = step(0.76, max(abs(vUv.x - 0.5) * 2.0, abs(vUv.y - 0.5) * 2.0));
@@ -223,7 +223,7 @@ export function createThornVineLanceShaderMaterial(): THREE.ShaderMaterial {
     void main() {
       vec3 N = normalize(vNormalView);
       vec3 V = normalize(vViewPos);
-      float fresnel = pow(1.0 - max(0.0, abs(dot(N, V))), 1.7);
+      float fresnel = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.7);
       float ang = atan(vLocalPos.z, vLocalPos.x);
       float spiral = smoothstep(0.45, 0.92, sin(vLocalPos.y * 8.5 + ang * 3.0 - uTime * 7.0) * 0.5 + 0.5);
       float tipGlow = smoothstep(0.4, 1.5, vLocalPos.y);
@@ -282,7 +282,7 @@ export function createMonochromeJudgementObeliskShaderMaterial(): THREE.ShaderMa
     void main() {
       vec3 N = normalize(vNormalView);
       vec3 V = normalize(vViewPos);
-      float fresnel = pow(1.0 - max(0.0, abs(dot(N, V))), 1.55);
+      float fresnel = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.55);
       float runeBand = smoothstep(0.82, 0.96, sin(vLocalPos.y * 14.0 - uTime * 6.0));
       float facingLight = max(0.0, dot(N, normalize(vec3(0.4, 0.8, 0.5))));
       float halftone = step(0.32, length(fract(vUv * 12.0) - 0.5));
@@ -335,7 +335,7 @@ export function createPrismShardColumnShaderMaterial(): THREE.ShaderMaterial {
     void main() {
       vec3 N = normalize(vNormalView);
       vec3 V = normalize(vViewPos);
-      float fresnel = pow(1.0 - max(0.0, abs(dot(N, V))), 1.5);
+      float fresnel = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.5);
       float phase = vLocalPos.y * 4.5 + dot(N, vec3(1.0, 0.6, 0.8)) * 3.0 - uTime * 4.5 + uSeed;
       vec3 rainbow = 0.55 + 0.45 * cos(phase + vec3(0.0, 2.094, 4.188));
       vec3 facetCol = mix(mix(uColor, uCoreColor, 0.5 + 0.5 * sin(phase)), rainbow, 0.48);
@@ -389,7 +389,7 @@ export function createAetherMonarchCrownShaderMaterial(): THREE.ShaderMaterial {
     void main() {
       vec3 N = normalize(vNormalView);
       vec3 V = normalize(vViewPos);
-      float fresnel = pow(1.0 - max(0.0, abs(dot(N, V))), 1.55);
+      float fresnel = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.55);
       float vein = smoothstep(0.74, 0.96, sin(vLocalPos.y * 10.0 + atan(vLocalPos.z, vLocalPos.x) * 4.0 - uTime * 6.5));
       float spec = pow(max(0.0, dot(N, normalize(vec3(0.3, 0.8, 0.5)))), 4.0);
 

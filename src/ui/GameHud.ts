@@ -603,7 +603,10 @@ export class GameHud {
     this.indexUi.closeReviewDialog();
     this.omegaBossUi.clearForgeCutscene();
     this.shopUi.clearPremiumCutscene();
-    this.inspectedSlot = null;
+    if (this.inspectedSlot !== null) {
+      this.inspectedSlot = null;
+      this.onFocusPlot?.(null);
+    }
     this.worldOverlayUi.clearTransientOverlays();
     this.onSetSceneMode?.(mode);
     if (mode === 'tower') {

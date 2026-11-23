@@ -336,7 +336,7 @@ export function createFresnelDomeMaterial(): THREE.ShaderMaterial {
       void main() {
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
-        float fresnel = pow(1.0 - abs(dot(N, V)), 2.1);
+        float fresnel = pow(max(0.0001, 1.0 - abs(dot(N, V))), 2.1);
 
         float n = vnoise(vec2(vUv.x * 16.0, vUv.y * 8.0 - uProgress * 5.0));
         float waveBand = smoothstep(0.16, 0.0, abs((vUv.y - 0.08) - uProgress * 0.95));
@@ -393,8 +393,8 @@ export function createEnergyWeaponMaterial(): THREE.ShaderMaterial {
         vec3 L = normalize(vec3(0.42, 0.85, 0.55));
         float ndv = abs(dot(N, V));
         float ndl = 0.45 + 0.55 * dot(N, L);
-        float rim = pow(1.0 - ndv, 1.6);
-        float core = pow(ndv, 1.4);
+        float rim = pow(max(0.0001, 1.0 - ndv), 1.6);
+        float core = pow(max(0.0001, ndv), 1.4);
         float pulse = 0.94 + 0.14 * sin(vLocalPos.y * 8.0 - uTime * 16.0);
 
         vec3 deepBody = uColor * 0.28;
@@ -446,8 +446,8 @@ export function createOrbitalBeamMaterial(): THREE.ShaderMaterial {
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
         float ndv = abs(dot(N, V));
-        float filament = pow(ndv, 3.6);
-        float outerEdge = pow(1.0 - ndv, 2.2) * 0.45;
+        float filament = pow(max(0.0001, ndv), 3.6);
+        float outerEdge = pow(max(0.0001, 1.0 - ndv), 2.2) * 0.45;
 
         float scroll1 = vnoise(vec2(vUv.x * 10.0, vUv.y * 5.0 + uTime * 7.5));
         float scroll2 = vnoise(vec2(vUv.x * 22.0 - uTime * 2.5, vUv.y * 14.0 + uTime * 11.0));

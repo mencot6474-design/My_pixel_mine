@@ -304,7 +304,7 @@ export function createHalcyonRailBowShaderMaterial(): THREE.ShaderMaterial {
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
         vec3 L = normalize(vec3(0.4, 0.85, 0.5));
-        float rim = pow(1.0 - abs(dot(N, V)), 1.5);
+        float rim = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.5);
         float ndl = 0.45 + 0.55 * max(0.0, dot(N, L));
         float pulse = smoothstep(0.55, 0.96, sin(vLocalPos.y * 12.0 - uTime * 9.0));
 
@@ -463,7 +463,7 @@ export function createHalcyonRailPillarShaderMaterial(): THREE.ShaderMaterial {
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
         vec3 L = normalize(vec3(0.4, 0.85, 0.5));
-        float rim = pow(1.0 - abs(dot(N, V)), 1.5);
+        float rim = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.5);
         float ndl = 0.42 + 0.58 * max(0.0, dot(N, L));
 
         float channel = smoothstep(0.65, 0.96, sin(vLocalPos.y * 8.0 - uTime * 12.0));
@@ -727,7 +727,7 @@ export function createYukikageKunaiShaderMaterial(): THREE.ShaderMaterial {
         vec3 L = normalize(vec3(0.4, 0.85, 0.5));
         float ndv = abs(dot(N, V));
         float ndl = 0.45 + 0.55 * dot(N, L);
-        float rim = pow(1.0 - ndv, 1.6);
+        float rim = pow(max(0.0001, 1.0 - ndv), 1.6);
 
         float isBlade = smoothstep(-0.08, 0.05, vLocalPos.y);
         float fullerGroove = smoothstep(0.075, 0.02, abs(vLocalPos.x)) * smoothstep(0.75, 0.05, vLocalPos.y);
@@ -829,7 +829,7 @@ export function createHalcyonRainShaderMaterial(): THREE.ShaderMaterial {
         vec3 L = normalize(vec3(0.45, 0.82, 0.55));
         float ndv = abs(dot(N, V));
         float ndl = 0.5 + 0.5 * dot(N, L);
-        float rim = pow(1.0 - ndv, 1.9);
+        float rim = pow(max(0.0001, 1.0 - ndv), 1.9);
 
         float hNorm = clamp((vLocalPos.y + 0.85) / 2.5, 0.0, 1.0);
 

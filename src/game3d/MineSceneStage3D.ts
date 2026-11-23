@@ -139,19 +139,27 @@ export function applyCameraOrbitDrag(opts: {
   defaultYaw?: number;
   defaultPitch?: number;
 }): { yaw: number; pitch: number } {
+  const safeDefaultYaw = Number.isFinite(opts.defaultYaw) ? (opts.defaultYaw as number) : 0;
+  const safeDefaultPitch = Number.isFinite(opts.defaultPitch) ? (opts.defaultPitch as number) : 0;
   if (opts.cameraLocked) {
-    return { yaw: opts.defaultYaw ?? 0, pitch: opts.defaultPitch ?? 0 };
+    return { yaw: safeDefaultYaw, pitch: safeDefaultPitch };
   }
+  const safeYaw = Number.isFinite(opts.yaw) ? opts.yaw : safeDefaultYaw;
+  const safePitch = Number.isFinite(opts.pitch) ? opts.pitch : safeDefaultPitch;
+  const safeDx = Number.isFinite(opts.dx) ? opts.dx : 0;
+  const safeDy = Number.isFinite(opts.dy) ? opts.dy : 0;
   return {
-    yaw: Math.max(-1.35, Math.min(1.35, opts.yaw - opts.dx * 0.005)),
-    pitch: Math.max(-0.45, Math.min(0.42, opts.pitch + opts.dy * 0.004)),
+    yaw: Math.max(-1.35, Math.min(1.35, safeYaw - safeDx * 0.005)),
+    pitch: Math.max(-0.45, Math.min(0.42, safePitch + safeDy * 0.004)),
   };
 }
 
 /** Clamps camera zoom radius to the mode's safe orbit bounds. */
 export function clampCameraZoomRadius(radius: number, mode: SceneMode): number {
   const maxRad = mode === 'shop' ? 38 : mode === 'fusion' ? 34 : 28;
-  return Math.max(9, Math.min(maxRad, radius));
+  const fallback = mode === 'shop' ? 30.4 : mode === 'fusion' ? 23.4 : mode === 'tower' || mode === 'omega' ? 16.4 : 20.4;
+  const safeRadius = Number.isFinite(radius) ? radius : fallback;
+  return Math.max(9, Math.min(maxRad, safeRadius));
 }
 
 const tmpCamPos = new THREE.Vector3();
@@ -312,59 +320,77 @@ export function stepMineSceneCamera(ctx: {
   inputState: MineInputState;
   state: { orbitYaw: number; orbitPitch: number; camRadius: number; tapShakeIntensity: number };
 }): void {
-  const dtSec = ctx.dtSec;
-    const damp = 1 - Math.exp(-dtSec * 16);
-    const fusionCam = ctx.mode === 'fusion' ? (ctx.fusionWorld?.getCameraFocusState() ?? null) : null;
-    if (fusionCam?.active) {
-      const cineDamp = 1 - Math.exp(-dtSec * 6.5);
-      ctx.camera.position.lerp(fusionCam.camPos, cineDamp);
-      ctx.currentLookAt.lerp(fusionCam.lookAt, cineDamp);
-      ctx.camera.lookAt(ctx.currentLookAt);
-    } else if (ctx.focusedPlotIndex !== null && ctx.pedestals[ctx.focusedPlotIndex]) {
-      const pPos = ctx.pedestals[ctx.focusedPlotIndex].group.position;
-      tmpCamPos.set(pPos.x, pPos.y + 2.15, pPos.z + 5.35);
-      tmpLookTarget.set(pPos.x, pPos.y + 1.55, pPos.z);
-      ctx.camera.position.lerp(tmpCamPos, damp);
-      ctx.currentLookAt.lerp(tmpLookTarget, damp);
-      ctx.camera.lookAt(ctx.currentLookAt);
-    } else if (ctx.tutorialFocusChest && ctx.mode === 'mine') {
-      const cPos = ctx.crateGroup.position;
-      tmpCamPos.set(cPos.x + 0.8, cPos.y + 4.3, cPos.z + 7.2);
-      tmpLookTarget.set(cPos.x, cPos.y + 0.65, cPos.z);
-      ctx.camera.position.lerp(tmpCamPos, damp);
-      ctx.currentLookAt.lerp(tmpLookTarget, damp);
-      ctx.camera.lookAt(ctx.currentLookAt);
-    } else if (ctx.tutorialFocusSellShop && ctx.mode === 'shop') {
-      tmpCamPos.set(-4.6, 5.2, 11.4);
-      tmpLookTarget.set(-6.95, 2.3, 2.8);
-      ctx.camera.position.lerp(tmpCamPos, damp);
-      ctx.currentLookAt.lerp(tmpLookTarget, damp);
-      ctx.camera.lookAt(ctx.currentLookAt);
-    } else {
-      if (ctx.inputState.cameraLocked) {
-        ctx.inputState.targetOrbitYaw = 0;
-        ctx.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode(ctx.mode);
-      }
-      ctx.state.orbitYaw += (ctx.inputState.targetOrbitYaw - ctx.state.orbitYaw) * damp;
-      ctx.state.orbitPitch += (ctx.inputState.targetOrbitPitch - ctx.state.orbitPitch) * damp;
-      ctx.state.camRadius += (ctx.inputState.targetCamRadius - ctx.state.camRadius) * damp;
-      const camY = (ctx.baseCamPos.y + ctx.state.orbitPitch * 7) * (ctx.state.camRadius / 16.5);
-
-      ctx.currentLookAt.lerp(ctx.lookAtPos, damp);
-      ctx.camera.position.set(
-        ctx.currentLookAt.x + Math.sin(ctx.state.orbitYaw) * ctx.state.camRadius,
-        camY,
-        ctx.currentLookAt.z + Math.cos(ctx.state.orbitYaw) * ctx.state.camRadius
-      );
-      if ((ctx.mode === 'mine' || ctx.mode === 'omega') && ctx.state.tapShakeIntensity > 0.001) {
-        const sx = (Math.sin(ctx.elapsed * 95) * 0.7 + Math.cos(ctx.elapsed * 143) * 0.3) * ctx.state.tapShakeIntensity;
-        const sy = Math.cos(ctx.elapsed * 117) * ctx.state.tapShakeIntensity * 0.75;
-        ctx.camera.position.x += sx;
-        ctx.camera.position.y += sy;
-        ctx.state.tapShakeIntensity = Math.max(0, ctx.state.tapShakeIntensity - dtSec * 1.4);
-      }
-      ctx.camera.lookAt(ctx.currentLookAt);
+  const dtSec = Number.isFinite(ctx.dtSec) ? Math.max(0, ctx.dtSec) : 0;
+  const damp = 1 - Math.exp(-dtSec * 16);
+  const fusionCam = ctx.mode === 'fusion' ? (ctx.fusionWorld?.getCameraFocusState() ?? null) : null;
+  if (fusionCam?.active) {
+    const cineDamp = 1 - Math.exp(-dtSec * 6.5);
+    ctx.camera.position.lerp(fusionCam.camPos, cineDamp);
+    ctx.currentLookAt.lerp(fusionCam.lookAt, cineDamp);
+    ctx.camera.lookAt(ctx.currentLookAt);
+  } else if (ctx.mode === 'mine' && ctx.focusedPlotIndex !== null && ctx.pedestals[ctx.focusedPlotIndex]) {
+    const pPos = ctx.pedestals[ctx.focusedPlotIndex].group.position;
+    tmpCamPos.set(pPos.x, pPos.y + 2.15, pPos.z + 5.35);
+    tmpLookTarget.set(pPos.x, pPos.y + 1.55, pPos.z);
+    ctx.camera.position.lerp(tmpCamPos, damp);
+    ctx.currentLookAt.lerp(tmpLookTarget, damp);
+    ctx.camera.lookAt(ctx.currentLookAt);
+  } else if (ctx.tutorialFocusChest && ctx.mode === 'mine') {
+    const cPos = ctx.crateGroup.position;
+    tmpCamPos.set(cPos.x + 0.8, cPos.y + 4.3, cPos.z + 7.2);
+    tmpLookTarget.set(cPos.x, cPos.y + 0.65, cPos.z);
+    ctx.camera.position.lerp(tmpCamPos, damp);
+    ctx.currentLookAt.lerp(tmpLookTarget, damp);
+    ctx.camera.lookAt(ctx.currentLookAt);
+  } else if (ctx.tutorialFocusSellShop && ctx.mode === 'shop') {
+    tmpCamPos.set(-4.6, 5.2, 11.4);
+    tmpLookTarget.set(-6.95, 2.3, 2.8);
+    ctx.camera.position.lerp(tmpCamPos, damp);
+    ctx.currentLookAt.lerp(tmpLookTarget, damp);
+    ctx.camera.lookAt(ctx.currentLookAt);
+  } else {
+    const defaultPitch = getDefaultOrbitPitchForMode(ctx.mode);
+    if (!Number.isFinite(ctx.inputState.targetOrbitYaw)) ctx.inputState.targetOrbitYaw = 0;
+    if (!Number.isFinite(ctx.inputState.targetOrbitPitch)) ctx.inputState.targetOrbitPitch = defaultPitch;
+    if (!Number.isFinite(ctx.inputState.targetCamRadius)) {
+      ctx.inputState.targetCamRadius = clampCameraZoomRadius(NaN, ctx.mode);
     }
+    if (ctx.inputState.cameraLocked) {
+      ctx.inputState.targetOrbitYaw = 0;
+      ctx.inputState.targetOrbitPitch = defaultPitch;
+    }
+    if (!Number.isFinite(ctx.state.orbitYaw)) ctx.state.orbitYaw = ctx.inputState.targetOrbitYaw;
+    if (!Number.isFinite(ctx.state.orbitPitch)) ctx.state.orbitPitch = ctx.inputState.targetOrbitPitch;
+    if (!Number.isFinite(ctx.state.camRadius)) ctx.state.camRadius = ctx.inputState.targetCamRadius;
+
+    ctx.state.orbitYaw += (ctx.inputState.targetOrbitYaw - ctx.state.orbitYaw) * damp;
+    ctx.state.orbitPitch += (ctx.inputState.targetOrbitPitch - ctx.state.orbitPitch) * damp;
+    ctx.state.camRadius += (ctx.inputState.targetCamRadius - ctx.state.camRadius) * damp;
+    const camY = (ctx.baseCamPos.y + ctx.state.orbitPitch * 7) * (ctx.state.camRadius / 16.5);
+
+    if (
+      !Number.isFinite(ctx.currentLookAt.x) ||
+      !Number.isFinite(ctx.currentLookAt.y) ||
+      !Number.isFinite(ctx.currentLookAt.z)
+    ) {
+      ctx.currentLookAt.copy(ctx.lookAtPos);
+    } else {
+      ctx.currentLookAt.lerp(ctx.lookAtPos, damp);
+    }
+    ctx.camera.position.set(
+      ctx.currentLookAt.x + Math.sin(ctx.state.orbitYaw) * ctx.state.camRadius,
+      camY,
+      ctx.currentLookAt.z + Math.cos(ctx.state.orbitYaw) * ctx.state.camRadius
+    );
+    if ((ctx.mode === 'mine' || ctx.mode === 'omega') && ctx.state.tapShakeIntensity > 0.001) {
+      const sx = (Math.sin(ctx.elapsed * 95) * 0.7 + Math.cos(ctx.elapsed * 143) * 0.3) * ctx.state.tapShakeIntensity;
+      const sy = Math.cos(ctx.elapsed * 117) * ctx.state.tapShakeIntensity * 0.75;
+      ctx.camera.position.x += sx;
+      ctx.camera.position.y += sy;
+      ctx.state.tapShakeIntensity = Math.max(0, ctx.state.tapShakeIntensity - dtSec * 1.4);
+    }
+    ctx.camera.lookAt(ctx.currentLookAt);
+  }
 
 }
 
@@ -491,22 +517,28 @@ export function applyMineSceneModeTransition(ctx: {
   if (mode !== 'mine' && mode !== 'tower') {
     ctx.renderer.domElement.classList.remove('mam-mining-cursor');
   }
-  if (mode !== 'altar') ctx.shopWorld?.cancelSpin();
-  if (mode !== 'fusion') ctx.fusionWorld?.cancelAnimation();
 
-  if (mode === 'shop' || mode === 'altar') ctx.ensureShopWorld();
-  else if (mode === 'fusion') ctx.ensureFusionWorld();
-  else if (mode === 'tower') ctx.ensureTowerArena();
-  else if (mode === 'omega') ctx.ensureOmegaArena();
+  let shopWorld = ctx.shopWorld;
+  let fusionWorld = ctx.fusionWorld;
+  let towerArena = ctx.towerArena;
+  let omegaArena = ctx.omegaArena;
+
+  if (mode !== 'altar') shopWorld?.cancelSpin();
+  if (mode !== 'fusion') fusionWorld?.cancelAnimation();
+
+  if (mode === 'shop' || mode === 'altar') shopWorld = ctx.ensureShopWorld();
+  else if (mode === 'fusion') fusionWorld = ctx.ensureFusionWorld();
+  else if (mode === 'tower') towerArena = ctx.ensureTowerArena();
+  else if (mode === 'omega') omegaArena = ctx.ensureOmegaArena();
 
   const isMine = mode === 'mine';
-  if (ctx.shopWorld) {
-    ctx.shopWorld.shopGroup.visible = mode === 'shop';
-    ctx.shopWorld.altarGroup.visible = mode === 'altar';
+  if (shopWorld) {
+    shopWorld.shopGroup.visible = mode === 'shop';
+    shopWorld.altarGroup.visible = mode === 'altar';
   }
-  if (ctx.fusionWorld) ctx.fusionWorld.group.visible = mode === 'fusion';
-  if (ctx.towerArena) ctx.towerArena.group.visible = mode === 'tower';
-  if (ctx.omegaArena) ctx.omegaArena.group.visible = mode === 'omega';
+  if (fusionWorld) fusionWorld.group.visible = mode === 'fusion';
+  if (towerArena) towerArena.group.visible = mode === 'tower';
+  if (omegaArena) omegaArena.group.visible = mode === 'omega';
 
   ctx.env.group.visible = isMine;
   ctx.env.skyDome.visible = mode === 'mine' || mode === 'shop';
@@ -545,7 +577,7 @@ export function applyMineSceneModeTransition(ctx: {
     ctx.inputState.targetCamRadius = 16.4;
     ctx.lookAtPos.set(0, 2.25, -1.6);
     ctx.syncTowerFighters();
-    ctx.towerArena?.resetFloorCharge();
+    towerArena?.resetFloorCharge();
   } else if (mode === 'omega') {
     ctx.scene.background = new THREE.Color(0xfda4af);
     ctx.scene.fog = new THREE.Fog(0xfecdd3, 38, 108);
@@ -556,7 +588,8 @@ export function applyMineSceneModeTransition(ctx: {
     ctx.lookAtPos.set(0, 2.1, -1.5);
     ctx.syncTowerFighters();
   } else if (mode === 'shop') {
-    const aspect = ctx.camera.aspect || 1;
+    const rawAspect = ctx.camera.aspect;
+    const aspect = Number.isFinite(rawAspect) && rawAspect > 0 ? rawAspect : 1;
     ctx.inputState.targetOrbitYaw = 0;
     ctx.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('shop');
     ctx.inputState.targetCamRadius = aspect < 0.85 ? 37.6 : aspect < 1.15 ? 33.2 : 30.4;

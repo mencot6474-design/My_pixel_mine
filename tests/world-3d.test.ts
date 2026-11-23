@@ -18,7 +18,12 @@ import {
   HOLD_MINE_INTERVAL_SEC,
   stepHoldMineTimer,
 } from '../src/game3d/MineScene3D';
-import { buildMineStageAndChest, STAGE_CRESCENT_SLOTS } from '../src/game3d/MineSceneStage3D';
+import {
+  applyMineSceneModeTransition,
+  buildMineStageAndChest,
+  STAGE_CRESCENT_SLOTS,
+  stepMineSceneCamera,
+} from '../src/game3d/MineSceneStage3D';
 import { createNexusLeftGate, createVaultCoreDais } from '../src/game3d/ArenaWings3D';
 import { createCyberCargoPod } from '../src/game3d/CyberCargoPod3D';
 import { AudioManager } from '../src/audio/AudioManager';
@@ -4061,5 +4066,135 @@ describe('Pure 3D Mine World', () => {
     expect(skylineTrimInstances).toBeGreaterThanOrEqual(20);
     expect(spireInstances).toBeGreaterThanOrEqual(10);
     plaza.dispose();
+  });
+
+  it('sets TowerArena3D visible on first lazy initialization in applyMineSceneModeTransition and self-heals non-finite camera state', () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(42, 1, 1, 220);
+    const renderer = { domElement: { classList: { remove: () => {} } } } as unknown as THREE.WebGLRenderer;
+    const env = new MineEnvironment3D(WORLD_PALETTES.underground);
+    const pit = new OrePit3D(WORLD_PALETTES.underground);
+    const plotAttackController = new PlotAttackController3D();
+    const crateGroup = new THREE.Group();
+    const pedestals: PlotPedestal3D[] = [new PlotPedestal3D(0, -7.35, -3.15, 0.58)];
+    const weatherFx = { setShopMode: () => {}, setFeverTier: () => {} } as unknown as import('../src/game3d/WeatherFx3D').WeatherFx3D;
+
+    let towerArena: TowerArena3D | null = null;
+    let resetFloorCalls = 0;
+    const ensureTowerArena = (): TowerArena3D => {
+      if (!towerArena) {
+        towerArena = new TowerArena3D();
+        const origReset = towerArena.resetFloorCharge.bind(towerArena);
+        towerArena.resetFloorCharge = () => {
+          resetFloorCalls++;
+          origReset();
+        };
+      }
+      return towerArena;
+    };
+
+    const inputState = {
+      isDragging: false,
+      dragMoved: false,
+      dragPointerType: 'mouse',
+      activePointerId: null,
+      activeTouchPoints: new Map<number, { x: number; y: number }>(),
+      lastPinchDist: null,
+      dragStartX: 0,
+      dragStartY: 0,
+      lastDragX: 0,
+      lastDragY: 0,
+      holdMineActive: false,
+      holdMineElapsed: 0,
+      holdMineFiredInitial: false,
+      holdMineClientX: 0,
+      holdMineClientY: 0,
+      targetOrbitYaw: 0,
+      targetOrbitPitch: -0.18,
+      targetCamRadius: 20.4,
+      cameraLocked: false,
+      crateHovered: false,
+      crateBounce: 0,
+      dragHighlightPlot: null,
+    };
+    const lookAtPos = new THREE.Vector3(0, 0.85, 0.15);
+    const currentLookAt = new THREE.Vector3(0, 0.85, 0.15);
+    const baseCamPos = new THREE.Vector3(0, 11.7, 20.55);
+    const orbitState = { orbitYaw: 0, orbitPitch: -0.18, camRadius: 20.4, tapShakeIntensity: 0 };
+
+    // First entry into Tower with towerArena initially null must still set towerArena.group.visible = true
+    applyMineSceneModeTransition({
+      mode: 'tower',
+      modeChanged: true,
+      overclockTier: 0,
+      scene,
+      camera,
+      renderer,
+      weatherFx,
+      env,
+      pit,
+      crateGroup,
+      pedestals,
+      plotAttackController,
+      shopWorld: null,
+      fusionWorld: null,
+      towerArena,
+      omegaArena: null,
+      ensureShopWorld: () => new ShopWorld3D(),
+      ensureFusionWorld: () => new FusionWorld3D(),
+      ensureTowerArena,
+      ensureOmegaArena: () => new OmegaArena3D(),
+      applyWeatherAtmosphere: () => {},
+      syncTowerFighters: () => {},
+      inputState,
+      lookAtPos,
+      currentLookAt,
+      baseCamPos,
+      setOrbitImmediate: (yaw, pitch, radius) => {
+        orbitState.orbitYaw = yaw;
+        orbitState.orbitPitch = pitch;
+        orbitState.camRadius = radius;
+      },
+    });
+
+    expect(towerArena).not.toBeNull();
+    expect(towerArena!.group.visible).toBe(true);
+    expect(resetFloorCalls).toBe(1);
+    expect(env.group.visible).toBe(false);
+    expect(pit.group.visible).toBe(false);
+    expect(pedestals[0].group.visible).toBe(false);
+
+    // stepMineSceneCamera must ignore focusedPlotIndex outside 'mine' and recover from NaN orbit/lookAt
+    orbitState.orbitYaw = Number.NaN;
+    orbitState.camRadius = Number.NaN;
+    inputState.targetCamRadius = Number.NaN;
+    currentLookAt.set(Number.NaN, 0, 0);
+    stepMineSceneCamera({
+      dtSec: 0.016,
+      elapsed: 1.0,
+      mode: 'tower',
+      camera,
+      currentLookAt,
+      baseCamPos,
+      lookAtPos,
+      focusedPlotIndex: 0,
+      pedestals,
+      crateGroup,
+      tutorialFocusChest: false,
+      tutorialFocusSellShop: false,
+      fusionWorld: null,
+      inputState,
+      state: orbitState,
+    });
+    expect(Number.isFinite(camera.position.x)).toBe(true);
+    expect(Number.isFinite(camera.position.y)).toBe(true);
+    expect(Number.isFinite(camera.position.z)).toBe(true);
+    expect(Number.isFinite(currentLookAt.x)).toBe(true);
+
+    towerArena!.dispose();
+    plotAttackController.dispose();
+    pedestals.forEach((p) => p.dispose());
+    pit.dispose();
+    env.dispose();
   });
 });
