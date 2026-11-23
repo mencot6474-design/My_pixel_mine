@@ -53,6 +53,7 @@ import {
   renderAudioControlsHtml,
   renderCurrencyRailHtml,
   renderFeverScreenFxHtml,
+  shouldShowTwinTrialHudButton,
 } from '../src/ui/HudChromeRenderer';
 import { stepHudSlowTick } from '../src/ui/HudActionRouter';
 import { TwinTrialModalUi } from '../src/ui/TwinTrialModalUi';
@@ -1902,6 +1903,16 @@ describe('Tahap B HUD Modules', () => {
 
       const hotbarHtml = renderHotbarSlotsHtml(state);
       expect(hotbarHtml).toContain('TRIAL');
+    });
+
+    it('restricts Trial HUD button visibility to mine and shop scenes so battle/altar/fusion never enter invisible modal state', () => {
+      expect(shouldShowTwinTrialHudButton('mine', true)).toBe(true);
+      expect(shouldShowTwinTrialHudButton('shop', true)).toBe(true);
+      expect(shouldShowTwinTrialHudButton('tower', true)).toBe(false);
+      expect(shouldShowTwinTrialHudButton('altar', true)).toBe(false);
+      expect(shouldShowTwinTrialHudButton('fusion', true)).toBe(false);
+      expect(shouldShowTwinTrialHudButton('omega', true)).toBe(false);
+      expect(shouldShowTwinTrialHudButton('mine', false)).toBe(false);
     });
   });
 });

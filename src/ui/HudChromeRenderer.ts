@@ -1,6 +1,7 @@
 import { assetUrl } from '../game/AssetUrl';
 import { fmtInt, fmtMoney } from '../game/NumberFormat';
 import type { OverclockTier } from '../game/OverclockDomain';
+import type { SceneMode } from '../game3d/MineScene3D';
 import { hudIconHtml } from './HudIcons';
 import {
   formatCountdownTimer,
@@ -17,6 +18,10 @@ import {
   TW_TELEPORT_PILL,
   TW_TOP_CENTER,
 } from './HudShared';
+
+export function shouldShowTwinTrialHudButton(sceneMode: SceneMode, trialVisible: boolean): boolean {
+  return trialVisible && (sceneMode === 'mine' || sceneMode === 'shop');
+}
 
 export function renderAudioControlsHtml(opts: {
   floating: boolean;

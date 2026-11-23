@@ -30,6 +30,7 @@ import {
   renderFeverScreenFxHtml,
   renderMineChromeHtml,
   renderMineQuickButtonsHtml,
+  shouldShowTwinTrialHudButton,
   syncFeverScreenFxDom,
   updateFpsBadgeDom,
 } from './HudChromeRenderer';
@@ -739,7 +740,7 @@ export class GameHud {
       cameraLocked: gameSettings.get().cameraLocked,
       fps: this.currentFps,
       twinTrial: {
-        visible: this.state.isTwinTrialVisible(),
+        visible: shouldShowTwinTrialHudButton(this.sceneMode, this.state.isTwinTrialVisible()),
         active: this.state.isTwinTrialActive(),
         remainingSec: this.state.getTwinTrialRemainingSec(),
       },
@@ -794,7 +795,9 @@ export class GameHud {
     const savedScrolls = sameView ? captureRootScrolls(this.root) : [];
     this.lastRenderViewKey = viewKey;
     this.lastRenderedModal = this.activeModal;
-    this.root.dataset.hudTrial = this.state.isTwinTrialVisible() ? 'true' : 'false';
+    this.root.dataset.hudTrial = shouldShowTwinTrialHudButton(this.sceneMode, this.state.isTwinTrialVisible())
+      ? 'true'
+      : 'false';
 
     this.worldOverlayUi.resetPlotLayerKeysIfMineIdle();
 
