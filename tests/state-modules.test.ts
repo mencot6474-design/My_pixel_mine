@@ -12,7 +12,9 @@ import { getIndexTabEntryIds } from '../src/game/IndexRewardsDomain';
 import { rollTapCriticalDamage, TAP_CRIT_MULT } from '../src/game3d/MineScene3D';
 import {
   getLatestWorldScaleAnchor,
+  getMinersByWorld,
   getOreById,
+  getWorldStarterChibiId,
   getWorldUpgradeCostScale,
   ORES,
   syncTwinCatalogDpsFromAnchor,
@@ -1609,6 +1611,33 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(state.miners['crimson-ronin']).toBeGreaterThanOrEqual(1);
       expect(state.discovered.has('halcyon-twins')).toBe(true);
       expect(state.unlockChibisByIds(['halcyon-twins'])).toBe(0);
+    });
+  });
+
+  describe('1000x World Scaling Ladder', () => {
+    it('scales WORLDS unlockCost (1M..1Sp), oreHpMult (2000^w), upgradeCostScale (1000^w), and 5 miners/world by 1000^w', () => {
+      for (let w = 0; w < WORLDS.length; w++) {
+        const expectedUnlock = w === 0 ? 0 : Math.pow(1000, w + 1);
+        expect(WORLDS[w].unlockCost).toBe(expectedUnlock);
+        expect(WORLDS[w].oreHpMult).toBe(Math.pow(2000, w));
+        expect(getWorldUpgradeCostScale(WORLDS[w].id)).toBe(Math.pow(1000, w));
+
+        const worldDps = getMinersByWorld(WORLDS[w].id)
+          .map((m) => m.chibi.baseDps)
+          .sort((a, b) => a - b);
+        expect(worldDps).toEqual([10, 20, 35, 65, 100].map((v) => v * Math.pow(1000, w)));
+      }
+
+      const simW9Id = 'aetherial_w9' as unknown as (typeof WORLDS)[number]['id'];
+      const simWorlds = [
+        ...WORLDS,
+        { id: simW9Id, name: 'W9', iconColor: '#fff', unlockCost: 1e27, oreHpMult: Math.pow(2000, 8) },
+      ];
+      expect(getWorldUpgradeCostScale(simW9Id, simWorlds)).toBe(1e24);
+
+      expect(getWorldStarterChibiId('underground')).toBe('astral-recruit');
+      expect(getWorldStarterChibiId('crystal')).toBe('volt-kensei');
+      expect(getWorldStarterChibiId('chrono')).toBe('glitch-warden');
     });
   });
 });

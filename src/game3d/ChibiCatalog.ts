@@ -75,7 +75,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'common',
     accentColor: '#38bdf8',
-    baseDps: 8,
+    baseDps: 10,
     smoothFilter: true,
   },
   {
@@ -86,7 +86,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'uncommon',
     accentColor: '#f59e0b',
-    baseDps: 16,
+    baseDps: 20,
     smoothFilter: true,
   },
   {
@@ -97,7 +97,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'rare',
     accentColor: '#60a5fa',
-    baseDps: 22,
+    baseDps: 35,
     smoothFilter: true,
   },
   {
@@ -108,7 +108,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'uncommon',
     accentColor: '#facc15',
-    baseDps: 75,
+    baseDps: 10_000,
     smoothFilter: true,
   },
   {
@@ -119,7 +119,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'rare',
     accentColor: '#fb7185',
-    baseDps: 95,
+    baseDps: 20_000,
     smoothFilter: true,
   },
   {
@@ -130,7 +130,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'epic',
     accentColor: '#34d399',
-    baseDps: 120,
+    baseDps: 35_000,
     smoothFilter: true,
   },
   {
@@ -141,7 +141,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'rare',
     accentColor: '#4ade80',
-    baseDps: 340,
+    baseDps: 10_000_000,
     smoothFilter: true,
   },
   {
@@ -152,7 +152,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'epic',
     accentColor: '#22d3ee',
-    baseDps: 430,
+    baseDps: 20_000_000,
     smoothFilter: true,
   },
   {
@@ -163,7 +163,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'legendary',
     accentColor: '#818cf8',
-    baseDps: 550,
+    baseDps: 35_000_000,
     smoothFilter: true,
   },
   {
@@ -174,7 +174,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'epic',
     accentColor: '#22d3ee',
-    baseDps: 1_500,
+    baseDps: 10_000_000_000,
     smoothFilter: true,
   },
   {
@@ -185,7 +185,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'legendary',
     accentColor: '#f87171',
-    baseDps: 1_950,
+    baseDps: 20_000_000_000,
     smoothFilter: true,
   },
   {
@@ -196,7 +196,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'mythic',
     accentColor: '#fde047',
-    baseDps: 2_500,
+    baseDps: 35_000_000_000,
     smoothFilter: true,
   },
   {
@@ -207,7 +207,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'legendary',
     accentColor: '#ef4444',
-    baseDps: 7_000,
+    baseDps: 10_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -218,7 +218,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'rainbow',
     accentColor: '#f59e0b',
-    baseDps: 9_200,
+    baseDps: 20_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -229,7 +229,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'mythic',
     accentColor: '#38bdf8',
-    baseDps: 12_000,
+    baseDps: 35_000_000_000_000,
     smoothFilter: true,
   },
 
@@ -242,7 +242,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'exotic',
     accentColor: '#fb923c',
-    baseDps: 38,
+    baseDps: 65,
     smoothFilter: true,
   },
   {
@@ -253,7 +253,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'secret',
     accentColor: '#22d3ee',
-    baseDps: 60,
+    baseDps: 100,
     smoothFilter: true,
   },
   {
@@ -264,7 +264,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'exotic',
     accentColor: '#38bdf8',
-    baseDps: 190,
+    baseDps: 65_000,
     smoothFilter: true,
   },
   {
@@ -275,7 +275,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'secret',
     accentColor: '#67e8f9',
-    baseDps: 290,
+    baseDps: 100_000,
     smoothFilter: true,
   },
   {
@@ -286,7 +286,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'exotic',
     accentColor: '#f59e0b',
-    baseDps: 850,
+    baseDps: 65_000_000,
     smoothFilter: true,
   },
   {
@@ -297,7 +297,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'secret',
     accentColor: '#fb7185',
-    baseDps: 1_250,
+    baseDps: 100_000_000,
     smoothFilter: true,
   },
   {
@@ -308,7 +308,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'exotic',
     accentColor: '#fb7185',
-    baseDps: 3_800,
+    baseDps: 65_000_000_000,
     smoothFilter: true,
   },
   {
@@ -319,7 +319,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'secret',
     accentColor: '#7dd3fc',
-    baseDps: 5_600,
+    baseDps: 100_000_000_000,
     smoothFilter: true,
   },
   {
@@ -330,7 +330,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'exotic',
     accentColor: '#a855f7',
-    baseDps: 18_500,
+    baseDps: 65_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -341,7 +341,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'secret',
     accentColor: '#c084fc',
-    baseDps: 28_000,
+    baseDps: 100_000_000_000_000,
     smoothFilter: true,
   },
 
@@ -354,7 +354,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'legendary',
     accentColor: '#38bdf8',
-    baseDps: 36_000,
+    baseDps: 10_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -365,7 +365,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'rainbow',
     accentColor: '#ef4444',
-    baseDps: 48_000,
+    baseDps: 20_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -376,7 +376,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'mythic',
     accentColor: '#fbbf24',
-    baseDps: 65_000,
+    baseDps: 35_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -387,7 +387,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'exotic',
     accentColor: '#a855f7',
-    baseDps: 95_000,
+    baseDps: 65_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -398,7 +398,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'secret',
     accentColor: '#ef4444',
-    baseDps: 140_000,
+    baseDps: 100_000_000_000_000_000,
     smoothFilter: true,
   },
 
@@ -411,7 +411,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'legendary',
     accentColor: '#2dd4bf',
-    baseDps: 190_000,
+    baseDps: 10_000_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -422,7 +422,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'rainbow',
     accentColor: '#f43f5e',
-    baseDps: 260_000,
+    baseDps: 20_000_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -433,7 +433,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'mythic',
     accentColor: '#fb7185',
-    baseDps: 360_000,
+    baseDps: 35_000_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -444,7 +444,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'exotic',
     accentColor: '#a855f7',
-    baseDps: 520_000,
+    baseDps: 65_000_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -455,7 +455,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'secret',
     accentColor: '#94a3b8',
-    baseDps: 780_000,
+    baseDps: 100_000_000_000_000_000_000,
     smoothFilter: true,
   },
 
@@ -468,7 +468,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'legendary',
     accentColor: '#38bdf8',
-    baseDps: 1_050_000,
+    baseDps: 10_000_000_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -479,7 +479,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'rainbow',
     accentColor: '#ef4444',
-    baseDps: 1_450_000,
+    baseDps: 20_000_000_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -490,7 +490,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'mythic',
     accentColor: '#a855f7',
-    baseDps: 2_000_000,
+    baseDps: 35_000_000_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -501,7 +501,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'exotic',
     accentColor: '#f43f5e',
-    baseDps: 2_900_000,
+    baseDps: 65_000_000_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -512,7 +512,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'secret',
     accentColor: '#38bdf8',
-    baseDps: 4_400_000,
+    baseDps: 100_000_000_000_000_000_000_000,
     smoothFilter: true,
   },
 
@@ -525,7 +525,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'exotic',
     accentColor: '#38bdf8',
-    baseDps: 8_500,
+    baseDps: 80,
     smoothFilter: true,
   },
   {
@@ -536,7 +536,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'exotic',
     accentColor: '#bae6fd',
-    baseDps: 18_000,
+    baseDps: 80_000,
     smoothFilter: true,
   },
   {
@@ -547,7 +547,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'secret',
     accentColor: '#f43f5e',
-    baseDps: 55_000,
+    baseDps: 80_000_000,
     smoothFilter: true,
   },
   {
@@ -558,7 +558,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'secret',
     accentColor: '#c084fc',
-    baseDps: 110_000,
+    baseDps: 80_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -569,7 +569,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'secret',
     accentColor: '#fde047',
-    baseDps: 180_000,
+    baseDps: 80_000_000_000_000_000,
     smoothFilter: true,
   },
 
@@ -582,7 +582,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'fusion',
     accentColor: '#22d3ee',
-    baseDps: 26_000,
+    baseDps: 150_000,
     smoothFilter: true,
   },
   {
@@ -593,7 +593,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'fusion',
     accentColor: '#f43f5e',
-    baseDps: 72_000,
+    baseDps: 150_000_000_000,
     smoothFilter: true,
   },
   {
@@ -604,7 +604,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'fusion',
     accentColor: '#e2e8f0',
-    baseDps: 165_000,
+    baseDps: 150_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -615,7 +615,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'fusion',
     accentColor: '#facc15',
-    baseDps: 295_000,
+    baseDps: 150_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -626,7 +626,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'fusion',
     accentColor: '#fbbf24',
-    baseDps: 8_800_000,
+    baseDps: 150_000_000_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -637,7 +637,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'limited',
     accentColor: '#fbbf24',
-    baseDps: 85,
+    baseDps: 50,
     smoothFilter: true,
   },
   {
@@ -648,7 +648,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'limited',
     accentColor: '#f43f5e',
-    baseDps: 450,
+    baseDps: 50_000,
     smoothFilter: true,
   },
   {
@@ -659,7 +659,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'limited',
     accentColor: '#e11d48',
-    baseDps: 2_400,
+    baseDps: 50_000_000,
     smoothFilter: true,
   },
   {
@@ -670,7 +670,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'limited',
     accentColor: '#f43f5e',
-    baseDps: 14_000,
+    baseDps: 50_000_000_000,
     smoothFilter: true,
   },
   {
@@ -681,7 +681,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'limited',
     accentColor: '#e879f9',
-    baseDps: 48_000,
+    baseDps: 50_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -692,7 +692,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'limited',
     accentColor: '#f43f5e',
-    baseDps: 120_000,
+    baseDps: 50_000_000_000_000_000,
     smoothFilter: true,
   },
   {
@@ -703,7 +703,7 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     frames: 4,
     rarity: 'limited',
     accentColor: '#e2e8f0',
-    baseDps: 260_000,
+    baseDps: 50_000_000_000_000_000_000,
     smoothFilter: true,
   },
   {
