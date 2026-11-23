@@ -142,6 +142,26 @@ export interface TierVfxChoreoContext {
     onSlashBeat?: (beatIdx: number, pt: WorldPoint3) => void;
     onImpact?: () => void;
   }) => void;
+  fireLullabyTwinsSakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[];
+    onSlashBeat?: (beatIdx: number, pt: WorldPoint3) => void;
+    onImpact?: () => void;
+  }) => void;
+  fireNocturneTwinsSakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[];
+    onSlashBeat?: (beatIdx: number, pt: WorldPoint3) => void;
+    onImpact?: () => void;
+  }) => void;
+  fireHalcyonTwinsSakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[];
+    onSlashBeat?: (beatIdx: number, pt: WorldPoint3) => void;
+    onImpact?: () => void;
+  }) => void;
+  fireYukikageTwinsSakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[];
+    onSlashBeat?: (beatIdx: number, pt: WorldPoint3) => void;
+    onImpact?: () => void;
+  }) => void;
 }
 
 export function fireTierAttackChoreography(

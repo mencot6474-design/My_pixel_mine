@@ -25,8 +25,8 @@ const CONFIRM_AT_SEC = 2.7;
 const TWIN_CUTSCENE_PALETTES: Record<string, TwinCutscenePalette> = {
   'yukikage-twins': { colorA: '#38bdf8', colorB: '#f472b6', ribbonClass: 'text-[#38bdf8]' },
   'halcyon-twins': { colorA: '#22d3ee', colorB: '#fde047', ribbonClass: 'text-[#22d3ee]' },
-  'nocturne-twins': { colorA: '#a855f7', colorB: '#fb7185', ribbonClass: 'text-[#c084fc]' },
-  'lullaby-twins': { colorA: '#e879f9', colorB: '#38bdf8', ribbonClass: 'text-[#e879f9]' },
+  'nocturne-twins': { colorA: '#a855f7', colorB: '#f8fafc', ribbonClass: 'text-[#c084fc]' },
+  'lullaby-twins': { colorA: '#f472b6', colorB: '#a855f7', ribbonClass: 'text-[#f472b6]' },
   'clockwork-twins': { colorA: '#f59e0b', colorB: '#2dd4bf', ribbonClass: 'text-[#fbbf24]' },
 };
 

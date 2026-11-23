@@ -230,36 +230,40 @@ export function createSlashShaderMaterial(): THREE.ShaderMaterial {
           col = mix(col, vec3(0.018, 0.008, 0.035), innerDark * 0.9);
           col += uColor * midWhip * 0.9;
         } else if (uMode > 1.5 && uMode < 2.5) {
-          // Mode 2: Yukikage Frost-Ink (crystalline ice facets + dark shrine ink)
-          float iceCrystal = abs(fract(vUv.x * 18.0 + vUv.y * 4.0) - 0.5) * 2.0;
-          float crystalEdge = smoothstep(0.62, 0.94, iceCrystal + coreBand * 0.6);
-          float inkRib = smoothstep(0.54, 0.24, vUv.y);
-          col = mix(uColor * 1.35, uCoreColor * 1.85, crystalEdge);
-          col = mix(col, vec3(0.02, 0.04, 0.08), inkRib * 0.88);
-          col += vec3(0.7, 0.95, 1.0) * tipSpark * 0.8;
+          // Mode 2: Yukikage Iai-Zero Sumi-Frost Slash (razor pitch-navy sumi-ink void + jagged ice crystal fractures + absolute-zero white leading edge)
+          float iceFracture = step(0.56, abs(fract(vUv.x * 18.0 + vUv.y * 5.0 + uSeed) - 0.5) * 2.0);
+          float sumiCore = step(0.14, vUv.y) * step(vUv.y, 0.54);
+          float zeroEdge = step(0.74, vUv.y) * step(vUv.y, 0.96);
+          col = mix(uColor * 1.85, uCoreColor * 1.95, iceFracture * 0.75);
+          col = mix(col, vec3(0.012, 0.022, 0.08), sumiCore * 0.92);
+          col = mix(col, vec3(1.0) * 2.05, clamp(zeroEdge + tipSpark * 0.95 + coreBand * 0.7, 0.0, 1.0));
         } else if (uMode > 2.5 && uMode < 3.5) {
-          // Mode 3: Halcyon Valkyrie Rail-Laser (deep navy ink core + blazing solar-gold & cyan rail beam chevrons)
-          float prismWave = 0.5 + 0.5 * sin(vUv.x * 26.0 - uProgress * 14.0 + vUv.y * 6.0);
-          vec3 prismHue = mix(uColor * 1.45, uCoreColor * 1.65, prismWave);
-          float chevron = smoothstep(0.68, 0.96, abs(sin(vUv.x * 34.0 - uProgress * 8.0 + uSeed)));
-          float inkCore = smoothstep(0.60, 0.24, vUv.y);
-          col = mix(prismHue, vec3(0.02, 0.05, 0.15), inkCore * 0.88);
-          col = mix(col, vec3(1.0, 0.98, 0.88) * 1.7, clamp(coreBand + chevron * 0.55 + tipSpark * 0.8, 0.0, 1.0));
+          // Mode 3: Halcyon Razor Thunder-Rail Broadsword Cleave (hard dark-navy ink void + jagged azure-gold lightning teeth + white razor edge)
+          float railTeeth = step(0.58, abs(fract(vUv.x * 20.0 - uProgress * 10.0 + uSeed) - 0.5) * 2.0);
+          float voidSteel = step(0.14, vUv.y) * step(vUv.y, 0.52);
+          float razorRim = step(0.74, vUv.y) * step(vUv.y, 0.95);
+          float spark = step(0.88, hash21(floor(vec2(vUv.x * 46.0, vUv.y * 12.0) + uSeed)));
+          vec3 railCol = mix(uColor * 1.85, uCoreColor * 1.9, railTeeth * 0.72);
+          col = mix(railCol, vec3(0.015, 0.032, 0.11), voidSteel * 0.92);
+          col = mix(col, vec3(1.0, 0.99, 0.92) * 2.0, clamp(razorRim + spark + tipSpark * 0.95 + coreBand * 0.7, 0.0, 1.0));
         } else if (uMode > 3.5 && uMode < 4.5) {
-          // Mode 4: Nocturne Void Eclipse (Acheron hard-step black/white reality sever + violet corona rim)
-          float splitStep = smoothstep(0.46, 0.54, sin(vUv.x * 14.0 - uProgress * 9.0 + vUv.y * 5.0) * 0.5 + 0.5);
-          float voidSlash = smoothstep(0.62, 0.24, vUv.y);
-          vec3 hardCol = mix(uColor * 1.45, uCoreColor * 1.65, splitStep);
-          col = mix(hardCol, vec3(0.015, 0.01, 0.035), voidSlash * 0.92);
-          col += vec3(0.72, 0.38, 1.0) * (midWhip * 0.85 + coreBand * 0.6) + vec3(1.0) * tipSpark * 0.95;
+          // Mode 4: Nocturne Abyssal Chain-Sever (spiky black-violet ink core + silver-star razor rim)
+          float spikyEdge = smoothstep(0.36, 0.86, abs(fract(vUv.x * 16.0 - uProgress * 6.0 + uSeed) - 0.5) * 2.0);
+          float voidSlash = smoothstep(0.66, 0.24, vUv.y) * smoothstep(0.08, 0.26, vUv.y);
+          float starSpark = smoothstep(0.84, 0.98, hash21(floor(vec2(vUv.x * 42.0, vUv.y * 10.0) + uSeed)));
+          vec3 hardCol = mix(uColor * 1.55, uCoreColor * 1.7, spikyEdge * 0.65);
+          col = mix(hardCol, vec3(0.015, 0.008, 0.036), voidSlash * 0.94);
+          col += vec3(0.72, 0.38, 1.0) * (midWhip * 0.9 + coreBand * 0.65) + vec3(1.0) * (starSpark * 1.2 + tipSpark * 0.95);
         } else if (uMode > 4.5 && uMode < 5.5) {
-          // Mode 5: Lullaby Astral Music-Box (twilight indigo ink core + sakura harmonic wave + starlight glints)
-          float harmonic = smoothstep(0.38, 0.62, sin(vUv.x * 18.0 + vUv.y * 8.0 - uProgress * 10.0) * 0.5 + 0.5);
+          // Mode 5: Lullaby Gothic Nightmare Ribbon (pitch-black ink void core + blazing sakura-magenta & porcelain-violet edge + gothic star glints)
+          float laceRib = smoothstep(0.36, 0.72, cos(vUv.x * 24.0 - uProgress * 12.0 + vUv.y * 5.0) * 0.5 + 0.5);
           float sparkle = smoothstep(0.84, 0.98, hash21(floor(vec2(vUv.x * 46.0, vUv.y * 11.0))));
-          vec3 astralTint = mix(uColor * 1.48, uCoreColor * 1.72, harmonic);
-          float twilightCore = smoothstep(0.60, 0.22, vUv.y) * (1.0 - harmonic * 0.45);
-          col = mix(astralTint, vec3(0.05, 0.02, 0.14), twilightCore * 0.88);
-          col += vec3(1.0, 0.94, 0.82) * (coreBand * 0.85 + sparkle * 1.35 + tipSpark * 0.7);
+          vec3 sakuraEdge = mix(uColor * 1.62, uCoreColor * 1.75, laceRib);
+          float inkCore = smoothstep(0.68, 0.24, vUv.y) * smoothstep(0.08, 0.28, vUv.y);
+          float razorRim = smoothstep(0.68, 0.94, vUv.y) + smoothstep(0.24, 0.10, vUv.y) * 0.65;
+          col = mix(sakuraEdge, vec3(0.02, 0.006, 0.042), inkCore * 0.92);
+          col = mix(col, mix(uColor * 1.85, vec3(1.0, 0.94, 1.0), 0.52), clamp(razorRim, 0.0, 1.0));
+          col += vec3(1.0, 0.92, 0.98) * (coreBand * 0.75 + sparkle * 1.35 + tipSpark * 0.8);
         } else if (uMode > 6.5 && uMode < 7.5) {
           // Mode 7: Glitch Cheshire (RGB scanline tear + cyber pixel teeth over phantom indigo ink)
           float rowTear = floor(vUv.y * 14.0 + floor(uProgress * 14.0));

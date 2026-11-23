@@ -183,7 +183,7 @@ export function firePodiumWeaponCastChoreography(
           ? '#22d3ee'
           : chibiId === 'nocturne-twins'
             ? '#f8fafc'
-            : '#e879f9';
+            : '#f472b6';
     const twinColB =
       chibiId === 'yukikage-twins'
         ? '#e0f2fe'
@@ -191,7 +191,7 @@ export function firePodiumWeaponCastChoreography(
           ? '#fde047'
           : chibiId === 'nocturne-twins'
             ? '#a855f7'
-            : '#38bdf8';
+            : '#c084fc';
     const offsets = twinKind === 'kunai' || twinKind === 'arrow' ? [-0.6, 0, 0.6] : [-0.45, 0.45];
     offsets.forEach((dx, idx) => {
       const end = new THREE.Vector3(dest.x + dx * 0.75, dest.y, dest.z);

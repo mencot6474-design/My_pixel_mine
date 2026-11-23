@@ -223,7 +223,7 @@ export function createClockworkScytheHandGeometry(): THREE.BufferGeometry {
   return mergeSimpleGeos(parts);
 }
 
-/** Halcyon Valkyrie Crest Halo Shader behind Podium Chibi (midnight navy crosshair reticle + solar gold twin chevrons). */
+/** Halcyon Emerald-Mint, Azure & Solar-Gold Celestial Cross-Crest Halo Shader behind Podium Chibi (matches idle.webp!). */
 export function createHalcyonValkyrieHaloShaderMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -242,26 +242,39 @@ export function createHalcyonValkyrieHaloShaderMaterial(): THREE.ShaderMaterial 
       uniform float uTime;
       varying vec2 vUv;
 
+      float hcStar4(vec2 p, float r) {
+        vec2 q = abs(p);
+        return pow(pow(q.x, 0.50) + pow(q.y, 0.50), 1.0 / 0.50) - r;
+      }
+
       void main() {
         vec2 p = (vUv - 0.5) * 2.0;
         float r = length(p);
         if (r > 0.99) discard;
         float ang = atan(p.y, p.x);
 
-        float navyBg = smoothstep(0.95, 0.72, r) * 0.80;
-        float outerRing = smoothstep(0.020, 0.0, abs(r - 0.88));
-        float innerRing = smoothstep(0.018, 0.0, abs(r - 0.56));
-        float ticks = smoothstep(0.76, 0.98, cos(ang * 24.0 - uTime * 1.4)) * smoothstep(0.74, 0.78, r) * smoothstep(0.87, 0.83, r);
-        float crosshair = (smoothstep(0.022, 0.0, abs(p.x)) + smoothstep(0.022, 0.0, abs(p.y))) * smoothstep(0.92, 0.44, r) * smoothstep(0.32, 0.44, r);
-        float chevrons = smoothstep(0.84, 0.98, cos((ang + uTime * 0.8) * 4.0)) * smoothstep(0.66, 0.58, r) * smoothstep(0.42, 0.50, r);
+        float navyBg = smoothstep(0.95, 0.70, r) * 0.88;
+        float outerRing = step(abs(r - 0.87), 0.022);
+        float innerRing = step(abs(r - 0.56), 0.016);
+        float ticks = step(0.80, abs(sin(ang * 12.0 - uTime * 2.4))) * step(abs(r - 0.72), 0.06);
+        float polarity = step(0.0, sin(ang * 2.0 + uTime * 2.0));
 
-        vec3 navy = vec3(0.02, 0.06, 0.16);
-        vec3 cyan = vec3(0.14, 0.84, 0.98);
-        vec3 gold = vec3(0.99, 0.84, 0.24);
+        // Razor Celestial 4-Point Cross-Fleur Crest at apex (p.y ~ 0.84)
+        vec2 apexP = p - vec2(0.0, 0.82);
+        float apexCrest = step(hcStar4(apexP * 1.15, 0.19), 0.015);
+        float glintRing = step(0.90, cos(ang * 8.0 + uTime * 3.0)) * step(abs(r - 0.87), 0.045);
 
-        float mask = clamp(outerRing + innerRing + ticks + crosshair + chevrons, 0.0, 1.0);
-        vec3 col = navy + cyan * (outerRing * 1.35 + crosshair * 1.4 + chevrons * 1.1) + gold * (innerRing * 1.4 + ticks * 1.45);
-        float edge = smoothstep(0.99, 0.88, r);
+        vec3 navy = vec3(0.015, 0.035, 0.12);
+        vec3 mintAqua = vec3(0.18, 0.96, 0.92);
+        vec3 azureBlue = vec3(0.14, 0.84, 1.0);
+        vec3 solarGold = vec3(1.0, 0.88, 0.28);
+
+        float mask = clamp(outerRing + innerRing + ticks + apexCrest + glintRing, 0.0, 1.0);
+        vec3 col = navy
+          + mix(mintAqua, solarGold, polarity) * (outerRing * 1.55 + innerRing * 1.25)
+          + azureBlue * (ticks * 1.45 + glintRing * 1.55)
+          + vec3(1.0) * (apexCrest * 1.65);
+        float edge = smoothstep(0.99, 0.87, r);
         float alpha = clamp(max(navyBg, mask) * 1.14 * edge * uOpacity, 0.0, 0.98);
         if (alpha < 0.015) discard;
         gl_FragColor = vec4(col, alpha);
@@ -274,7 +287,7 @@ export function createHalcyonValkyrieHaloShaderMaterial(): THREE.ShaderMaterial 
   });
 }
 
-/** Halcyon Valkyrie Rail-Bow & Wing-Blade Shader (obsidian navy chassis + solar gold rail + blazing sky-cyan core). */
+/** Halcyon Paladin Dark-Steel & Azure-Gold Shader for Podium Angel Wings & Twin Broadswords. */
 export function createHalcyonRailBowShaderMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -304,16 +317,20 @@ export function createHalcyonRailBowShaderMaterial(): THREE.ShaderMaterial {
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
         vec3 L = normalize(vec3(0.4, 0.85, 0.5));
-        float rim = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.5);
-        float ndl = 0.45 + 0.55 * max(0.0, dot(N, L));
-        float pulse = smoothstep(0.55, 0.96, sin(vLocalPos.y * 12.0 - uTime * 9.0));
+        float ndv = abs(dot(N, V));
+        float cel = step(0.32, dot(N, L));
+        float inkRim = step(ndv, 0.24);
+        float edgeGlow = step(0.24, ndv) * step(ndv, 0.42);
+        float pulse = step(0.72, sin(vLocalPos.y * 16.0 - uTime * 16.0));
 
-        vec3 chassis = vec3(0.04, 0.09, 0.22);
-        vec3 gold = vec3(0.99, 0.84, 0.24);
-        vec3 cyan = vec3(0.16, 0.86, 0.99);
+        vec3 darkSteel = vec3(0.025, 0.05, 0.15);
+        vec3 pearlWhite = vec3(0.92, 0.97, 1.0);
+        vec3 gold = vec3(1.0, 0.88, 0.28);
+        vec3 azure = vec3(0.14, 0.86, 1.0);
 
-        vec3 col = mix(chassis, gold * 1.32, clamp(ndl * 0.55 + rim * 0.65, 0.0, 1.0));
-        col = mix(col, cyan * 1.5, clamp(pulse * 0.6 + pow(rim, 2.2) * 0.7, 0.0, 1.0));
+        vec3 col = mix(darkSteel, pearlWhite, cel * 0.85);
+        col = mix(col, mix(gold * 1.45, azure * 1.75, pulse), max(edgeGlow * 0.85, pulse * 0.55));
+        col = mix(col, vec3(0.01, 0.02, 0.06), inkRim * 0.92);
         gl_FragColor = vec4(col, clamp(0.98 * uOpacity, 0.0, 0.98));
       }
     `,
@@ -324,53 +341,65 @@ export function createHalcyonRailBowShaderMaterial(): THREE.ShaderMaterial {
   });
 }
 
-/** Faceted 3D Mechanical Wing-Blade Geometry for Halcyon Twins (sharp chamfered prism stabilizer, zero SVG curves). */
+/** Sculpted Feathered Angel Wing-Blade Geometry for Halcyon Twins Podium Back (matches idle.webp white angel wings!). */
 export function createHalcyonMechanicalWingBladeGeometry(): THREE.BufferGeometry {
-  const parts: THREE.BufferGeometry[] = [];
-  const mainBlade = new THREE.ConeGeometry(0.18, 1.25, 4);
-  mainBlade.scale(0.65, 1.0, 0.28);
-  mainBlade.rotateZ(-0.85);
-  mainBlade.translate(0.58, 0.42, 0);
-  parts.push(mainBlade);
+  const s = new THREE.Shape();
+  s.moveTo(0, -0.06);
+  s.lineTo(0.46, 0.22);
+  s.lineTo(1.18, 0.14);
+  s.lineTo(0.84, -0.04);
+  s.lineTo(1.04, -0.14);
+  s.lineTo(0.54, -0.18);
+  s.lineTo(0, -0.06);
+  s.closePath();
 
-  const subBlade = new THREE.ConeGeometry(0.12, 0.82, 4);
-  subBlade.scale(0.65, 1.0, 0.24);
-  subBlade.rotateZ(-1.18);
-  subBlade.translate(0.46, 0.14, 0.01);
-  parts.push(subBlade);
-
-  const rootHub = new THREE.OctahedronGeometry(0.16, 0);
-  rootHub.scale(0.85, 1.2, 0.45);
-  rootHub.translate(0.12, 0.04, 0);
-  parts.push(rootHub);
-  return mergeSimpleGeos(parts);
+  const geo = new THREE.ExtrudeGeometry(s, {
+    depth: 0.036,
+    bevelEnabled: true,
+    bevelThickness: 0.012,
+    bevelSize: 0.010,
+    bevelSegments: 1,
+  });
+  geo.translate(0, 0, -0.018);
+  geo.computeVertexNormals();
+  return geo;
 }
 
-/** Sculpted Upright Twin Valkyrie Rail-Bow Arc Geometry for Halcyon Twins Podium Back. */
+/** Sculpted Upright Paladin Broadsword Geometry for Halcyon Twins Podium Back (matches idle.webp & pose.webp!). */
 export function createHalcyonRailBowGeometry(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  const upperLimb = new THREE.ConeGeometry(0.085, 0.72, 4);
-  upperLimb.rotateZ(-0.28);
-  upperLimb.translate(0.14, 0.42, 0);
-  parts.push(upperLimb);
+  const blade = new THREE.Shape();
+  blade.moveTo(-0.025, -0.44);
+  blade.lineTo(0.025, -0.44);
+  blade.lineTo(0.03, -0.06);
+  blade.lineTo(0.18, 0.02);
+  blade.lineTo(0.08, 0.08);
+  blade.lineTo(0.10, 0.88);
+  blade.lineTo(0, 1.24);
+  blade.lineTo(-0.10, 0.88);
+  blade.lineTo(-0.08, 0.08);
+  blade.lineTo(-0.18, 0.02);
+  blade.lineTo(-0.03, -0.06);
+  blade.closePath();
 
-  const lowerLimb = new THREE.ConeGeometry(0.085, 0.72, 4);
-  lowerLimb.rotateZ(Math.PI + 0.28);
-  lowerLimb.translate(0.14, -0.42, 0);
-  parts.push(lowerLimb);
+  const bladeGeo = new THREE.ExtrudeGeometry(blade, {
+    depth: 0.032,
+    bevelEnabled: true,
+    bevelThickness: 0.012,
+    bevelSize: 0.010,
+    bevelSegments: 1,
+  });
+  bladeGeo.translate(0, 0, -0.016);
+  parts.push(bladeGeo);
 
-  const bowCore = new THREE.OctahedronGeometry(0.14, 0);
-  bowCore.scale(0.75, 1.45, 0.55);
-  bowCore.translate(0.02, 0, 0);
-  parts.push(bowCore);
-
-  const energyString = new THREE.CylinderGeometry(0.018, 0.018, 1.38, 6);
-  energyString.translate(0.24, 0, 0);
-  parts.push(energyString);
+  const gem = new THREE.OctahedronGeometry(0.085, 0);
+  gem.scale(0.85, 1.35, 0.55);
+  gem.translate(0, 0.02, 0);
+  parts.push(gem);
   return mergeSimpleGeos(parts);
 }
 
-/** Horizontal Orbital Crosshair & Telemetry Coordinate Floor Seal Shader for Halcyon Twins. */
+/** Horizontal Emerald-Mint, Azure & Solar-Gold Sanctuary Floor Seal Shader for Halcyon Twins. */
 export function createHalcyonOrbitalSealShaderMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -391,34 +420,43 @@ export function createHalcyonOrbitalSealShaderMaterial(): THREE.ShaderMaterial {
       uniform float uOpacity;
       varying vec2 vUv;
 
+      float hcStar4(vec2 p, float r) {
+        vec2 q = abs(p);
+        return pow(pow(q.x, 0.50) + pow(q.y, 0.50), 1.0 / 0.50) - r;
+      }
+
       void main() {
         vec2 p = (vUv - 0.5) * 2.0;
         float r = length(p);
         if (r > 1.0) discard;
         float ang = atan(p.y, p.x);
 
-        float navyBg = smoothstep(0.96, 0.72, r) * 0.80;
-        float outerTrack = smoothstep(0.020, 0.0, abs(r - 0.90));
+        float navyBg = smoothstep(0.96, 0.70, r) * 0.82;
+        float wave = 0.025 * sin(ang * 4.0 - uTime * 2.0);
+        float outerTrack = smoothstep(0.022, 0.0, abs(r - (0.88 + wave)));
         float midReticle = smoothstep(0.018, 0.0, abs(r - 0.58));
-        float innerLock = smoothstep(0.022, 0.0, abs(r - (0.34 - uProgress * 0.14)));
+        float innerLock = smoothstep(0.020, 0.0, abs(r - 0.30));
 
-        // Azimuth degree ticks & 4 diagonal pillar lock-on rays
-        float ticks = smoothstep(0.82, 0.98, cos(ang * 32.0 - uTime * 1.6)) * smoothstep(0.76, 0.80, r) * smoothstep(0.88, 0.84, r);
-        float diagLock = smoothstep(0.92, 0.99, abs(cos((ang + 0.785398) * 2.0))) * smoothstep(0.94, 0.24, r);
-        float crossH = smoothstep(0.018, 0.0, abs(p.y)) * smoothstep(0.92, 0.12, abs(p.x));
-        float crossV = smoothstep(0.018, 0.0, abs(p.x)) * smoothstep(0.92, 0.12, abs(p.y));
-        float radarWave = smoothstep(0.08, 0.0, abs(r - fract(uProgress * 2.2) * 0.94));
+        float sectorAng = mod(ang - uTime * 0.6 + 3.14159265, 1.5707963) - 0.78539816;
+        vec2 slotP = vec2(sin(sectorAng) * r, r - 0.73);
+        float crest = smoothstep(0.03, 0.0, hcStar4(slotP * 4.5, 0.58));
+        float centerStar = smoothstep(0.025, 0.0, hcStar4(p, 0.24));
+        float pulseWave = smoothstep(0.08, 0.0, abs(r - fract(uProgress * 2.2) * 0.94));
 
-        vec3 navy = vec3(0.02, 0.06, 0.16);
-        vec3 cyan = vec3(0.14, 0.84, 0.98);
-        vec3 gold = vec3(0.99, 0.84, 0.24);
+        vec3 navy = vec3(0.02, 0.06, 0.18);
+        vec3 mintAqua = vec3(0.18, 0.92, 0.88);
+        vec3 azure = vec3(0.16, 0.74, 1.0);
+        vec3 gold = vec3(1.0, 0.86, 0.28);
 
-        float lineMask = clamp(outerTrack + midReticle + innerLock + ticks + diagLock + crossH + crossV + radarWave, 0.0, 1.0);
+        float polarity = 0.5 + 0.5 * sin(ang * 2.0 + uTime * 1.5);
+        float lineMask = clamp(outerTrack + midReticle + innerLock + crest + centerStar + pulseWave, 0.0, 1.0);
         vec3 col = navy
-          + cyan * (outerTrack * 1.4 + crossH * 1.2 + crossV * 1.2 + radarWave * 1.3)
-          + gold * (midReticle * 1.4 + innerLock * 1.55 + ticks * 1.35 + diagLock * 1.3);
+          + mix(mintAqua, gold, polarity) * (outerTrack * 1.45 + midReticle * 1.2)
+          + azure * (innerLock * 1.2 + pulseWave * 1.4)
+          + gold * (crest * 1.45)
+          + vec3(1.0) * (centerStar * 0.9);
 
-        float edge = smoothstep(1.0, 0.90, r);
+        float edge = smoothstep(1.0, 0.89, r);
         float alpha = clamp(max(navyBg, lineMask) * 1.16 * edge * uOpacity, 0.0, 0.98);
         if (alpha < 0.015) discard;
         gl_FragColor = vec4(col, alpha);
@@ -713,78 +751,58 @@ export function createYukikageShrineRingShaderMaterial(): THREE.ShaderMaterial {
       void main() {
         vec2 p = (vUv - 0.5) * 2.0;
         float r = length(p);
-        if (r > 0.99 || r < 0.14) discard;
-        float ang = atan(p.y, p.x);
+        if (r > 0.99 || r < 0.16) discard;
 
-        // 2.5s 3-Phase Sakuga Timeline: 0.0-0.2 Charge, 0.2-0.5 Snappy Strike Surge, 0.5-1.0 Voronoi/Ink Dissolve
         float cycle = fract(uTime * 0.4 + uProgress);
         float charge = smoothstep(0.0, 0.2, cycle);
         float strike = 1.0 - pow(1.0 - clamp((cycle - 0.2) / 0.3, 0.0, 1.0), 3.0);
-        float dissolveT = clamp((cycle - 0.5) / 0.5, 0.0, 1.0);
 
-        // 1. 24-Ribbed Black Bamboo Wagasa Umbrella Canopy Wheel (centered slightly upper-left behind Yuki)
-        vec2 wagP = p - vec2(-0.14, 0.12);
-        float wagR = length(wagP);
-        float wagAng = atan(wagP.y, wagP.x) + uTime * 0.28;
-        float wagasaCanopy = smoothstep(0.76, 0.72, wagR) * smoothstep(0.10, 0.18, wagR);
-        float wagasaRim = smoothstep(0.024, 0.004, abs(wagR - 0.74));
-        float bambooHub = smoothstep(0.022, 0.004, abs(wagR - 0.26)) + smoothstep(0.018, 0.003, abs(wagR - 0.32));
-        float bambooRibs = pow(max(0.0, cos(wagAng * 12.0)), 18.0) * wagasaCanopy;
+        // Open-Air 6-Branch Akaza Snowflake Needles & Dual-Square Kekkai Barrier (ZERO round disc!)
+        float rotA = uTime * 0.24;
+        float cA = cos(rotA), sA = sin(rotA);
+        vec2 rp = vec2(p.x * cA - p.y * sA, p.x * sA + p.y * cA);
+        float sector = mod(atan(rp.y, rp.x) + 3.14159265, 1.04719755) - 0.52359877;
+        vec2 q = vec2(cos(sector), abs(sin(sector))) * r;
 
-        // 2. Sweeping Left Sumi-Ink & Dark-Teal Brush Slash Crescent (matching attack.webp left twin)
-        float inkFbm = ykFbm(vec2(ang * 2.8 - uTime * 1.1, r * 5.2 - uTime * 0.7));
-        float leftArcGate = smoothstep(0.35, -0.45, p.x);
-        float inkCrescent = smoothstep(0.11, 0.018, abs(r - (0.81 + (inkFbm - 0.5) * 0.12))) * leftArcGate;
-        float inkTealEdge = smoothstep(0.045, 0.008, abs(r - (0.84 + (inkFbm - 0.5) * 0.10))) * leftArcGate;
+        float needle = max(abs(q.y) - 0.024 * (1.0 - q.x * 0.4), q.x - 0.90);
+        vec2 b1 = q - vec2(0.40, 0.0);
+        vec2 r1 = vec2(b1.x * 0.7071 + b1.y * 0.7071, abs(b1.y * 0.7071 - b1.x * 0.7071));
+        float barb = max(r1.y - 0.016, max(r1.x - 0.22, -r1.x));
+        float dSnow = min(needle, barb);
+        float snowInk = smoothstep(0.036, 0.012, dSnow);
+        float snowBody = step(dSnow, 0.0);
+        float snowCore = step(dSnow, -0.009);
 
-        // 3. Sweeping Right Voronoi Cryo-Crystal & 6-Fold Snowflake Stream (matching attack.webp right twin)
-        vec2 vor = ykVoronoi(p * 6.2 + vec2(-uTime * 0.4, uTime * 0.3));
-        float crystalFacet = smoothstep(0.14, 0.02, vor.y - vor.x);
-        float rightArcGate = smoothstep(-0.35, 0.45, p.x);
-        float frostCrescent = smoothstep(0.12, 0.02, abs(r - (0.80 + (vor.x - 0.4) * 0.10))) * rightArcGate;
-        float frostCore = crystalFacet * frostCrescent;
+        // Counter-rotating Japanese 8-Pointed Kekkai Shrine Frame
+        float rotB = -uTime * 0.18;
+        float cB = cos(rotB), sB = sin(rotB);
+        vec2 kp = vec2(p.x * cB - p.y * sB, p.x * sB + p.y * cB);
+        float dKekkai = min(abs(max(abs(kp.x), abs(kp.y)) - 0.64), abs((abs(kp.x) + abs(kp.y)) * 0.7071 - 0.64));
+        float kekkaiInk = smoothstep(0.034, 0.012, dKekkai);
+        float kekkaiBody = step(dKekkai, 0.012);
 
-        // 6-Fold Crystalline Snowflake Spokes & Barbs
-        float snowAng = ang - uTime * 0.35;
-        float snowSpoke = pow(max(0.0, cos(snowAng * 3.0)), 22.0) * smoothstep(0.92, 0.32, r) * smoothstep(0.24, 0.42, r);
-        float frostDissolve = smoothstep(dissolveT - 0.12, dissolveT + 0.12, mix(inkFbm, 1.0 - vor.x, 0.5));
-        float activeSnow = (snowSpoke + frostCore) * (0.62 + 0.38 * charge * frostDissolve);
-
-        // 4. Orbiting Dark-Teal Hitodama Spirit Wisps (idle.webp) & Warm Amber Lantern Fireflies (pose.webp)
-        float hitodamaGlow = 0.0;
-        float lanternFirefly = 0.0;
-        for (int i = 0; i < 2; i++) {
-          float fi = float(i);
-          float wAng = uTime * 0.95 + fi * 3.14159265;
-          vec2 wPos = vec2(cos(wAng) * 0.84, sin(wAng) * 0.72);
-          float dWisp = length(p - wPos);
-          hitodamaGlow += smoothstep(0.11, 0.025, dWisp);
-
-          float fAng = -uTime * 0.75 + fi * 3.14159265 + 0.9;
-          vec2 fPos = vec2(cos(fAng) * 0.64, sin(fAng) * 0.64);
-          lanternFirefly += smoothstep(0.075, 0.012, length(p - fPos));
+        // 4 Orbiting Amber-Gold Ofuda / Hitodama Diamond Talismans
+        float talisman = 0.0;
+        for (int i = 0; i < 4; i++) {
+          float a = float(i) * 1.5707963 + rotB * 1.4;
+          vec2 tPos = p - vec2(cos(a), sin(a)) * 0.80;
+          talisman += step(abs(tPos.x) + abs(tPos.y), 0.095);
         }
 
-        vec3 sumiInk = vec3(0.025, 0.05, 0.11);
-        vec3 darkTeal = vec3(0.08, 0.58, 0.68);
-        vec3 cryoCyan = vec3(0.22, 0.78, 0.98) * (1.28 + strike * 0.42);
-        vec3 snowWhite = vec3(0.95, 0.99, 1.0) * (1.35 + strike * 0.45);
-        vec3 bambooAmber = vec3(0.99, 0.78, 0.22) * 1.42;
+        vec3 sumiInk = vec3(0.014, 0.028, 0.08);
+        vec3 cryoCyan = vec3(0.20, 0.88, 1.0) * (1.35 + strike * 0.45);
+        vec3 snowWhite = vec3(0.96, 0.99, 1.0) * (1.42 + charge * 0.35);
+        vec3 bambooAmber = vec3(1.0, 0.82, 0.24) * 1.55;
 
+        float inkMask = clamp(max(snowInk, kekkaiInk), 0.0, 1.0);
         vec3 col = sumiInk;
-        // Wagasa bamboo ribs & hub rings
-        col = mix(col, mix(sumiInk, bambooAmber, 0.55), bambooRibs * 0.75);
-        col = mix(col, bambooAmber, clamp(bambooHub * wagasaCanopy * 1.2 + lanternFirefly * 1.1, 0.0, 1.0));
-        // Left Sumi-Ink & Dark-Teal slash stream
-        col = mix(col, darkTeal * 1.35, clamp(inkTealEdge + hitodamaGlow * 0.85, 0.0, 1.0));
-        col = mix(col, sumiInk, inkCrescent * (1.0 - inkTealEdge * 0.65));
-        // Right Cryo-Frost & Voronoi Ice stream
-        col = mix(col, cryoCyan, clamp(frostCrescent + wagasaRim * 0.85 + activeSnow * 0.75, 0.0, 1.0));
-        col = mix(col, snowWhite, clamp(activeSnow * 0.9 + hitodamaGlow * 0.55 + lanternFirefly * 0.45, 0.0, 1.0));
+        col = mix(col, cryoCyan, clamp(snowBody, 0.0, 1.0));
+        col = mix(col, bambooAmber, clamp(kekkaiBody * 0.95 + talisman, 0.0, 1.0));
+        col = mix(col, snowWhite, clamp(snowCore + talisman * 0.4, 0.0, 1.0));
 
-        float structureMask = clamp(wagasaCanopy * 0.86 + inkCrescent + inkTealEdge + frostCrescent + activeSnow + hitodamaGlow + lanternFirefly, 0.0, 1.0);
-        float edgeFade = smoothstep(0.99, 0.89, r) * smoothstep(0.14, 0.24, r);
-        float alpha = clamp(structureMask * 1.18 * edgeFade * uOpacity, 0.0, 0.98);
+        float structureMask = clamp(max(inkMask * 0.85, max(snowBody, max(kekkaiBody, talisman))), 0.0, 1.0);
+        float edgeFade = smoothstep(0.99, 0.90, r) * smoothstep(0.16, 0.24, r);
+        float alpha = clamp(structureMask * 1.15 * edgeFade * uOpacity, 0.0, 0.98);
         if (alpha < 0.015) discard;
         gl_FragColor = vec4(col, alpha);
       }
@@ -859,24 +877,24 @@ export function createYukikageKunaiShaderMaterial(): THREE.ShaderMaterial {
         vec3 V = normalize(vViewPos);
         vec3 L = normalize(vec3(0.42, 0.86, 0.52));
         float ndv = abs(dot(N, V));
-        float ndl = 0.45 + 0.55 * max(0.0, dot(N, L));
-        float rim = pow(max(0.0001, 1.0 - ndv), 1.55);
-        float inkBorder = smoothstep(0.24, 0.10, ndv);
+        float cel = step(0.32, dot(N, L));
+        float rim = step(ndv, 0.38);
+        float inkBorder = step(ndv, 0.22);
 
         float vorEdge = ykPropVoronoi(vLocalPos.xy * 6.5 + vec2(0.0, -uTime * 0.8));
-        float crystalRidge = smoothstep(0.14, 0.02, vorEdge);
-        float frostPulse = 0.72 + 0.28 * sin(vLocalPos.y * 12.0 - uTime * 9.0);
-        float tipSnow = smoothstep(0.18, 0.78, vLocalPos.y);
+        float crystalRidge = step(vorEdge, 0.09);
+        float frostPulse = step(0.55, sin(vLocalPos.y * 14.0 - uTime * 11.0));
+        float tipSnow = step(0.38, vLocalPos.y);
 
-        vec3 sumiInk = vec3(0.025, 0.055, 0.13);
-        vec3 glacialBlue = vec3(0.14, 0.68, 0.96);
-        vec3 cryoCyan = vec3(0.45, 0.90, 1.0);
+        vec3 sumiInk = vec3(0.018, 0.042, 0.11);
+        vec3 glacialBlue = vec3(0.14, 0.72, 0.98);
+        vec3 cryoCyan = vec3(0.45, 0.92, 1.0);
         vec3 pureSnow = vec3(0.96, 0.99, 1.0);
 
-        vec3 col = mix(sumiInk, glacialBlue * (0.85 + 0.35 * ndl), 0.55 + tipSnow * 0.35);
-        col = mix(col, cryoCyan * 1.38, clamp(rim * 0.85 + crystalRidge * 0.75 * frostPulse, 0.0, 1.0));
-        col = mix(col, pureSnow * 1.45, clamp(pow(rim, 2.4) * 0.82 + crystalRidge * tipSnow * 0.7, 0.0, 1.0));
-        col = mix(col, sumiInk, inkBorder * 0.78);
+        vec3 col = mix(sumiInk, glacialBlue, clamp(cel * 0.7 + tipSnow * 0.35, 0.0, 1.0));
+        col = mix(col, cryoCyan * 1.48, clamp(rim * 0.82 + crystalRidge * frostPulse * 0.8, 0.0, 1.0));
+        col = mix(col, pureSnow * 1.55, clamp(crystalRidge * tipSnow * 0.85, 0.0, 1.0));
+        col = mix(col, sumiInk, inkBorder * 0.92);
 
         float alpha = clamp(0.97 * uOpacity, 0.0, 0.99);
         if (alpha < 0.01) discard;

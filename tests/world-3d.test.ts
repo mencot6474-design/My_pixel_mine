@@ -3578,7 +3578,7 @@ describe('Pure 3D Mine World', () => {
       }
       if (id === 'lullaby-twins') {
         const backGroup = sprite.group.getObjectByName('chibiBackAttachmentGroup');
-        expect(backGroup?.children.length).toBe(2); // Music-Box Halo + Moon Cradle Arch
+        expect(backGroup?.children.length).toBe(6); // Gothic Rose-Window Halo + Sanctuary Crown + 4 Demon/Angel Wing Pinions
       }
       if (id === 'clockwork-twins') {
         const backGroup = sprite.group.getObjectByName('chibiBackAttachmentGroup');

@@ -39,6 +39,10 @@ import {
 import { CrimsonRoninSkillVfxPool } from './skills/crimsonRoninSkillVfx3D';
 import { ObsidianSovereignSkillVfxPool } from './skills/obsidianSovereignSkillVfx3D';
 import { ClockworkTwinsSkillVfxPool } from './skills/clockworkTwinsSkillVfx3D';
+import { LullabyTwinsSkillVfxPool } from './skills/lullabyTwinsSkillVfx3D';
+import { NocturneTwinsSkillVfxPool } from './skills/nocturneTwinsSkillVfx3D';
+import { HalcyonTwinsSkillVfxPool } from './skills/halcyonTwinsSkillVfx3D';
+import { YukikageTwinsSkillVfxPool } from './skills/yukikageTwinsSkillVfx3D';
 import {
   createTierVfxPoolCollections,
   firePodiumWeaponCastChoreography,
@@ -142,6 +146,10 @@ export class TierAttackVfxPool3D {
   private readonly crimsonRoninSkillPool: CrimsonRoninSkillVfxPool;
   private readonly obsidianSovereignSkillPool: ObsidianSovereignSkillVfxPool;
   private readonly clockworkTwinsSkillPool: ClockworkTwinsSkillVfxPool;
+  private readonly lullabyTwinsSkillPool: LullabyTwinsSkillVfxPool;
+  private readonly nocturneTwinsSkillPool: NocturneTwinsSkillVfxPool;
+  private readonly halcyonTwinsSkillPool: HalcyonTwinsSkillVfxPool;
+  private readonly yukikageTwinsSkillPool: YukikageTwinsSkillVfxPool;
   private readonly updateState: TierVfxPoolUpdateState;
 
   constructor(hooks: TierVfxHooks = {}) {
@@ -220,10 +228,18 @@ export class TierAttackVfxPool3D {
     this.crimsonRoninSkillPool = new CrimsonRoninSkillVfxPool(this.hooks);
     this.obsidianSovereignSkillPool = new ObsidianSovereignSkillVfxPool(this.hooks);
     this.clockworkTwinsSkillPool = new ClockworkTwinsSkillVfxPool(this.hooks);
+    this.lullabyTwinsSkillPool = new LullabyTwinsSkillVfxPool(this.hooks);
+    this.nocturneTwinsSkillPool = new NocturneTwinsSkillVfxPool(this.hooks);
+    this.halcyonTwinsSkillPool = new HalcyonTwinsSkillVfxPool(this.hooks);
+    this.yukikageTwinsSkillPool = new YukikageTwinsSkillVfxPool(this.hooks);
     this.group.add(
       this.crimsonRoninSkillPool.group,
       this.obsidianSovereignSkillPool.group,
-      this.clockworkTwinsSkillPool.group
+      this.clockworkTwinsSkillPool.group,
+      this.lullabyTwinsSkillPool.group,
+      this.nocturneTwinsSkillPool.group,
+      this.halcyonTwinsSkillPool.group,
+      this.yukikageTwinsSkillPool.group
     );
     for (const mat of this.crimsonRoninSkillPool.getMaterials()) {
       patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
@@ -232,6 +248,18 @@ export class TierAttackVfxPool3D {
       patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
     }
     for (const mat of this.clockworkTwinsSkillPool.getMaterials()) {
+      patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
+    }
+    for (const mat of this.lullabyTwinsSkillPool.getMaterials()) {
+      patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
+    }
+    for (const mat of this.nocturneTwinsSkillPool.getMaterials()) {
+      patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
+    }
+    for (const mat of this.halcyonTwinsSkillPool.getMaterials()) {
+      patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
+    }
+    for (const mat of this.yukikageTwinsSkillPool.getMaterials()) {
       patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
     }
   }
@@ -284,6 +312,10 @@ export class TierAttackVfxPool3D {
       fireCrimsonRoninSakuga: (o) => this.crimsonRoninSkillPool.fire(o),
       fireObsidianSovereignSakuga: (o) => this.obsidianSovereignSkillPool.fire(o),
       fireClockworkTwinsSakuga: (o) => this.clockworkTwinsSkillPool.fire(o),
+      fireLullabyTwinsSakuga: (o) => this.lullabyTwinsSkillPool.fire(o),
+      fireNocturneTwinsSakuga: (o) => this.nocturneTwinsSkillPool.fire(o),
+      fireHalcyonTwinsSakuga: (o) => this.halcyonTwinsSkillPool.fire(o),
+      fireYukikageTwinsSakuga: (o) => this.yukikageTwinsSkillPool.fire(o),
     };
   }
 
@@ -292,6 +324,10 @@ export class TierAttackVfxPool3D {
     this.crimsonRoninSkillPool.setHooks(hooks);
     this.obsidianSovereignSkillPool.setHooks(hooks);
     this.clockworkTwinsSkillPool.setHooks(hooks);
+    this.lullabyTwinsSkillPool.setHooks(hooks);
+    this.nocturneTwinsSkillPool.setHooks(hooks);
+    this.halcyonTwinsSkillPool.setHooks(hooks);
+    this.yukikageTwinsSkillPool.setHooks(hooks);
   }
 
   public setLowQuality(low: boolean): void {
@@ -299,6 +335,10 @@ export class TierAttackVfxPool3D {
     this.crimsonRoninSkillPool.setLowQuality(low);
     this.obsidianSovereignSkillPool.setLowQuality(low);
     this.clockworkTwinsSkillPool.setLowQuality(low);
+    this.lullabyTwinsSkillPool.setLowQuality(low);
+    this.nocturneTwinsSkillPool.setLowQuality(low);
+    this.halcyonTwinsSkillPool.setLowQuality(low);
+    this.yukikageTwinsSkillPool.setLowQuality(low);
   }
 
   public clear(): void {
@@ -335,6 +375,10 @@ export class TierAttackVfxPool3D {
     this.crimsonRoninSkillPool.clear();
     this.obsidianSovereignSkillPool.clear();
     this.clockworkTwinsSkillPool.clear();
+    this.lullabyTwinsSkillPool.clear();
+    this.nocturneTwinsSkillPool.clear();
+    this.halcyonTwinsSkillPool.clear();
+    this.yukikageTwinsSkillPool.clear();
   }
 
   private after(delay: number, fn: () => void): void {
@@ -1006,6 +1050,10 @@ export class TierAttackVfxPool3D {
     this.crimsonRoninSkillPool.update(dtSec, this.time);
     this.obsidianSovereignSkillPool.update(dtSec, this.time);
     this.clockworkTwinsSkillPool.update(dtSec, this.time);
+    this.lullabyTwinsSkillPool.update(dtSec, this.time);
+    this.nocturneTwinsSkillPool.update(dtSec, this.time);
+    this.halcyonTwinsSkillPool.update(dtSec, this.time);
+    this.yukikageTwinsSkillPool.update(dtSec, this.time);
   }
 
   public dispose(): void {
@@ -1015,6 +1063,10 @@ export class TierAttackVfxPool3D {
     this.crimsonRoninSkillPool.dispose();
     this.obsidianSovereignSkillPool.dispose();
     this.clockworkTwinsSkillPool.dispose();
+    this.lullabyTwinsSkillPool.dispose();
+    this.nocturneTwinsSkillPool.dispose();
+    this.halcyonTwinsSkillPool.dispose();
+    this.yukikageTwinsSkillPool.dispose();
     const mats = new Set<THREE.Material>();
     for (const s of this.slashes) mats.add(s.mat);
     for (const d of this.domes) mats.add(d.mat);

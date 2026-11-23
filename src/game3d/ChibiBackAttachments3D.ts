@@ -41,6 +41,8 @@ import {
   createLullabyMoonCradleArchGeometry,
   createLullabyMoonCradleShaderMaterial,
   createLullabyPinkAuraShaderMaterial,
+  createLullabyWingFeatherGeometry,
+  createLullabyWingFeatherShaderMaterial,
   createMonochromeCruciformBackShaderMaterial,
   createMonochromeCruciformSwordGeometry,
   createMonochromeSumiBackHaloShaderMaterial,
@@ -431,21 +433,48 @@ export function createChibiBackAttachments(
   } else if (defId === 'lullaby-twins') {
     handle.omegaAuraGroup = new THREE.Group();
     handle.omegaAuraGroup.position.set(0, spriteHeight * 0.56, -0.15);
-    const musicBoxHaloMat = createLullabyPinkAuraShaderMaterial();
-    const cradleMat = createLullabyMoonCradleShaderMaterial();
-    handle.omegaAuraMat = cradleMat;
-    handle.twinCustomMats.push(musicBoxHaloMat, cradleMat);
+    const gothicHaloMat = createLullabyPinkAuraShaderMaterial();
+    const crownMat = createLullabyMoonCradleShaderMaterial();
+    const demonWingMat = createLullabyWingFeatherShaderMaterial(false);
+    const angelWingMat = createLullabyWingFeatherShaderMaterial(true);
+    handle.omegaAuraMat = crownMat;
+    handle.twinCustomMats.push(gothicHaloMat, crownMat, demonWingMat, angelWingMat);
 
-    const discGeo = new THREE.PlaneGeometry(1.92, 1.92);
-    const cradleGeo = createLullabyMoonCradleArchGeometry();
-    handle.twinCustomGeos.push(discGeo, cradleGeo);
+    const discGeo = new THREE.PlaneGeometry(2.08, 2.08);
+    const crownGeo = createLullabyMoonCradleArchGeometry();
+    const wingPinionGeo = createLullabyWingFeatherGeometry();
+    handle.omegaAuraGeo = wingPinionGeo;
+    handle.twinCustomGeos.push(discGeo, crownGeo);
 
-    const auraDisc = new THREE.Mesh(discGeo, musicBoxHaloMat);
-    auraDisc.position.set(0, 0.06, -0.09);
-    const moonCradle = new THREE.Mesh(cradleGeo, cradleMat);
-    moonCradle.scale.setScalar(1.06);
-    moonCradle.position.set(0, 0.08, -0.04);
-    handle.omegaAuraGroup.add(auraDisc, moonCradle);
+    const auraDisc = new THREE.Mesh(discGeo, gothicHaloMat);
+    auraDisc.position.set(0, 0.06, -0.10);
+    const sanctuaryCrown = new THREE.Mesh(crownGeo, crownMat);
+    sanctuaryCrown.scale.setScalar(1.06);
+    sanctuaryCrown.position.set(0, 0.08, -0.05);
+    handle.omegaAuraGroup.add(auraDisc, sanctuaryCrown);
+
+    // 4 Asymmetric Animated Wings (Left = Black-Ink Sakura Demon Pinions, Right = Porcelain-White Violet Angel Pinions)
+    const lullabyWingSpecs: Array<{
+      isRight: boolean;
+      x: number;
+      y: number;
+      z: number;
+      rz: number;
+      sc: number;
+    }> = [
+      { isRight: false, x: -0.24, y: 0.22, z: -0.02, rz: 0.28, sc: 0.92 },
+      { isRight: true, x: 0.24, y: 0.22, z: -0.02, rz: -0.28, sc: 0.92 },
+      { isRight: false, x: -0.20, y: -0.04, z: -0.04, rz: 0.62, sc: 0.74 },
+      { isRight: true, x: 0.20, y: -0.04, z: -0.04, rz: -0.62, sc: 0.74 },
+    ];
+    for (const ws of lullabyWingSpecs) {
+      const wm = new THREE.Mesh(wingPinionGeo, ws.isRight ? angelWingMat : demonWingMat);
+      wm.scale.set(ws.isRight ? ws.sc : -ws.sc, ws.sc, ws.sc);
+      wm.position.set(ws.x, ws.y, ws.z);
+      wm.rotation.z = ws.rz;
+      handle.omegaAuraGroup.add(wm);
+      handle.twinWingMeshes.push(wm);
+    }
 
     handle.omegaAuraGroup.visible = true;
     spritePivot.add(handle.omegaAuraGroup);
@@ -1246,8 +1275,9 @@ export function updateChibiBackAttachmentGroup(
   } else if (handle.twinWingMeshes.length >= 2) {
     const isUncommon = handle.tierRarity === 'uncommon';
     const isMythic = handle.tierRarity === 'mythic';
-    const flapSpeed = isUncommon ? 6.0 : isMythic ? 7.5 : 10.5;
-    const flapAmp = isUncommon ? 0.10 : isMythic ? 0.14 : 0.18;
+    const isLullaby = defId === 'lullaby-twins';
+    const flapSpeed = isUncommon ? 6.0 : isLullaby ? 6.2 : isMythic ? 7.5 : 10.5;
+    const flapAmp = isUncommon ? 0.10 : isLullaby ? 0.16 : isMythic ? 0.14 : 0.18;
     const flap = Math.sin(elapsed * flapSpeed) * flapAmp;
     handle.twinWingMeshes[0].rotation.y = -0.14 + flap;
     handle.twinWingMeshes[1].rotation.y = 0.14 - flap;

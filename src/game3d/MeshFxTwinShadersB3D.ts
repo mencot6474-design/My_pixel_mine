@@ -1,7 +1,7 @@
 ﻿import * as THREE from 'three';
 import { mergeSimpleGeos } from './MeshHelpers3D';
 
-/** Nocturne Hard-Step Cel-Shaded Black-Violet vs Radiant-Silver Twin Blade Shader (NormalBlending). */
+/** Nocturne Hard-Step Cel-Shaded Silver-Star vs Pitch-Black Electric Violet Wing-Pinion Shader (NormalBlending). */
 export function createNocturneWingShaderMaterial(isBlack = false): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -32,20 +32,23 @@ export function createNocturneWingShaderMaterial(isBlack = false): THREE.ShaderM
       void main() {
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
-        float rim = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.5);
-        float sweep = smoothstep(0.42, 0.50, sin(vLocalPos.y * 8.0 - uTime * 9.0));
-        float edgeBevel = smoothstep(0.06, 0.015, abs(vLocalPos.x));
+        vec3 L = normalize(vec3(0.35, 0.85, 0.55));
+        float ndv = abs(dot(N, V));
+        float cel = smoothstep(0.26, 0.38, max(0.0, dot(N, L)));
+        float rim = pow(max(0.0001, 1.0 - ndv), 1.4);
+        float inkRim = smoothstep(0.24, 0.12, ndv);
+        float vein = smoothstep(0.58, 0.94, sin(vLocalPos.y * 10.0 - uTime * 9.0 + vLocalPos.x * 4.0));
 
-        vec3 silverBody = mix(vec3(0.86, 0.90, 0.98), vec3(1.0, 1.0, 1.0), clamp(sweep + rim * 0.6, 0.0, 1.0));
-        silverBody = mix(silverBody, vec3(0.04, 0.03, 0.09), edgeBevel * 0.72);
-        silverBody += vec3(0.72, 0.45, 0.98) * rim * 0.55;
+        vec3 inkBlack = vec3(0.016, 0.008, 0.036);
+        vec3 silverBody = mix(vec3(0.76, 0.80, 0.90), vec3(0.98, 0.99, 1.0), cel);
+        silverBody = mix(silverBody, vec3(0.74, 0.44, 1.0), clamp(vein * 0.45 + rim * 0.55, 0.0, 1.0));
+        silverBody = mix(silverBody, inkBlack, inkRim * 0.90);
 
-        vec3 voidBody = mix(vec3(0.02, 0.015, 0.045), vec3(0.14, 0.06, 0.24), sweep * 0.55);
-        voidBody = mix(voidBody, vec3(0.76, 0.48, 1.0), clamp(rim * 0.95 + edgeBevel * 0.75, 0.0, 1.0));
-        voidBody += vec3(1.0) * pow(rim, 2.5) * 0.85;
+        vec3 voidBody = mix(inkBlack, vec3(0.68, 0.34, 0.98) * 1.48, clamp(rim * 0.92 + vein * 0.68 + cel * 0.18, 0.0, 1.0));
+        voidBody += vec3(0.96, 0.92, 1.0) * pow(rim, 2.3) * 0.85;
 
         vec3 col = mix(silverBody, voidBody, uIsBlack);
-        float alpha = clamp((0.96 + rim * 0.04) * uOpacity, 0.0, 0.99);
+        float alpha = clamp((0.97 + rim * 0.03) * uOpacity, 0.0, 0.99);
         if (alpha < 0.01) discard;
         gl_FragColor = vec4(col, alpha);
       }
@@ -57,27 +60,27 @@ export function createNocturneWingShaderMaterial(isBlack = false): THREE.ShaderM
   });
 }
 
-/** Sharp Faceted Twin Blade Geometry for Nocturne Twins (diamond eclipse sword + twin crescent guard). */
+/** Spiky Jagged Abyssal Wing-Claw & Gothic Cross Pinion Geometry for Nocturne Twins Podium Back (matches attack.webp!). */
 export function createNocturneWingGeometry(): THREE.BufferGeometry {
   const bladeShape = new THREE.Shape();
-  bladeShape.moveTo(0, -0.42);
-  bladeShape.lineTo(0.042, -0.42);
-  bladeShape.lineTo(0.05, -0.05);
-  bladeShape.lineTo(0.24, 0.06);
-  bladeShape.lineTo(0.11, 0.14);
-  bladeShape.lineTo(0.13, 0.92);
-  bladeShape.lineTo(0, 1.38);
-  bladeShape.lineTo(-0.13, 0.92);
-  bladeShape.lineTo(-0.11, 0.14);
-  bladeShape.lineTo(-0.24, 0.06);
-  bladeShape.lineTo(-0.05, -0.05);
-  bladeShape.lineTo(-0.042, -0.42);
+  bladeShape.moveTo(0, -0.34);
+  bladeShape.lineTo(0.055, -0.10);
+  bladeShape.lineTo(0.26, 0.14);
+  bladeShape.lineTo(0.11, 0.24);
+  bladeShape.lineTo(0.20, 0.68);
+  bladeShape.lineTo(0.09, 0.74);
+  bladeShape.lineTo(0, 1.42);
+  bladeShape.lineTo(-0.09, 0.74);
+  bladeShape.lineTo(-0.20, 0.68);
+  bladeShape.lineTo(-0.11, 0.24);
+  bladeShape.lineTo(-0.26, 0.14);
+  bladeShape.lineTo(-0.055, -0.10);
   bladeShape.closePath();
 
   const geo = new THREE.ExtrudeGeometry(bladeShape, {
     depth: 0.042,
     bevelEnabled: true,
-    bevelThickness: 0.012,
+    bevelThickness: 0.014,
     bevelSize: 0.012,
     bevelSegments: 1,
   });
@@ -86,7 +89,7 @@ export function createNocturneWingGeometry(): THREE.BufferGeometry {
   return geo;
 }
 
-/** Nocturne Upright Total Eclipse Corona Halo Shader behind the Podium Chibi (Acheron-style hard-step contrast). */
+/** Nocturne Upright Abyssal Shadow-Mist & Gothic Cross Eclipse Halo Shader behind the Podium Chibi. */
 export function createNocturneEclipseHaloShaderMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -105,31 +108,51 @@ export function createNocturneEclipseHaloShaderMaterial(): THREE.ShaderMaterial 
       uniform float uTime;
       varying vec2 vUv;
 
+      float ncHash(vec2 p) {
+        p = fract(p * vec2(234.34, 435.345));
+        p += dot(p, p + 34.23);
+        return fract(p.x * p.y);
+      }
+      float ncNoise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(ncHash(i), ncHash(i + vec2(1.0, 0.0)), f.x), mix(ncHash(i + vec2(0.0, 1.0)), ncHash(i + vec2(1.0, 1.0)), f.x), f.y);
+      }
+      float ncStar4(vec2 p, float r) {
+        vec2 q = abs(p);
+        return pow(pow(q.x, 0.52) + pow(q.y, 0.52), 1.0 / 0.52) - r;
+      }
+
       void main() {
         vec2 p = (vUv - 0.5) * 2.0;
         float r = length(p);
         if (r > 0.99) discard;
         float ang = atan(p.y, p.x);
 
-        // Pitch black eclipse disc center + jagged silver-violet corona rim
-        float flare = 0.06 * sin(ang * 12.0 - uTime * 3.5) + 0.03 * cos(ang * 20.0 + uTime * 4.5);
-        float voidHole = smoothstep(0.48 + flare, 0.44 + flare, r);
-        float coronaEdge = smoothstep(0.045, 0.0, abs(r - (0.48 + flare)));
+        float polarity = smoothstep(-0.08, 0.08, p.x + 0.08 * sin(p.y * 4.0 - uTime * 1.6));
+        float swirlMist = ncNoise(vec2(ang * 3.0 + r * 4.0 - uTime * 1.8, r * 5.0));
+        float wisp = smoothstep(0.45, 0.65, swirlMist) * smoothstep(0.92, 0.35, r);
+
+        float spikeFlare = 0.055 * pow(abs(cos(ang * 8.0 - uTime * 2.4)), 3.0);
+        float coronaEdge = smoothstep(0.036, 0.0, abs(r - (0.52 + spikeFlare)));
+        float chainTicks = smoothstep(0.55, 0.95, abs(cos(ang * 16.0 + uTime * 1.6))) * smoothstep(0.025, 0.0, abs(r - 0.84));
         float outerRing = smoothstep(0.020, 0.0, abs(r - 0.88));
-        float polarity = smoothstep(-0.03, 0.03, sin(ang + uTime * 0.65));
+        float starCore = smoothstep(0.025, 0.0, ncStar4(p, 0.25)) * (0.75 + 0.25 * sin(uTime * 4.5));
 
-        vec3 voidBlack = vec3(0.015, 0.01, 0.035);
+        vec3 voidBlack = vec3(0.016, 0.008, 0.036);
         vec3 violetGlow = vec3(0.66, 0.34, 0.98);
-        vec3 silverWhite = vec3(0.98, 0.99, 1.0);
+        vec3 silverWhite = vec3(0.96, 0.98, 1.0);
+        vec3 twinAccent = mix(silverWhite, violetGlow, polarity);
 
-        float discBg = smoothstep(0.95, 0.72, r) * 0.82;
-        vec3 ringCol = mix(violetGlow * 1.4, silverWhite * 1.35, polarity);
-        vec3 col = mix(voidBlack, ringCol, clamp(coronaEdge + outerRing, 0.0, 1.0));
-        col = mix(col, voidBlack, voidHole);
-        col += silverWhite * coronaEdge * 0.55;
+        float discBg = smoothstep(0.95, 0.70, r) * 0.86;
+        float lineMask = clamp(coronaEdge + outerRing + chainTicks + wisp * 0.75 + starCore, 0.0, 1.0);
+        vec3 col = voidBlack
+          + twinAccent * (coronaEdge * 1.4 + outerRing * 1.2 + wisp * 0.75)
+          + silverWhite * (chainTicks * 1.35 + starCore * 1.35);
 
         float edgeFade = smoothstep(0.99, 0.88, r);
-        float alpha = clamp(max(discBg, clamp(coronaEdge + outerRing, 0.0, 1.0)) * 1.15 * edgeFade * uOpacity, 0.0, 0.98);
+        float alpha = clamp(max(discBg, lineMask) * 1.15 * edgeFade * uOpacity, 0.0, 0.98);
         if (alpha < 0.015) discard;
         gl_FragColor = vec4(col, alpha);
       }
@@ -221,7 +244,7 @@ export function createNocturneEclipseMonolithGeometry(): THREE.BufferGeometry {
   return mergeSimpleGeos(parts);
 }
 
-/** Nocturne Hard-Step Cel-Shaded Total Eclipse & Yin-Yang Dimension Scar Floor Seal Shader. */
+/** Nocturne Hard-Step Cel-Shaded Abyssal Shadow-Mist & Gothic Cross Floor Seal Shader. */
 export function createNocturneEclipseCraterShaderMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -242,31 +265,49 @@ export function createNocturneEclipseCraterShaderMaterial(): THREE.ShaderMateria
       uniform float uTime;
       varying vec2 vUv;
 
+      float ncHash2(vec2 p) {
+        p = fract(p * vec2(234.34, 435.345));
+        p += dot(p, p + 34.23);
+        return fract(p.x * p.y);
+      }
+      float ncNoise2(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(ncHash2(i), ncHash2(i + vec2(1.0, 0.0)), f.x), mix(ncHash2(i + vec2(0.0, 1.0)), ncHash2(i + vec2(1.0, 1.0)), f.x), f.y);
+      }
+      float ncCross2(vec2 p, float w, float h, float barY) {
+        return min(max(abs(p.x) - w, abs(p.y) - h), max(abs(p.x) - h * 0.68, abs(p.y - barY) - w * 1.05));
+      }
+
       void main() {
         vec2 p = (vUv - 0.5) * 2.0;
         float r = length(p);
         if (r > 0.99) discard;
         float angle = atan(p.y, p.x);
 
-        // Hard-step cel-shaded Yin-Yang swirl & central void eclipse hole
-        float swirl = angle + r * 2.8 - uTime * 3.8;
-        float polarity = smoothstep(-0.025, 0.025, sin(swirl));
-        float eclipseHole = smoothstep(0.32, 0.28, r);
-        float coronaRing = smoothstep(0.026, 0.0, abs(r - (0.31 + 0.04 * sin(angle * 12.0 - uTime * 6.0))));
-        float shockRing = smoothstep(0.030, 0.0, abs(r - min(0.93, 0.22 + uProgress * 0.92)));
-        float riftSlash = smoothstep(0.032, 0.0, abs(p.y - p.x * 0.45)) * smoothstep(0.95, 0.2, abs(p.x));
+        float swirl = angle + 2.0 / (r + 0.25) - uTime * 2.5;
+        float mist = ncNoise2(vec2(swirl * 1.6, r * 4.5));
+        float wisp = smoothstep(0.42, 0.60, mist) * (1.0 - smoothstep(0.70, 0.88, mist));
+        float polarity = smoothstep(-0.08, 0.08, sin(angle * 2.0 + r * 2.5 - uTime * 1.6));
 
-        vec3 voidBlack = vec3(0.02, 0.015, 0.04);
+        float coronaRing = smoothstep(0.028, 0.0, abs(r - (0.34 + 0.04 * sin(angle * 10.0 - uTime * 5.0))));
+        float outerRing = smoothstep(0.022, 0.0, abs(r - 0.88));
+        float sectorAng = mod(angle - uTime * 0.7 + 3.14159265, 0.78539816) - 0.39269908;
+        float crossGlyph = smoothstep(0.024, 0.0, ncCross2(vec2(sin(sectorAng) * r, r - 0.72) * 9.5, 0.18, 0.78, 0.25));
+        float riftSlash = smoothstep(0.032, 0.0, abs(p.y - p.x * 0.42)) * smoothstep(0.95, 0.18, abs(p.x));
+
+        vec3 voidBlack = vec3(0.016, 0.008, 0.036);
         vec3 pureSilver = vec3(0.96, 0.98, 1.0);
         vec3 violet = vec3(0.68, 0.34, 0.98);
 
-        vec3 col = mix(voidBlack, pureSilver, polarity);
-        col = mix(col, voidBlack, eclipseHole);
-        col = mix(col, violet * 1.45, clamp(coronaRing * 0.8 + shockRing * 0.9, 0.0, 1.0));
-        col += pureSilver * clamp(riftSlash * 1.2 + coronaRing * 0.45, 0.0, 1.0);
+        vec3 col = voidBlack
+          + mix(violet, pureSilver, polarity) * (wisp * 0.9 + outerRing * 1.3 + coronaRing * 1.3)
+          + violet * crossGlyph * 1.4
+          + pureSilver * clamp(riftSlash * 1.3 + coronaRing * 0.45, 0.0, 1.0);
 
-        float baseBg = smoothstep(0.95, 0.65, r) * 0.84;
-        float lineMask = clamp(coronaRing + shockRing + riftSlash, 0.0, 1.0);
+        float baseBg = smoothstep(0.95, 0.65, r) * 0.86;
+        float lineMask = clamp(coronaRing + outerRing + crossGlyph + wisp + riftSlash, 0.0, 1.0);
         float edgeFade = smoothstep(0.99, 0.88, r);
         float alpha = clamp(max(baseBg, lineMask) * 1.16 * edgeFade * uOpacity, 0.0, 0.98);
         if (alpha < 0.015) discard;
@@ -280,7 +321,7 @@ export function createNocturneEclipseCraterShaderMaterial(): THREE.ShaderMateria
   });
 }
 
-/** Lullaby Astral Music-Box Dial & Starlight Score Halo Shader behind the Chibi. */
+/** Lullaby Gothic Rose-Window & Split Angel/Demon Nightmare Halo Shader behind the Chibi. */
 export function createLullabyPinkAuraShaderMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -299,46 +340,62 @@ export function createLullabyPinkAuraShaderMaterial(): THREE.ShaderMaterial {
       uniform float uTime;
       varying vec2 vUv;
 
+      float lbSdHeart(vec2 p) {
+        p.x = abs(p.x);
+        p.y += 0.35;
+        if (p.y + p.x > 1.0) {
+          return sqrt(dot(p - vec2(0.25, 0.75), p - vec2(0.25, 0.75))) - 0.353553;
+        }
+        return sqrt(min(
+          dot(p - vec2(0.0, 1.0), p - vec2(0.0, 1.0)),
+          dot(p - 0.5 * max(p.x + p.y, 0.0), p - 0.5 * max(p.x + p.y, 0.0))
+        )) * sign(p.x - p.y);
+      }
+
+      float lbSdStar4(vec2 p, float r) {
+        vec2 q = abs(p);
+        return pow(pow(q.x, 0.52) + pow(q.y, 0.52), 1.0 / 0.52) - r;
+      }
+
       void main() {
         vec2 p = (vUv - 0.5) * 2.0;
         float r = length(p);
-        if (r > 0.98) discard;
+        if (r > 0.99) discard;
         float angle = atan(p.y, p.x);
 
-        // Midnight indigo music-box velvet backdrop for sharp contrast on bright worlds
-        float plateMask = smoothstep(0.94, 0.72, r) * 0.84;
+        // Deep gothic obsidian velvet backdrop for razor contrast on bright & dark worlds
+        float plateMask = smoothstep(0.95, 0.70, r) * 0.86;
+        float polarity = smoothstep(-0.08, 0.08, p.x + 0.08 * sin(p.y * 4.0 - uTime * 1.4));
 
-        // 5 concentric rotating musical score staff rings
-        float staffRings = 0.0;
-        for (int i = 0; i < 5; i++) {
-          float rr = 0.48 + float(i) * 0.068;
-          staffRings += smoothstep(0.014, 0.0, abs(r - rr)) * 0.62;
-        }
-        float outerRim = smoothstep(0.022, 0.0, abs(r - 0.89));
-        float innerRim = smoothstep(0.020, 0.0, abs(r - 0.36));
+        // 12-petal Gothic Cathedral Rose-Window pointed lace arches
+        float laceWave = 0.062 * pow(abs(cos(angle * 6.0 - uTime * 0.55)), 2.2);
+        float outerLace = smoothstep(0.022, 0.0, abs(r - (0.86 + laceWave * 0.6)));
+        float innerRose = smoothstep(0.020, 0.0, abs(r - (0.58 - laceWave * 0.85)));
+        float coreHalo = smoothstep(0.020, 0.0, abs(r - 0.32));
+        float spokes = smoothstep(0.88, 0.985, abs(cos(angle * 6.0 - uTime * 0.55))) * smoothstep(0.28, 0.36, r) * smoothstep(0.88, 0.78, r);
 
-        // Flowing musical note dots riding the staff rings
-        float notePhase = angle * 6.0 - uTime * 2.2;
-        float noteRadius = 0.58 + 0.11 * sin(floor(notePhase / 6.2831853 + 10.0) * 2.3 + uTime);
-        float noteDot = smoothstep(0.045, 0.016, length(vec2(abs(fract(notePhase * 0.15915) - 0.5) * r * 1.4, r - noteRadius)));
+        // 6 orbiting Gothic Stitched Hearts + 4-Point Cross-Stars
+        float sectorAng = mod(angle - uTime * 0.75 + 3.14159265, 1.04719755) - 0.52359877;
+        vec2 slotP = vec2(sin(sectorAng) * r, r - 0.73);
+        float heartGlyph = smoothstep(0.03, 0.0, lbSdHeart(slotP * 11.5));
+        float starBurst = smoothstep(0.02, 0.0, lbSdStar4(p, 0.24)) * (0.7 + 0.3 * sin(uTime * 4.2));
+        float beatPulse = smoothstep(0.045, 0.0, abs(r - fract(uTime * 0.42) * 0.92)) * 0.65;
 
-        // Subtle lower moon cradle gleam & 4-point star ticks
-        float starTicks = pow(max(0.0, cos(angle * 4.0 + uTime * 1.4)), 14.0) * smoothstep(0.92, 0.32, r);
-        float cradleArc = smoothstep(0.036, 0.0, abs(r - 0.82)) * smoothstep(0.15, -0.35, p.y);
+        vec3 obsidianBg = mix(vec3(0.03, 0.008, 0.065), vec3(0.075, 0.022, 0.14), polarity * 0.55);
+        vec3 sakuraPink = vec3(0.96, 0.38, 0.74);
+        vec3 abyssViolet = vec3(0.68, 0.34, 0.98);
+        vec3 porcelainWhite = vec3(0.98, 0.95, 1.0);
 
-        vec3 nightBg = vec3(0.05, 0.02, 0.14);
-        vec3 sakuraPink = vec3(0.96, 0.36, 0.72);
-        vec3 starCyan = vec3(0.24, 0.86, 0.98);
-        vec3 roseGold = vec3(1.0, 0.86, 0.62);
+        vec3 twinAccent = mix(abyssViolet, sakuraPink, polarity);
+        float lineEnergy = clamp(outerLace + innerRose + coreHalo + spokes * 0.8 + heartGlyph + starBurst + beatPulse, 0.0, 1.0);
 
-        vec3 col = nightBg
-          + sakuraPink * (staffRings * 0.75 + cradleArc * 1.25 + innerRim * 0.8)
-          + starCyan * (starTicks * 1.15 + noteDot * 1.4)
-          + roseGold * (outerRim * 1.2 + noteDot * 0.45);
+        vec3 col = obsidianBg
+          + twinAccent * (outerLace * 1.35 + innerRose * 1.15 + spokes * 0.85 + beatPulse)
+          + sakuraPink * (heartGlyph * 1.45)
+          + porcelainWhite * (coreHalo * 1.1 + starBurst * 1.35);
 
-        float lineEnergy = clamp(staffRings + outerRim + innerRim + noteDot + starTicks + cradleArc, 0.0, 1.0);
-        float edgeFade = smoothstep(0.98, 0.86, r);
-        float alpha = clamp(max(plateMask, lineEnergy) * edgeFade * uOpacity, 0.0, 0.98);
+        float edgeFade = smoothstep(0.99, 0.87, r);
+        float alpha = clamp(max(plateMask, lineEnergy) * 1.12 * edgeFade * uOpacity, 0.0, 0.98);
         if (alpha < 0.015) discard;
         gl_FragColor = vec4(col, alpha);
       }
@@ -350,40 +407,83 @@ export function createLullabyPinkAuraShaderMaterial(): THREE.ShaderMaterial {
   });
 }
 
-/** Upright 3D Moon Cradle Arch & Suspended Chime Geometry for Lullaby Twins Podium Back. */
+/** Upright 3D Asymmetric Gothic Sanctuary Crown & Demon-Horn / Angel-Ribbon Arch Geometry for Lullaby Twins Podium Back. */
 export function createLullabyMoonCradleArchGeometry(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  // Vertical half-moon cradle arc behind the upper shoulders (pure vertical Z-facing curve, zero tilted rings)
-  const crescent = new THREE.Shape();
-  crescent.moveTo(-0.88, 0.42);
-  crescent.quadraticCurveTo(0.0, -1.08, 0.88, 0.42);
-  crescent.quadraticCurveTo(0.0, -0.82, -0.88, 0.42);
-  const cradleGeo = new THREE.ExtrudeGeometry(crescent, {
+  const extrudeCfg: THREE.ExtrudeGeometryOptions = {
     depth: 0.045,
     bevelEnabled: true,
     bevelThickness: 0.012,
     bevelSize: 0.012,
     bevelSegments: 1,
-  });
-  cradleGeo.translate(0, -0.05, -0.0225);
-  parts.push(cradleGeo);
+  };
 
-  // Twin side star finials & dangling music chime crystals
+  // Top Gothic Ribboned Halo Crest (flat Z-facing crescent arch above the twins, zero tilted hoops)
+  const arch = new THREE.Shape();
+  arch.moveTo(-0.76, 0.54);
+  arch.quadraticCurveTo(0.0, 1.02, 0.76, 0.54);
+  arch.quadraticCurveTo(0.0, 0.84, -0.76, 0.54);
+  const archGeo = new THREE.ExtrudeGeometry(arch, extrudeCfg);
+  archGeo.translate(0, -0.02, -0.0225);
+  parts.push(archGeo);
+
+  // Center Gothic Cross-Bow Finial at top of the crown
+  const bowCenter = new THREE.OctahedronGeometry(0.11, 0);
+  bowCenter.scale(0.85, 1.35, 0.55);
+  bowCenter.translate(0, 0.82, 0);
+  parts.push(bowCenter);
+
+  // Left Demon Horn Pinion (Left Twin motif)
+  const leftHorn = new THREE.Shape();
+  leftHorn.moveTo(-0.56, 0.44);
+  leftHorn.quadraticCurveTo(-0.96, 0.72, -0.72, 1.04);
+  leftHorn.quadraticCurveTo(-0.78, 0.68, -0.44, 0.46);
+  leftHorn.closePath();
+  const leftHornGeo = new THREE.ExtrudeGeometry(leftHorn, extrudeCfg);
+  leftHornGeo.translate(0, 0, -0.0225);
+  parts.push(leftHornGeo);
+
+  // Right Angel Ribbon Streamer (Right Twin motif)
+  const rightRibbon = new THREE.Shape();
+  rightRibbon.moveTo(0.46, 0.48);
+  rightRibbon.quadraticCurveTo(0.95, 0.66, 0.88, 0.14);
+  rightRibbon.lineTo(0.76, 0.18);
+  rightRibbon.quadraticCurveTo(0.82, 0.56, 0.42, 0.42);
+  rightRibbon.closePath();
+  const rightRibGeo = new THREE.ExtrudeGeometry(rightRibbon, extrudeCfg);
+  rightRibGeo.translate(0, 0, -0.0225);
+  parts.push(rightRibGeo);
+
+  // Twin hanging Gothic Heart/Crystal Chimes
   for (const sx of [-1, 1]) {
-    const tipStar = new THREE.OctahedronGeometry(0.11, 0);
-    tipStar.scale(0.85, 1.35, 0.65);
-    tipStar.translate(sx * 0.90, 0.42, 0);
-    parts.push(tipStar);
-
-    const chime = new THREE.OctahedronGeometry(0.075, 0);
-    chime.scale(0.65, 1.55, 0.65);
-    chime.translate(sx * 0.72, 0.02, 0);
-    parts.push(chime);
+    const gem = new THREE.OctahedronGeometry(0.085, 0);
+    gem.scale(0.78, 1.48, 0.55);
+    gem.translate(sx * 0.78, 0.36, 0);
+    parts.push(gem);
   }
   return mergeSimpleGeos(parts);
 }
 
-/** Rose-Gold & Starlight Cyan Shader for Lullaby Upright Moon Cradle & Chimes. */
+/** Sculpted Single Gothic Wing Pinion Geometry for Lullaby Twins Animated Back Wings. */
+export function createLullabyWingFeatherGeometry(): THREE.BufferGeometry {
+  const s = new THREE.Shape();
+  s.moveTo(0, -0.08);
+  s.quadraticCurveTo(0.48, 0.24, 0.98, 0.04);
+  s.quadraticCurveTo(0.62, -0.09, 0.42, -0.22);
+  s.quadraticCurveTo(0.18, -0.08, 0, -0.08);
+  const geo = new THREE.ExtrudeGeometry(s, {
+    depth: 0.036,
+    bevelEnabled: true,
+    bevelThickness: 0.010,
+    bevelSize: 0.010,
+    bevelSegments: 1,
+  });
+  geo.translate(0, 0, -0.018);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/** Asymmetric Cel-Shaded Obsidian-Sakura (Left Demon) vs Porcelain-Violet (Right Angel) Shader for Lullaby Podium Wings & Crown. */
 export function createLullabyMoonCradleShaderMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -412,16 +512,26 @@ export function createLullabyMoonCradleShaderMaterial(): THREE.ShaderMaterial {
       void main() {
         vec3 N = normalize(vNormalView);
         vec3 V = normalize(vViewPos);
-        float rim = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.5);
-        float notePulse = 0.5 + 0.5 * sin(vLocalPos.x * 7.0 - uTime * 5.0);
+        vec3 L = normalize(vec3(0.35, 0.85, 0.55));
+        float ndv = abs(dot(N, V));
+        float cel = smoothstep(0.28, 0.36, max(0.0, dot(N, L)));
+        float rim = pow(max(0.0001, 1.0 - ndv), 1.45);
+        float inkRim = smoothstep(0.24, 0.12, ndv);
+        float pulse = 0.5 + 0.5 * sin(vLocalPos.x * 8.0 - uTime * 5.2);
 
-        vec3 deepIndigo = vec3(0.08, 0.03, 0.18);
-        vec3 roseGold = vec3(0.98, 0.74, 0.58);
-        vec3 starCyan = vec3(0.24, 0.86, 0.98);
-        vec3 sakuraPink = vec3(0.96, 0.40, 0.74);
+        float isRightSide = smoothstep(-0.08, 0.08, vLocalPos.x);
+        vec3 obsidianInk = vec3(0.03, 0.01, 0.06);
+        vec3 sakuraPink = vec3(0.96, 0.38, 0.74);
+        vec3 abyssViolet = vec3(0.68, 0.34, 0.98);
+        vec3 porcelain = vec3(0.97, 0.95, 1.0);
 
-        vec3 col = mix(deepIndigo, mix(roseGold, sakuraPink, notePulse * 0.55), 0.42 + rim * 0.58);
-        col += starCyan * pow(rim, 2.2) * 0.85;
+        vec3 leftDemonCol = mix(obsidianInk, mix(abyssViolet, sakuraPink, pulse), clamp(rim * 0.88 + cel * 0.25, 0.0, 1.0));
+        vec3 rightAngelCol = mix(vec3(0.72, 0.66, 0.88), porcelain, cel);
+        rightAngelCol = mix(rightAngelCol, sakuraPink * 1.25, rim * 0.68);
+        rightAngelCol = mix(rightAngelCol, obsidianInk, inkRim * 0.92);
+
+        vec3 col = mix(leftDemonCol, rightAngelCol, isRightSide);
+        col += sakuraPink * pow(rim, 2.2) * 0.75;
         gl_FragColor = vec4(col, clamp(0.98 * uOpacity, 0.0, 0.98));
       }
     `,
@@ -432,7 +542,66 @@ export function createLullabyMoonCradleShaderMaterial(): THREE.ShaderMaterial {
   });
 }
 
-/** Horizontal Astral Music-Box & Flowing Score Floor Seal for Lullaby Twins Pit Ult. */
+/** Per-Wing Shader for Lullaby Twins Animated Back Wings (Left = Black-Ink Sakura Demon, Right = Porcelain-White Violet Angel). */
+export function createLullabyWingFeatherShaderMaterial(isWhiteAngel: boolean): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uOpacity: { value: 1.0 },
+      uTime: { value: 0.0 },
+      uIsWhite: { value: isWhiteAngel ? 1.0 : 0.0 },
+    },
+    vertexShader: `
+      varying vec3 vNormalView;
+      varying vec3 vViewPos;
+      varying vec3 vLocalPos;
+      void main() {
+        vLocalPos = position;
+        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+        vViewPos = -mvPos.xyz;
+        vNormalView = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * mvPos;
+      }
+    `,
+    fragmentShader: `
+      uniform float uOpacity;
+      uniform float uTime;
+      uniform float uIsWhite;
+      varying vec3 vNormalView;
+      varying vec3 vViewPos;
+      varying vec3 vLocalPos;
+
+      void main() {
+        vec3 N = normalize(vNormalView);
+        vec3 V = normalize(vViewPos);
+        vec3 L = normalize(vec3(0.35, 0.85, 0.55));
+        float ndv = abs(dot(N, V));
+        float cel = smoothstep(0.28, 0.36, max(0.0, dot(N, L)));
+        float rim = pow(max(0.0001, 1.0 - ndv), 1.45);
+        float inkRim = smoothstep(0.24, 0.12, ndv);
+        float vein = smoothstep(0.68, 0.96, sin(vLocalPos.x * 12.0 - uTime * 7.0));
+
+        vec3 inkBlack = vec3(0.025, 0.008, 0.055);
+        vec3 sakuraPink = vec3(0.96, 0.38, 0.74);
+        vec3 abyssViolet = vec3(0.70, 0.36, 0.98);
+        vec3 porcelain = vec3(0.98, 0.96, 1.0);
+
+        vec3 demonCol = mix(inkBlack, sakuraPink * 1.42, clamp(rim * 0.92 + vein * 0.65, 0.0, 1.0));
+        vec3 angelCol = mix(vec3(0.74, 0.68, 0.90), porcelain, cel);
+        angelCol = mix(angelCol, abyssViolet * 1.45, clamp(vein * 0.45 + rim * 0.55, 0.0, 1.0));
+        angelCol = mix(angelCol, inkBlack, inkRim * 0.92);
+
+        vec3 col = mix(demonCol, angelCol, uIsWhite);
+        gl_FragColor = vec4(col, clamp(0.98 * uOpacity, 0.0, 0.98));
+      }
+    `,
+    transparent: true,
+    depthWrite: true,
+    side: THREE.DoubleSide,
+    blending: THREE.NormalBlending,
+  });
+}
+
+/** Horizontal Gothic Rose-Window & Split Angel/Demon Nightmare Floor Seal for Lullaby Twins. */
 export function createLullabyMusicBoxSealShaderMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -453,47 +622,50 @@ export function createLullabyMusicBoxSealShaderMaterial(): THREE.ShaderMaterial 
       uniform float uOpacity;
       varying vec2 vUv;
 
+      float lbSdHeart(vec2 p) {
+        p.x = abs(p.x);
+        p.y += 0.35;
+        if (p.y + p.x > 1.0) {
+          return sqrt(dot(p - vec2(0.25, 0.75), p - vec2(0.25, 0.75))) - 0.353553;
+        }
+        return sqrt(min(
+          dot(p - vec2(0.0, 1.0), p - vec2(0.0, 1.0)),
+          dot(p - 0.5 * max(p.x + p.y, 0.0), p - 0.5 * max(p.x + p.y, 0.0))
+        )) * sign(p.x - p.y);
+      }
+
       void main() {
         vec2 p = (vUv - 0.5) * 2.0;
         float r = length(p);
         if (r > 1.0) discard;
         float ang = atan(p.y, p.x);
 
-        // Midnight indigo music-box disc base
-        float discBg = smoothstep(0.96, 0.72, r) * 0.82;
+        float discBg = smoothstep(0.96, 0.70, r) * 0.84;
+        float polarity = smoothstep(-0.08, 0.08, sin(ang + r * 2.4 - uTime * 2.0));
+        float roseWave = 0.065 * pow(abs(cos(ang * 6.0 - uTime * 0.75)), 2.2);
 
-        // 5-line concentric circular musical score staff
-        float staffLines = 0.0;
-        for (int i = 0; i < 5; i++) {
-          float rr = 0.52 + float(i) * 0.068;
-          staffLines += smoothstep(0.013, 0.0, abs(r - rr)) * 0.65;
-        }
-        float outerRing = smoothstep(0.020, 0.0, abs(r - 0.91));
-        float innerMoonRing = smoothstep(0.022, 0.0, abs(r - 0.34));
+        float outerRing = smoothstep(0.022, 0.0, abs(r - (0.88 + roseWave * 0.6)));
+        float midArch = smoothstep(0.020, 0.0, abs(r - (0.60 - roseWave * 0.8)));
+        float innerHalo = smoothstep(0.020, 0.0, abs(r - 0.33));
+        float spokes = smoothstep(0.88, 0.985, abs(cos(ang * 6.0 - uTime * 0.75))) * smoothstep(0.28, 0.36, r) * smoothstep(0.90, 0.80, r);
 
-        // 6 crystal chime anchor glyphs + golden musical note markers rotating on staff
-        float beatAngle = ang - uTime * 1.15;
-        float noteArc = fract((beatAngle + 3.14159265) / 0.52359877) - 0.5;
-        float noteLane = 0.56 + 0.16 * (0.5 + 0.5 * sin(floor((beatAngle + 3.14159) / 0.5236) * 2.7));
-        float noteHeads = smoothstep(0.048, 0.014, length(vec2(noteArc * r * 1.35, r - noteLane)));
-        float stem = smoothstep(0.014, 0.003, abs(noteArc) * r) * smoothstep(noteLane - 0.01, noteLane + 0.02, r) * smoothstep(noteLane + 0.12, noteLane + 0.08, r);
+        float sectorAng = mod(ang - uTime * 0.95 + 3.14159265, 1.04719755) - 0.52359877;
+        vec2 slotP = vec2(sin(sectorAng) * r, r - 0.74);
+        float heartMask = smoothstep(0.03, 0.0, lbSdHeart(slotP * 10.5));
+        float ripple = smoothstep(0.06, 0.0, abs(r - fract(uProgress * 2.3) * 0.94));
 
-        // Sonic resonance shock ripples pulsing outward
-        float ripple = smoothstep(0.06, 0.0, abs(r - fract(uProgress * 2.4) * 0.94));
-        float starRays = pow(max(0.0, cos(ang * 6.0 + uTime * 1.4)), 14.0) * smoothstep(0.92, 0.18, r);
-
-        vec3 nightIndigo = vec3(0.04, 0.02, 0.12);
+        vec3 nightObsidian = mix(vec3(0.035, 0.01, 0.068), vec3(0.09, 0.03, 0.16), polarity * 0.6);
         vec3 sakuraPink = vec3(0.96, 0.38, 0.74);
-        vec3 starCyan = vec3(0.22, 0.84, 0.98);
-        vec3 roseGold = vec3(1.0, 0.84, 0.56);
+        vec3 abyssViolet = vec3(0.68, 0.34, 0.98);
+        vec3 porcelain = vec3(0.98, 0.95, 1.0);
 
-        float linesMask = clamp(staffLines + outerRing + innerMoonRing + noteHeads + stem + ripple + starRays, 0.0, 1.0);
-        vec3 col = nightIndigo
-          + sakuraPink * (staffLines * 0.85 + innerMoonRing * 1.35)
-          + starCyan * (ripple * 1.35 + starRays * 1.2)
-          + roseGold * (outerRing * 1.3 + noteHeads * 1.55 + stem * 1.25);
+        float linesMask = clamp(outerRing + midArch + innerHalo + spokes * 0.8 + heartMask + ripple, 0.0, 1.0);
+        vec3 col = nightObsidian
+          + mix(sakuraPink, abyssViolet, polarity) * (outerRing * 1.4 + midArch * 1.2 + spokes * 0.9)
+          + sakuraPink * (heartMask * 1.5 + ripple * 1.1)
+          + porcelain * (innerHalo * 1.2 + ripple * 0.5);
 
-        float edgeFade = smoothstep(1.0, 0.90, r);
+        float edgeFade = smoothstep(1.0, 0.89, r);
         float alpha = clamp(max(discBg, linesMask) * 1.15 * edgeFade * uOpacity, 0.0, 0.98);
         if (alpha < 0.015) discard;
         gl_FragColor = vec4(col, alpha);
