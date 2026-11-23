@@ -3,10 +3,12 @@ import { assetUrl } from '../game/AssetUrl';
 import {
   getWorldById,
   getWorldResonanceScale,
+  getWorldStarterChibiId,
   WORLD_RESONANCE_TIERS,
   WorldId,
   WORLDS,
 } from '../game/GameData';
+import { getChibiById } from '../game3d/ChibiCatalog';
 import { GameState } from '../game/GameState';
 import { fmtMoney } from '../game/NumberFormat';
 import { ModalKind, renderModalShell, TW_CLOSE_BTN, TW_SHOP_MODAL_RESP } from './HudShared';
@@ -324,7 +326,13 @@ export class WorldsModalUi {
             this.state.setActiveWorld(wid);
             this.onFocusWorldTree(wid);
             this.onOpenModal('none');
-            this.pushToast(`Unlocked & Teleported to ${wDef.name}!`);
+            const starterId = getWorldStarterChibiId(wid);
+            const starterName = starterId ? getChibiById(starterId)?.name : undefined;
+            this.pushToast(
+              starterName
+                ? `Unlocked ${wDef.name}! Starter Chibi gained: ${starterName}`
+                : `Unlocked & Teleported to ${wDef.name}!`
+            );
           }
         } else if (status === 'no-cash') {
           audio.playSfx('ui-error');

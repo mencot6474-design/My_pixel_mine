@@ -1,5 +1,6 @@
 import { audio } from '../audio/AudioManager';
-import { getWorldById, getWorldIndex, WorldId, WORLDS } from '../game/GameData';
+import { getWorldById, getWorldIndex, getWorldStarterChibiId, WorldId, WORLDS } from '../game/GameData';
+import { getChibiById } from '../game3d/ChibiCatalog';
 import {
   formatNodeEffectLine,
   getNodeNextCost,
@@ -463,7 +464,12 @@ export class UpgradesWorldsUi {
           if (this.state.unlockWorld(wid)) {
             audio.playSfx('unlock');
             this.focusWorldTree(wid);
-            this.pushToast(`Unlocked ${getWorldById(wid).name}!`);
+            const starterId = getWorldStarterChibiId(wid);
+            const starterName = starterId ? getChibiById(starterId)?.name : undefined;
+            const wName = getWorldById(wid).name;
+            this.pushToast(
+              starterName ? `Unlocked ${wName}! Starter Chibi gained: ${starterName}` : `Unlocked ${wName}!`
+            );
             this.onRequestRender();
           }
         } else if (status === 'no-cash') {

@@ -1,4 +1,4 @@
-import { WORLDS, WorldId, getWorldById, getWorldIndex } from './GameData';
+import { WORLDS, WorldId, getWorldById, getWorldIndex, getWorldStarterChibiId } from './GameData';
 import {
   RESEARCH_NODES,
   ResearchEffectType,
@@ -119,6 +119,11 @@ export function unlockWorldDomain(
   ctx.cash -= def.unlockCost;
   if (!ctx.unlockedWorlds.includes(worldId)) {
     ctx.unlockedWorlds.push(worldId);
+  }
+  const starterId = getWorldStarterChibiId(worldId);
+  if (starterId) {
+    ctx.miners[starterId] = (ctx.miners[starterId] || 0) + 1;
+    ctx.discovered?.add(starterId);
   }
   ctx.activeWorldId = worldId;
   emit();

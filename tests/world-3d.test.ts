@@ -1675,14 +1675,14 @@ describe('Pure 3D Mine World', () => {
     fm.dispose();
   });
 
-  it('scales all 12 Shop Pickaxes monotonically in cost, DMG multiplier, and stock without exploits', () => {
-    expect(PICKAXES.length).toBe(12);
+  it('scales all 14 Shop Pickaxes monotonically in cost, DMG multiplier, and stock without exploits', () => {
+    expect(PICKAXES.length).toBe(14);
     expect(PICKAXES.map((p) => p.id).slice(-5)).toEqual([
-      'cinderforge',
-      'runebreaker',
       'voidcleaver',
       'astralsiphon',
       'starwellcrown',
+      'leviathanfang',
+      'chronoeternity',
     ]);
 
     let prevCostPerDmg = 0;
@@ -2071,7 +2071,7 @@ describe('Pure 3D Mine World', () => {
   });
 
   it('supports Relic Forge recipes, bag+chest consumption, 3-slot equip cap, and stat bonuses', () => {
-    expect(RELICS.length).toBe(12);
+    expect(RELICS.length).toBe(14);
     for (const relic of RELICS) {
       expect(existsSync(resolve(process.cwd(), 'public', relic.iconPath.replace(/^\//, '')))).toBe(true);
       for (const ing of relic.ingredients) {
@@ -3429,10 +3429,17 @@ describe('Pure 3D Mine World', () => {
     expect(roninBack?.visible).toBe(true);
 
     const roninMainPivot = roninSprite.group.children[0];
-    roninSprite.triggerPodiumCast(0.45);
+    expect(roninSprite.getAnimState()).toBe('idle');
+    roninSprite.triggerPodiumCast(0.36);
+    expect(roninSprite.getAnimState()).toBe('attack');
+    roninSprite.setAnimState('idle'); // ignored while active podium cast pulse runs
+    expect(roninSprite.getAnimState()).toBe('attack');
     roninSprite.update(0.1, 0.35, cam);
     expect(roninBack?.scale.x).toBeGreaterThan(1.0);
     expect(roninMainPivot.position.lengthSq()).toBe(0);
+    expect(roninSprite.getAnimState()).toBe('attack');
+    roninSprite.update(0.3, 0.65, cam);
+    expect(roninSprite.getAnimState()).toBe('idle');
 
     roninSprite.triggerBlitz({ rarity: 'omega', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
     sovSprite.triggerBlitz({ rarity: 'omega', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
@@ -4312,5 +4319,27 @@ describe('Pure 3D Mine World', () => {
     pedestals.forEach((p) => p.dispose());
     pit.dispose();
     env.dispose();
+  });
+
+  it('grants 1x lowest-tier Starter Chibi and discovers it in Index once on World unlock without overwriting plots', () => {
+    const gs = new GameState();
+    gs.cash = 1e12;
+    const beforePlotUnit = gs.plotMiners[0];
+    for (const node of getResearchNodesForTree('underground')) {
+      while (gs.getResearchLevel(node.id) < node.maxLevel) {
+        expect(gs.upgradeResearch(node.id)).toBe(true);
+      }
+    }
+    expect(gs.miners['volt-kensei'] ?? 0).toBe(0);
+    expect(gs.discovered.has('volt-kensei')).toBe(false);
+
+    expect(gs.unlockWorld('crystal')).toBe(true);
+    expect(gs.miners['volt-kensei']).toBe(1);
+    expect(gs.discovered.has('volt-kensei')).toBe(true);
+    expect(gs.plotMiners[0]).toBe(beforePlotUnit);
+
+    // Calling unlockWorld again never double-grants
+    expect(gs.unlockWorld('crystal')).toBe(false);
+    expect(gs.miners['volt-kensei']).toBe(1);
   });
 });
