@@ -40,8 +40,10 @@ import { getAchievementAllDmgBonusDomain } from './AchievementsDomain';
 import { getActiveFusionPassiveBonuses } from './FusionDomain';
 import { getActiveIndexPassiveBonusesDomain } from './IndexRewardsDomain';
 import { RETURN_RUSH_BOOST_ID, RETURN_RUSH_SPEED_BONUS } from './OfflineEarningsDomain';
-import { getOverclockTierBuffs, type OverclockTier } from './OverclockDomain';
+import { OverclockTier } from './OverclockDomain';
+import { getOverclockTierBuffs } from './OverclockDomain';
 import { ResearchEffectType } from './ResearchData';
+import { getPermanentMinerCount, getTrialOwnedCount, type TwinTrialState } from './TwinTrialDomain';
 import { WeatherId } from './WeatherData';
 
 export const CHIBI_DMG_MULT_PER_LEVEL = 0.12;
@@ -101,6 +103,7 @@ export interface PlotUnitsContext {
   claimedAchievements?: ReadonlySet<string>;
   unlockedWorlds?: readonly WorldId[];
   discovered?: ReadonlySet<string>;
+  twinTrial?: TwinTrialState;
   getActiveResearchBonus(effectType: ResearchEffectType): number;
   getRelicBonus(stat: RelicEffectStat): number;
   getWeatherDamageMult(): number;
@@ -207,14 +210,21 @@ export function getChibiStarCount(ctx: Pick<PlotUnitsContext, 'chibiStars'>, chi
 }
 
 export function getSpareChibiDuplicateCount(
-  ctx: Pick<PlotUnitsContext, 'miners' | 'plotMiners'>,
+  ctx: Pick<PlotUnitsContext, 'miners' | 'plotMiners' | 'plotUnits' | 'twinTrial'>,
   chibiId: string
 ): number {
-  const totalOwned = ctx.miners[chibiId] || 0;
-  if (totalOwned <= 1) return 0;
-  const placedCount = ctx.plotMiners.filter((id) => id === chibiId).length;
-  const minKeep = Math.max(1, placedCount);
-  return Math.max(0, totalOwned - minKeep);
+  const permOwned = ctx.twinTrial
+    ? getPermanentMinerCount(ctx.miners, ctx.twinTrial, chibiId)
+    : ctx.miners[chibiId] || 0;
+  if (permOwned <= 1) return 0;
+  let placedPermCount = 0;
+  for (let i = 0; i < ctx.plotMiners.length; i++) {
+    if (ctx.plotMiners[i] === chibiId && !ctx.plotUnits?.[i]?.isTrial) {
+      placedPermCount++;
+    }
+  }
+  const minKeep = Math.max(1, placedPermCount);
+  return Math.max(0, permOwned - minKeep);
 }
 
 export function canStarUpUnit(ctx: PlotUnitsContext, chibiId: string): boolean {
@@ -238,7 +248,8 @@ export function starUpUnit(
   if (getSpareChibiDuplicateCount(ctx, chibiId) < next.dupCost) {
     return { ok: false, reason: 'insufficient' };
   }
-  ctx.miners[chibiId] = Math.max(1, (ctx.miners[chibiId] || 0) - next.dupCost);
+  const trialCount = ctx.twinTrial ? getTrialOwnedCount(ctx.twinTrial, chibiId) : 0;
+  ctx.miners[chibiId] = Math.max(1 + trialCount, (ctx.miners[chibiId] || 0) - next.dupCost);
   ctx.chibiStars[chibiId] = next.star;
   emit();
   return { ok: true, newStar: next.star };
@@ -248,9 +259,10 @@ export function autoStarUpAllUnits(ctx: PlotUnitsContext, emit: () => void = () 
   let upgrades = 0;
   for (const chibiId of Object.keys(ctx.miners)) {
     if (!getChibiById(chibiId) || (ctx.miners[chibiId] || 0) <= 1) continue;
+    const trialCount = ctx.twinTrial ? getTrialOwnedCount(ctx.twinTrial, chibiId) : 0;
     let next = getNextChibiStarTier(getChibiStarCount(ctx, chibiId));
     while (next && getSpareChibiDuplicateCount(ctx, chibiId) >= next.dupCost) {
-      ctx.miners[chibiId] = Math.max(1, (ctx.miners[chibiId] || 0) - next.dupCost);
+      ctx.miners[chibiId] = Math.max(1 + trialCount, (ctx.miners[chibiId] || 0) - next.dupCost);
       ctx.chibiStars[chibiId] = next.star;
       upgrades++;
       next = getNextChibiStarTier(next.star);
@@ -568,6 +580,20 @@ export function equipChibiOnPlotSlot(
   const prevUnit = ctx.plotUnits[slotIndex];
   const hadPrev = Boolean(ctx.plotMiners[slotIndex]);
   const nextUnit = popStashedUnit(ctx, chibiId) ?? createFreshPlotUnit(chibiId);
+  if (ctx.twinTrial) {
+    const permOwned = getPermanentMinerCount(ctx.miners, ctx.twinTrial, chibiId);
+    let placedOtherPerm = 0;
+    for (let i = 0; i < ctx.plotMiners.length; i++) {
+      if (i !== slotIndex && ctx.plotMiners[i] === chibiId && !ctx.plotUnits[i]?.isTrial) {
+        placedOtherPerm++;
+      }
+    }
+    if (placedOtherPerm >= permOwned) {
+      nextUnit.isTrial = true;
+    } else {
+      delete nextUnit.isTrial;
+    }
+  }
   ctx.plotMiners[slotIndex] = chibiId;
   ctx.plotUnits[slotIndex] = nextUnit;
   stashPlotUnit(ctx, prevUnit);
@@ -634,7 +660,7 @@ export function upgradeUnitDamage(
 ): boolean {
   const unit = ctx.plotUnits[slotIndex];
   const stats = computePlotUnitStats(ctx, slotIndex);
-  if (!unit || !stats || unit.damageLevel >= 100 || ctx.cash < stats.dmgCost) return false;
+  if (!unit || unit.isTrial || !stats || unit.damageLevel >= 100 || ctx.cash < stats.dmgCost) return false;
   ctx.cash -= stats.dmgCost;
   unit.damageLevel++;
   emit();
@@ -648,7 +674,7 @@ export function upgradeUnitSpeed(
 ): boolean {
   const unit = ctx.plotUnits[slotIndex];
   const stats = computePlotUnitStats(ctx, slotIndex);
-  if (!unit || !stats || unit.speedLevel >= 17 || ctx.cash < stats.speedCost) return false;
+  if (!unit || unit.isTrial || !stats || unit.speedLevel >= 17 || ctx.cash < stats.speedCost) return false;
   ctx.cash -= stats.speedCost;
   unit.speedLevel++;
   emit();
@@ -662,7 +688,7 @@ export function upgradeUnitMiningSpeed(
 ): boolean {
   const unit = ctx.plotUnits[slotIndex];
   const stats = computePlotUnitStats(ctx, slotIndex);
-  if (!unit || !stats || unit.miningSpeedLevel >= 16 || ctx.cash < stats.miningCost) return false;
+  if (!unit || unit.isTrial || !stats || unit.miningSpeedLevel >= 16 || ctx.cash < stats.miningCost) return false;
   ctx.cash -= stats.miningCost;
   unit.miningSpeedLevel++;
   emit();
@@ -677,7 +703,7 @@ export function buyOrEquipUnitPickaxe(
 ): 'equipped' | 'unequipped' | 'locked' {
   const unit = ctx.plotUnits[slotIndex];
   const pick = PICKAXES.find((p) => p.id === pickaxeId);
-  if (!unit || !pick) return 'locked';
+  if (!unit || unit.isTrial || !pick) return 'locked';
 
   if (unit.pickaxeId === pickaxeId) {
     ctx.ownedPickaxes[pickaxeId] = (ctx.ownedPickaxes[pickaxeId] || 0) + 1;
@@ -707,7 +733,7 @@ export function rollUnitMutation(
 ): string | null {
   const unit = ctx.plotUnits[slotIndex];
   const stats = computePlotUnitStats(ctx, slotIndex);
-  if (!unit || !stats || ctx.gems < stats.mutationCost) return null;
+  if (!unit || unit.isTrial || !stats || ctx.gems < stats.mutationCost) return null;
   ctx.gems -= stats.mutationCost;
   const mut = rollMutation(rng, ctx.getMutationLuckMult());
   unit.mutationId = mut.id;
@@ -742,7 +768,7 @@ export function toggleUnitEnchant(
 ): boolean {
   const unit = ctx.plotUnits[slotIndex];
   const enc = ENCHANTS.find((e) => e.id === enchantId);
-  if (!unit || !enc) return false;
+  if (!unit || unit.isTrial || !enc) return false;
 
   if (unit.enchantId === enchantId) {
     unit.enchantId = null;
@@ -779,6 +805,7 @@ export function equipBestUnitsToPlots(
 
   for (const list of poolByChibi.values()) {
     list.sort((a, b) => {
+      if (Boolean(a.isTrial) !== Boolean(b.isTrial)) return a.isTrial ? 1 : -1;
       const diff = getUnitRankScore(ctx, b) - getUnitRankScore(ctx, a);
       if (diff !== 0) return diff;
       const lvlB = b.damageLevel + b.speedLevel + b.miningSpeedLevel;
@@ -792,8 +819,13 @@ export function equipBestUnitsToPlots(
     if (qty <= 0) continue;
     const def = getChibiById(id) ?? CHIBI_CATALOG[0];
     const pool = poolByChibi.get(id) ?? [];
+    const permCount = ctx.twinTrial ? getPermanentMinerCount(ctx.miners, ctx.twinTrial, id) : qty;
     for (let q = 0; q < qty; q++) {
       const unit = pool.shift() ?? createFreshPlotUnit(def.id);
+      if (ctx.twinTrial) {
+        if (q < permCount) delete unit.isTrial;
+        else unit.isTrial = true;
+      }
       candidates.push({
         chibiId: def.id,
         unit,
@@ -813,7 +845,12 @@ export function equipBestUnitsToPlots(
     }
   }
 
-  candidates.sort((a, b) => b.score - a.score || b.baseDps - a.baseDps);
+  candidates.sort(
+    (a, b) =>
+      b.score - a.score ||
+      b.baseDps - a.baseDps ||
+      (a.unit.isTrial ? 1 : 0) - (b.unit.isTrial ? 1 : 0)
+  );
 
   const nextPlotMiners: (string | null)[] = Array(STAGE_PEDESTAL_COUNT).fill(null);
   const nextPlotUnits: (PlotUnitState | null)[] = Array(STAGE_PEDESTAL_COUNT).fill(null);

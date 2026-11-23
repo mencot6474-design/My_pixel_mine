@@ -980,6 +980,47 @@ export class GameState {
     return newlyUnlocked;
   }
 
+  public isTwinTrialVisible(): boolean {
+    return this.twinTrial.status === 'available' || this.twinTrial.status === 'active';
+  }
+
+  public isTwinTrialActive(nowMs = Date.now()): boolean {
+    return this.twinTrial.status === 'active' && nowMs < this.twinTrial.expiresAt;
+  }
+
+  public getTwinTrialRemainingSec(nowMs = Date.now()): number {
+    return TwinTrialDom.getTwinTrialRemainingSec(this.twinTrial, nowMs);
+  }
+
+  public isTrialPlotSlot(slotIndex: number): boolean {
+    return Boolean(this.plotUnits[slotIndex]?.isTrial);
+  }
+
+  public isTrialOnlyChibi(chibiId: string): boolean {
+    return (
+      TwinTrialDom.getTrialOwnedCount(this.twinTrial, chibiId) > 0 &&
+      TwinTrialDom.getPermanentMinerCount(this.miners, this.twinTrial, chibiId) <= 0
+    );
+  }
+
+  public unlockTwinTrial(): boolean {
+    const unlocked = TwinTrialDom.unlockTwinTrialDomain(this);
+    if (unlocked) this.emit();
+    return unlocked;
+  }
+
+  public claimTwinTrial(chibiId: string, nowMs = Date.now()): boolean {
+    const claimed = TwinTrialDom.claimTwinTrialDomain(this, chibiId, nowMs);
+    if (claimed) this.emit();
+    return claimed;
+  }
+
+  public syncTwinTrial(nowMs = Date.now()): { expired: boolean; chibiId: string | null } {
+    const res = TwinTrialDom.syncTwinTrialDomain(this, nowMs);
+    if (res.expired) this.emit();
+    return res;
+  }
+
   public touchSaveTimestamp(): void {
     this.save();
   }

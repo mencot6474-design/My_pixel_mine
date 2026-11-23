@@ -1945,5 +1945,57 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(reloadedExpired.plotMiners[1]).toBeNull();
       expect(reloadedExpired.discovered.has('halcyon-twins')).toBe(false);
     });
+
+    it('enforces read-only trial unit guards across PlotUnitsDomain, star-up, equipBest, and GameState API', () => {
+      const state = new GameState();
+      state.cash = 1_000_000;
+      state.gems = 10_000;
+      state.ownedPickaxes['sunwheel'] = 1;
+      expect(state.isTwinTrialVisible()).toBe(false);
+      expect(state.unlockTwinTrial()).toBe(true);
+      expect(state.isTwinTrialVisible()).toBe(true);
+
+      const now = Date.now();
+      expect(state.claimTwinTrial('lullaby-twins', now)).toBe(true);
+      expect(state.isTwinTrialActive(now)).toBe(true);
+      expect(state.isTrialOnlyChibi('lullaby-twins')).toBe(true);
+      expect(state.getTwinTrialRemainingSec(now)).toBe(1200);
+
+      // Equip onto plot 1 via hotbar (claimTwinTrial auto-inserted into hotbar[0])
+      expect(state.placeHotbarItemOnPlot(0, 1)).toBe('placed');
+      expect(state.isTrialPlotSlot(1)).toBe(true);
+      expect(state.plotUnits[1]?.isTrial).toBe(true);
+
+      // Read-only: upgrades, pickaxe, mutation, enchant, and star-up are all blocked
+      expect(state.upgradePlotDamage(1)).toBe(false);
+      expect(state.upgradePlotSpeed(1)).toBe(false);
+      expect(state.upgradePlotMiningSpeed(1)).toBe(false);
+      expect(state.buyOrEquipPickaxe(1, 'sunwheel')).toBe('locked');
+      expect(state.rollPlotMutation(1)).toBeNull();
+      expect(state.togglePlotEnchant(1, 'blazing')).toBe(false);
+      expect(state.cash).toBe(1_000_000);
+      expect(state.gems).toBe(10_000);
+      expect(state.ownedPickaxes['sunwheel']).toBe(1);
+
+      // Even if player later gets 1 permanent copy (total 2), trial copy is not counted for star-up (0 spare dupes)
+      state.miners['lullaby-twins'] = 2;
+      state.discovered.add('lullaby-twins');
+      expect(state.isTrialOnlyChibi('lullaby-twins')).toBe(false);
+      expect(state.starUpChibi('lullaby-twins').ok).toBe(false);
+      expect(state.autoStarUpAll()).toBe(0);
+
+      // Equip best keeps 1 permanent (non-trial) and 1 trial (isTrial: true)
+      state.equipBestMiners();
+      const lullabySlots = state.plotUnits.filter((u) => u?.chibiId === 'lullaby-twins');
+      expect(lullabySlots).toHaveLength(2);
+      expect(lullabySlots.filter((u) => u?.isTrial)).toHaveLength(1);
+      expect(lullabySlots.filter((u) => !u?.isTrial)).toHaveLength(1);
+
+      // Permanent slot can upgrade, trial slot remains read-only
+      const permIdx = state.plotUnits.findIndex((u) => u?.chibiId === 'lullaby-twins' && !u.isTrial);
+      const trialIdx = state.plotUnits.findIndex((u) => u?.chibiId === 'lullaby-twins' && u.isTrial);
+      expect(state.upgradePlotDamage(permIdx)).toBe(true);
+      expect(state.upgradePlotDamage(trialIdx)).toBe(false);
+    });
   });
 });
