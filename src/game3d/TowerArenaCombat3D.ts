@@ -13,7 +13,10 @@ import {
 import {
   BARRAGE_BEAT_WEIGHTS,
   BARRAGE_FOLLOWUP_DELAYS,
+  CHIBI_ATTACK_ANIM_SEC,
   computeAttackVfxSpeedScale,
+  computeSpotlightMaxChargeSec,
+  SpotlightAttackQueue,
   type TierAttackVfxPool3D,
   type WorldPoint3,
 } from './TierAttackVfx3D';
@@ -86,6 +89,7 @@ export interface TowerChibiFighter {
   dmg: number;
   attackInterval: number;
   attackCooldown: number;
+  chargeSec: number;
   comboStep: number;
   enchantId: string | null;
   colorHex: string;
@@ -266,6 +270,7 @@ export function stepTowerFightersAndBarrages(ctx: {
   fighters: Map<number, TowerChibiFighter>;
   waveRocks: readonly TowerWaveRockSlot[];
   pendingBarrages: TowerPendingBarrage[];
+  spotlight: SpotlightAttackQueue;
   targetPtsScratch: WorldPoint3[];
   projectiles: SignatureProjectilePool3D;
   tierVfx: TierAttackVfxPool3D;
@@ -354,7 +359,7 @@ export function stepTowerFightersAndBarrages(ctx: {
   const handleProjectileArrival = (a: SignatureProjectileArrival): void => {
     if (ctx.paused) return;
     const fighter = ctx.fighters.get(a.slotIndex);
-    const speedScale = computeAttackVfxSpeedScale(a.attackInterval);
+    const speedScale = computeAttackVfxSpeedScale(fighter ? fighter.attackInterval : CHIBI_ATTACK_ANIM_SEC);
     const beat0Interval = a.attackInterval * BARRAGE_BEAT_WEIGHTS[0];
     const beat0Dmg = Math.max(1, Math.round(a.dmg * BARRAGE_BEAT_WEIGHTS[0]));
 
@@ -457,24 +462,49 @@ export function stepTowerFightersAndBarrages(ctx: {
     }
   };
 
+  let hasAliveRock = false;
+  if (!ctx.bossWave) {
+    for (let ri = 0; ri < ctx.waveRocks.length; ri++) {
+      if (ctx.waveRocks[ri].alive) {
+        hasAliveRock = true;
+        break;
+      }
+    }
+  }
+  const hasTargets = ctx.bossWave || hasAliveRock;
+  const maxChargeSec = computeSpotlightMaxChargeSec(ctx.fighters.size);
+
+  if (!ctx.paused) {
+    ctx.spotlight.step(ctx.safeDt);
+  }
+
   for (const f of ctx.fighters.values()) {
     f.fx.update(ctx.elapsed);
     f.colorHex = f.fx.getAccentColor();
     f.sprite.setAccentColor(f.colorHex);
-    const pos = f.sprite.group.position;
-    pos.copy(f.spawnPos);
-
+    f.sprite.group.position.copy(f.spawnPos);
     f.sprite.setAnimState('idle');
-    if (ctx.paused) {
-      // Keep podium chibi idle while paused
-    } else if (!ctx.bossWave) {
-      const targetRock = pickTowerTargetOreForFighter(f, ctx.waveRocks, ctx.fighters);
-      if (targetRock) {
-        f.attackCooldown -= ctx.safeDt;
-        if (f.attackCooldown <= 0) {
-          f.attackCooldown = f.attackInterval;
-          const step = f.comboStep;
-          f.comboStep = (f.comboStep + 1) % 3;
+    if (!ctx.paused) {
+      f.attackCooldown = Math.max(0, f.attackCooldown - ctx.safeDt);
+      if (hasTargets) {
+        f.chargeSec = Math.min(maxChargeSec, f.chargeSec + ctx.safeDt);
+      }
+    }
+  }
+
+  if (!ctx.paused && hasTargets) {
+    const activeFighter = ctx.spotlight.pickNextReady(ctx.fighters.values(), (f) => f.attackCooldown);
+    if (activeFighter) {
+      const pos = activeFighter.sprite.group.position;
+      if (!ctx.bossWave) {
+        const targetRock = pickTowerTargetOreForFighter(activeFighter, ctx.waveRocks, ctx.fighters);
+        if (targetRock) {
+          const effectiveSec = Math.max(activeFighter.attackInterval, activeFighter.chargeSec);
+          activeFighter.attackCooldown = activeFighter.attackInterval;
+          activeFighter.chargeSec = 0;
+          ctx.spotlight.claim(activeFighter.slotIndex, CHIBI_ATTACK_ANIM_SEC);
+          const step = activeFighter.comboStep;
+          activeFighter.comboStep = (activeFighter.comboStep + 1) % 3;
           ctx.targetPtsScratch.length = 0;
           for (let ri = 0; ri < ctx.waveRocks.length; ri++) {
             const wr = ctx.waveRocks[ri];
@@ -482,82 +512,89 @@ export function stepTowerFightersAndBarrages(ctx: {
           }
           const targetPt: WorldPoint3 = { x: targetRock.x, y: 0.45, z: targetRock.z };
 
-          f.sprite.triggerPodiumCast(0.36);
+          activeFighter.sprite.triggerPodiumCast(0.36);
           ctx.tierVfx.firePodiumWeaponCast({
-            rarity: f.def.rarity,
-            chibiId: f.def.id,
-            colorHex: f.colorHex,
+            rarity: activeFighter.def.rarity,
+            chibiId: activeFighter.def.id,
+            colorHex: activeFighter.colorHex,
             origin: { x: pos.x, y: pos.y, z: pos.z },
             target: targetPt,
             allTargets: ctx.targetPtsScratch,
           });
-          ctx.tierVfx.fireAnticipation(f.def.rarity, f.colorHex, targetPt, ctx.targetPtsScratch);
+          ctx.tierVfx.fireAnticipation(
+            activeFighter.def.rarity,
+            activeFighter.colorHex,
+            targetPt,
+            ctx.targetPtsScratch
+          );
 
           ctx.projectiles.launch(
             {
-              style: f.style,
-              slotIndex: f.slotIndex,
+              style: activeFighter.style,
+              slotIndex: activeFighter.slotIndex,
               targetId: targetRock.index,
-              dmg: Math.max(1, Math.round(f.dmg * f.attackInterval)),
+              dmg: Math.max(1, Math.round(activeFighter.dmg * effectiveSec)),
               comboStep: step,
-              accentColor: f.colorHex,
+              accentColor: activeFighter.colorHex,
               sx: pos.x,
               sy: pos.y + 1.25,
               sz: pos.z,
               ex: targetRock.x,
               ey: 1.05,
               ez: targetRock.z,
-              attackInterval: f.attackInterval,
+              attackInterval: effectiveSec,
               isBoss: false,
             },
             handleProjectileArrival
           );
         }
-      }
-    } else {
-      f.attackCooldown -= ctx.safeDt;
-      if (f.attackCooldown <= 0) {
-        f.attackCooldown = f.attackInterval;
-        const step = f.comboStep;
-        f.comboStep = (f.comboStep + 1) % 3;
+      } else {
+        const effectiveSec = Math.max(activeFighter.attackInterval, activeFighter.chargeSec);
+        activeFighter.attackCooldown = activeFighter.attackInterval;
+        activeFighter.chargeSec = 0;
+        ctx.spotlight.claim(activeFighter.slotIndex, CHIBI_ATTACK_ANIM_SEC);
+        const step = activeFighter.comboStep;
+        activeFighter.comboStep = (activeFighter.comboStep + 1) % 3;
         const bossPt: WorldPoint3 = { x: 0, y: 0.8, z: TOWER_BOSS_CENTER_Z + 0.85 };
 
-        f.sprite.triggerPodiumCast(0.45);
+        activeFighter.sprite.triggerPodiumCast(0.45);
         ctx.tierVfx.firePodiumWeaponCast({
-          rarity: f.def.rarity,
-          chibiId: f.def.id,
-          colorHex: f.colorHex,
+          rarity: activeFighter.def.rarity,
+          chibiId: activeFighter.def.id,
+          colorHex: activeFighter.colorHex,
           origin: { x: pos.x, y: pos.y, z: pos.z },
           target: bossPt,
           allTargets: [bossPt],
         });
-        ctx.tierVfx.fireAnticipation(f.def.rarity, f.colorHex, bossPt, [bossPt]);
+        ctx.tierVfx.fireAnticipation(activeFighter.def.rarity, activeFighter.colorHex, bossPt, [bossPt]);
 
         const bossTargetX = (Math.random() - 0.5) * 0.65;
         const bossTargetY = 2.15 + Math.random() * 0.45;
         ctx.projectiles.launch(
           {
-            style: f.style,
-            slotIndex: f.slotIndex,
+            style: activeFighter.style,
+            slotIndex: activeFighter.slotIndex,
             targetId: -1,
-            dmg: Math.max(1, Math.round(f.dmg * f.attackInterval)),
+            dmg: Math.max(1, Math.round(activeFighter.dmg * effectiveSec)),
             comboStep: step,
-            accentColor: f.colorHex,
+            accentColor: activeFighter.colorHex,
             sx: pos.x,
             sy: pos.y + 1.25,
             sz: pos.z,
             ex: bossTargetX,
             ey: bossTargetY,
             ez: TOWER_BOSS_CENTER_Z + 0.85,
-            attackInterval: f.attackInterval,
+            attackInterval: effectiveSec,
             isBoss: true,
           },
           handleProjectileArrival
         );
       }
     }
+  }
 
-    if (ctx.camera) {
+  if (ctx.camera) {
+    for (const f of ctx.fighters.values()) {
       f.sprite.update(ctx.safeDt, ctx.elapsed, ctx.camera);
     }
   }

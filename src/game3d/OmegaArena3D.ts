@@ -34,7 +34,10 @@ import {
 import {
   BARRAGE_BEAT_WEIGHTS,
   BARRAGE_FOLLOWUP_DELAYS,
+  CHIBI_ATTACK_ANIM_SEC,
   computeAttackVfxSpeedScale,
+  computeSpotlightMaxChargeSec,
+  SpotlightAttackQueue,
   TierAttackVfxPool3D,
   type TierVfxHooks,
   type WorldPoint3,
@@ -88,6 +91,7 @@ export class OmegaArena3D {
   private readonly targetsGroup = new THREE.Group();
   private readonly impactFx = new AttackImpactFxController();
   private readonly projectiles = new SignatureProjectilePool3D();
+  private readonly spotlight = new SpotlightAttackQueue();
   private readonly pendingBarrages: Array<{
     slotIndex: number;
     beatIndex: number;
@@ -373,9 +377,12 @@ export class OmegaArena3D {
       this.bossSprite.setAnimState('idle');
     }
     this.projectiles.clear();
+    this.spotlight.reset();
     for (const f of this.fighters.values()) {
       f.sprite.setAnimState('idle');
       f.sprite.group.position.copy(f.spawnPos);
+      f.attackCooldown = 0.08 + f.slotIndex * 0.1;
+      f.chargeSec = 0;
     }
   }
 
@@ -398,8 +405,11 @@ export class OmegaArena3D {
     }
     if (phase !== 'active') {
       this.projectiles.clear();
+      this.spotlight.reset();
       for (const f of this.fighters.values()) {
         f.sprite.setAnimState('idle');
+        f.attackCooldown = 0.08 + f.slotIndex * 0.1;
+        f.chargeSec = 0;
         if (phase === 'ended') {
           f.sprite.group.position.copy(f.spawnPos);
         }
@@ -659,7 +669,7 @@ export class OmegaArena3D {
       const fighter = this.fighters.get(a.slotIndex);
       if (fighter) {
         const bossPt: WorldPoint3 = { x: 0, y: this.bossStageY, z: BOSS_POS_Z + 0.25 };
-        const speedScale = computeAttackVfxSpeedScale(a.attackInterval);
+        const speedScale = computeAttackVfxSpeedScale(fighter.attackInterval);
         this.tierVfx.fireTierAttack({
           rarity: fighter.rarity,
           chibiId: fighter.chibiId,
@@ -700,6 +710,11 @@ export class OmegaArena3D {
       });
     };
 
+    const maxChargeSec = computeSpotlightMaxChargeSec(this.fighters.size);
+    if (canAttack) {
+      this.spotlight.step(safeDt);
+    }
+
     for (const f of this.fighters.values()) {
       f.fx.update(elapsed);
       f.colorHex = f.fx.getAccentColor();
@@ -707,48 +722,54 @@ export class OmegaArena3D {
       f.sprite.group.position.copy(f.spawnPos);
       f.sprite.setAnimState('idle');
       if (canAttack) {
-        f.attackCooldown -= safeDt;
-        if (f.attackCooldown <= 0) {
-          f.attackCooldown = f.attackInterval;
-          const step = f.comboStep;
-          f.comboStep = (f.comboStep + 1) % 3;
-          const bossPt: WorldPoint3 = { x: 0, y: this.bossStageY, z: BOSS_POS_Z + 0.25 };
-
-          f.sprite.triggerPodiumCast(0.36);
-          this.tierVfx.firePodiumWeaponCast({
-            rarity: f.rarity,
-            chibiId: f.chibiId,
-            colorHex: f.colorHex,
-            origin: { x: f.spawnPos.x, y: f.spawnPos.y, z: f.spawnPos.z },
-            target: bossPt,
-            allTargets: [bossPt],
-          });
-          this.tierVfx.fireAnticipation(f.rarity, f.colorHex, bossPt, [bossPt]);
-
-          this.projectiles.launch(
-            {
-              style: f.style,
-              slotIndex: f.slotIndex,
-              targetId: -1,
-              dmg: f.dmg,
-              comboStep: step,
-              accentColor: f.colorHex,
-              sx: f.spawnPos.x,
-              sy: f.spawnPos.y + 1.25,
-              sz: f.spawnPos.z,
-              ex: (Math.random() - 0.5) * 0.9,
-              ey: this.bossStageY + 1.85,
-              ez: BOSS_POS_Z + 0.25,
-              attackInterval: f.attackInterval,
-              isBoss: true,
-            },
-            handleOmegaArrival
-          );
-        }
-      } else {
-        f.sprite.setAnimState('idle');
+        f.attackCooldown = Math.max(0, f.attackCooldown - safeDt);
+        f.chargeSec = Math.min(maxChargeSec, f.chargeSec + safeDt);
       }
       f.sprite.update(safeDt, elapsed, camera);
+    }
+
+    if (canAttack) {
+      const activeFighter = this.spotlight.pickNextReady(this.fighters.values(), (f) => f.attackCooldown);
+      if (activeFighter) {
+        const effectiveSec = Math.max(activeFighter.attackInterval, activeFighter.chargeSec);
+        activeFighter.attackCooldown = activeFighter.attackInterval;
+        activeFighter.chargeSec = 0;
+        this.spotlight.claim(activeFighter.slotIndex, CHIBI_ATTACK_ANIM_SEC);
+        const step = activeFighter.comboStep;
+        activeFighter.comboStep = (activeFighter.comboStep + 1) % 3;
+        const bossPt: WorldPoint3 = { x: 0, y: this.bossStageY, z: BOSS_POS_Z + 0.25 };
+
+        activeFighter.sprite.triggerPodiumCast(0.36);
+        this.tierVfx.firePodiumWeaponCast({
+          rarity: activeFighter.rarity,
+          chibiId: activeFighter.chibiId,
+          colorHex: activeFighter.colorHex,
+          origin: { x: activeFighter.spawnPos.x, y: activeFighter.spawnPos.y, z: activeFighter.spawnPos.z },
+          target: bossPt,
+          allTargets: [bossPt],
+        });
+        this.tierVfx.fireAnticipation(activeFighter.rarity, activeFighter.colorHex, bossPt, [bossPt]);
+
+        this.projectiles.launch(
+          {
+            style: activeFighter.style,
+            slotIndex: activeFighter.slotIndex,
+            targetId: -1,
+            dmg: activeFighter.dmg,
+            comboStep: step,
+            accentColor: activeFighter.colorHex,
+            sx: activeFighter.spawnPos.x,
+            sy: activeFighter.spawnPos.y + 1.25,
+            sz: activeFighter.spawnPos.z,
+            ex: (Math.random() - 0.5) * 0.9,
+            ey: this.bossStageY + 1.85,
+            ez: BOSS_POS_Z + 0.25,
+            attackInterval: effectiveSec,
+            isBoss: true,
+          },
+          handleOmegaArrival
+        );
+      }
     }
 
     if (canAttack) {

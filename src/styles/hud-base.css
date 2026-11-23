@@ -45,6 +45,36 @@
       1px 1px 0 #000;
   }
 
+  .mam-dmg-stroke-sm {
+    paint-order: stroke fill;
+    -webkit-text-stroke: 3.5px #14111d;
+    text-shadow: 0 2px 0 #14111d;
+  }
+
+  .mam-dmg-stroke {
+    paint-order: stroke fill;
+    -webkit-text-stroke: 5px #14111d;
+    text-shadow: 0 2.5px 0 #14111d;
+  }
+
+  .mam-dmg-stroke-lg {
+    paint-order: stroke fill;
+    -webkit-text-stroke: 6px #14111d;
+    text-shadow: 0 3px 0 #14111d;
+  }
+
+  .mam-dmg-crit-glow {
+    text-shadow:
+      0 3px 0 #14111d,
+      0 0 14px rgba(245, 158, 11, 0.72);
+  }
+
+  .mam-dmg-perfect-glow {
+    text-shadow:
+      0 3px 0 #14111d,
+      0 0 16px rgba(56, 189, 248, 0.78);
+  }
+
   .mam-rainbow-text {
     background: linear-gradient(90deg, #dc2626, #d97706, #059669, #0284c7, #7c3aed, #db2777);
     -webkit-background-clip: text;
@@ -83,8 +113,14 @@
     transform-origin: bottom center;
   }
 
+  #dmgPopupLayer {
+    font-family: var(--mam-font);
+  }
+
   #dmgPopupLayer > div {
-    scale: var(--mam-float-scale, 1);
+    translate: 0;
+    rotate: 0deg;
+    scale: max(0.86, var(--mam-float-scale, 1));
   }
 
   #hudRoot button,

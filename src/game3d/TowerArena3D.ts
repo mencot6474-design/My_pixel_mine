@@ -13,6 +13,7 @@ import {
 } from './SignatureProjectilePool3D';
 import {
   CHIBI_ATTACK_ANIM_SEC,
+  SpotlightAttackQueue,
   TierAttackVfxPool3D,
   type TierVfxHooks,
   type WorldPoint3,
@@ -82,6 +83,7 @@ export class TowerArena3D {
   private readonly impactFx = new AttackImpactFxController({ floorY: 0.11 });
   private readonly projectiles = new SignatureProjectilePool3D();
   private readonly pendingBarrages: TowerPendingBarrage[] = [];
+  private readonly spotlight = new SpotlightAttackQueue();
   private readonly tierVfx = new TierAttackVfxPool3D();
   private readonly targetPtsScratch: WorldPoint3[] = [];
   private readonly shardGroup = new THREE.Group();
@@ -247,6 +249,7 @@ export class TowerArena3D {
           dmg: cfg.dmg,
           attackInterval: Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / Math.max(1, cfg.miningMult))),
           attackCooldown: 0.14 + cfg.slotIndex * 0.08,
+          chargeSec: 0,
           comboStep: 0,
           enchantId: null,
           colorHex: cfg.def.accentColor,
@@ -297,12 +300,14 @@ export class TowerArena3D {
   public resetFloorCharge(): void {
     this.projectiles.clear();
     this.pendingBarrages.length = 0;
+    this.spotlight.reset();
     for (const f of this.fighters.values()) {
       f.sprite.group.position.copy(f.spawnPos);
       f.sprite.setAnimState('idle');
       f.sprite.setFacing(f.spawnPos.x <= 0 ? 1 : -1);
       f.targetOreIndex = -1;
       f.attackCooldown = 0.14 + f.slotIndex * 0.08;
+      f.chargeSec = 0;
     }
   }
 
@@ -730,6 +735,7 @@ export class TowerArena3D {
       fighters: this.fighters,
       waveRocks: this.waveRocks,
       pendingBarrages: this.pendingBarrages,
+      spotlight: this.spotlight,
       targetPtsScratch: this.targetPtsScratch,
       projectiles: this.projectiles,
       tierVfx: this.tierVfx,

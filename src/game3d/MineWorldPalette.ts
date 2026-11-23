@@ -109,6 +109,22 @@ export const STAGE_PEDESTAL_COUNT = 5;
 export const BASE_PIT_NODE_COUNT = 5;
 export const MAX_PIT_NODE_COUNT = 20;
 
+export interface CrescentSlotTransform {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly visualYaw: number;
+}
+
+/** 3-tier floating curved crescent slots hovering around the northern rim of the circular arena pool. */
+export const STAGE_CRESCENT_SLOTS: readonly CrescentSlotTransform[] = [
+  { x: -7.35, y: 0.72, z: -3.15, visualYaw: 0.58 },
+  { x: -3.85, y: 1.04, z: -5.1, visualYaw: 0.3 },
+  { x: 0, y: 1.38, z: -5.9, visualYaw: 0 },
+  { x: 3.85, y: 1.04, z: -5.1, visualYaw: -0.3 },
+  { x: 7.35, y: 0.72, z: -3.15, visualYaw: -0.58 },
+] as const;
+
 export type OreVariantKey = 'common' | 'vein' | 'geode';
 
 export interface OreVariantDef {

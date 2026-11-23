@@ -13,7 +13,9 @@ import {
   BARRAGE_FOLLOWUP_DELAYS,
   CHIBI_ATTACK_ANIM_SEC,
   computeAttackVfxSpeedScale,
+  computeSpotlightMaxChargeSec,
   splitBarrageDamage,
+  SpotlightAttackQueue,
   TierAttackVfxPool3D,
   type TierVfxHooks,
   type WorldPoint3,
@@ -64,6 +66,7 @@ interface PlotUnitState {
   critChance: number;
   critMult: number;
   cooldown: number;
+  chargeSec: number;
   comboStep: number;
   targetOreId: number | null;
 }
@@ -125,6 +128,7 @@ export class PlotAttackController3D {
 
   private readonly units = new Map<number, PlotUnitState>();
   private readonly pendingStrikes: PendingBlitzStrike[] = [];
+  private readonly spotlight = new SpotlightAttackQueue();
   private readonly tierVfx = new TierAttackVfxPool3D();
   private readonly alivePointScratch: WorldPoint3[] = [];
   private readonly aoeTargetsScratch: AliveNodeTarget[] = [];
@@ -164,6 +168,9 @@ export class PlotAttackController3D {
   ): void {
     if (!def) {
       this.units.delete(slotIndex);
+      if (this.units.size === 0) {
+        this.spotlight.reset();
+      }
       return;
     }
     const prev = this.units.get(slotIndex);
@@ -182,6 +189,7 @@ export class PlotAttackController3D {
       critChance,
       critMult,
       cooldown: prev && prev.def.id === def.id ? prev.cooldown : 0.12 + (slotIndex % 5) * 0.34,
+      chargeSec: prev && prev.def.id === def.id ? prev.chargeSec : 0,
       comboStep: prev?.comboStep ?? slotIndex % 3,
       targetOreId: prev?.targetOreId ?? null,
     });
@@ -214,6 +222,7 @@ export class PlotAttackController3D {
 
   public clearProjectiles(): void {
     this.pendingStrikes.length = 0;
+    this.spotlight.reset();
     this.tierVfx.clear();
   }
 
@@ -440,6 +449,71 @@ export class PlotAttackController3D {
     );
   }
 
+  private fireVisualUnitStrike(
+    unit: PlotUnitState,
+    ped: PlotPedestal3D,
+    target: AliveNodeTarget,
+    alive: AliveNodeTarget[],
+    attackInterval: number,
+    strikeDamage: number
+  ): void {
+    this.alivePointScratch.length = 0;
+    for (let ai = 0; ai < alive.length; ai++) {
+      const an = alive[ai];
+      this.alivePointScratch.push({ x: an.worldX, y: an.worldY, z: an.worldZ });
+    }
+    const targetPt: WorldPoint3 = { x: target.worldX, y: target.worldY, z: target.worldZ };
+    const wideCenter = computeZoneWideCenter(targetPt, this.alivePointScratch);
+    const areaScale = computeSafePitAreaScale(wideCenter);
+    const accentColor = ped.getActiveAccentColor();
+
+    ped.triggerChibiCast(0.36);
+    ped.getAttackOriginWorldPosition(this.originVec);
+    this.tierVfx.firePodiumWeaponCast({
+      rarity: unit.def.rarity,
+      chibiId: unit.def.id,
+      colorHex: accentColor,
+      origin: { x: ped.group.position.x, y: ped.group.position.y, z: ped.group.position.z },
+      target: targetPt,
+      allTargets: this.alivePointScratch,
+      areaScale,
+      wideCenter,
+    });
+    this.tierVfx.fireAnticipation(
+      unit.def.rarity,
+      accentColor,
+      targetPt,
+      this.alivePointScratch,
+      areaScale,
+      wideCenter
+    );
+
+    const beatDmgs = splitBarrageDamage(strikeDamage);
+    const lastBeatIdx = beatDmgs.length - 1;
+    for (let bi = 0; bi < beatDmgs.length; bi++) {
+      const beatDmg = beatDmgs[bi];
+      if (beatDmg <= 0) continue;
+      const isFinisher = bi === lastBeatIdx;
+      const delayLeft = bi === 0 ? 0.2 : 0.2 + BARRAGE_FOLLOWUP_DELAYS[bi - 1];
+      this.pendingStrikes.push({
+        slotIndex: unit.slotIndex,
+        targetId: target.id,
+        dmg: beatDmg,
+        comboStep: isFinisher ? 2 : (unit.comboStep + bi) % 2,
+        accentColor,
+        sx: this.originVec.x,
+        sz: this.originVec.z,
+        ex: target.worldX,
+        ey: target.worldY + 0.65,
+        ez: target.worldZ,
+        attackInterval,
+        delayLeft,
+        fireShader: bi === 0,
+        isFinisher,
+      });
+    }
+  }
+
   public update(
     dtSec: number,
     camera: THREE.Camera,
@@ -460,83 +534,31 @@ export class PlotAttackController3D {
     }
 
     const alive = pit.getAliveNodesInfo();
+    const maxChargeSec = computeSpotlightMaxChargeSec(this.units.size);
 
-    for (const unit of this.units.values()) {
-      const ped = pedestals[unit.slotIndex];
-      const pedX = ped ? ped.group.position.x : (unit.slotIndex - 2) * 3.22;
-      const pedZ = ped ? ped.group.position.z : -4.58;
+    if (!renderVisuals) {
+      this.spotlight.reset();
+      for (const unit of this.units.values()) {
+        const ped = pedestals[unit.slotIndex];
+        const pedX = ped ? ped.group.position.x : (unit.slotIndex - 2) * 3.22;
+        const pedZ = ped ? ped.group.position.z : -4.58;
 
-      if (alive.length === 0) {
-        unit.cooldown = Math.max(0.08, unit.cooldown - safeDt);
-        continue;
-      }
+        if (alive.length === 0) {
+          unit.cooldown = Math.max(0.08, unit.cooldown - safeDt);
+          continue;
+        }
 
-      const target = this.pickTarget(unit, alive, pedX);
-      if (!target) continue;
+        const target = this.pickTarget(unit, alive, pedX);
+        if (!target) continue;
 
-      unit.cooldown -= safeDt;
-      if (unit.cooldown <= 0) {
-        const attackInterval = getMineAttackIntervalSec(unit.miningMult);
-        unit.cooldown = attackInterval;
-        const strikeDamage = Math.max(1, unit.dmg * attackInterval);
-
-        if (renderVisuals && ped) {
-          this.alivePointScratch.length = 0;
-          for (let ai = 0; ai < alive.length; ai++) {
-            const an = alive[ai];
-            this.alivePointScratch.push({ x: an.worldX, y: an.worldY, z: an.worldZ });
-          }
-          const targetPt: WorldPoint3 = { x: target.worldX, y: target.worldY, z: target.worldZ };
-          const wideCenter = computeZoneWideCenter(targetPt, this.alivePointScratch);
-          const areaScale = computeSafePitAreaScale(wideCenter);
-          const accentColor = ped.getActiveAccentColor();
-
-          ped.triggerChibiCast(0.36);
-          ped.getAttackOriginWorldPosition(this.originVec);
-          this.tierVfx.firePodiumWeaponCast({
-            rarity: unit.def.rarity,
-            chibiId: unit.def.id,
-            colorHex: accentColor,
-            origin: { x: ped.group.position.x, y: ped.group.position.y, z: ped.group.position.z },
-            target: targetPt,
-            allTargets: this.alivePointScratch,
-            areaScale,
-            wideCenter,
-          });
-          this.tierVfx.fireAnticipation(
-            unit.def.rarity,
-            accentColor,
-            targetPt,
-            this.alivePointScratch,
-            areaScale,
-            wideCenter
-          );
-
-          const beatDmgs = splitBarrageDamage(strikeDamage);
-          const lastBeatIdx = beatDmgs.length - 1;
-          for (let bi = 0; bi < beatDmgs.length; bi++) {
-            const beatDmg = beatDmgs[bi];
-            if (beatDmg <= 0) continue;
-            const isFinisher = bi === lastBeatIdx;
-            const delayLeft = bi === 0 ? 0.2 : 0.2 + BARRAGE_FOLLOWUP_DELAYS[bi - 1];
-            this.pendingStrikes.push({
-              slotIndex: unit.slotIndex,
-              targetId: target.id,
-              dmg: beatDmg,
-              comboStep: isFinisher ? 2 : (unit.comboStep + bi) % 2,
-              accentColor,
-              sx: this.originVec.x,
-              sz: this.originVec.z,
-              ex: target.worldX,
-              ey: target.worldY + 0.65,
-              ez: target.worldZ,
-              attackInterval,
-              delayLeft,
-              fireShader: bi === 0,
-              isFinisher,
-            });
-          }
-        } else {
+        unit.cooldown -= safeDt;
+        unit.chargeSec = Math.min(maxChargeSec, unit.chargeSec + safeDt);
+        if (unit.cooldown <= 0) {
+          const attackInterval = getMineAttackIntervalSec(unit.miningMult);
+          const effectiveSec = Math.max(attackInterval, unit.chargeSec);
+          unit.cooldown = attackInterval;
+          unit.chargeSec = 0;
+          const strikeDamage = Math.max(1, unit.dmg * effectiveSec);
           this.applyImpact(
             pit,
             target.id,
@@ -555,27 +577,76 @@ export class PlotAttackController3D {
             false,
             unit
           );
+          unit.comboStep = (unit.comboStep + 1) % 3;
         }
-        unit.comboStep = (unit.comboStep + 1) % 3;
+      }
+      return;
+    }
+
+    this.spotlight.step(safeDt);
+
+    for (const unit of this.units.values()) {
+      unit.cooldown = Math.max(0, unit.cooldown - safeDt);
+      if (alive.length > 0) {
+        unit.chargeSec = Math.min(maxChargeSec, unit.chargeSec + safeDt);
       }
     }
 
-    if (renderVisuals) {
-      for (let i = this.pendingStrikes.length - 1; i >= 0; i--) {
-        if (this.pendingStrikes.length === 0) break;
-        if (i >= this.pendingStrikes.length) {
-          i = this.pendingStrikes.length - 1;
-        }
-        const st = this.pendingStrikes[i];
-        if (!st) continue;
-        st.delayLeft -= safeDt;
-        if (st.delayLeft <= 0) {
-          this.pendingStrikes.splice(i, 1);
-          this.handleArrival(st, pit, pedestals, true, onOreBroken, onOreHit);
+    if (alive.length > 0) {
+      const activeUnit = this.spotlight.pickNextReady(this.units.values(), (u) => u.cooldown);
+      if (activeUnit) {
+        const ped = pedestals[activeUnit.slotIndex];
+        const pedX = ped ? ped.group.position.x : (activeUnit.slotIndex - 2) * 3.22;
+        const pedZ = ped ? ped.group.position.z : -4.58;
+        const target = this.pickTarget(activeUnit, alive, pedX);
+        if (target) {
+          const attackInterval = getMineAttackIntervalSec(activeUnit.miningMult);
+          const effectiveSec = Math.max(attackInterval, activeUnit.chargeSec);
+          activeUnit.cooldown = attackInterval;
+          activeUnit.chargeSec = 0;
+          this.spotlight.claim(activeUnit.slotIndex, CHIBI_ATTACK_ANIM_SEC);
+          const strikeDamage = Math.max(1, activeUnit.dmg * effectiveSec);
+          if (ped) {
+            this.fireVisualUnitStrike(activeUnit, ped, target, alive, attackInterval, strikeDamage);
+          } else {
+            this.applyImpact(
+              pit,
+              target.id,
+              target,
+              strikeDamage,
+              activeUnit.def.accentColor,
+              pedX,
+              pedZ,
+              activeUnit.comboStep,
+              false,
+              onOreBroken,
+              onOreHit,
+              activeUnit.critChance,
+              activeUnit.critMult,
+              activeUnit.def.rarity,
+              false,
+              activeUnit
+            );
+          }
+          activeUnit.comboStep = (activeUnit.comboStep + 1) % 3;
         }
       }
-      this.tierVfx.update(safeDt, camera);
     }
+
+    for (let i = this.pendingStrikes.length - 1; i >= 0; i--) {
+      if (this.pendingStrikes.length === 0) break;
+      if (i >= this.pendingStrikes.length) {
+        i = this.pendingStrikes.length - 1;
+      }
+      const st = this.pendingStrikes[i];
+      if (!st) continue;
+      st.delayLeft -= safeDt;
+      if (st.delayLeft <= 0) {
+        this.pendingStrikes.splice(i, 1);
+        this.handleArrival(st, pit, pedestals, true, onOreBroken, onOreHit);
+      }
+    }
+    this.tierVfx.update(safeDt, camera);
   }
 
   public dispose(): void {

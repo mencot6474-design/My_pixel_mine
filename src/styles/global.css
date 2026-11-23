@@ -265,14 +265,11 @@
 
   .mam-pickaxe-combo-crit {
     margin-left: 2px;
-    padding: 1px 4px;
-    border-radius: 5px;
-    border: 1.5px solid #14111d;
-    background: linear-gradient(90deg, #fde047, #fb923c);
-    color: #14111d;
-    font-size: 8.5px;
+    color: #ea580c;
+    font-size: 10px;
     font-weight: 900;
-    letter-spacing: 0.06em;
+    font-style: italic;
+    letter-spacing: 0.04em;
     line-height: 1;
   }
 

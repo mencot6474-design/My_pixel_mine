@@ -105,6 +105,65 @@ export function computeAttackVfxSpeedScale(attackInterval: number): number {
   return Math.max(1.65, Math.min(1.95, attackInterval / 1.35));
 }
 
+export function computeSpotlightMaxChargeSec(unitCount: number): number {
+  return Math.max(CHIBI_ATTACK_ANIM_SEC, Math.max(1, unitCount) * CHIBI_ATTACK_ANIM_SEC * 1.5);
+}
+
+/**
+ * Enforces strict single-Chibi Sakuga spotlight turns across up to 5 podium slots.
+ * Guarantees zero overlapping 2.5s skill shaders while advancing in round-robin order.
+ */
+export class SpotlightAttackQueue {
+  private lockRemaining = 0;
+  private nextCursorSlot = 0;
+
+  public reset(): void {
+    this.lockRemaining = 0;
+    this.nextCursorSlot = 0;
+  }
+
+  public getLockRemaining(): number {
+    return this.lockRemaining;
+  }
+
+  public step(dtSec: number): void {
+    if (this.lockRemaining > 0) {
+      const next = this.lockRemaining - dtSec;
+      this.lockRemaining = next <= 1e-6 ? 0 : next;
+    }
+  }
+
+  public pickNextReady<T extends { slotIndex: number }>(
+    units: Iterable<T>,
+    getCooldown: (unit: T) => number
+  ): T | null {
+    if (this.lockRemaining > 0) return null;
+
+    let bestAfterCursor: T | null = null;
+    let bestWrap: T | null = null;
+
+    for (const u of units) {
+      if (getCooldown(u) > 0) continue;
+      if (u.slotIndex >= this.nextCursorSlot) {
+        if (!bestAfterCursor || u.slotIndex < bestAfterCursor.slotIndex) {
+          bestAfterCursor = u;
+        }
+      } else {
+        if (!bestWrap || u.slotIndex < bestWrap.slotIndex) {
+          bestWrap = u;
+        }
+      }
+    }
+
+    return bestAfterCursor ?? bestWrap;
+  }
+
+  public claim(firedSlot: number, durationSec = CHIBI_ATTACK_ANIM_SEC): void {
+    this.lockRemaining = Math.max(0, durationSec);
+    this.nextCursorSlot = firedSlot + 1;
+  }
+}
+
 export function getRaritySecondaryColor(rarity: string): string {
   switch (rarity) {
     case 'uncommon':

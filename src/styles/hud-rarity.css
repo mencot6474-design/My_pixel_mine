@@ -627,4 +627,9 @@
     text-shadow: 0 1px 0 #000 !important;
   }
 
+  body.mam-quality-low #dmgPopupLayer .mam-dmg-crit-glow,
+  body.mam-quality-low #dmgPopupLayer .mam-dmg-perfect-glow {
+    text-shadow: 0 2.5px 0 #14111d !important;
+  }
+
 }

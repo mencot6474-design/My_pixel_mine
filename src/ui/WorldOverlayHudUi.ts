@@ -664,33 +664,21 @@ export class WorldOverlayHudUi {
     const dmgText = fmtShort(Math.max(1, Math.round(dmg)));
     if (isPerfect) {
       el.className =
-        'absolute inline-flex items-center gap-1.5 font-black tabular-nums whitespace-nowrap will-change-[transform,opacity] animate-[mamCritFloat_0.92s_cubic-bezier(0.22,1,0.36,1)_forwards] pointer-events-none';
+        'absolute inline-flex flex-col items-center font-black tabular-nums whitespace-nowrap will-change-[transform,opacity] animate-[mamCritFloat_0.98s_cubic-bezier(0.22,1,0.36,1)_forwards] pointer-events-none';
       el.innerHTML = `
-        <svg class="w-7 h-7 shrink-0 drop-shadow-[0_0_10px_rgba(56,189,248,0.95)]" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-          <path d="M14 1.5L17.2 9.4L25.5 7.5L19.6 13.8L26.5 18.5L17.6 18.6L14 26.5L10.4 18.6L1.5 18.5L8.4 13.8L2.5 7.5L10.8 9.4L14 1.5Z" fill="#38bdf8" stroke="#fde047" stroke-width="1.6" stroke-linejoin="round"/>
-          <path d="M14 5.5L16.1 11.1L21.8 11.4L17.1 14.9L18.8 20.5L14 17.2L9.2 20.5L10.9 14.9L6.2 11.4L11.9 11.1L14 5.5Z" fill="#ffffff"/>
-        </svg>
-        <span class="inline-flex flex-col items-start leading-none">
-          <span class="mam-pill-xs rounded-md bg-[linear-gradient(90deg,#0284c7,#a855f7,#f59e0b)] border-2 border-[#14111d] text-[10px] tracking-[0.1em] text-white uppercase">PERFECT STRIKE!</span>
-          <span class="text-[31px] text-[#67e8f9] mam-outline">-${dmgText}!!</span>
-        </span>
+        <span class="-mb-1 text-[15px] font-black italic tracking-[0.14em] text-[#38bdf8] uppercase mam-dmg-stroke-sm">PERFECT!</span>
+        <span class="text-[42px] leading-none font-black italic text-[#a5f3fc] mam-dmg-stroke-lg mam-dmg-perfect-glow">-${dmgText}!!</span>
       `;
     } else if (isCrit) {
       el.className =
-        'absolute inline-flex items-center gap-1 font-black tabular-nums whitespace-nowrap will-change-[transform,opacity] animate-[mamCritFloat_0.82s_cubic-bezier(0.22,1,0.36,1)_forwards] pointer-events-none';
+        'absolute inline-flex flex-col items-center font-black tabular-nums whitespace-nowrap will-change-[transform,opacity] animate-[mamCritFloat_0.92s_cubic-bezier(0.22,1,0.36,1)_forwards] pointer-events-none';
       el.innerHTML = `
-        <svg class="w-6 h-6 shrink-0 drop-shadow-[0_0_8px_rgba(251,191,36,0.95)]" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-          <path d="M14 1.5L17.2 9.4L25.5 7.5L19.6 13.8L26.5 18.5L17.6 18.6L14 26.5L10.4 18.6L1.5 18.5L8.4 13.8L2.5 7.5L10.8 9.4L14 1.5Z" fill="#f59e0b" stroke="#fef08a" stroke-width="1.4" stroke-linejoin="round"/>
-          <path d="M14 5.5L16.1 11.1L21.8 11.4L17.1 14.9L18.8 20.5L14 17.2L9.2 20.5L10.9 14.9L6.2 11.4L11.9 11.1L14 5.5Z" fill="#fffbeb"/>
-        </svg>
-        <span class="inline-flex flex-col items-start leading-none">
-          <span class="mam-pill-xs rounded bg-[linear-gradient(90deg,#f59e0b,#ef4444)] border border-[#fef08a]/85 text-[9px] tracking-[0.12em] text-white uppercase shadow-[0_0_10px_rgba(245,158,11,0.75)]">CRIT</span>
-          <span class="text-[28px] text-[#fef08a] mam-outline drop-shadow-[0_0_12px_rgba(245,158,11,0.9)]">-${dmgText}!</span>
-        </span>
+        <span class="-mb-1 text-[15px] font-black italic tracking-[0.14em] text-[#fb923c] uppercase mam-dmg-stroke-sm">CRIT!</span>
+        <span class="text-[38px] leading-none font-black italic text-[#fef08a] mam-dmg-stroke-lg mam-dmg-crit-glow">-${dmgText}!</span>
       `;
     } else {
-      const sizeColor = isClick ? 'text-[22px] text-[#facc15]' : 'text-[20px] text-[#ef4444]';
-      el.className = `absolute font-black tabular-nums whitespace-nowrap will-change-[transform,opacity] animate-[mamDmgFloat_0.68s_cubic-bezier(0.22,1,0.36,1)_forwards] mam-outline ${sizeColor}`;
+      const sizeColor = isClick ? 'text-[32px] text-[#fde047]' : 'text-[28px] text-[#ff7878]';
+      el.className = `absolute font-black tabular-nums whitespace-nowrap will-change-[transform,opacity] animate-[mamDmgFloat_0.82s_cubic-bezier(0.22,1,0.36,1)_forwards] mam-dmg-stroke ${sizeColor}`;
       el.textContent = `-${dmgText}`;
     }
     el.addEventListener('animationend', () => el.remove(), { once: true });

@@ -53,6 +53,7 @@ export interface OmegaFighterEntry {
   dmg: number;
   attackInterval: number;
   attackCooldown: number;
+  chargeSec: number;
   comboStep: number;
   colorHex: string;
 }
@@ -445,6 +446,7 @@ export function syncOmegaFighterEntries(ctx: {
       dmg: cfg.dmg,
       attackInterval: Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / Math.max(0.4, cfg.miningMult))),
       attackCooldown: 0.08 + cfg.slotIndex * 0.1,
+      chargeSec: 0,
       comboStep: 0,
       colorHex: cfg.def.accentColor,
     });

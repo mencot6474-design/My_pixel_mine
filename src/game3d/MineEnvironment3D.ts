@@ -78,18 +78,18 @@ export class MineEnvironment3D {
     });
     this.group.add(this.vaultDais.group);
 
-    // 5. Drifting Under-Void Crystal Shards Beneath the Floating Circular Arena Ring (InstancedMesh)
-    const shardCount = 16;
-    const shardGeo = new THREE.OctahedronGeometry(0.45, 0);
+    // 5. Drifting Anti-Grav Cyber Sky-Stage Light Buoys around outer sky perimeter (InstancedMesh)
+    const shardCount = 12;
+    const shardGeo = new THREE.OctahedronGeometry(0.28, 0);
     shardGeo.scale(0.65, 1.85, 0.65);
-    this.voidShardsInst = new THREE.InstancedMesh(shardGeo, this.cliffMat, shardCount);
+    this.voidShardsInst = new THREE.InstancedMesh(shardGeo, this.cyberDeckTrimMat, shardCount);
     for (let i = 0; i < shardCount; i++) {
       this.voidShardSeeds.push({
-        angle: (i / shardCount) * Math.PI * 2 + (i % 3) * 0.2,
-        radius: 8.4 + (i % 5) * 1.15,
-        baseY: -2.9 - (i % 4) * 0.55,
-        scale: 0.55 + (i % 3) * 0.25,
-        speed: 0.04 + (i % 4) * 0.015,
+        angle: (i / shardCount) * Math.PI * 2 + (i % 3) * 0.18,
+        radius: 10.8 + (i % 4) * 1.1,
+        baseY: -1.45 - (i % 4) * 0.38,
+        scale: 0.45 + (i % 3) * 0.16,
+        speed: 0.035 + (i % 3) * 0.012,
       });
     }
     this.group.add(this.voidShardsInst);

@@ -9,7 +9,13 @@ import { createCyberCargoPod } from './CyberCargoPod3D';
 import { configureSceneTextureSharpness } from './MeshHelpers3D';
 import { ImpactFrameShader } from './MeshFx3D';
 import type { MineEnvironment3D } from './MineEnvironment3D';
-import { type MineWorldPalette, type OreVariantKey, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
+import {
+  type CrescentSlotTransform,
+  type MineWorldPalette,
+  type OreVariantKey,
+  STAGE_CRESCENT_SLOTS,
+  STAGE_PEDESTAL_COUNT,
+} from './MineWorldPalette';
 import { PlotPedestal3D } from './PlotPedestal3D';
 import { GRAPHICS_PRESETS, type GraphicsQuality } from '../game/GameSettings';
 import { type OverclockTier } from '../game/OverclockDomain';
@@ -165,21 +171,7 @@ export function clampCameraZoomRadius(radius: number, mode: SceneMode): number {
 const tmpCamPos = new THREE.Vector3();
 const tmpLookTarget = new THREE.Vector3();
 
-export interface CrescentSlotTransform {
-  readonly x: number;
-  readonly y: number;
-  readonly z: number;
-  readonly visualYaw: number;
-}
-
-/** 3-tier floating curved crescent slots hovering around the northern rim of the circular arena pool. */
-export const STAGE_CRESCENT_SLOTS: readonly CrescentSlotTransform[] = [
-  { x: -7.35, y: 0.72, z: -3.15, visualYaw: 0.58 },
-  { x: -3.85, y: 1.04, z: -5.1, visualYaw: 0.3 },
-  { x: 0, y: 1.38, z: -5.9, visualYaw: 0 },
-  { x: 3.85, y: 1.04, z: -5.1, visualYaw: -0.3 },
-  { x: 7.35, y: 0.72, z: -3.15, visualYaw: -0.58 },
-] as const;
+export { STAGE_CRESCENT_SLOTS, type CrescentSlotTransform };
 
 export function buildMineStageAndChest(ctx: {
   palette: MineWorldPalette;

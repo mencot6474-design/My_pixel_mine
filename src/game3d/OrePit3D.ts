@@ -11,6 +11,11 @@ import {
 } from './MineWorldPalette';
 import { AttackImpactFxController } from './AttackImpactFx3D';
 import {
+  type ColosseumBiomeHandle,
+  createColosseumBiomeHandle,
+  WORLD_ARENA_BIOMES,
+} from './ColosseumBiome3D';
+import {
   getGeodeGlowTexture,
   getSoftContactShadowTexture,
   loadPublicSpriteTexture,
@@ -99,6 +104,7 @@ export class OrePit3D {
   private readonly wallMat: THREE.MeshStandardMaterial;
   private readonly trimMat: THREE.MeshStandardMaterial;
   private readonly pitNeonMat: THREE.MeshStandardMaterial;
+  private readonly biomeIsland: ColosseumBiomeHandle;
   private readonly shardMat: THREE.MeshStandardMaterial;
   private readonly rockChipMat: THREE.MeshStandardMaterial;
   private readonly sharedShardGeo = new THREE.OctahedronGeometry(0.14, 0);
@@ -165,6 +171,8 @@ export class OrePit3D {
     this.wallMat = envMeshes.wallMat;
     this.trimMat = envMeshes.trimMat;
     this.pitNeonMat = envMeshes.pitNeonMat;
+    this.biomeIsland = createColosseumBiomeHandle(resolveWorldIdFromPalette(palette));
+    this.group.add(this.biomeIsland.group);
 
     this.sharedShardGeo.scale(0.75, 1.45, 0.75);
     this.shardMat = new THREE.MeshStandardMaterial({
@@ -293,11 +301,17 @@ export class OrePit3D {
     this.activeWorldId = resolveWorldIdFromPalette(palette);
 
     const cColor = new THREE.Color(palette.crystalColor);
-    this.floorMat.map = getCircularNexusPoolTexture(palette.pitFloorColor, palette.crystalColor);
+    const biome = WORLD_ARENA_BIOMES[this.activeWorldId] ?? WORLD_ARENA_BIOMES.underground;
+    this.floorMat.map = getCircularNexusPoolTexture(
+      palette.pitFloorColor,
+      palette.crystalColor,
+      this.activeWorldId
+    );
     this.floorMat.needsUpdate = true;
-    this.wallMat.color.setHex(0x161f30);
-    this.trimMat.map = getCyberColosseumDeckTexture(palette.crystalColor);
+    this.wallMat.color.set(biome.rockHex).lerp(new THREE.Color('#334155'), 0.28);
+    this.trimMat.map = getCyberColosseumDeckTexture(palette.crystalColor, biome.deckHex);
     this.trimMat.needsUpdate = true;
+    this.biomeIsland.setBiome(this.activeWorldId, palette.crystalColor);
     this.pitNeonMat.color.copy(cColor);
     this.pitNeonMat.emissive.copy(cColor);
     this.pitNeonMat.emissiveIntensity = 1.05;
@@ -643,6 +657,7 @@ export class OrePit3D {
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
     this.impactFx.setLowQuality(low);
+    this.biomeIsland.setLowQuality(low);
   }
 
   private spawnShardsAt(lx: number, lz: number, count: number, isShatter = false, isMeteor = false): void {
@@ -826,6 +841,7 @@ export class OrePit3D {
         this.pitNeonMat.emissive.copy(this.pitNeonMat.color);
         this.pitNeonMat.emissiveIntensity = 1.05 + (this.skillPulsePeakIntensity - 1.05) * t;
       }
+      this.biomeIsland.update(elapsed, this.skillPulseTimer > 0 ? this.skillPulseTimer / 0.45 : 0);
       stepOrePitShards(dtSec, {
         group: this.group,
         shardPool: this.shardPool,
@@ -934,6 +950,7 @@ export class OrePit3D {
 
   public dispose(): void {
     this.impactFx.dispose();
+    this.biomeIsland.dispose();
     for (const p of this.shardPool) {
       this.group.remove(p.mesh);
     }

@@ -25,6 +25,7 @@ import {
   stepMineSceneCamera,
 } from '../src/game3d/MineSceneStage3D';
 import { createNexusLeftGate, createVaultCoreDais } from '../src/game3d/ArenaWings3D';
+import { WORLD_ARENA_BIOMES } from '../src/game3d/ColosseumBiome3D';
 import { createCyberCargoPod } from '../src/game3d/CyberCargoPod3D';
 import { AudioManager } from '../src/audio/AudioManager';
 import {
@@ -217,7 +218,9 @@ import {
 } from '../src/game3d/MeshFx3D';
 import {
   buildTierMotionWaypoints,
+  CHIBI_ATTACK_ANIM_SEC,
   splitBarrageDamage,
+  SpotlightAttackQueue,
   TierAttackVfxPool3D,
 } from '../src/game3d/TierAttackVfx3D';
 import { createTowerCityEnvironment } from '../src/game3d/TowerCityEnvironment3D';
@@ -3395,18 +3398,25 @@ describe('Pure 3D Mine World', () => {
     expect(hits.length).toBeGreaterThanOrEqual(3);
     const hitsAfterBeat0 = hits.length;
 
-    // Advance through all 7 barrage beats (0.20s .. 1.68s) so 100% strike damage lands across 7 hits
+    // Advance through Slot 0's 7 barrage beats (0.20s .. 1.68s) — strict spotlight keeps Slot 1 queued until 2.5s
     const beats = splitBarrageDamage(1000);
     expect(beats).toEqual([80, 100, 110, 130, 150, 180, 250]);
     expect(beats.reduce((sum, v) => sum + v, 0)).toBe(1000);
     const smallBeats = splitBarrageDamage(5);
     expect(smallBeats).toEqual([1, 1, 1, 1, 1, 0, 0]);
     for (let i = 0; i < 28; i++) {
-      pit.update(0.05, 0.6 + i * 0.05, cam, false);
+      pit.update(0.05, 0.76 + i * 0.05, cam, false);
       controller.update(0.05, cam, pit, peds, true, onBroken, onHit);
     }
     expect(hits.length).toBeGreaterThan(hitsAfterBeat0);
-    expect(hits.length).toBeGreaterThanOrEqual(21);
+    expect(hits.length).toBe(7);
+
+    // Advance through Slot 1's (twin) spotlight turn (2.62s + 1.68s) -> adds 7 * 3 = 21 AoE hits (total 28)
+    for (let i = 0; i < 48; i++) {
+      pit.update(0.05, 2.16 + i * 0.05, cam, false);
+      controller.update(0.05, cam, pit, peds, true, onBroken, onHit);
+    }
+    expect(hits.length).toBeGreaterThanOrEqual(28);
 
     // Switch to headless/background mining: flushes projectiles and deals damage directly with 0 active projectiles
     const prevHits = hits.length;
@@ -3539,10 +3549,10 @@ describe('Pure 3D Mine World', () => {
     pit.dispose();
   });
 
-  it('assigns distinct ore targets across multiple simultaneous Chibis in Mine Pit', () => {
+  it('assigns distinct ore targets across multiple Chibis in strict 2.5s spotlight turns without simultaneous overlap', () => {
     const controller = new PlotAttackController3D();
     const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
-    pit.setHpScale(100); // High HP so ores survive all 5 initial hits
+    pit.setHpScale(100); // High HP so ores survive all 5 turns
     const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
     const commonDef = CHIBI_CATALOG.find((c) => c.rarity === 'common') ?? CHIBI_CATALOG[0];
     const peds = [0, 1, 2, 3, 4].map((idx) => {
@@ -3557,8 +3567,15 @@ describe('Pure 3D Mine World', () => {
       hitPositions.add(`${wx.toFixed(3)},${wz.toFixed(3)}`);
     };
 
-    // Advance enough for all 5 staggered slots (cooldowns 0.12..1.48s + 0.20s delay) to land Beat 0
+    // During the first 2.0s spotlight window, strictly 1 Chibi fires (1 distinct ore hit)
     for (let i = 0; i < 40; i++) {
+      pit.update(0.05, i * 0.05, cam, false);
+      controller.update(0.05, cam, pit, peds, true, undefined, onHit);
+    }
+    expect(hitPositions.size).toBe(1);
+
+    // Over 5 full sequential 2.5s spotlight turns (~12.5s total), all 5 Chibis hit 5 distinct ores
+    for (let i = 40; i < 260; i++) {
       pit.update(0.05, i * 0.05, cam, false);
       controller.update(0.05, cam, pit, peds, true, undefined, onHit);
     }
@@ -4066,14 +4083,14 @@ describe('Pure 3D Mine World', () => {
 
   it('builds a deep circular colosseum ore pool with circular node spawns and pulses 3-ring trim on high-tier skills', () => {
     expect(PIT_RADIUS).toBe(6.4);
-    expect(PIT_FLOOR_Y).toBe(-1.95);
+    expect(PIT_FLOOR_Y).toBe(-0.42);
     expect(PIT_CENTER_Z).toBe(1.65);
 
     const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
     pit.setActiveNodeCount(20);
     pit.group.updateMatrixWorld(true);
 
-    // Deep circular pool floor at center (0, PIT_CENTER_Z) sits at world y ≈ -1.95
+    // Open elevated Sky-Stage battle court floor at center (0, PIT_CENTER_Z) sits at world y ≈ -0.42
     const centerRay = new THREE.Raycaster(
       new THREE.Vector3(0, 5, PIT_CENTER_Z),
       new THREE.Vector3(0, -1, 0)
@@ -4128,7 +4145,7 @@ describe('Pure 3D Mine World', () => {
 
     ctrl.setSlotUnit(1, null);
     ctrl.setSlotUnit(0, twinDef, { dmg: 100, speed: 1, miningMult: 1 });
-    for (let i = 0; i < 10; i++) ctrl.update(0.1, cam, pit, [pedTwin, pedCommon], true);
+    for (let i = 0; i < 28; i++) ctrl.update(0.1, cam, pit, [pedTwin, pedCommon], true);
     expect(pulses.length).toBeGreaterThanOrEqual(1);
     expect(pulses[0].strength).toBeGreaterThanOrEqual(1.0);
 
@@ -4274,12 +4291,12 @@ describe('Pure 3D Mine World', () => {
       for (const d of poolInternal.debris) {
         if (!d.active) continue;
         sawDebris = true;
-        expect(d.floorY).toBeLessThan(-1.0);
+        expect(d.floorY).toBeLessThan(-0.2);
       }
       for (const q of poolInternal.quads) {
         if (!q.active || q.gravity <= 0) continue;
         sawFallingSparks = true;
-        expect(q.floorY).toBeLessThan(-1.0);
+        expect(q.floorY).toBeLessThan(-0.2);
       }
     }
     expect(sawDebris).toBe(true);
@@ -4629,5 +4646,145 @@ describe('Pure 3D Mine World', () => {
     expect(fresh.unlockWorld('crystal')).toBe(true);
     fresh.equipBestMiners();
     expect(fresh.plotMiners[0]).toBe('volt-kensei');
+  });
+
+  it('enforces strict 2.5s single-chibi spotlight turns across Mine, Tower, and Omega while preserving 100% team DPS', () => {
+    const queue = new SpotlightAttackQueue();
+    const slots = [0, 1, 3, 4].map((slotIndex) => ({ slotIndex, cooldown: 0 }));
+    const order: number[] = [];
+    for (let turn = 0; turn < 6; turn++) {
+      const picked = queue.pickNextReady(slots, (s) => s.cooldown);
+      expect(picked).not.toBeNull();
+      order.push(picked!.slotIndex);
+      queue.claim(picked!.slotIndex, CHIBI_ATTACK_ANIM_SEC);
+      // While locked (< 2.5s), no other slot can fire
+      queue.step(CHIBI_ATTACK_ANIM_SEC - 0.1);
+      expect(queue.pickNextReady(slots, (s) => s.cooldown)).toBeNull();
+      queue.step(0.1);
+    }
+    expect(order).toEqual([0, 1, 3, 4, 0, 1]);
+
+    // Mine Pit: 5 Chibis @ 100 DPS each (500 total DPS) over 15s (6 spotlight turns) preserves full DPS
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
+    const commonDef = CHIBI_CATALOG.find((c) => c.rarity === 'common') ?? CHIBI_CATALOG[0];
+    const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    pit.setHpScale(10000);
+    const ctrl = new PlotAttackController3D();
+    const peds = [0, 1, 2, 3, 4].map((idx) => {
+      const p = new PlotPedestal3D(idx, (idx - 2) * 3.22, -4.58);
+      p.setChibi(commonDef);
+      ctrl.setSlotUnit(idx, commonDef, { dmg: 100, speed: 1, miningMult: 2, critChance: 0 });
+      return p;
+    });
+    let steadyStateDmg = 0;
+    for (let i = 0; i < 500; i++) {
+      const t = i * 0.05;
+      pit.update(0.05, t, cam, false);
+      ctrl.update(0.05, cam, pit, peds, true, undefined, (dmg) => {
+        if (t >= 12.5) {
+          steadyStateDmg += dmg;
+        }
+      });
+    }
+    // Over one full 5-turn steady-state cycle [12.5s..25.0s] (12.5s), 5 units @ 100 DPS = 6250 exact damage
+    expect(steadyStateDmg).toBeGreaterThanOrEqual(6150);
+    expect(steadyStateDmg).toBeLessThanOrEqual(6350);
+    ctrl.dispose();
+    peds.forEach((p) => p.dispose());
+    pit.dispose();
+
+    // TowerArena3D: within first 2.0s of a wave, strictly 1 fighter slot fires
+    const tower = new TowerArena3D();
+    tower.group.visible = true;
+    tower.syncFighters(
+      [0, 1, 2, 3, 4].map((slotIndex) => ({
+        slotIndex,
+        def: CHIBI_CATALOG[slotIndex],
+        enchantId: null,
+        dmg: 100,
+        speed: 1,
+        miningMult: 2,
+      }))
+    );
+    tower.syncWaveState({
+      floor: 1,
+      wave: 1,
+      isBossWave: false,
+      isCheckpointFloor: false,
+      waveOres: rollTowerWaveOres(1, 1),
+      anomalyColorHex: '#38bdf8',
+      equippedMinerCount: 5,
+      paused: false,
+    });
+    const towerSlotsEarly = new Set<number>();
+    for (let i = 0; i < 40; i++) {
+      tower.update(0.05, (i + 1) * 0.05, cam, (ev) => towerSlotsEarly.add(ev.slotIndex));
+    }
+    expect(towerSlotsEarly.size).toBe(1);
+    const towerSlotsFull = new Set<number>(towerSlotsEarly);
+    for (let i = 40; i < 240; i++) {
+      tower.update(0.05, (i + 1) * 0.05, cam, (ev) => towerSlotsFull.add(ev.slotIndex));
+    }
+    expect(towerSlotsFull.size).toBe(5);
+    tower.dispose();
+
+    // OmegaArena3D: within first 2.0s of active duel, strictly 1 fighter slot fires; across 12s all 5 take turns
+    const omega = new OmegaArena3D();
+    omega.group.visible = true;
+    omega.syncFighters(
+      [0, 1, 2, 3, 4].map((slotIndex) => ({
+        slotIndex,
+        def: CHIBI_CATALOG[slotIndex],
+        enchantId: null,
+        dmg: 100,
+        speed: 1,
+        miningMult: 2,
+      }))
+    );
+    const omegaSlotsEarly = new Set<number>();
+    for (let i = 0; i < 40; i++) {
+      omega.update(0.05, (i + 1) * 0.05, cam, (ev) => omegaSlotsEarly.add(ev.slotIndex));
+    }
+    expect(omegaSlotsEarly.size).toBe(1);
+    const omegaSlotsFull = new Set<number>(omegaSlotsEarly);
+    for (let i = 40; i < 240; i++) {
+      omega.update(0.05, (i + 1) * 0.05, cam, (ev) => omegaSlotsFull.add(ev.slotIndex));
+    }
+    expect(omegaSlotsFull.size).toBe(5);
+    omega.dispose();
+  });
+
+  it('builds Cyber E-Sports / Idol Sky-Stage crescent balcony, symmetric wing decks, and distinct W1-W8 stage themes', () => {
+    expect(Object.keys(WORLD_ARENA_BIOMES)).toHaveLength(WORLDS.length);
+    const distinctCaps = new Set(Object.values(WORLD_ARENA_BIOMES).map((b) => b.capHex));
+    expect(distinctCaps.size).toBe(WORLDS.length);
+
+    const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    pit.group.updateMatrixWorld(true);
+    const pitBox = new THREE.Box3().setFromObject(pit.group);
+    // Symmetric Left Holo Console Wing Deck & Right Vault Wing Deck span across both flanks
+    expect(pitBox.min.x).toBeLessThan(-9.5);
+    expect(pitBox.max.x).toBeGreaterThan(9.5);
+
+    let instancedCount = 0;
+    pit.group.traverse((obj) => {
+      if (obj instanceof THREE.InstancedMesh) instancedCount += 1;
+    });
+    // Animated stage equalizer chevrons InstancedMesh
+    expect(instancedCount).toBeGreaterThanOrEqual(1);
+
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
+    for (const w of WORLDS) {
+      expect(() => {
+        pit.setPalette(WORLD_PALETTES[w.id], false);
+        pit.triggerSkillPulse(WORLD_PALETTES[w.id].crystalColor, 1.0);
+        pit.update(0.05, 1.25, cam, true);
+      }).not.toThrow();
+    }
+    pit.setLowQuality(true);
+    pit.update(0.05, 1.3, cam, true);
+    pit.setLowQuality(false);
+    pit.update(0.05, 1.35, cam, true);
+    expect(() => pit.dispose()).not.toThrow();
   });
 });

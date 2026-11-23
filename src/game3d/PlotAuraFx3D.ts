@@ -15,6 +15,7 @@ export const ENCHANT_SECONDARY_COLOR: Record<string, string> = {
 
 let cachedPedestalHoloTex: THREE.CanvasTexture | null | undefined;
 let cachedEnchantSigilTex: THREE.CanvasTexture | null | undefined;
+let cachedThrusterProjTex: THREE.CanvasTexture | null | undefined;
 
 export function getPedestalHoloRingTexture(): THREE.CanvasTexture | null {
   if (cachedPedestalHoloTex !== undefined) return cachedPedestalHoloTex;
@@ -142,6 +143,128 @@ export function getEnchantSigilTexture(): THREE.CanvasTexture | null {
   tex.needsUpdate = true;
   cachedEnchantSigilTex = tex;
   return tex;
+}
+
+/**
+ * Crisp cached radial hologram projector ring texture for beneath floating pedestals.
+ */
+export function getThrusterHoloProjectionTexture(): THREE.CanvasTexture | null {
+  if (cachedThrusterProjTex !== undefined) return cachedThrusterProjTex;
+  if (typeof document === 'undefined') {
+    cachedThrusterProjTex = null;
+    return null;
+  }
+  const size = 256;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const ctx = c.getContext('2d');
+  if (!ctx) {
+    cachedThrusterProjTex = null;
+    return null;
+  }
+  const mid = size * 0.5;
+
+  const coreGrad = ctx.createRadialGradient(mid, mid, 4, mid, mid, 122);
+  coreGrad.addColorStop(0, 'rgba(255,255,255,0.52)');
+  coreGrad.addColorStop(0.28, 'rgba(255,255,255,0.20)');
+  coreGrad.addColorStop(0.68, 'rgba(255,255,255,0.06)');
+  coreGrad.addColorStop(0.84, 'rgba(255,255,255,0.28)');
+  coreGrad.addColorStop(0.93, 'rgba(255,255,255,0.04)');
+  coreGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = coreGrad;
+  ctx.fillRect(0, 0, size, size);
+
+  // Outer crisp segmented hologram ring
+  ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+  ctx.lineWidth = 3.2;
+  for (let i = 0; i < 6; i++) {
+    const a0 = (i * Math.PI) / 3 + 0.08;
+    ctx.beginPath();
+    ctx.arc(mid, mid, 108, a0, a0 + Math.PI / 3 - 0.16);
+    ctx.stroke();
+  }
+
+  // Mid fine hairline circuit circle
+  ctx.strokeStyle = 'rgba(255,255,255,0.68)';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.arc(mid, mid, 84, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Inner dashed reticle ring + 4 cardinal ticks
+  ctx.strokeStyle = 'rgba(255,255,255,0.86)';
+  ctx.lineWidth = 2.4;
+  for (let i = 0; i < 4; i++) {
+    const a0 = (i * Math.PI) / 2 + 0.16;
+    ctx.beginPath();
+    ctx.arc(mid, mid, 56, a0, a0 + Math.PI / 2 - 0.32);
+    ctx.stroke();
+
+    const ta = (i * Math.PI) / 2;
+    ctx.beginPath();
+    ctx.moveTo(mid + Math.cos(ta) * 62, mid + Math.sin(ta) * 62);
+    ctx.lineTo(mid + Math.cos(ta) * 98, mid + Math.sin(ta) * 98);
+    ctx.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  cachedThrusterProjTex = tex;
+  return tex;
+}
+
+/**
+ * Animated holographic anti-grav light cone shader with soft feathered bottom edge & scanlines.
+ */
+export function createThrusterBeamShaderMaterial(
+  colorHex = '#22d3ee',
+  baseOpacity = 0.44
+): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+    uniforms: {
+      uColor: { value: new THREE.Color(colorHex) },
+      uTime: { value: 0 },
+      uOpacity: { value: baseOpacity },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      varying vec3 vNormalW;
+      varying vec3 vViewPos;
+      void main() {
+        vUv = uv;
+        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+        vViewPos = -mvPos.xyz;
+        vNormalW = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * mvPos;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 uColor;
+      uniform float uTime;
+      uniform float uOpacity;
+      varying vec2 vUv;
+      varying vec3 vNormalW;
+      varying vec3 vViewPos;
+      void main() {
+        // vUv.y = 1.0 at top emitter neck, 0.0 at bottom flared air fade
+        float topSoft = smoothstep(1.0, 0.86, vUv.y);
+        float bottomFade = pow(clamp(vUv.y, 0.0, 1.0), 1.75);
+        float scan = 0.68 + 0.32 * sin(vUv.y * 30.0 + uTime * 6.5);
+        float ribs = 0.78 + 0.22 * sin(vUv.x * 37.699 + uTime * 1.8);
+        float ndotv = abs(dot(normalize(vNormalW), normalize(vViewPos)));
+        float edgeSoft = pow(clamp(ndotv, 0.0, 1.0), 0.72);
+        float alpha = topSoft * bottomFade * scan * ribs * edgeSoft * uOpacity;
+        vec3 hotCore = mix(uColor, vec3(1.0), smoothstep(0.55, 0.92, vUv.y) * 0.58);
+        gl_FragColor = vec4(hotCore, alpha);
+      }
+    `,
+  });
 }
 
 export function createAnimeAuraShaderMaterial(

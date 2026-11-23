@@ -15,11 +15,13 @@ import {
   CHIBI_ATTACK_ANIM_SEC,
   CHIBI_BLITZ_SHADOW_SEC,
   computeAttackVfxSpeedScale,
+  computeSpotlightMaxChargeSec,
   getRaritySecondaryColor,
   isWideAoeRarity,
   resolvePitBounds,
   sampleTierMotionWaypoints,
   splitBarrageDamage,
+  SpotlightAttackQueue,
   type SampledMotionFrame,
   type TierAttackFireOpts,
   type TierMotionWaypoint,
@@ -79,10 +81,12 @@ export {
   CHIBI_ATTACK_ANIM_SEC,
   CHIBI_BLITZ_SHADOW_SEC,
   computeAttackVfxSpeedScale,
+  computeSpotlightMaxChargeSec,
   getRaritySecondaryColor,
   isWideAoeRarity,
   sampleTierMotionWaypoints,
   splitBarrageDamage,
+  SpotlightAttackQueue,
 };
 export type {
   SampledMotionFrame,
@@ -137,6 +141,7 @@ export class TierAttackVfxPool3D {
   private hooks: TierVfxHooks = {};
   private lowQuality = false;
   private time = 0;
+  private activeTargetFloorY = 0;
   private disposed = false;
 
   private readonly tmpDir = new THREE.Vector3();
@@ -877,6 +882,14 @@ export class TierAttackVfxPool3D {
     }
   }
 
+  private resolveParticleFloorY(y: number, minFloorOffset = 0.06): number {
+    if (this.pitClipUniforms.uPitClipActive.value > 0.5) {
+      return this.pitClipUniforms.uPitFloorY.value + minFloorOffset;
+    }
+    const baseFloor = this.activeTargetFloorY < -0.1 ? this.activeTargetFloorY : y < -0.1 ? y - 0.15 : 0;
+    return Math.min(baseFloor + minFloorOffset, y);
+  }
+
   private spawnDebrisBurst(x: number, y: number, z: number, color: string, secondary: string, count = 5): void {
     const cap = this.lowQuality ? Math.max(1, Math.ceil(count * 0.4)) : count;
     for (let i = 0; i < cap; i++) {
@@ -887,7 +900,7 @@ export class TierAttackVfxPool3D {
       slot.active = true;
       slot.age = 0;
       slot.life = 0.45 + Math.random() * 0.22;
-      slot.floorY = Math.max(y < -0.5 ? -1.9 : 0.08, y - 0.35);
+      slot.floorY = this.resolveParticleFloorY(y, 0.08);
       slot.vx = Math.cos(a) * spd;
       slot.vy = 3.2 + Math.random() * 3.8;
       slot.vz = Math.sin(a) * spd;
@@ -912,7 +925,7 @@ export class TierAttackVfxPool3D {
     slot.active = true;
     slot.age = 0;
     slot.life = opts.life ?? 0.34;
-    slot.floorY = opts.floorY ?? (opts.y < -0.5 ? -1.92 : 0.06);
+    slot.floorY = opts.floorY ?? this.resolveParticleFloorY(opts.y, 0.06);
     slot.vx = opts.vx ?? 0;
     slot.vy = opts.vy ?? 0;
     slot.vz = opts.vz ?? 0;
@@ -984,7 +997,7 @@ export class TierAttackVfxPool3D {
         s0: 0.45 + Math.random() * 0.32,
         s1: 0.06,
         life: 0.24 + Math.random() * 0.2,
-        floorY: Math.max(y < -0.5 ? -1.92 : 0.06, y - 0.5),
+        floorY: this.resolveParticleFloorY(y, 0.06),
         vx: Math.cos(a) * spd,
         vy: 1.8 + Math.random() * 3.6,
         vz: Math.sin(a) * spd,
@@ -1039,6 +1052,7 @@ export class TierAttackVfxPool3D {
   }
 
   public fireTierAttack(opts: TierAttackFireOpts): void {
+    this.activeTargetFloorY = opts.target.y;
     fireTierAttackChoreography(this.getChoreoContext(), opts);
   }
 

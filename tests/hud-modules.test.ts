@@ -639,6 +639,14 @@ describe('Tahap B HUD Modules', () => {
         store.update({ showDamagePopups: true });
         overlay.spawnDamagePopup(50, 100, 100, true);
         expect(children.length).toBe(1);
+        expect((children[0] as { className: string }).className).toContain('mam-dmg-stroke');
+
+        overlay.spawnDamagePopup(125, 100, 100, true, true);
+        expect(children.length).toBe(2);
+        const critHtml = (children[1] as { innerHTML?: string }).innerHTML ?? '';
+        expect(critHtml).toContain('CRIT!');
+        expect(critHtml).not.toContain('mam-pill-xs');
+        expect(critHtml).not.toContain('<svg');
       } finally {
         (globalThis as unknown as { document: unknown }).document = origDoc;
       }

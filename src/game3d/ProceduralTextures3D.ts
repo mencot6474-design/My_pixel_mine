@@ -410,76 +410,155 @@ export function getNexusArenaFloorTexture(stoneHex: string, crystalHex: string):
   });
 }
 
-export function getCircularNexusPoolTexture(stoneHex: string, crystalHex: string): THREE.Texture {
-  return paintCachedTexture(`circular-nexus-pool-v2|${stoneHex}|${crystalHex}`, 512, 512, 1, 1, [6, 10, 20, 255], (ctx) => {
-    // Deep dark-matte abyssal circular pool so additive GLSL skill shaders pop brilliantly
-    const grad = ctx.createRadialGradient(256, 256, 18, 256, 256, 256);
-    grad.addColorStop(0, mixHex('#101c36', crystalHex, 0.18));
-    grad.addColorStop(0.52, mixHex('#080e1c', stoneHex, 0.1));
-    grad.addColorStop(0.9, '#050811');
-    grad.addColorStop(1, '#03050b');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 512, 512);
+export function getCircularNexusPoolTexture(
+  stoneHex: string,
+  crystalHex: string,
+  biomeKey = 'underground'
+): THREE.Texture {
+  return paintCachedTexture(
+    `circular-nexus-pool-v3|${stoneHex}|${crystalHex}|${biomeKey}`,
+    512,
+    512,
+    1,
+    1,
+    [8, 12, 22, 255],
+    (ctx) => {
+      // Deep dark-center pool for high Sakuga shader contrast + richer biome-colored outer sanctum ring
+      const grad = ctx.createRadialGradient(256, 256, 16, 256, 256, 256);
+      grad.addColorStop(0, mixHex('#101d38', crystalHex, 0.24));
+      grad.addColorStop(0.45, mixHex('#0a1224', stoneHex, 0.18));
+      grad.addColorStop(0.82, mixHex('#080d1a', stoneHex, 0.22));
+      grad.addColorStop(1, '#040710');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 512);
 
-    ctx.strokeStyle = crystalHex;
-    ctx.globalAlpha = 0.22;
-    ctx.lineWidth = 2.2;
-    for (const r of [64, 128, 192, 238]) {
-      ctx.beginPath();
-      ctx.arc(256, 256, r, 0, Math.PI * 2);
-      ctx.stroke();
-    }
+      // Subtle low-poly stone / rune floor facets
+      ctx.strokeStyle = mixHex('#334155', stoneHex, 0.45);
+      ctx.globalAlpha = 0.26;
+      ctx.lineWidth = 1.6;
+      for (let i = 0; i < 12; i++) {
+        const a = (i * Math.PI * 2) / 12;
+        ctx.beginPath();
+        ctx.moveTo(256 + Math.cos(a) * 58, 256 + Math.sin(a) * 58);
+        ctx.lineTo(256 + Math.cos(a) * 248, 256 + Math.sin(a) * 248);
+        ctx.stroke();
+      }
 
-    // Segmented outer cyber alignment arcs
-    ctx.globalAlpha = 0.34;
-    ctx.lineWidth = 3;
-    for (let i = 0; i < 8; i++) {
-      const a0 = (i * Math.PI) / 4 + 0.08;
-      ctx.beginPath();
-      ctx.arc(256, 256, 216, a0, a0 + Math.PI / 4 - 0.16);
-      ctx.stroke();
-    }
+      // Sacred Colosseum concentric rings & glowing biome octagram
+      ctx.strokeStyle = crystalHex;
+      ctx.globalAlpha = 0.28;
+      ctx.lineWidth = 2.4;
+      for (const r of [66, 126, 186, 236]) {
+        ctx.beginPath();
+        ctx.arc(256, 256, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
 
-    ctx.globalAlpha = 0.12;
-    ctx.lineWidth = 1.4;
-    for (let i = 0; i < 16; i++) {
-      const a = (i * Math.PI * 2) / 16;
-      ctx.beginPath();
-      ctx.moveTo(256 + Math.cos(a) * 64, 256 + Math.sin(a) * 64);
-      ctx.lineTo(256 + Math.cos(a) * 244, 256 + Math.sin(a) * 244);
-      ctx.stroke();
+      // Twin rotated squares (8-point Sanctum Seal)
+      ctx.globalAlpha = 0.22;
+      ctx.lineWidth = 2.2;
+      for (const rotOff of [0, Math.PI / 4]) {
+        ctx.beginPath();
+        for (let k = 0; k <= 4; k++) {
+          const a = rotOff + (k * Math.PI) / 2;
+          const px = 256 + Math.cos(a) * 184;
+          const py = 256 + Math.sin(a) * 184;
+          if (k === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+
+      // Segmented outer sanctum alignment arcs & keystone ticks
+      ctx.globalAlpha = 0.44;
+      ctx.lineWidth = 3.5;
+      for (let i = 0; i < 8; i++) {
+        const a0 = (i * Math.PI) / 4 + 0.08;
+        ctx.beginPath();
+        ctx.arc(256, 256, 214, a0, a0 + Math.PI / 4 - 0.16);
+        ctx.stroke();
+      }
+
+      // World-specific subtle biome floor motif
+      ctx.globalAlpha = 0.34;
+      ctx.lineWidth = 2;
+      if (biomeKey === 'magma') {
+        ctx.strokeStyle = '#fb923c';
+        for (let i = 0; i < 10; i++) {
+          const a = (i * Math.PI * 2) / 10 + 0.2;
+          ctx.beginPath();
+          ctx.moveTo(256 + Math.cos(a) * 135, 256 + Math.sin(a) * 135);
+          ctx.lineTo(256 + Math.cos(a + 0.14) * 195, 256 + Math.sin(a + 0.14) * 195);
+          ctx.lineTo(256 + Math.cos(a - 0.06) * 242, 256 + Math.sin(a - 0.06) * 242);
+          ctx.stroke();
+        }
+      } else if (biomeKey === 'starwell' || biomeKey === 'crystal') {
+        ctx.strokeStyle = '#bae6fd';
+        for (let i = 0; i < 6; i++) {
+          const a = (i * Math.PI) / 3;
+          const px = 256 + Math.cos(a) * 156;
+          const py = 256 + Math.sin(a) * 156;
+          ctx.beginPath();
+          ctx.moveTo(px - 10, py);
+          ctx.lineTo(px + 10, py);
+          ctx.moveTo(px, py - 10);
+          ctx.lineTo(px, py + 10);
+          ctx.stroke();
+        }
+      } else if (biomeKey === 'chrono') {
+        ctx.strokeStyle = '#fde68a';
+        for (let i = 0; i < 24; i++) {
+          const a = (i * Math.PI * 2) / 24;
+          const r0 = i % 2 === 0 ? 196 : 204;
+          ctx.beginPath();
+          ctx.moveTo(256 + Math.cos(a) * r0, 256 + Math.sin(a) * r0);
+          ctx.lineTo(256 + Math.cos(a) * 212, 256 + Math.sin(a) * 212);
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
-  });
+  );
 }
 
-/** Sleek dark-titanium segmented armor deck texture for the Cyber-Colosseum arena rim. */
-export function getCyberColosseumDeckTexture(accentHex = '#38bdf8'): THREE.Texture {
-  return paintCachedTexture(`cyber-colosseum-deck-v1|${accentHex}`, 256, 64, 8, 1, [16, 24, 40, 255], (ctx) => {
-    const grad = ctx.createLinearGradient(0, 0, 0, 64);
-    grad.addColorStop(0.0, '#1e293b');
-    grad.addColorStop(0.5, '#0f172a');
-    grad.addColorStop(1.0, '#090f1d');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 256, 64);
+/** Sleek silver-titanium segmented tournament deck texture for the Cyber Sky-Stage rim. */
+export function getCyberColosseumDeckTexture(
+  accentHex = '#38bdf8',
+  deckTintHex = '#64748b'
+): THREE.Texture {
+  return paintCachedTexture(
+    `cyber-colosseum-deck-v3|${accentHex}|${deckTintHex}`,
+    256,
+    64,
+    12,
+    1,
+    [56, 74, 102, 255],
+    (ctx) => {
+      const grad = ctx.createLinearGradient(0, 0, 0, 64);
+      grad.addColorStop(0.0, mixHex('#94a3b8', deckTintHex, 0.35));
+      grad.addColorStop(0.5, mixHex('#475569', deckTintHex, 0.35));
+      grad.addColorStop(1.0, mixHex('#334155', deckTintHex, 0.35));
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 256, 64);
 
-    // Precision armor plate seam lines
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.22)';
-    for (let x = 0; x < 256; x += 64) {
-      ctx.fillRect(x, 6, 3, 52);
-    }
-    ctx.fillRect(0, 30, 256, 2);
+      // Crisp clean armor plate seam lines & alloy trim
+      ctx.fillStyle = 'rgba(248, 250, 252, 0.32)';
+      for (let x = 0; x < 256; x += 64) {
+        ctx.fillRect(x, 6, 3, 52);
+      }
+      ctx.fillRect(0, 31, 256, 2);
 
-    // Glowing accent alignment ticks & top/bottom cyber trim rails
-    ctx.fillStyle = accentHex;
-    ctx.globalAlpha = 0.88;
-    ctx.fillRect(0, 2, 256, 4);
-    ctx.fillRect(0, 58, 256, 4);
-    for (let x = 18; x < 256; x += 64) {
-      ctx.fillRect(x, 18, 28, 5);
+      // Bright stage light-bars & inner/outer neon rails
+      ctx.fillStyle = accentHex;
+      ctx.globalAlpha = 0.96;
+      ctx.fillRect(0, 2, 256, 5);
+      ctx.fillRect(0, 57, 256, 5);
+      for (let x = 14; x < 256; x += 64) {
+        ctx.fillRect(x, 18, 36, 6);
+      }
+      ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
-  });
+  );
 }
 
 export function getHazardStripeTexture(accentHex = '#38bdf8'): THREE.Texture {

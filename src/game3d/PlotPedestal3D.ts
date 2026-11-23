@@ -16,9 +16,11 @@ import {
 import {
   createAnimeAuraShaderMaterial,
   createAnimeParticlePoints,
+  createThrusterBeamShaderMaterial,
   ENCHANT_SECONDARY_COLOR,
   getEnchantSigilTexture,
   getPedestalHoloRingTexture,
+  getThrusterHoloProjectionTexture,
 } from './PlotAuraFx3D';
 export {
   createAnimeAuraShaderMaterial,
@@ -51,7 +53,13 @@ export class PlotPedestal3D {
 
   private readonly ringMat: THREE.MeshStandardMaterial;
   private readonly holoDiscMat: THREE.MeshBasicMaterial;
-  private readonly thrusterPlumeMat: THREE.MeshBasicMaterial;
+  private readonly thrusterBeamOuterMat: THREE.ShaderMaterial;
+  private readonly thrusterBeamCoreMat: THREE.ShaderMaterial;
+  private readonly holoProjOuterMat: THREE.MeshBasicMaterial;
+  private readonly holoProjInnerMat: THREE.MeshBasicMaterial;
+  private readonly holoProjOuterMesh: THREE.Mesh;
+  private readonly holoProjInnerMesh: THREE.Mesh;
+  private readonly whiteColor = new THREE.Color('#ffffff');
   private hoverBobOffset = 0;
   private hovered = false;
   private chibiDef: ChibiDef | null = null;
@@ -288,21 +296,62 @@ export class PlotPedestal3D {
     thrusterEmitter.position.y = -0.365;
     thrusterEmitter.rotation.y = Math.PI / 8;
 
-    this.thrusterPlumeMat = new THREE.MeshBasicMaterial({
+    // Layered Holographic Anti-Grav Projector Beam + Dual Counter-Rotating Holo Rings underneath podium
+    this.thrusterBeamOuterMat = createThrusterBeamShaderMaterial('#22d3ee', 0.44);
+    const thrusterBeamOuter = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.24, 0.58, 0.56, 20, 1, true),
+      this.thrusterBeamOuterMat
+    );
+    thrusterBeamOuter.position.y = -0.64;
+
+    this.thrusterBeamCoreMat = createThrusterBeamShaderMaterial('#e0f2fe', 0.62);
+    const thrusterBeamCore = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.13, 0.27, 0.34, 16, 1, true),
+      this.thrusterBeamCoreMat
+    );
+    thrusterBeamCore.position.y = -0.52;
+
+    const projTex = getThrusterHoloProjectionTexture();
+    this.holoProjOuterMat = new THREE.MeshBasicMaterial({
       color: 0x22d3ee,
+      ...(projTex ? { map: projTex } : {}),
       transparent: true,
-      opacity: 0.26,
+      opacity: 0.58,
       blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
-    const thrusterPlume = new THREE.Mesh(
-      new THREE.ConeGeometry(0.4, 0.64, 12, 1, true),
-      this.thrusterPlumeMat
+    this.holoProjOuterMesh = new THREE.Mesh(
+      projTex ? new THREE.PlaneGeometry(1.36, 1.36) : new THREE.RingGeometry(0.36, 0.58, 24),
+      this.holoProjOuterMat
     );
-    thrusterPlume.position.y = -0.7;
-    thrusterPlume.rotation.x = Math.PI;
-    this.podiumBodyGroup.add(thrusterKeel, thrusterEmitter, thrusterPlume);
+    this.holoProjOuterMesh.rotation.x = -Math.PI / 2;
+    this.holoProjOuterMesh.position.y = -0.45;
+
+    this.holoProjInnerMat = new THREE.MeshBasicMaterial({
+      color: 0xe0f2fe,
+      ...(projTex ? { map: projTex } : {}),
+      transparent: true,
+      opacity: 0.42,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.holoProjInnerMesh = new THREE.Mesh(
+      projTex ? new THREE.PlaneGeometry(0.86, 0.86) : new THREE.RingGeometry(0.2, 0.34, 20),
+      this.holoProjInnerMat
+    );
+    this.holoProjInnerMesh.rotation.x = -Math.PI / 2;
+    this.holoProjInnerMesh.position.y = -0.58;
+
+    this.podiumBodyGroup.add(
+      thrusterKeel,
+      thrusterEmitter,
+      thrusterBeamOuter,
+      thrusterBeamCore,
+      this.holoProjOuterMesh,
+      this.holoProjInnerMesh
+    );
 
     const hitMesh = new THREE.Mesh(
       new THREE.CylinderGeometry(0.76, 0.76, 1.9, 8),
@@ -315,7 +364,14 @@ export class PlotPedestal3D {
 
     mergeStaticMeshesByMaterial(
       this.podiumBodyGroup,
-      new Set<THREE.Object3D>([holoLensDisc, thrusterPlume, frontApron])
+      new Set<THREE.Object3D>([
+        holoLensDisc,
+        thrusterBeamOuter,
+        thrusterBeamCore,
+        this.holoProjOuterMesh,
+        this.holoProjInnerMesh,
+        frontApron,
+      ])
     );
 
     this.labelMat = new THREE.SpriteMaterial({
@@ -346,7 +402,7 @@ export class PlotPedestal3D {
       this.ringMat.color.setHex(0x22d3ee);
       this.ringMat.emissive.setHex(0x22d3ee);
       this.holoDiscMat.color.setHex(0x22d3ee);
-      this.thrusterPlumeMat.color.setHex(0x22d3ee);
+      this.syncUnderHoloColors();
       return;
     }
 
@@ -354,7 +410,7 @@ export class PlotPedestal3D {
       this.ringMat.color.set(def.accentColor);
       this.ringMat.emissive.set(def.accentColor);
       this.holoDiscMat.color.set(def.accentColor);
-      this.thrusterPlumeMat.color.set(def.accentColor);
+      this.syncUnderHoloColors();
     }
 
     const sprite = new ChibiSprite3D(def, 2.05, this.index * 0.75);
@@ -400,7 +456,7 @@ export class PlotPedestal3D {
         this.ringMat.emissive.setHex(0x22d3ee);
         this.holoDiscMat.color.setHex(0x22d3ee);
       }
-      this.thrusterPlumeMat.color.copy(this.ringMat.color);
+      this.syncUnderHoloColors();
       this.ringMat.emissiveIntensity = this.hovered ? 1.15 : 0.85;
       return;
     }
@@ -417,7 +473,7 @@ export class PlotPedestal3D {
     this.ringMat.emissive.set(enc.color);
     this.ringMat.emissiveIntensity = 1.05;
     this.holoDiscMat.color.set(enc.color);
-    this.thrusterPlumeMat.color.set(enc.color);
+    this.syncUnderHoloColors();
 
     const auraGroup = new THREE.Group();
     auraGroup.position.y = this.hoverBobOffset;
@@ -496,6 +552,7 @@ export class PlotPedestal3D {
     if (this.auraMotePoints) {
       this.auraMotePoints.visible = !low;
     }
+    this.holoProjInnerMesh.visible = !low;
   }
 
   public getChibi(): ChibiDef | null {
@@ -584,6 +641,15 @@ export class PlotPedestal3D {
     this.chibiSprite?.setAnimState('idle');
   }
 
+  private syncUnderHoloColors(): void {
+    (this.thrusterBeamOuterMat.uniforms.uColor.value as THREE.Color).copy(this.ringMat.color);
+    (this.thrusterBeamCoreMat.uniforms.uColor.value as THREE.Color)
+      .copy(this.ringMat.color)
+      .lerp(this.whiteColor, 0.48);
+    this.holoProjOuterMat.color.copy(this.ringMat.color);
+    this.holoProjInnerMat.color.copy(this.ringMat.color).lerp(this.whiteColor, 0.42);
+  }
+
   public setHovered(hover: boolean): void {
     this.hovered = hover;
     this.ringMat.emissiveIntensity = hover ? 1.3 : this.enchantId ? 1.05 : 0.85;
@@ -607,8 +673,20 @@ export class PlotPedestal3D {
     const baseRingIntensity = this.hovered ? 1.3 : this.enchantId ? 1.05 : 0.85;
     this.ringMat.emissiveIntensity = baseRingIntensity + this.castRingPulse * 0.95;
     this.holoDiscMat.opacity = Math.min(0.95, (this.hovered ? 0.86 : 0.68) + this.castRingPulse * 0.22);
-    this.thrusterPlumeMat.color.copy(this.ringMat.color);
-    this.thrusterPlumeMat.opacity = 0.22 + this.castRingPulse * 0.24 + Math.sin(elapsed * 4.5 + this.index) * 0.04;
+    const pulseWave = Math.sin(elapsed * 4.2 + this.index) * 0.05;
+    this.syncUnderHoloColors();
+    this.thrusterBeamOuterMat.uniforms.uTime.value = elapsed + this.index * 0.7;
+    this.thrusterBeamOuterMat.uniforms.uOpacity.value =
+      (this.hovered ? 0.56 : 0.42) + this.castRingPulse * 0.28 + pulseWave;
+    this.thrusterBeamCoreMat.uniforms.uTime.value = elapsed * 1.2 + this.index * 0.7;
+    this.thrusterBeamCoreMat.uniforms.uOpacity.value =
+      (this.hovered ? 0.74 : 0.58) + this.castRingPulse * 0.3 + pulseWave;
+    this.holoProjOuterMat.opacity = (this.hovered ? 0.78 : 0.56) + this.castRingPulse * 0.25;
+    this.holoProjOuterMesh.rotation.z = elapsed * 0.48 + this.index;
+    this.holoProjInnerMat.opacity = (this.hovered ? 0.6 : 0.4) + this.castRingPulse * 0.25;
+    if (!this.lowQuality) {
+      this.holoProjInnerMesh.rotation.z = -elapsed * 0.76 - this.index;
+    }
     const targetScale = (this.hovered ? 1.06 : 1) * PLOT_PODIUM_SCALE;
     this.tmpScale.set(targetScale, PLOT_PODIUM_SCALE, targetScale);
     this.group.scale.lerp(this.tmpScale, Math.min(1, safeDt * 12));
