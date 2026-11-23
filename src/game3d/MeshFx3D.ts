@@ -4,6 +4,8 @@ export * from './MeshFxTwinShadersA3D';
 export * from './MeshFxTwinShadersB3D';
 export * from './MeshFxOmegaShaders3D';
 export * from './MeshFxFusionShaders3D';
+export * from './MeshFxTierBackShadersA3D';
+export * from './MeshFxTierBackShadersB3D';
 
 const HASH_NOISE_GLSL = `
   float hash21(vec2 p) {

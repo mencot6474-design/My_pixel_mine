@@ -229,12 +229,14 @@ export class ChibiSprite3D {
     this.shadowDisc.position.y = 0.012;
     this.group.add(this.shadowDisc);
 
-    // Omega & Twin unit bespoke 3D back-shader attachments (always-on outside hologram mode)
+    // Bespoke Omega/Twin/Fusion & tier-scaled (Common..Limited) 3D back-shader attachments
     this.backAttachments = createChibiBackAttachments(
       this.def.id,
       spriteHeight,
       this.spritePivot,
-      this.blitzHeroPivot
+      this.blitzHeroPivot,
+      this.def.rarity,
+      this.def.accentColor
     );
 
     // Preload idle pose immediately; blitz/combat poses are loaded lazily on demand
@@ -439,10 +441,7 @@ export class ChibiSprite3D {
   }
 
   private shouldShowBackAttachment(): boolean {
-    return (
-      !this.hologramMode &&
-      (this.def.rarity === 'fusion' || this.def.rarity === 'twin' || this.def.rarity === 'omega')
-    );
+    return !this.hologramMode && Boolean(this.backAttachments.omegaAuraGroup);
   }
 
   public isHologramMode(): boolean {
