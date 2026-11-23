@@ -35,6 +35,8 @@ import { type ActivePremiumPassives, buyPremiumShopChibiDomain, getActivePremium
 import { type ActiveOmegaPassives, getActiveOmegaPassiveBonuses, OMEGA_MAX_KEYS, type OmegaBossId } from './OmegaData';
 import * as OmegaDom from './OmegaBossDomain';
 import type { OmegaBattleState, OmegaBattleSummary, OmegaStrikeResult, OmegaTargetObject } from './OmegaBossDomain';
+import * as TwinTrialDom from './TwinTrialDomain';
+import type { TwinTrialState } from './TwinTrialDomain';
 
 export type {
   PlotUnitState,
@@ -123,6 +125,7 @@ export class GameState {
   public careerStats: CareerStats = Achievements.createDefaultCareerStats();
   public claimedAchievements = new Set<string>();
   public readonly overclock: OverclockState = OverclockDom.createInitialOverclockState();
+  public twinTrial: TwinTrialState = TwinTrialDom.createInitialTwinTrialState();
   private loadedLastSavedAt = 0;
 
   private readonly listeners = new Set<StateListener>();

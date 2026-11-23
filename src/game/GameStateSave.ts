@@ -18,6 +18,14 @@ import { isValidIndexMilestoneId } from './IndexRewardsDomain';
 import { ResearchTreeId } from './ResearchData';
 import { TOWER_DICE_PITY_MAX, TOWER_MAX_FLOOR, TOWER_MAX_KEYS, TowerSaveData } from './TowerData';
 import { getOmegaBossById, OMEGA_MAX_KEYS } from './OmegaData';
+import { isPremiumShopChibi } from './PremiumShopData';
+import {
+  createInitialTwinTrialState,
+  getPermanentMinerCount,
+  syncTwinTrialDomain,
+  type TwinTrialState,
+  type TwinTrialStatus,
+} from './TwinTrialDomain';
 import { isValidWeatherId, WeatherId } from './WeatherData';
 
 export const SAVE_KEY = 'my_anime_mine_v2_save_v1';
@@ -76,6 +84,7 @@ export interface PlotUnitState {
   pickaxeId: string;
   mutationId: string;
   enchantId: string | null;
+  isTrial?: boolean;
 }
 
 export interface OmegaSaveData {
@@ -131,6 +140,7 @@ export interface SavePayload {
   teamPresets?: TeamPresetSlots[];
   careerStats?: Partial<CareerStats>;
   claimedAchievements?: string[];
+  twinTrial?: TwinTrialState;
 }
 
 export interface SaveableGameState {
@@ -185,6 +195,7 @@ export interface SaveableGameState {
   teamPresets: TeamPresetSlots[];
   careerStats: CareerStats;
   claimedAchievements: Set<string>;
+  twinTrial: TwinTrialState;
 }
 
 /** Maps retired World 2–5 ore IDs onto current catalog ore IDs. */
@@ -308,6 +319,7 @@ export function serializeSavePayload(state: SaveableGameState): SavePayload {
     teamPresets: state.teamPresets.map((p) => p.slice(0, STAGE_PEDESTAL_COUNT)),
     careerStats: { ...state.careerStats },
     claimedAchievements: [...state.claimedAchievements],
+    twinTrial: { ...state.twinTrial },
   };
 }
 
@@ -399,12 +411,15 @@ export function deserializeSaveJson(
       state.plotUnits = Array.from({ length: STAGE_PEDESTAL_COUNT }, (_, i) => {
         const u = data.plotUnits?.[i] ?? null;
         if (!u) return null;
-        return {
+        const clean: PlotUnitState = {
           ...u,
           damageLevel: Math.max(1, Math.min(65, Math.floor(u.damageLevel || 1))),
           speedLevel: Math.max(1, Math.min(35, Math.floor(u.speedLevel || 1))),
           miningSpeedLevel: Math.max(1, Math.min(35, Math.floor(u.miningSpeedLevel || 1))),
         };
+        if (u.isTrial) clean.isTrial = true;
+        else delete clean.isTrial;
+        return clean;
       });
     }
     // Sanitize excess plot placements beyond owned chibi count
@@ -430,13 +445,18 @@ export function deserializeSaveJson(
       const nextStash: Record<string, PlotUnitState[]> = {};
       for (const [cid, arr] of Object.entries(data.stashedUnits)) {
         if (Array.isArray(arr) && arr.length > 0 && (state.miners[cid] || 0) > 0) {
-          nextStash[cid] = arr.map((u) => ({
-            ...u,
-            pickaxeId: '',
-            damageLevel: Math.max(1, Math.min(65, Math.floor(u.damageLevel || 1))),
-            speedLevel: Math.max(1, Math.min(35, Math.floor(u.speedLevel || 1))),
-            miningSpeedLevel: Math.max(1, Math.min(35, Math.floor(u.miningSpeedLevel || 1))),
-          }));
+          nextStash[cid] = arr.map((u) => {
+            const clean: PlotUnitState = {
+              ...u,
+              pickaxeId: '',
+              damageLevel: Math.max(1, Math.min(65, Math.floor(u.damageLevel || 1))),
+              speedLevel: Math.max(1, Math.min(35, Math.floor(u.speedLevel || 1))),
+              miningSpeedLevel: Math.max(1, Math.min(35, Math.floor(u.miningSpeedLevel || 1))),
+            };
+            if (u.isTrial) clean.isTrial = true;
+            else delete clean.isTrial;
+            return clean;
+          });
         }
       }
       state.stashedUnits = nextStash;
@@ -478,6 +498,33 @@ export function deserializeSaveJson(
       }
       state.equippedRelics = validEquipped;
     }
+    if (data.twinTrial && typeof data.twinTrial === 'object') {
+      const t = data.twinTrial;
+      const validStatuses: TwinTrialStatus[] = ['locked', 'available', 'active', 'expired'];
+      const status: TwinTrialStatus = validStatuses.includes(t.status as TwinTrialStatus)
+        ? (t.status as TwinTrialStatus)
+        : 'locked';
+      const chibiId = typeof t.chibiId === 'string' && isPremiumShopChibi(t.chibiId) ? t.chibiId : null;
+      const startedAt = typeof t.startedAt === 'number' && Number.isFinite(t.startedAt) ? Math.max(0, t.startedAt) : 0;
+      const expiresAt = typeof t.expiresAt === 'number' && Number.isFinite(t.expiresAt) ? Math.max(0, t.expiresAt) : 0;
+      state.twinTrial =
+        status === 'active' && !chibiId
+          ? createInitialTwinTrialState()
+          : { status, chibiId, startedAt, expiresAt };
+    }
+    if (Array.isArray(data.teamPresets)) {
+      const presets = createEmptyTeamPresets();
+      for (let i = 0; i < TEAM_PRESET_COUNT; i++) {
+        const rawPreset = data.teamPresets[i];
+        if (!Array.isArray(rawPreset)) continue;
+        for (let s = 0; s < STAGE_PEDESTAL_COUNT; s++) {
+          const id = rawPreset[s];
+          presets[i][s] = typeof id === 'string' && getChibiById(id) ? id : null;
+        }
+      }
+      state.teamPresets = presets;
+    }
+    syncTwinTrialDomain(state, Date.now());
     if (Array.isArray(data.discovered)) {
       const cleaned = new Set<string>();
       for (const rawId of data.discovered) {
@@ -493,19 +540,29 @@ export function deserializeSaveJson(
       if ((state.chestOres[id] || 0) > 0 && isValidIndexId(id)) state.discovered.add(id);
     }
     for (const id of Object.keys(state.miners)) {
-      if ((state.miners[id] || 0) > 0 && isValidIndexId(id)) state.discovered.add(id);
+      if (getPermanentMinerCount(state.miners, state.twinTrial, id) > 0 && isValidIndexId(id)) {
+        state.discovered.add(id);
+      }
     }
     for (const id of Object.keys(state.chestMiners)) {
       if ((state.chestMiners[id] || 0) > 0 && isValidIndexId(id)) state.discovered.add(id);
     }
     for (const slotId of [...state.hotbar, ...state.plotMiners]) {
-      if (slotId && isValidIndexId(slotId)) state.discovered.add(slotId);
+      if (slotId && getPermanentMinerCount(state.miners, state.twinTrial, slotId) > 0 && isValidIndexId(slotId)) {
+        state.discovered.add(slotId);
+      }
     }
     for (const id of Object.keys(state.chibiStars)) {
       if ((state.chibiStars[id] || 0) > 0 && isValidIndexId(id)) state.discovered.add(id);
     }
     for (const id of Object.keys(state.stashedUnits)) {
-      if ((state.stashedUnits[id]?.length ?? 0) > 0 && isValidIndexId(id)) state.discovered.add(id);
+      if (
+        (state.stashedUnits[id]?.length ?? 0) > 0 &&
+        getPermanentMinerCount(state.miners, state.twinTrial, id) > 0 &&
+        isValidIndexId(id)
+      ) {
+        state.discovered.add(id);
+      }
     }
     if (data.activeBoosts) state.activeBoosts = data.activeBoosts;
     if (data.tower && typeof data.tower === 'object') {
@@ -605,18 +662,6 @@ export function deserializeSaveJson(
           (id): id is string => typeof id === 'string' && isValidIndexMilestoneId(id)
         )
       );
-    }
-    if (Array.isArray(data.teamPresets)) {
-      const presets = createEmptyTeamPresets();
-      for (let i = 0; i < TEAM_PRESET_COUNT; i++) {
-        const rawPreset = data.teamPresets[i];
-        if (!Array.isArray(rawPreset)) continue;
-        for (let s = 0; s < STAGE_PEDESTAL_COUNT; s++) {
-          const id = rawPreset[s];
-          presets[i][s] = typeof id === 'string' && getChibiById(id) ? id : null;
-        }
-      }
-      state.teamPresets = presets;
     }
     if (data.careerStats && typeof data.careerStats === 'object') {
       const defStats = createDefaultCareerStats();

@@ -69,6 +69,16 @@ import {
   RETURN_RUSH_SPEED_BONUS,
 } from '../src/game/OfflineEarningsDomain';
 import {
+  claimTwinTrialDomain,
+  createInitialTwinTrialState,
+  getPermanentMinerCount,
+  getTrialOwnedCount,
+  getTwinTrialRemainingSec,
+  syncTwinTrialDomain,
+  TWIN_TRIAL_DURATION_MS,
+  unlockTwinTrialDomain,
+} from '../src/game/TwinTrialDomain';
+import {
   autoStarUpAllUnits,
   computeDpsBreakdown,
   computePlotUnitStats,
@@ -1736,6 +1746,204 @@ describe('Tahap C GameState Domain Modules', () => {
       const ocTap = reloaded.getTapDamage(now + 1000);
       expect(ocTap).toBeGreaterThanOrEqual(baseTap * 2 - 1);
       expect(ocTap).toBeLessThanOrEqual(baseTap * 2 + 1);
+    });
+  });
+
+  describe('TwinTrialDomain', () => {
+    function makeTrialCtx() {
+      return {
+        twinTrial: createInitialTwinTrialState(),
+        miners: { 'astral-recruit': 1 } as Record<string, number>,
+        hotbar: ['astral-recruit', null, null, null, null, null, null, null, null] as (string | null)[],
+        selectedHotbarSlot: 0,
+        plotMiners: ['astral-recruit', null, null, null, null] as (string | null)[],
+        plotUnits: [
+          {
+            chibiId: 'astral-recruit',
+            damageLevel: 1,
+            speedLevel: 1,
+            miningSpeedLevel: 1,
+            pickaxeId: '',
+            mutationId: 'normal',
+            enchantId: null,
+          },
+          null,
+          null,
+          null,
+          null,
+        ],
+        stashedUnits: {} as Record<string, any[]>,
+        ownedPickaxes: {} as Record<string, number>,
+        teamPresets: [
+          [null, null, null, null, null],
+          [null, null, null, null, null],
+          [null, null, null, null, null],
+        ] as (string | null)[][],
+        discovered: new Set<string>(['astral-recruit']),
+      };
+    }
+
+    it('unlocks once from locked to available and rejects duplicate unlocks', () => {
+      const ctx = makeTrialCtx();
+      expect(ctx.twinTrial.status).toBe('locked');
+      expect(unlockTwinTrialDomain(ctx)).toBe(true);
+      expect(ctx.twinTrial.status).toBe('available');
+      expect(unlockTwinTrialDomain(ctx)).toBe(false);
+    });
+
+    it('claims 1 of 5 Twin Chibis for 20 minutes without adding to discovered', () => {
+      const ctx = makeTrialCtx();
+      expect(claimTwinTrialDomain(ctx, 'yukikage-twins', 1_000_000)).toBe(false);
+      unlockTwinTrialDomain(ctx);
+
+      expect(claimTwinTrialDomain(ctx, 'astral-recruit', 1_000_000)).toBe(false);
+      expect(claimTwinTrialDomain(ctx, 'yukikage-twins', 1_000_000)).toBe(true);
+
+      expect(ctx.twinTrial).toEqual({
+        status: 'active',
+        chibiId: 'yukikage-twins',
+        startedAt: 1_000_000,
+        expiresAt: 1_000_000 + TWIN_TRIAL_DURATION_MS,
+      });
+      expect(ctx.miners['yukikage-twins']).toBe(1);
+      expect(ctx.hotbar[1]).toBe('yukikage-twins');
+      expect(ctx.discovered.has('yukikage-twins')).toBe(false);
+      expect(getTrialOwnedCount(ctx.twinTrial, 'yukikage-twins')).toBe(1);
+      expect(getPermanentMinerCount(ctx.miners, ctx.twinTrial, 'yukikage-twins')).toBe(0);
+      expect(getTwinTrialRemainingSec(ctx.twinTrial, 1_000_000 + 30_000)).toBe(1170);
+
+      // Cannot claim a second time while active or expired
+      expect(claimTwinTrialDomain(ctx, 'halcyon-twins', 1_010_000)).toBe(false);
+    });
+
+    it('purges trial unit from miners, hotbar, plots, stash, and teamPresets on expiry', () => {
+      const ctx = makeTrialCtx();
+      unlockTwinTrialDomain(ctx);
+      claimTwinTrialDomain(ctx, 'clockwork-twins', 1_000_000);
+
+      // Simulate trial unit placed on plot 1, stashed, and saved in preset 0
+      ctx.plotMiners[1] = 'clockwork-twins';
+      ctx.plotUnits[1] = {
+        chibiId: 'clockwork-twins',
+        damageLevel: 1,
+        speedLevel: 1,
+        miningSpeedLevel: 1,
+        pickaxeId: 'sunwheel',
+        mutationId: 'normal',
+        enchantId: null,
+        isTrial: true,
+      };
+      ctx.stashedUnits['clockwork-twins'] = [
+        {
+          chibiId: 'clockwork-twins',
+          damageLevel: 1,
+          speedLevel: 1,
+          miningSpeedLevel: 1,
+          pickaxeId: '',
+          mutationId: 'normal',
+          enchantId: null,
+          isTrial: true,
+        },
+      ];
+      ctx.teamPresets[0] = ['astral-recruit', 'clockwork-twins', null, null, null];
+      ctx.selectedHotbarSlot = 1;
+
+      const res = syncTwinTrialDomain(ctx, 1_000_000 + TWIN_TRIAL_DURATION_MS);
+      expect(res).toEqual({ expired: true, chibiId: 'clockwork-twins' });
+      expect(ctx.twinTrial.status).toBe('expired');
+      expect(ctx.miners['clockwork-twins']).toBeUndefined();
+      expect(ctx.hotbar.includes('clockwork-twins')).toBe(false);
+      expect(ctx.selectedHotbarSlot).toBe(-1);
+      expect(ctx.plotMiners[1]).toBeNull();
+      expect(ctx.plotUnits[1]).toBeNull();
+      expect(ctx.ownedPickaxes['sunwheel']).toBe(1);
+      expect(ctx.stashedUnits['clockwork-twins']).toBeUndefined();
+      expect(ctx.teamPresets[0]).toEqual(['astral-recruit', null, null, null, null]);
+    });
+
+    it('keeps permanent copy intact if player acquires the same Twin before trial expires', () => {
+      const ctx = makeTrialCtx();
+      unlockTwinTrialDomain(ctx);
+      claimTwinTrialDomain(ctx, 'nocturne-twins', 1_000_000);
+
+      // Player later buys a permanent copy and places both (slot 1 permanent, slot 2 trial)
+      ctx.miners['nocturne-twins'] = 2;
+      ctx.discovered.add('nocturne-twins');
+      ctx.plotMiners[1] = 'nocturne-twins';
+      ctx.plotUnits[1] = {
+        chibiId: 'nocturne-twins',
+        damageLevel: 5,
+        speedLevel: 2,
+        miningSpeedLevel: 2,
+        pickaxeId: 'sunwheel',
+        mutationId: 'diamond',
+        enchantId: 'blazing',
+      };
+      ctx.plotMiners[2] = 'nocturne-twins';
+      ctx.plotUnits[2] = {
+        chibiId: 'nocturne-twins',
+        damageLevel: 1,
+        speedLevel: 1,
+        miningSpeedLevel: 1,
+        pickaxeId: '',
+        mutationId: 'normal',
+        enchantId: null,
+        isTrial: true,
+      };
+      ctx.teamPresets[0] = ['astral-recruit', 'nocturne-twins', null, null, null];
+
+      const res = syncTwinTrialDomain(ctx, 1_000_000 + TWIN_TRIAL_DURATION_MS + 1000);
+      expect(res.expired).toBe(true);
+      expect(ctx.miners['nocturne-twins']).toBe(1);
+      expect(ctx.hotbar.includes('nocturne-twins')).toBe(true);
+      expect(ctx.plotMiners[1]).toBe('nocturne-twins');
+      expect(ctx.plotUnits[1]?.damageLevel).toBe(5);
+      expect(ctx.plotMiners[2]).toBeNull();
+      expect(ctx.plotUnits[2]).toBeNull();
+      expect(ctx.discovered.has('nocturne-twins')).toBe(true);
+      expect(ctx.teamPresets[0]).toEqual(['astral-recruit', 'nocturne-twins', null, null, null]);
+    });
+
+    it('serializes and reloads twinTrial without auto-adding trial unit to discovered, and expires offline saves', () => {
+      const state = new GameState();
+      const start = Date.now() - 60_000;
+      state.twinTrial = {
+        status: 'active',
+        chibiId: 'halcyon-twins',
+        startedAt: start,
+        expiresAt: start + TWIN_TRIAL_DURATION_MS,
+      };
+      state.miners['halcyon-twins'] = 1;
+      state.plotMiners[1] = 'halcyon-twins';
+      state.plotUnits[1] = {
+        chibiId: 'halcyon-twins',
+        damageLevel: 1,
+        speedLevel: 1,
+        miningSpeedLevel: 1,
+        pickaxeId: '',
+        mutationId: 'normal',
+        enchantId: null,
+        isTrial: true,
+      };
+      state.discovered.delete('halcyon-twins');
+
+      const rawActive = JSON.stringify(serializeSavePayload(state));
+      const reloadedActive = new GameState();
+      deserializeSaveJson(reloadedActive, rawActive);
+      expect(reloadedActive.twinTrial.status).toBe('active');
+      expect(reloadedActive.miners['halcyon-twins']).toBe(1);
+      expect(reloadedActive.plotUnits[1]?.isTrial).toBe(true);
+      expect(reloadedActive.discovered.has('halcyon-twins')).toBe(false);
+
+      // Expired save payload purges on deserialize
+      state.twinTrial.expiresAt = Date.now() - 5_000;
+      const rawExpired = JSON.stringify(serializeSavePayload(state));
+      const reloadedExpired = new GameState();
+      deserializeSaveJson(reloadedExpired, rawExpired);
+      expect(reloadedExpired.twinTrial.status).toBe('expired');
+      expect(reloadedExpired.miners['halcyon-twins']).toBeUndefined();
+      expect(reloadedExpired.plotMiners[1]).toBeNull();
+      expect(reloadedExpired.discovered.has('halcyon-twins')).toBe(false);
     });
   });
 });
