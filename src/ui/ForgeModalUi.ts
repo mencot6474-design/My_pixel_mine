@@ -138,12 +138,15 @@ export class ForgeModalUi {
       })
       .join('');
 
+    const worldCount = RELICS.filter((r) => r.category === 'world').length;
+    const weatherCount = RELICS.filter((r) => r.category === 'weather').length;
+    const towerCount = RELICS.filter((r) => r.category === 'tower').length;
     const tabsHtml = `
       <div class="flex items-center gap-1.5 flex-wrap">
         <button class="${TW_TAB_BTN} ${this.forgeTab === 'all' ? 'active' : ''}" data-action="forge-tab" data-tab="all">All (${RELICS.length})</button>
-        <button class="${TW_TAB_BTN} ${this.forgeTab === 'world' ? 'active' : ''}" data-action="forge-tab" data-tab="world">World (6)</button>
-        <button class="${TW_TAB_BTN} ${this.forgeTab === 'weather' ? 'active' : ''}" data-action="forge-tab" data-tab="weather">Weather (3)</button>
-        <button class="${TW_TAB_BTN} ${this.forgeTab === 'tower' ? 'active' : ''}" data-action="forge-tab" data-tab="tower">Tower (3)</button>
+        <button class="${TW_TAB_BTN} ${this.forgeTab === 'world' ? 'active' : ''}" data-action="forge-tab" data-tab="world">World (${worldCount})</button>
+        <button class="${TW_TAB_BTN} ${this.forgeTab === 'weather' ? 'active' : ''}" data-action="forge-tab" data-tab="weather">Weather (${weatherCount})</button>
+        <button class="${TW_TAB_BTN} ${this.forgeTab === 'tower' ? 'active' : ''}" data-action="forge-tab" data-tab="tower">Tower (${towerCount})</button>
       </div>
     `;
 

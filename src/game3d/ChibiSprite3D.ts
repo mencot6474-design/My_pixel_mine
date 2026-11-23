@@ -343,7 +343,12 @@ export class ChibiSprite3D {
     }
   }
 
+  public getAnimState(): ChibiAnimState {
+    return this.animState;
+  }
+
   public setAnimState(state: ChibiAnimState): void {
+    if (state === 'idle' && this.castPulseTimer > 0 && !this.hologramMode) return;
     if (this.animState === state) return;
     this.animState = state;
     if (state !== 'attack') {
@@ -489,11 +494,13 @@ export class ChibiSprite3D {
     this.showcaseTimer = durationSec;
   }
 
-  /** Triggers a clean on-podium aura & glint pulse when casting weapons from behind the chibi. */
-  public triggerPodiumCast(durationSec = 0.42): void {
+  /** Switches podium chibi from idle -> attack pose briefly on cast, then snaps straight back to idle. */
+  public triggerPodiumCast(durationSec = 0.36): void {
     if (this.hologramMode) return;
+    this.ensureBlitzPosesPreloaded();
     this.castPulseDuration = Math.max(0.22, durationSec);
     this.castPulseTimer = this.castPulseDuration;
+    this.setAnimState('attack');
   }
 
   /**
@@ -686,6 +693,14 @@ export class ChibiSprite3D {
       castPulseAmt = Math.sin(cp * Math.PI);
       showGlint = true;
       glintProgress = cp;
+      if (
+        this.castPulseTimer <= 0 &&
+        this.animState === 'attack' &&
+        this.attackSwingTimer <= 0 &&
+        this.showcaseTimer <= 0
+      ) {
+        this.setAnimState('idle');
+      }
     }
 
     this.glintMesh.visible = showGlint;

@@ -712,7 +712,7 @@ export class OmegaArena3D {
           f.comboStep = (f.comboStep + 1) % 3;
           const bossPt: WorldPoint3 = { x: 0, y: this.bossStageY, z: BOSS_POS_Z + 0.25 };
 
-          f.sprite.triggerPodiumCast(0.45);
+          f.sprite.triggerPodiumCast(0.36);
           this.tierVfx.firePodiumWeaponCast({
             rarity: f.rarity,
             chibiId: f.chibiId,

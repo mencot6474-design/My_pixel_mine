@@ -24,7 +24,7 @@ export interface RelicDef {
 }
 
 export const RELICS: readonly RelicDef[] = [
-  // === 6 WORLD RELICS (W1-W6) ===
+  // === 8 WORLD RELICS (W1-W8) ===
   {
     id: 'miner_lantern',
     name: "Miner's Iron Lantern",
@@ -133,6 +133,44 @@ export const RELICS: readonly RelicDef[] = [
       { oreId: 'zenithite', amount: 2 },
     ],
     gemCost: 300000,
+  },
+  {
+    id: 'abyssal_heart',
+    name: 'Leviathan Abyssal Heart',
+    category: 'world',
+    rarity: 'exotic',
+    iconPath: '/relics/abyssal_heart.webp',
+    tagline: 'W7 Abyssal Biolume — Channels leviathan pressure to surge team DMG, ore worth, and haul yields.',
+    effects: {
+      minerDmgPct: 0.9,
+      oreValuePct: 0.85,
+      oreDropPct: 0.6,
+    },
+    ingredients: [
+      { oreId: 'trenchslate', amount: 65 },
+      { oreId: 'abyssalite', amount: 10 },
+      { oreId: 'leviapearl', amount: 2 },
+    ],
+    gemCost: 650000,
+  },
+  {
+    id: 'chrono_astrolabe',
+    name: 'Chrono Nexus Astrolabe',
+    category: 'world',
+    rarity: 'secret',
+    iconPath: '/relics/chrono_astrolabe.webp',
+    tagline: 'W8 Chrono Nexus — Overclocks spacetime yields for apex team DMG, ore worth, and drop output.',
+    effects: {
+      minerDmgPct: 1.15,
+      oreValuePct: 1.1,
+      oreDropPct: 0.8,
+    },
+    ingredients: [
+      { oreId: 'mithrilite', amount: 60 },
+      { oreId: 'aetherium', amount: 10 },
+      { oreId: 'chronocrown', amount: 2 },
+    ],
+    gemCost: 1250000,
   },
 
   // === 3 WEATHER & MUTATION RELICS ===

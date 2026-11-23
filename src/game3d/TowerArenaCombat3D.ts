@@ -466,7 +466,7 @@ export function stepTowerFightersAndBarrages(ctx: {
           }
           const targetPt: WorldPoint3 = { x: targetRock.x, y: 0.45, z: targetRock.z };
 
-          f.sprite.triggerPodiumCast(0.45);
+          f.sprite.triggerPodiumCast(0.36);
           ctx.tierVfx.firePodiumWeaponCast({
             rarity: f.def.rarity,
             chibiId: f.def.id,

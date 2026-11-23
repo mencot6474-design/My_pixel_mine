@@ -467,8 +467,7 @@ export class PlotAttackController3D {
           const areaScale = computeSafePitAreaScale(wideCenter);
           const accentColor = ped.getActiveAccentColor();
 
-          ped.setChibiAnimState('idle');
-          ped.triggerChibiCast(0.45);
+          ped.triggerChibiCast(0.36);
           ped.getAttackOriginWorldPosition(this.originVec);
           this.tierVfx.firePodiumWeaponCast({
             rarity: unit.def.rarity,

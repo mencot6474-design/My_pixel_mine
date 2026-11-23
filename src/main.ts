@@ -54,7 +54,38 @@ async function bootstrap(): Promise<void> {
   const pickaxeCursorEl = document.createElement('div');
   pickaxeCursorEl.id = 'mamPickaxeCursor';
   pickaxeCursorEl.style.display = 'none';
-  pickaxeCursorEl.innerHTML = `<img src="${assetUrl('/pickaxes/sunwheel.webp')}" alt="" />`;
+  pickaxeCursorEl.innerHTML = `
+    <div class="mam-cursor-pointer" aria-hidden="true">
+      <svg viewBox="0 0 44 44" width="44" height="44" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="mamCursorBladeGrad" x1="5" y1="5" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="48%" stop-color="#38bdf8"/>
+            <stop offset="100%" stop-color="#fde047"/>
+          </linearGradient>
+        </defs>
+        <g class="mam-cursor-reticle-ring" style="transform-origin: 9px 9px;">
+          <circle cx="9" cy="9" r="7.2" stroke="#14111d" stroke-width="2.8" stroke-dasharray="5 3.5" opacity="0.9"/>
+          <circle cx="9" cy="9" r="7.2" stroke="#fde047" stroke-width="1.3" stroke-dasharray="5 3.5"/>
+        </g>
+        <path d="M5 5 L35 17.5 L23 22 L33 32 L28.5 36.5 L18.5 26.5 L14.5 38 Z"
+          fill="url(#mamCursorBladeGrad)" stroke="#14111d" stroke-width="3.2" stroke-linejoin="round"/>
+        <path d="M5 5 L22.5 21.5 L18.5 26.5 Z" fill="#ffffff" fill-opacity="0.55"/>
+        <circle cx="5" cy="5" r="2.2" fill="#ffffff" stroke="#14111d" stroke-width="1.2"/>
+      </svg>
+    </div>
+    <div class="mam-cursor-mine" aria-hidden="true">
+      <div class="mam-cursor-target-beacon">
+        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="18" cy="18" r="12" stroke="#14111d" stroke-width="4" stroke-dasharray="7 5"/>
+          <circle cx="18" cy="18" r="12" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="7 5"/>
+          <path d="M18 2 V8 M18 28 V34 M2 18 H8 M28 18 H34" stroke="#14111d" stroke-width="4" stroke-linecap="round"/>
+          <path d="M18 2 V8 M18 28 V34 M2 18 H8 M28 18 H34" stroke="#fde047" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <img src="${assetUrl('/pickaxes/sunwheel.webp')}" alt="" />
+    </div>
+  `;
   const pickaxeComboEl = document.createElement('div');
   pickaxeComboEl.id = 'mamPickaxeCombo';
   pickaxeComboEl.className = 'mam-pickaxe-combo tier-cool';
@@ -100,6 +131,24 @@ async function bootstrap(): Promise<void> {
     });
   };
 
+  const setCursorPosition = (x: number, y: number): void => {
+    pickaxeCursorEl.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
+  };
+
+  const spawnCursorClickPulse = (x: number, y: number): void => {
+    const pulse = document.createElement('div');
+    pulse.className = 'mam-cursor-click-pulse';
+    pulse.style.left = `${Math.round(x)}px`;
+    pulse.style.top = `${Math.round(y)}px`;
+    document.body.appendChild(pulse);
+    const cleanup = (): void => pulse.remove();
+    pulse.addEventListener('animationend', cleanup, { once: true });
+    window.setTimeout(cleanup, 320);
+  };
+
+  const INTERACTIVE_CURSOR_SELECTOR =
+    'button, a, [role="button"], [data-action], [data-teleport-world], [data-teleport-unlock], [data-equip-slot], [data-index-id], [data-inv-uid], [data-omega-ring-parry], [data-omega-hit-target], input, select, label, .cursor-pointer';
+
   const triggerTapCombo = (isCrit: boolean, sx: number, sy: number): void => {
     const now = performance.now();
     tapComboState = stepTapCombo(tapComboState, now, TAP_COMBO_WINDOW_MS);
@@ -114,8 +163,8 @@ async function bootstrap(): Promise<void> {
 
     if (lastPointerType === 'touch' || pickaxeCursorEl.style.display !== 'block') {
       pickaxeCursorEl.style.display = 'block';
-      pickaxeCursorEl.style.left = `${Math.round(sx)}px`;
-      pickaxeCursorEl.style.top = `${Math.round(sy)}px`;
+      pickaxeCursorEl.classList.add('is-mining-mode');
+      setCursorPosition(sx, sy);
       syncComboEdgeFlip(sx, sy);
       triggerPickaxeSwing();
     }
@@ -151,24 +200,27 @@ async function bootstrap(): Promise<void> {
     });
   };
 
+  let clickFeedbackTimer: number | null = null;
   const syncPickaxeCursor = (e: PointerEvent): void => {
     lastPointerType = e.pointerType || 'mouse';
     if (isAdPlaying()) {
+      document.body.classList.remove('mam-custom-cursor-active');
       pickaxeCursorEl.style.display = 'none';
       return;
     }
     if (lastPointerType === 'touch') {
+      document.body.classList.remove('mam-custom-cursor-active');
       return;
     }
+    document.body.classList.add('mam-custom-cursor-active');
     const canvas = threeRoot.querySelector('canvas');
-    const active = Boolean(canvas && e.target === canvas && canvas.classList.contains('mam-mining-cursor'));
-    if (!active) {
-      pickaxeCursorEl.style.display = 'none';
-      return;
-    }
+    const isMining = Boolean(canvas && e.target === canvas && canvas.classList.contains('mam-mining-cursor'));
+    const targetEl = e.target instanceof Element ? e.target : null;
+    const isHoveringUi = !isMining && Boolean(targetEl?.closest(INTERACTIVE_CURSOR_SELECTOR));
+    pickaxeCursorEl.classList.toggle('is-mining-mode', isMining);
+    pickaxeCursorEl.classList.toggle('is-hovering', isHoveringUi);
     pickaxeCursorEl.style.display = 'block';
-    pickaxeCursorEl.style.left = `${e.clientX}px`;
-    pickaxeCursorEl.style.top = `${e.clientY}px`;
+    setCursorPosition(e.clientX, e.clientY);
     syncComboEdgeFlip(e.clientX, e.clientY);
   };
   window.addEventListener('pointermove', syncPickaxeCursor, true);
@@ -176,12 +228,29 @@ async function bootstrap(): Promise<void> {
     'pointerdown',
     (e) => {
       syncPickaxeCursor(e);
-      if (lastPointerType !== 'touch' && pickaxeCursorEl.style.display === 'block') {
+      if (lastPointerType === 'touch' || pickaxeCursorEl.style.display !== 'block') return;
+      if (pickaxeCursorEl.classList.contains('is-mining-mode')) {
         triggerPickaxeSwing();
+      } else {
+        pickaxeCursorEl.classList.add('is-clicking');
+        if (clickFeedbackTimer !== null) window.clearTimeout(clickFeedbackTimer);
+        clickFeedbackTimer = window.setTimeout(() => {
+          clickFeedbackTimer = null;
+          pickaxeCursorEl.classList.remove('is-clicking');
+        }, 115);
+        spawnCursorClickPulse(e.clientX, e.clientY);
       }
     },
     true
   );
+  document.addEventListener('pointerleave', () => {
+    if (lastPointerType !== 'touch') {
+      pickaxeCursorEl.style.display = 'none';
+    }
+  });
+  window.addEventListener('blur', () => {
+    pickaxeCursorEl.style.display = 'none';
+  });
 
   const gameState = new GameState();
   let hud: GameHud | null = null;
@@ -524,6 +593,7 @@ async function bootstrap(): Promise<void> {
       scene.setAdPaused(paused);
       hud?.setAdPaused(paused);
       if (paused) {
+        document.body.classList.remove('mam-custom-cursor-active');
         pickaxeCursorEl.style.display = 'none';
         resetTapCombo();
       }
