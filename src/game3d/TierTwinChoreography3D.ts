@@ -373,147 +373,42 @@ export function fireTwinChibiChoreography(
     }
 
     case 'clockwork-twins': {
-      // 5. CLOCKWORK TWINS: Sakuga Time-Stop Chrono Cataclysm (Astrolabe Seal + Dual-Pass Mode-6 Cel Slashes + Spatial Rifts + Sakuga Clocktower Slam + 8 Clock-Hand Scythes -> "TIME RESUMES" Overdrive!)
-      ctx.hooks.onArenaDim?.(0.84, '#0d0802', 1.24 * sc);
-      ctx.spawnClockDial({ x: cx, y: cy + 0.09, z: cz, color: '#f59e0b', coreColor: '#2dd4bf', s0: 2.6 * as, s1: 11.2 * as, life: 1.38 * sc });
-
-      // Act 1: Layered Dual-Pass Sakuga Mode-6 Slashes, Horizontal Cel Gears, Chain Lightning & Diagonal Time Rifts
-      pts.forEach((n, idx) => {
-        ctx.after(idx * 0.05 * sc, () => {
-          const isAmber = idx % 2 === 0;
-          const ry = idx * 1.25;
-          ctx.spawnSlash({
-            x: n.x, y: n.y + 0.92, z: n.z,
-            color: isAmber ? '#f59e0b' : '#2dd4bf', coreColor: isAmber ? '#fef08a' : '#ffffff',
-            rx: (isAmber ? 1 : -1) * 0.34, ry, rz: isAmber ? 0.32 : -0.32,
-            s0: 1.9 * as, s1: 5.0 * as, life: 0.34 * sc, spinSpeed: (isAmber ? 1 : -1) * 5.6, shaderMode: 6, darkCore: true,
-          });
-          ctx.spawnSlash({
-            x: n.x, y: n.y + 1.08, z: n.z,
-            color: isAmber ? '#fef08a' : '#5eead4', coreColor: '#ffffff',
-            rx: (isAmber ? -1 : 1) * 0.28, ry: ry + 0.9, rz: isAmber ? -0.26 : 0.26,
-            s0: 1.5 * as, s1: 4.2 * as, life: 0.28 * sc, spinSpeed: (isAmber ? -1 : 1) * 6.4, shaderMode: 6,
-          });
-          ctx.spawnRift({
-            x: n.x, y: n.y + 0.95, z: n.z,
-            color: isAmber ? '#f59e0b' : '#2dd4bf', coreColor: '#fef08a',
-            ry: ry * 0.4, rz: isAmber ? 0.52 : -0.52, len: 5.2 * as, height: 0.95, life: 0.34 * sc,
-          });
-          ctx.spawnWeapon({
-            kind: 'gear', color: isAmber ? '#f59e0b' : '#2dd4bf', coreColor: '#fef08a',
-            startPos: new THREE.Vector3(cx + (isAmber ? -3.8 : 3.8) * as, cy + 2.8, cz - 0.8),
-            endPos: new THREE.Vector3(n.x, n.y + 0.45, n.z),
-            startRot: new THREE.Euler(-Math.PI / 2, 0, 0),
-            endRot: new THREE.Euler(-Math.PI / 2, 0, (isAmber ? 1 : -1) * Math.PI * 4),
-            scale: 1.28 * Math.max(0.75, as), mode: 'swing', life: 0.28 * sc,
-          });
-          if (idx > 0) {
+      // 5. CLOCKWORK TWINS: 2.5s Sakuga Chrono-Scissor Execution (Snappy 6-Hit Per-Ore Blitz -> Violent easeInExpo Great-Scythe Slam -> Judgment Sky-Pillar & Ballistic Spark Fountain -> 1.05s Time-Resume Overdrive)
+      ctx.fireClockworkTwinsSakuga({
+        cx,
+        cy,
+        cz,
+        areaScale: as,
+        pts,
+        onSlashBeat: (beatIdx, pt) => {
+          const isAmber = beatIdx % 2 === 0;
+          ctx.spawnSparks(
+            pt.x,
+            pt.y + 0.85,
+            pt.z,
+            isAmber ? '#fbbf24' : '#2dd4bf',
+            isAmber ? '#f472b6' : '#c084fc',
+            6,
+            7.4
+          );
+          if (pts.length > 1) {
+            const other = pts[(beatIdx + 1) % pts.length];
             ctx.spawnLightning(
-              new THREE.Vector3(pts[idx - 1].x, pts[idx - 1].y + 0.65, pts[idx - 1].z),
-              new THREE.Vector3(n.x, n.y + 0.65, n.z),
-              '#2dd4bf', 0.18, 0.24 * sc
+              new THREE.Vector3(pt.x, pt.y + 0.75, pt.z),
+              new THREE.Vector3(other.x, other.y + 0.75, other.z),
+              isAmber ? '#fbbf24' : '#2dd4bf',
+              0.18,
+              0.18 * sc
             );
           }
-        });
-      });
-
-      // Act 2 & Act 3: Colossal Sakuga Clocktower Slam -> 8 Clock-Hand Scythes Lock -> "TIME RESUMES" Triple Vortex Finale!
-      ctx.after(0.18 * sc, () => {
-        ctx.spawnInvertedClocktower({
-          cx, cy, cz, areaScale: as, fallDur: 0.13 * sc, holdDur: 0.36 * sc, explodeDur: 0.44 * sc,
-          onLand: () => {
-            ctx.hooks.onImpactFrame?.(0.85, 1.0, '#2dd4bf', 0.045);
-            ctx.hooks.onSpeedLines?.(0.98, 0.38);
-            ctx.spawnQuad({ tex: ctx.ringTex, x: cx, y: cy + 0.12, z: cz, color: '#2dd4bf', s0: 1.2 * as, s1: 8.6 * as, life: 0.38 * sc, flatFloor: true, alpha: 0.98 });
-            ctx.spawnSparks(cx, cy + 0.55, cz, '#fbbf24', '#2dd4bf', 14, 7.2);
-            ctx.spawnSlash({
-              x: cx, y: cy + 1.35, z: cz, color: '#f59e0b', coreColor: '#fef08a',
-              rx: 0.22, ry: 0.4, rz: 0.34, s0: 2.8 * as, s1: 7.4 * as, life: 0.38 * sc, spinSpeed: 5.8, shaderMode: 6, darkCore: true,
-            });
-            ctx.spawnSlash({
-              x: cx, y: cy + 1.5, z: cz, color: '#2dd4bf', coreColor: '#ffffff',
-              rx: -0.22, ry: Math.PI + 0.4, rz: -0.34, s0: 2.8 * as, s1: 7.4 * as, life: 0.38 * sc, spinSpeed: -5.8, shaderMode: 6, darkCore: true,
-            });
-            // 8 Giant Sakuga Clock-Hand Scythes pinning radially around the embedded Clocktower
-            const handCount = 8;
-            for (let s = 0; s < handCount; s++) {
-              const ang = (s / handCount) * Math.PI * 2;
-              const sx = cx + Math.cos(ang) * 2.65 * as;
-              const sz = cz + Math.sin(ang) * 1.9 * as;
-              ctx.spawnDirectedWeapon(
-                'clockhand',
-                new THREE.Vector3(sx * 1.3 - cx * 0.3, cy + 7.0, sz * 1.3 - cz * 0.3),
-                new THREE.Vector3(sx, cy + 0.16, sz),
-                s % 2 === 0 ? '#fbbf24' : '#2dd4bf',
-                1.45 * Math.max(0.75, as),
-                0.22 * sc
-              );
-            }
-          },
-          onExplode: () => {
-            ctx.hooks.onImpactFrame?.(1.0, 0.0, '#fbbf24', 0.075);
-            ctx.after(0.095 * sc, () => ctx.hooks.onImpactFrame?.(0.95, 1.0, '#2dd4bf', 0.05));
-            ctx.hooks.onSpeedLines?.(1.0, 0.56);
-
-            // Triple Concentric Sakuga Vortexes (1 giant central gold + 2 counter-spinning teal)
-            ctx.spawnVortex({ x: cx, y: cy, z: cz, color: '#fbbf24', coreColor: '#ffffff', sx: 3.0 * as, sy: 2.65, twist: 9.0, spin: 11.2, life: 0.72 * sc });
-            ctx.spawnVortex({ x: cx - 1.35 * as, y: cy, z: cz, color: '#2dd4bf', coreColor: '#fef08a', sx: 2.15 * as, sy: 2.2, spin: -10.5, life: 0.68 * sc });
-            ctx.spawnVortex({ x: cx + 1.35 * as, y: cy, z: cz, color: '#f59e0b', coreColor: '#5eead4', sx: 2.15 * as, sy: 2.2, spin: -10.5, life: 0.68 * sc });
-
-            // 3-Layer High-Contrast Expanding Shock Domes
-            ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#f59e0b', coreColor: '#ffffff', s0: 1.0 * as, s1: 9.2 * as, yScale: 0.58, life: 0.62 * sc });
-            ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#2dd4bf', coreColor: '#fef08a', s0: 0.75 * as, s1: 7.6 * as, yScale: 0.64, life: 0.54 * sc });
-            ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#0f172a', coreColor: '#fbbf24', s0: 0.55 * as, s1: 6.0 * as, yScale: 0.70, life: 0.46 * sc });
-
-            // 4 Full-Span Spatial Time-Shatter Rifts + Giant Finishing Cross Slashes
-            for (let r = 0; r < 4; r++) {
-              ctx.spawnRift({
-                x: cx, y: cy + 1.35 + (r % 2) * 0.45, z: cz,
-                color: r % 2 === 0 ? '#fbbf24' : '#2dd4bf', coreColor: '#ffffff',
-                ry: (r * Math.PI) / 4, rz: r % 2 === 0 ? 0.36 : -0.36, len: 12.2 * as, height: 1.35, life: 0.54 * sc,
-              });
-            }
-            ctx.spawnSlash({
-              x: cx, y: cy + 1.2, z: cz, color: '#fbbf24', coreColor: '#ffffff',
-              rx: 0.14, ry: 0.15, rz: 0.24, s0: 3.4 * as, s1: 9.4 * as, life: 0.48 * sc, spinSpeed: 6.2, shaderMode: 6, darkCore: true,
-            });
-            ctx.spawnSlash({
-              x: cx, y: cy + 1.45, z: cz, color: '#2dd4bf', coreColor: '#fef08a',
-              rx: -0.14, ry: Math.PI + 0.15, rz: -0.24, s0: 3.4 * as, s1: 9.4 * as, life: 0.48 * sc, spinSpeed: -6.2, shaderMode: 6, darkCore: true,
-            });
-
-            // 14 Spinning Sakuga Gears + 4 Giant Clock-Hand Scythes erupting cleanly outward
-            const gearCount = 14;
-            for (let g = 0; g < gearCount; g++) {
-              const ang = (g / gearCount) * Math.PI * 2;
-              const rad = (2.8 + (g % 2) * 1.6) * as;
-              ctx.spawnWeapon({
-                kind: 'gear', color: g % 2 === 0 ? '#f59e0b' : '#2dd4bf', coreColor: '#fef08a',
-                startPos: new THREE.Vector3(cx, cy + 1.85, cz),
-                endPos: new THREE.Vector3(cx + Math.cos(ang) * rad, cy + 0.42 + (g % 2) * 0.45, cz + Math.sin(ang) * rad * 0.72),
-                startRot: new THREE.Euler(-Math.PI / 2, 0, ang),
-                endRot: new THREE.Euler(-Math.PI / 2, 0, ang + (g % 2 === 0 ? 1 : -1) * Math.PI * 4),
-                scale: (1.1 + (g % 2) * 0.28) * as, mode: 'swing', life: (0.48 + (g % 2) * 0.08) * sc,
-              });
-            }
-            for (let h = 0; h < 4; h++) {
-              const ang = (h / 4) * Math.PI * 2 + 0.39;
-              ctx.spawnDirectedWeapon(
-                'clockhand',
-                new THREE.Vector3(cx, cy + 2.4, cz),
-                new THREE.Vector3(cx + Math.cos(ang) * 4.4 * as, cy + 0.25, cz + Math.sin(ang) * 3.1 * as),
-                h % 2 === 0 ? '#fbbf24' : '#2dd4bf',
-                1.45 * as,
-                0.38 * sc
-              );
-            }
-
-            pts.forEach((n, i) => {
-              ctx.spawnDebrisBurst(n.x, n.y + 0.8, n.z, i % 2 === 0 ? '#f59e0b' : '#2dd4bf', '#fef08a', 7);
-              ctx.spawnSparks(n.x, n.y + 0.9, n.z, '#fbbf24', '#2dd4bf', 10, 7.6);
-            });
-          },
-        });
+        },
+        onImpact: () => {
+          ctx.spawnSparks(cx, cy + 1.05, cz, '#fbbf24', '#ffffff', 14, 9.2);
+          pts.forEach((n, i) => {
+            ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, i % 2 === 0 ? '#fbbf24' : '#2dd4bf', '#f472b6', 6);
+            ctx.spawnSparks(n.x, n.y + 0.9, n.z, i % 2 === 0 ? '#fbbf24' : '#f472b6', '#2dd4bf', 8, 8.2);
+          });
+        },
       });
       break;
     }

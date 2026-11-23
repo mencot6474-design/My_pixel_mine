@@ -137,6 +137,11 @@ export interface TierVfxChoreoContext {
   fireObsidianSovereignSakuga: (opts: {
     cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
   }) => void;
+  fireClockworkTwinsSakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[];
+    onSlashBeat?: (beatIdx: number, pt: WorldPoint3) => void;
+    onImpact?: () => void;
+  }) => void;
 }
 
 export function fireTierAttackChoreography(

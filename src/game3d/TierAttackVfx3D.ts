@@ -38,6 +38,7 @@ import {
 } from './TierVfxPitClip3D';
 import { CrimsonRoninSkillVfxPool } from './skills/crimsonRoninSkillVfx3D';
 import { ObsidianSovereignSkillVfxPool } from './skills/obsidianSovereignSkillVfx3D';
+import { ClockworkTwinsSkillVfxPool } from './skills/clockworkTwinsSkillVfx3D';
 import {
   createTierVfxPoolCollections,
   firePodiumWeaponCastChoreography,
@@ -140,6 +141,7 @@ export class TierAttackVfxPool3D {
   private readonly pitClipUniforms: PitArenaClipUniforms = createPitArenaClipUniforms();
   private readonly crimsonRoninSkillPool: CrimsonRoninSkillVfxPool;
   private readonly obsidianSovereignSkillPool: ObsidianSovereignSkillVfxPool;
+  private readonly clockworkTwinsSkillPool: ClockworkTwinsSkillVfxPool;
   private readonly updateState: TierVfxPoolUpdateState;
 
   constructor(hooks: TierVfxHooks = {}) {
@@ -217,11 +219,19 @@ export class TierAttackVfxPool3D {
 
     this.crimsonRoninSkillPool = new CrimsonRoninSkillVfxPool(this.hooks);
     this.obsidianSovereignSkillPool = new ObsidianSovereignSkillVfxPool(this.hooks);
-    this.group.add(this.crimsonRoninSkillPool.group, this.obsidianSovereignSkillPool.group);
+    this.clockworkTwinsSkillPool = new ClockworkTwinsSkillVfxPool(this.hooks);
+    this.group.add(
+      this.crimsonRoninSkillPool.group,
+      this.obsidianSovereignSkillPool.group,
+      this.clockworkTwinsSkillPool.group
+    );
     for (const mat of this.crimsonRoninSkillPool.getMaterials()) {
       patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
     }
     for (const mat of this.obsidianSovereignSkillPool.getMaterials()) {
+      patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
+    }
+    for (const mat of this.clockworkTwinsSkillPool.getMaterials()) {
       patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
     }
   }
@@ -273,6 +283,7 @@ export class TierAttackVfxPool3D {
       spawnSparks: (x, y, z, c, s, cnt, spd) => this.spawnSparks(x, y, z, c, s, cnt, spd),
       fireCrimsonRoninSakuga: (o) => this.crimsonRoninSkillPool.fire(o),
       fireObsidianSovereignSakuga: (o) => this.obsidianSovereignSkillPool.fire(o),
+      fireClockworkTwinsSakuga: (o) => this.clockworkTwinsSkillPool.fire(o),
     };
   }
 
@@ -280,12 +291,14 @@ export class TierAttackVfxPool3D {
     this.hooks = hooks;
     this.crimsonRoninSkillPool.setHooks(hooks);
     this.obsidianSovereignSkillPool.setHooks(hooks);
+    this.clockworkTwinsSkillPool.setHooks(hooks);
   }
 
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
     this.crimsonRoninSkillPool.setLowQuality(low);
     this.obsidianSovereignSkillPool.setLowQuality(low);
+    this.clockworkTwinsSkillPool.setLowQuality(low);
   }
 
   public clear(): void {
@@ -321,6 +334,7 @@ export class TierAttackVfxPool3D {
     resetArr(this.orbs);
     this.crimsonRoninSkillPool.clear();
     this.obsidianSovereignSkillPool.clear();
+    this.clockworkTwinsSkillPool.clear();
   }
 
   private after(delay: number, fn: () => void): void {
@@ -991,6 +1005,7 @@ export class TierAttackVfxPool3D {
     this.time = this.updateState.time;
     this.crimsonRoninSkillPool.update(dtSec, this.time);
     this.obsidianSovereignSkillPool.update(dtSec, this.time);
+    this.clockworkTwinsSkillPool.update(dtSec, this.time);
   }
 
   public dispose(): void {
@@ -999,6 +1014,7 @@ export class TierAttackVfxPool3D {
     this.clear();
     this.crimsonRoninSkillPool.dispose();
     this.obsidianSovereignSkillPool.dispose();
+    this.clockworkTwinsSkillPool.dispose();
     const mats = new Set<THREE.Material>();
     for (const s of this.slashes) mats.add(s.mat);
     for (const d of this.domes) mats.add(d.mat);
