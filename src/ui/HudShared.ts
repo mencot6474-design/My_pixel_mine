@@ -42,7 +42,8 @@ export type ModalKind =
   | 'achievements'
   | 'daily-login'
   | 'altar-hub'
-  | 'omega-boss';
+  | 'omega-boss'
+  | 'twin-trial';
 
 export type ModalThemeId = Exclude<ModalKind, 'none'>;
 

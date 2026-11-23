@@ -1,7 +1,9 @@
+import { assetUrl } from '../game/AssetUrl';
 import { fmtInt, fmtMoney } from '../game/NumberFormat';
 import type { OverclockTier } from '../game/OverclockDomain';
 import { hudIconHtml } from './HudIcons';
 import {
+  formatCountdownTimer,
   TW_BADGE_BASE,
   TW_CURRENCY_BAR,
   TW_PLUS_BTN,
@@ -21,6 +23,11 @@ export function renderAudioControlsHtml(opts: {
   muted: boolean;
   cameraLocked: boolean;
   fps?: number;
+  twinTrial?: {
+    visible: boolean;
+    active: boolean;
+    remainingSec: number;
+  };
 }): string {
   const { floating, muted, cameraLocked, fps = 0 } = opts;
   const audioIcon = muted
@@ -77,49 +84,79 @@ export function renderAudioControlsHtml(opts: {
 
   const fpsText = fps > 0 ? String(fps) : '--';
   const fpsDotColor = fps >= 50 ? '#22c55e' : fps >= 30 ? '#f59e0b' : '#ef4444';
+  const trialVisible = Boolean(opts.twinTrial?.visible);
+  const trialActive = Boolean(opts.twinTrial?.active);
+  const trialTimerText = trialActive
+    ? formatCountdownTimer(opts.twinTrial?.remainingSec ?? 0)
+    : 'FREE';
+  const trialBgCls = trialActive
+    ? 'bg-[linear-gradient(135deg,#bbf7d0_0%,#bae6fd_100%)]'
+    : 'bg-[linear-gradient(135deg,#fde047_0%,#bae6fd_55%,#fbcfe8_100%)]';
+  const trialBadgeCls = trialActive
+    ? 'bg-[#dcfce7] text-[#14532d]'
+    : 'bg-[#fde047] text-[#14111d]';
+  const trialBtnHtml = trialVisible
+    ? `
+      <button
+        class="relative ${utilBtnCls} border-[#14111d] ${trialBgCls}"
+        data-action="open-twin-trial"
+        title="${trialActive ? `Twin Chibi Trial Active (${trialTimerText} left)` : 'Claim 20m Twin Chibi Free Trial!'}"
+        aria-label="${trialActive ? 'Inspect Active Twin Trial' : 'Open Twin Chibi Free Trial'}"
+      >
+        <img src="${assetUrl('/badges/twin.svg')}" alt="Twin Trial" class="w-7 h-7 @max-[720px]:w-6 @max-[720px]:h-6 object-contain pointer-events-none" draggable="false" />
+        <span
+          class="absolute -bottom-2 left-1/2 -translate-x-1/2 px-1.5 py-[1px] rounded-full border-[1.5px] border-[#14111d] ${trialBadgeCls} text-[9px] font-black leading-tight tracking-tight tabular-nums whitespace-nowrap pointer-events-none"
+          data-twin-trial-timer="true"
+        >${trialTimerText}</span>
+      </button>
+    `
+    : '';
 
   return `
-    <div class="${placementCls} flex items-center gap-2 @max-[720px]:gap-1.5 pointer-events-none">
-      <div
-        class="h-12 @max-[720px]:h-10 px-2.5 @max-[720px]:px-2 rounded-2xl border-[2.5px] border-[#14111d] bg-[#fff8e7] flex items-center gap-1.5 select-none pointer-events-auto"
-        title="Live Frames Per Second"
-        aria-label="FPS Counter"
-      >
-        <span
-          data-fps-dot
-          class="w-2.5 h-2.5 rounded-full border-[1.5px] border-[#14111d] shrink-0"
-          style="background:${fpsDotColor}"
-        ></span>
-        <span class="font-extrabold text-[13px] @max-[720px]:text-[11px] text-[#14111d] tabular-nums leading-none whitespace-nowrap">
-          <span data-fps-value>${fpsText}</span> <span class="text-[10px] @max-[720px]:text-[9px] text-[#64748b] font-black">FPS</span>
-        </span>
+    <div class="${placementCls} flex flex-col items-end gap-2 @max-[720px]:gap-1.5 pointer-events-none">
+      <div class="flex items-center gap-2 @max-[720px]:gap-1.5 pointer-events-none">
+        <div
+          class="h-12 @max-[720px]:h-10 px-2.5 @max-[720px]:px-2 rounded-2xl border-[2.5px] border-[#14111d] bg-[#fff8e7] flex items-center gap-1.5 select-none pointer-events-auto"
+          title="Live Frames Per Second"
+          aria-label="FPS Counter"
+        >
+          <span
+            data-fps-dot
+            class="w-2.5 h-2.5 rounded-full border-[1.5px] border-[#14111d] shrink-0"
+            style="background:${fpsDotColor}"
+          ></span>
+          <span class="font-extrabold text-[13px] @max-[720px]:text-[11px] text-[#14111d] tabular-nums leading-none whitespace-nowrap">
+            <span data-fps-value>${fpsText}</span> <span class="text-[10px] @max-[720px]:text-[9px] text-[#64748b] font-black">FPS</span>
+          </span>
+        </div>
+        <button
+          class="${utilBtnCls} ${camFrameCls}"
+          data-action="toggle-camera-lock"
+          data-camera-locked="${cameraLocked ? 'true' : 'false'}"
+          title="${cameraLocked ? 'Camera Locked (Front + Zoom Only) — Click to Unlock' : 'Lock Camera Front (Zoom Only)'}"
+          aria-label="${cameraLocked ? 'Unlock Camera' : 'Lock Camera Front'}"
+          aria-pressed="${cameraLocked ? 'true' : 'false'}"
+        >
+          ${camIcon}
+        </button>
+        <button
+          class="${utilBtnCls} ${gearFrameCls}"
+          data-action="open-settings"
+          title="Settings"
+          aria-label="Open Settings"
+        >
+          ${gearIcon}
+        </button>
+        <button
+          class="${utilBtnCls} ${frameCls}"
+          data-action="toggle-audio"
+          title="${muted ? 'Unmute Audio' : 'Mute Audio'}"
+          aria-label="${muted ? 'Unmute Audio' : 'Mute Audio'}"
+        >
+          ${audioIcon}
+        </button>
       </div>
-      <button
-        class="${utilBtnCls} ${camFrameCls}"
-        data-action="toggle-camera-lock"
-        data-camera-locked="${cameraLocked ? 'true' : 'false'}"
-        title="${cameraLocked ? 'Camera Locked (Front + Zoom Only) — Click to Unlock' : 'Lock Camera Front (Zoom Only)'}"
-        aria-label="${cameraLocked ? 'Unlock Camera' : 'Lock Camera Front'}"
-        aria-pressed="${cameraLocked ? 'true' : 'false'}"
-      >
-        ${camIcon}
-      </button>
-      <button
-        class="${utilBtnCls} ${gearFrameCls}"
-        data-action="open-settings"
-        title="Settings"
-        aria-label="Open Settings"
-      >
-        ${gearIcon}
-      </button>
-      <button
-        class="${utilBtnCls} ${frameCls}"
-        data-action="toggle-audio"
-        title="${muted ? 'Unmute Audio' : 'Mute Audio'}"
-        aria-label="${muted ? 'Unmute Audio' : 'Mute Audio'}"
-      >
-        ${audioIcon}
-      </button>
+      ${trialBtnHtml}
     </div>
   `;
 }
@@ -136,7 +173,7 @@ export function renderCurrencyRailHtml(opts: {
 }): string {
   const posCls = opts.topAlign
     ? 'top-[14px] right-4'
-    : 'top-[42%] right-4 -translate-y-1/2 [[data-hud-compact=true]_&]:top-[72px] [[data-hud-compact=true]_&]:translate-y-0 [[data-hud-short=true]_&]:top-[36%]';
+    : 'top-[42%] right-4 -translate-y-1/2 [[data-hud-compact=true]_&]:top-[72px] [[data-hud-compact=true][data-hud-trial=true]_&]:top-[128px] [[data-hud-compact=true]_&]:translate-y-0 [[data-hud-short=true]_&]:top-[36%]';
   const plusBtn = opts.showGemsPlus
     ? `<button class="${TW_PLUS_BTN} absolute right-2 top-1/2 -translate-y-1/2" data-action="gems-plus" aria-label="Buy Gems"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true"><path d="M8 2.8v10.4M2.8 8h10.4" stroke="#14111d" stroke-width="2.8" stroke-linecap="round"/></svg></button>`
     : '';

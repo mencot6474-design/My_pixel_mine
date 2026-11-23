@@ -49,7 +49,15 @@ import {
   formatWeatherTimer,
 } from '../src/ui/WeatherDpsHudUi';
 import { UpgradesWorldsUi } from '../src/ui/UpgradesWorldsUi';
-import { renderFeverScreenFxHtml } from '../src/ui/HudChromeRenderer';
+import {
+  renderAudioControlsHtml,
+  renderCurrencyRailHtml,
+  renderFeverScreenFxHtml,
+} from '../src/ui/HudChromeRenderer';
+import { stepHudSlowTick } from '../src/ui/HudActionRouter';
+import { TwinTrialModalUi } from '../src/ui/TwinTrialModalUi';
+import { PREMIUM_SHOP_ITEMS } from '../src/game/PremiumShopData';
+import { TWIN_TRIAL_DURATION_MS } from '../src/game/TwinTrialDomain';
 import {
   buildAltarAnchorsHtml,
   buildMineOreBarsHtml,
@@ -1740,6 +1748,120 @@ describe('Tahap B HUD Modules', () => {
       expect(html).not.toContain('data-equip-ore');
       expect(html).not.toContain('data-insp-inv-action="toggle-ore"');
       expect(html).toContain(`data-inspect-inv-only="ore:${ORES[0].id}"`);
+    });
+  });
+
+  describe('TwinTrial HUD & Modal', () => {
+    it('renders Trial button beneath audio controls only when visible and shows FREE or mm:ss countdown', () => {
+      const hiddenHtml = renderAudioControlsHtml({
+        floating: true,
+        muted: false,
+        cameraLocked: false,
+        fps: 60,
+        twinTrial: { visible: false, active: false, remainingSec: 0 },
+      });
+      expect(hiddenHtml).not.toContain('data-action="open-twin-trial"');
+
+      const availHtml = renderAudioControlsHtml({
+        floating: true,
+        muted: false,
+        cameraLocked: false,
+        fps: 60,
+        twinTrial: { visible: true, active: false, remainingSec: 0 },
+      });
+      expect(availHtml).toContain('data-action="open-twin-trial"');
+      expect(availHtml).toContain('FREE');
+      expect(availHtml.indexOf('data-action="toggle-audio"')).toBeLessThan(
+        availHtml.indexOf('data-action="open-twin-trial"')
+      );
+
+      const activeHtml = renderAudioControlsHtml({
+        floating: true,
+        muted: false,
+        cameraLocked: false,
+        fps: 60,
+        twinTrial: { visible: true, active: true, remainingSec: 750 },
+      });
+      expect(activeHtml).toContain('data-twin-trial-timer="true"');
+      expect(activeHtml).toContain('12:30');
+
+      const railHtml = renderCurrencyRailHtml({
+        gems: 100,
+        cash: 250,
+        showCash: true,
+      });
+      expect(railHtml).toContain('[[data-hud-compact=true][data-hud-trial=true]_&]:top-[128px]');
+    });
+
+    it('renders all 5 Twin Chibis in TwinTrialModalUi with read-only notice and claims chosen Twin', () => {
+      const state = new GameState();
+      state.unlockTwinTrial();
+      const onClaim = vi.fn();
+      const ui = new TwinTrialModalUi(state, () => {}, onClaim, () => {});
+      const html = ui.renderModal();
+
+      for (const item of PREMIUM_SHOP_ITEMS) {
+        expect(html).toContain(`data-inspect-trial-twin="${item.chibiId}"`);
+      }
+      expect(html).toContain('Read-Only');
+      expect(html).toContain('20:00');
+      expect(html).toContain('data-claim-twin-trial="yukikage-twins"');
+
+      expect(ui.claimSelectedTwin('yukikage-twins')).toBe(true);
+      expect(state.twinTrial.status).toBe('active');
+      expect(state.twinTrial.chibiId).toBe('yukikage-twins');
+      expect(onClaim).toHaveBeenCalledWith('yukikage-twins');
+    });
+
+    it('expires active trial during stepHudSlowTick, closes modal/inspector, syncs plots, and pushes toast', () => {
+      const state = new GameState();
+      state.unlockTwinTrial();
+      const past = Date.now() - TWIN_TRIAL_DURATION_MS - 1000;
+      state.claimTwinTrial('halcyon-twins', past);
+      state.plotMiners[1] = 'halcyon-twins';
+      state.plotUnits[1] = {
+        chibiId: 'halcyon-twins',
+        damageLevel: 1,
+        speedLevel: 1,
+        miningSpeedLevel: 1,
+        pickaxeId: '',
+        mutationId: 'normal',
+        enchantId: null,
+        isTrial: true,
+      };
+
+      const onSyncPlots = vi.fn();
+      const pushToast = vi.fn();
+      const render = vi.fn();
+      const onTwinTrialExpired = vi.fn();
+      const fakeRoot = {
+        querySelector: () => null,
+        querySelectorAll: () => [],
+      } as unknown as HTMLElement;
+
+      stepHudSlowTick({
+        root: fakeRoot,
+        state,
+        activeModal: 'twin-trial',
+        weatherDpsUi: {
+          syncActivePotionsHud: () => {},
+          syncWeatherWidget: () => {},
+          syncDpsMeterWidget: () => {},
+        } as unknown as any,
+        lastRegrowthActive: false,
+        setLastRegrowthActive: () => {},
+        onSyncPlots,
+        onTwinTrialExpired,
+        pushToast,
+        render,
+      });
+
+      expect(state.twinTrial.status).toBe('expired');
+      expect(state.miners['halcyon-twins']).toBeUndefined();
+      expect(onTwinTrialExpired).toHaveBeenCalledWith('halcyon-twins');
+      expect(onSyncPlots).toHaveBeenCalled();
+      expect(pushToast).toHaveBeenCalled();
+      expect(render).toHaveBeenCalled();
     });
   });
 });

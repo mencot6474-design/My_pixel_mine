@@ -302,6 +302,15 @@ export class TutorialUi {
     }
   }
 
+  public static isStoredDone(): boolean {
+    if (typeof localStorage === 'undefined') return false;
+    try {
+      return localStorage.getItem(TUTORIAL_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
   public isActive(): boolean {
     return this.step !== 'done';
   }

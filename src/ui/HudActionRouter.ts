@@ -1,4 +1,5 @@
 import { audio } from '../audio/AudioManager';
+import { getChibiById } from '../game3d/ChibiCatalog';
 import type { OverclockTier } from '../game/OverclockDomain';
 import type { SceneMode } from '../game3d/MineScene3D';
 import { gameSettings } from '../game/GameSettings';
@@ -28,6 +29,7 @@ import type { OmegaBossModalUi } from './OmegaBossModalUi';
 import type { SettingsModalUi } from './SettingsModalUi';
 import type { ShopModalsUi } from './ShopModalsUi';
 import type { TowerUi } from './TowerUi';
+import type { TwinTrialModalUi } from './TwinTrialModalUi';
 import type { UpgradesWorldsUi } from './UpgradesWorldsUi';
 import type { WeatherDpsHudUi } from './WeatherDpsHudUi';
 
@@ -46,6 +48,7 @@ export interface HudModalRenderers {
   dailyLoginUi: DailyLoginModalUi;
   fusionUi: FusionHudUi;
   omegaBossUi: OmegaBossModalUi;
+  twinTrialUi?: TwinTrialModalUi;
 }
 
 export interface HudActionRouterContext {
@@ -73,6 +76,7 @@ export interface HudSlowTickContext {
   setLastReturnRushActive?: (active: boolean) => void;
   onSyncPlots: (ids: (string | null)[]) => void;
   onWeatherChange?: (weatherId: WeatherId) => void;
+  onTwinTrialExpired?: (chibiId: string | null) => void;
   pushToast: (text: string) => void;
   render: () => void;
 }
@@ -136,6 +140,8 @@ export function renderActiveModalHtml(activeModal: ModalKind, ui: HudModalRender
       return ui.fusionUi.renderAltarChoiceModal();
     case 'omega-boss':
       return ui.omegaBossUi.renderOmegaModal();
+    case 'twin-trial':
+      return ui.twinTrialUi ? ui.twinTrialUi.renderModal() : '';
     default:
       return '';
   }
@@ -154,6 +160,10 @@ export function buildHudCoordinatorActions(ctx: HudActionRouterContext): Record<
     'open-bounties': () => ctx.toggleModal('bounties'),
     'open-achievements': () => ctx.toggleModal('achievements'),
     'open-daily-login': () => ctx.toggleModal('daily-login'),
+    'open-twin-trial': () => {
+      audio.playSfx('ui-open');
+      ctx.toggleModal('twin-trial');
+    },
     'toggle-audio': () => {
       const nextMuted = audio.toggleMuted();
       ctx.pushToast(nextMuted ? 'Audio Muted' : 'Audio On');
@@ -306,6 +316,20 @@ export function stepHudSlowTick(ctx: HudSlowTickContext): void {
     ctx.onSyncPlots(ctx.state.getEquippedPlotMinerIds());
   }
   ctx.weatherDpsUi.syncDpsMeterWidget(ctx.root);
+
+  const trialRes = ctx.state.syncTwinTrial();
+  if (trialRes.expired) {
+    ctx.onTwinTrialExpired?.(trialRes.chibiId);
+    ctx.onSyncPlots(ctx.state.getEquippedPlotMinerIds());
+    const chibiName = trialRes.chibiId ? (getChibiById(trialRes.chibiId)?.name ?? trialRes.chibiId) : 'Twin Chibi';
+    ctx.pushToast(`⏱️ Twin Trial ended! ${chibiName} has returned.`);
+    ctx.render();
+  } else if (ctx.state.isTwinTrialActive()) {
+    const remStr = formatCountdownTimer(ctx.state.getTwinTrialRemainingSec());
+    ctx.root.querySelectorAll<HTMLElement>('[data-twin-trial-timer="true"], [data-twin-trial-modal-timer="true"]').forEach((el) => {
+      el.textContent = remStr;
+    });
+  }
 }
 
 export function stepHudFastTick(ctx: HudFastTickContext): void {
@@ -502,4 +526,5 @@ export function bindHudRootEvents(ctx: HudBindRootEventsContext): void {
   ctx.fusionUi.bindFusionWorldEvents(ctx.root);
   ctx.omegaBossUi.bindEvents(ctx.root);
   ctx.omegaArenaUi.bindArenaEvents(ctx.root);
+  ctx.twinTrialUi?.bindEvents(ctx.root);
 }

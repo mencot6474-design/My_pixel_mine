@@ -60,6 +60,7 @@ import { SettingsModalUi } from './SettingsModalUi';
 import { ShopModalsUi } from './ShopModalsUi';
 import { TowerUi } from './TowerUi';
 import { TutorialUi } from './TutorialUi';
+import { TwinTrialModalUi } from './TwinTrialModalUi';
 import { UpgradesWorldsUi } from './UpgradesWorldsUi';
 import { WeatherDpsHudUi } from './WeatherDpsHudUi';
 import { WorldOverlayHudUi } from './WorldOverlayHudUi';
@@ -107,6 +108,7 @@ export class GameHud {
   private readonly omegaBridge: HudOmegaBridge;
   private readonly omegaBossUi: OmegaBossModalUi;
   private readonly omegaArenaUi: OmegaArenaHudUi;
+  private readonly twinTrialUi: TwinTrialModalUi;
 
   constructor(
     private readonly root: HTMLElement,
@@ -260,12 +262,28 @@ export class GameHud {
       (zoomed) => this.onSetTutorialPitZoom?.(zoomed),
       (zoomed) => this.onSetTutorialChestZoom?.(zoomed),
       (zoomed) => this.onSetTutorialSellShopZoom?.(zoomed),
-      () => this.onTutorialComplete?.(),
+      () => {
+        this.state.unlockTwinTrial();
+        this.onTutorialComplete?.();
+        this.render();
+      },
       () => {
         const reward = this.state.grantTutorialStarterReward();
         audio.playSfx('rare-fanfare', { volume: 0.7 });
         this.pushToast(`Starter Bonus: +${fmtInt(reward.gems)} Gems • +${fmtInt(reward.dice)} Enchant Dice!`);
       }
+    );
+    if (!this.tutorialUi.isActive() && TutorialUi.isStoredDone()) {
+      this.state.unlockTwinTrial();
+    }
+    this.twinTrialUi = new TwinTrialModalUi(
+      this.state,
+      (msg) => this.pushToast(msg),
+      () => {
+        this.activeModal = 'none';
+        this.render();
+      },
+      () => this.render()
     );
     this.weatherDpsUi = new WeatherDpsHudUi(
       this.state,
@@ -442,6 +460,14 @@ export class GameHud {
         },
         onSyncPlots: this.onSyncPlots,
         onWeatherChange: this.onWeatherChange,
+        onTwinTrialExpired: () => {
+          if (this.activeModal === 'twin-trial') {
+            this.activeModal = 'none';
+          }
+          if (this.inspectedSlot !== null && !this.state.getPlotUnit(this.inspectedSlot)) {
+            this.openPlotInspector(null);
+          }
+        },
         pushToast: (msg) => this.pushToast(msg),
         render: () => this.render(),
       });
@@ -712,6 +738,11 @@ export class GameHud {
       muted: audio.isMuted(),
       cameraLocked: gameSettings.get().cameraLocked,
       fps: this.currentFps,
+      twinTrial: {
+        visible: this.state.isTwinTrialVisible(),
+        active: this.state.isTwinTrialActive(),
+        remainingSec: this.state.getTwinTrialRemainingSec(),
+      },
     });
   }
 
@@ -763,6 +794,7 @@ export class GameHud {
     const savedScrolls = sameView ? captureRootScrolls(this.root) : [];
     this.lastRenderViewKey = viewKey;
     this.lastRenderedModal = this.activeModal;
+    this.root.dataset.hudTrial = this.state.isTwinTrialVisible() ? 'true' : 'false';
 
     this.worldOverlayUi.resetPlotLayerKeysIfMineIdle();
 
@@ -867,6 +899,7 @@ export class GameHud {
       dailyLoginUi: this.dailyLoginUi,
       fusionUi: this.fusionUi,
       omegaBossUi: this.omegaBossUi,
+      twinTrialUi: this.twinTrialUi,
     });
   }
 
@@ -974,6 +1007,7 @@ export class GameHud {
       fusionUi: this.fusionUi,
       omegaBossUi: this.omegaBossUi,
       omegaArenaUi: this.omegaArenaUi,
+      twinTrialUi: this.twinTrialUi,
     });
   }
 
