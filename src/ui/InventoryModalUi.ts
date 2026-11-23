@@ -136,12 +136,18 @@ export class InventoryModalUi {
       if (starTier.miningSpeedBonus > 0) starBonusParts.push(`+${Math.round(starTier.miningSpeedBonus * 100)}% Spd`);
       if (starTier.dropBonusPct > 0) starBonusParts.push(`+${Math.round(starTier.dropBonusPct * 100)}% Drop/Gem`);
 
+      const isTrialOnly = this.state.isTrialOnlyChibi(def.id);
+      const trialBadge = isTrialOnly
+        ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black border-2 border-[#14111d] bg-[#fef08a] text-[#78350f]">TRIAL</span>`
+        : '';
+
       return renderInspectorPanel({
         rarity,
         title: def.name,
         subtitle: `Backpack • ${worldName} Miner`,
         badgesHtml: `
           <div class="flex items-center justify-center gap-1 flex-wrap">
+            ${trialBadge}
             <span class="px-2 py-0.5 rounded-full text-[10px] font-black border-2 border-[#14111d] ${isEq ? 'bg-[#6ee7b7] text-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e]'}">${isEq ? `Hotbar #${hotbarIdx + 1}` : 'Not Equipped'}</span>
             <span class="px-2 py-0.5 rounded-full text-[10px] font-black border-2 border-[#14111d] ${star > 0 ? 'bg-[#fde047] text-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e]'}">${'★'.repeat(Math.max(1, star))}${star === 0 ? ' 0' : ` ${star}/5`}</span>
           </div>
@@ -158,19 +164,23 @@ export class InventoryModalUi {
             <button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border-2 border-[#14111d] ${isEq ? 'bg-[#ff922b] text-[#14111d]' : 'bg-[#2ee59d] text-[#14111d]'} text-[13px] font-black cursor-pointer transition-[transform,filter] duration-150 ease-out hover:brightness-105 active:scale-[0.96]" data-insp-inv-action="toggle-miner" data-insp-id="${def.id}">
               ${isEq ? 'Unequip from Hotbar' : 'Equip to Hotbar'}
             </button>
-            <button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border-2 border-[#14111d] transition-[transform,filter] duration-150 ease-out ${
-              !nextTier
-                ? 'disabled bg-[#fef08a] text-[#b45309] cursor-default'
-                : canStarUp
-                  ? 'bg-[#fde047] text-[#14111d] cursor-pointer hover:brightness-105 active:scale-[0.96]'
-                  : 'disabled bg-[#e2e8f0] text-[#64748b] border-[#94a3b8] cursor-not-allowed opacity-75'
-            } text-[12.5px] font-black" data-insp-inv-action="star-up-miner" data-insp-id="${def.id}" ${!nextTier || !canStarUp ? 'disabled' : ''}>
-              ${
-                nextTier
-                  ? `★ Star Up → ★${nextTier.star} (${fmtInt(spare)}/${nextTier.dupCost} dupes)`
-                  : '★ MAX STAR (★5) ★'
-              }
-            </button>
+            ${
+              isTrialOnly
+                ? `<div class="w-full rounded-xl border-2 border-[#14111d] bg-[#fef9c3] px-2 py-1.5 text-[11px] font-black text-[#78350f]">Trial Unit • Read-Only (Not in Index)</div>`
+                : `<button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border-2 border-[#14111d] transition-[transform,filter] duration-150 ease-out ${
+                    !nextTier
+                      ? 'disabled bg-[#fef08a] text-[#b45309] cursor-default'
+                      : canStarUp
+                        ? 'bg-[#fde047] text-[#14111d] cursor-pointer hover:brightness-105 active:scale-[0.96]'
+                        : 'disabled bg-[#e2e8f0] text-[#64748b] border-[#94a3b8] cursor-not-allowed opacity-75'
+                  } text-[12.5px] font-black" data-insp-inv-action="star-up-miner" data-insp-id="${def.id}" ${!nextTier || !canStarUp ? 'disabled' : ''}>
+                    ${
+                      nextTier
+                        ? `★ Star Up → ★${nextTier.star} (${fmtInt(spare)}/${nextTier.dupCost} dupes)`
+                        : '★ MAX STAR (★5) ★'
+                    }
+                  </button>`
+            }
           </div>
         `,
       });
@@ -272,9 +282,10 @@ export class InventoryModalUi {
         ]
           .filter(Boolean)
           .join(' ');
+        const isTrialOnly = this.state.isTrialOnlyChibi(def.id);
         cards.push(`
           <div class="${rarityCardClasses(rarity, extraCls)}" style="${rarityVars(rarity)}" data-equip-miner="${def.id}" title="Click to Equip / Unequip">
-            ${star > 0 ? `<span class="mam-pill-xs absolute bottom-1 left-1 z-[4] bg-[#fde047] text-[#14111d]">★${star}</span>` : ''}
+            ${isTrialOnly ? '<span class="mam-pill-xs absolute bottom-1 left-1 z-[4] bg-[#fef08a] text-[#78350f]">TRIAL</span>' : star > 0 ? `<span class="mam-pill-xs absolute bottom-1 left-1 z-[4] bg-[#fde047] text-[#14111d]">★${star}</span>` : ''}
             ${isEquipped ? `<span class="mam-equipped-tag">${hotbarIdx + 1}</span>` : ''}
             <div class="mam-card-art">
               ${chibiPortraitHtml(def)}

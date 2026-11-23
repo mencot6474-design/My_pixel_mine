@@ -1864,4 +1864,44 @@ describe('Tahap B HUD Modules', () => {
       expect(render).toHaveBeenCalled();
     });
   });
+
+  describe('Trial Badges & Read-Only Inspector', () => {
+    it('renders read-only PlotInspectUi state for a trial plot unit and TRIAL badges in Inventory & Hotbar', () => {
+      const state = new GameState();
+      state.unlockTwinTrial();
+      state.claimTwinTrial('nocturne-twins', Date.now());
+      state.placeHotbarItemOnPlot(0, 1);
+
+      const inspectUi = new PlotInspectUi(
+        state,
+        () => {},
+        () => {},
+        () => {},
+        () => '',
+        () => {}
+      );
+      const fakeRoot = {
+        innerHTML: '',
+        querySelector: () => null,
+        querySelectorAll: () => [],
+      } as unknown as HTMLElement;
+      inspectUi.render(fakeRoot, 1);
+
+      expect(fakeRoot.innerHTML).toContain('TRIAL');
+      expect(fakeRoot.innerHTML).toContain('Read-Only');
+      expect(fakeRoot.innerHTML).toContain('data-twin-trial-timer="true"');
+      expect(fakeRoot.innerHTML).toContain('data-inspect-action="pickup"');
+      expect(fakeRoot.innerHTML).toContain('data-inspect-action="exit"');
+      expect(fakeRoot.innerHTML).not.toContain('data-inspect-action="up-dmg"');
+      expect(fakeRoot.innerHTML).not.toContain('data-inspect-action="roll-mut"');
+
+      const invUi = new InventoryModalUi(state, () => {});
+      const invHtml = invUi.renderModal();
+      expect(invHtml).toContain('data-equip-miner="nocturne-twins"');
+      expect(invHtml).toContain('TRIAL');
+
+      const hotbarHtml = renderHotbarSlotsHtml(state);
+      expect(hotbarHtml).toContain('TRIAL');
+    });
+  });
 });

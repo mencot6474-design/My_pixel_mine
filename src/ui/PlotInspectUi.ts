@@ -27,6 +27,7 @@ import { fmtInt, fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
 import { enchantAuraIconHtml, hudIconHtml, pickaxeIconHtml } from './HudIcons';
 import {
   bindEnchantHoverInspector,
+  formatCountdownTimer,
   InspectTab,
   rarityVars,
   renderMutationBadgeHtml,
@@ -174,6 +175,8 @@ export class PlotInspectUi {
     const premiumDef = getPremiumShopItemByChibiId(chibi.id);
     const omegaDef = getOmegaBossByChibiId(chibi.id);
     const eqEnchant = getEnchantById(unit.enchantId);
+    const isTrial = Boolean(unit.isTrial);
+    const trialRem = isTrial ? formatCountdownTimer(this.state.getTwinTrialRemainingSec()) : '';
 
     root.innerHTML = `
       <button class="absolute top-4 @max-[720px]:top-2.5 left-1/2 -translate-x-1/2 px-[34px] py-[7px] rounded-2xl border-[3px] border-[#14111d] bg-[#fb923c] hover:bg-[#fdba74] text-[#14111d] text-[19px] font-black cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.97] active:scale-[0.94]" data-inspect-action="exit">Exit</button>
@@ -188,6 +191,11 @@ export class PlotInspectUi {
           <span class="text-[#14111d]">•</span>
           ${renderMutationBadgeHtml(mut.id, mut.name)}
         </div>
+        ${
+          isTrial
+            ? `<div class="mt-0.5 w-full rounded-xl border-2 border-[#14111d] bg-[#fef9c3] px-2.5 py-1 text-[11px] font-black text-[#78350f] flex items-center justify-between gap-1"><span>⚡ TRIAL • Read-Only</span><span class="tabular-nums" data-twin-trial-timer="true">${trialRem}</span></div>`
+            : ''
+        }
         ${resBonusPct > 0 && worldName ? `<div class="text-[11px] font-black tabular-nums text-[#7c3aed]">✦ ${worldName} Synergy (+${Math.round(resBonusPct * 100)}% DMG${resOrePct > 0 ? ` • +${resOrePct}% Ore` : ''}${resSellPct > 0 ? ` • +${resSellPct}% Sell` : ''})</div>` : ''}
         ${
           fusionDef
@@ -271,24 +279,38 @@ export class PlotInspectUi {
       </div>
 
       <div class="absolute bottom-[14px] left-1/2 -translate-x-1/2 w-[860px] max-w-[calc(100%-24px)] flex flex-col items-center gap-2 pointer-events-auto">
-        <div class="grid grid-cols-[repeat(4,150px)] @max-[920px]:grid-cols-4 @max-[920px]:w-full gap-2 @max-[920px]:gap-1.5">
-          <button class="${TW_INSPECT_TAB} ${this.inspectTab === 'pickaxe' ? 'active' : ''}" data-inspect-tab="pickaxe">${hudIconHtml('pickaxe', 20, 'Pickaxe')} Pickaxe</button>
-          <button class="${TW_INSPECT_TAB} ${this.inspectTab === 'stats' ? 'active' : ''}" data-inspect-tab="stats">${hudIconHtml('stats', 20, 'Stats')} Stats</button>
-          <button class="${TW_INSPECT_TAB} ${this.inspectTab === 'mutation' ? 'active' : ''}" data-inspect-tab="mutation">${hudIconHtml('mutation', 20, 'Mutation')} Mutation</button>
-          <button class="${TW_INSPECT_TAB} ${this.inspectTab === 'enchants' ? 'active' : ''}" data-inspect-tab="enchants">${hudIconHtml('enchant', 20, 'Enchants')} Enchants</button>
-        </div>
+        ${
+          isTrial
+            ? `
+              <div class="mam-inspect-panel w-full p-3.5 rounded-2xl bg-[#fff8e7] border-[3px] border-[#14111d] flex items-center justify-between gap-3 @max-[720px]:flex-col @max-[720px]:text-center">
+                <div class="flex flex-col gap-0.5">
+                  <div class="text-[15px] font-black text-[#14111d]">⚡ Twin Trial Unit (Read-Only Showcase)</div>
+                  <div class="text-[12px] font-extrabold text-[#5b526e]">Upgrades, Pickaxes, Mutations, Enchants, and Index registration are locked during the 20-minute free trial.</div>
+                </div>
+                <span class="px-3 py-1.5 rounded-xl border-2 border-[#14111d] bg-[#fef08a] text-[14px] font-black tabular-nums text-[#14111d] shrink-0" data-twin-trial-timer="true">${trialRem}</span>
+              </div>
+            `
+            : `
+              <div class="grid grid-cols-[repeat(4,150px)] @max-[920px]:grid-cols-4 @max-[920px]:w-full gap-2 @max-[920px]:gap-1.5">
+                <button class="${TW_INSPECT_TAB} ${this.inspectTab === 'pickaxe' ? 'active' : ''}" data-inspect-tab="pickaxe">${hudIconHtml('pickaxe', 20, 'Pickaxe')} Pickaxe</button>
+                <button class="${TW_INSPECT_TAB} ${this.inspectTab === 'stats' ? 'active' : ''}" data-inspect-tab="stats">${hudIconHtml('stats', 20, 'Stats')} Stats</button>
+                <button class="${TW_INSPECT_TAB} ${this.inspectTab === 'mutation' ? 'active' : ''}" data-inspect-tab="mutation">${hudIconHtml('mutation', 20, 'Mutation')} Mutation</button>
+                <button class="${TW_INSPECT_TAB} ${this.inspectTab === 'enchants' ? 'active' : ''}" data-inspect-tab="enchants">${hudIconHtml('enchant', 20, 'Enchants')} Enchants</button>
+              </div>
 
-        <div class="mam-inspect-panel w-full p-2.5 rounded-2xl bg-[#fff8e7] border-[3px] border-[#14111d] flex items-stretch gap-2 overflow-x-hidden [&.is-stats]:flex-col [&.is-stats]:gap-2 [&.is-pickaxe]:items-center [&.is-pickaxe]:gap-1.5 [&.is-pickaxe]:py-1.5 [&.is-pickaxe]:px-2 [&.is-enchants]:grid [&.is-enchants]:grid-cols-10 @max-[760px]:[&.is-enchants]:grid-cols-5 [&.is-enchants]:gap-1.5 [&.is-mutation]:items-center [&.is-mutation]:gap-1.5 @max-[760px]:[&.is-mutation]:flex-wrap [&_.mam-strip-card]:min-w-0 [&_.mam-strip-card]:w-auto [&_.mam-strip-card_.mam-card-name]:text-[11px] [&_.mam-strip-card_.mam-card-name]:leading-tight [&_.mam-strip-card_.mam-card-name]:whitespace-nowrap [&_.mam-strip-card_.mam-card-name]:overflow-hidden [&_.mam-strip-card_.mam-card-name]:text-ellipsis [&.is-mutation_.mam-strip-card]:flex-1 [&.is-mutation_.mam-strip-card]:h-[84px] [&.is-mutation_.mam-strip-card]:py-1 [&.is-mutation_.mam-strip-card]:px-0.5 [&.is-enchants_.mam-strip-card]:h-[84px] [&.is-enchants_.mam-strip-card]:py-1 [&.is-enchants_.mam-strip-card]:px-0.5 [&.is-pickaxe_.mam-strip-card]:flex-[0_0_88px] [&.is-pickaxe_.mam-strip-card]:w-[88px] @max-[760px]:[&.is-pickaxe_.mam-strip-card]:flex-[0_0_80px] @max-[760px]:[&.is-pickaxe_.mam-strip-card]:w-[80px] [&.is-pickaxe_.mam-strip-card]:h-[84px] [&.is-pickaxe_.mam-strip-card]:py-1 [&.is-pickaxe_.mam-strip-card]:px-1 ${
-          this.inspectTab === 'mutation'
-            ? 'is-mutation'
-            : this.inspectTab === 'enchants'
-              ? 'is-enchants'
-              : this.inspectTab === 'pickaxe'
-                ? 'is-pickaxe'
-                : 'is-stats'
-        }">
-          ${this.renderTabContent(unit, stats)}
-        </div>
+              <div class="mam-inspect-panel w-full p-2.5 rounded-2xl bg-[#fff8e7] border-[3px] border-[#14111d] flex items-stretch gap-2 overflow-x-hidden [&.is-stats]:flex-col [&.is-stats]:gap-2 [&.is-pickaxe]:items-center [&.is-pickaxe]:gap-1.5 [&.is-pickaxe]:py-1.5 [&.is-pickaxe]:px-2 [&.is-enchants]:grid [&.is-enchants]:grid-cols-10 @max-[760px]:[&.is-enchants]:grid-cols-5 [&.is-enchants]:gap-1.5 [&.is-mutation]:items-center [&.is-mutation]:gap-1.5 @max-[760px]:[&.is-mutation]:flex-wrap [&_.mam-strip-card]:min-w-0 [&_.mam-strip-card]:w-auto [&_.mam-strip-card_.mam-card-name]:text-[11px] [&_.mam-strip-card_.mam-card-name]:leading-tight [&_.mam-strip-card_.mam-card-name]:whitespace-nowrap [&_.mam-strip-card_.mam-card-name]:overflow-hidden [&_.mam-strip-card_.mam-card-name]:text-ellipsis [&.is-mutation_.mam-strip-card]:flex-1 [&.is-mutation_.mam-strip-card]:h-[84px] [&.is-mutation_.mam-strip-card]:py-1 [&.is-mutation_.mam-strip-card]:px-0.5 [&.is-enchants_.mam-strip-card]:h-[84px] [&.is-enchants_.mam-strip-card]:py-1 [&.is-enchants_.mam-strip-card]:px-0.5 [&.is-pickaxe_.mam-strip-card]:flex-[0_0_88px] [&.is-pickaxe_.mam-strip-card]:w-[88px] @max-[760px]:[&.is-pickaxe_.mam-strip-card]:flex-[0_0_80px] @max-[760px]:[&.is-pickaxe_.mam-strip-card]:w-[80px] [&.is-pickaxe_.mam-strip-card]:h-[84px] [&.is-pickaxe_.mam-strip-card]:py-1 [&.is-pickaxe_.mam-strip-card]:px-1 ${
+                this.inspectTab === 'mutation'
+                  ? 'is-mutation'
+                  : this.inspectTab === 'enchants'
+                    ? 'is-enchants'
+                    : this.inspectTab === 'pickaxe'
+                      ? 'is-pickaxe'
+                      : 'is-stats'
+              }">
+                ${this.renderTabContent(unit, stats)}
+              </div>
+            `
+        }
       </div>
 
       ${this.renderMutationConfirmOverlay(chibi.name, stats.mutationCost)}

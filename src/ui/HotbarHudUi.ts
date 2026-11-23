@@ -42,7 +42,7 @@ export function buildHotbarStateKey(state: GameState): string {
   return `${state.hotbar
     .map((id) => {
       if (!id || !getChibiById(id)) return '';
-      return `${id}:${state.miners[id] || 0}:${getMinerSellValue(id)}`;
+      return `${id}:${state.miners[id] || 0}:${state.isTrialOnlyChibi(id) ? 'T' : 'P'}:${getMinerSellValue(id)}`;
     })
     .join(',')}|${state.selectedHotbarSlot}`;
 }
@@ -92,14 +92,15 @@ export function renderHotbarSlotsHtml(state: GameState): string {
       const artHtml = chibiPortraitHtml(chibi, { draggable: false });
       const worth = getMinerSellValue(chibi.id);
       const qty = state.miners[chibi.id] || 0;
+      const isTrialOnly = state.isTrialOnlyChibi(chibi.id);
 
       if (qty <= 0) return emptySlot;
 
       return `
-          <button class="${TW_HOTBAR_SLOT} cursor-grab active:cursor-grabbing select-none touch-none [&>*]:pointer-events-none ${rarityCardClasses(rarity, selectedCls)}" style="${rarityVars(rarity)}" data-hotbar="${idx}" title="${title} (Worth ${fmtMoney(worth)}) • Drag to move">
+          <button class="${TW_HOTBAR_SLOT} cursor-grab active:cursor-grabbing select-none touch-none [&>*]:pointer-events-none ${rarityCardClasses(rarity, selectedCls)}" style="${rarityVars(rarity)}" data-hotbar="${idx}" title="${title}${isTrialOnly ? ' (20m Trial)' : ''} (Worth ${fmtMoney(worth)}) • Drag to move">
             <div class="relative z-[4] w-full flex items-center justify-between gap-0.5 px-0.5 pt-0.5">
               <span class="${TW_HOTBAR_NUM}">${idx + 1}</span>
-              ${qty > 1 ? `<span class="mam-hotbar-qty">x${fmtShort(qty)}</span>` : ''}
+              ${isTrialOnly ? '<span class="mam-pill-xs bg-[#fef08a] text-[#78350f] leading-none">TRIAL</span>' : qty > 1 ? `<span class="mam-hotbar-qty">x${fmtShort(qty)}</span>` : ''}
             </div>
             <div class="mam-card-art">${artHtml}</div>
             <div class="mam-hotbar-val-bar">
