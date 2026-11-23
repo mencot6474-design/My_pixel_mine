@@ -412,7 +412,7 @@ export function applyOmegaSquadStrikeDomain(
   battle.hp = Math.max(0, battle.hp - hpDmg);
   battle.damageDealt += rawDmg;
 
-  const breakTriggered = addOmegaStagger(battle, isCrit ? 2.5 : 1.2);
+  const breakTriggered = addOmegaStagger(battle, isCrit ? 1.1 : 0.52);
   const bossDefeated = battle.hp <= 0;
   if (bossDefeated) {
     finishOmegaBossDomain(ctx, 'victory', rng, emit);

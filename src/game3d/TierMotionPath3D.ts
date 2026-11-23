@@ -74,16 +74,31 @@ export function lerpNum(a: number, b: number, t: number): number {
 
 export const CHIBI_ATTACK_ANIM_SEC = 2.5;
 export const CHIBI_BLITZ_SHADOW_SEC = 0.88;
-export const BARRAGE_BEAT_WEIGHTS = [0.25, 0.3, 0.45] as const;
-export const BARRAGE_FOLLOWUP_DELAYS = [0.75, 1.55] as const;
+export const BARRAGE_BEAT_WEIGHTS = [0.08, 0.1, 0.11, 0.13, 0.15, 0.18, 0.25] as const;
+export const BARRAGE_FOLLOWUP_DELAYS = [0.18, 0.36, 0.56, 0.78, 1.04, 1.48] as const;
 
-export function splitBarrageDamage(totalDmg: number): [number, number, number] {
+export type BarrageDamageTuple = [number, number, number, number, number, number, number];
+
+export function splitBarrageDamage(totalDmg: number): BarrageDamageTuple {
   const safe = Math.max(1, Math.round(totalDmg));
-  if (safe < 3) return [safe, 0, 0];
-  const d0 = Math.max(1, Math.round(safe * BARRAGE_BEAT_WEIGHTS[0]));
-  const d1 = Math.max(1, Math.round(safe * BARRAGE_BEAT_WEIGHTS[1]));
-  const d2 = Math.max(0, safe - d0 - d1);
-  return [d0, d1, d2];
+  const out: BarrageDamageTuple = [0, 0, 0, 0, 0, 0, 0];
+  if (safe < BARRAGE_BEAT_WEIGHTS.length) {
+    for (let i = 0; i < safe; i++) {
+      out[i] = 1;
+    }
+    return out;
+  }
+  let used = 0;
+  const lastIdx = BARRAGE_BEAT_WEIGHTS.length - 1;
+  for (let i = 0; i < lastIdx; i++) {
+    const remainingMin = lastIdx - i;
+    const raw = Math.max(1, Math.round(safe * BARRAGE_BEAT_WEIGHTS[i]));
+    const clamped = Math.min(safe - used - remainingMin, raw);
+    out[i] = clamped;
+    used += clamped;
+  }
+  out[lastIdx] = Math.max(1, safe - used);
+  return out;
 }
 
 export function computeAttackVfxSpeedScale(attackInterval: number): number {

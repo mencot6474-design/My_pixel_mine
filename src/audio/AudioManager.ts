@@ -299,7 +299,7 @@ export class AudioManager {
       volume: isClick ? 0.62 : 0.22,
       pitchMin: hasCombo ? scaleRate * 0.99 : isClick ? 0.93 : 0.9,
       pitchMax: hasCombo ? scaleRate * 1.01 : isClick ? 1.12 : 1.08,
-      cooldownMs: isClick ? 45 : 220,
+      cooldownMs: isClick ? 45 : 120,
       bucket: isClick ? 'ore-hit-tap' : 'ore-hit-auto',
     });
   }

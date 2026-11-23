@@ -282,25 +282,14 @@ export class MineScene3D {
         this.arenaDimTarget = Math.min(0.65, level);
         this.arenaDimTimer = Math.min(0.75, duration);
       },
-      onImpactFrame: (strength, invert, tintHex, duration) => {
-        if (this.graphicsQuality === 'low' || this.impactFrameCooldown > 0) return;
-        this.impactFrameCooldown = 2.35;
-        this.impactPass.uniforms.uImpactStrength.value = strength;
-        this.impactPass.uniforms.uImpactInvert.value = invert;
-        (this.impactPass.uniforms.uTint.value as THREE.Color).set(tintHex);
-        this.impactFrameTimer = Math.min(0.055, duration);
+      onImpactFrame: () => {
+        // Disabled full-screen B&W/invert strobe flash to avoid eye strain in medium/high presets
       },
-      onSpeedLines: (level, duration) => {
-        if (this.graphicsQuality === 'low') return;
-        this.impactPass.uniforms.uSpeedLines.value = Math.max(
-          this.impactPass.uniforms.uSpeedLines.value as number,
-          level * 0.75
-        );
-        this.speedLinesTimer = Math.max(this.speedLinesTimer, Math.min(0.28, duration));
+      onSpeedLines: () => {
+        // Disabled full-screen edge flicker streaks to avoid eye strain in medium/high presets
       },
-      onFlash: (_colorHex, strength) => {
-        if (this.graphicsQuality === 'low') return;
-        this.bloomPass.strength = Math.min(0.18, 0.12 + strength * 0.1);
+      onFlash: () => {
+        // Keep bloom strength steady at 0.12 without sudden full-screen flash spikes
       },
     };
   }
@@ -544,9 +533,7 @@ export class MineScene3D {
       !this.modalBackdropThrottled || now - this.lastThrottledRenderMs >= 33;
     if (shouldRenderFrame) {
       this.lastThrottledRenderMs = now;
-      const postFxActive =
-        this.graphicsQuality === 'high' ||
-        (this.graphicsQuality === 'medium' && (this.impactFrameTimer > 0 || this.speedLinesTimer > 0));
+      const postFxActive = this.graphicsQuality === 'high';
       if (!postFxActive) {
         this.renderer.render(this.scene, this.camera);
       } else {
@@ -917,6 +904,11 @@ export class MineScene3D {
 
   public setGraphicsQuality(quality: GraphicsQuality): void {
     this.graphicsQuality = quality;
+    this.impactFrameTimer = 0;
+    this.speedLinesTimer = 0;
+    this.impactPass.uniforms.uImpactStrength.value = 0;
+    this.impactPass.uniforms.uSpeedLines.value = 0;
+    this.bloomPass.strength = 0.12;
     applyMineGraphicsQuality({
       quality,
       anisoCap: this.getTextureAnisoCap(),

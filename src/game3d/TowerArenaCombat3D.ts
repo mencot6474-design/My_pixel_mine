@@ -188,9 +188,6 @@ export function pickTowerTargetOreForFighter(
   const aliveRocks = waveRocks.filter((r) => r.alive);
   if (aliveRocks.length === 0) return null;
 
-  const existing = aliveRocks.find((r) => r.index === fighter.targetOreIndex);
-  if (existing) return existing;
-
   const targetCounts = new Map<number, number>();
   for (const r of aliveRocks) targetCounts.set(r.index, 0);
   for (const other of fighters.values()) {
@@ -198,6 +195,16 @@ export function pickTowerTargetOreForFighter(
     if (targetCounts.has(other.targetOreIndex)) {
       targetCounts.set(other.targetOreIndex, (targetCounts.get(other.targetOreIndex) ?? 0) + 1);
     }
+  }
+
+  let minCount = Infinity;
+  for (const c of targetCounts.values()) {
+    if (c < minCount) minCount = c;
+  }
+
+  const existing = aliveRocks.find((r) => r.index === fighter.targetOreIndex);
+  if (existing && (targetCounts.get(existing.index) ?? 0) <= minCount) {
+    return existing;
   }
 
   const pos = fighter.sprite.group.position;
@@ -275,8 +282,10 @@ export function stepTowerFightersAndBarrages(ctx: {
   ) => void;
   onFighterStrike?: (ev: TowerStrikeEvent) => void;
 }): void {
+  const beatCount = BARRAGE_BEAT_WEIGHTS.length;
   const resolveBarrageBeat = (b: TowerPendingBarrage): void => {
     if (ctx.paused || b.isBoss !== ctx.bossWave) return;
+    const isFinisher = b.beatIndex === beatCount - 1;
     if (b.isBoss) {
       ctx.triggerBossBounce();
       ctx.impactFx.spawnImpact({
@@ -284,12 +293,13 @@ export function stepTowerFightersAndBarrages(ctx: {
         targetY: 2.45,
         targetZ: TOWER_BOSS_CENTER_Z + 1.05,
         accentColor: b.accentColor,
+        heavy: isFinisher,
         comboStep: b.comboStep,
         attackerX: b.sx,
         attackerZ: b.sz,
-        shockwaveScale: b.beatIndex === 2 ? 1.65 : 1.25,
+        shockwaveScale: isFinisher ? 1.75 : 1.05,
       });
-      ctx.spawnTowerShardsAt(b.ex, 2.2, TOWER_BOSS_CENTER_Z + 1.05, b.accentColor, b.beatIndex === 2 ? 5 : 3, false, true);
+      ctx.spawnTowerShardsAt(b.ex, 2.2, TOWER_BOSS_CENTER_Z + 1.05, b.accentColor, isFinisher ? 6 : 2, false, true);
       ctx.onFighterStrike?.({
         slotIndex: b.slotIndex,
         targetOreIndex: null,
@@ -306,7 +316,11 @@ export function stepTowerFightersAndBarrages(ctx: {
     } else {
       let rock = ctx.waveRocks[b.targetOreIndex];
       if (!rock || !rock.alive) {
-        rock = ctx.waveRocks.find((r) => r.alive) ?? rock;
+        const fighter = ctx.fighters.get(b.slotIndex);
+        rock =
+          (fighter ? pickTowerTargetOreForFighter(fighter, ctx.waveRocks, ctx.fighters) : null) ??
+          ctx.waveRocks.find((r) => r.alive) ??
+          rock;
       }
       if (!rock || !rock.alive) return;
       ctx.impactFx.spawnImpact({
@@ -314,12 +328,13 @@ export function stepTowerFightersAndBarrages(ctx: {
         targetY: 1.05,
         targetZ: rock.z,
         accentColor: b.accentColor,
+        heavy: isFinisher,
         comboStep: b.comboStep,
         attackerX: b.sx,
         attackerZ: b.sz,
-        shockwaveScale: b.beatIndex === 2 ? 1.35 : 0.95,
+        shockwaveScale: isFinisher ? 1.45 : 0.9,
       });
-      ctx.spawnTowerShardsAt(rock.x, 0.85, rock.z, b.accentColor, b.beatIndex === 2 ? 5 : 3, false);
+      ctx.spawnTowerShardsAt(rock.x, 0.85, rock.z, b.accentColor, isFinisher ? 5 : 2, false);
       ctx.onFighterStrike?.({
         slotIndex: b.slotIndex,
         targetOreIndex: rock.index,
@@ -343,8 +358,9 @@ export function stepTowerFightersAndBarrages(ctx: {
     const beat0Interval = a.attackInterval * BARRAGE_BEAT_WEIGHTS[0];
     const beat0Dmg = Math.max(1, Math.round(a.dmg * BARRAGE_BEAT_WEIGHTS[0]));
 
-    for (let bi = 1; bi <= 2; bi++) {
+    for (let bi = 1; bi < beatCount; bi++) {
       const w = BARRAGE_BEAT_WEIGHTS[bi];
+      const isFinisher = bi === beatCount - 1;
       ctx.pendingBarrages.push({
         slotIndex: a.slotIndex,
         targetOreIndex: a.targetId,
@@ -354,7 +370,7 @@ export function stepTowerFightersAndBarrages(ctx: {
         beatInterval: a.attackInterval * w,
         dmg: Math.max(1, Math.round(a.dmg * w)),
         accentColor: a.accentColor,
-        comboStep: (a.comboStep + bi) % 3,
+        comboStep: isFinisher ? 2 : (a.comboStep + bi) % 2,
         sx: a.sx,
         sz: a.sz,
         ex: a.ex,
@@ -383,10 +399,10 @@ export function stepTowerFightersAndBarrages(ctx: {
         targetY: 2.45,
         targetZ: TOWER_BOSS_CENTER_Z + 1.05,
         accentColor: a.accentColor,
-        comboStep: a.comboStep,
+        comboStep: a.comboStep % 2,
         attackerX: a.sx,
         attackerZ: a.sz,
-        shockwaveScale: 1.45,
+        shockwaveScale: 1.15,
       });
       ctx.spawnTowerShardsAt(a.ex, 2.2, TOWER_BOSS_CENTER_Z + 1.05, a.accentColor, 4, false, true);
       ctx.onFighterStrike?.({

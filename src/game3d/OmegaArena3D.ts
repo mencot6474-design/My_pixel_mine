@@ -670,8 +670,10 @@ export class OmegaArena3D {
           speedScale,
         });
       }
-      for (let bi = 1; bi <= 2; bi++) {
+      const beatCount = BARRAGE_BEAT_WEIGHTS.length;
+      for (let bi = 1; bi < beatCount; bi++) {
         const w = BARRAGE_BEAT_WEIGHTS[bi];
+        const isFinisher = bi === beatCount - 1;
         this.pendingBarrages.push({
           slotIndex: a.slotIndex,
           beatIndex: bi,
@@ -679,7 +681,7 @@ export class OmegaArena3D {
           beatInterval: a.attackInterval * w,
           dmg: Math.max(1, Math.round(a.dmg * w)),
           accentColor: a.accentColor,
-          comboStep: (a.comboStep + bi) % 3,
+          comboStep: isFinisher ? 2 : (a.comboStep + bi) % 2,
           sx: a.sx,
           sz: a.sz,
           ex: a.ex,
@@ -756,16 +758,18 @@ export class OmegaArena3D {
         b.delayLeft -= safeDt;
         if (b.delayLeft <= 0) {
           this.pendingBarrages.splice(i, 1);
-          this.bossHitBounce = Math.max(this.bossHitBounce, 0.08);
+          const isFinisher = b.beatIndex === BARRAGE_BEAT_WEIGHTS.length - 1;
+          this.bossHitBounce = Math.max(this.bossHitBounce, isFinisher ? 0.14 : 0.08);
           this.impactFx.spawnImpact({
             targetX: b.ex,
             targetY: b.ey,
             targetZ: b.ez,
             accentColor: b.accentColor,
+            heavy: isFinisher,
             comboStep: b.comboStep,
             attackerX: b.sx,
             attackerZ: b.sz,
-            shockwaveScale: b.beatIndex === 2 ? 1.5 : 1.1,
+            shockwaveScale: isFinisher ? 1.65 : 1.0,
           });
           onStrike?.({
             slotIndex: b.slotIndex,

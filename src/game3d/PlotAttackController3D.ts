@@ -35,6 +35,7 @@ interface PendingBlitzStrike {
   attackInterval: number;
   delayLeft: number;
   fireShader: boolean;
+  isFinisher?: boolean;
 }
 
 export type PlotOreBrokenCb = (
@@ -70,21 +71,11 @@ interface PlotUnitState {
 type AliveNodeTarget = ReturnType<OrePit3D['getAliveNodesInfo']>[number];
 
 const MINE_PIT_VFX_SCALE = 0.72;
+export const MAX_AOE_TARGETS = 3;
 
-/** Minimum 3 ore nodes hit per AoE attack, scaling up to 6 for wide-AoE apex rarities. */
-export function getAoeTargetCount(rarity: string): number {
-  if (rarity === 'fusion' || rarity === 'limited' || rarity === 'twin' || rarity === 'omega') return 6;
-  if (rarity === 'secret') return 5;
-  if (
-    rarity === 'epic' ||
-    rarity === 'legendary' ||
-    rarity === 'rainbow' ||
-    rarity === 'mythic' ||
-    rarity === 'exotic'
-  ) {
-    return 4;
-  }
-  return 3;
+/** Single-target (1 ore) for tiers common..limited; up to 3-ore AoE cleave for fusion, twin & omega. */
+export function getAoeTargetCount(rarity?: string): number {
+  return rarity === 'fusion' || rarity === 'twin' || rarity === 'omega' ? MAX_AOE_TARGETS : 1;
 }
 
 function getAoeSplashDamageMult(rarity: string): number {
@@ -137,6 +128,7 @@ export class PlotAttackController3D {
   private readonly tierVfx = new TierAttackVfxPool3D();
   private readonly alivePointScratch: WorldPoint3[] = [];
   private readonly aoeTargetsScratch: AliveNodeTarget[] = [];
+  private readonly claimCountsScratch = new Map<number, number>();
   private readonly originVec = new THREE.Vector3();
   private readonly tmpWorldPos = { x: 0, y: 0, z: 0 };
   private skillPulseHook?: (colorHex: string, strength: number) => void;
@@ -234,27 +226,43 @@ export class PlotAttackController3D {
       unit.targetOreId = null;
       return null;
     }
+
+    const claimCounts = this.claimCountsScratch;
+    claimCounts.clear();
+    for (let i = 0; i < alive.length; i++) {
+      claimCounts.set(alive[i].id, 0);
+    }
+    for (const other of this.units.values()) {
+      if (other.slotIndex === unit.slotIndex || other.targetOreId === null) continue;
+      const cur = claimCounts.get(other.targetOreId);
+      if (cur !== undefined) {
+        claimCounts.set(other.targetOreId, cur + 1);
+      }
+    }
+
+    let minClaims = Infinity;
+    for (const c of claimCounts.values()) {
+      if (c < minClaims) minClaims = c;
+    }
+
     if (unit.targetOreId !== null) {
       for (let i = 0; i < alive.length; i++) {
-        if (alive[i].id === unit.targetOreId) {
+        if (alive[i].id === unit.targetOreId && (claimCounts.get(alive[i].id) ?? 0) <= minClaims) {
           return alive[i];
         }
       }
     }
+
     let best = alive[(unit.slotIndex * 3) % alive.length];
     let bestScore = Infinity;
     for (let i = 0; i < alive.length; i++) {
       const n = alive[i];
       const dx = Math.abs(n.worldX - pedestalX);
       const eventBias = n.isMeteor || n.pitEventKind ? -3.0 : 0;
-      let claimedPenalty = 0;
-      for (const other of this.units.values()) {
-        if (other.slotIndex !== unit.slotIndex && other.targetOreId === n.id) {
-          claimedPenalty += 3.2;
-        }
-      }
+      const claims = claimCounts.get(n.id) ?? 0;
       const spreadBias = ((i + unit.slotIndex) % 3) * 0.75;
-      const score = dx * 0.45 + spreadBias + eventBias + claimedPenalty;
+      // Strictly prefer unclaimed ores first so different Chibis never share the same ore target
+      const score = claims * 1000 + dx * 0.45 + spreadBias + eventBias;
       if (score < bestScore) {
         bestScore = score;
         best = n;
@@ -278,9 +286,12 @@ export class PlotAttackController3D {
     onOreHit?: PlotOreHitCb,
     critChance = 0,
     critMult = 2.25,
-    rarity = 'common'
+    rarity = 'common',
+    heavy = false,
+    unit?: PlotUnitState
   ): void {
     const alive = pit.getAliveNodesInfo();
+    if (alive.length === 0) return;
     let target: AliveNodeTarget | null = null;
     for (let i = 0; i < alive.length; i++) {
       if (alive[i].id === targetOreId) {
@@ -288,8 +299,19 @@ export class PlotAttackController3D {
         break;
       }
     }
+    if (!target && unit) {
+      target = this.pickTarget(unit, alive, originX);
+    }
+    if (!target && fallbackTarget) {
+      for (let i = 0; i < alive.length; i++) {
+        if (alive[i].id === fallbackTarget.id) {
+          target = alive[i];
+          break;
+        }
+      }
+    }
     if (!target) {
-      target = fallbackTarget ?? alive[0] ?? null;
+      target = alive[0] ?? null;
     }
     if (!target) return;
 
@@ -325,7 +347,7 @@ export class PlotAttackController3D {
       const hitRes = pit.hitNode(
         hitNodeTarget.id,
         dmgForNode,
-        false,
+        heavy,
         undefined,
         renderVisuals
           ? {
@@ -412,7 +434,9 @@ export class PlotAttackController3D {
       onOreHit,
       arrivalUnit?.critChance ?? 0,
       arrivalUnit?.critMult ?? 2.25,
-      arrivalUnit?.def.rarity ?? 'common'
+      arrivalUnit?.def.rarity ?? 'common',
+      Boolean(a.isFinisher),
+      arrivalUnit
     );
   }
 
@@ -488,17 +512,18 @@ export class PlotAttackController3D {
             wideCenter
           );
 
-          const [d0, d1, d2] = splitBarrageDamage(strikeDamage);
-          const beatDmgs = [d0, d1, d2] as const;
-          const beatDelays = [0.2, 0.2 + BARRAGE_FOLLOWUP_DELAYS[0], 0.2 + BARRAGE_FOLLOWUP_DELAYS[1]] as const;
-          for (let bi = 0; bi < 3; bi++) {
+          const beatDmgs = splitBarrageDamage(strikeDamage);
+          const lastBeatIdx = beatDmgs.length - 1;
+          for (let bi = 0; bi < beatDmgs.length; bi++) {
             const beatDmg = beatDmgs[bi];
             if (beatDmg <= 0) continue;
+            const isFinisher = bi === lastBeatIdx;
+            const delayLeft = bi === 0 ? 0.2 : 0.2 + BARRAGE_FOLLOWUP_DELAYS[bi - 1];
             this.pendingStrikes.push({
               slotIndex: unit.slotIndex,
               targetId: target.id,
               dmg: beatDmg,
-              comboStep: (unit.comboStep + bi) % 3,
+              comboStep: isFinisher ? 2 : (unit.comboStep + bi) % 2,
               accentColor,
               sx: this.originVec.x,
               sz: this.originVec.z,
@@ -506,8 +531,9 @@ export class PlotAttackController3D {
               ey: target.worldY + 0.65,
               ez: target.worldZ,
               attackInterval,
-              delayLeft: beatDelays[bi],
+              delayLeft,
               fireShader: bi === 0,
+              isFinisher,
             });
           }
         } else {
@@ -525,7 +551,9 @@ export class PlotAttackController3D {
             onOreHit,
             unit.critChance,
             unit.critMult,
-            unit.def.rarity
+            unit.def.rarity,
+            false,
+            unit
           );
         }
         unit.comboStep = (unit.comboStep + 1) % 3;

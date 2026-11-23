@@ -29,6 +29,7 @@ import { createCyberCargoPod } from '../src/game3d/CyberCargoPod3D';
 import { AudioManager } from '../src/audio/AudioManager';
 import {
   PlotAttackController3D,
+  getAoeTargetCount,
   getChibiAttackStyle,
 } from '../src/game3d/PlotAttackController3D';
 import {
@@ -3338,15 +3339,18 @@ describe('Pure 3D Mine World', () => {
     expect(hits.length).toBeGreaterThanOrEqual(3);
     const hitsAfterBeat0 = hits.length;
 
-    // Advance through follow-up barrage beats (0.95s & 1.75s) so 100% strike damage lands across 3 beats
-    const [b0, b1, b2] = splitBarrageDamage(1000);
-    expect([b0, b1, b2]).toEqual([250, 300, 450]);
-    expect(b0 + b1 + b2).toBe(1000);
-    for (let i = 0; i < 26; i++) {
+    // Advance through all 7 barrage beats (0.20s .. 1.68s) so 100% strike damage lands across 7 hits
+    const beats = splitBarrageDamage(1000);
+    expect(beats).toEqual([80, 100, 110, 130, 150, 180, 250]);
+    expect(beats.reduce((sum, v) => sum + v, 0)).toBe(1000);
+    const smallBeats = splitBarrageDamage(5);
+    expect(smallBeats).toEqual([1, 1, 1, 1, 1, 0, 0]);
+    for (let i = 0; i < 28; i++) {
       pit.update(0.05, 0.6 + i * 0.05, cam, false);
       controller.update(0.05, cam, pit, peds, true, onBroken, onHit);
     }
     expect(hits.length).toBeGreaterThan(hitsAfterBeat0);
+    expect(hits.length).toBeGreaterThanOrEqual(21);
 
     // Switch to headless/background mining: flushes projectiles and deals damage directly with 0 active projectiles
     const prevHits = hits.length;
@@ -3361,6 +3365,148 @@ describe('Pure 3D Mine World', () => {
 
     controller.setSlotUnit(0, null);
     expect(controller.getUnitCount()).toBe(1);
+
+    controller.dispose();
+    peds.forEach((p) => p.dispose());
+    pit.dispose();
+  });
+
+  it('uses 1-ore single target for common..limited, caps fusion/twin/omega AoE at 3 ores, and retargets remaining barrage hits', () => {
+    for (const r of [
+      'common',
+      'uncommon',
+      'rare',
+      'epic',
+      'legendary',
+      'rainbow',
+      'mythic',
+      'exotic',
+      'secret',
+      'limited',
+    ]) {
+      expect(getAoeTargetCount(r)).toBe(1);
+    }
+    for (const r of ['fusion', 'twin', 'omega']) {
+      expect(getAoeTargetCount(r)).toBe(3);
+    }
+
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
+
+    // 1) Single-target tier (common) hits 1 ore on Beat 0, then retargets to a 2nd ore on Beat 1
+    const singleCtrl = new PlotAttackController3D();
+    const singlePit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    singlePit.setHpScale(0.01);
+    const singlePed = new PlotPedestal3D(0, -3.22, -4.58);
+    const commonDef = CHIBI_CATALOG.find((c) => c.rarity === 'common') ?? CHIBI_CATALOG[0];
+    singlePed.setChibi(commonDef);
+    singleCtrl.setSlotUnit(0, commonDef, { dmg: 5000, speed: 1, miningMult: 1 });
+    let singleBroken = 0;
+    let singleHits = 0;
+    for (let i = 0; i < 8; i++) {
+      singlePit.update(0.05, i * 0.05, cam, false);
+      singleCtrl.update(
+        0.05,
+        cam,
+        singlePit,
+        [singlePed],
+        true,
+        () => {
+          singleBroken += 1;
+        },
+        () => {
+          singleHits += 1;
+        }
+      );
+    }
+    expect(singleHits).toBe(1);
+    expect(singleBroken).toBe(1);
+    expect(singlePit.getAliveNodesInfo().length).toBe(4);
+    for (let i = 0; i < 5; i++) {
+      singlePit.update(0.05, 0.4 + i * 0.05, cam, false);
+      singleCtrl.update(
+        0.05,
+        cam,
+        singlePit,
+        [singlePed],
+        true,
+        () => {
+          singleBroken += 1;
+        },
+        () => {
+          singleHits += 1;
+        }
+      );
+    }
+    expect(singleHits).toBe(2);
+    expect(singleBroken).toBe(2);
+    singleCtrl.dispose();
+    singlePed.dispose();
+    singlePit.dispose();
+
+    // 2) AoE tier (twin) hits max 3 ores on Beat 0, then retargets to remaining 2 alive ores on Beat 1
+    const controller = new PlotAttackController3D();
+    const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    pit.setHpScale(0.01); // Low HP so Beat 0 one-shots up to 3 ores
+    const ped = new PlotPedestal3D(0, -3.22, -4.58);
+    const twinDef = CHIBI_CATALOG.find((c) => c.rarity === 'twin') ?? CHIBI_CATALOG[0];
+    ped.setChibi(twinDef);
+
+    controller.setSlotUnit(0, twinDef, { dmg: 5000, speed: 1, miningMult: 1 });
+    let brokenCount = 0;
+    const hitCoords: Array<{ x: number; z: number }> = [];
+    const onHit = (_dmg: number, wx: number, _wy: number, wz: number) => {
+      hitCoords.push({ x: wx, z: wz });
+    };
+    const onBroken = () => {
+      brokenCount += 1;
+    };
+
+    // Advance past Beat 0 (0.12s cooldown + 0.20s delay = 0.32s) -> max 3 ores hit & broken
+    for (let i = 0; i < 8; i++) {
+      pit.update(0.05, i * 0.05, cam, false);
+      controller.update(0.05, cam, pit, [ped], true, onBroken, onHit);
+    }
+    expect(hitCoords.length).toBe(3);
+    expect(brokenCount).toBe(3);
+    expect(pit.getAliveNodesInfo().length).toBe(2);
+
+    // Advance to Beat 1 (+0.18s) -> retargets to the remaining 2 alive ores
+    for (let i = 0; i < 5; i++) {
+      pit.update(0.05, 0.4 + i * 0.05, cam, false);
+      controller.update(0.05, cam, pit, [ped], true, onBroken, onHit);
+    }
+    expect(brokenCount).toBe(5);
+    expect(hitCoords.length).toBe(5);
+
+    controller.dispose();
+    ped.dispose();
+    pit.dispose();
+  });
+
+  it('assigns distinct ore targets across multiple simultaneous Chibis in Mine Pit', () => {
+    const controller = new PlotAttackController3D();
+    const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+    pit.setHpScale(100); // High HP so ores survive all 5 initial hits
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
+    const commonDef = CHIBI_CATALOG.find((c) => c.rarity === 'common') ?? CHIBI_CATALOG[0];
+    const peds = [0, 1, 2, 3, 4].map((idx) => {
+      const p = new PlotPedestal3D(idx, (idx - 2) * 3.22, -4.58);
+      p.setChibi(commonDef);
+      controller.setSlotUnit(idx, commonDef, { dmg: 100, speed: 1, miningMult: 1 });
+      return p;
+    });
+
+    const hitPositions = new Set<string>();
+    const onHit = (_dmg: number, wx: number, _wy: number, wz: number) => {
+      hitPositions.add(`${wx.toFixed(3)},${wz.toFixed(3)}`);
+    };
+
+    // Advance enough for all 5 staggered slots (cooldowns 0.12..1.48s + 0.20s delay) to land Beat 0
+    for (let i = 0; i < 40; i++) {
+      pit.update(0.05, i * 0.05, cam, false);
+      controller.update(0.05, cam, pit, peds, true, undefined, onHit);
+    }
+    expect(hitPositions.size).toBe(5);
 
     controller.dispose();
     peds.forEach((p) => p.dispose());
