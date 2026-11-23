@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { PlotInspectUi, shouldStopAutoMutationRoll } from '../src/ui/PlotInspectUi';
+import { PlotInspectUi, shouldStopAutoMutationRoll, sortInspectPickaxes } from '../src/ui/PlotInspectUi';
 import { AudioManager, getMusicalScaleRate, MUSICAL_SCALE_SEMITONES } from '../src/audio/AudioManager';
 import { IndexModalUi } from '../src/ui/IndexModalUi';
 import { getIndexTabEntryIds } from '../src/game/IndexRewardsDomain';
-import { InventoryModalUi } from '../src/ui/InventoryModalUi';
+import { InventoryModalUi, sortInventoryMiners } from '../src/ui/InventoryModalUi';
+import { CHIBI_CATALOG } from '../src/game3d/ChibiCatalog';
 import { getLootVacuumBurstPlan } from '../src/ui/LootVacuumFx';
-import { ENCHANTS, GEM_SHOP_ITEMS, ORES } from '../src/game/GameData';
+import { ENCHANTS, GEM_SHOP_ITEMS, ORES, PICKAXES } from '../src/game/GameData';
 import {
   DEFAULT_GAME_SETTINGS,
   GameSettings,
@@ -277,17 +278,19 @@ describe('Tahap B HUD Modules', () => {
       expect(canDropHotbarOnPlot({ sceneMode: 'mine', activeModal: 'none', inspectedSlot: 0 })).toBe(false);
     });
 
-    it('renders 9 hotbar slots incl. qty<=0/unknown fallbacks, tracks state key changes, and highlights bag button', () => {
+    it('renders 9 Chibi-only hotbar slots incl. ore/qty<=0/unknown fallbacks, tracks state key changes, and highlights bag button', () => {
       const state = new GameState();
       const firstOre = ORES[0];
-      const zeroOre = ORES[1];
+      const zeroChibi = CHIBI_CATALOG[2];
       state.miners['astral-recruit'] = 1;
       state.hotbar[0] = 'astral-recruit';
+      state.miners['solar-striker'] = 3;
+      state.hotbar[1] = 'solar-striker';
       state.ores[firstOre.id] = 3;
-      state.hotbar[1] = firstOre.id;
-      state.ores[zeroOre.id] = 0;
-      state.hotbar[2] = zeroOre.id;
-      state.hotbar[3] = 'non-existent-id';
+      state.hotbar[2] = firstOre.id; // ores must never render on hotbar
+      state.miners[zeroChibi.id] = 0;
+      state.hotbar[3] = zeroChibi.id;
+      state.hotbar[4] = 'non-existent-id';
 
       const key1 = buildHotbarStateKey(state);
       state.selectHotbarSlot(1);
@@ -299,13 +302,14 @@ describe('Tahap B HUD Modules', () => {
         expect(slotsHtml).toContain(`data-hotbar="${i}"`);
       }
       expect(slotsHtml).toContain('Onee');
-      expect(slotsHtml).toContain(firstOre.name);
+      expect(slotsHtml).toContain(CHIBI_CATALOG[1].name);
       expect(slotsHtml).toContain('x3');
+      expect(slotsHtml).not.toContain(firstOre.name);
+      expect(slotsHtml).not.toContain(zeroChibi.name);
       expect(slotsHtml).toContain('mam-hotbar-keycap');
       expect(slotsHtml).toContain('mam-empty-slot');
       expect(slotsHtml).not.toContain('rounded-full bg-[#14111d]/18');
       expect(slotsHtml).toContain('is-hotbar-selected');
-      expect(slotsHtml).not.toContain(zeroOre.name);
 
       const closedBag = renderHotbarBagButtonHtml('none');
       const openBag = renderHotbarBagButtonHtml('inventory');
@@ -1623,7 +1627,7 @@ describe('Tahap B HUD Modules', () => {
       const shopUi = new ShopModalsUi(state, onToast, () => {});
       const html = shopUi.renderPickaxeShopModal();
       expect(html).toContain('Unlock Crystal Caves');
-      expect(html).toContain('$3.5M');
+      expect(html).toContain('$8M');
       expect(html).toContain('$25Sp');
 
       let clickHandler: ((e: { stopPropagation: () => void }) => void) | null = null;
@@ -1643,6 +1647,99 @@ describe('Tahap B HUD Modules', () => {
       clickHandler!({ stopPropagation: vi.fn() });
       expect(state.ownedPickaxes.rhodolite).toBeUndefined();
       expect(onToast).toHaveBeenCalledWith('Unlock Crystal Caves first!');
+    });
+  });
+
+  describe('PlotInspectUi Single-Row Pickaxe Strip', () => {
+    it('sorts Equipped -> Owned (strongest first) -> Unlocked World -> Locked and renders a 1-row strip', () => {
+      const sorted = sortInspectPickaxes(PICKAXES, {
+        equippedId: 'rhodolite',
+        ownedPickaxes: { sunwheel: 1, thundercoil: 4 },
+        isWorldUnlocked: (w) => w === 'underground' || w === 'crystal',
+      });
+      expect(sorted[0].id).toBe('rhodolite');
+      expect(sorted[1].id).toBe('thundercoil');
+      expect(sorted[2].id).toBe('sunwheel');
+      expect(sorted[3].id).toBe('starter');
+      expect(sorted[sorted.length - 1].id).toBe('chronoeternity');
+
+      const state = new GameState();
+      state.unlockedWorlds = ['underground', 'crystal'];
+      state.ownedPickaxes = { sunwheel: 1, thundercoil: 4 };
+      state.miners['astral-recruit'] = 1;
+      state.plotMiners[0] = 'astral-recruit';
+      state.plotUnits[0] = {
+        chibiId: 'astral-recruit',
+        damageLevel: 1,
+        speedLevel: 1,
+        miningSpeedLevel: 1,
+        pickaxeId: 'rhodolite',
+        mutationId: 'normal',
+        enchantId: null,
+      };
+      const ui = new PlotInspectUi(
+        state,
+        () => {},
+        () => {},
+        () => {},
+        () => '',
+        () => {}
+      );
+      (ui as unknown as { inspectTab: string }).inspectTab = 'pickaxe';
+      const fakeRoot = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] } as unknown as HTMLElement;
+      ui.render(fakeRoot, 0);
+
+      expect(fakeRoot.innerHTML).toContain('data-pickaxe-strip="true"');
+      expect(fakeRoot.innerHTML).toContain('data-pickaxe-scroll="left"');
+      expect(fakeRoot.innerHTML).toContain('data-pickaxe-scroll="right"');
+      expect(fakeRoot.innerHTML).not.toContain('is-pickaxe]:grid-cols-6');
+      const idxRhodolite = fakeRoot.innerHTML.indexOf('data-pickaxe-id="rhodolite"');
+      const idxThunder = fakeRoot.innerHTML.indexOf('data-pickaxe-id="thundercoil"');
+      const idxSunwheel = fakeRoot.innerHTML.indexOf('data-pickaxe-id="sunwheel"');
+      const idxChrono = fakeRoot.innerHTML.indexOf('data-pickaxe-id="chronoeternity"');
+      expect(idxRhodolite).toBeGreaterThan(-1);
+      expect(idxRhodolite).toBeLessThan(idxThunder);
+      expect(idxThunder).toBeLessThan(idxSunwheel);
+      expect(idxSunwheel).toBeLessThan(idxChrono);
+    });
+  });
+
+  describe('Backpack Hotbar-First Ordering & Ore Inspect-Only', () => {
+    it('places hotbar-equipped Chibis at the very top in hotbar slot order (1..9), ahead of higher-DPS bag Chibis', () => {
+      const cLow = CHIBI_CATALOG[0]; // astral-recruit (lowest DPS)
+      const cMid = CHIBI_CATALOG[1]; // solar-striker
+      const cHigh = CHIBI_CATALOG[4]; // higher DPS non-hotbar
+
+      const ordered = sortInventoryMiners(
+        [
+          { def: cHigh, effDps: 999 },
+          { def: cLow, effDps: 10 },
+          { def: cMid, effDps: 20 },
+        ],
+        [cMid.id, cLow.id, null, null, null, null, null, null, null]
+      );
+      expect(ordered.map((x) => x.def.id)).toEqual([cMid.id, cLow.id, cHigh.id]);
+
+      const state = new GameState();
+      state.miners[cLow.id] = 1;
+      state.miners[cMid.id] = 1;
+      state.miners[cHigh.id] = 1;
+      state.ores[ORES[0].id] = 2;
+      state.hotbar = [cMid.id, cLow.id, null, null, null, null, null, null, null];
+
+      const invUi = new InventoryModalUi(state, () => {});
+      const html = invUi.renderModal();
+      const posMid = html.indexOf(`data-equip-miner="${cMid.id}"`);
+      const posLow = html.indexOf(`data-equip-miner="${cLow.id}"`);
+      const posHigh = html.indexOf(`data-equip-miner="${cHigh.id}"`);
+      expect(posMid).toBeGreaterThan(-1);
+      expect(posMid).toBeLessThan(posLow);
+      expect(posLow).toBeLessThan(posHigh);
+
+      // Ores cannot be equipped onto hotbar from Backpack
+      expect(html).not.toContain('data-equip-ore');
+      expect(html).not.toContain('data-insp-inv-action="toggle-ore"');
+      expect(html).toContain(`data-inspect-inv-only="ore:${ORES[0].id}"`);
     });
   });
 });

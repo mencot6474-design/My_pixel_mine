@@ -11,6 +11,7 @@ import {
   isHighTierMutation,
   MUTATIONS,
   PICKAXES,
+  type PickaxeDef,
 } from '../game/GameData';
 import { getFusionRecipeByResultChibiId, type FusionPassiveStat } from '../game/FusionData';
 import { getStarPassiveScale } from '../game/FusionDomain';
@@ -45,6 +46,30 @@ export function shouldStopAutoMutationRoll(opts: {
   if (isHighTierMutation(opts.mutationId)) return 'high-tier';
   if (opts.gems < opts.cost) return 'no-gems';
   return null;
+}
+
+/** Orders pickaxes for the single-row Plot Inspector strip: Equipped → Owned (strongest first) → Unlocked World → Locked. */
+export function sortInspectPickaxes(
+  pickaxes: readonly PickaxeDef[],
+  opts: {
+    equippedId: string;
+    ownedPickaxes: Record<string, number>;
+    isWorldUnlocked: (worldId: PickaxeDef['worldId']) => boolean;
+  }
+): PickaxeDef[] {
+  const rankOf = (p: PickaxeDef): number => {
+    if (p.id === opts.equippedId) return 0;
+    if ((opts.ownedPickaxes[p.id] || 0) > 0) return 1;
+    if (opts.isWorldUnlocked(p.worldId)) return 2;
+    return 3;
+  };
+  return [...pickaxes].sort((a, b) => {
+    const ra = rankOf(a);
+    const rb = rankOf(b);
+    if (ra !== rb) return ra - rb;
+    if (ra === 1 && a.dmgMult !== b.dmgMult) return b.dmgMult - a.dmgMult;
+    return 0;
+  });
 }
 
 export class PlotInspectUi {
@@ -253,7 +278,7 @@ export class PlotInspectUi {
           <button class="${TW_INSPECT_TAB} ${this.inspectTab === 'enchants' ? 'active' : ''}" data-inspect-tab="enchants">${hudIconHtml('enchant', 20, 'Enchants')} Enchants</button>
         </div>
 
-        <div class="mam-inspect-panel w-full p-2.5 rounded-2xl bg-[#fff8e7] border-[3px] border-[#14111d] flex items-stretch gap-2 overflow-x-hidden [&.is-stats]:flex-col [&.is-stats]:gap-2 [&.is-pickaxe]:grid [&.is-pickaxe]:grid-cols-6 @max-[760px]:[&.is-pickaxe]:grid-cols-4 [&.is-pickaxe]:gap-1.5 [&.is-enchants]:grid [&.is-enchants]:grid-cols-10 @max-[760px]:[&.is-enchants]:grid-cols-5 [&.is-enchants]:gap-1.5 [&.is-mutation]:items-center [&.is-mutation]:gap-1.5 @max-[760px]:[&.is-mutation]:flex-wrap [&_.mam-strip-card]:min-w-0 [&_.mam-strip-card]:w-auto [&_.mam-strip-card_.mam-card-name]:text-[11px] [&_.mam-strip-card_.mam-card-name]:leading-tight [&_.mam-strip-card_.mam-card-name]:whitespace-nowrap [&_.mam-strip-card_.mam-card-name]:overflow-hidden [&_.mam-strip-card_.mam-card-name]:text-ellipsis [&.is-mutation_.mam-strip-card]:flex-1 [&.is-mutation_.mam-strip-card]:h-[84px] [&.is-mutation_.mam-strip-card]:py-1 [&.is-mutation_.mam-strip-card]:px-0.5 [&.is-enchants_.mam-strip-card]:h-[84px] [&.is-enchants_.mam-strip-card]:py-1 [&.is-enchants_.mam-strip-card]:px-0.5 [&.is-pickaxe_.mam-strip-card]:h-[84px] [&.is-pickaxe_.mam-strip-card]:py-1 [&.is-pickaxe_.mam-strip-card]:px-0.5 ${
+        <div class="mam-inspect-panel w-full p-2.5 rounded-2xl bg-[#fff8e7] border-[3px] border-[#14111d] flex items-stretch gap-2 overflow-x-hidden [&.is-stats]:flex-col [&.is-stats]:gap-2 [&.is-pickaxe]:items-center [&.is-pickaxe]:gap-1.5 [&.is-pickaxe]:py-1.5 [&.is-pickaxe]:px-2 [&.is-enchants]:grid [&.is-enchants]:grid-cols-10 @max-[760px]:[&.is-enchants]:grid-cols-5 [&.is-enchants]:gap-1.5 [&.is-mutation]:items-center [&.is-mutation]:gap-1.5 @max-[760px]:[&.is-mutation]:flex-wrap [&_.mam-strip-card]:min-w-0 [&_.mam-strip-card]:w-auto [&_.mam-strip-card_.mam-card-name]:text-[11px] [&_.mam-strip-card_.mam-card-name]:leading-tight [&_.mam-strip-card_.mam-card-name]:whitespace-nowrap [&_.mam-strip-card_.mam-card-name]:overflow-hidden [&_.mam-strip-card_.mam-card-name]:text-ellipsis [&.is-mutation_.mam-strip-card]:flex-1 [&.is-mutation_.mam-strip-card]:h-[84px] [&.is-mutation_.mam-strip-card]:py-1 [&.is-mutation_.mam-strip-card]:px-0.5 [&.is-enchants_.mam-strip-card]:h-[84px] [&.is-enchants_.mam-strip-card]:py-1 [&.is-enchants_.mam-strip-card]:px-0.5 [&.is-pickaxe_.mam-strip-card]:flex-[0_0_88px] [&.is-pickaxe_.mam-strip-card]:w-[88px] @max-[760px]:[&.is-pickaxe_.mam-strip-card]:flex-[0_0_80px] @max-[760px]:[&.is-pickaxe_.mam-strip-card]:w-[80px] [&.is-pickaxe_.mam-strip-card]:h-[84px] [&.is-pickaxe_.mam-strip-card]:py-1 [&.is-pickaxe_.mam-strip-card]:px-1 ${
           this.inspectTab === 'mutation'
             ? 'is-mutation'
             : this.inspectTab === 'enchants'
@@ -374,12 +399,23 @@ export class PlotInspectUi {
       '<span class="absolute -top-1.5 -right-1.5 z-[5] w-[18px] h-[18px] rounded-full bg-[#2ee59d] border-2 border-[#14111d] flex items-center justify-center pointer-events-none" aria-label="Equipped"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.2 6.3L4.8 8.9L9.8 3.3" stroke="#14111d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
 
     if (this.inspectTab === 'pickaxe') {
-      return PICKAXES.map((p) => {
-        const owned = this.state.ownedPickaxes[p.id] || 0;
-        const eq = unit.pickaxeId === p.id;
-        const available = eq || owned > 0;
-        return `
-          <div class="${TW_STRIP_CARD} ${eq ? 'equipped' : ''} ${available ? '' : 'locked'}" style="${rarityVars(p.rarity)}" data-pickaxe-id="${p.id}" title="${eq ? 'Click to Unequip (returns to bag)' : owned > 0 ? 'Click to Equip (1 per Chibi)' : 'Locked — Buy in Pickaxe Shop'}">
+      const sorted = sortInspectPickaxes(PICKAXES, {
+        equippedId: unit.pickaxeId,
+        ownedPickaxes: this.state.ownedPickaxes,
+        isWorldUnlocked: (wId) => this.state.isWorldUnlocked(wId),
+      });
+      const cardsHtml = sorted
+        .map((p) => {
+          const owned = this.state.ownedPickaxes[p.id] || 0;
+          const eq = unit.pickaxeId === p.id;
+          const available = eq || owned > 0;
+          const hint = eq
+            ? `${p.name} (${p.dmgMult}x DMG) — Click to Unequip (returns to bag)`
+            : owned > 0
+              ? `${p.name} (${p.dmgMult}x DMG) — Click to Equip (1 per Chibi)`
+              : `${p.name} (${p.dmgMult}x DMG) — Locked, buy in Pickaxe Shop`;
+          return `
+          <div class="${TW_STRIP_CARD} ${eq ? 'equipped' : ''} ${available ? '' : 'locked'}" style="${rarityVars(p.rarity)}" data-pickaxe-id="${p.id}" title="${hint}">
             ${eq ? equippedCheckHtml : ''}
             <div class="mam-card-name">${p.name}</div>
             <div>${available ? pickaxeIconHtml(p.id, 36, p.name) : hudIconHtml('lock', 30, 'Locked')}</div>
@@ -388,7 +424,17 @@ export class PlotInspectUi {
             </div>
           </div>
         `;
-      }).join('');
+        })
+        .join('');
+      const navBtnCls =
+        'w-7 h-[84px] shrink-0 rounded-xl border-2 border-[#14111d] bg-[#fcecc8] hover:bg-[#fde047] text-[#14111d] text-[18px] font-black inline-flex items-center justify-center cursor-pointer transition-colors active:scale-95 select-none';
+      return `
+        <button type="button" class="${navBtnCls}" data-pickaxe-scroll="left" aria-label="Scroll pickaxes left">&lsaquo;</button>
+        <div class="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto overflow-y-hidden mam-no-scrollbar py-1.5 px-1" data-pickaxe-strip="true">
+          ${cardsHtml}
+        </div>
+        <button type="button" class="${navBtnCls}" data-pickaxe-scroll="right" aria-label="Scroll pickaxes right">&rsaquo;</button>
+      `;
     }
 
     if (this.inspectTab === 'mutation') {
@@ -646,6 +692,28 @@ export class PlotInspectUi {
         }
       });
     });
+
+    const pickaxeStrip = root.querySelector<HTMLElement>('[data-pickaxe-strip="true"]');
+    if (pickaxeStrip) {
+      pickaxeStrip.addEventListener(
+        'wheel',
+        (e) => {
+          if (pickaxeStrip.scrollWidth <= pickaxeStrip.clientWidth) return;
+          if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+            e.preventDefault();
+            pickaxeStrip.scrollLeft += e.deltaY;
+          }
+        },
+        { passive: false }
+      );
+      root.querySelectorAll<HTMLElement>('[data-pickaxe-scroll]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          audio.playSfx('ui-tab');
+          const dir = btn.dataset.pickaxeScroll === 'left' ? -1 : 1;
+          pickaxeStrip.scrollBy({ left: dir * 280, behavior: 'smooth' });
+        });
+      });
+    }
 
     root.querySelectorAll('[data-pickaxe-id]').forEach((el) => {
       el.addEventListener('click', () => {

@@ -166,7 +166,7 @@ describe('Tahap C GameState Domain Modules', () => {
         ores: { topaz: 4, [firstOre]: 2 },
         chestOres: { sapphire: 3 },
         others: { 'summon-scroll': 2, 'ore-elixir-1': 1 },
-        hotbar: ['topaz', null, null, null, null, null, null, null, null],
+        hotbar: ['topaz', 'astral-recruit', null, null, null, null, null, null, null],
         plotMiners: ['astral-recruit', 'astral-recruit', null, null, null, null, null, null],
         plotUnits: [
           null,
@@ -225,7 +225,10 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(state.chestOres['frostquartz']).toBe(3);
       expect(state.others['summon-scroll']).toBeUndefined();
       expect(state.others['ore-elixir-1']).toBe(1);
-      expect(state.hotbar[0]).toBe('glowquartz');
+      expect(state.hotbar[0]).toBeNull();
+      expect(state.hotbar[1]).toBe('astral-recruit');
+      expect(state.hotbar).not.toContain('glowquartz');
+      expect(state.hotbar).not.toContain('topaz');
       // Slot 1 exceeded owned count (1) and slot 5 was trimmed beyond pedestal count
       expect(state.plotMiners[1]).toBeNull();
       expect(state.ownedPickaxes['copper']).toBe(1);
@@ -1618,11 +1621,11 @@ describe('Tahap C GameState Domain Modules', () => {
   });
 
   describe('1000x World Scaling Ladder', () => {
-    it('scales WORLDS unlockCost (1M..1Sp), oreHpMult (2000^w), upgradeCostScale (1000^w), and 5 miners/world by 1000^w', () => {
+    it('scales WORLDS unlockCost (5M..5Sp), oreHpMult (3500^w), upgradeCostScale (1000^w), and 5 miners/world by 1000^w', () => {
       for (let w = 0; w < WORLDS.length; w++) {
-        const expectedUnlock = w === 0 ? 0 : Math.pow(1000, w + 1);
+        const expectedUnlock = w === 0 ? 0 : Number(`5e${3 * (w + 1)}`);
         expect(WORLDS[w].unlockCost).toBe(expectedUnlock);
-        expect(WORLDS[w].oreHpMult).toBe(Math.pow(2000, w));
+        expect(WORLDS[w].oreHpMult).toBe(Math.pow(3_500, w));
         expect(getWorldUpgradeCostScale(WORLDS[w].id)).toBe(Math.pow(1000, w));
 
         const worldDps = getMinersByWorld(WORLDS[w].id)
@@ -1676,13 +1679,15 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(getEffectiveChibiBaseDps('volt-kensei', ['underground'], new Set(['astral-recruit']))).toBe(10_000);
     });
 
-    it('aligns World Research tree root/apex costs to 1000x per-world ladder inside unlock affordability', () => {
+    it('aligns World Research tree root/apex costs to 1000x per-world ladder inside unlock affordability and keeps valuePerLv bounded', () => {
       for (let w = 0; w < WORLDS.length; w++) {
         const nodes = getResearchNodesForTree(WORLDS[w].id);
         const root = nodes.find((n) => n.requires.length === 0)!;
         const apex = nodes.find((n) => n.row === 3)!;
-        expect(root.baseCost).toBe(1_500 * Math.pow(1000, w));
-        expect(apex.baseCost).toBe(150_000 * Math.pow(1000, w));
+        const valNode = nodes.find((n) => n.effectType === 'oreValuePct')!;
+        expect(root.baseCost).toBe(6_000 * Math.pow(1000, w));
+        expect(apex.baseCost).toBe(600_000 * Math.pow(1000, w));
+        expect(valNode.perLevel).toBeLessThanOrEqual(0.5);
         if (w < WORLDS.length - 1) {
           expect(apex.baseCost).toBeLessThan(WORLDS[w + 1].unlockCost);
         }

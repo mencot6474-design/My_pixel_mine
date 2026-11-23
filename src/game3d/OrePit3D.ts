@@ -81,7 +81,7 @@ export type {
   SweetSpotPitState,
 };
 
-const BASE_ORE_HP = 180;
+const BASE_ORE_HP = 1_000;
 
 const METEOR_TARGET_X = 0;
 const METEOR_TARGET_Z = -0.25;

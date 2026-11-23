@@ -499,9 +499,8 @@ export class GameState {
     LootChest.toggleHotbarItemDomain(this, chibiId, () => this.emit());
   }
 
-  public toggleEquipOre(oreId: string): void {
-    if ((this.ores[oreId] || 0) <= 0) return;
-    LootChest.toggleHotbarItemDomain(this, oreId, () => this.emit());
+  public toggleEquipOre(_oreId: string): void {
+    // Hotbar is reserved for Chibi miners only.
   }
 
   public equipBestMiners(): void {

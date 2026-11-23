@@ -113,13 +113,13 @@ export const RARITY_BORDER: Record<ItemRarity, string> = {
 
 export const WORLDS: readonly WorldDef[] = [
   { id: 'underground', name: 'The Underground', iconColor: '#f59e0b', unlockCost: 0, oreHpMult: 1 },
-  { id: 'crystal', name: 'Crystal Caves', iconColor: '#38bdf8', unlockCost: 1_000_000, oreHpMult: 2_000 },
-  { id: 'magma', name: 'Magma Hollows', iconColor: '#f97316', unlockCost: 1_000_000_000, oreHpMult: 4_000_000 },
-  { id: 'ruins', name: 'Ancient Ruins', iconColor: '#a855f7', unlockCost: 1_000_000_000_000, oreHpMult: 8_000_000_000 },
-  { id: 'astral', name: 'Voidreach', iconColor: '#e879f9', unlockCost: 1_000_000_000_000_000, oreHpMult: 16_000_000_000_000 },
-  { id: 'starwell', name: 'Starwell', iconColor: '#38bdf8', unlockCost: 1_000_000_000_000_000_000, oreHpMult: 32_000_000_000_000_000 },
-  { id: 'abyssal', name: 'Abyssal Biolume', iconColor: '#2dd4bf', unlockCost: 1_000_000_000_000_000_000_000, oreHpMult: 64_000_000_000_000_000_000 },
-  { id: 'chrono', name: 'Chrono Nexus', iconColor: '#fbbf24', unlockCost: 1_000_000_000_000_000_000_000_000, oreHpMult: 128_000_000_000_000_000_000_000 },
+  { id: 'crystal', name: 'Crystal Caves', iconColor: '#38bdf8', unlockCost: 5_000_000, oreHpMult: 3_500 },
+  { id: 'magma', name: 'Magma Hollows', iconColor: '#f97316', unlockCost: 5_000_000_000, oreHpMult: 12_250_000 },
+  { id: 'ruins', name: 'Ancient Ruins', iconColor: '#a855f7', unlockCost: 5_000_000_000_000, oreHpMult: 42_875_000_000 },
+  { id: 'astral', name: 'Voidreach', iconColor: '#e879f9', unlockCost: 5_000_000_000_000_000, oreHpMult: 150_062_500_000_000 },
+  { id: 'starwell', name: 'Starwell', iconColor: '#38bdf8', unlockCost: 5_000_000_000_000_000_000, oreHpMult: 525_218_750_000_000_000 },
+  { id: 'abyssal', name: 'Abyssal Biolume', iconColor: '#2dd4bf', unlockCost: 5_000_000_000_000_000_000_000, oreHpMult: 1_838_265_625_000_000_000_000 },
+  { id: 'chrono', name: 'Chrono Nexus', iconColor: '#fbbf24', unlockCost: 5_000_000_000_000_000_000_000_000, oreHpMult: 6_433_929_687_500_000_000_000_000 },
 ] as const;
 
 export const WORLD_UPGRADE_COST_SCALE: Record<string, number> = {
@@ -348,18 +348,18 @@ export const ORES: readonly OreDef[] = [
   { id: 'dawncrown', name: 'Dawncrown', worldId: 'starwell', chancePct: 0.005, rarity: 'mythic', color: '#fbbf24', secondaryColor: '#ec4899', sellValue: 55_000_000_000_000_000_000 },
 
   // 7. Abyssal Biolume (World 7 Index — 5 endgame ores climbing to Exotic & Secret)
-  { id: 'trenchslate', name: 'Trenchslate', worldId: 'abyssal', chancePct: 52.0, rarity: 'legendary', color: '#2dd4bf', secondaryColor: '#042f2e', sellValue: 150_000_000_000_000_000_000 },
-  { id: 'prismarine', name: 'Prismarine', worldId: 'abyssal', chancePct: 26.0, rarity: 'rainbow', color: '#5eead4', secondaryColor: '#0f172a', sellValue: 450_000_000_000_000_000_000 },
-  { id: 'pelagium', name: 'Pelagium', worldId: 'abyssal', chancePct: 16.0, rarity: 'mythic', color: '#fb7185', secondaryColor: '#1e1b4b', sellValue: 1_500_000_000_000_000_000_000 },
-  { id: 'abyssalite', name: 'Abyssalite', worldId: 'abyssal', chancePct: 5.5, rarity: 'exotic', color: '#14b8a6', secondaryColor: '#312e81', sellValue: 7_500_000_000_000_000_000_000 },
-  { id: 'leviapearl', name: 'Leviapearl', worldId: 'abyssal', chancePct: 0.5, rarity: 'secret', color: '#f43f5e', secondaryColor: '#0f172a', sellValue: 55_000_000_000_000_000_000_000 },
+  { id: 'trenchslate', name: 'Trenchslate', worldId: 'abyssal', chancePct: 66.85, rarity: 'legendary', color: '#2dd4bf', secondaryColor: '#042f2e', sellValue: 125_000_000_000_000_000_000 },
+  { id: 'prismarine', name: 'Prismarine', worldId: 'abyssal', chancePct: 25.0, rarity: 'rainbow', color: '#5eead4', secondaryColor: '#0f172a', sellValue: 375_000_000_000_000_000_000 },
+  { id: 'pelagium', name: 'Pelagium', worldId: 'abyssal', chancePct: 7.5, rarity: 'mythic', color: '#fb7185', secondaryColor: '#1e1b4b', sellValue: 1_250_000_000_000_000_000_000 },
+  { id: 'abyssalite', name: 'Abyssalite', worldId: 'abyssal', chancePct: 0.6, rarity: 'exotic', color: '#14b8a6', secondaryColor: '#312e81', sellValue: 6_500_000_000_000_000_000_000 },
+  { id: 'leviapearl', name: 'Leviapearl', worldId: 'abyssal', chancePct: 0.05, rarity: 'secret', color: '#f43f5e', secondaryColor: '#0f172a', sellValue: 45_000_000_000_000_000_000_000 },
 
   // 8. Chrono Nexus (World 8 Index — 5 endgame ores climbing to Exotic & Secret)
-  { id: 'mithrilite', name: 'Mithrilite', worldId: 'chrono', chancePct: 52.0, rarity: 'legendary', color: '#93c5fd', secondaryColor: '#451a03', sellValue: 150_000_000_000_000_000_000_000 },
-  { id: 'orichalcite', name: 'Orichalcite', worldId: 'chrono', chancePct: 26.0, rarity: 'rainbow', color: '#fb923c', secondaryColor: '#1e1b4b', sellValue: 450_000_000_000_000_000_000_000 },
-  { id: 'adamantite', name: 'Adamantite', worldId: 'chrono', chancePct: 16.0, rarity: 'mythic', color: '#e11d48', secondaryColor: '#18181b', sellValue: 1_500_000_000_000_000_000_000_000 },
-  { id: 'aetherium', name: 'Aetherium', worldId: 'chrono', chancePct: 5.5, rarity: 'exotic', color: '#2dd4bf', secondaryColor: '#0f172a', sellValue: 7_500_000_000_000_000_000_000_000 },
-  { id: 'chronocrown', name: 'Chronocrown', worldId: 'chrono', chancePct: 0.5, rarity: 'secret', color: '#fbbf24', secondaryColor: '#09090b', sellValue: 55_000_000_000_000_000_000_000_000 },
+  { id: 'mithrilite', name: 'Mithrilite', worldId: 'chrono', chancePct: 69.47, rarity: 'legendary', color: '#93c5fd', secondaryColor: '#451a03', sellValue: 125_000_000_000_000_000_000_000 },
+  { id: 'orichalcite', name: 'Orichalcite', worldId: 'chrono', chancePct: 24.0, rarity: 'rainbow', color: '#fb923c', secondaryColor: '#1e1b4b', sellValue: 375_000_000_000_000_000_000_000 },
+  { id: 'adamantite', name: 'Adamantite', worldId: 'chrono', chancePct: 6.1, rarity: 'mythic', color: '#e11d48', secondaryColor: '#18181b', sellValue: 1_250_000_000_000_000_000_000_000 },
+  { id: 'aetherium', name: 'Aetherium', worldId: 'chrono', chancePct: 0.4, rarity: 'exotic', color: '#2dd4bf', secondaryColor: '#0f172a', sellValue: 6_500_000_000_000_000_000_000_000 },
+  { id: 'chronocrown', name: 'Chronocrown', worldId: 'chrono', chancePct: 0.03, rarity: 'secret', color: '#fbbf24', secondaryColor: '#09090b', sellValue: 45_000_000_000_000_000_000_000_000 },
 ] as const;
 
 export interface WeatherOreDef extends OreDef {
@@ -516,14 +516,14 @@ export const PICKAXES: readonly PickaxeDef[] = [
   { id: 'sunwheel', name: 'Sunwheel', worldId: 'underground', dmgMult: 2.0, cost: 450, rarity: 'legendary', color: '#f59e0b' },
   { id: 'zircon', name: 'Zircon', worldId: 'underground', dmgMult: 3.8, cost: 8_000, rarity: 'rainbow', color: '#38bdf8' },
   { id: 'thundercoil', name: 'Thundercoil', worldId: 'underground', dmgMult: 7.0, cost: 120_000, rarity: 'uncommon', color: '#22c55e' },
-  { id: 'rhodolite', name: 'Rhodolite', worldId: 'crystal', dmgMult: 14.0, cost: 3_500_000, rarity: 'rare', color: '#818cf8' },
-  { id: 'heartpiercer', name: 'Heartpiercer', worldId: 'crystal', dmgMult: 30.0, cost: 90_000_000, rarity: 'mythic', color: '#ec4899' },
-  { id: 'anvilheart', name: 'Anvilheart', worldId: 'magma', dmgMult: 65.0, cost: 3_500_000_000, rarity: 'rainbow', color: '#f97316' },
-  { id: 'cinderforge', name: 'Cinderforge', worldId: 'magma', dmgMult: 140.0, cost: 90_000_000_000, rarity: 'legendary', color: '#fb7185' },
+  { id: 'rhodolite', name: 'Rhodolite', worldId: 'crystal', dmgMult: 14.0, cost: 8_000_000, rarity: 'rare', color: '#818cf8' },
+  { id: 'heartpiercer', name: 'Heartpiercer', worldId: 'crystal', dmgMult: 30.0, cost: 150_000_000, rarity: 'mythic', color: '#ec4899' },
+  { id: 'anvilheart', name: 'Anvilheart', worldId: 'magma', dmgMult: 65.0, cost: 8_000_000_000, rarity: 'rainbow', color: '#f97316' },
+  { id: 'cinderforge', name: 'Cinderforge', worldId: 'magma', dmgMult: 140.0, cost: 150_000_000_000, rarity: 'legendary', color: '#fb7185' },
   { id: 'runebreaker', name: 'Runebreaker', worldId: 'ruins', dmgMult: 310.0, cost: 15_000_000_000_000, rarity: 'epic', color: '#2dd4bf' },
   { id: 'voidcleaver', name: 'Voidcleaver', worldId: 'astral', dmgMult: 700.0, cost: 15_000_000_000_000_000, rarity: 'exotic', color: '#c084fc' },
-  { id: 'astralsiphon', name: 'Astralsiphon', worldId: 'starwell', dmgMult: 1_600.0, cost: 5_000_000_000_000_000_000, rarity: 'mythic', color: '#38bdf8' },
-  { id: 'starwellcrown', name: 'Starwell Crown', worldId: 'starwell', dmgMult: 3_800.0, cost: 150_000_000_000_000_000_000, rarity: 'secret', color: '#fde047' },
+  { id: 'astralsiphon', name: 'Astralsiphon', worldId: 'starwell', dmgMult: 1_600.0, cost: 12_000_000_000_000_000_000, rarity: 'mythic', color: '#38bdf8' },
+  { id: 'starwellcrown', name: 'Starwell Crown', worldId: 'starwell', dmgMult: 3_800.0, cost: 250_000_000_000_000_000_000, rarity: 'secret', color: '#fde047' },
   { id: 'leviathanfang', name: 'Leviathan Fang', worldId: 'abyssal', dmgMult: 8_800.0, cost: 25_000_000_000_000_000_000_000, rarity: 'exotic', color: '#14b8a6' },
   { id: 'chronoeternity', name: 'Chrono Eternity', worldId: 'chrono', dmgMult: 20_000.0, cost: 25_000_000_000_000_000_000_000_000, rarity: 'secret', color: '#fbbf24' },
 ] as const;

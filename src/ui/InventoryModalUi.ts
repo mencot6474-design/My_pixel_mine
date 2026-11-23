@@ -1,5 +1,5 @@
 import { audio } from '../audio/AudioManager';
-import { CHIBI_CATALOG, getChibiById } from '../game3d/ChibiCatalog';
+import { CHIBI_CATALOG, ChibiDef, getChibiById } from '../game3d/ChibiCatalog';
 import {
   GEM_SHOP_ITEMS,
   getChibiStarTier,
@@ -30,6 +30,21 @@ import {
   TW_TAB_BTN,
 } from './HudShared';
 
+/** Orders Backpack Chibis with Hotbar-equipped Chibis first in consecutive slot order (1..9), followed by remaining Chibis sorted by effective DPS. */
+export function sortInventoryMiners<T extends { def: ChibiDef; effDps: number }>(
+  items: readonly T[],
+  hotbar: readonly (string | null)[]
+): T[] {
+  return [...items].sort((a, b) => {
+    const aIdx = hotbar.indexOf(a.def.id);
+    const bIdx = hotbar.indexOf(b.def.id);
+    if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+    if (aIdx !== -1) return -1;
+    if (bIdx !== -1) return 1;
+    return b.effDps - a.effDps;
+  });
+}
+
 export class InventoryModalUi {
   private invTab: InvTab = 'all';
   private invSearch = '';
@@ -52,12 +67,22 @@ export class InventoryModalUi {
 
     const q = this.invSearch.trim().toLowerCase();
     if (this.invTab === 'all' || this.invTab === 'miners') {
-      const firstMiner = Object.entries(this.state.miners)
-        .filter(([, qty]) => qty > 0)
-        .map(([id]) => getChibiById(id))
-        .filter((d): d is NonNullable<typeof d> => Boolean(d))
-        .filter((d) => !q || d.name.toLowerCase().includes(q))
-        .sort((a, b) => this.state.getEffectiveChibiDps(b.id) - this.state.getEffectiveChibiDps(a.id))[0];
+      const sortedMiners = sortInventoryMiners(
+        Object.entries(this.state.miners)
+          .filter(([, qty]) => qty > 0)
+          .map(([id]) => getChibiById(id))
+          .filter((d): d is NonNullable<typeof d> => Boolean(d))
+          .filter((d) => !q || d.name.toLowerCase().includes(q))
+          .map((def) => {
+            const star = this.state.getChibiStar(def.id);
+            const effDps = Math.round(
+              this.state.getEffectiveChibiDps(def.id) * getChibiStarTier(star).dmgMult
+            );
+            return { def, effDps };
+          }),
+        this.state.hotbar
+      );
+      const firstMiner = sortedMiners[0]?.def;
       if (firstMiner) {
         this.invInspectTarget = { kind: 'miner', id: firstMiner.id };
         return this.invInspectTarget;
@@ -155,8 +180,6 @@ export class InventoryModalUi {
       const def = getOreById(target.id);
       if (!def) return renderEmptyInspectorPanel('Select any item to inspect details.');
       const qty = this.state.ores[def.id] || 0;
-      const hotbarIdx = this.state.hotbar.indexOf(def.id);
-      const isEq = hotbarIdx !== -1;
       const unitVal = this.state.getEffectiveOreSellValue(def.id);
       const totalVal = unitVal * qty;
       const worldName = getWorldById(def.worldId).name;
@@ -165,7 +188,7 @@ export class InventoryModalUi {
         rarity: def.rarity,
         title: def.name,
         subtitle: `Backpack • ${worldName} Ore`,
-        badgesHtml: `<span class="mam-pill rounded-full text-[10px] font-black border-2 border-[#14111d] ${isEq ? 'bg-[#bbf7d0] text-[#14532d]' : 'bg-[#fcecc8] text-[#14111d]'}">${isEq ? `Hotbar #${hotbarIdx + 1}` : 'In Bag'}</span>`,
+        badgesHtml: '<span class="mam-pill rounded-full text-[10px] font-black border-2 border-[#14111d] bg-[#fcecc8] text-[#14111d]">In Bag</span>',
         artHtml: oreIconSvg(def.color, def.secondaryColor, def.rarity, `inv_${def.id}`),
         stats: [
           ['Quantity', `x${fmtInt(qty)}`, 'text-[#14111d]'],
@@ -174,14 +197,9 @@ export class InventoryModalUi {
           ['Stack Value', fmtMoney(totalVal), 'text-[#b45309]'],
         ],
         actionHtml: `
-          <div class="grid grid-cols-2 gap-1.5">
-            <button class="mam-sheen-hover relative overflow-hidden h-9 rounded-xl border-[2.5px] border-[#14111d] ${isEq ? 'bg-[#fb923c] hover:bg-[#fdba74]' : 'bg-[#38bdf8] hover:bg-[#7dd3fc]'} text-[#14111d] text-[12.5px] font-black cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.96] hover:-rotate-[1.2deg] active:scale-[0.93]" data-insp-inv-action="toggle-ore" data-insp-id="${def.id}">
-              ${isEq ? 'Unequip' : 'Equip'}
-            </button>
-            <button class="mam-sheen-hover relative overflow-hidden h-9 rounded-xl border-[2.5px] border-[#14111d] bg-[#4ade80] hover:bg-[#86efac] text-[#14111d] text-[12.5px] font-black cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.96] hover:rotate-[1.2deg] active:scale-[0.93]" data-insp-inv-action="sell-ore-all" data-insp-id="${def.id}">
-              Sell All
-            </button>
-          </div>
+          <button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border-[2.5px] border-[#14111d] bg-[#4ade80] hover:bg-[#86efac] text-[#14111d] text-[13px] font-black cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.97] active:scale-[0.94]" data-insp-inv-action="sell-ore-all" data-insp-id="${def.id}">
+            Sell All
+          </button>
         `,
       });
     }
@@ -222,15 +240,19 @@ export class InventoryModalUi {
     const selTarget = this.invInspectTarget;
 
     if (this.invTab === 'all' || this.invTab === 'miners') {
-      const minerList = Object.entries(this.state.miners)
-        .filter(([, qty]) => qty > 0)
-        .map(([id, qty]) => {
-          const def = getChibiById(id) ?? CHIBI_CATALOG[0];
-          const star = this.state.getChibiStar(def.id);
-          const effDps = Math.round(this.state.getEffectiveChibiDps(def.id) * getChibiStarTier(star).dmgMult);
-          return { def, qty, star, effDps };
-        })
-        .sort((a, b) => b.effDps - a.effDps);
+      const minerList = sortInventoryMiners(
+        Object.entries(this.state.miners)
+          .filter(([, qty]) => qty > 0)
+          .map(([id, qty]) => {
+            const def = getChibiById(id) ?? CHIBI_CATALOG[0];
+            const star = this.state.getChibiStar(def.id);
+            const effDps = Math.round(
+              this.state.getEffectiveChibiDps(def.id) * getChibiStarTier(star).dmgMult
+            );
+            return { def, qty, star, effDps };
+          }),
+        this.state.hotbar
+      );
 
       for (const { def, qty, star, effDps } of minerList) {
         if (q && !def.name.toLowerCase().includes(q)) continue;
@@ -296,14 +318,11 @@ export class InventoryModalUi {
 
       for (const { def, qty } of oreList) {
         if (q && !def.name.toLowerCase().includes(q)) continue;
-        const hotbarIdx = this.state.hotbar.indexOf(def.id);
-        const isEquipped = hotbarIdx !== -1;
         const isInsp = selTarget?.kind === 'ore' && selTarget.id === def.id;
         cards.push(`
-          <div class="${rarityCardClasses(def.rarity, isInsp ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '')}" style="${rarityVars(def.rarity)}" data-equip-ore="${def.id}" title="${def.name} (${fmtMoney(def.sellValue)}) — Click to Equip / Unequip">
-            ${isEquipped ? `<span class="mam-equipped-tag">${hotbarIdx + 1}</span>` : ''}
+          <div class="${rarityCardClasses(def.rarity, isInsp ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '')}" style="${rarityVars(def.rarity)}" data-inspect-inv-only="ore:${def.id}" title="${def.name} (${fmtMoney(def.sellValue)}) — Click to Inspect">
             <div class="mam-card-art">${oreIconSvg(def.color, def.secondaryColor, def.rarity, `inv_${def.id}`)}</div>
-            <div class="mam-card-name truncate ${isEquipped ? '!text-left pl-1 pr-[22px]' : 'px-1'}">${def.name}</div>
+            <div class="mam-card-name truncate px-1">${def.name}</div>
             <div class="mam-card-bottom">
               <span class="mam-card-val">${fmtMoney(def.sellValue)}</span>
               <span class="mam-card-qty">x${fmtInt(qty)}</span>
@@ -545,17 +564,6 @@ export class InventoryModalUi {
       });
     });
 
-    scope.querySelectorAll('[data-equip-ore]').forEach((el) => {
-      el.addEventListener('click', () => {
-        const id = (el as HTMLElement).dataset.equipOre;
-        if (!id) return;
-        audio.playSfx('ui-tab');
-        this.invInspectTarget = { kind: 'ore', id };
-        this.state.toggleEquipOre(id);
-        this.refreshInventoryInspectorLive(root);
-      });
-    });
-
     scope.querySelectorAll('[data-use-potion]').forEach((el) => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -595,10 +603,6 @@ export class InventoryModalUi {
             audio.playSfx('ui-error');
             this.pushToast(res.reason === 'max' ? 'Already MAX ★5!' : 'Not enough spare duplicates!');
           }
-        } else if (act === 'toggle-ore') {
-          audio.playSfx('ui-tab');
-          this.invInspectTarget = { kind: 'ore', id };
-          this.state.toggleEquipOre(id);
         } else if (act === 'sell-ore-all') {
           const def = getOreById(id);
           const earned = this.state.sellOre(id, true);
@@ -625,14 +629,12 @@ export class InventoryModalUi {
     root.querySelectorAll<HTMLElement>('[data-equip-miner]').forEach((el) => {
       applyInspectRing(el, target?.kind === 'miner' && el.dataset.equipMiner === target.id);
     });
-    root.querySelectorAll<HTMLElement>('[data-equip-ore]').forEach((el) => {
-      applyInspectRing(el, target?.kind === 'ore' && el.dataset.equipOre === target.id);
-    });
-    root.querySelectorAll<HTMLElement>('[data-inv-potion-card="true"]').forEach((el) => {
-      applyInspectRing(
-        el,
-        target?.kind === 'gem-item' && el.dataset.inspectInvOnly === `gem-item:${target.id}`
-      );
+    root.querySelectorAll<HTMLElement>('[data-inspect-inv-only]').forEach((el) => {
+      const raw = el.dataset.inspectInvOnly ?? '';
+      const active =
+        (target?.kind === 'ore' && raw === `ore:${target.id}`) ||
+        (target?.kind === 'gem-item' && raw === `gem-item:${target.id}`);
+      applyInspectRing(el, active);
     });
     const panel = root.querySelector<HTMLElement>('[data-inv-inspector="true"]');
     if (!panel) return;

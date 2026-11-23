@@ -13,7 +13,7 @@ export const RETURN_RUSH_MIN_OFFLINE_SEC = 3600; // 1 hour
 export const RETURN_RUSH_DURATION_SEC = 600; // 10 minutes
 export const RETURN_RUSH_FEVER_CHARGE_BONUS = 0.5; // +50% Fever Charge
 export const RETURN_RUSH_SPEED_BONUS = 0.25; // +25% Speed
-const BASE_AVG_ROCK_HP = 180 * 1.25;
+const BASE_AVG_ROCK_HP = 1_000 * 1.25;
 const MAX_OFFLINE_CHEST_ORES = 200;
 
 export interface OfflineEarningsSummary {

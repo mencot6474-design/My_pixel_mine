@@ -12,6 +12,7 @@ import {
   WeatherOreDef,
   WorldId,
 } from './GameData';
+import { getChibiById } from '../game3d/ChibiCatalog';
 import { compactHotbarSlots } from './GameStateSave';
 import { getGlobalGemGainBonus } from './TowerData';
 import { getWeatherById, WeatherDef, WeatherId } from './WeatherData';
@@ -112,6 +113,7 @@ export function addItemToHotbarIfSpaceDomain(
   ctx: Pick<LootChestContext, 'hotbar'>,
   itemId: string
 ): void {
+  if (!getChibiById(itemId)) return;
   if (ctx.hotbar.includes(itemId)) return;
   const emptyIdx = ctx.hotbar.indexOf(null);
   if (emptyIdx !== -1) {
@@ -145,6 +147,7 @@ export function toggleHotbarItemDomain(
     emit();
     return;
   }
+  if (!getChibiById(itemId)) return;
 
   const emptyIdx = ctx.hotbar.indexOf(null);
   if (emptyIdx !== -1) {
@@ -292,7 +295,6 @@ export function onMeteorBrokenDomain(
     added += weatherOreQty;
   } else {
     ctx.ores[weatherOre.id] = (ctx.ores[weatherOre.id] || 0) + weatherOreQty;
-    addItemToHotbarIfSpaceDomain(ctx, weatherOre.id);
   }
 
   // Bonus world ore burst
@@ -379,7 +381,6 @@ export function takeAllFromChestDomain(
     if (qty <= 0) continue;
     ctx.ores[id] = (ctx.ores[id] || 0) + qty;
     ctx.discovered.add(id);
-    addItemToHotbarIfSpaceDomain(ctx, id);
     taken += qty;
   }
   ctx.chestMiners = {};

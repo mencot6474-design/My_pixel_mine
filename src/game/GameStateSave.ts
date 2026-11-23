@@ -378,7 +378,7 @@ export function deserializeSaveJson(
       }
     }
     if (Array.isArray(data.hotbar) && data.hotbar.length === 9) {
-      state.hotbar = data.hotbar.map((slot) => (slot ? migrateOreId(slot) : null));
+      state.hotbar = data.hotbar.map((slot) => (slot && getChibiById(slot) ? slot : null));
       compactHotbar();
     }
     if (data.ownedPickaxes) state.ownedPickaxes = data.ownedPickaxes;

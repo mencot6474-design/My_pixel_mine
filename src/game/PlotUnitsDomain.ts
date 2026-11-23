@@ -326,7 +326,7 @@ function computeUnitBaseDmgParts(
   const mut = getMutationById(unit.mutationId);
   const enc = getEnchantById(unit.enchantId);
   const encMult = enc ? enc.dmgMult : 1;
-  const lvlScale = (lvl: number) => Math.pow(1.28, lvl - 1);
+  const lvlScale = (lvl: number) => Math.pow(1.12, lvl - 1);
   const dmgResearchMult = 1 + ctx.getActiveResearchBonus('minerDmgPct') + ctx.getRelicBonus('minerDmgPct');
   const starTier = getChibiStarTier(getChibiStarCount(ctx, chibi.id));
   const resonanceDmgMult = 1 + getWorldResonanceDmgPct(ctx, getMinerWorldId(chibi.id));
@@ -416,7 +416,7 @@ export function computePlotUnitStats(
   const worth = Math.round(baseDmg * 12);
 
   const upgradeCostMult = getChibiUpgradeCostMult(chibi.id, ctx.unlockedWorlds, ctx.discovered);
-  const dmgCost = Math.round(50 * Math.pow(1.32, unit.damageLevel - 1) * upgradeCostMult);
+  const dmgCost = Math.round(50 * Math.pow(1.36, unit.damageLevel - 1) * upgradeCostMult);
   const speedCost = Math.round(75 * Math.pow(1.42, unit.speedLevel - 1) * upgradeCostMult);
   const miningCost = Math.round(90 * Math.pow(1.45, unit.miningSpeedLevel - 1) * upgradeCostMult);
   const mutationCost = Math.max(
@@ -841,12 +841,6 @@ export function equipBestUnitsToPlots(
     if (hbIdx >= 9) break;
     if (!nextHotbar.includes(cand.chibiId)) {
       nextHotbar[hbIdx++] = cand.chibiId;
-    }
-  }
-  for (const item of ctx.hotbar) {
-    if (hbIdx >= 9) break;
-    if (item && !getChibiById(item) && !nextHotbar.includes(item)) {
-      nextHotbar[hbIdx++] = item;
     }
   }
   ctx.hotbar = nextHotbar;

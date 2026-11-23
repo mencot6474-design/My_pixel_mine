@@ -374,6 +374,8 @@ describe('Pure 3D Mine World', () => {
     expect(abyssalOres.reduce((acc, o) => acc + o.chancePct, 0)).toBeCloseTo(100, 4);
     expect(abyssalOres[0].sellValue).toBeGreaterThan(starwellOres[0].sellValue);
     expect(abyssalOres[4].sellValue).toBeGreaterThan(starwellOres[7].sellValue);
+    expect(abyssalOres[3].chancePct).toBeLessThanOrEqual(1.0);
+    expect(abyssalOres[4].chancePct).toBeLessThanOrEqual(0.05);
 
     const chronoOres = getOresByWorld('chrono');
     expect(chronoOres.map((o) => o.name)).toEqual([
@@ -387,6 +389,8 @@ describe('Pure 3D Mine World', () => {
     expect(chronoOres.reduce((acc, o) => acc + o.chancePct, 0)).toBeCloseTo(100, 4);
     expect(chronoOres[0].sellValue).toBeGreaterThan(abyssalOres[0].sellValue);
     expect(chronoOres[4].sellValue).toBeGreaterThan(abyssalOres[4].sellValue);
+    expect(chronoOres[3].chancePct).toBeLessThan(abyssalOres[3].chancePct);
+    expect(chronoOres[4].chancePct).toBeLessThan(abyssalOres[4].chancePct);
 
     expect(getMinersByWorld('underground').length).toBe(5);
     expect(getMinersByWorld('crystal').length).toBe(5);
@@ -792,27 +796,28 @@ describe('Pure 3D Mine World', () => {
     expect(gs.getActiveOreNodeCount()).toBe(13);
   });
 
-  it('auto-populates hotbar 1-9 with Chibis and Ores on chest takeAll and clears sold ores', () => {
+  it('auto-populates hotbar 1-9 with Chibis only on chest takeAll and keeps ores out of hotbar', () => {
     const gs = new GameState();
     gs.chestMiners = { 'solar-striker': 1 };
     gs.chestOres = { coalite: 3, ochrite: 2 };
 
     const taken = gs.takeAllFromChest();
     expect(taken).toBe(6);
-    expect(gs.hotbar.slice(0, 3)).toEqual(['solar-striker', 'coalite', 'ochrite']);
+    expect(gs.hotbar.slice(0, 3)).toEqual(['solar-striker', null, null]);
+    expect(gs.ores.coalite).toBe(3);
+    expect(gs.ores.ochrite).toBe(2);
 
-    // Selecting an ore slot must not place it on an empty plot pedestal
+    // Ores cannot be equipped onto the hotbar
+    gs.toggleEquipOre('coalite');
+    expect(gs.hotbar).not.toContain('coalite');
+
+    // Empty slot cannot place onto an empty plot pedestal
     gs.selectHotbarSlot(1);
     expect(gs.placeSelectedOnPlot(1)).toBe('need-select');
     expect(gs.plotMiners[1]).toBeNull();
 
-    // Selling out an ore clears it from the hotbar
     expect(gs.sellOre('coalite', true)).toBeGreaterThan(0);
-    expect(gs.hotbar).not.toContain('coalite');
-    expect(gs.hotbar).toContain('ochrite');
-
     expect(gs.sellAllOres()).toBeGreaterThan(0);
-    expect(gs.hotbar).not.toContain('ochrite');
   });
 
   it('scales Gem Tower floors, 10 waves per floor, 5-floor checkpoints/milestones, anomalies, and global gem bonus', () => {
@@ -1972,7 +1977,7 @@ describe('Pure 3D Mine World', () => {
       expect(meteorInfo).toBeDefined();
       expect(meteorInfo?.worldX).toBeLessThan(0);
       expect(meteorInfo?.worldY).toBeGreaterThan(5);
-      expect(meteorInfo?.maxHp).toBe(180 * 2 * METEOR_HP_MULT);
+      expect(meteorInfo?.maxHp).toBe(1000 * 2 * METEOR_HP_MULT);
       expect(meteorInfo?.meteorWeatherId).toBe('celestial');
 
       for (let i = 0; i < 16; i++) {
@@ -2074,23 +2079,28 @@ describe('Pure 3D Mine World', () => {
     expect(Math.round(bd.units[0].pct + bd.units[1].pct)).toBe(100);
     expect(bd.tapDamage).toBe(gs.getTapDamage());
 
-    // Hotbar auto-compacts 1..9 when an item is removed/unequipped or sold
+    // Hotbar auto-compacts 1..9 for Chibis only and strips legacy ores on save load
+    const hb1 = CHIBI_CATALOG[0].id;
+    const hb2 = CHIBI_CATALOG[1].id;
+    const hb3 = CHIBI_CATALOG[2].id;
+    gs.miners[hb1] = 1;
+    gs.miners[hb2] = 1;
+    gs.miners[hb3] = 1;
     gs.ores = { coalite: 5, ochrite: 3, copperine: 2 };
-    gs.hotbar = ['coalite', 'ochrite', 'copperine', null, null, null, null, null, null];
-    gs.selectedHotbarSlot = 2; // copperine
-    gs.toggleEquipOre('coalite'); // unequips slot 0 -> shifts ochrite->0, copperine->1
-    expect(gs.hotbar.slice(0, 3)).toEqual(['ochrite', 'copperine', null]);
+    gs.hotbar = [hb1, hb2, hb3, null, null, null, null, null, null];
+    gs.selectedHotbarSlot = 2; // hb3
+    gs.toggleEquipMiner(hb1); // unequips slot 0 -> shifts hb2->0, hb3->1
+    expect(gs.hotbar.slice(0, 3)).toEqual([hb2, hb3, null]);
     expect(gs.selectedHotbarSlot).toBe(1);
-    gs.sellOre('ochrite', true); // removes slot 0 -> shifts copperine->0
-    expect(gs.hotbar.slice(0, 2)).toEqual(['copperine', null]);
-    expect(gs.selectedHotbarSlot).toBe(0);
+    gs.toggleEquipOre('copperine'); // ignored: hotbar is Chibi-only
+    expect(gs.hotbar).not.toContain('copperine');
 
-    // Equip Best fills hotbar neatly starting from slot 1 (index 0) in rank order, followed by existing ores
+    // Equip Best fills hotbar strictly with Chibis (never ores)
+    gs.hotbar[5] = 'copperine';
     gs.equipBestMiners();
     expect(gs.hotbar[0]).toBe(gs.plotMiners[0]);
     expect(gs.hotbar[1]).toBe(gs.plotMiners[1]);
-    expect(gs.hotbar[2]).toBe('copperine');
-    expect(gs.hotbar[3]).toBeNull();
+    expect(gs.hotbar).not.toContain('copperine');
   });
 
   it('supports Relic Forge recipes, bag+chest consumption, 3-slot equip cap, and stat bonuses', () => {
@@ -2940,7 +2950,7 @@ describe('Pure 3D Mine World', () => {
     const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
     pit.spawnWeatherMeteor('void', 2, 0);
     const meteor = pit.getAliveNodesInfo().find((n) => n.isMeteor);
-    expect(meteor?.maxHp).toBe(180 * 2 * 375);
+    expect(meteor?.maxHp).toBe(1000 * 2 * 375);
     pit.dispose();
   });
 

@@ -12,7 +12,7 @@ export function getPlotStatUpgradeCost(
   upgradeCostMult: number
 ): number {
   const safeLvl = Math.max(1, Math.floor(level));
-  if (stat === 'dmg') return Math.round(50 * Math.pow(1.32, safeLvl - 1) * upgradeCostMult);
+  if (stat === 'dmg') return Math.round(50 * Math.pow(1.36, safeLvl - 1) * upgradeCostMult);
   if (stat === 'speed') return Math.round(75 * Math.pow(1.42, safeLvl - 1) * upgradeCostMult);
   return Math.round(90 * Math.pow(1.45, safeLvl - 1) * upgradeCostMult);
 }

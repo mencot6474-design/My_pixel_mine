@@ -1,10 +1,10 @@
 import { audio } from '../audio/AudioManager';
 import { getChibiById } from '../game3d/ChibiCatalog';
 import { SceneMode } from '../game3d/MineScene3D';
-import { getMinerRarity, getMinerSellValue, getOreById, ItemRarity } from '../game/GameData';
+import { getMinerRarity, getMinerSellValue, ItemRarity } from '../game/GameData';
 import { GameState } from '../game/GameState';
 import { fmtMoney, fmtShort } from '../game/NumberFormat';
-import { hudIconHtml, oreIconSvg } from './HudIcons';
+import { hudIconHtml } from './HudIcons';
 import {
   chibiPortraitHtml,
   ModalKind,
@@ -37,14 +37,12 @@ interface ActiveHotbarDrag {
   onCancel: () => void;
 }
 
-/** Computes a compact key capturing hotbar slot items, quantities/sell values, and selection. */
+/** Computes a compact key capturing hotbar Chibi slots, quantities/sell values, and selection. */
 export function buildHotbarStateKey(state: GameState): string {
   return `${state.hotbar
     .map((id) => {
-      if (!id) return '';
-      if (getChibiById(id)) return `${id}:${state.miners[id] || 0}:${getMinerSellValue(id)}`;
-      if (getOreById(id)) return `${id}:${state.ores[id] || 0}:${state.getEffectiveOreSellValue(id)}`;
-      return id;
+      if (!id || !getChibiById(id)) return '';
+      return `${id}:${state.miners[id] || 0}:${getMinerSellValue(id)}`;
     })
     .join(',')}|${state.selectedHotbarSlot}`;
 }
@@ -86,28 +84,14 @@ export function renderHotbarSlotsHtml(state: GameState): string {
         `;
       if (!itemId) return emptySlot;
 
-      let rarity: ItemRarity;
-      let title: string;
-      let artHtml: string;
-      let worth: number;
-      let qty: number;
-
       const chibi = getChibiById(itemId);
-      if (chibi) {
-        rarity = getMinerRarity(chibi.id);
-        title = chibi.name;
-        artHtml = chibiPortraitHtml(chibi, { draggable: false });
-        worth = getMinerSellValue(chibi.id);
-        qty = state.miners[chibi.id] || 0;
-      } else {
-        const ore = getOreById(itemId);
-        if (!ore) return emptySlot;
-        rarity = ore.rarity;
-        title = ore.name;
-        artHtml = oreIconSvg(ore.color, ore.secondaryColor, ore.rarity, `hb_${idx}_${ore.id}`);
-        worth = state.getEffectiveOreSellValue(ore.id);
-        qty = state.ores[ore.id] || 0;
-      }
+      if (!chibi) return emptySlot;
+
+      const rarity: ItemRarity = getMinerRarity(chibi.id);
+      const title = chibi.name;
+      const artHtml = chibiPortraitHtml(chibi, { draggable: false });
+      const worth = getMinerSellValue(chibi.id);
+      const qty = state.miners[chibi.id] || 0;
 
       if (qty <= 0) return emptySlot;
 
