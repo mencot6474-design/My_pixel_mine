@@ -536,7 +536,7 @@ export class GameState {
     return ShopWeather.getPickaxeRestockRemainingSecDomain(this, Date.now(), () => this.emit());
   }
 
-  public buyPickaxe(pickaxeId: string): 'bought' | 'sold_out' | 'no_cash' {
+  public buyPickaxe(pickaxeId: string): 'bought' | 'sold_out' | 'no_cash' | 'locked' {
     return ShopWeather.buyPickaxeDomain(this, pickaxeId, Date.now(), () => this.emit());
   }
 

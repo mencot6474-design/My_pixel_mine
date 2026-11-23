@@ -6,6 +6,7 @@ import {
   getPickaxeById,
   getPickaxeSellValue,
   PICKAXE_RESTOCK_MS,
+  WorldId,
 } from './GameData';
 import { isNonSellableChibi } from './DailyLoginData';
 import type { PlotUnitState } from './GameStateSave';
@@ -36,6 +37,7 @@ export interface ShopWeatherContext {
   activeBoosts: Record<string, number>;
   weatherId: WeatherId;
   weatherExpiresAt: number;
+  unlockedWorlds?: readonly WorldId[];
   getEffectiveOreSellValue(oreId: string): number;
 }
 
@@ -179,16 +181,17 @@ export function getPickaxeRestockRemainingSecDomain(
   return Math.max(0, Math.ceil((ctx.pickaxeRestockAt - now) / 1000));
 }
 
-/** Purchases one pickaxe from the stocked shop if affordable and in stock. */
+/** Purchases one pickaxe from the stocked shop if unlocked for its World, in stock, and affordable. */
 export function buyPickaxeDomain(
-  ctx: Pick<ShopWeatherContext, 'cash' | 'ownedPickaxes' | 'pickaxeStock' | 'pickaxeRestockAt'>,
+  ctx: Pick<ShopWeatherContext, 'cash' | 'ownedPickaxes' | 'pickaxeStock' | 'pickaxeRestockAt' | 'unlockedWorlds'>,
   pickaxeId: string,
   now = Date.now(),
   emit: () => void = () => {}
-): 'bought' | 'sold_out' | 'no_cash' {
+): 'bought' | 'sold_out' | 'no_cash' | 'locked' {
   refreshPickaxeStockIfDueDomain(ctx, now, emit);
   const p = getPickaxeById(pickaxeId);
   if (!p || p.id !== pickaxeId) return 'sold_out';
+  if (ctx.unlockedWorlds && !ctx.unlockedWorlds.includes(p.worldId)) return 'locked';
   const stock = ctx.pickaxeStock[p.id] ?? 0;
   if (stock <= 0) return 'sold_out';
   if (ctx.cash < p.cost) return 'no_cash';

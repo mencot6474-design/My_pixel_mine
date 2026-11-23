@@ -1614,4 +1614,35 @@ describe('Tahap B HUD Modules', () => {
       expect(fakeRoot.innerHTML).not.toContain('Sx');
     });
   });
+
+  describe('World-Locked Pickaxe Shop UI', () => {
+    it('shows world lock state for unreached worlds and rejects locked purchases with toast', () => {
+      const state = new GameState();
+      state.cash = 1e30;
+      const onToast = vi.fn();
+      const shopUi = new ShopModalsUi(state, onToast, () => {});
+      const html = shopUi.renderPickaxeShopModal();
+      expect(html).toContain('Unlock Crystal Caves');
+      expect(html).toContain('$3.5M');
+      expect(html).toContain('$25Sp');
+
+      let clickHandler: ((e: { stopPropagation: () => void }) => void) | null = null;
+      const lockedBtn = {
+        dataset: { buyPickaxe: 'rhodolite' },
+        addEventListener: (_evt: string, fn: (e: { stopPropagation: () => void }) => void) => {
+          clickHandler = fn;
+        },
+        classList: { toggle: vi.fn() },
+        closest: () => null,
+      };
+      const fakeRoot = {
+        querySelector: () => null,
+        querySelectorAll: (sel: string) => (sel === '[data-buy-pickaxe]' ? [lockedBtn] : []),
+      } as unknown as HTMLElement;
+      shopUi.bindEvents(fakeRoot);
+      clickHandler!({ stopPropagation: vi.fn() });
+      expect(state.ownedPickaxes.rhodolite).toBeUndefined();
+      expect(onToast).toHaveBeenCalledWith('Unlock Crystal Caves first!');
+    });
+  });
 });

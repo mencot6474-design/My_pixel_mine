@@ -1703,14 +1703,36 @@ describe('Pure 3D Mine World', () => {
         expect(costPerDmg).toBeGreaterThan(prevCostPerDmg);
         prevCostPerDmg = costPerDmg;
         expect(getPickaxeSellValue(p.id)).toBeLessThan(p.cost);
+        const wIdx = WORLDS.findIndex((w) => w.id === p.worldId);
+        expect(wIdx).toBeGreaterThanOrEqual(0);
+        const worldFloor = wIdx === 0 ? 450 : WORLDS[wIdx].unlockCost;
+        const worldCeil = (wIdx === 0 ? 1_000 : worldFloor) * 1_000;
+        expect(p.cost).toBeGreaterThanOrEqual(worldFloor);
+        expect(p.cost).toBeLessThan(worldCeil);
       }
     }
 
     const gs = new GameState();
-    gs.cash = 1e18;
+    gs.cash = 1e30;
+    // Pickaxes for locked Worlds cannot be bought even with huge cash
+    expect(gs.buyPickaxe('rhodolite')).toBe('locked');
+    expect(gs.buyPickaxe('starwellcrown')).toBe('locked');
+    expect(gs.buyPickaxe('chronoeternity')).toBe('locked');
+    expect(gs.ownedPickaxes.rhodolite).toBeUndefined();
+
+    // Unlocking Crystal Caves unlocks Crystal pickaxes while Magma+ stay locked
+    gs.unlockedWorlds.push('crystal');
+    expect(gs.buyPickaxe('rhodolite')).toBe('bought');
+    expect(gs.ownedPickaxes.rhodolite).toBe(1);
+    expect(gs.buyPickaxe('anvilheart')).toBe('locked');
+
+    // Unlocking all Worlds allows buying Starwell Crown & Chrono Eternity
+    gs.unlockedWorlds = WORLDS.map((w) => w.id);
     expect(gs.buyPickaxe('starwellcrown')).toBe('bought');
     expect(gs.ownedPickaxes.starwellcrown).toBe(1);
     expect(gs.buyPickaxe('starwellcrown')).toBe('sold_out');
+    expect(gs.buyPickaxe('chronoeternity')).toBe('bought');
+    expect(gs.ownedPickaxes.chronoeternity).toBe(1);
   });
 
   it('serves 2D fantasy PNG art for all 16 HUD & Modal icons', () => {

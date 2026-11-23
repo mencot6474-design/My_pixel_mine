@@ -9,6 +9,7 @@ import {
   getOreById,
   getPickaxeById,
   getPickaxeSellValue,
+  getWorldById,
   ItemRarity,
   PICKAXES,
 } from '../game/GameData';
@@ -95,17 +96,21 @@ export class ShopModalsUi {
   private buildPickaxeInspectorHtml(): string {
     const p = getPickaxeById(this.shopInspectPickaxeId) ?? PICKAXES[0];
     this.shopInspectPickaxeId = p.id;
+    const locked = !this.state.isWorldUnlocked(p.worldId);
+    const reqWorld = getWorldById(p.worldId);
     const stock = this.state.pickaxeStock[p.id] ?? 0;
     const soldOut = stock <= 0;
-    const canBuy = !soldOut && this.state.cash >= p.cost;
+    const canBuy = !locked && !soldOut && this.state.cash >= p.cost;
     const ownedBag = this.state.ownedPickaxes[p.id] || 0;
     const equippedCount = this.state.plotUnits.filter((u) => u?.pickaxeId === p.id).length;
 
     return renderInspectorPanel({
       rarity: p.rarity,
       title: p.name,
-      subtitle: 'Pickaxe Upgrade',
-      badgesHtml: `<span class="mam-pill rounded-full border-2 border-[#14111d] text-[10px] font-black ${soldOut ? 'bg-[#fda4af] text-[#14111d]' : 'bg-[#6ee7b7] text-[#14111d]'}">${soldOut ? 'Sold Out' : `${fmtInt(stock)} Left`}</span>`,
+      subtitle: `${reqWorld.name} • Pickaxe`,
+      badgesHtml: locked
+        ? `<span class="mam-pill rounded-full border-2 border-[#14111d] text-[10px] font-black bg-[#e2e8f0] text-[#475569]">🔒 ${reqWorld.name}</span>`
+        : `<span class="mam-pill rounded-full border-2 border-[#14111d] text-[10px] font-black ${soldOut ? 'bg-[#fda4af] text-[#14111d]' : 'bg-[#6ee7b7] text-[#14111d]'}">${soldOut ? 'Sold Out' : `${fmtInt(stock)} Left`}</span>`,
       artHtml: pickaxeIconHtml(p.id, 84, p.name),
       stats: [
         ['Power', `${p.dmgMult}x DMG`, 'text-[#0284c7]'],
@@ -114,8 +119,8 @@ export class ShopModalsUi {
         ['Resell', fmtMoney(getPickaxeSellValue(p.id)), 'text-[#059669]'],
       ],
       actionHtml: `
-        <button class="${TW_SHOP_BUY_BTN} !h-10 !text-[15px] ${soldOut ? 'sold-out' : canBuy ? '' : 'disabled'}" data-buy-pickaxe="${p.id}">
-          ${soldOut ? 'Sold Out' : p.cost === 0 ? 'Claim Free' : `Buy • ${fmtMoney(p.cost)}`}
+        <button class="${TW_SHOP_BUY_BTN} !h-10 !text-[15px] ${locked ? 'disabled' : soldOut ? 'sold-out' : canBuy ? '' : 'disabled'}" data-buy-pickaxe="${p.id}">
+          ${locked ? `Unlock ${reqWorld.name}` : soldOut ? 'Sold Out' : p.cost === 0 ? 'Claim Free' : `Buy • ${fmtMoney(p.cost)}`}
         </button>
       `,
     });
@@ -197,22 +202,24 @@ export class ShopModalsUi {
     if (!getPickaxeById(this.shopInspectPickaxeId)) this.shopInspectPickaxeId = PICKAXES[0].id;
 
     const cards = PICKAXES.map((p) => {
+      const locked = !this.state.isWorldUnlocked(p.worldId);
+      const reqWorld = getWorldById(p.worldId);
       const stock = this.state.pickaxeStock[p.id] ?? 0;
       const soldOut = stock <= 0;
-      const canBuy = !soldOut && this.state.cash >= p.cost;
+      const canBuy = !locked && !soldOut && this.state.cash >= p.cost;
       const isInspected = this.shopInspectPickaxeId === p.id;
       return `
-        <div class="${rarityCardClasses(p.rarity, isInspected ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '')} !aspect-auto min-h-[192px] pt-2.5 px-2 pb-[9px] gap-1.5 !justify-start" style="${rarityVars(p.rarity)}" data-shop-item-card="true" data-inspect-pickaxe="${p.id}">
-          <div class="mam-card-art !relative !inset-auto w-full h-[70px] shrink-0 flex items-center justify-center">${pickaxeIconHtml(p.id, 66, p.name)}</div>
-          <div class="w-full flex flex-col items-center gap-0.5 min-h-0">
+        <div class="${rarityCardClasses(p.rarity, `${isInspected ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : ''} ${locked ? 'opacity-80' : ''}`)} !aspect-auto min-h-[192px] pt-2.5 px-2 pb-[9px] gap-1.5 !justify-start" style="${rarityVars(p.rarity)}" data-shop-item-card="true" data-inspect-pickaxe="${p.id}">
+          <div class="mam-card-art !relative !inset-auto w-full h-[70px] shrink-0 flex items-center justify-center ${locked ? 'grayscale-[65%] opacity-75' : ''}">${pickaxeIconHtml(p.id, 66, p.name)}</div>
+          <div class="w-full flex flex-col items-center gap-0.5 min-w-0">
             <div class="w-full px-0.5 text-center text-[14px] font-black leading-[1.18] text-[#14111d] whitespace-nowrap overflow-hidden text-ellipsis" title="${p.name}">${p.name}</div>
             <div class="text-[11px] font-black leading-[1.15] text-[#0284c7] text-center">${p.dmgMult}x DMG</div>
-            <div class="text-[12px] font-extrabold leading-[1.15] text-[#5b526e] text-center [&.is-sold-out]:text-[#dc2626] ${soldOut ? 'is-sold-out' : ''}" data-shop-meta="true">
-              ${soldOut ? 'Sold out' : `${fmtInt(stock)} in stock`}
+            <div class="text-[11px] font-extrabold leading-[1.15] text-center truncate max-w-full ${locked ? 'text-[#b45309]' : soldOut ? 'text-[#dc2626]' : 'text-[#5b526e]'}" data-shop-meta="true">
+              ${locked ? `Unlock ${reqWorld.name}` : soldOut ? 'Sold out' : `${fmtInt(stock)} in stock`}
             </div>
           </div>
-          <button class="${TW_SHOP_BUY_BTN} ${soldOut ? 'sold-out' : canBuy ? '' : 'disabled'}" data-buy-pickaxe="${p.id}">
-            ${p.cost === 0 ? 'Free' : fmtMoney(p.cost)}
+          <button class="${TW_SHOP_BUY_BTN} ${locked ? 'disabled' : soldOut ? 'sold-out' : canBuy ? '' : 'disabled'}" data-buy-pickaxe="${p.id}">
+            ${locked ? `🔒 ${fmtMoney(p.cost)}` : p.cost === 0 ? 'Free' : fmtMoney(p.cost)}
           </button>
         </div>
       `;
@@ -604,6 +611,11 @@ export class ShopModalsUi {
         if (res === 'bought') {
           audio.playSfx('equip-pick');
           this.pushToast('Pickaxe purchased!');
+        } else if (res === 'locked') {
+          const p = getPickaxeById(id);
+          const reqWorldName = p ? getWorldById(p.worldId).name : 'next World';
+          audio.playSfx('ui-error');
+          this.pushToast(`Unlock ${reqWorldName} first!`);
         } else if (res === 'sold_out') {
           audio.playSfx('ui-error');
           this.pushToast('Sold out! Wait for restock.');
@@ -771,17 +783,19 @@ export class ShopModalsUi {
 
   public updatePickaxeShopLive(root: HTMLElement): void {
     for (const p of PICKAXES) {
+      const locked = !this.state.isWorldUnlocked(p.worldId);
+      const reqWorld = getWorldById(p.worldId);
       const stock = this.state.pickaxeStock[p.id] ?? 0;
       const soldOut = stock <= 0;
-      const canBuy = !soldOut && this.state.cash >= p.cost;
+      const canBuy = !locked && !soldOut && this.state.cash >= p.cost;
       const btn = root.querySelector<HTMLElement>(`[data-buy-pickaxe="${p.id}"]`);
       if (!btn) continue;
-      btn.classList.toggle('sold-out', soldOut);
-      btn.classList.toggle('disabled', !soldOut && !canBuy);
+      btn.classList.toggle('sold-out', !locked && soldOut);
+      btn.classList.toggle('disabled', locked || (!soldOut && !canBuy));
       const meta = btn.closest('[data-shop-item-card="true"]')?.querySelector<HTMLElement>('[data-shop-meta="true"]');
       if (meta) {
-        meta.classList.toggle('is-sold-out', soldOut);
-        meta.textContent = soldOut ? 'Sold out' : `${fmtInt(stock)} in stock`;
+        meta.classList.toggle('is-sold-out', !locked && soldOut);
+        meta.textContent = locked ? `Unlock ${reqWorld.name}` : soldOut ? 'Sold out' : `${fmtInt(stock)} in stock`;
       }
     }
     this.refreshInspectorLive(root);

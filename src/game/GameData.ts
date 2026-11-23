@@ -53,6 +53,7 @@ export interface OtherItemDef {
 export interface PickaxeDef {
   id: string;
   name: string;
+  worldId: WorldId;
   dmgMult: number;
   cost: number;
   rarity: ItemRarity;
@@ -511,20 +512,20 @@ syncTwinCatalogDpsFromAnchor();
 export const OTHER_ITEMS: readonly OtherItemDef[] = [] as const;
 
 export const PICKAXES: readonly PickaxeDef[] = [
-  { id: 'starter', name: 'Chrysoberyl', dmgMult: 1, cost: 0, rarity: 'common', color: '#94a3b8' },
-  { id: 'sunwheel', name: 'Sunwheel', dmgMult: 2.0, cost: 450, rarity: 'legendary', color: '#f59e0b' },
-  { id: 'zircon', name: 'Zircon', dmgMult: 3.8, cost: 3_500, rarity: 'rainbow', color: '#38bdf8' },
-  { id: 'thundercoil', name: 'Thundercoil', dmgMult: 7.0, cost: 45_000, rarity: 'uncommon', color: '#22c55e' },
-  { id: 'rhodolite', name: 'Rhodolite', dmgMult: 14.0, cost: 1_200_000, rarity: 'rare', color: '#818cf8' },
-  { id: 'heartpiercer', name: 'Heartpiercer', dmgMult: 30.0, cost: 35_000_000, rarity: 'mythic', color: '#ec4899' },
-  { id: 'anvilheart', name: 'Anvilheart', dmgMult: 65.0, cost: 1_500_000_000, rarity: 'rainbow', color: '#f97316' },
-  { id: 'cinderforge', name: 'Cinderforge', dmgMult: 140.0, cost: 55_000_000_000, rarity: 'legendary', color: '#fb7185' },
-  { id: 'runebreaker', name: 'Runebreaker', dmgMult: 310.0, cost: 2_500_000_000_000, rarity: 'epic', color: '#2dd4bf' },
-  { id: 'voidcleaver', name: 'Voidcleaver', dmgMult: 700.0, cost: 120_000_000_000_000, rarity: 'exotic', color: '#c084fc' },
-  { id: 'astralsiphon', name: 'Astralsiphon', dmgMult: 1_600.0, cost: 6_000_000_000_000_000, rarity: 'mythic', color: '#38bdf8' },
-  { id: 'starwellcrown', name: 'Starwell Crown', dmgMult: 3_800.0, cost: 350_000_000_000_000_000, rarity: 'secret', color: '#fde047' },
-  { id: 'leviathanfang', name: 'Leviathan Fang', dmgMult: 8_800.0, cost: 20_000_000_000_000_000_000, rarity: 'exotic', color: '#14b8a6' },
-  { id: 'chronoeternity', name: 'Chrono Eternity', dmgMult: 20_000.0, cost: 1_200_000_000_000_000_000_000, rarity: 'secret', color: '#fbbf24' },
+  { id: 'starter', name: 'Chrysoberyl', worldId: 'underground', dmgMult: 1, cost: 0, rarity: 'common', color: '#94a3b8' },
+  { id: 'sunwheel', name: 'Sunwheel', worldId: 'underground', dmgMult: 2.0, cost: 450, rarity: 'legendary', color: '#f59e0b' },
+  { id: 'zircon', name: 'Zircon', worldId: 'underground', dmgMult: 3.8, cost: 8_000, rarity: 'rainbow', color: '#38bdf8' },
+  { id: 'thundercoil', name: 'Thundercoil', worldId: 'underground', dmgMult: 7.0, cost: 120_000, rarity: 'uncommon', color: '#22c55e' },
+  { id: 'rhodolite', name: 'Rhodolite', worldId: 'crystal', dmgMult: 14.0, cost: 3_500_000, rarity: 'rare', color: '#818cf8' },
+  { id: 'heartpiercer', name: 'Heartpiercer', worldId: 'crystal', dmgMult: 30.0, cost: 90_000_000, rarity: 'mythic', color: '#ec4899' },
+  { id: 'anvilheart', name: 'Anvilheart', worldId: 'magma', dmgMult: 65.0, cost: 3_500_000_000, rarity: 'rainbow', color: '#f97316' },
+  { id: 'cinderforge', name: 'Cinderforge', worldId: 'magma', dmgMult: 140.0, cost: 90_000_000_000, rarity: 'legendary', color: '#fb7185' },
+  { id: 'runebreaker', name: 'Runebreaker', worldId: 'ruins', dmgMult: 310.0, cost: 15_000_000_000_000, rarity: 'epic', color: '#2dd4bf' },
+  { id: 'voidcleaver', name: 'Voidcleaver', worldId: 'astral', dmgMult: 700.0, cost: 15_000_000_000_000_000, rarity: 'exotic', color: '#c084fc' },
+  { id: 'astralsiphon', name: 'Astralsiphon', worldId: 'starwell', dmgMult: 1_600.0, cost: 5_000_000_000_000_000_000, rarity: 'mythic', color: '#38bdf8' },
+  { id: 'starwellcrown', name: 'Starwell Crown', worldId: 'starwell', dmgMult: 3_800.0, cost: 150_000_000_000_000_000_000, rarity: 'secret', color: '#fde047' },
+  { id: 'leviathanfang', name: 'Leviathan Fang', worldId: 'abyssal', dmgMult: 8_800.0, cost: 25_000_000_000_000_000_000_000, rarity: 'exotic', color: '#14b8a6' },
+  { id: 'chronoeternity', name: 'Chrono Eternity', worldId: 'chrono', dmgMult: 20_000.0, cost: 25_000_000_000_000_000_000_000_000, rarity: 'secret', color: '#fbbf24' },
 ] as const;
 
 export const MUTATIONS: readonly MutationDef[] = [
