@@ -39,7 +39,12 @@ import * as TwinTrialDom from './TwinTrialDomain';
 import type { TwinTrialState } from './TwinTrialDomain';
 import { type ActiveAnomalyPassives, getActiveAnomalyPassiveBonuses } from './AnomalyData';
 import * as RiftDom from './RiftDomain';
-import type { RiftBreachClaimResult, RiftWindowSnapshot } from './RiftDomain';
+import type {
+  RiftBattleState,
+  RiftBattleSummary,
+  RiftBreachClaimResult,
+  RiftWindowSnapshot,
+} from './RiftDomain';
 
 export type {
   PlotUnitState,
@@ -132,6 +137,13 @@ export class GameState {
   public riftShards = 0;
   public riftPassExpiresAt = 0;
   public riftBreachesCompleted = 0;
+  public riftHourlyKey = '';
+  public riftHourlyAttemptsUsed = 0;
+  public riftPassAttemptsUsed = 0;
+  public riftBestDamage = 0;
+  public riftBestTier = 0;
+  public riftBattle: RiftBattleState | null = null;
+  public riftLastSummary: RiftBattleSummary | null = null;
   private loadedLastSavedAt = 0;
 
   private readonly listeners = new Set<StateListener>();
@@ -627,69 +639,62 @@ export class GameState {
   }
 
   public getRiftWindowSnapshot(nowMs = Date.now()): RiftWindowSnapshot {
-    return RiftDom.getRiftWindowSnapshot(nowMs, this.riftPassExpiresAt);
+    return RiftDom.getRiftWindowSnapshot(nowMs, this.riftPassExpiresAt, this);
   }
 
-  public buyRiftPass(nowMs = Date.now()): 'bought' | 'no_gems' {
-    const self = this;
-    const res = RiftDom.buyRiftPassDomain(
-      {
-        get gems() { return self.gems; },
-        set gems(v: number) { self.gems = v; },
-        get riftShards() { return self.riftShards; },
-        set riftShards(v: number) { self.riftShards = v; },
-        get riftPassExpiresAt() { return self.riftPassExpiresAt; },
-        set riftPassExpiresAt(v: number) { self.riftPassExpiresAt = v; },
-        get riftBreachesCompleted() { return self.riftBreachesCompleted; },
-        set riftBreachesCompleted(v: number) { self.riftBreachesCompleted = v; },
-        miners: this.miners,
-        discovered: this.discovered,
-      },
-      nowMs,
-      () => this.emit()
-    );
-    return res;
+  public getRiftSquadEffectiveDps(): number {
+    return RiftDom.getRiftSquadEffectiveDpsDomain(this);
+  }
+
+  public buyRiftPass(nowMs = Date.now()): 'bought' | 'no_gems' | 'already_has_attempts' {
+    return RiftDom.buyRiftPassDomain(this, nowMs, () => this.emit());
+  }
+
+  public startRiftBattle(nowMs = Date.now()): boolean {
+    return RiftDom.startRiftBattleDomain(this, nowMs, () => this.emit());
+  }
+
+  public applyRiftSquadStrike(
+    slotIndex: number,
+    attackInterval = 0.85,
+    isUltimate = false,
+    rng: () => number = Math.random
+  ) {
+    return RiftDom.applyRiftSquadStrikeDomain(this, slotIndex, attackInterval, isUltimate, rng);
+  }
+
+  public applyRiftTapDamage(
+    baseTapDmg = this.getTapDamage(),
+    baseCritChance = 0.15,
+    baseCritMult = 2.5,
+    rng: () => number = Math.random
+  ) {
+    return RiftDom.applyRiftTapDamageDomain(this, baseTapDmg, baseCritChance, baseCritMult, rng);
+  }
+
+  public stepRiftBattleTick(
+    dtSec: number,
+    totalSquadDps = this.getRiftSquadEffectiveDps(),
+    nowMs = Date.now(),
+    rng: () => number = Math.random
+  ) {
+    return RiftDom.stepRiftBattleTickDomain(this, dtSec, totalSquadDps, nowMs, rng, () => this.emit());
+  }
+
+  public retreatRiftBattle(nowMs = Date.now(), rng: () => number = Math.random): RiftBattleSummary | null {
+    return RiftDom.retreatRiftBattleDomain(this, nowMs, rng, () => this.emit());
+  }
+
+  public clearRiftSummary(): void {
+    this.riftLastSummary = null;
   }
 
   public claimRiftBreachReward(nowMs = Date.now(), rng?: () => number): RiftBreachClaimResult {
-    const self = this;
-    return RiftDom.claimRiftBreachRewardDomain(
-      {
-        get gems() { return self.gems; },
-        set gems(v: number) { self.gems = v; },
-        get riftShards() { return self.riftShards; },
-        set riftShards(v: number) { self.riftShards = v; },
-        get riftPassExpiresAt() { return self.riftPassExpiresAt; },
-        set riftPassExpiresAt(v: number) { self.riftPassExpiresAt = v; },
-        get riftBreachesCompleted() { return self.riftBreachesCompleted; },
-        set riftBreachesCompleted(v: number) { self.riftBreachesCompleted = v; },
-        miners: this.miners,
-        discovered: this.discovered,
-      },
-      nowMs,
-      rng,
-      () => this.emit()
-    );
+    return RiftDom.claimRiftBreachRewardDomain(this, nowMs, rng, () => this.emit());
   }
 
   public redeemAnomalyChibi(chibiId: string): 'redeemed' | 'no_shards' | 'invalid' {
-    const self = this;
-    return RiftDom.redeemAnomalyChibiDomain(
-      {
-        get gems() { return self.gems; },
-        set gems(v: number) { self.gems = v; },
-        get riftShards() { return self.riftShards; },
-        set riftShards(v: number) { self.riftShards = v; },
-        get riftPassExpiresAt() { return self.riftPassExpiresAt; },
-        set riftPassExpiresAt(v: number) { self.riftPassExpiresAt = v; },
-        get riftBreachesCompleted() { return self.riftBreachesCompleted; },
-        set riftBreachesCompleted(v: number) { self.riftBreachesCompleted = v; },
-        miners: this.miners,
-        discovered: this.discovered,
-      },
-      chibiId,
-      () => this.emit()
-    );
+    return RiftDom.redeemAnomalyChibiDomain(this, chibiId, () => this.emit());
   }
 
   public buyPremiumShopItem(chibiId: string): 'bought' | 'no_coins' | 'invalid' {

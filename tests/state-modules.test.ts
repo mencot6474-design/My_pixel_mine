@@ -2187,5 +2187,155 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(getRiftHourlyBossId(1)).toBe('null-singularity');
       expect(getRiftHourlyBossId(0)).not.toBe(getRiftHourlyBossId(1));
     });
+
+    it('enforces 3-attempt dual-bucket quota across :05/:15 Force Open and :55/:00 hourly overlap without double grants', () => {
+      const state = new GameState();
+      const emptyOpenMs = new Date(2026, 10, 25, 14, 5, 0).getTime();
+      // Empty plot squad guard
+      state.plotMiners = [null, null, null, null, null];
+      state.plotUnits = [null, null, null, null, null];
+      expect(state.startRiftBattle(emptyOpenMs)).toBe(false);
+
+      // Deploy a unit
+      state.miners['astral-recruit'] = 1;
+      state.equipBestMiners();
+      expect(state.getRiftWindowSnapshot(emptyOpenMs).attemptsRemaining).toBe(3);
+
+      // Spend all 3 hourly attempts at :05
+      for (let i = 0; i < 3; i++) {
+        expect(state.startRiftBattle(emptyOpenMs)).toBe(true);
+        state.retreatRiftBattle(emptyOpenMs);
+        state.clearRiftSummary();
+      }
+      expect(state.getRiftWindowSnapshot(emptyOpenMs).attemptsRemaining).toBe(0);
+      expect(state.startRiftBattle(emptyOpenMs)).toBe(false);
+
+      // Buy Force Open pass at :05 when 0 attempts left -> switches to pass bucket with 3 attempts
+      state.gems = RIFT_PASS_GEM_COST;
+      expect(state.buyRiftPass(emptyOpenMs)).toBe('bought');
+      expect(state.getRiftWindowSnapshot(emptyOpenMs)).toMatchObject({
+        isOpen: true,
+        source: 'pass',
+        attemptsRemaining: 3,
+      });
+      // Spend 1 pass attempt at :06, then cross :15 -> must still have 2 pass attempts (no reset to 3)
+      const at06Ms = emptyOpenMs + 60_000;
+      expect(state.startRiftBattle(at06Ms)).toBe(true);
+      state.retreatRiftBattle(at06Ms);
+      const at16Ms = new Date(2026, 10, 25, 14, 16, 0).getTime();
+      expect(state.getRiftWindowSnapshot(at16Ms)).toMatchObject({
+        isOpen: true,
+        source: 'pass',
+        attemptsRemaining: 2,
+      });
+
+      // Fresh scenario: buy pass at :55, spend 1 pass attempt, then cross :00 -> gets 3 hourly attempts while keeping 2 pass attempts
+      const stateB = new GameState();
+      stateB.miners['astral-recruit'] = 1;
+      stateB.equipBestMiners();
+      stateB.gems = RIFT_PASS_GEM_COST;
+      const at55Ms = new Date(2026, 10, 25, 14, 55, 0).getTime();
+      expect(stateB.buyRiftPass(at55Ms)).toBe('bought');
+      expect(stateB.startRiftBattle(at55Ms)).toBe(true);
+      stateB.retreatRiftBattle(at55Ms);
+      expect(stateB.getRiftWindowSnapshot(at55Ms).attemptsRemaining).toBe(2);
+
+      const at00Ms = new Date(2026, 10, 25, 15, 0, 0).getTime();
+      expect(stateB.getRiftWindowSnapshot(at00Ms)).toMatchObject({
+        isOpen: true,
+        source: 'hourly',
+        attemptsRemaining: 3,
+      });
+      // Exhaust all 3 free hourly attempts -> should fall back to the 2 unused pass attempts (still valid until :10)
+      for (let i = 0; i < 3; i++) {
+        expect(stateB.startRiftBattle(at00Ms)).toBe(true);
+        stateB.retreatRiftBattle(at00Ms);
+      }
+      expect(stateB.getRiftWindowSnapshot(at00Ms)).toMatchObject({
+        isOpen: true,
+        source: 'pass',
+        attemptsRemaining: 2,
+      });
+    });
+
+    it('runs 30s Rift battle with combat anomalies (overclock-surge, hyper-crit, mirror-echo, meteor-storm), settles 1 Shard/Tier, and persists quota/best', () => {
+      // Find hour indices for each anomaly (hourIndex % 4 === 0..3)
+      const baseHourMs = Math.floor(new Date(2026, 10, 25, 16, 2, 0).getTime() / 3_600_000) * 3_600_000 + 120_000;
+      const findHourMs = (mod: number) => {
+        for (let h = 0; h < 8; h++) {
+          const ms = baseHourMs + h * 3_600_000;
+          if (Math.floor(ms / 3_600_000) % 4 === mod) return ms;
+        }
+        return baseHourMs;
+      };
+
+      const hyperCritMs = findHourMs(0);
+      const meteorStormMs = findHourMs(1);
+      const overclockSurgeMs = findHourMs(2);
+      const mirrorEchoMs = findHourMs(3);
+
+      // 1. overclock-surge: 1.3x squad strike DMG
+      const stateSurge = new GameState();
+      stateSurge.miners['astral-recruit'] = 1;
+      stateSurge.equipBestMiners();
+      expect(stateSurge.startRiftBattle(overclockSurgeMs)).toBe(true);
+      const unitDmg = stateSurge.getPlotUnitStats(0)!.dmg;
+      const surgeStrike = stateSurge.applyRiftSquadStrike(0, 1, false, () => 0.99);
+      expect(surgeStrike.dmgDealt).toBe(Math.round(unitDmg * 1.3));
+
+      // 2. mirror-echo: 1.35x on Ult strike
+      const stateEcho = new GameState();
+      stateEcho.miners['astral-recruit'] = 1;
+      stateEcho.equipBestMiners();
+      const echoUnitDmg = stateEcho.getPlotUnitStats(0)!.dmg;
+      expect(stateEcho.startRiftBattle(mirrorEchoMs)).toBe(true);
+      const echoBase = stateEcho.applyRiftSquadStrike(0, 1, false, () => 0.99);
+      const echoUlt = stateEcho.applyRiftSquadStrike(0, 1, true, () => 0.99);
+      expect(echoBase.dmgDealt).toBe(Math.round(echoUnitDmg));
+      expect(echoUlt.dmgDealt).toBe(Math.round(echoUnitDmg * 1.35));
+
+      // 3. hyper-crit: +25% crit chance & 1.5x crit mult (rng = 0.25 triggers crit because base 0.05 + 0.25 = 0.30 > 0.25)
+      const stateCrit = new GameState();
+      stateCrit.miners['astral-recruit'] = 1;
+      stateCrit.equipBestMiners();
+      const critUnitDmg = stateCrit.getPlotUnitStats(0)!.dmg;
+      expect(stateCrit.startRiftBattle(hyperCritMs)).toBe(true);
+      const critStrike = stateCrit.applyRiftSquadStrike(0, 1, false, () => 0.25);
+      expect(critStrike.isCrit).toBe(true);
+      expect(critStrike.dmgDealt).toBe(Math.round(critUnitDmg * 2.25 * 1.5));
+
+      // 4. meteor-storm: 4s meteor burst + 30s finish awards exact Tier N = N Shards (Tier 4 -> 4 Shards) & persists
+      const stateMeteor = new GameState();
+      stateMeteor.miners['astral-recruit'] = 1;
+      stateMeteor.equipBestMiners();
+      expect(stateMeteor.startRiftBattle(meteorStormMs)).toBe(true);
+      const tick4s = stateMeteor.stepRiftBattleTick(4.0, 1000, meteorStormMs, () => 0.99);
+      expect(tick4s.meteorDmg).toBe(4000);
+      expect(tick4s.finished).toBe(false);
+
+      // Push damage to Tier 4 (50T) via tap and finish timer
+      stateMeteor.applyRiftTapDamage(50_000_000_000_000, 0, 1, () => 0.99);
+      const finishTick = stateMeteor.stepRiftBattleTick(26.0, 1000, meteorStormMs, () => 0.01);
+      expect(finishTick.finished).toBe(true);
+      expect(finishTick.summary).toMatchObject({
+        tierReached: 4,
+        shardsEarned: 4,
+        isNewBest: true,
+        attemptsRemaining: 2,
+      });
+      expect(finishTick.summary?.droppedChibiId).toBeTruthy();
+      expect(stateMeteor.riftShards).toBe(4);
+      expect(stateMeteor.riftBestTier).toBe(4);
+      expect(stateMeteor.riftBestDamage).toBeGreaterThanOrEqual(50_000_000_000_000);
+
+      // Save & reload round-trip preserves quota & personal best
+      const saved = serializeSavePayload(stateMeteor);
+      const reloaded = new GameState();
+      deserializeSaveJson(reloaded, JSON.stringify(saved));
+      expect(reloaded.riftHourlyAttemptsUsed).toBe(1);
+      expect(reloaded.riftBestTier).toBe(4);
+      expect(reloaded.riftBestDamage).toBe(stateMeteor.riftBestDamage);
+      expect(reloaded.getRiftWindowSnapshot(meteorStormMs).attemptsRemaining).toBe(2);
+    });
   });
 });

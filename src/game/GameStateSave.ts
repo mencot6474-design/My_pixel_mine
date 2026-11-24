@@ -144,6 +144,11 @@ export interface SavePayload {
   riftShards?: number;
   riftPassExpiresAt?: number;
   riftBreachesCompleted?: number;
+  riftHourlyKey?: string;
+  riftHourlyAttemptsUsed?: number;
+  riftPassAttemptsUsed?: number;
+  riftBestDamage?: number;
+  riftBestTier?: number;
 }
 
 export interface SaveableGameState {
@@ -202,6 +207,11 @@ export interface SaveableGameState {
   riftShards: number;
   riftPassExpiresAt: number;
   riftBreachesCompleted: number;
+  riftHourlyKey: string;
+  riftHourlyAttemptsUsed: number;
+  riftPassAttemptsUsed: number;
+  riftBestDamage: number;
+  riftBestTier: number;
 }
 
 /** Maps retired World 2–5 ore IDs onto current catalog ore IDs. */
@@ -331,6 +341,11 @@ export function serializeSavePayload(state: SaveableGameState): SavePayload {
     riftShards: state.riftShards,
     riftPassExpiresAt: state.riftPassExpiresAt,
     riftBreachesCompleted: state.riftBreachesCompleted,
+    riftHourlyKey: state.riftHourlyKey,
+    riftHourlyAttemptsUsed: state.riftHourlyAttemptsUsed,
+    riftPassAttemptsUsed: state.riftPassAttemptsUsed,
+    riftBestDamage: state.riftBestDamage,
+    riftBestTier: state.riftBestTier,
   };
 }
 
@@ -660,6 +675,21 @@ export function deserializeSaveJson(
     }
     if (typeof data.riftBreachesCompleted === 'number' && Number.isFinite(data.riftBreachesCompleted) && data.riftBreachesCompleted >= 0) {
       state.riftBreachesCompleted = Math.floor(data.riftBreachesCompleted);
+    }
+    if (typeof data.riftHourlyKey === 'string') {
+      state.riftHourlyKey = data.riftHourlyKey;
+    }
+    if (typeof data.riftHourlyAttemptsUsed === 'number' && Number.isFinite(data.riftHourlyAttemptsUsed) && data.riftHourlyAttemptsUsed >= 0) {
+      state.riftHourlyAttemptsUsed = Math.min(3, Math.floor(data.riftHourlyAttemptsUsed));
+    }
+    if (typeof data.riftPassAttemptsUsed === 'number' && Number.isFinite(data.riftPassAttemptsUsed) && data.riftPassAttemptsUsed >= 0) {
+      state.riftPassAttemptsUsed = Math.min(3, Math.floor(data.riftPassAttemptsUsed));
+    }
+    if (typeof data.riftBestDamage === 'number' && Number.isFinite(data.riftBestDamage) && data.riftBestDamage >= 0) {
+      state.riftBestDamage = data.riftBestDamage;
+    }
+    if (typeof data.riftBestTier === 'number' && Number.isFinite(data.riftBestTier) && data.riftBestTier >= 0) {
+      state.riftBestTier = Math.min(10, Math.floor(data.riftBestTier));
     }
     if (Array.isArray(data.bounties)) {
       state.bounties = data.bounties.filter((b): b is BountyEntry => isValidBountyEntry(b));
