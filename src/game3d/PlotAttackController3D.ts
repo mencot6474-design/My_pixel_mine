@@ -11,12 +11,14 @@ import {
 } from './SignatureProjectilePool3D';
 import {
   BARRAGE_FOLLOWUP_DELAYS,
-  CHIBI_ATTACK_ANIM_SEC,
   computeAttackVfxSpeedScale,
   computeSpotlightMaxChargeSec,
+  getBasicAttackIntervalSec,
   splitBarrageDamage,
   SpotlightAttackQueue,
   TierAttackVfxPool3D,
+  ULT_CHARGE_BASIC_ATTACKS,
+  ULT_SPOTLIGHT_LOCK_SEC,
   type TierVfxHooks,
   type WorldPoint3,
 } from './TierAttackVfx3D';
@@ -26,7 +28,7 @@ export { getChibiAttackStyle, type PlotAttackStyle };
 interface PendingBlitzStrike {
   slotIndex: number;
   targetId: number;
-  beatIndex: number;
+  beatIndex?: number;
   dmg: number;
   comboStep: number;
   accentColor: string;
@@ -39,6 +41,8 @@ interface PendingBlitzStrike {
   delayLeft: number;
   fireShader: boolean;
   isFinisher?: boolean;
+  isBasic?: boolean;
+  affectedIds?: Set<number>;
 }
 
 export type PlotOreBrokenCb = (
@@ -70,18 +74,29 @@ interface PlotUnitState {
   critMult: number;
   cooldown: number;
   chargeSec: number;
+  ultCharge: number;
+  ultBankSec: number;
+  ultArmed: boolean;
+  ultActiveTimer: number;
   comboStep: number;
   targetOreId: number | null;
 }
 
 type AliveNodeTarget = ReturnType<OrePit3D['getAliveNodesInfo']>[number];
 
-const MINE_PIT_VFX_SCALE = 0.72;
-export const MAX_AOE_TARGETS = 3;
+const MINE_PIT_VFX_SCALE = 0.56;
+export const AOE_CLEAVE_RADIUS = 3.8;
+export const MAX_AOE_TARGETS = 20;
+const BASIC_ATTACK_DPS_SHARE = 0.65;
 
-/** Single-target (1 ore) for tiers common..limited; up to 3-ore AoE cleave for fusion, twin & omega. */
+/** Single-target (1 ore) for tiers common..limited; radius-wide AoE cleave for fusion, twin & omega. */
 export function getAoeTargetCount(rarity?: string): number {
   return rarity === 'fusion' || rarity === 'twin' || rarity === 'omega' ? MAX_AOE_TARGETS : 1;
+}
+
+/** Returns AoE cleave radius around the target ore (0 for single-target tiers). */
+export function getAoeCleaveRadius(rarity?: string): number {
+  return rarity === 'fusion' || rarity === 'twin' || rarity === 'omega' ? AOE_CLEAVE_RADIUS : 0;
 }
 
 function getAoeSplashDamageMult(rarity: string): number {
@@ -89,18 +104,36 @@ function getAoeSplashDamageMult(rarity: string): number {
 }
 
 function getMineAttackIntervalSec(miningMult: number): number {
-  const safeMult = Math.max(1, miningMult);
-  return Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / (1 + (safeMult - 1) * 0.15)));
+  return getBasicAttackIntervalSec(miningMult);
 }
 
-/** Locks true AoE domain skills (fusion/twin/omega) cleanly to the circular Mine Pit center. */
-function computeZoneWideCenter(): WorldPoint3 {
-  return { x: 0, y: PIT_FLOOR_Y, z: PIT_CENTER_Z };
+/** Centers the Ult AoE circle on the target ore, clamped slightly inside the pit wall so the 3.8m zone stays clean. */
+function computeZoneWideCenter(target?: WorldPoint3): WorldPoint3 {
+  if (!target) {
+    return { x: 0, y: PIT_FLOOR_Y, z: PIT_CENTER_Z };
+  }
+  const dx = target.x;
+  const dz = target.z - PIT_CENTER_Z;
+  const dist = Math.hypot(dx, dz);
+  const maxCenterOffset = Math.max(0.5, PIT_RADIUS - 2.35);
+  if (dist > maxCenterOffset && dist > 1e-4) {
+    const s = maxCenterOffset / dist;
+    return {
+      x: dx * s,
+      y: PIT_FLOOR_Y,
+      z: PIT_CENTER_Z + dz * s,
+    };
+  }
+  return {
+    x: target.x,
+    y: PIT_FLOOR_Y,
+    z: target.z,
+  };
 }
 
 function computeSafePitAreaScale(center: WorldPoint3): number {
   const distFromPit = Math.hypot(center.x, center.z - PIT_CENTER_Z);
-  return Math.min(MINE_PIT_VFX_SCALE, Math.max(0.45, (PIT_RADIUS - 0.45 - distFromPit) / 4.7));
+  return Math.min(MINE_PIT_VFX_SCALE, Math.max(0.48, (PIT_RADIUS - 0.35 - distFromPit) / 5.2));
 }
 
 export class PlotAttackController3D {
@@ -159,6 +192,7 @@ export class PlotAttackController3D {
     const miningMult = stats?.miningMult ?? prev?.miningMult ?? 1;
     const critChance = stats?.critChance ?? prev?.critChance ?? 0.05;
     const critMult = stats?.critMult ?? prev?.critMult ?? 2.25;
+    const sameUnit = Boolean(prev && prev.def.id === def.id);
     this.units.set(slotIndex, {
       slotIndex,
       def,
@@ -168,8 +202,12 @@ export class PlotAttackController3D {
       miningMult,
       critChance,
       critMult,
-      cooldown: prev && prev.def.id === def.id ? prev.cooldown : 0.12 + (slotIndex % 5) * 0.34,
-      chargeSec: prev && prev.def.id === def.id ? prev.chargeSec : 0,
+      cooldown: sameUnit && prev ? prev.cooldown : 0.12 + (slotIndex % 5) * 0.16,
+      chargeSec: sameUnit && prev ? prev.chargeSec : 0,
+      ultCharge: sameUnit && prev ? prev.ultCharge : 0,
+      ultBankSec: sameUnit && prev ? prev.ultBankSec : 0,
+      ultArmed: sameUnit && prev ? prev.ultArmed : false,
+      ultActiveTimer: sameUnit && prev ? prev.ultActiveTimer : 0,
       comboStep: prev?.comboStep ?? slotIndex % 3,
       targetOreId: prev?.targetOreId ?? null,
     });
@@ -194,6 +232,22 @@ export class PlotAttackController3D {
 
   public getUnitCount(): number {
     return this.units.size;
+  }
+
+  public getSlotUltState(slotIndex: number): {
+    charge: number;
+    maxCharge: number;
+    armed: boolean;
+    ulting: boolean;
+  } | null {
+    const unit = this.units.get(slotIndex);
+    if (!unit) return null;
+    return {
+      charge: unit.ultCharge,
+      maxCharge: ULT_CHARGE_BASIC_ATTACKS,
+      armed: unit.ultArmed,
+      ulting: unit.ultActiveTimer > 0,
+    };
   }
 
   public getActiveProjectileCount(): number {
@@ -278,7 +332,11 @@ export class PlotAttackController3D {
     rarity = 'common',
     heavy = false,
     unit?: PlotUnitState,
-    beatIndex = 0
+    beatIndex?: number,
+    isBasic = false,
+    affectedIds?: Set<number>,
+    anchorX?: number,
+    anchorZ?: number
   ): void {
     const alive = pit.getAliveNodesInfo();
     if (alive.length === 0) return;
@@ -289,7 +347,34 @@ export class PlotAttackController3D {
         break;
       }
     }
+    if (!target && affectedIds && affectedIds.size > 0) {
+      for (let i = 0; i < alive.length; i++) {
+        if (affectedIds.has(alive[i].id)) {
+          target = alive[i];
+          break;
+        }
+      }
+    }
+    if (!target && anchorX !== undefined && anchorZ !== undefined && !isBasic) {
+      const aoeR = getAoeCleaveRadius(rarity);
+      if (aoeR > 0) {
+        const maxSq = aoeR * aoeR;
+        let bestSq = maxSq;
+        for (let i = 0; i < alive.length; i++) {
+          const n = alive[i];
+          const dx = n.worldX - anchorX;
+          const dz = n.worldZ - anchorZ;
+          const dSq = dx * dx + dz * dz;
+          if (dSq <= bestSq) {
+            bestSq = dSq;
+            target = n;
+          }
+        }
+      }
+    }
     if (!target && unit) {
+      // Do not jump to a faraway cluster for an Ult finisher if the original cluster is already 100% cleared
+      if (heavy && affectedIds && affectedIds.size > 0) return;
       target = this.pickTarget(unit, alive, originX);
     }
     if (!target && fallbackTarget) {
@@ -305,30 +390,30 @@ export class PlotAttackController3D {
     }
     if (!target) return;
 
-    const maxTargets = Math.min(alive.length, getAoeTargetCount(rarity));
+    const aoeRadius = isBasic ? 0 : getAoeCleaveRadius(rarity);
     this.aoeTargetsScratch.length = 0;
     this.aoeTargetsScratch.push(target);
-    if (maxTargets > 1 && alive.length > 1) {
-      // Pick closest surrounding ores so AoE strikes cleave at least 3 nodes simultaneously
-      const primaryX = target.worldX;
-      const primaryZ = target.worldZ;
-      const candidates: Array<{ node: AliveNodeTarget; distSq: number }> = [];
+    if (aoeRadius > 0 && alive.length > 1) {
+      // Cleave every alive ore inside AOE_CLEAVE_RADIUS around the primary target (plus any tracked 1-HP nodes)
+      const primaryX = anchorX ?? target.worldX;
+      const primaryZ = anchorZ ?? target.worldZ;
+      const maxDistSq = aoeRadius * aoeRadius;
       for (let i = 0; i < alive.length; i++) {
         const n = alive[i];
         if (n.id === target.id) continue;
+        const inCluster = affectedIds?.has(n.id) ?? false;
         const dx = n.worldX - primaryX;
         const dz = n.worldZ - primaryZ;
-        candidates.push({ node: n, distSq: dx * dx + dz * dz });
-      }
-      candidates.sort((a, b) => a.distSq - b.distSq);
-      for (let i = 0; i < candidates.length && this.aoeTargetsScratch.length < maxTargets; i++) {
-        this.aoeTargetsScratch.push(candidates[i].node);
+        if (inCluster || dx * dx + dz * dz <= maxDistSq) {
+          this.aoeTargetsScratch.push(n);
+        }
       }
     }
 
     const isCrit = critChance > 0 && Math.random() < critChance;
     const finalDmg = isCrit ? Math.max(1, Math.round(strikeDamage * critMult)) : strikeDamage;
     const splashMult = getAoeSplashDamageMult(rarity);
+    const preventBreak = !isBasic && !heavy && beatIndex !== undefined;
 
     for (let ti = 0; ti < this.aoeTargetsScratch.length; ti++) {
       const hitNodeTarget = this.aoeTargetsScratch[ti];
@@ -345,10 +430,17 @@ export class PlotAttackController3D {
               attackerX: originX,
               attackerZ: originZ,
               comboStep,
+              preventBreak,
+              beatIndex,
             }
-          : undefined
+          : preventBreak
+            ? { preventBreak: true, beatIndex }
+            : undefined
       );
       if (!hitRes) continue;
+      if (preventBreak) {
+        affectedIds?.add(hitNodeTarget.id);
+      }
 
       const hitY = hitNodeTarget.worldY + 0.7;
       if (renderVisuals) {
@@ -357,20 +449,22 @@ export class PlotAttackController3D {
           y: hitNodeTarget.worldY + 0.72,
           z: hitNodeTarget.worldZ,
           colorHex: accentColor,
-          beatIndex,
+          beatIndex: beatIndex ?? 0,
           isFinisher: heavy,
-          scale: hitNodeTarget.isMeteor ? 1.35 : 0.96,
+          scale: hitNodeTarget.isMeteor ? (isBasic ? 1.05 : 1.35) : isBasic ? 0.74 : 0.96,
         });
-        onOreHit?.(
-          hitRes.dmgDealt,
-          hitNodeTarget.worldX,
-          hitY,
-          hitNodeTarget.worldZ,
-          hitRes.isMeteor,
-          isCrit,
-          beatIndex,
-          heavy
-        );
+        if (hitRes.dmgDealt > 0 || heavy) {
+          onOreHit?.(
+            hitRes.dmgDealt,
+            hitNodeTarget.worldX,
+            hitY,
+            hitNodeTarget.worldZ,
+            hitRes.isMeteor,
+            isCrit,
+            beatIndex,
+            heavy
+          );
+        }
       }
       if (hitRes.broken) {
         this.tmpWorldPos.x = hitNodeTarget.worldX;
@@ -408,7 +502,7 @@ export class PlotAttackController3D {
         }
         const speedScale = computeAttackVfxSpeedScale(a.attackInterval);
         const targetPt: WorldPoint3 = { x: a.ex, y: Math.max(PIT_FLOOR_Y, a.ey - 0.65), z: a.ez };
-        const wideCenter = computeZoneWideCenter();
+        const wideCenter = computeZoneWideCenter(targetPt);
         const areaScale = computeSafePitAreaScale(wideCenter);
         this.tierVfx.fireTierAttack({
           rarity: unit.def.rarity,
@@ -445,8 +539,58 @@ export class PlotAttackController3D {
       arrivalUnit?.def.rarity ?? 'common',
       Boolean(a.isFinisher),
       arrivalUnit,
-      a.beatIndex
+      a.beatIndex,
+      Boolean(a.isBasic),
+      a.affectedIds,
+      a.ex,
+      a.ez
     );
+  }
+
+  private fireVisualBasicStrike(
+    unit: PlotUnitState,
+    ped: PlotPedestal3D,
+    target: AliveNodeTarget,
+    alive: AliveNodeTarget[],
+    attackInterval: number,
+    strikeDamage: number
+  ): void {
+    this.alivePointScratch.length = 0;
+    for (let ai = 0; ai < alive.length; ai++) {
+      const an = alive[ai];
+      this.alivePointScratch.push({ x: an.worldX, y: an.worldY, z: an.worldZ });
+    }
+    const targetPt: WorldPoint3 = { x: target.worldX, y: target.worldY, z: target.worldZ };
+    const accentColor = ped.getActiveAccentColor();
+
+    ped.triggerChibiCast(0.24);
+    ped.getAttackOriginWorldPosition(this.originVec);
+    this.tierVfx.firePodiumWeaponCast({
+      rarity: 'common',
+      chibiId: unit.def.id,
+      colorHex: accentColor,
+      origin: { x: ped.group.position.x, y: ped.group.position.y, z: ped.group.position.z },
+      target: targetPt,
+      allTargets: this.alivePointScratch,
+      areaScale: 0.55,
+    });
+    this.pendingStrikes.push({
+      slotIndex: unit.slotIndex,
+      targetId: target.id,
+      dmg: Math.max(1, Math.round(strikeDamage)),
+      comboStep: unit.comboStep % 2,
+      accentColor,
+      sx: this.originVec.x,
+      sz: this.originVec.z,
+      ex: target.worldX,
+      ey: target.worldY + 0.65,
+      ez: target.worldZ,
+      attackInterval,
+      delayLeft: 0.18,
+      fireShader: false,
+      isFinisher: false,
+      isBasic: true,
+    });
   }
 
   private fireVisualUnitStrike(
@@ -463,12 +607,18 @@ export class PlotAttackController3D {
       this.alivePointScratch.push({ x: an.worldX, y: an.worldY, z: an.worldZ });
     }
     const targetPt: WorldPoint3 = { x: target.worldX, y: target.worldY, z: target.worldZ };
-    const wideCenter = computeZoneWideCenter();
+    const wideCenter = computeZoneWideCenter(targetPt);
     const areaScale = computeSafePitAreaScale(wideCenter);
     const accentColor = ped.getActiveAccentColor();
 
-    ped.triggerChibiCast(0.36);
+    ped.triggerChibiUltOpening(0.52);
     ped.getAttackOriginWorldPosition(this.originVec);
+    this.tierVfx.fireUltOpeningBurst({
+      x: ped.group.position.x,
+      y: ped.group.position.y,
+      z: ped.group.position.z,
+      colorHex: accentColor,
+    });
     this.tierVfx.firePodiumWeaponCast({
       rarity: unit.def.rarity,
       chibiId: unit.def.id,
@@ -490,10 +640,11 @@ export class PlotAttackController3D {
 
     const beatDmgs = splitBarrageDamage(strikeDamage);
     const lastBeatIdx = beatDmgs.length - 1;
+    const affectedIds = new Set<number>([target.id]);
     for (let bi = 0; bi < beatDmgs.length; bi++) {
-      const beatDmg = beatDmgs[bi];
-      if (beatDmg <= 0) continue;
       const isFinisher = bi === lastBeatIdx;
+      const beatDmg = isFinisher ? Math.max(1, beatDmgs[bi]) : beatDmgs[bi];
+      if (beatDmg <= 0) continue;
       const delayLeft = bi === 0 ? 0.2 : 0.2 + BARRAGE_FOLLOWUP_DELAYS[bi - 1];
       this.pendingStrikes.push({
         slotIndex: unit.slotIndex,
@@ -511,6 +662,7 @@ export class PlotAttackController3D {
         delayLeft,
         fireShader: bi === 0,
         isFinisher,
+        affectedIds,
       });
     }
   }
@@ -556,9 +708,10 @@ export class PlotAttackController3D {
         unit.chargeSec = Math.min(maxChargeSec, unit.chargeSec + safeDt);
         if (unit.cooldown <= 0) {
           const attackInterval = getMineAttackIntervalSec(unit.miningMult);
-          const effectiveSec = Math.max(attackInterval, unit.chargeSec);
+          const effectiveSec = Math.max(0.01, unit.chargeSec + unit.ultBankSec);
           unit.cooldown = attackInterval;
           unit.chargeSec = 0;
+          unit.ultBankSec = 0;
           const strikeDamage = Math.max(1, unit.dmg * effectiveSec);
           this.applyImpact(
             pit,
@@ -588,49 +741,107 @@ export class PlotAttackController3D {
 
     for (const unit of this.units.values()) {
       unit.cooldown = Math.max(0, unit.cooldown - safeDt);
+      if (unit.ultActiveTimer > 0) {
+        unit.ultActiveTimer = Math.max(0, unit.ultActiveTimer - safeDt);
+      }
       if (alive.length > 0) {
         unit.chargeSec = Math.min(maxChargeSec, unit.chargeSec + safeDt);
+      }
+      if (unit.ultCharge >= ULT_CHARGE_BASIC_ATTACKS && !unit.ultArmed) {
+        const basicInterval = getMineAttackIntervalSec(unit.miningMult);
+        if (unit.cooldown <= basicInterval * 0.55) {
+          unit.ultArmed = true;
+        }
       }
     }
 
     if (alive.length > 0) {
-      const activeUnit = this.spotlight.pickNextReady(this.units.values(), (u) => u.cooldown);
-      if (activeUnit) {
-        const ped = pedestals[activeUnit.slotIndex];
-        const pedX = ped ? ped.group.position.x : (activeUnit.slotIndex - 2) * 3.22;
+      // 1) Ult relay queue: any armed Chibi (5/5 basic charge) triggers 2.5s Sakuga Ult spaced 1.5s apart
+      const activeUltUnit = this.spotlight.pickNextReady(this.units.values(), (u) => (u.ultArmed ? 0 : 1));
+      if (activeUltUnit) {
+        const ped = pedestals[activeUltUnit.slotIndex];
+        const pedX = ped ? ped.group.position.x : (activeUltUnit.slotIndex - 2) * 3.22;
         const pedZ = ped ? ped.group.position.z : -4.58;
-        const target = this.pickTarget(activeUnit, alive, pedX);
+        const target = this.pickTarget(activeUltUnit, alive, pedX);
         if (target) {
-          const attackInterval = getMineAttackIntervalSec(activeUnit.miningMult);
-          const effectiveSec = Math.max(attackInterval, activeUnit.chargeSec);
-          activeUnit.cooldown = attackInterval;
-          activeUnit.chargeSec = 0;
-          this.spotlight.claim(activeUnit.slotIndex, CHIBI_ATTACK_ANIM_SEC);
-          const strikeDamage = Math.max(1, activeUnit.dmg * effectiveSec);
+          const attackInterval = getMineAttackIntervalSec(activeUltUnit.miningMult);
+          const ultSec = Math.max(0.01, activeUltUnit.ultBankSec + activeUltUnit.chargeSec);
+          activeUltUnit.cooldown = Math.max(attackInterval, ULT_SPOTLIGHT_LOCK_SEC);
+          activeUltUnit.chargeSec = 0;
+          activeUltUnit.ultBankSec = 0;
+          activeUltUnit.ultCharge = 0;
+          activeUltUnit.ultArmed = false;
+          activeUltUnit.ultActiveTimer = ULT_SPOTLIGHT_LOCK_SEC;
+          this.spotlight.claim(activeUltUnit.slotIndex, ULT_SPOTLIGHT_LOCK_SEC);
+          const strikeDamage = Math.max(1, activeUltUnit.dmg * ultSec);
           if (ped) {
-            this.fireVisualUnitStrike(activeUnit, ped, target, alive, attackInterval, strikeDamage);
+            this.fireVisualUnitStrike(activeUltUnit, ped, target, alive, attackInterval, strikeDamage);
           } else {
             this.applyImpact(
               pit,
               target.id,
               target,
               strikeDamage,
-              activeUnit.def.accentColor,
+              activeUltUnit.def.accentColor,
               pedX,
               pedZ,
-              activeUnit.comboStep,
+              activeUltUnit.comboStep,
               false,
               onOreBroken,
               onOreHit,
-              activeUnit.critChance,
-              activeUnit.critMult,
-              activeUnit.def.rarity,
+              activeUltUnit.critChance,
+              activeUltUnit.critMult,
+              activeUltUnit.def.rarity,
               false,
-              activeUnit
+              activeUltUnit
             );
           }
-          activeUnit.comboStep = (activeUnit.comboStep + 1) % 3;
+          activeUltUnit.comboStep = (activeUltUnit.comboStep + 1) % 3;
         }
+      }
+
+      // 2) Parallel basic attacks: all non-ulting ready Chibis keep firing without waiting in line
+      for (const unit of this.units.values()) {
+        if (unit.cooldown > 0 || unit.ultActiveTimer > 0) continue;
+        const ped = pedestals[unit.slotIndex];
+        const pedX = ped ? ped.group.position.x : (unit.slotIndex - 2) * 3.22;
+        const pedZ = ped ? ped.group.position.z : -4.58;
+        const target = this.pickTarget(unit, alive, pedX);
+        if (!target) continue;
+
+        const basicInterval = getMineAttackIntervalSec(unit.miningMult);
+        const elapsedSec = Math.max(0.01, unit.chargeSec);
+        const basicSec = elapsedSec * BASIC_ATTACK_DPS_SHARE;
+        unit.ultBankSec = Math.min(maxChargeSec, unit.ultBankSec + elapsedSec * (1 - BASIC_ATTACK_DPS_SHARE));
+        unit.chargeSec = 0;
+        unit.cooldown = basicInterval;
+        unit.ultCharge = Math.min(ULT_CHARGE_BASIC_ATTACKS, unit.ultCharge + 1);
+        const strikeDamage = Math.max(1, unit.dmg * basicSec);
+        if (ped) {
+          this.fireVisualBasicStrike(unit, ped, target, alive, basicInterval, strikeDamage);
+        } else {
+          this.applyImpact(
+            pit,
+            target.id,
+            target,
+            strikeDamage,
+            unit.def.accentColor,
+            pedX,
+            pedZ,
+            unit.comboStep,
+            false,
+            onOreBroken,
+            onOreHit,
+            unit.critChance,
+            unit.critMult,
+            unit.def.rarity,
+            false,
+            unit,
+            undefined,
+            true
+          );
+        }
+        unit.comboStep = (unit.comboStep + 1) % 3;
       }
     }
 

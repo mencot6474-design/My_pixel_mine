@@ -407,4 +407,90 @@
     color: #ffffff;
   }
 
+  /* ============================================================
+   * Chibi 5-Segment Ult Charge Bar & Ult Opening Pop
+   * ============================================================ */
+  .mam-ult-badge-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: center bottom;
+  }
+
+  .mam-ult-badge-wrap.is-ult-active {
+    filter: brightness(1.16) saturate(1.18);
+  }
+
+  @keyframes mam-ult-badge-pop {
+    0% {
+      transform: scale(1);
+    }
+    26% {
+      transform: scale(1.3) translateY(-4px);
+    }
+    58% {
+      transform: scale(0.95);
+    }
+    100% {
+      transform: scale(1.06);
+    }
+  }
+
+  .mam-ult-badge-wrap.is-ult-pop {
+    animation: mam-ult-badge-pop 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .mam-ult-charge-bar {
+    width: 58px;
+    height: 7px;
+    padding: 1.5px;
+    border-radius: 999px;
+    border: 1.5px solid #14111d;
+    background: rgba(20, 17, 29, 0.92);
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1.5px;
+    overflow: hidden;
+  }
+
+  .mam-ult-seg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 2px;
+    background: rgba(148, 163, 184, 0.25);
+    transition: background-color 120ms ease, transform 120ms ease;
+  }
+
+  .mam-ult-seg.is-filled {
+    background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 100%);
+  }
+
+  @keyframes mam-ult-ready-pulse {
+    from {
+      opacity: 0.78;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .mam-ult-charge-bar.is-ult-ready {
+    border-color: #fde047;
+  }
+
+  .mam-ult-charge-bar.is-ult-ready .mam-ult-seg.is-filled {
+    background: linear-gradient(180deg, #fef08a 0%, #f59e0b 100%);
+    animation: mam-ult-ready-pulse 0.6s ease-in-out infinite alternate;
+  }
+
+  .mam-ult-charge-bar.is-ult-active {
+    border-color: #ffffff;
+    background: #1e1b4b;
+  }
+
+  .mam-ult-charge-bar.is-ult-active .mam-ult-seg.is-filled {
+    background: linear-gradient(180deg, #ffffff 0%, #fde047 55%, #f97316 100%);
+  }
+
 }

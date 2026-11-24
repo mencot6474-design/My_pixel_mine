@@ -46,6 +46,11 @@ export interface PlotAnchorScreen {
   btnX: number;
   btnY: number;
   visible: boolean;
+  rarity?: string;
+  ultCharge?: number;
+  ultMaxCharge?: number;
+  ultArmed?: boolean;
+  ulting?: boolean;
 }
 
 export interface OreHpScreen {

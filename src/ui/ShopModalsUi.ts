@@ -649,6 +649,7 @@ export class ShopModalsUi {
     scope.querySelectorAll('[data-buy-premium-item]').forEach((el) => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (this.twinCutscene.getState()) return;
         const chibiId = (el as HTMLElement).dataset.buyPremiumItem;
         if (!chibiId) return;
         this.shopInspectPremiumId = chibiId;

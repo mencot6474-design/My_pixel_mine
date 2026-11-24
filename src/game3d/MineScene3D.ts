@@ -265,6 +265,7 @@ export class MineScene3D {
       crateGroup: this.crateGroup,
       callbacks: this.callbacks,
       getFocusedPlotIndex: () => this.focusedPlotIndex,
+      getPlotUltState: (slotIndex) => this.plotAttackController.getSlotUltState(slotIndex),
     });
     this.weatherFx.setQualityScale(0);
     this.scene.add(this.weatherFx.group);
@@ -529,8 +530,11 @@ export class MineScene3D {
     this.arenaDimTarget = postFxTimers.arenaDimTarget;
     this.arenaDimCurrent = postFxTimers.arenaDimCurrent;
 
+    const fullscreenCutsceneActive =
+      typeof document !== 'undefined' && document.body?.dataset.fullscreenCutscene === 'true';
     const shouldRenderFrame =
-      !this.modalBackdropThrottled || now - this.lastThrottledRenderMs >= 33;
+      !fullscreenCutsceneActive &&
+      (!this.modalBackdropThrottled || now - this.lastThrottledRenderMs >= 33);
     if (shouldRenderFrame) {
       this.lastThrottledRenderMs = now;
       const postFxActive = this.graphicsQuality === 'high';

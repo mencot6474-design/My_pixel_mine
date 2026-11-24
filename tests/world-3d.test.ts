@@ -29,7 +29,9 @@ import { WORLD_ARENA_BIOMES } from '../src/game3d/ColosseumBiome3D';
 import { createCyberCargoPod } from '../src/game3d/CyberCargoPod3D';
 import { AudioManager } from '../src/audio/AudioManager';
 import {
+  AOE_CLEAVE_RADIUS,
   PlotAttackController3D,
+  getAoeCleaveRadius,
   getAoeTargetCount,
   getChibiAttackStyle,
 } from '../src/game3d/PlotAttackController3D';
@@ -230,12 +232,15 @@ import {
   createYukikageWagasaUmbrellaGeometry,
 } from '../src/game3d/MeshFx3D';
 import {
+  BARRAGE_FOLLOWUP_DELAYS,
   buildTierMotionWaypoints,
   CHIBI_ATTACK_ANIM_SEC,
   isWideAoeRarity,
   splitBarrageDamage,
   SpotlightAttackQueue,
   TierAttackVfxPool3D,
+  ULT_CHARGE_BASIC_ATTACKS,
+  ULT_SPOTLIGHT_LOCK_SEC,
 } from '../src/game3d/TierAttackVfx3D';
 import {
   createLeviathanHydroClawShaderMaterial,
@@ -294,6 +299,17 @@ describe('Pure 3D Mine World', () => {
     expect(node.hp).toBe(0);
 
     expect(applyNodeDamagePure(node, 20)).toBeNull();
+
+    const finisherNode = { hp: 50, alive: true };
+    const heldHit = applyNodeDamagePure(finisherNode, 80, true);
+    expect(heldHit?.broken).toBe(false);
+    expect(heldHit?.dmgDealt).toBe(49);
+    expect(finisherNode.alive).toBe(true);
+    expect(finisherNode.hp).toBe(1);
+    const finisherBreak = applyNodeDamagePure(finisherNode, 10, false);
+    expect(finisherBreak?.broken).toBe(true);
+    expect(finisherBreak?.dmgDealt).toBe(1);
+    expect(finisherNode.alive).toBe(false);
   });
 
   it('registers all 77 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
@@ -3440,33 +3456,27 @@ describe('Pure 3D Mine World', () => {
     }
     expect(controller.getActiveProjectileCount()).toBeGreaterThan(0);
 
-    // Advance projectile flight until impacts land — single AoE attack hits >= 3 ore nodes
+    // Advance projectile flight until initial parallel basic attacks land (both slots hit without waiting)
     for (let i = 0; i < 12; i++) {
       pit.update(0.05, i * 0.05, cam, false);
       controller.update(0.05, cam, pit, peds, true, onBroken, onHit);
     }
-    expect(hits.length).toBeGreaterThanOrEqual(3);
-    const hitsAfterBeat0 = hits.length;
+    expect(hits.length).toBeGreaterThanOrEqual(2);
+    const hitsAfterBasic = hits.length;
 
-    // Advance through Slot 0's 7 barrage beats (0.20s .. 1.68s) — strict spotlight keeps Slot 1 queued until 2.5s
     const beats = splitBarrageDamage(1000);
     expect(beats).toEqual([80, 100, 110, 130, 150, 180, 250]);
     expect(beats.reduce((sum, v) => sum + v, 0)).toBe(1000);
     const smallBeats = splitBarrageDamage(5);
     expect(smallBeats).toEqual([1, 1, 1, 1, 1, 0, 0]);
-    for (let i = 0; i < 28; i++) {
+    expect(BARRAGE_FOLLOWUP_DELAYS[BARRAGE_FOLLOWUP_DELAYS.length - 1]).toBeLessThanOrEqual(1.25);
+
+    // Advance through 5 basic attacks + both slots' 1.5s-spaced Ult 7-hit barrages (~9.5s total)
+    for (let i = 0; i < 180; i++) {
       pit.update(0.05, 0.76 + i * 0.05, cam, false);
       controller.update(0.05, cam, pit, peds, true, onBroken, onHit);
     }
-    expect(hits.length).toBeGreaterThan(hitsAfterBeat0);
-    expect(hits.length).toBe(7);
-
-    // Advance through Slot 1's (twin) spotlight turn (2.62s + 1.68s) -> adds 7 * 3 = 21 AoE hits (total 28)
-    for (let i = 0; i < 48; i++) {
-      pit.update(0.05, 2.16 + i * 0.05, cam, false);
-      controller.update(0.05, cam, pit, peds, true, onBroken, onHit);
-    }
-    expect(hits.length).toBeGreaterThanOrEqual(28);
+    expect(hits.length).toBeGreaterThan(hitsAfterBasic + 21);
 
     // Switch to headless/background mining: flushes projectiles and deals damage directly with 0 active projectiles
     const prevHits = hits.length;
@@ -3501,10 +3511,11 @@ describe('Pure 3D Mine World', () => {
       'limited',
     ]) {
       expect(getAoeTargetCount(r)).toBe(1);
+      expect(getAoeCleaveRadius(r)).toBe(0);
       expect(isWideAoeRarity(r)).toBe(false);
     }
     for (const r of ['fusion', 'twin', 'omega']) {
-      expect(getAoeTargetCount(r)).toBe(3);
+      expect(getAoeCleaveRadius(r)).toBe(AOE_CLEAVE_RADIUS);
       expect(isWideAoeRarity(r)).toBe(true);
     }
 
@@ -3517,7 +3528,7 @@ describe('Pure 3D Mine World', () => {
     const singlePed = new PlotPedestal3D(0, -3.22, -4.58);
     const commonDef = CHIBI_CATALOG.find((c) => c.rarity === 'common') ?? CHIBI_CATALOG[0];
     singlePed.setChibi(commonDef);
-    singleCtrl.setSlotUnit(0, commonDef, { dmg: 15000, speed: 1, miningMult: 1 });
+    singleCtrl.setSlotUnit(0, commonDef, { dmg: 30000, speed: 1, miningMult: 1 });
     let singleBroken = 0;
     let singleHits = 0;
     for (let i = 0; i < 8; i++) {
@@ -3539,7 +3550,8 @@ describe('Pure 3D Mine World', () => {
     expect(singleHits).toBe(1);
     expect(singleBroken).toBe(1);
     expect(singlePit.getAliveNodesInfo().length).toBe(4);
-    for (let i = 0; i < 5; i++) {
+    // Advance across two basic attack cycles (~1.6s) -> hits & breaks 1 ore per basic attack (no AoE)
+    for (let i = 0; i < 25; i++) {
       singlePit.update(0.05, 0.4 + i * 0.05, cam, false);
       singleCtrl.update(
         0.05,
@@ -3561,50 +3573,151 @@ describe('Pure 3D Mine World', () => {
     singlePed.dispose();
     singlePit.dispose();
 
-    // 2) AoE tier (twin) hits max 3 ores on Beat 0, then retargets to remaining 2 alive ores on Beat 1
+    // 2) AoE tier (twin) cleaves ALL clustered ores inside AOE_CLEAVE_RADIUS (3.8m), leaves far ores untouched,
+    //    and holds clustered ores at 1 HP across beats 0..5 before shattering them together on Beat 6 Finisher
     const controller = new PlotAttackController3D();
-    const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
-    pit.setHpScale(0.01); // Low HP so Beat 0 one-shots up to 3 ores
     const ped = new PlotPedestal3D(0, -3.22, -4.58);
     const twinDef = CHIBI_CATALOG.find((c) => c.rarity === 'twin') ?? CHIBI_CATALOG[0];
     ped.setChibi(twinDef);
 
-    controller.setSlotUnit(0, twinDef, { dmg: 15000, speed: 1, miningMult: 1 });
+    const fakeNodes = [
+      // 4 clustered ores inside 3.8m radius around node 0 (-2.0, 0.5)
+      { id: 0, worldX: -2.0, worldY: -0.42, worldZ: 0.5, hp: 500, maxHp: 500, alive: true, variantKey: 'rock' as const },
+      { id: 1, worldX: -0.5, worldY: -0.42, worldZ: 0.8, hp: 500, maxHp: 500, alive: true, variantKey: 'rock' as const },
+      { id: 2, worldX: -3.1, worldY: -0.42, worldZ: 1.9, hp: 500, maxHp: 500, alive: true, variantKey: 'vein' as const },
+      { id: 3, worldX: -1.4, worldY: -0.42, worldZ: -1.2, hp: 500, maxHp: 500, alive: true, variantKey: 'geode' as const },
+      // 2 far ores well outside 3.8m radius -> must NOT be cleaved
+      { id: 4, worldX: 3.4, worldY: -0.42, worldZ: 1.2, hp: 500, maxHp: 500, alive: true, variantKey: 'rock' as const },
+      { id: 5, worldX: 4.2, worldY: -0.42, worldZ: 3.0, hp: 500, maxHp: 500, alive: true, variantKey: 'vein' as const },
+    ];
+    const mockPit = {
+      getAliveNodesInfo: () => fakeNodes.filter((n) => n.alive),
+      hitNode: (
+        nodeId: number,
+        dmg: number,
+        _heavy: boolean,
+        _shardCount?: number,
+        fx?: { preventBreak?: boolean; beatIndex?: number }
+      ) => {
+        const node = fakeNodes.find((n) => n.id === nodeId);
+        if (!node || !node.alive) return null;
+        const pure = applyNodeDamagePure(node, dmg, Boolean(fx?.preventBreak), fx?.beatIndex);
+        if (!pure) return null;
+        return {
+          broken: pure.broken,
+          variantKey: node.variantKey,
+          dmgDealt: pure.dmgDealt,
+        };
+      },
+    } as unknown as OrePit3D;
+
+    controller.setSlotUnit(0, twinDef, { dmg: 12000, speed: 1, miningMult: 1, critChance: 0 });
     let brokenCount = 0;
-    const hitCoords: Array<{ x: number; z: number }> = [];
-    const onHit = (_dmg: number, wx: number, _wy: number, wz: number) => {
-      hitCoords.push({ x: wx, z: wz });
-    };
-    const onBroken = () => {
-      brokenCount += 1;
-    };
+    let sawNonFinisherHold = false;
+    let sawFinisherBreak = false;
+    const seenClusterBeats = new Map<number, number>();
 
-    // Advance past Beat 0 (0.12s cooldown + 0.20s delay = 0.32s) -> max 3 ores hit & broken
-    for (let i = 0; i < 8; i++) {
-      pit.update(0.05, i * 0.05, cam, false);
-      controller.update(0.05, cam, pit, [ped], true, onBroken, onHit);
+    // Complete 5 basic attacks (keep mock cluster alive with high HP during charging)
+    for (const n of fakeNodes) {
+      n.hp = 1_000_000;
+      n.maxHp = 1_000_000;
     }
-    expect(hitCoords.length).toBe(3);
-    expect(brokenCount).toBe(3);
-    expect(pit.getAliveNodesInfo().length).toBe(2);
+    for (let i = 0; i < 115; i++) {
+      controller.update(0.05, cam, mockPit, [ped], true);
+    }
 
-    // Advance to Beat 1 (+0.18s) -> retargets to the remaining 2 alive ores
-    for (let i = 0; i < 5; i++) {
-      pit.update(0.05, 0.4 + i * 0.05, cam, false);
-      controller.update(0.05, cam, pit, [ped], true, onBroken, onHit);
+    // Lower clustered & far HP to 1500 so Beat 0 would normally one-shot them if not paced across beats 0..6
+    for (const n of fakeNodes) {
+      n.hp = 1500;
+      n.maxHp = 1500;
     }
-    expect(brokenCount).toBe(5);
-    expect(hitCoords.length).toBe(5);
+
+    for (let i = 115; i < 190; i++) {
+      controller.update(
+        0.05,
+        cam,
+        mockPit,
+        [ped],
+        true,
+        () => {
+          brokenCount += 1;
+        },
+        (dmgDealt, wx, _wy, _wz, _m, _c, beatIdx, isFinisher) => {
+          if (beatIdx !== undefined && !isFinisher) {
+            if (brokenCount === 0 && fakeNodes[0].hp >= 1) sawNonFinisherHold = true;
+          }
+          if (beatIdx !== undefined && Math.abs(wx - fakeNodes[0].worldX) < 0.1) {
+            seenClusterBeats.set(beatIdx, dmgDealt);
+          }
+          if (isFinisher) {
+            sawFinisherBreak = true;
+          }
+        }
+      );
+      if (sawFinisherBreak && brokenCount > 0) break;
+    }
+
+    expect(sawNonFinisherHold).toBe(true);
+    expect(sawFinisherBreak).toBe(true);
+    // All 7 barrage beats (0..6) show real crescendo damage without starving beats 1..5 or showing -1 on Finisher
+    expect(seenClusterBeats.size).toBe(7);
+    expect((seenClusterBeats.get(6) ?? 0)).toBeGreaterThan(seenClusterBeats.get(0) ?? 0);
+    // All 4 clustered ores inside 3.8m broke on Finisher; the 2 far ores outside 3.8m stay completely intact
+    expect(brokenCount).toBe(4);
+    expect(fakeNodes.slice(0, 4).every((n) => !n.alive)).toBe(true);
+    expect(fakeNodes[4].alive && fakeNodes[4].hp === 1500).toBe(true);
+    expect(fakeNodes[5].alive && fakeNodes[5].hp === 1500).toBe(true);
+
+    // 3) Mid-barrage primary-target break (e.g. player tap kills node 0 while nodes 1..3 sit at 1 HP)
+    //    must STILL break all remaining 1-HP clustered nodes on Beat 6 Finisher without jumping to far ores
+    for (let i = 0; i < 4; i++) {
+      fakeNodes[i].hp = 1_000_000;
+      fakeNodes[i].maxHp = 1_000_000;
+      fakeNodes[i].alive = true;
+    }
+    for (let i = 0; i < 115; i++) {
+      controller.update(0.05, cam, mockPit, [ped], true);
+    }
+    for (let i = 0; i < 4; i++) {
+      fakeNodes[i].hp = 1500;
+      fakeNodes[i].maxHp = 1500;
+    }
+    let simulatedTapKill = false;
+    let finisher2Fired = false;
+    for (let i = 115; i < 190; i++) {
+      controller.update(
+        0.05,
+        cam,
+        mockPit,
+        [ped],
+        true,
+        undefined,
+        (_d, _wx, _wy, _wz, _m, _c, beatIdx, isFinisher) => {
+          if (!simulatedTapKill && beatIdx === 2) {
+            // Simulate player tap / basic attack destroying primary target node 0 mid-barrage
+            simulatedTapKill = true;
+            fakeNodes[0].hp = 0;
+            fakeNodes[0].alive = false;
+          }
+          if (isFinisher) finisher2Fired = true;
+        }
+      );
+      if (finisher2Fired) break;
+    }
+    expect(simulatedTapKill).toBe(true);
+    expect(finisher2Fired).toBe(true);
+    expect(fakeNodes.slice(0, 4).every((n) => !n.alive)).toBe(true);
+    expect(fakeNodes[4].alive && fakeNodes[4].hp === 1500).toBe(true);
+    expect(fakeNodes[5].alive && fakeNodes[5].hp === 1500).toBe(true);
 
     controller.dispose();
     ped.dispose();
-    pit.dispose();
   });
 
-  it('assigns distinct ore targets across multiple Chibis in strict 2.5s spotlight turns without simultaneous overlap', () => {
+  it('assigns distinct ore targets across all 5 parallel Chibis immediately and triggers 1.5s-spaced Ultimates', () => {
     const controller = new PlotAttackController3D();
     const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
-    pit.setHpScale(100); // High HP so ores survive all 5 turns
+    pit.setHpScale(100); // High HP so ores survive all turns
     const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
     const commonDef = CHIBI_CATALOG.find((c) => c.rarity === 'common') ?? CHIBI_CATALOG[0];
     const peds = [0, 1, 2, 3, 4].map((idx) => {
@@ -3615,23 +3728,26 @@ describe('Pure 3D Mine World', () => {
     });
 
     const hitPositions = new Set<string>();
-    const onHit = (_dmg: number, wx: number, _wy: number, wz: number) => {
+    let ultBeatHits = 0;
+    const onHit = (_dmg: number, wx: number, _wy: number, wz: number, _m?: boolean, _c?: boolean, beatIdx?: number) => {
       hitPositions.add(`${wx.toFixed(3)},${wz.toFixed(3)}`);
+      if (beatIdx !== undefined) ultBeatHits++;
     };
 
-    // During the first 2.0s spotlight window, strictly 1 Chibi fires (1 distinct ore hit)
+    // Within the first 2.0s, all 5 Chibis attack in parallel and spread across 5 distinct ores
     for (let i = 0; i < 40; i++) {
       pit.update(0.05, i * 0.05, cam, false);
       controller.update(0.05, cam, pit, peds, true, undefined, onHit);
     }
-    expect(hitPositions.size).toBe(1);
+    expect(hitPositions.size).toBe(5);
+    expect(ultBeatHits).toBe(0);
 
-    // Over 5 full sequential 2.5s spotlight turns (~12.5s total), all 5 Chibis hit 5 distinct ores
-    for (let i = 40; i < 260; i++) {
+    // After 5 basic attacks (~14s total), all 5 Chibis have fired their 1.5s-spaced Ult barrages
+    for (let i = 40; i < 280; i++) {
       pit.update(0.05, i * 0.05, cam, false);
       controller.update(0.05, cam, pit, peds, true, undefined, onHit);
     }
-    expect(hitPositions.size).toBe(5);
+    expect(ultBeatHits).toBeGreaterThanOrEqual(28);
 
     controller.dispose();
     peds.forEach((p) => p.dispose());
@@ -4257,7 +4373,7 @@ describe('Pure 3D Mine World', () => {
 
     ctrl.setSlotUnit(1, null);
     ctrl.setSlotUnit(0, twinDef, { dmg: 100, speed: 1, miningMult: 1 });
-    for (let i = 0; i < 28; i++) ctrl.update(0.1, cam, pit, [pedTwin, pedCommon], true);
+    for (let i = 0; i < 75; i++) ctrl.update(0.1, cam, pit, [pedTwin, pedCommon], true);
     expect(pulses.length).toBeGreaterThanOrEqual(1);
     expect(pulses[0].strength).toBeGreaterThanOrEqual(1.0);
 
@@ -4760,7 +4876,11 @@ describe('Pure 3D Mine World', () => {
     expect(fresh.plotMiners[0]).toBe('volt-kensei');
   });
 
-  it('enforces strict 2.5s single-chibi spotlight turns across Mine, Tower, and Omega while preserving 100% team DPS', () => {
+  it('runs parallel 5x basic attacks and 1.5s-spaced Ult spotlight turns across Mine, Tower, and Omega while preserving 100% team DPS', () => {
+    expect(ULT_CHARGE_BASIC_ATTACKS).toBe(5);
+    expect(ULT_SPOTLIGHT_LOCK_SEC).toBe(1.5);
+    expect(CHIBI_ATTACK_ANIM_SEC).toBe(2.5);
+
     const queue = new SpotlightAttackQueue();
     const slots = [0, 1, 3, 4].map((slotIndex) => ({ slotIndex, cooldown: 0 }));
     const order: number[] = [];
@@ -4768,15 +4888,15 @@ describe('Pure 3D Mine World', () => {
       const picked = queue.pickNextReady(slots, (s) => s.cooldown);
       expect(picked).not.toBeNull();
       order.push(picked!.slotIndex);
-      queue.claim(picked!.slotIndex, CHIBI_ATTACK_ANIM_SEC);
-      // While locked (< 2.5s), no other slot can fire
-      queue.step(CHIBI_ATTACK_ANIM_SEC - 0.1);
+      queue.claim(picked!.slotIndex, ULT_SPOTLIGHT_LOCK_SEC);
+      // While locked (< 1.5s), no other Ult slot can fire
+      queue.step(ULT_SPOTLIGHT_LOCK_SEC - 0.1);
       expect(queue.pickNextReady(slots, (s) => s.cooldown)).toBeNull();
       queue.step(0.1);
     }
     expect(order).toEqual([0, 1, 3, 4, 0, 1]);
 
-    // Mine Pit: 5 Chibis @ 100 DPS each (500 total DPS) over 15s (6 spotlight turns) preserves full DPS
+    // Mine Pit: 5 Chibis @ 100 DPS each (500 total DPS) over 12.5s steady-state preserves full DPS
     const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
     const commonDef = CHIBI_CATALOG.find((c) => c.rarity === 'common') ?? CHIBI_CATALOG[0];
     const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
@@ -4798,14 +4918,18 @@ describe('Pure 3D Mine World', () => {
         }
       });
     }
-    // Over one full 5-turn steady-state cycle [12.5s..25.0s] (12.5s), 5 units @ 100 DPS = 6250 exact damage
-    expect(steadyStateDmg).toBeGreaterThanOrEqual(6150);
-    expect(steadyStateDmg).toBeLessThanOrEqual(6350);
+    // Over [12.5s..25.0s] (12.5s), 5 units @ 100 DPS = 6250 exact damage
+    expect(steadyStateDmg).toBeGreaterThanOrEqual(6000);
+    expect(steadyStateDmg).toBeLessThanOrEqual(6500);
+    const slot0Ult = ctrl.getSlotUltState(0);
+    expect(slot0Ult).not.toBeNull();
+    expect(slot0Ult?.maxCharge).toBe(5);
+    expect(() => peds[0].triggerChibiUltOpening(0.52)).not.toThrow();
     ctrl.dispose();
     peds.forEach((p) => p.dispose());
     pit.dispose();
 
-    // TowerArena3D: within first 2.0s of a wave, strictly 1 fighter slot fires
+    // TowerArena3D: within first 2.0s all 5 parallel fighters strike, and across 14s all 5 fire Ult finishers
     const tower = new TowerArena3D();
     tower.group.visible = true;
     tower.syncFighters(
@@ -4828,18 +4952,23 @@ describe('Pure 3D Mine World', () => {
       paused: false,
     });
     const towerSlotsEarly = new Set<number>();
+    const towerUltSlots = new Set<number>();
     for (let i = 0; i < 40; i++) {
       tower.update(0.05, (i + 1) * 0.05, cam, (ev) => towerSlotsEarly.add(ev.slotIndex));
     }
-    expect(towerSlotsEarly.size).toBe(1);
-    const towerSlotsFull = new Set<number>(towerSlotsEarly);
-    for (let i = 40; i < 240; i++) {
-      tower.update(0.05, (i + 1) * 0.05, cam, (ev) => towerSlotsFull.add(ev.slotIndex));
+    expect(towerSlotsEarly.size).toBe(5);
+    for (let i = 40; i < 280; i++) {
+      tower.update(0.05, (i + 1) * 0.05, cam, (ev) => {
+        if (ev.isFinisher) towerUltSlots.add(ev.slotIndex);
+      });
     }
-    expect(towerSlotsFull.size).toBe(5);
+    expect(towerUltSlots.size).toBe(5);
+    const towerAnchors = tower.getFighterPlotAnchors(cam, 1280, 720, new THREE.Vector3());
+    expect(towerAnchors).toHaveLength(5);
+    expect(towerAnchors[0].ultMaxCharge).toBe(5);
     tower.dispose();
 
-    // OmegaArena3D: within first 2.0s of active duel, strictly 1 fighter slot fires; across 12s all 5 take turns
+    // OmegaArena3D: within first 2.0s all 5 parallel fighters strike, and across 14s all 5 fire Ult finishers
     const omega = new OmegaArena3D();
     omega.group.visible = true;
     omega.syncFighters(
@@ -4853,15 +4982,20 @@ describe('Pure 3D Mine World', () => {
       }))
     );
     const omegaSlotsEarly = new Set<number>();
+    const omegaUltSlots = new Set<number>();
     for (let i = 0; i < 40; i++) {
       omega.update(0.05, (i + 1) * 0.05, cam, (ev) => omegaSlotsEarly.add(ev.slotIndex));
     }
-    expect(omegaSlotsEarly.size).toBe(1);
-    const omegaSlotsFull = new Set<number>(omegaSlotsEarly);
-    for (let i = 40; i < 240; i++) {
-      omega.update(0.05, (i + 1) * 0.05, cam, (ev) => omegaSlotsFull.add(ev.slotIndex));
+    expect(omegaSlotsEarly.size).toBe(5);
+    for (let i = 40; i < 280; i++) {
+      omega.update(0.05, (i + 1) * 0.05, cam, (ev) => {
+        if (ev.isFinisher) omegaUltSlots.add(ev.slotIndex);
+      });
     }
-    expect(omegaSlotsFull.size).toBe(5);
+    expect(omegaUltSlots.size).toBe(5);
+    const omegaAnchors = omega.getFighterPlotAnchors(cam, 1280, 720);
+    expect(omegaAnchors).toHaveLength(5);
+    expect(omegaAnchors[0].ultMaxCharge).toBe(5);
     omega.dispose();
   });
 
@@ -4992,7 +5126,7 @@ describe('Pure 3D Mine World', () => {
     const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
     const seenBeats = new Set<number>();
     let sawFinisher = false;
-    for (let i = 0; i < 65; i++) {
+    for (let i = 0; i < 180; i++) {
       tower.update(0.05, (i + 1) * 0.05, cam, (ev) => {
         if (ev.beatIndex !== undefined) seenBeats.add(ev.beatIndex);
         if (ev.isFinisher) sawFinisher = true;

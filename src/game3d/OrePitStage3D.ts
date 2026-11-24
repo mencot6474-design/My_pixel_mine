@@ -54,12 +54,42 @@ export interface PureOreHitResult {
   dmgDealt: number;
 }
 
-/** Applies pure damage to a pit ore node and returns hit/break status. */
+const BARRAGE_PACED_SHARES = [
+  0.08 / 1.0,
+  0.1 / 0.92,
+  0.11 / 0.82,
+  0.13 / 0.71,
+  0.15 / 0.58,
+  0.18 / 0.43,
+] as const;
+
+/** Applies pure damage to a pit ore node and returns hit/break status. When preventBreak is true, paces lethal damage across barrage beats and clamps at 1 HP until Finisher. */
 export function applyNodeDamagePure(
   node: DamageableOreState,
-  dmg: number
+  dmg: number,
+  preventBreak = false,
+  beatIndex?: number
 ): PureOreHitResult | null {
   if (!node.alive || node.hp <= 0 || dmg <= 0) return null;
+  if (preventBreak) {
+    if (node.hp <= 1) {
+      return {
+        broken: false,
+        dmgDealt: 0,
+      };
+    }
+    let maxAllowed = node.hp - 1;
+    if (beatIndex !== undefined && beatIndex >= 0 && beatIndex < BARRAGE_PACED_SHARES.length && dmg >= node.hp) {
+      const paced = Math.max(1, Math.floor(node.hp * BARRAGE_PACED_SHARES[beatIndex]));
+      maxAllowed = Math.min(maxAllowed, paced);
+    }
+    const dmgDealt = Math.min(maxAllowed, dmg);
+    node.hp = Math.max(1, node.hp - dmgDealt);
+    return {
+      broken: false,
+      dmgDealt,
+    };
+  }
   const dmgDealt = Math.min(node.hp, dmg);
   node.hp = Math.max(0, node.hp - dmg);
   if (node.hp > 0) {
@@ -92,6 +122,8 @@ export interface OreAttackFxOptions {
   attackerZ?: number;
   comboStep?: number;
   isPerfect?: boolean;
+  preventBreak?: boolean;
+  beatIndex?: number;
 }
 
 export interface SweetSpotPitState {

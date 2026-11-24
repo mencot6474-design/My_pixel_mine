@@ -592,6 +592,11 @@ export class PlotPedestal3D {
     this.castRingPulse = 1.0;
   }
 
+  public triggerChibiUltOpening(durationSec = 0.52): void {
+    this.chibiSprite?.triggerUltOpening(durationSec);
+    this.castRingPulse = 1.65;
+  }
+
   public triggerChibiBlitz(opts: {
     rarity: string;
     targetX: number;

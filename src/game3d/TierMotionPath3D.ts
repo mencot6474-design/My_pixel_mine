@@ -73,9 +73,16 @@ export function lerpNum(a: number, b: number, t: number): number {
 }
 
 export const CHIBI_ATTACK_ANIM_SEC = 2.5;
+export const ULT_SPOTLIGHT_LOCK_SEC = 1.5;
+export const ULT_CHARGE_BASIC_ATTACKS = 5;
 export const CHIBI_BLITZ_SHADOW_SEC = 0.88;
 export const BARRAGE_BEAT_WEIGHTS = [0.08, 0.1, 0.11, 0.13, 0.15, 0.18, 0.25] as const;
-export const BARRAGE_FOLLOWUP_DELAYS = [0.18, 0.36, 0.56, 0.78, 1.04, 1.48] as const;
+export const BARRAGE_FOLLOWUP_DELAYS = [0.14, 0.29, 0.46, 0.65, 0.88, 1.22] as const;
+
+export function getBasicAttackIntervalSec(miningMult: number): number {
+  const safeMult = Math.max(1, miningMult);
+  return Math.max(0.75, Math.min(1.25, 1.25 / (1 + (safeMult - 1) * 0.12)));
+}
 
 export type BarrageDamageTuple = [number, number, number, number, number, number, number];
 
@@ -106,7 +113,7 @@ export function computeAttackVfxSpeedScale(attackInterval: number): number {
 }
 
 export function computeSpotlightMaxChargeSec(unitCount: number): number {
-  return Math.max(CHIBI_ATTACK_ANIM_SEC, Math.max(1, unitCount) * CHIBI_ATTACK_ANIM_SEC * 1.5);
+  return Math.max(CHIBI_ATTACK_ANIM_SEC * 2, Math.max(1, unitCount) * ULT_SPOTLIGHT_LOCK_SEC * 2.5);
 }
 
 /**

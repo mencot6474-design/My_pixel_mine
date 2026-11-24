@@ -20,6 +20,12 @@ export interface MineProjectorCtx {
   crateGroup: THREE.Group;
   callbacks: MineSceneCallbacks;
   getFocusedPlotIndex: () => number | null;
+  getPlotUltState?: (slotIndex: number) => {
+    charge: number;
+    maxCharge: number;
+    armed: boolean;
+    ulting: boolean;
+  } | null;
 }
 
 export class MineSceneProjector {
@@ -161,7 +167,8 @@ export class MineSceneProjector {
     const anchors: PlotAnchorScreen[] = [];
 
     for (const ped of this.ctx.pedestals) {
-      if (!ped.getChibi() || this.ctx.getFocusedPlotIndex() !== null) {
+      const chibi = ped.getChibi();
+      if (!chibi || this.ctx.getFocusedPlotIndex() !== null) {
         anchors.push({ slotIndex: ped.index, labelX: 0, labelY: 0, btnX: 0, btnY: 0, visible: false });
         continue;
       }
@@ -176,6 +183,7 @@ export class MineSceneProjector {
       const btnVisible = this.ctx.projVec.z > -1 && this.ctx.projVec.z < 1;
       const btnX = (this.ctx.projVec.x * 0.5 + 0.5) * w;
       const btnY = (-this.ctx.projVec.y * 0.5 + 0.5) * h;
+      const ultState = this.ctx.getPlotUltState?.(ped.index);
 
       anchors.push({
         slotIndex: ped.index,
@@ -184,6 +192,11 @@ export class MineSceneProjector {
         btnX,
         btnY,
         visible: labelVisible && btnVisible,
+        rarity: chibi.rarity,
+        ultCharge: ultState?.charge ?? 0,
+        ultMaxCharge: ultState?.maxCharge ?? 5,
+        ultArmed: ultState?.armed ?? false,
+        ulting: ultState?.ulting ?? false,
       });
     }
 
@@ -208,8 +221,10 @@ export class MineSceneProjector {
     const modeChanged = this.lastOverlayMode !== mode;
     if (modeChanged) {
       this.lastOverlayMode = mode;
-      if (mode !== 'mine') {
+      if (mode !== 'mine' && mode !== 'tower' && mode !== 'omega') {
         this.ctx.callbacks.onPlotAnchors?.([]);
+      }
+      if (mode !== 'mine') {
         this.ctx.callbacks.onOreBars?.([]);
       }
       if (mode !== 'mine' && mode !== 'tower') {
@@ -249,15 +264,19 @@ export class MineSceneProjector {
       if (towerArena) {
         const { width: w, height: h } = this.getViewportSize();
         this.ctx.callbacks.onTowerOreBars?.(towerArena.getAliveOreScreenBars(this.ctx.camera, w, h, this.ctx.projVec));
+        this.ctx.callbacks.onPlotAnchors?.(towerArena.getFighterPlotAnchors(this.ctx.camera, w, h, this.ctx.projVec));
       }
     } else if (mode === 'omega') {
       const omegaArena = this.ctx.getOmegaArena();
-      if (omegaArena && this.ctx.callbacks.onOmegaArenaOverlay) {
+      if (omegaArena) {
         const { width: w, height: h } = this.getViewportSize();
-        this.ctx.callbacks.onOmegaArenaOverlay({
-          bossHead: omegaArena.getBossHeadScreenAnchor(this.ctx.camera, w, h),
-          targets: omegaArena.getTargetScreenAnchors(this.ctx.camera, w, h),
-        });
+        this.ctx.callbacks.onPlotAnchors?.(omegaArena.getFighterPlotAnchors(this.ctx.camera, w, h));
+        if (this.ctx.callbacks.onOmegaArenaOverlay) {
+          this.ctx.callbacks.onOmegaArenaOverlay({
+            bossHead: omegaArena.getBossHeadScreenAnchor(this.ctx.camera, w, h),
+            targets: omegaArena.getTargetScreenAnchors(this.ctx.camera, w, h),
+          });
+        }
       }
     } else if (mode === 'fusion' && fusionWorld) {
       if (fusionWorld.isAnimating() || fusionWorld.isRevealHolding()) {

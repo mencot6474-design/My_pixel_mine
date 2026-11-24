@@ -580,7 +580,6 @@
   @media (prefers-reduced-motion: reduce) {
     .mam-omega-hero-slam,
     .mam-omega-hero-color-pop,
-    .mam-omega-flash-veil,
     .mam-omega-banner-sweep,
     .mam-omega-confirm-rise,
     .mam-omega-parry-ring-shrink,
@@ -588,6 +587,12 @@
     .mam-omega-tap-pulse {
       animation: none !important;
       opacity: 1 !important;
+    }
+
+    .mam-omega-flash-veil {
+      animation: none !important;
+      display: none !important;
+      opacity: 0 !important;
     }
   }
 

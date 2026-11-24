@@ -400,7 +400,7 @@ export function applyOmegaSquadStrikeDomain(
 
   const rawDmg = Math.max(
     1,
-    Math.round(st.dmg * Math.max(0.15, attackIntervalSec) * critMult * breakMult * armorMult)
+    Math.round(st.dmg * Math.max(0.01, attackIntervalSec) * critMult * breakMult * armorMult)
   );
   let remainingDmg = rawDmg;
   if (battle.barrierHp > 0) {
@@ -412,7 +412,8 @@ export function applyOmegaSquadStrikeDomain(
   battle.hp = Math.max(0, battle.hp - hpDmg);
   battle.damageDealt += rawDmg;
 
-  const breakTriggered = addOmegaStagger(battle, isCrit ? 1.1 : 0.52);
+  const staggerScale = Math.min(1.15, Math.max(0.28, attackIntervalSec * 0.72));
+  const breakTriggered = addOmegaStagger(battle, (isCrit ? 1.1 : 0.52) * staggerScale);
   const bossDefeated = battle.hp <= 0;
   if (bossDefeated) {
     finishOmegaBossDomain(ctx, 'victory', rng, emit);

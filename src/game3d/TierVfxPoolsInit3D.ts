@@ -83,6 +83,56 @@ import {
 } from './TierMotionPath3D';
 import type { TierVfxChoreoContext } from './TierVfxChoreography3D';
 
+export interface UltOpeningBurstOpts {
+  x: number;
+  y: number;
+  z: number;
+  colorHex: string;
+  secondaryHex?: string;
+}
+
+export function fireUltOpeningBurstChoreography(
+  ctx: TierVfxChoreoContext,
+  opts: UltOpeningBurstOpts
+): void {
+  const sec = opts.secondaryHex ?? '#fef08a';
+  ctx.spawnBeam({
+    x: opts.x,
+    y: opts.y + 0.1,
+    z: opts.z,
+    color: opts.colorHex,
+    coreColor: sec,
+    radius: 0.95,
+    height: 7.4,
+    life: 0.38,
+  });
+  ctx.spawnQuad({
+    tex: ctx.ringTex,
+    x: opts.x,
+    y: opts.y + 0.28,
+    z: opts.z,
+    color: opts.colorHex,
+    s0: 0.75,
+    s1: 4.2,
+    life: 0.42,
+    flatFloor: true,
+    alpha: 0.95,
+  });
+  ctx.spawnQuad({
+    tex: ctx.ringTex,
+    x: opts.x,
+    y: opts.y + 0.22,
+    z: opts.z,
+    color: sec,
+    s0: 0.55,
+    s1: 3.1,
+    life: 0.46,
+    flatFloor: true,
+    alpha: 0.85,
+  });
+  ctx.spawnSparks(opts.x, opts.y + 1.35, opts.z, opts.colorHex, sec, ctx.lowQuality ? 4 : 9, 5.6);
+}
+
 export interface PodiumWeaponCastOpts {
   rarity: string;
   chibiId?: string;

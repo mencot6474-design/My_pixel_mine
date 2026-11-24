@@ -566,7 +566,7 @@ export class OrePit3D {
     const effectiveDmg = node.isMeteor
       ? Math.min(dmg, Math.max(1, Math.ceil(node.maxHp * meteorCap)))
       : dmg;
-    const pure = applyNodeDamagePure(node, effectiveDmg);
+    const pure = applyNodeDamagePure(node, effectiveDmg, Boolean(attackFx?.preventBreak), attackFx?.beatIndex);
     if (!pure) return null;
 
     node.squashAmt = isPerfect ? 0.56 : heavy ? 0.46 : 0.34;

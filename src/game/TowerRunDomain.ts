@@ -147,7 +147,7 @@ export function getTowerSlotStrikeDamageDomain(
 ): number {
   const unitDps = getTowerUnitEffectiveDpsDomain(ctx, slotIndex);
   if (unitDps <= 0) return 0;
-  return Math.max(1, Math.round(unitDps * Math.max(0.15, attackIntervalSec)));
+  return Math.max(1, Math.round(unitDps * Math.max(0.01, attackIntervalSec)));
 }
 
 export function getTowerEffectiveDpsDomain(ctx: TowerRunContext): number {

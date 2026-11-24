@@ -24,6 +24,7 @@ export interface SignatureProjectileLaunchOpts {
   ez: number;
   attackInterval?: number;
   isBoss?: boolean;
+  isUltimate?: boolean;
 }
 
 export interface SignatureProjectileArrival {
@@ -39,6 +40,7 @@ export interface SignatureProjectileArrival {
   ez: number;
   attackInterval: number;
   isBoss: boolean;
+  isUltimate: boolean;
 }
 
 interface PooledProjectile {
@@ -56,6 +58,7 @@ interface PooledProjectile {
   accentColor: string;
   attackInterval: number;
   isBoss: boolean;
+  isUltimate: boolean;
   startX: number;
   startY: number;
   startZ: number;
@@ -146,6 +149,7 @@ export class SignatureProjectilePool3D {
     ez: 0,
     attackInterval: 0.85,
     isBoss: false,
+    isUltimate: false,
   };
 
   private lowQuality = false;
@@ -201,6 +205,7 @@ export class SignatureProjectilePool3D {
         accentColor: '#38bdf8',
         attackInterval: 0.85,
         isBoss: false,
+        isUltimate: false,
         startX: 0,
         startY: 0,
         startZ: 0,
@@ -266,6 +271,7 @@ export class SignatureProjectilePool3D {
     p.accentColor = opts.accentColor;
     p.attackInterval = opts.attackInterval ?? 0.85;
     p.isBoss = Boolean(opts.isBoss);
+    p.isUltimate = Boolean(opts.isUltimate);
     p.startX = sx;
     p.startY = sy;
     p.startZ = opts.sz;
@@ -368,6 +374,7 @@ export class SignatureProjectilePool3D {
         a.ez = opts.ez;
         a.attackInterval = opts.attackInterval ?? 0.85;
         a.isBoss = Boolean(opts.isBoss);
+        a.isUltimate = Boolean(opts.isUltimate);
         onOverflow(a);
       }
       return;
@@ -411,6 +418,7 @@ export class SignatureProjectilePool3D {
         a.ez = p.endZ;
         a.attackInterval = p.attackInterval;
         a.isBoss = p.isBoss;
+        a.isUltimate = p.isUltimate;
         onArrive(a);
       }
       p.active = false;
@@ -509,6 +517,7 @@ export class SignatureProjectilePool3D {
           a.ez = p.endZ;
           a.attackInterval = p.attackInterval;
           a.isBoss = p.isBoss;
+          a.isUltimate = p.isUltimate;
           onArrive(a);
         }
         p.active = false;

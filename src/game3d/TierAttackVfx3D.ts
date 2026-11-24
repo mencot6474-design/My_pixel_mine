@@ -16,12 +16,15 @@ import {
   CHIBI_BLITZ_SHADOW_SEC,
   computeAttackVfxSpeedScale,
   computeSpotlightMaxChargeSec,
+  getBasicAttackIntervalSec,
   getRaritySecondaryColor,
   isWideAoeRarity,
   resolvePitBounds,
   sampleTierMotionWaypoints,
   splitBarrageDamage,
   SpotlightAttackQueue,
+  ULT_CHARGE_BASIC_ATTACKS,
+  ULT_SPOTLIGHT_LOCK_SEC,
   type SampledMotionFrame,
   type TierAttackFireOpts,
   type TierMotionWaypoint,
@@ -50,7 +53,9 @@ import { ParadoxTwinsSkillVfxPool } from './skills/paradoxTwinsSkillVfx3D';
 import {
   createTierVfxPoolCollections,
   firePodiumWeaponCastChoreography,
+  fireUltOpeningBurstChoreography,
   type PodiumWeaponCastOpts,
+  type UltOpeningBurstOpts,
 } from './TierVfxPoolsInit3D';
 import {
   type BarrageLineSlot,
@@ -85,11 +90,14 @@ export {
   CHIBI_BLITZ_SHADOW_SEC,
   computeAttackVfxSpeedScale,
   computeSpotlightMaxChargeSec,
+  getBasicAttackIntervalSec,
   getRaritySecondaryColor,
   isWideAoeRarity,
   sampleTierMotionWaypoints,
   splitBarrageDamage,
   SpotlightAttackQueue,
+  ULT_CHARGE_BASIC_ATTACKS,
+  ULT_SPOTLIGHT_LOCK_SEC,
 };
 export type {
   SampledMotionFrame,
@@ -143,6 +151,24 @@ export class TierAttackVfxPool3D {
 
   private readonly events: Array<{ delay: number; fn: () => void }> = [];
   private hooks: TierVfxHooks = {};
+  private suppressHooks = false;
+  private readonly safeHooks: TierVfxHooks = {
+    onArenaDim: (l, t, d) => {
+      if (!this.suppressHooks) this.hooks.onArenaDim?.(l, t, d);
+    },
+    onImpactFrame: (s, i, t, d) => {
+      if (!this.suppressHooks) this.hooks.onImpactFrame?.(s, i, t, d);
+    },
+    onSpeedLines: (l, d) => {
+      if (!this.suppressHooks) this.hooks.onSpeedLines?.(l, d);
+    },
+    onCameraPush: (z, p) => {
+      if (!this.suppressHooks) this.hooks.onCameraPush?.(z, p);
+    },
+    onFlash: (c, s) => {
+      if (!this.suppressHooks) this.hooks.onFlash?.(c, s);
+    },
+  };
   private lowQuality = false;
   private time = 0;
   private activeTargetFloorY = 0;
@@ -239,15 +265,15 @@ export class TierAttackVfxPool3D {
 
     patchTierVfxPoolMaterialsWithPitClip(pools, this.pitClipUniforms);
 
-    this.crimsonRoninSkillPool = new CrimsonRoninSkillVfxPool(this.hooks);
-    this.obsidianSovereignSkillPool = new ObsidianSovereignSkillVfxPool(this.hooks);
-    this.abyssalLeviathanSkillPool = new AbyssalLeviathanSkillVfxPool(this.hooks);
-    this.clockworkTwinsSkillPool = new ClockworkTwinsSkillVfxPool(this.hooks);
-    this.lullabyTwinsSkillPool = new LullabyTwinsSkillVfxPool(this.hooks);
-    this.nocturneTwinsSkillPool = new NocturneTwinsSkillVfxPool(this.hooks);
-    this.halcyonTwinsSkillPool = new HalcyonTwinsSkillVfxPool(this.hooks);
-    this.yukikageTwinsSkillPool = new YukikageTwinsSkillVfxPool(this.hooks);
-    this.paradoxTwinsSkillPool = new ParadoxTwinsSkillVfxPool(this.hooks);
+    this.crimsonRoninSkillPool = new CrimsonRoninSkillVfxPool(this.safeHooks);
+    this.obsidianSovereignSkillPool = new ObsidianSovereignSkillVfxPool(this.safeHooks);
+    this.abyssalLeviathanSkillPool = new AbyssalLeviathanSkillVfxPool(this.safeHooks);
+    this.clockworkTwinsSkillPool = new ClockworkTwinsSkillVfxPool(this.safeHooks);
+    this.lullabyTwinsSkillPool = new LullabyTwinsSkillVfxPool(this.safeHooks);
+    this.nocturneTwinsSkillPool = new NocturneTwinsSkillVfxPool(this.safeHooks);
+    this.halcyonTwinsSkillPool = new HalcyonTwinsSkillVfxPool(this.safeHooks);
+    this.yukikageTwinsSkillPool = new YukikageTwinsSkillVfxPool(this.safeHooks);
+    this.paradoxTwinsSkillPool = new ParadoxTwinsSkillVfxPool(this.safeHooks);
     this.group.add(
       this.crimsonRoninSkillPool.group,
       this.obsidianSovereignSkillPool.group,
@@ -347,15 +373,15 @@ export class TierAttackVfxPool3D {
 
   public setHooks(hooks: TierVfxHooks): void {
     this.hooks = hooks;
-    this.crimsonRoninSkillPool.setHooks(hooks);
-    this.obsidianSovereignSkillPool.setHooks(hooks);
-    this.abyssalLeviathanSkillPool.setHooks(hooks);
-    this.clockworkTwinsSkillPool.setHooks(hooks);
-    this.lullabyTwinsSkillPool.setHooks(hooks);
-    this.nocturneTwinsSkillPool.setHooks(hooks);
-    this.halcyonTwinsSkillPool.setHooks(hooks);
-    this.yukikageTwinsSkillPool.setHooks(hooks);
-    this.paradoxTwinsSkillPool.setHooks(hooks);
+    this.crimsonRoninSkillPool.setHooks(this.safeHooks);
+    this.obsidianSovereignSkillPool.setHooks(this.safeHooks);
+    this.abyssalLeviathanSkillPool.setHooks(this.safeHooks);
+    this.clockworkTwinsSkillPool.setHooks(this.safeHooks);
+    this.lullabyTwinsSkillPool.setHooks(this.safeHooks);
+    this.nocturneTwinsSkillPool.setHooks(this.safeHooks);
+    this.halcyonTwinsSkillPool.setHooks(this.safeHooks);
+    this.yukikageTwinsSkillPool.setHooks(this.safeHooks);
+    this.paradoxTwinsSkillPool.setHooks(this.safeHooks);
   }
 
   public setLowQuality(low: boolean): void {
@@ -1131,12 +1157,56 @@ export class TierAttackVfxPool3D {
     slot.mesh.visible = true;
   }
 
+  public fireUltOpeningBurst(opts: UltOpeningBurstOpts): void {
+    fireUltOpeningBurstChoreography(this.getChoreoContext(), opts);
+  }
+
   public firePodiumWeaponCast(opts: PodiumWeaponCastOpts): void {
     firePodiumWeaponCastChoreography(this.getChoreoContext(), opts);
   }
 
+  private fastForwardOldUltTails(): void {
+    const pushTail = (arr: ReadonlyArray<{ active: boolean; age: number; life: number }>): void => {
+      for (let i = 0; i < arr.length; i++) {
+        const s = arr[i];
+        if (s.active && s.life > 0) {
+          s.age = Math.max(s.age, s.life * 0.72);
+        }
+      }
+    };
+    pushTail(this.domes);
+    pushTail(this.vortices);
+    pushTail(this.clockDials);
+    pushTail(this.frostSeals);
+    pushTail(this.lullabySeals);
+    pushTail(this.halcyonSeals);
+    for (const sealList of Object.values(this.fusionSeals)) {
+      pushTail(sealList);
+    }
+
+    // Fast-forward already-running 2.5s Sakuga shader tails (+0.54s) cleanly into their dissolve phase
+    // so consecutive 1.5s Ults never stack additive whiteout on stage.
+    this.suppressHooks = true;
+    try {
+      for (let step = 0; step < 6; step++) {
+        this.crimsonRoninSkillPool.update(0.09, this.time);
+        this.obsidianSovereignSkillPool.update(0.09, this.time);
+        this.abyssalLeviathanSkillPool.update(0.09, this.time);
+        this.clockworkTwinsSkillPool.update(0.09, this.time);
+        this.lullabyTwinsSkillPool.update(0.09, this.time);
+        this.nocturneTwinsSkillPool.update(0.09, this.time);
+        this.halcyonTwinsSkillPool.update(0.09, this.time);
+        this.yukikageTwinsSkillPool.update(0.09, this.time);
+        this.paradoxTwinsSkillPool.update(0.09, this.time);
+      }
+    } finally {
+      this.suppressHooks = false;
+    }
+  }
+
   public fireTierAttack(opts: TierAttackFireOpts): void {
     this.activeTargetFloorY = opts.target.y;
+    this.fastForwardOldUltTails();
     fireTierAttackChoreography(this.getChoreoContext(), opts);
   }
 

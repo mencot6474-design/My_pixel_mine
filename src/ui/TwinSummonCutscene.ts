@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { audio } from '../audio/AudioManager';
 import { assetUrl } from '../game/AssetUrl';
+import { gameSettings } from '../game/GameSettings';
 import { fmtInt, fmtShort } from '../game/NumberFormat';
 import { getPremiumShopItemByChibiId, PREMIUM_SHOP_ITEMS, PremiumShopItemDef } from '../game/PremiumShopData';
 import { ChibiDef, getChibiById } from '../game3d/ChibiCatalog';
@@ -73,6 +74,10 @@ const TWIN_CUTSCENE_FRAGMENT_SHADER = `
     return abs(p.x) + abs(p.y);
   }
 
+  float invSmooth(float lo, float hi, float x) {
+    return 1.0 - smoothstep(lo, hi, x);
+  }
+
   vec2 rotate2d(vec2 p, float a) {
     float c = cos(a);
     float s = sin(a);
@@ -130,7 +135,7 @@ const TWIN_CUTSCENE_FRAGMENT_SHADER = `
         float fi = float(i);
         vec2 rotSt = rotate2d(st, t * (0.7 + fi * 0.35) * (i == 1 ? -1.0 : 1.0));
         float targetR = mix(0.68 - fi * 0.16, 0.06, easeIn);
-        float diaRing = smoothstep(0.015, 0.0, abs(diamondDist(rotSt) - targetR));
+        float diaRing = invSmooth(0.0, 0.015, abs(diamondDist(rotSt) - targetR));
         vec3 ringCol = (i == 1) ? uColorB : uColorA;
         col += ringCol * diaRing * (0.9 + p * 0.8) * mask;
       }
@@ -140,12 +145,12 @@ const TWIN_CUTSCENE_FRAGMENT_SHADER = `
       float dB = length(st - starB);
       float trailAngA = theta - orbitAng;
       float trailAngB = theta - (orbitAng + PI);
-      float arcTrailA = exp(-abs(r - orbitR) * 28.0) * smoothstep(1.4, 0.0, mod(-trailAngA + 2.0 * PI, 2.0 * PI));
-      float arcTrailB = exp(-abs(r - orbitR) * 28.0) * smoothstep(1.4, 0.0, mod(-trailAngB + 2.0 * PI, 2.0 * PI));
+      float arcTrailA = exp(-abs(r - orbitR) * 28.0) * invSmooth(0.0, 1.4, mod(-trailAngA + 2.0 * PI, 2.0 * PI));
+      float arcTrailB = exp(-abs(r - orbitR) * 28.0) * invSmooth(0.0, 1.4, mod(-trailAngB + 2.0 * PI, 2.0 * PI));
 
-      col += uColorA * (smoothstep(0.11, 0.0, dA) * 1.45 + arcTrailA * 0.85) * mask;
-      col += uColorB * (smoothstep(0.11, 0.0, dB) * 1.45 + arcTrailB * 0.85) * mask;
-      col += vec3(1.0) * (smoothstep(0.026, 0.0, dA) + smoothstep(0.026, 0.0, dB)) * 1.7 * mask;
+      col += uColorA * (invSmooth(0.0, 0.11, dA) * 1.45 + arcTrailA * 0.85) * mask;
+      col += uColorB * (invSmooth(0.0, 0.11, dB) * 1.45 + arcTrailB * 0.85) * mask;
+      col += vec3(1.0) * (invSmooth(0.0, 0.026, dA) + invSmooth(0.0, 0.026, dB)) * 1.7 * mask;
     }
 
     // PHASE 2 & 3: Vertical Aurora Mirror Curtain, Twin Helix Ribbons & Diamond Mandala (1.05s+)
@@ -156,7 +161,7 @@ const TWIN_CUTSCENE_FRAGMENT_SHADER = `
       // Iridescent center prism curtain
       float curtainW = 0.075 / (abs(st.y) + 0.35) + burstDecay * 0.095;
       float shimmer = 0.72 + 0.28 * sin(st.y * 14.0 - t * 6.5);
-      float curtain = smoothstep(curtainW, 0.0, abs(st.x)) * shimmer;
+      float curtain = invSmooth(0.0, curtainW, abs(st.x)) * shimmer;
       col += prismMix * curtain * (0.36 + burstDecay * 1.25);
 
       // Twin Weaving Helix Ribbons
@@ -164,18 +169,18 @@ const TWIN_CUTSCENE_FRAGMENT_SHADER = `
       float helixPhase = st.y * 7.5 - t * 4.2;
       float x1 = sin(helixPhase) * waveAmp;
       float x2 = -x1;
-      float ribbon1 = smoothstep(0.026, 0.0, abs(st.x - x1)) * smoothstep(0.95, 0.05, abs(st.y));
-      float ribbon2 = smoothstep(0.026, 0.0, abs(st.x - x2)) * smoothstep(0.95, 0.05, abs(st.y));
+      float ribbon1 = invSmooth(0.0, 0.026, abs(st.x - x1)) * invSmooth(0.05, 0.95, abs(st.y));
+      float ribbon2 = invSmooth(0.0, 0.026, abs(st.x - x2)) * invSmooth(0.05, 0.95, abs(st.y));
       col += uColorA * ribbon1 * (0.65 + burstDecay * 0.9);
       col += uColorB * ribbon2 * (0.65 + burstDecay * 0.9);
 
       // Expanding Faceted Diamond Shockwaves (t=1.05s & color-pop at t=1.62s)
-      float dWave1 = smoothstep(0.036, 0.0, abs(dDia - pt * 1.65)) * max(0.0, 1.0 - pt * 1.05);
+      float dWave1 = invSmooth(0.0, 0.036, abs(dDia - pt * 1.65)) * max(0.0, 1.0 - pt * 1.05);
       col += mix(uColorA, vec3(1.0), 0.55) * dWave1 * 1.55;
 
       if (t >= 1.62) {
         float ct = t - 1.62;
-        float dWave2 = smoothstep(0.04, 0.0, abs(dDia - ct * 1.85)) * max(0.0, 1.0 - ct * 1.25);
+        float dWave2 = invSmooth(0.0, 0.04, abs(dDia - ct * 1.85)) * max(0.0, 1.0 - ct * 1.25);
         col += mix(uColorB, vec3(1.0), 0.5) * dWave2 * 1.65;
       }
 
@@ -184,9 +189,9 @@ const TWIN_CUTSCENE_FRAGMENT_SHADER = `
       vec2 rot1 = rotate2d(st, t * 0.45);
       vec2 rot2 = rotate2d(st, -t * 0.45 + PI * 0.25);
       float mandalaR = 0.34 + 0.014 * sin(t * 2.8);
-      float m1 = smoothstep(0.012, 0.0, abs(diamondDist(rot1) - mandalaR));
-      float m2 = smoothstep(0.012, 0.0, abs(diamondDist(rot2) - mandalaR));
-      float ringHalo = smoothstep(0.014, 0.0, abs(r - 0.28));
+      float m1 = invSmooth(0.0, 0.012, abs(diamondDist(rot1) - mandalaR));
+      float m2 = invSmooth(0.0, 0.012, abs(diamondDist(rot2) - mandalaR));
+      float ringHalo = invSmooth(0.0, 0.014, abs(r - 0.28));
 
       col += uColorA * (m1 * 0.85 + ringHalo * 0.45) * auraFade;
       col += uColorB * (m2 * 0.85 + ringHalo * 0.45) * auraFade;
@@ -200,7 +205,7 @@ const TWIN_CUTSCENE_FRAGMENT_SHADER = `
     if (isImpactFrame) {
       float rays = sin(theta * 16.0 + dDia * 10.0);
       float facetCut = step(0.12, rays * smoothstep(0.05, 0.4, r));
-      float coreBright = smoothstep(0.28, 0.03, dDia);
+      float coreBright = invSmooth(0.03, 0.28, dDia);
       vec3 flashCol = mix(uColorA * 0.35 + vec3(0.04, 0.05, 0.14), vec3(0.95, 0.99, 1.0), max(facetCut, coreBright));
       col = mix(flashCol, uColorB, 0.18 * (1.0 - coreBright));
     }
@@ -289,7 +294,7 @@ export function buildTwinFullscreenRevealDomHtml(
         >SKIP &gt;&gt;</button>
       </div>
 
-      <div class="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 overflow-y-auto mam-no-scrollbar py-2 relative z-10">
+      <div class="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 overflow-y-auto mam-no-scrollbar py-2 relative z-[25]">
         <div class="hidden flex-col items-center gap-2.5" data-twin-fs-hero="true">
           ${
             poseSrc
@@ -347,7 +352,7 @@ export function buildTwinFullscreenRevealDomHtml(
         </div>
       </div>
 
-      <div class="text-center text-[11px] font-black tracking-[0.16em] uppercase text-[#bae6fd]/75 relative z-10" data-twin-fs-caption="true">
+      <div class="text-center text-[11px] font-black tracking-[0.16em] uppercase text-[#bae6fd]/75 relative z-[25]" data-twin-fs-caption="true">
         ${
           cs.phase === 'confirm'
             ? `${chibiName} Ready for Deployment`
@@ -446,13 +451,47 @@ export class TwinSummonCutsceneController {
       this.layerEl.remove();
       this.layerEl = null;
     }
+    if (typeof document !== 'undefined' && document.body?.dataset.fullscreenCutscene) {
+      delete document.body.dataset.fullscreenCutscene;
+    }
     this.state = null;
     this.onConfirmHandler = null;
     this.effectiveBaseDps = undefined;
   }
 
+  private disposeWebGlLayer(): void {
+    if (this.glGeo) {
+      this.glGeo.dispose();
+      this.glGeo = null;
+    }
+    if (this.glMaterial) {
+      this.glMaterial.dispose();
+      this.glMaterial = null;
+    }
+    if (this.glRenderer) {
+      const domEl = this.glRenderer.domElement;
+      this.glRenderer.dispose();
+      try {
+        this.glRenderer.forceContextLoss();
+      } catch {
+        // Ignore if context already lost
+      }
+      domEl?.remove();
+      this.glRenderer = null;
+    }
+    this.glScene = null;
+    this.glCamera = null;
+  }
+
+  private getCutsceneDpr(): number {
+    const q = gameSettings.get().graphicsQuality;
+    const cap = q === 'low' ? 0.75 : q === 'medium' ? 1.0 : 1.15;
+    return Math.min(window.devicePixelRatio || 1, cap);
+  }
+
   private mountFullscreenDom(item: PremiumShopItemDef): void {
     if (typeof document === 'undefined' || !this.state) return;
+    document.body.dataset.fullscreenCutscene = 'true';
     const chibi = getChibiById(item.chibiId);
     const layer = document.createElement('div');
     layer.id = 'twinCutsceneLayer';
@@ -484,7 +523,7 @@ export class TwinSummonCutsceneController {
     try {
       const w = Math.max(320, window.innerWidth || 1280);
       const h = Math.max(240, window.innerHeight || 720);
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+      const dpr = this.getCutsceneDpr();
 
       const renderer = new THREE.WebGLRenderer({
         antialias: false,
@@ -495,6 +534,14 @@ export class TwinSummonCutsceneController {
       renderer.setPixelRatio(dpr);
       renderer.setSize(w, h, false);
       renderer.domElement.className = 'absolute inset-0 w-full h-full pointer-events-none';
+      renderer.domElement.addEventListener(
+        'webglcontextlost',
+        (ev) => {
+          ev.preventDefault();
+          this.disposeWebGlLayer();
+        },
+        { once: true }
+      );
       layer.appendChild(renderer.domElement);
 
       const palette = getTwinCutscenePalette(chibiId);
@@ -521,7 +568,7 @@ export class TwinSummonCutsceneController {
       this.glMaterial = mat;
       this.glGeo = geo;
     } catch {
-      // Headless / WebGL-unavailable environment: DOM reveal remains clean
+      this.disposeWebGlLayer();
     }
   }
 
@@ -529,7 +576,7 @@ export class TwinSummonCutsceneController {
     if (!this.glRenderer || !this.glMaterial || typeof window === 'undefined') return;
     const w = Math.max(320, window.innerWidth || 1280);
     const h = Math.max(240, window.innerHeight || 720);
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+    const dpr = this.getCutsceneDpr();
     const el = this.glRenderer.domElement;
     const targetW = Math.round(w * dpr);
     const targetH = Math.round(h * dpr);
@@ -562,7 +609,13 @@ export class TwinSummonCutsceneController {
         bannerEl.classList.remove('hidden');
         bannerEl.classList.add('flex');
       }
-      flashEl?.classList.remove('hidden');
+      const reducedMotion =
+        typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!reducedMotion && this.state?.phase !== 'confirm') {
+        flashEl?.classList.remove('hidden');
+      }
     }
   }
 
@@ -571,6 +624,10 @@ export class TwinSummonCutsceneController {
     const skipBtn = this.layerEl.querySelector<HTMLElement>('[data-twin-cutscene-skip]');
     if (skipBtn && this.state.phase === 'confirm') {
       skipBtn.classList.add('hidden');
+    }
+    const flashEl = this.layerEl.querySelector<HTMLElement>('[data-twin-fs-flash]');
+    if (flashEl && this.state.phase === 'confirm') {
+      flashEl.classList.add('hidden');
     }
     const confirmCard = this.layerEl.querySelector<HTMLElement>('[data-twin-confirm]');
     if (confirmCard && this.state.phase === 'confirm') {
@@ -589,40 +646,52 @@ export class TwinSummonCutsceneController {
     this.lastFrameMs = performance.now();
     const tick = (nowMs: number): void => {
       if (!this.state || !this.layerEl) return;
-      const dt = Math.min(0.05, Math.max(0, (nowMs - this.lastFrameMs) / 1000));
+      this.rafId = requestAnimationFrame(tick);
+
+      const dt = Math.min(0.25, Math.max(0, (nowMs - this.lastFrameMs) / 1000));
       this.lastFrameMs = nowMs;
       this.elapsedSec += dt;
 
-      if (this.state.phase === 'animating') {
-        if (!this.orbitCueFired && this.elapsedSec >= 0.22) {
-          this.orbitCueFired = true;
-          audio.playSfx('ui-tab');
+      try {
+        if (this.state.phase === 'animating') {
+          if (!this.orbitCueFired && this.elapsedSec >= 0.22) {
+            this.orbitCueFired = true;
+            audio.playSfx('ui-tab');
+          }
+          if (!this.impactCueFired && this.elapsedSec >= IMPACT_AT_SEC) {
+            this.impactCueFired = true;
+            audio.playCrystalChord('perfect');
+            audio.playSfx('coin-alt');
+            this.syncSilhouettePhase(false);
+          }
+          if (!this.colorCueFired && this.elapsedSec >= COLOR_POP_AT_SEC) {
+            this.colorCueFired = true;
+            audio.playSfx('rare-fanfare', { volume: 0.72 });
+            audio.playCrystalChord('perfect');
+            this.syncSilhouettePhase(true);
+          }
+          if (this.elapsedSec >= CONFIRM_AT_SEC) {
+            this.state = { ...this.state, phase: 'confirm' };
+            this.syncConfirmDom();
+          }
         }
-        if (!this.impactCueFired && this.elapsedSec >= IMPACT_AT_SEC) {
-          this.impactCueFired = true;
-          audio.playCrystalChord('perfect');
-          audio.playSfx('coin-alt');
-          this.syncSilhouettePhase(false);
-        }
-        if (!this.colorCueFired && this.elapsedSec >= COLOR_POP_AT_SEC) {
-          this.colorCueFired = true;
-          audio.playSfx('rare-fanfare', { volume: 0.72 });
-          audio.playCrystalChord('perfect');
-          this.syncSilhouettePhase(true);
-        }
-        if (this.elapsedSec >= CONFIRM_AT_SEC) {
+      } catch {
+        // Keep confirm flow alive even if audio/DOM hook fails on restricted device
+        if (this.elapsedSec >= CONFIRM_AT_SEC && this.state.phase !== 'confirm') {
           this.state = { ...this.state, phase: 'confirm' };
           this.syncConfirmDom();
         }
       }
 
       if (this.glRenderer && this.glScene && this.glCamera && this.glMaterial) {
-        this.resizeWebGlIfNeeded();
-        this.glMaterial.uniforms.uTime.value = this.elapsedSec;
-        this.glRenderer.render(this.glScene, this.glCamera);
+        try {
+          this.resizeWebGlIfNeeded();
+          this.glMaterial.uniforms.uTime.value = this.elapsedSec;
+          this.glRenderer.render(this.glScene, this.glCamera);
+        } catch {
+          this.disposeWebGlLayer();
+        }
       }
-
-      this.rafId = requestAnimationFrame(tick);
     };
     this.rafId = requestAnimationFrame(tick);
   }

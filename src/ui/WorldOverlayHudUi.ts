@@ -10,7 +10,7 @@ import {
 } from '../game3d/ShopWorld3D';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
 import type { OmegaTargetScreenAnchor } from '../game3d/OmegaArena3D';
-import { getEnchantById, getMinerRarity, getMutationById, RARITY_BORDER } from '../game/GameData';
+import { getEnchantById, getMinerRarity, getMutationById, RARITY_BORDER, type ItemRarity } from '../game/GameData';
 import { GameSettings, gameSettings } from '../game/GameSettings';
 import { GameState } from '../game/GameState';
 import { fmtShort } from '../game/NumberFormat';
@@ -266,7 +266,19 @@ export class WorldOverlayHudUi {
   private shopBubbleLayerEl: HTMLElement | null = null;
   private omegaLayerEl: HTMLElement | null = null;
   private readonly lastPlotLabelKeys = new Map<number, string>();
-  private readonly plotLabelCache = new Map<number, { el: HTMLElement; x: number; y: number }>();
+  private readonly plotLabelCache = new Map<
+    number,
+    {
+      el: HTMLElement;
+      badgeWrap: HTMLElement | null;
+      barEl: HTMLElement | null;
+      segs: HTMLElement[];
+      x: number;
+      y: number;
+      charge: number;
+      state: string;
+    }
+  >();
   private readonly mineOreBarNodes = new Map<number, { key: string; el: HTMLElement }>();
   private lastAutoDmgPopupAtMs = 0;
 
@@ -368,24 +380,42 @@ export class WorldOverlayHudUi {
 
     if (this.plotLayerEl) {
       const { sceneMode, activeModal, inspectedSlot } = this.getUiContext();
-      if (sceneMode !== 'mine' || activeModal !== 'none' || inspectedSlot !== null) {
+      const showCombatBadges = sceneMode === 'mine' || sceneMode === 'tower' || sceneMode === 'omega';
+      if (!showCombatBadges || activeModal !== 'none' || inspectedSlot !== null) {
         if (this.plotLayerEl.innerHTML !== '') {
           this.plotLayerEl.innerHTML = '';
           this.plotLayerEl.dataset.keys = '';
           this.plotLabelCache.clear();
         }
       } else {
-        const items: Array<{ slotIndex: number; rarity: ReturnType<typeof getMinerRarity>; x: number; y: number }> = [];
+        const items: Array<{
+          slotIndex: number;
+          rarity: ItemRarity;
+          x: number;
+          y: number;
+          ultCharge: number;
+          ultMaxCharge: number;
+          ultArmed: boolean;
+          ulting: boolean;
+        }> = [];
         for (const a of anchors) {
           if (!a.visible) continue;
-          const unit = this.state.getPlotUnit(a.slotIndex);
-          const chibi = unit ? getChibiById(unit.chibiId) : null;
-          if (!unit || !chibi) continue;
+          let resolvedRarity = a.rarity as ItemRarity | undefined;
+          if (!resolvedRarity) {
+            const unit = this.state.getPlotUnit(a.slotIndex);
+            const chibi = unit ? getChibiById(unit.chibiId) : null;
+            if (!unit || !chibi) continue;
+            resolvedRarity = getMinerRarity(chibi.id);
+          }
           items.push({
             slotIndex: a.slotIndex,
-            rarity: getMinerRarity(chibi.id),
+            rarity: resolvedRarity,
             x: Math.round(a.labelX),
             y: Math.round(a.labelY),
+            ultCharge: a.ultCharge ?? 0,
+            ultMaxCharge: Math.max(1, a.ultMaxCharge ?? 5),
+            ultArmed: Boolean(a.ultArmed),
+            ulting: Boolean(a.ulting),
           });
         }
         const key = items.map((item) => `${item.slotIndex}:${item.rarity}`).join(',');
@@ -394,7 +424,7 @@ export class WorldOverlayHudUi {
           this.plotLayerEl.innerHTML = items
             .map(
               (item) =>
-                `<div class="absolute top-0 left-0 flex items-end justify-center leading-none pointer-events-none select-none will-change-transform origin-bottom" data-label-slot="${item.slotIndex}">${renderRarityBadgeHtml(item.rarity, '!ml-0')}</div>`
+                `<div class="absolute top-0 left-0 flex flex-col items-center gap-[3px] leading-none pointer-events-none select-none will-change-transform origin-bottom" data-label-slot="${item.slotIndex}"><div class="mam-ult-badge-wrap" data-ult-badge-wrap="true">${renderRarityBadgeHtml(item.rarity, '!ml-0')}</div><div class="mam-ult-charge-bar" data-ult-bar="true" data-ult-state="charging" data-charge="0"><span class="mam-ult-seg" data-ult-seg="0"></span><span class="mam-ult-seg" data-ult-seg="1"></span><span class="mam-ult-seg" data-ult-seg="2"></span><span class="mam-ult-seg" data-ult-seg="3"></span><span class="mam-ult-seg" data-ult-seg="4"></span></div></div>`
             )
             .join('');
           this.plotLabelCache.clear();
@@ -404,7 +434,10 @@ export class WorldOverlayHudUi {
           if (!cached) {
             const el = this.plotLayerEl.querySelector<HTMLElement>(`[data-label-slot="${item.slotIndex}"]`);
             if (!el) continue;
-            cached = { el, x: NaN, y: NaN };
+            const badgeWrap = el.querySelector<HTMLElement>('[data-ult-badge-wrap="true"]');
+            const barEl = el.querySelector<HTMLElement>('[data-ult-bar="true"]');
+            const segs = Array.from(el.querySelectorAll<HTMLElement>('[data-ult-seg]'));
+            cached = { el, badgeWrap, barEl, segs, x: NaN, y: NaN, charge: -1, state: '' };
             this.plotLabelCache.set(item.slotIndex, cached);
           }
           if (cached.x !== item.x || cached.y !== item.y) {
@@ -412,12 +445,46 @@ export class WorldOverlayHudUi {
             cached.y = item.y;
             cached.el.style.transform = `translate3d(${item.x}px, ${item.y}px, 0) translate(-50%, -100%)`;
           }
+          const nextState = item.ulting
+            ? 'active'
+            : item.ultArmed || item.ultCharge >= item.ultMaxCharge
+              ? 'ready'
+              : 'charging';
+          const displayCharge =
+            nextState === 'active' || nextState === 'ready'
+              ? 5
+              : Math.max(0, Math.min(5, Math.round((item.ultCharge / item.ultMaxCharge) * 5)));
+          if (cached.charge !== displayCharge || cached.state !== nextState) {
+            const prevState = cached.state;
+            cached.charge = displayCharge;
+            cached.state = nextState;
+            if (cached.barEl) {
+              cached.barEl.dataset.ultState = nextState;
+              cached.barEl.dataset.charge = String(displayCharge);
+              cached.barEl.classList.toggle('is-ult-ready', nextState === 'ready');
+              cached.barEl.classList.toggle('is-ult-active', nextState === 'active');
+            }
+            if (cached.badgeWrap) {
+              cached.badgeWrap.classList.toggle('is-ult-active', nextState === 'active');
+              if (nextState === 'active' && prevState !== 'active') {
+                cached.badgeWrap.classList.remove('is-ult-pop');
+                void cached.badgeWrap.offsetWidth;
+                cached.badgeWrap.classList.add('is-ult-pop');
+              } else if (nextState !== 'active') {
+                cached.badgeWrap.classList.remove('is-ult-pop');
+              }
+            }
+            for (let si = 0; si < cached.segs.length; si++) {
+              cached.segs[si].classList.toggle('is-filled', si < displayCharge);
+            }
+          }
         }
       }
     }
 
+    const { sceneMode } = this.getUiContext();
     const plot0 = anchors.find((a) => a.slotIndex === 0);
-    if (plot0) {
+    if (sceneMode === 'mine' && plot0) {
       this.onTutorialPlotAnchor?.(plot0.labelX, plot0.labelY, plot0.visible);
     }
   }
@@ -649,10 +716,10 @@ export class WorldOverlayHudUi {
     if (!this.dmgLayerEl || this.getUiContext().inspectedSlot !== null) return;
     if (settings.graphicsQuality === 'low' && !isClick && !isCrit && !isPerfect) {
       const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      if (nowMs - this.lastAutoDmgPopupAtMs < 140) return;
+      if (nowMs - this.lastAutoDmgPopupAtMs < 85) return;
       this.lastAutoDmgPopupAtMs = nowMs;
     }
-    const maxPopups = settings.graphicsQuality === 'low' ? 6 : 24;
+    const maxPopups = settings.graphicsQuality === 'low' ? 12 : 24;
     if (this.dmgLayerEl.childElementCount >= maxPopups) {
       this.dmgLayerEl.firstElementChild?.remove();
     }

@@ -27,6 +27,7 @@ import {
   syncOmegaFighterEntries,
 } from './OmegaArenaStage3D';
 import type { TowerFighterConfig } from './TowerArena3D';
+import type { PlotAnchorScreen } from './MineSceneStage3D';
 import {
   type SignatureProjectileArrival,
   SignatureProjectilePool3D,
@@ -34,14 +35,17 @@ import {
 import {
   BARRAGE_BEAT_WEIGHTS,
   BARRAGE_FOLLOWUP_DELAYS,
-  CHIBI_ATTACK_ANIM_SEC,
   computeAttackVfxSpeedScale,
   computeSpotlightMaxChargeSec,
   SpotlightAttackQueue,
   TierAttackVfxPool3D,
+  ULT_CHARGE_BASIC_ATTACKS,
+  ULT_SPOTLIGHT_LOCK_SEC,
   type TierVfxHooks,
   type WorldPoint3,
 } from './TierAttackVfx3D';
+
+const BASIC_ATTACK_DPS_SHARE = 0.65;
 
 export type { OmegaStrikeEvent, OmegaTargetScreenAnchor };
 
@@ -382,8 +386,12 @@ export class OmegaArena3D {
     for (const f of this.fighters.values()) {
       f.sprite.setAnimState('idle');
       f.sprite.group.position.copy(f.spawnPos);
-      f.attackCooldown = 0.08 + f.slotIndex * 0.1;
+      f.attackCooldown = 0.08 + f.slotIndex * 0.16;
       f.chargeSec = 0;
+      f.ultCharge = 0;
+      f.ultBankSec = 0;
+      f.ultArmed = false;
+      f.ultActiveTimer = 0;
     }
   }
 
@@ -409,8 +417,12 @@ export class OmegaArena3D {
       this.spotlight.reset();
       for (const f of this.fighters.values()) {
         f.sprite.setAnimState('idle');
-        f.attackCooldown = 0.08 + f.slotIndex * 0.1;
+        f.attackCooldown = 0.08 + f.slotIndex * 0.16;
         f.chargeSec = 0;
+        f.ultCharge = 0;
+        f.ultBankSec = 0;
+        f.ultArmed = false;
+        f.ultActiveTimer = 0;
         if (phase === 'ended') {
           f.sprite.group.position.copy(f.spawnPos);
         }
@@ -489,6 +501,35 @@ export class OmegaArena3D {
       x: (this.projVec.x * 0.5 + 0.5) * width,
       y: (-this.projVec.y * 0.5 + 0.5) * height,
     };
+  }
+
+  public getFighterPlotAnchors(
+    camera: THREE.Camera,
+    width: number,
+    height: number
+  ): PlotAnchorScreen[] {
+    const out: PlotAnchorScreen[] = [];
+    if (!this.group.visible) return out;
+    for (const f of this.fighters.values()) {
+      f.sprite.getLabelAnchorWorldPosition(this.projVec, 0.14, true).project(camera);
+      const visible = this.projVec.z > -1 && this.projVec.z < 1;
+      const labelX = (this.projVec.x * 0.5 + 0.5) * width;
+      const labelY = (-this.projVec.y * 0.5 + 0.5) * height;
+      out.push({
+        slotIndex: f.slotIndex,
+        labelX,
+        labelY,
+        btnX: labelX,
+        btnY: labelY,
+        visible,
+        rarity: f.rarity,
+        ultCharge: f.ultCharge,
+        ultMaxCharge: ULT_CHARGE_BASIC_ATTACKS,
+        ultArmed: f.ultArmed,
+        ulting: f.ultActiveTimer > 0,
+      });
+    }
+    return out;
   }
 
   public getTargetScreenAnchors(camera: THREE.Camera, width: number, height: number): OmegaTargetScreenAnchor[] {
@@ -668,8 +709,10 @@ export class OmegaArena3D {
 
     const handleOmegaArrival = (a: SignatureProjectileArrival): void => {
       const fighter = this.fighters.get(a.slotIndex);
-      if (fighter) {
-        const bossPt: WorldPoint3 = { x: 0, y: this.bossStageY, z: BOSS_POS_Z + 0.25 };
+      const isUlt = a.isUltimate;
+      if (isUlt && fighter) {
+        const lateralX = Math.max(-0.95, Math.min(0.95, fighter.spawnPos.x * 0.22));
+        const bossPt: WorldPoint3 = { x: lateralX, y: this.bossStageY, z: BOSS_POS_Z + 0.25 };
         const speedScale = computeAttackVfxSpeedScale(fighter.attackInterval);
         this.tierVfx.fireTierAttack({
           rarity: fighter.rarity,
@@ -679,26 +722,30 @@ export class OmegaArena3D {
           allTargets: [bossPt],
           comboStep: a.comboStep,
           speedScale,
+          areaScale: 0.92,
+          wideCenter: { x: lateralX * 0.75, y: this.bossStageY, z: BOSS_POS_Z + 0.25 },
         });
       }
-      const beatCount = BARRAGE_BEAT_WEIGHTS.length;
-      for (let bi = 1; bi < beatCount; bi++) {
-        const w = BARRAGE_BEAT_WEIGHTS[bi];
-        const isFinisher = bi === beatCount - 1;
-        this.pendingBarrages.push({
-          slotIndex: a.slotIndex,
-          beatIndex: bi,
-          delayLeft: BARRAGE_FOLLOWUP_DELAYS[bi - 1],
-          beatInterval: a.attackInterval * w,
-          dmg: Math.max(1, Math.round(a.dmg * w)),
-          accentColor: a.accentColor,
-          comboStep: isFinisher ? 2 : (a.comboStep + bi) % 2,
-          sx: a.sx,
-          sz: a.sz,
-          ex: a.ex,
-          ey: a.ey,
-          ez: a.ez,
-        });
+      if (isUlt) {
+        const beatCount = BARRAGE_BEAT_WEIGHTS.length;
+        for (let bi = 1; bi < beatCount; bi++) {
+          const w = BARRAGE_BEAT_WEIGHTS[bi];
+          const isFinisher = bi === beatCount - 1;
+          this.pendingBarrages.push({
+            slotIndex: a.slotIndex,
+            beatIndex: bi,
+            delayLeft: BARRAGE_FOLLOWUP_DELAYS[bi - 1],
+            beatInterval: a.attackInterval * w,
+            dmg: Math.max(1, Math.round(a.dmg * w)),
+            accentColor: a.accentColor,
+            comboStep: isFinisher ? 2 : (a.comboStep + bi) % 2,
+            sx: a.sx,
+            sz: a.sz,
+            ex: a.ex,
+            ey: a.ey,
+            ez: a.ez,
+          });
+        }
       }
       this.tierVfx.fireBarrageHitSlash({
         x: a.ex,
@@ -707,12 +754,25 @@ export class OmegaArena3D {
         colorHex: a.accentColor,
         beatIndex: 0,
         isFinisher: false,
-        scale: 1.38,
+        scale: isUlt ? 1.38 : 1.0,
       });
+      if (!isUlt) {
+        this.impactFx.spawnImpact({
+          targetX: a.ex,
+          targetY: a.ey,
+          targetZ: a.ez,
+          accentColor: a.accentColor,
+          heavy: false,
+          comboStep: a.comboStep % 2,
+          attackerX: a.sx,
+          attackerZ: a.sz,
+          shockwaveScale: 0.72,
+        });
+      }
       onStrike?.({
         slotIndex: a.slotIndex,
-        attackInterval: a.attackInterval * BARRAGE_BEAT_WEIGHTS[0],
-        dmg: Math.max(1, Math.round(a.dmg * BARRAGE_BEAT_WEIGHTS[0])),
+        attackInterval: isUlt ? a.attackInterval * BARRAGE_BEAT_WEIGHTS[0] : a.attackInterval,
+        dmg: isUlt ? Math.max(1, Math.round(a.dmg * BARRAGE_BEAT_WEIGHTS[0])) : a.dmg,
         wx: a.ex,
         wy: a.ey,
         wz: a.ez,
@@ -735,52 +795,92 @@ export class OmegaArena3D {
       f.sprite.setAnimState('idle');
       if (canAttack) {
         f.attackCooldown = Math.max(0, f.attackCooldown - safeDt);
+        if (f.ultActiveTimer > 0) {
+          f.ultActiveTimer = Math.max(0, f.ultActiveTimer - safeDt);
+        }
         f.chargeSec = Math.min(maxChargeSec, f.chargeSec + safeDt);
+        if (f.ultCharge >= ULT_CHARGE_BASIC_ATTACKS && !f.ultArmed && f.attackCooldown <= f.attackInterval * 0.55) {
+          f.ultArmed = true;
+        }
       }
       f.sprite.update(safeDt, elapsed, camera);
     }
 
-    if (canAttack) {
-      const activeFighter = this.spotlight.pickNextReady(this.fighters.values(), (f) => f.attackCooldown);
-      if (activeFighter) {
-        const effectiveSec = Math.max(activeFighter.attackInterval, activeFighter.chargeSec);
-        activeFighter.attackCooldown = activeFighter.attackInterval;
-        activeFighter.chargeSec = 0;
-        this.spotlight.claim(activeFighter.slotIndex, CHIBI_ATTACK_ANIM_SEC);
-        const step = activeFighter.comboStep;
-        activeFighter.comboStep = (activeFighter.comboStep + 1) % 3;
-        const bossPt: WorldPoint3 = { x: 0, y: this.bossStageY, z: BOSS_POS_Z + 0.25 };
+    const launchOmegaAttack = (f: OmegaFighterEntry, isUltimate: boolean, effectiveSec: number): void => {
+      const step = f.comboStep;
+      f.comboStep = (f.comboStep + 1) % 3;
+      const bossPt: WorldPoint3 = { x: 0, y: this.bossStageY, z: BOSS_POS_Z + 0.25 };
 
-        activeFighter.sprite.triggerPodiumCast(0.36);
-        this.tierVfx.firePodiumWeaponCast({
-          rarity: activeFighter.rarity,
-          chibiId: activeFighter.chibiId,
-          colorHex: activeFighter.colorHex,
-          origin: { x: activeFighter.spawnPos.x, y: activeFighter.spawnPos.y, z: activeFighter.spawnPos.z },
-          target: bossPt,
-          allTargets: [bossPt],
+      if (isUltimate) {
+        f.sprite.triggerUltOpening(0.52);
+        this.tierVfx.fireUltOpeningBurst({
+          x: f.spawnPos.x,
+          y: f.spawnPos.y,
+          z: f.spawnPos.z,
+          colorHex: f.colorHex,
         });
-        this.tierVfx.fireAnticipation(activeFighter.rarity, activeFighter.colorHex, bossPt, [bossPt]);
+      } else {
+        f.sprite.triggerPodiumCast(0.24);
+      }
+      this.tierVfx.firePodiumWeaponCast({
+        rarity: isUltimate ? f.rarity : 'common',
+        chibiId: f.chibiId,
+        colorHex: f.colorHex,
+        origin: { x: f.spawnPos.x, y: f.spawnPos.y, z: f.spawnPos.z },
+        target: bossPt,
+        allTargets: [bossPt],
+      });
+      if (isUltimate) {
+        this.tierVfx.fireAnticipation(f.rarity, f.colorHex, bossPt, [bossPt]);
+      }
 
-        this.projectiles.launch(
-          {
-            style: activeFighter.style,
-            slotIndex: activeFighter.slotIndex,
-            targetId: -1,
-            dmg: activeFighter.dmg,
-            comboStep: step,
-            accentColor: activeFighter.colorHex,
-            sx: activeFighter.spawnPos.x,
-            sy: activeFighter.spawnPos.y + 1.25,
-            sz: activeFighter.spawnPos.z,
-            ex: (Math.random() - 0.5) * 0.9,
-            ey: this.bossStageY + 1.85,
-            ez: BOSS_POS_Z + 0.25,
-            attackInterval: effectiveSec,
-            isBoss: true,
-          },
-          handleOmegaArrival
-        );
+      this.projectiles.launch(
+        {
+          style: f.style,
+          slotIndex: f.slotIndex,
+          targetId: -1,
+          dmg: Math.max(1, Math.round(f.dmg * effectiveSec)),
+          comboStep: step,
+          accentColor: f.colorHex,
+          sx: f.spawnPos.x,
+          sy: f.spawnPos.y + 1.25,
+          sz: f.spawnPos.z,
+          ex: (Math.random() - 0.5) * 0.9,
+          ey: this.bossStageY + 1.85,
+          ez: BOSS_POS_Z + 0.25,
+          attackInterval: effectiveSec,
+          isBoss: true,
+          isUltimate,
+        },
+        handleOmegaArrival
+      );
+    };
+
+    if (canAttack) {
+      // 1) Ult relay queue: armed Chibis (5/5 basic charge) fire 2.5s Sakuga Ult spaced 1.5s apart
+      const activeUltFighter = this.spotlight.pickNextReady(this.fighters.values(), (f) => (f.ultArmed ? 0 : 1));
+      if (activeUltFighter) {
+        const ultSec = Math.max(0.01, activeUltFighter.ultBankSec + activeUltFighter.chargeSec);
+        activeUltFighter.attackCooldown = Math.max(activeUltFighter.attackInterval, ULT_SPOTLIGHT_LOCK_SEC);
+        activeUltFighter.chargeSec = 0;
+        activeUltFighter.ultBankSec = 0;
+        activeUltFighter.ultCharge = 0;
+        activeUltFighter.ultArmed = false;
+        activeUltFighter.ultActiveTimer = ULT_SPOTLIGHT_LOCK_SEC;
+        this.spotlight.claim(activeUltFighter.slotIndex, ULT_SPOTLIGHT_LOCK_SEC);
+        launchOmegaAttack(activeUltFighter, true, ultSec);
+      }
+
+      // 2) Parallel basic attacks: all ready Chibis attack continuously without waiting
+      for (const f of this.fighters.values()) {
+        if (f.attackCooldown > 0 || f.ultActiveTimer > 0) continue;
+        const elapsedSec = Math.max(0.01, f.chargeSec);
+        const basicSec = elapsedSec * BASIC_ATTACK_DPS_SHARE;
+        f.ultBankSec = Math.min(maxChargeSec, f.ultBankSec + elapsedSec * (1 - BASIC_ATTACK_DPS_SHARE));
+        f.chargeSec = 0;
+        f.attackCooldown = f.attackInterval;
+        f.ultCharge = Math.min(ULT_CHARGE_BASIC_ATTACKS, f.ultCharge + 1);
+        launchOmegaAttack(f, false, basicSec);
       }
     }
 

@@ -76,6 +76,8 @@ export class ChibiSprite3D {
   private showcaseTimer = 0;
   private castPulseTimer = 0;
   private castPulseDuration = 0.42;
+  private ultOpenTimer = 0;
+  private ultOpenDuration = 0.52;
   private attackSwingTimer = 0;
   private attackSwingDuration = 0.42;
   private attackComboStep = 0;
@@ -503,6 +505,15 @@ export class ChibiSprite3D {
     this.setAnimState('attack');
   }
 
+  /** Plays a dramatic Sakuga power-up & ascent opening animation on the podium when triggering Ultimate. */
+  public triggerUltOpening(durationSec = 0.52): void {
+    if (this.hologramMode) return;
+    this.ensureBlitzPosesPreloaded();
+    this.ultOpenDuration = Math.max(0.32, durationSec);
+    this.ultOpenTimer = this.ultOpenDuration;
+    this.triggerPodiumCast(Math.max(0.45, durationSec));
+  }
+
   /**
    * Triggers Rainbow-standard world-space multi-teleport blitz choreography across
    * pit / tower / boss arenas without disturbing animGroup tests or pedestal scaling.
@@ -682,6 +693,28 @@ export class ChibiSprite3D {
       shadowScale = 1.0 - breath * 0.04;
     }
 
+    let ultOpenPulse = 0;
+    if (this.ultOpenTimer > 0) {
+      this.ultOpenTimer = Math.max(0, this.ultOpenTimer - dtSec);
+      const up = 1 - this.ultOpenTimer / this.ultOpenDuration;
+      ultOpenPulse = Math.sin(up * Math.PI);
+      if (up < 0.34) {
+        const c = Math.sin((up / 0.34) * Math.PI * 0.5);
+        posY -= 0.08 * c;
+        posX += Math.sin(up * 85) * 0.032;
+        scaleX *= 1 + 0.14 * c;
+        scaleY *= 1 - 0.11 * c;
+      } else {
+        const r = (up - 0.34) / 0.66;
+        const arc = Math.sin(r * Math.PI);
+        posY += arc * 0.34;
+        scaleY *= 1 + arc * 0.16;
+        scaleX *= 1 - arc * 0.07;
+        rotZ += -this.facing * arc * 0.085;
+        shadowScale *= 1 - arc * 0.22;
+      }
+    }
+
     this.animGroup.position.set(posX, posY, 0);
     this.animGroup.rotation.z = rotZ;
     this.animGroup.scale.set(scaleX, scaleY, 1);
@@ -707,9 +740,11 @@ export class ChibiSprite3D {
     if (showGlint) {
       const pulse = Math.sin(glintProgress * Math.PI);
       this.glintMesh.position.x = castPulseAmt > 0 ? 0 : -this.facing * 0.16;
-      this.glintMesh.rotation.z = glintProgress * Math.PI * 0.75;
-      this.glintMesh.scale.setScalar((castPulseAmt > 0 ? 0.55 : 0.36) + pulse * 0.92);
-      this.glintMat.opacity = 0.94 * pulse;
+      this.glintMesh.rotation.z = glintProgress * Math.PI * (ultOpenPulse > 0 ? 1.55 : 0.75);
+      const baseGlint = ultOpenPulse > 0 ? 0.92 : castPulseAmt > 0 ? 0.55 : 0.36;
+      const pulseBoost = ultOpenPulse > 0 ? 1.45 : 0.92;
+      this.glintMesh.scale.setScalar(baseGlint + pulse * pulseBoost);
+      this.glintMat.opacity = Math.min(1, (ultOpenPulse > 0 ? 1.0 : 0.94) * pulse);
     }
 
     const baseHeightOffset = this.mesh.position.y;

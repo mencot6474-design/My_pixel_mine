@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { audio } from '../audio/AudioManager';
 import { assetUrl } from '../game/AssetUrl';
+import { gameSettings } from '../game/GameSettings';
 import { fmtShort } from '../game/NumberFormat';
 import { getOmegaBossById, getOmegaPassiveStarScale, OMEGA_BOSS_DEFS, OmegaBossDef, OmegaBossId } from '../game/OmegaData';
 import { ChibiDef, getChibiById } from '../game3d/ChibiCatalog';
@@ -265,7 +266,7 @@ export function buildFullscreenRevealDomHtml(
         >SKIP &gt;&gt;</button>
       </div>
 
-      <div class="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 overflow-y-auto mam-no-scrollbar py-2 relative z-10">
+      <div class="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 overflow-y-auto mam-no-scrollbar py-2 relative z-[25]">
         <div class="hidden flex-col items-center gap-2.5" data-omega-fs-hero="true">
           ${
             poseSrc
@@ -325,7 +326,7 @@ export function buildFullscreenRevealDomHtml(
         </div>
       </div>
 
-      <div class="text-center text-[11px] font-black tracking-[0.16em] uppercase text-white/65 relative z-10" data-omega-fs-caption="true">
+      <div class="text-center text-[11px] font-black tracking-[0.16em] uppercase text-white/65 relative z-[25]" data-omega-fs-caption="true">
         ${
           cs.phase === 'confirm'
             ? `${boss.name} Ready for Deployment`
@@ -423,13 +424,47 @@ export class OmegaForgeCutsceneController {
       this.layerEl.remove();
       this.layerEl = null;
     }
+    if (typeof document !== 'undefined' && document.body?.dataset.fullscreenCutscene) {
+      delete document.body.dataset.fullscreenCutscene;
+    }
     this.state = null;
     this.onConfirmHandler = null;
     this.effectiveBaseDps = undefined;
   }
 
+  private disposeWebGlLayer(): void {
+    if (this.glGeo) {
+      this.glGeo.dispose();
+      this.glGeo = null;
+    }
+    if (this.glMaterial) {
+      this.glMaterial.dispose();
+      this.glMaterial = null;
+    }
+    if (this.glRenderer) {
+      const domEl = this.glRenderer.domElement;
+      this.glRenderer.dispose();
+      try {
+        this.glRenderer.forceContextLoss();
+      } catch {
+        // Ignore if context already lost
+      }
+      domEl?.remove();
+      this.glRenderer = null;
+    }
+    this.glScene = null;
+    this.glCamera = null;
+  }
+
+  private getCutsceneDpr(): number {
+    const q = gameSettings.get().graphicsQuality;
+    const cap = q === 'low' ? 0.75 : q === 'medium' ? 1.0 : 1.15;
+    return Math.min(window.devicePixelRatio || 1, cap);
+  }
+
   private mountFullscreenDom(boss: OmegaBossDef): void {
     if (typeof document === 'undefined' || !this.state) return;
+    document.body.dataset.fullscreenCutscene = 'true';
     const chibi = getChibiById(boss.chibiId);
     const layer = document.createElement('div');
     layer.id = 'omegaCutsceneLayer';
@@ -461,7 +496,7 @@ export class OmegaForgeCutsceneController {
     try {
       const w = Math.max(320, window.innerWidth || 1280);
       const h = Math.max(240, window.innerHeight || 720);
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+      const dpr = this.getCutsceneDpr();
 
       const renderer = new THREE.WebGLRenderer({
         antialias: false,
@@ -472,6 +507,14 @@ export class OmegaForgeCutsceneController {
       renderer.setPixelRatio(dpr);
       renderer.setSize(w, h, false);
       renderer.domElement.className = 'absolute inset-0 w-full h-full pointer-events-none';
+      renderer.domElement.addEventListener(
+        'webglcontextlost',
+        (ev) => {
+          ev.preventDefault();
+          this.disposeWebGlLayer();
+        },
+        { once: true }
+      );
       layer.appendChild(renderer.domElement);
 
       const scene = new THREE.Scene();
@@ -503,7 +546,7 @@ export class OmegaForgeCutsceneController {
       this.glMaterial = mat;
       this.glGeo = geo;
     } catch {
-      // Headless / WebGL-unavailable environment: DOM reveal remains clean
+      this.disposeWebGlLayer();
     }
   }
 
@@ -511,7 +554,7 @@ export class OmegaForgeCutsceneController {
     if (!this.glRenderer || !this.glMaterial || typeof window === 'undefined') return;
     const w = Math.max(320, window.innerWidth || 1280);
     const h = Math.max(240, window.innerHeight || 720);
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+    const dpr = this.getCutsceneDpr();
     const el = this.glRenderer.domElement;
     const targetW = Math.round(w * dpr);
     const targetH = Math.round(h * dpr);
@@ -544,7 +587,11 @@ export class OmegaForgeCutsceneController {
         bannerEl.classList.remove('hidden');
         bannerEl.classList.add('flex');
       }
-      if (flashEl) {
+      const reducedMotion =
+        typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!reducedMotion && this.state?.phase !== 'confirm' && flashEl) {
         flashEl.classList.remove('hidden');
       }
     }
@@ -555,6 +602,10 @@ export class OmegaForgeCutsceneController {
     const skipBtn = this.layerEl.querySelector<HTMLElement>('[data-omega-cutscene-skip]');
     if (skipBtn && this.state.phase === 'confirm') {
       skipBtn.classList.add('hidden');
+    }
+    const flashEl = this.layerEl.querySelector<HTMLElement>('[data-omega-fs-flash]');
+    if (flashEl && this.state.phase === 'confirm') {
+      flashEl.classList.add('hidden');
     }
     const confirmCard = this.layerEl.querySelector<HTMLElement>('[data-omega-forge-confirm]');
     if (confirmCard && this.state.phase === 'confirm') {
@@ -573,40 +624,51 @@ export class OmegaForgeCutsceneController {
     this.lastFrameMs = performance.now();
     const tick = (nowMs: number): void => {
       if (!this.state || !this.layerEl) return;
-      const dt = Math.min(0.05, Math.max(0, (nowMs - this.lastFrameMs) / 1000));
+      this.rafId = requestAnimationFrame(tick);
+
+      const dt = Math.min(0.25, Math.max(0, (nowMs - this.lastFrameMs) / 1000));
       this.lastFrameMs = nowMs;
       this.elapsedSec += dt;
 
-      if (this.state.phase === 'animating') {
-        if (!this.meteorCueFired && this.elapsedSec >= 0.25) {
-          this.meteorCueFired = true;
-          audio.playSfx('ui-tab');
+      try {
+        if (this.state.phase === 'animating') {
+          if (!this.meteorCueFired && this.elapsedSec >= 0.25) {
+            this.meteorCueFired = true;
+            audio.playSfx('ui-tab');
+          }
+          if (!this.impactCueFired && this.elapsedSec >= IMPACT_AT_SEC) {
+            this.impactCueFired = true;
+            audio.playCrystalChord();
+            audio.playSfx('coin-alt');
+            this.syncSilhouettePhase(false);
+          }
+          if (!this.colorCueFired && this.elapsedSec >= COLOR_POP_AT_SEC) {
+            this.colorCueFired = true;
+            audio.playSfx('place-chibi');
+            audio.playCrystalChord();
+            this.syncSilhouettePhase(true);
+          }
+          if (this.elapsedSec >= CONFIRM_AT_SEC) {
+            this.state = { ...this.state, phase: 'confirm' };
+            this.syncConfirmDom();
+          }
         }
-        if (!this.impactCueFired && this.elapsedSec >= IMPACT_AT_SEC) {
-          this.impactCueFired = true;
-          audio.playCrystalChord();
-          audio.playSfx('coin-alt');
-          this.syncSilhouettePhase(false);
-        }
-        if (!this.colorCueFired && this.elapsedSec >= COLOR_POP_AT_SEC) {
-          this.colorCueFired = true;
-          audio.playSfx('place-chibi');
-          audio.playCrystalChord();
-          this.syncSilhouettePhase(true);
-        }
-        if (this.elapsedSec >= CONFIRM_AT_SEC) {
+      } catch {
+        if (this.elapsedSec >= CONFIRM_AT_SEC && this.state.phase !== 'confirm') {
           this.state = { ...this.state, phase: 'confirm' };
           this.syncConfirmDom();
         }
       }
 
       if (this.glRenderer && this.glScene && this.glCamera && this.glMaterial) {
-        this.resizeWebGlIfNeeded();
-        this.glMaterial.uniforms.uTime.value = this.elapsedSec;
-        this.glRenderer.render(this.glScene, this.glCamera);
+        try {
+          this.resizeWebGlIfNeeded();
+          this.glMaterial.uniforms.uTime.value = this.elapsedSec;
+          this.glRenderer.render(this.glScene, this.glCamera);
+        } catch {
+          this.disposeWebGlLayer();
+        }
       }
-
-      this.rafId = requestAnimationFrame(tick);
     };
     this.rafId = requestAnimationFrame(tick);
   }

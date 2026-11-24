@@ -11,7 +11,7 @@ import {
 import { createChamferSlabGeometry, createLatheProfileGeometry, disposeObject3D, enableShadows } from './MeshHelpers3D';
 import { buildRooftopCommandBackdrop } from './OmegaRooftopAssets3D';
 import { getChibiAttackStyle, type PlotAttackStyle } from './SignatureProjectilePool3D';
-import { CHIBI_ATTACK_ANIM_SEC } from './TierAttackVfx3D';
+import { getBasicAttackIntervalSec } from './TierAttackVfx3D';
 import type { TowerFighterConfig } from './TowerArena3D';
 
 export const OMEGA_BOSS_POS_Z = -3.4;
@@ -56,6 +56,10 @@ export interface OmegaFighterEntry {
   attackInterval: number;
   attackCooldown: number;
   chargeSec: number;
+  ultCharge: number;
+  ultBankSec: number;
+  ultArmed: boolean;
+  ultActiveTimer: number;
   comboStep: number;
   colorHex: string;
 }
@@ -413,7 +417,7 @@ export function syncOmegaFighterEntries(ctx: {
     const existing = ctx.fighters.get(cfg.slotIndex);
     if (existing && existing.chibiId === cfg.def.id) {
       existing.dmg = cfg.dmg;
-      existing.attackInterval = Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / Math.max(0.4, cfg.miningMult)));
+      existing.attackInterval = getBasicAttackIntervalSec(cfg.miningMult);
       existing.fx.setEnchant(cfg.enchantId);
       existing.sprite.setAccentColor(cfg.def.accentColor);
       existing.sprite.setAnimState('idle');
@@ -446,9 +450,13 @@ export function syncOmegaFighterEntries(ctx: {
       fx,
       spawnPos: new THREE.Vector3(sx, standY, sz),
       dmg: cfg.dmg,
-      attackInterval: Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / Math.max(0.4, cfg.miningMult))),
-      attackCooldown: 0.08 + cfg.slotIndex * 0.1,
+      attackInterval: getBasicAttackIntervalSec(cfg.miningMult),
+      attackCooldown: 0.08 + cfg.slotIndex * 0.16,
       chargeSec: 0,
+      ultCharge: 0,
+      ultBankSec: 0,
+      ultArmed: false,
+      ultActiveTimer: 0,
       comboStep: 0,
       colorHex: cfg.def.accentColor,
     });

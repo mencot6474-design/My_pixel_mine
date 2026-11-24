@@ -12,12 +12,14 @@ import {
   SignatureProjectilePool3D,
 } from './SignatureProjectilePool3D';
 import {
-  CHIBI_ATTACK_ANIM_SEC,
+  getBasicAttackIntervalSec,
   SpotlightAttackQueue,
   TierAttackVfxPool3D,
+  ULT_CHARGE_BASIC_ATTACKS,
   type TierVfxHooks,
   type WorldPoint3,
 } from './TierAttackVfx3D';
+import type { PlotAnchorScreen } from './MineSceneStage3D';
 import {
   BossGravityRockSeed,
   BossHaloArcHandle,
@@ -254,9 +256,13 @@ export class TowerArena3D {
           spawnPos,
           targetOreIndex: -1,
           dmg: cfg.dmg,
-          attackInterval: Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / Math.max(1, cfg.miningMult))),
-          attackCooldown: 0.14 + cfg.slotIndex * 0.08,
+          attackInterval: getBasicAttackIntervalSec(cfg.miningMult),
+          attackCooldown: 0.12 + cfg.slotIndex * 0.16,
           chargeSec: 0,
+          ultCharge: 0,
+          ultBankSec: 0,
+          ultArmed: false,
+          ultActiveTimer: 0,
           comboStep: 0,
           enchantId: null,
           colorHex: cfg.def.accentColor,
@@ -264,7 +270,7 @@ export class TowerArena3D {
         this.fighters.set(cfg.slotIndex, existing);
       } else {
         existing.dmg = Math.max(1, cfg.dmg);
-        existing.attackInterval = Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / Math.max(1, cfg.miningMult)));
+        existing.attackInterval = getBasicAttackIntervalSec(cfg.miningMult);
       }
 
       this.applyFighterEnchant(existing, cfg.enchantId);
@@ -313,8 +319,12 @@ export class TowerArena3D {
       f.sprite.setAnimState('idle');
       f.sprite.setFacing(f.spawnPos.x <= 0 ? 1 : -1);
       f.targetOreIndex = -1;
-      f.attackCooldown = 0.14 + f.slotIndex * 0.08;
+      f.attackCooldown = 0.12 + f.slotIndex * 0.16;
       f.chargeSec = 0;
+      f.ultCharge = 0;
+      f.ultBankSec = 0;
+      f.ultArmed = false;
+      f.ultActiveTimer = 0;
     }
   }
 
@@ -752,6 +762,36 @@ export class TowerArena3D {
         this.spawnTowerShardsAt(x, y, z, colorHex, count, isShatter, isBoss),
       onFighterStrike,
     });
+  }
+
+  public getFighterPlotAnchors(
+    camera: THREE.Camera,
+    width: number,
+    height: number,
+    projVec: THREE.Vector3
+  ): PlotAnchorScreen[] {
+    const out: PlotAnchorScreen[] = [];
+    if (!this.group.visible) return out;
+    for (const f of this.fighters.values()) {
+      f.sprite.getLabelAnchorWorldPosition(projVec, 0.14, true).project(camera);
+      const visible = projVec.z > -1 && projVec.z < 1;
+      const labelX = (projVec.x * 0.5 + 0.5) * width;
+      const labelY = (-projVec.y * 0.5 + 0.5) * height;
+      out.push({
+        slotIndex: f.slotIndex,
+        labelX,
+        labelY,
+        btnX: labelX,
+        btnY: labelY,
+        visible,
+        rarity: f.def.rarity,
+        ultCharge: f.ultCharge,
+        ultMaxCharge: ULT_CHARGE_BASIC_ATTACKS,
+        ultArmed: f.ultArmed,
+        ulting: f.ultActiveTimer > 0,
+      });
+    }
+    return out;
   }
 
   public dispose(): void {

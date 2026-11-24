@@ -17,9 +17,13 @@ import {
   computeAttackVfxSpeedScale,
   computeSpotlightMaxChargeSec,
   SpotlightAttackQueue,
+  ULT_CHARGE_BASIC_ATTACKS,
+  ULT_SPOTLIGHT_LOCK_SEC,
   type TierAttackVfxPool3D,
   type WorldPoint3,
 } from './TierAttackVfx3D';
+
+const BASIC_ATTACK_DPS_SHARE = 0.65;
 
 export interface TowerFighterConfig {
   slotIndex: number;
@@ -92,6 +96,10 @@ export interface TowerChibiFighter {
   attackInterval: number;
   attackCooldown: number;
   chargeSec: number;
+  ultCharge: number;
+  ultBankSec: number;
+  ultArmed: boolean;
+  ultActiveTimer: number;
   comboStep: number;
   enchantId: string | null;
   colorHex: string;
@@ -383,36 +391,40 @@ export function stepTowerFightersAndBarrages(ctx: {
   const handleProjectileArrival = (a: SignatureProjectileArrival): void => {
     if (ctx.paused) return;
     const fighter = ctx.fighters.get(a.slotIndex);
+    const isUlt = a.isUltimate;
     const speedScale = computeAttackVfxSpeedScale(fighter ? fighter.attackInterval : CHIBI_ATTACK_ANIM_SEC);
-    const beat0Interval = a.attackInterval * BARRAGE_BEAT_WEIGHTS[0];
-    const beat0Dmg = Math.max(1, Math.round(a.dmg * BARRAGE_BEAT_WEIGHTS[0]));
+    const beat0Interval = isUlt ? a.attackInterval * BARRAGE_BEAT_WEIGHTS[0] : a.attackInterval;
+    const beat0Dmg = isUlt ? Math.max(1, Math.round(a.dmg * BARRAGE_BEAT_WEIGHTS[0])) : a.dmg;
 
-    for (let bi = 1; bi < beatCount; bi++) {
-      const w = BARRAGE_BEAT_WEIGHTS[bi];
-      const isFinisher = bi === beatCount - 1;
-      ctx.pendingBarrages.push({
-        slotIndex: a.slotIndex,
-        targetOreIndex: a.targetId,
-        isBoss: a.isBoss,
-        beatIndex: bi,
-        delayLeft: BARRAGE_FOLLOWUP_DELAYS[bi - 1],
-        beatInterval: a.attackInterval * w,
-        dmg: Math.max(1, Math.round(a.dmg * w)),
-        accentColor: a.accentColor,
-        comboStep: isFinisher ? 2 : (a.comboStep + bi) % 2,
-        sx: a.sx,
-        sz: a.sz,
-        ex: a.ex,
-        ey: a.ey,
-        ez: a.ez,
-      });
+    if (isUlt) {
+      for (let bi = 1; bi < beatCount; bi++) {
+        const w = BARRAGE_BEAT_WEIGHTS[bi];
+        const isFinisher = bi === beatCount - 1;
+        ctx.pendingBarrages.push({
+          slotIndex: a.slotIndex,
+          targetOreIndex: a.targetId,
+          isBoss: a.isBoss,
+          beatIndex: bi,
+          delayLeft: BARRAGE_FOLLOWUP_DELAYS[bi - 1],
+          beatInterval: a.attackInterval * w,
+          dmg: Math.max(1, Math.round(a.dmg * w)),
+          accentColor: a.accentColor,
+          comboStep: isFinisher ? 2 : (a.comboStep + bi) % 2,
+          sx: a.sx,
+          sz: a.sz,
+          ex: a.ex,
+          ey: a.ey,
+          ez: a.ez,
+        });
+      }
     }
 
     if (a.isBoss) {
       if (!ctx.bossWave) return;
       ctx.triggerBossBounce();
-      if (fighter) {
-        const bossPt: WorldPoint3 = { x: 0, y: 0.8, z: TOWER_BOSS_CENTER_Z + 0.85 };
+      if (isUlt && fighter) {
+        const lateralX = Math.max(-0.95, Math.min(0.95, fighter.spawnPos.x * 0.16));
+        const bossPt: WorldPoint3 = { x: lateralX, y: 0.8, z: TOWER_BOSS_CENTER_Z + 0.85 };
         ctx.tierVfx.fireTierAttack({
           rarity: fighter.def.rarity,
           chibiId: fighter.def.id,
@@ -421,8 +433,8 @@ export function stepTowerFightersAndBarrages(ctx: {
           allTargets: [bossPt],
           comboStep: a.comboStep,
           speedScale,
-          areaScale: 0.96,
-          wideCenter: { x: 0, y: 0.45, z: TOWER_BOSS_CENTER_Z + 1.15 },
+          areaScale: 0.92,
+          wideCenter: { x: lateralX * 0.75, y: 0.45, z: TOWER_BOSS_CENTER_Z + 1.15 },
         });
       }
       ctx.tierVfx.fireBarrageHitSlash({
@@ -432,7 +444,7 @@ export function stepTowerFightersAndBarrages(ctx: {
         colorHex: a.accentColor,
         beatIndex: 0,
         isFinisher: false,
-        scale: 1.38,
+        scale: isUlt ? 1.38 : 1.02,
       });
       ctx.impactFx.spawnImpact({
         targetX: a.ex,
@@ -442,9 +454,9 @@ export function stepTowerFightersAndBarrages(ctx: {
         comboStep: a.comboStep % 2,
         attackerX: a.sx,
         attackerZ: a.sz,
-        shockwaveScale: 1.15,
+        shockwaveScale: isUlt ? 1.15 : 0.72,
       });
-      ctx.spawnTowerShardsAt(a.ex, 2.2, TOWER_BOSS_CENTER_Z + 1.05, a.accentColor, 4, false, true);
+      ctx.spawnTowerShardsAt(a.ex, 2.2, TOWER_BOSS_CENTER_Z + 1.05, a.accentColor, isUlt ? 4 : 2, false, true);
       ctx.onFighterStrike?.({
         slotIndex: a.slotIndex,
         targetOreIndex: null,
@@ -467,12 +479,13 @@ export function stepTowerFightersAndBarrages(ctx: {
         rock = ctx.waveRocks.find((r) => r.alive) ?? rock;
       }
       if (!rock || !rock.alive) return;
-      if (fighter) {
+      if (isUlt && fighter) {
         ctx.targetPtsScratch.length = 0;
         for (let ri = 0; ri < ctx.waveRocks.length; ri++) {
           const wr = ctx.waveRocks[ri];
           if (wr.alive) ctx.targetPtsScratch.push({ x: wr.x, y: 0.45, z: wr.z });
         }
+        const waveBaseZ = TOWER_ARENA_CENTER_Z - 0.5;
         ctx.tierVfx.fireTierAttack({
           rarity: fighter.def.rarity,
           chibiId: fighter.def.id,
@@ -481,8 +494,12 @@ export function stepTowerFightersAndBarrages(ctx: {
           allTargets: ctx.targetPtsScratch,
           comboStep: a.comboStep,
           speedScale,
-          areaScale: 0.92,
-          wideCenter: { x: 0, y: 0.45, z: TOWER_ARENA_CENTER_Z - 0.5 },
+          areaScale: 0.88,
+          wideCenter: {
+            x: rock.x * 0.5,
+            y: 0.45,
+            z: waveBaseZ + (rock.z - waveBaseZ) * 0.5,
+          },
         });
       }
       ctx.tierVfx.fireBarrageHitSlash({
@@ -492,7 +509,7 @@ export function stepTowerFightersAndBarrages(ctx: {
         colorHex: a.accentColor,
         beatIndex: 0,
         isFinisher: false,
-        scale: 1.24,
+        scale: isUlt ? 1.24 : 0.88,
       });
       ctx.onFighterStrike?.({
         slotIndex: a.slotIndex,
@@ -536,114 +553,155 @@ export function stepTowerFightersAndBarrages(ctx: {
     f.sprite.setAnimState('idle');
     if (!ctx.paused) {
       f.attackCooldown = Math.max(0, f.attackCooldown - ctx.safeDt);
+      if (f.ultActiveTimer > 0) {
+        f.ultActiveTimer = Math.max(0, f.ultActiveTimer - ctx.safeDt);
+      }
       if (hasTargets) {
         f.chargeSec = Math.min(maxChargeSec, f.chargeSec + ctx.safeDt);
+      }
+      if (f.ultCharge >= ULT_CHARGE_BASIC_ATTACKS && !f.ultArmed && f.attackCooldown <= f.attackInterval * 0.55) {
+        f.ultArmed = true;
       }
     }
   }
 
-  if (!ctx.paused && hasTargets) {
-    const activeFighter = ctx.spotlight.pickNextReady(ctx.fighters.values(), (f) => f.attackCooldown);
-    if (activeFighter) {
-      const pos = activeFighter.sprite.group.position;
-      if (!ctx.bossWave) {
-        const targetRock = pickTowerTargetOreForFighter(activeFighter, ctx.waveRocks, ctx.fighters);
-        if (targetRock) {
-          const effectiveSec = Math.max(activeFighter.attackInterval, activeFighter.chargeSec);
-          activeFighter.attackCooldown = activeFighter.attackInterval;
-          activeFighter.chargeSec = 0;
-          ctx.spotlight.claim(activeFighter.slotIndex, CHIBI_ATTACK_ANIM_SEC);
-          const step = activeFighter.comboStep;
-          activeFighter.comboStep = (activeFighter.comboStep + 1) % 3;
-          ctx.targetPtsScratch.length = 0;
-          for (let ri = 0; ri < ctx.waveRocks.length; ri++) {
-            const wr = ctx.waveRocks[ri];
-            if (wr.alive) ctx.targetPtsScratch.push({ x: wr.x, y: 0.45, z: wr.z });
-          }
-          const targetPt: WorldPoint3 = { x: targetRock.x, y: 0.45, z: targetRock.z };
-          const waveWideCenter: WorldPoint3 = { x: 0, y: 0.45, z: TOWER_ARENA_CENTER_Z - 0.5 };
+  const launchTowerAttack = (f: TowerChibiFighter, isUltimate: boolean, effectiveSec: number): void => {
+    const pos = f.sprite.group.position;
+    const step = f.comboStep;
+    f.comboStep = (f.comboStep + 1) % 3;
+    if (!ctx.bossWave) {
+      const targetRock = pickTowerTargetOreForFighter(f, ctx.waveRocks, ctx.fighters);
+      if (!targetRock) return;
+      ctx.targetPtsScratch.length = 0;
+      for (let ri = 0; ri < ctx.waveRocks.length; ri++) {
+        const wr = ctx.waveRocks[ri];
+        if (wr.alive) ctx.targetPtsScratch.push({ x: wr.x, y: 0.45, z: wr.z });
+      }
+      const targetPt: WorldPoint3 = { x: targetRock.x, y: 0.45, z: targetRock.z };
+      const waveBaseZ = TOWER_ARENA_CENTER_Z - 0.5;
+      const waveWideCenter: WorldPoint3 = {
+        x: targetRock.x * 0.5,
+        y: 0.45,
+        z: waveBaseZ + (targetRock.z - waveBaseZ) * 0.5,
+      };
 
-          activeFighter.sprite.triggerPodiumCast(0.36);
-          ctx.tierVfx.firePodiumWeaponCast({
-            rarity: activeFighter.def.rarity,
-            chibiId: activeFighter.def.id,
-            colorHex: activeFighter.colorHex,
-            origin: { x: pos.x, y: pos.y, z: pos.z },
-            target: targetPt,
-            allTargets: ctx.targetPtsScratch,
-            wideCenter: waveWideCenter,
-          });
-          ctx.tierVfx.fireAnticipation(
-            activeFighter.def.rarity,
-            activeFighter.colorHex,
-            targetPt,
-            ctx.targetPtsScratch,
-            0.92,
-            waveWideCenter
-          );
-
-          ctx.projectiles.launch(
-            {
-              style: activeFighter.style,
-              slotIndex: activeFighter.slotIndex,
-              targetId: targetRock.index,
-              dmg: Math.max(1, Math.round(activeFighter.dmg * effectiveSec)),
-              comboStep: step,
-              accentColor: activeFighter.colorHex,
-              sx: pos.x,
-              sy: pos.y + 1.85,
-              sz: pos.z,
-              ex: targetRock.x,
-              ey: 1.05,
-              ez: targetRock.z,
-              attackInterval: effectiveSec,
-              isBoss: false,
-            },
-            handleProjectileArrival
-          );
-        }
+      if (isUltimate) {
+        f.sprite.triggerUltOpening(0.52);
+        ctx.tierVfx.fireUltOpeningBurst({ x: pos.x, y: pos.y, z: pos.z, colorHex: f.colorHex });
       } else {
-        const effectiveSec = Math.max(activeFighter.attackInterval, activeFighter.chargeSec);
-        activeFighter.attackCooldown = activeFighter.attackInterval;
-        activeFighter.chargeSec = 0;
-        ctx.spotlight.claim(activeFighter.slotIndex, CHIBI_ATTACK_ANIM_SEC);
-        const step = activeFighter.comboStep;
-        activeFighter.comboStep = (activeFighter.comboStep + 1) % 3;
-        const bossPt: WorldPoint3 = { x: 0, y: 0.8, z: TOWER_BOSS_CENTER_Z + 0.85 };
-
-        activeFighter.sprite.triggerPodiumCast(0.45);
-        ctx.tierVfx.firePodiumWeaponCast({
-          rarity: activeFighter.def.rarity,
-          chibiId: activeFighter.def.id,
-          colorHex: activeFighter.colorHex,
-          origin: { x: pos.x, y: pos.y, z: pos.z },
-          target: bossPt,
-          allTargets: [bossPt],
-        });
-        ctx.tierVfx.fireAnticipation(activeFighter.def.rarity, activeFighter.colorHex, bossPt, [bossPt]);
-
-        const bossTargetX = (Math.random() - 0.5) * 0.65;
-        const bossTargetY = 2.15 + Math.random() * 0.45;
-        ctx.projectiles.launch(
-          {
-            style: activeFighter.style,
-            slotIndex: activeFighter.slotIndex,
-            targetId: -1,
-            dmg: Math.max(1, Math.round(activeFighter.dmg * effectiveSec)),
-            comboStep: step,
-            accentColor: activeFighter.colorHex,
-            sx: pos.x,
-            sy: pos.y + 1.85,
-            sz: pos.z,
-            ex: bossTargetX,
-            ey: bossTargetY,
-            ez: TOWER_BOSS_CENTER_Z + 0.85,
-            attackInterval: effectiveSec,
-            isBoss: true,
-          },
-          handleProjectileArrival
+        f.sprite.triggerPodiumCast(0.24);
+      }
+      ctx.tierVfx.firePodiumWeaponCast({
+        rarity: isUltimate ? f.def.rarity : 'common',
+        chibiId: f.def.id,
+        colorHex: f.colorHex,
+        origin: { x: pos.x, y: pos.y, z: pos.z },
+        target: targetPt,
+        allTargets: ctx.targetPtsScratch,
+        wideCenter: isUltimate ? waveWideCenter : undefined,
+      });
+      if (isUltimate) {
+        ctx.tierVfx.fireAnticipation(
+          f.def.rarity,
+          f.colorHex,
+          targetPt,
+          ctx.targetPtsScratch,
+          0.92,
+          waveWideCenter
         );
       }
+
+      ctx.projectiles.launch(
+        {
+          style: f.style,
+          slotIndex: f.slotIndex,
+          targetId: targetRock.index,
+          dmg: Math.max(1, Math.round(f.dmg * effectiveSec)),
+          comboStep: step,
+          accentColor: f.colorHex,
+          sx: pos.x,
+          sy: pos.y + 1.85,
+          sz: pos.z,
+          ex: targetRock.x,
+          ey: 1.05,
+          ez: targetRock.z,
+          attackInterval: effectiveSec,
+          isBoss: false,
+          isUltimate,
+        },
+        handleProjectileArrival
+      );
+    } else {
+      const bossPt: WorldPoint3 = { x: 0, y: 0.8, z: TOWER_BOSS_CENTER_Z + 0.85 };
+
+      if (isUltimate) {
+        f.sprite.triggerUltOpening(0.52);
+        ctx.tierVfx.fireUltOpeningBurst({ x: pos.x, y: pos.y, z: pos.z, colorHex: f.colorHex });
+      } else {
+        f.sprite.triggerPodiumCast(0.24);
+      }
+      ctx.tierVfx.firePodiumWeaponCast({
+        rarity: isUltimate ? f.def.rarity : 'common',
+        chibiId: f.def.id,
+        colorHex: f.colorHex,
+        origin: { x: pos.x, y: pos.y, z: pos.z },
+        target: bossPt,
+        allTargets: [bossPt],
+      });
+      if (isUltimate) {
+        ctx.tierVfx.fireAnticipation(f.def.rarity, f.colorHex, bossPt, [bossPt]);
+      }
+
+      const bossTargetX = (Math.random() - 0.5) * 0.65;
+      const bossTargetY = 2.15 + Math.random() * 0.45;
+      ctx.projectiles.launch(
+        {
+          style: f.style,
+          slotIndex: f.slotIndex,
+          targetId: -1,
+          dmg: Math.max(1, Math.round(f.dmg * effectiveSec)),
+          comboStep: step,
+          accentColor: f.colorHex,
+          sx: pos.x,
+          sy: pos.y + 1.85,
+          sz: pos.z,
+          ex: bossTargetX,
+          ey: bossTargetY,
+          ez: TOWER_BOSS_CENTER_Z + 0.85,
+          attackInterval: effectiveSec,
+          isBoss: true,
+          isUltimate,
+        },
+        handleProjectileArrival
+      );
+    }
+  };
+
+  if (!ctx.paused && hasTargets) {
+    // 1) Ult relay queue: armed Chibis (5/5 basic charge) fire 2.5s Sakuga Ult spaced 1.5s apart
+    const activeUltFighter = ctx.spotlight.pickNextReady(ctx.fighters.values(), (f) => (f.ultArmed ? 0 : 1));
+    if (activeUltFighter) {
+      const ultSec = Math.max(0.01, activeUltFighter.ultBankSec + activeUltFighter.chargeSec);
+      activeUltFighter.attackCooldown = Math.max(activeUltFighter.attackInterval, ULT_SPOTLIGHT_LOCK_SEC);
+      activeUltFighter.chargeSec = 0;
+      activeUltFighter.ultBankSec = 0;
+      activeUltFighter.ultCharge = 0;
+      activeUltFighter.ultArmed = false;
+      activeUltFighter.ultActiveTimer = ULT_SPOTLIGHT_LOCK_SEC;
+      ctx.spotlight.claim(activeUltFighter.slotIndex, ULT_SPOTLIGHT_LOCK_SEC);
+      launchTowerAttack(activeUltFighter, true, ultSec);
+    }
+
+    // 2) Parallel basic attacks: all ready Chibis fire continuously without waiting
+    for (const f of ctx.fighters.values()) {
+      if (f.attackCooldown > 0 || f.ultActiveTimer > 0) continue;
+      const elapsedSec = Math.max(0.01, f.chargeSec);
+      const basicSec = elapsedSec * BASIC_ATTACK_DPS_SHARE;
+      f.ultBankSec = Math.min(maxChargeSec, f.ultBankSec + elapsedSec * (1 - BASIC_ATTACK_DPS_SHARE));
+      f.chargeSec = 0;
+      f.attackCooldown = f.attackInterval;
+      f.ultCharge = Math.min(ULT_CHARGE_BASIC_ATTACKS, f.ultCharge + 1);
+      launchTowerAttack(f, false, basicSec);
     }
   }
 
