@@ -369,6 +369,8 @@ export function bindMineSceneEvents(ctx: MineInputCtx): ResizeObserver | null {
       } else if (hit.userData.kind === 'chest') {
         ctx.state.crateBounce = 0.28;
         ctx.callbacks.onChestClick?.();
+      } else if (hit.userData.kind === 'rift-gate') {
+        ctx.callbacks.onRiftGateClick?.();
       } else if (hit.userData.kind === 'shop-pickaxe') {
         ctx.callbacks.onShopStationClick?.('pickaxe');
       } else if (hit.userData.kind === 'shop-sell') {

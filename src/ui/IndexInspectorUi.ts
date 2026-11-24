@@ -18,6 +18,7 @@ import { GameState } from '../game/GameState';
 import { IndexTabId } from '../game/IndexRewardsDomain';
 import { fmtInt, fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
 import { getOmegaBossByChibiId } from '../game/OmegaData';
+import { getAnomalyChibiById, RIFT_SHARD_PITY_COST } from '../game/AnomalyData';
 import { getPremiumShopItemByChibiId } from '../game/PremiumShopData';
 import { getWeatherById } from '../game/WeatherData';
 import { hudIconHtml, oreIconSvg } from './HudIcons';
@@ -54,6 +55,31 @@ export class IndexInspectorUi {
 
     const unlocked = this.state.discovered.has(targetId);
     const statusBadge = `<span class="mam-pill rounded-full text-[10px] font-black border-2 border-[#14111d] ${unlocked ? 'bg-[#6ee7b7] text-[#14111d]' : 'bg-[#e2e8f0] text-[#5b526e]'}">${unlocked ? 'Discovered' : 'Locked'}</span>`;
+
+    if (indexWorldId === 'anomaly') {
+      const anom = getAnomalyChibiById(targetId);
+      const chibi = anom ? getChibiById(anom.chibiId) : undefined;
+      if (anom && chibi) {
+        const owned = this.state.miners[chibi.id] || 0;
+        const onPlot = this.state.plotMiners.filter((id) => id === chibi.id).length;
+        return renderInspectorPanel({
+          rarity: chibi.rarity,
+          title: chibi.name,
+          subtitle: `${anom.title} • Hourly Rift`,
+          badgesHtml: statusBadge,
+          artHtml: chibiPortraitHtml(chibi, { usePose: true }),
+          stats: [
+            ['Base DPS', `${fmtShort(this.state.getEffectiveChibiDps(chibi.id))}/s`, 'text-[#b45309]'],
+            ['Triple Passive', anom.passiveLabel, 'text-[#0284c7]'],
+            ['Source', `Hourly Rift / ${RIFT_SHARD_PITY_COST} Shards`, 'text-[#9333ea]'],
+            ['Owned', `${fmtInt(owned)} (${onPlot}/5)`, 'text-[#14111d]'],
+          ],
+          actionHtml: this.renderReviewActionButton(chibi.id, 'Review 4 Poses', 'special'),
+          dimmed: !unlocked,
+        });
+      }
+      return renderEmptyInspectorPanel('Select any Anomaly Chibi to inspect details.');
+    }
 
     if (indexWorldId === 'omega') {
       const boss = getOmegaBossByChibiId(targetId);
@@ -274,7 +300,8 @@ export class IndexInspectorUi {
         indexWorldId === 'fusion' ||
         indexWorldId === 'limited' ||
         indexWorldId === 'twin' ||
-        indexWorldId === 'omega'
+        indexWorldId === 'omega' ||
+        indexWorldId === 'anomaly'
           ? 'underground'
           : indexWorldId)
     );

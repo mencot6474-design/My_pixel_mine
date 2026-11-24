@@ -15,6 +15,7 @@ import { GameState } from '../game/GameState';
 import { IndexTabId, isIndexMilestoneUnlocked } from '../game/IndexRewardsDomain';
 import { fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
 import { OMEGA_BOSS_DEFS } from '../game/OmegaData';
+import { ANOMALY_CHIBI_DEFS } from '../game/AnomalyData';
 import { PREMIUM_SHOP_ITEMS } from '../game/PremiumShopData';
 import { getWeatherById } from '../game/WeatherData';
 import { enchantDiceIconHtml, hudIconHtml, meteorIconHtml, oreIconSvg } from './HudIcons';
@@ -46,7 +47,9 @@ export class IndexModalUi {
 
   private getResolvedIndexInspectId(): string | null {
     let allIds: string[];
-    if (this.indexWorldId === 'omega') {
+    if (this.indexWorldId === 'anomaly') {
+      allIds = ANOMALY_CHIBI_DEFS.map((a) => a.chibiId);
+    } else if (this.indexWorldId === 'omega') {
       allIds = OMEGA_BOSS_DEFS.map((b) => b.chibiId);
     } else if (this.indexWorldId === 'twin') {
       allIds = PREMIUM_SHOP_ITEMS.map((item) => item.chibiId);
@@ -70,7 +73,7 @@ export class IndexModalUi {
 
   private isHoloChibiCard(id: string, rarity: ItemRarity, unlocked: boolean): boolean {
     if (!unlocked || !getChibiById(id)) return false;
-    return rarity === 'fusion' || rarity === 'limited' || rarity === 'twin' || rarity === 'omega' || this.state.getChibiStar(id) >= 5;
+    return rarity === 'fusion' || rarity === 'limited' || rarity === 'twin' || rarity === 'omega' || rarity === 'anomaly' || this.state.getChibiStar(id) >= 5;
   }
 
   private renderIndexCard(opts: {
@@ -113,6 +116,24 @@ export class IndexModalUi {
 
   private buildIndexCardsHtml(): string {
     const selectedId = this.getResolvedIndexInspectId();
+
+    if (this.indexWorldId === 'anomaly') {
+      return ANOMALY_CHIBI_DEFS.map((anom) => {
+        const chibi = getChibiById(anom.chibiId);
+        if (!chibi) return '';
+        return this.renderIndexCard({
+          id: chibi.id,
+          name: chibi.name,
+          rarity: chibi.rarity,
+          title: `${chibi.name} (${anom.title})`,
+          artHtml: chibiPortraitHtml(chibi, { usePose: true }),
+          bottomHtml: `${renderRarityBadgeHtml(chibi.rarity, 'is-compact mb-0.5')}<span class="mam-card-pct">${fmtShort(this.state.getEffectiveChibiDps(chibi.id))}/s</span>`,
+          unlocked: this.state.discovered.has(chibi.id),
+          selected: selectedId === chibi.id,
+          isChibi: true,
+        });
+      }).join('');
+    }
 
     if (this.indexWorldId === 'omega') {
       return OMEGA_BOSS_DEFS.map((boss) => {
@@ -427,7 +448,7 @@ export class IndexModalUi {
     }).join('');
 
     const specialSpecs: Array<{
-      tabId: Extract<IndexTabId, 'weather' | 'fusion' | 'limited' | 'twin' | 'omega'>;
+      tabId: Extract<IndexTabId, 'weather' | 'fusion' | 'limited' | 'twin' | 'omega' | 'anomaly'>;
       labelHtml: string;
       accentColor: string;
     }> = [
@@ -455,6 +476,11 @@ export class IndexModalUi {
         tabId: 'omega',
         labelHtml: `<img class="w-4 h-4 object-contain shrink-0" src="${assetUrl('/badges/omega.svg')}" alt="" aria-hidden="true" /><span>Omega</span>`,
         accentColor: '#ef4444',
+      },
+      {
+        tabId: 'anomaly',
+        labelHtml: `<img class="w-4 h-4 object-contain shrink-0" src="${assetUrl('/badges/anomaly.svg')}" alt="" aria-hidden="true" /><span>Anomaly</span>`,
+        accentColor: '#22d3ee',
       },
     ];
 
@@ -609,7 +635,7 @@ export class IndexModalUi {
         wBar.style.width = `${wp.total > 0 ? Math.min(100, Math.round((wp.found / wp.total) * 100)) : 0}%`;
       }
     }
-    for (const tabId of ['weather', 'fusion', 'limited', 'twin', 'omega'] as const) {
+    for (const tabId of ['weather', 'fusion', 'limited', 'twin', 'omega', 'anomaly'] as const) {
       const tp = this.state.getIndexTabProgress(tabId);
       const badge = root.querySelector<HTMLElement>(`[data-index-tab-count="${tabId}"]`);
       if (badge) badge.textContent = `(${tp.found}/${tp.total})`;

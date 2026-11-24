@@ -396,6 +396,11 @@ async function bootstrap(): Promise<void> {
       audio.playSfx('ui-open');
       hud?.openModal('chest');
     },
+    onRiftGateClick: () => {
+      if (hud?.isTutorialActive()) return;
+      audio.playSfx('ui-open');
+      hud?.openModal('rift');
+    },
     onPedestalClick: (slotIndex) => {
       if (hud && !hud.canTutorialInteract('plot', slotIndex)) return;
       const res = gameState.placeSelectedOnPlot(slotIndex);
@@ -614,6 +619,8 @@ async function bootstrap(): Promise<void> {
       'paradox-twins',
       'chrono-crystallis',
       'abyssal-leviathan',
+      'void-asura',
+      'null-singularity',
     ];
     const unlockAllLocalChibis = (): number => {
       const added = gameState.unlockChibisByIds(CHIBI_CATALOG.map((c) => c.id));
@@ -666,9 +673,19 @@ async function bootstrap(): Promise<void> {
       spawnMeteorIfAllowed(gameState.weatherId);
     }
   }
+  const syncRiftGateVisual = (nowMs: number): void => {
+    const snap = gameState.getRiftWindowSnapshot(nowMs);
+    const sec = snap.isOpen ? snap.remainingSec : snap.nextOpenSec;
+    const mm = String(Math.floor(sec / 60)).padStart(2, '0');
+    const ss = String(sec % 60).padStart(2, '0');
+    scene.setRiftGateStatus(snap.isOpen, snap.isOpen ? `RIFT OPEN ${mm}:${ss}` : `RIFT IN ${mm}:${ss}`);
+  };
+  syncRiftGateVisual(Date.now());
+
   window.setInterval(() => {
-    if (isAdPlaying() || hud?.isTutorialActive()) return;
     const now = Date.now();
+    syncRiftGateVisual(now);
+    if (isAdPlaying() || hud?.isTutorialActive()) return;
     if (activePitEvent) {
       if (now >= activePitEvent.expiresAt) {
         scene.clearPitEvent();

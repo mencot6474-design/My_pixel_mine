@@ -141,6 +141,9 @@ export interface SavePayload {
   careerStats?: Partial<CareerStats>;
   claimedAchievements?: string[];
   twinTrial?: TwinTrialState;
+  riftShards?: number;
+  riftPassExpiresAt?: number;
+  riftBreachesCompleted?: number;
 }
 
 export interface SaveableGameState {
@@ -196,6 +199,9 @@ export interface SaveableGameState {
   careerStats: CareerStats;
   claimedAchievements: Set<string>;
   twinTrial: TwinTrialState;
+  riftShards: number;
+  riftPassExpiresAt: number;
+  riftBreachesCompleted: number;
 }
 
 /** Maps retired World 2–5 ore IDs onto current catalog ore IDs. */
@@ -322,6 +328,9 @@ export function serializeSavePayload(state: SaveableGameState): SavePayload {
     careerStats: { ...state.careerStats },
     claimedAchievements: [...state.claimedAchievements],
     twinTrial: { ...state.twinTrial },
+    riftShards: state.riftShards,
+    riftPassExpiresAt: state.riftPassExpiresAt,
+    riftBreachesCompleted: state.riftBreachesCompleted,
   };
 }
 
@@ -642,6 +651,15 @@ export function deserializeSaveJson(
     }
     if (typeof data.bountiesCompleted === 'number' && Number.isFinite(data.bountiesCompleted) && data.bountiesCompleted >= 0) {
       state.bountiesCompleted = Math.floor(data.bountiesCompleted);
+    }
+    if (typeof data.riftShards === 'number' && Number.isFinite(data.riftShards) && data.riftShards >= 0) {
+      state.riftShards = Math.floor(data.riftShards);
+    }
+    if (typeof data.riftPassExpiresAt === 'number' && Number.isFinite(data.riftPassExpiresAt) && data.riftPassExpiresAt >= 0) {
+      state.riftPassExpiresAt = data.riftPassExpiresAt;
+    }
+    if (typeof data.riftBreachesCompleted === 'number' && Number.isFinite(data.riftBreachesCompleted) && data.riftBreachesCompleted >= 0) {
+      state.riftBreachesCompleted = Math.floor(data.riftBreachesCompleted);
     }
     if (Array.isArray(data.bounties)) {
       state.bounties = data.bounties.filter((b): b is BountyEntry => isValidBountyEntry(b));

@@ -275,7 +275,8 @@ export class InventoryModalUi {
           rarity === 'fusion' ||
           rarity === 'limited' ||
           rarity === 'twin' ||
-          rarity === 'omega';
+          rarity === 'omega' ||
+          rarity === 'anomaly';
         const extraCls = [
           isHolo ? 'is-holo-foil' : '',
           isInsp ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '',

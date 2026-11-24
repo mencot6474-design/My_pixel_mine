@@ -4,6 +4,7 @@ import type { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBl
 import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { ChibiDef, getChibiById } from './ChibiCatalog';
 import { ProceduralChestHandle } from './ChestVaultStation3D';
+import { type RiftGateHandle } from './RiftGate3D';
 import { PlotAttackController3D } from './PlotAttackController3D';
 import { type TierVfxHooks } from './TierAttackVfx3D';
 import { preloadCommonMineModels } from './GlbAssets3D';
@@ -128,6 +129,9 @@ export class MineScene3D {
 
   private readonly crateGroup = new THREE.Group();
   private readonly chestVisual: ProceduralChestHandle;
+  private readonly riftGate: RiftGateHandle;
+  private riftIsOpen = false;
+  private riftLabelText = 'RIFT IN 00:00';
   private readonly stageNeonMat: THREE.MeshStandardMaterial;
   private readonly stageHoloMat: THREE.MeshBasicMaterial;
 
@@ -236,6 +240,8 @@ export class MineScene3D {
     this.stageNeonMat = builtStage.stageNeonMat;
     this.stageHoloMat = builtStage.stageHoloMat;
     this.chestVisual = builtStage.chestVisual;
+    this.riftGate = builtStage.riftGate;
+    this.riftGate.setLowQuality(this.graphicsQuality === 'low');
 
     this.pit = new OrePit3D(palette);
     this.pit.setLowQuality(this.graphicsQuality === 'low');
@@ -499,6 +505,9 @@ export class MineScene3D {
       omegaArena: this.omegaArena,
       crateGroup: this.crateGroup,
       chestVisual: this.chestVisual,
+      riftGate: this.riftGate,
+      riftIsOpen: this.riftIsOpen,
+      riftLabelText: this.riftLabelText,
       inputState: this.inputState,
       onTowerFighterStrike: this.callbacks.onTowerFighterStrike,
       onOmegaFighterStrike: this.callbacks.onOmegaFighterStrike,
@@ -619,6 +628,7 @@ export class MineScene3D {
       env: this.env,
       pit: this.pit,
       crateGroup: this.crateGroup,
+      riftGate: this.riftGate,
       pedestals: this.pedestals,
       plotAttackController: this.plotAttackController,
       shopWorld: this.shopWorld,
@@ -994,6 +1004,11 @@ export class MineScene3D {
     }
   }
 
+  public setRiftGateStatus(isOpen: boolean, labelText: string): void {
+    this.riftIsOpen = isOpen;
+    this.riftLabelText = labelText;
+  }
+
   public destroy(): void {
     window.removeEventListener('resize', this.handleViewportResize);
     window.visualViewport?.removeEventListener('resize', this.handleViewportResize);
@@ -1006,6 +1021,7 @@ export class MineScene3D {
     this.pedestals.forEach((p) => p.dispose());
     this.plotAttackController.dispose();
     this.chestVisual.dispose();
+    this.riftGate.dispose();
     disposeObject3D(this.crateGroup);
     this.stageNeonMat.dispose();
     this.stageHoloMat.dispose();

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isNonSellableChibi } from '../src/game/DailyLoginData';
+import { RIFT_PASS_GEM_COST, RIFT_SHARD_PITY_COST } from '../src/game/AnomalyData';
+import { getRiftWindowSnapshot } from '../src/game/RiftDomain';
 import {
   TOWER_BOSS_COIN_CHANCE,
   TOWER_BOSS_COIN_DROP,
@@ -2117,6 +2119,46 @@ describe('Tahap C GameState Domain Modules', () => {
       const trialIdx = state.plotUnits.findIndex((u) => u?.chibiId === 'lullaby-twins' && u.isTrial);
       expect(state.upgradePlotDamage(permIdx)).toBe(true);
       expect(state.upgradePlotDamage(trialIdx)).toBe(false);
+    });
+  });
+
+  describe('Hourly Rift & AnomalyData', () => {
+    it('opens automatically during :00-:15, allows 500K Gem Rift Pass when closed, grants Shards & 100-Shard pity', () => {
+      const openMs = new Date(2026, 10, 25, 14, 5, 0).getTime();
+      const closedMs = new Date(2026, 10, 25, 14, 25, 0).getTime();
+
+      const openSnap = getRiftWindowSnapshot(openMs, 0);
+      expect(openSnap.isOpen).toBe(true);
+      expect(openSnap.source).toBe('hourly');
+      expect(openSnap.remainingSec).toBe(600);
+
+      const closedSnap = getRiftWindowSnapshot(closedMs, 0);
+      expect(closedSnap.isOpen).toBe(false);
+      expect(closedSnap.source).toBe('closed');
+      expect(closedSnap.nextOpenSec).toBe(2100);
+
+      const state = new GameState();
+      state.gems = 100_000;
+      expect(state.buyRiftPass(closedMs)).toBe('no_gems');
+
+      state.gems = RIFT_PASS_GEM_COST;
+      expect(state.buyRiftPass(closedMs)).toBe('bought');
+      expect(state.gems).toBe(0);
+      const passSnap = state.getRiftWindowSnapshot(closedMs);
+      expect(passSnap.isOpen).toBe(true);
+      expect(passSnap.source).toBe('pass');
+
+      const claimRes = state.claimRiftBreachReward(closedMs, () => 0.01);
+      expect(claimRes.shardsEarned).toBeGreaterThanOrEqual(18);
+      expect(claimRes.droppedChibiId).toBeTruthy();
+      expect(state.riftShards).toBe(claimRes.shardsEarned);
+
+      expect(state.redeemAnomalyChibi('void-asura')).toBe('no_shards');
+      state.riftShards = RIFT_SHARD_PITY_COST;
+      expect(state.redeemAnomalyChibi('void-asura')).toBe('redeemed');
+      expect(state.riftShards).toBe(0);
+      expect(state.discovered.has('void-asura')).toBe(true);
+      expect(isNonSellableChibi('void-asura')).toBe(true);
     });
   });
 });

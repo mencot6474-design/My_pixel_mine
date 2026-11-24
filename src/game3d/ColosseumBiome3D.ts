@@ -345,33 +345,10 @@ export function createColosseumBiomeHandle(initialWorld: WorldId = 'underground'
   cTrim.position.y = 0.43;
   cTrim.rotation.y = Math.PI / 8;
 
-  const cBody = new THREE.Mesh(consoleBodyGeo, slateMat);
-  cBody.position.set(0, 0.72, -0.06);
-  cBody.castShadow = true;
-  cBody.receiveShadow = true;
-
-  const cScreen = new THREE.Mesh(holoScreenGeo, secondaryNeonMat);
-  cScreen.position.set(0, 1.12, 0.06);
-  cScreen.rotation.x = -0.32;
-  consoleGroup.add(cKeel, cThruster, cBase, cTop, cTrim, cBody, cScreen);
+  consoleGroup.add(cKeel, cThruster, cBase, cTop, cTrim);
   staticGroup.add(consoleGroup);
 
-  // 3 Animated Vertical Equalizer Blades on the Left Console
-  const eqBladeGeo = createChamferSlabGeometry(0.22, 0.88, 0.08, 0.04, 0.01);
-  ownedGeos.push(eqBladeGeo);
   const eqBlades: THREE.Mesh[] = [];
-  for (let b = 0; b < 3; b++) {
-    const blade = new THREE.Mesh(eqBladeGeo, holoGlassMat);
-    const bx = (b - 1) * 0.35;
-    blade.position.set(
-      leftPadX + bx * Math.cos(Math.PI / 6) - 0.16 * Math.sin(Math.PI / 6),
-      leftPadY + 1.48,
-      leftPadZ - bx * Math.sin(Math.PI / 6) - 0.16 * Math.cos(Math.PI / 6)
-    );
-    blade.rotation.y = Math.PI / 6;
-    group.add(blade);
-    eqBlades.push(blade);
-  }
 
   // 3. 4 Swept Aerodynamic Stabilizer Wings + Under-Hull Anti-Grav Thruster Nacelles
   const aeroWingGeo = createChamferSlabGeometry(1.65, 0.14, 2.2, 0.32, 0.016);

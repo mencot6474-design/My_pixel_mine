@@ -102,6 +102,18 @@ import {
   createLeviathanHydroFinGeometry,
   createLeviathanMaelstromHaloShaderMaterial,
 } from './skills/abyssalLeviathanSkillVfx3D';
+import {
+  createVoidAsuraClawGeometry,
+  createVoidAsuraClawShaderMaterial,
+  createVoidAsuraHaloShaderMaterial,
+  createVoidAsuraObsidianShardGeometry,
+} from './skills/voidAsuraSkillVfx3D';
+import {
+  createNullCrystalGeometry,
+  createNullMirrorCardGeometry,
+  createNullMirrorCardShaderMaterial,
+  createNullSingularityHaloShaderMaterial,
+} from './skills/nullSingularitySkillVfx3D';
 
 export interface RoninFanKatanaSlot {
   mesh: THREE.Mesh;
@@ -369,6 +381,102 @@ export function createChibiBackAttachments(
     handle.omegaHandPivot.add(handle.omegaHandWeaponMesh);
     handle.omegaHandPivot.visible = false;
     blitzHeroPivot.add(handle.omegaHandPivot);
+  } else if (defId === 'void-asura') {
+    handle.omegaAuraGroup = new THREE.Group();
+    handle.omegaAuraGroup.position.set(0, spriteHeight * 0.52, -0.14);
+    const haloMat = createVoidAsuraHaloShaderMaterial();
+    const clawMat = createVoidAsuraClawShaderMaterial();
+    handle.omegaAuraMat = haloMat;
+    handle.twinCustomMats.push(clawMat);
+
+    const haloGeo = new THREE.PlaneGeometry(2.85, 2.85);
+    const clawGeo = createVoidAsuraClawGeometry();
+    const hornGeo = createVoidAsuraObsidianShardGeometry();
+    handle.omegaAuraGeo = haloGeo;
+    handle.twinCustomGeos.push(clawGeo, hornGeo);
+
+    handle.omegaHaloMesh = new THREE.Mesh(haloGeo, haloMat);
+    handle.omegaHaloMesh.position.set(0, 0.1, -0.12);
+    handle.omegaAuraGroup.add(handle.omegaHaloMesh);
+
+    const clawSpecs: ReadonlyArray<{ x: number; y: number; z: number; rz: number; sc: number; phase: number }> = [
+      { x: -0.78, y: 0.48, z: -0.05, rz: 0.52, sc: 0.54, phase: 0.0 },
+      { x: -0.94, y: 0.08, z: -0.04, rz: 0.96, sc: 0.64, phase: 0.8 },
+      { x: -0.82, y: -0.32, z: -0.03, rz: 1.38, sc: 0.56, phase: 1.6 },
+      { x: 0.78, y: 0.48, z: -0.05, rz: -0.52, sc: 0.54, phase: 0.4 },
+      { x: 0.94, y: 0.08, z: -0.04, rz: -0.96, sc: 0.64, phase: 1.2 },
+      { x: 0.82, y: -0.32, z: -0.03, rz: -1.38, sc: 0.56, phase: 2.0 },
+    ];
+    for (let i = 0; i < clawSpecs.length; i++) {
+      const cs = clawSpecs[i];
+      const cm = new THREE.Mesh(clawGeo, clawMat);
+      cm.position.set(cs.x, cs.y, cs.z);
+      cm.rotation.set(0.06, cs.x < 0 ? 0.16 : -0.16, cs.rz);
+      cm.scale.set(cs.x < 0 ? cs.sc : -cs.sc, cs.sc, cs.sc);
+      handle.omegaAuraGroup.add(cm);
+      handle.roninFanKatanas.push({
+        mesh: cm,
+        baseX: cs.x,
+        baseY: cs.y,
+        baseZ: cs.z,
+        baseRotZ: cs.rz,
+        outX: Math.sign(cs.x) * 0.75,
+        outY: cs.y * 0.48,
+        phase: cs.phase,
+      });
+    }
+    handle.omegaAuraGroup.visible = true;
+    spritePivot.add(handle.omegaAuraGroup);
+  } else if (defId === 'null-singularity') {
+    handle.omegaAuraGroup = new THREE.Group();
+    handle.omegaAuraGroup.position.set(0, spriteHeight * 0.54, -0.14);
+    const haloMat = createNullSingularityHaloShaderMaterial();
+    const cardMat = createNullMirrorCardShaderMaterial();
+    handle.omegaAuraMat = haloMat;
+    handle.twinCustomMats.push(cardMat);
+
+    const haloGeo = new THREE.PlaneGeometry(2.85, 2.85);
+    const cardGeo = createNullMirrorCardGeometry();
+    const cryGeo = createNullCrystalGeometry();
+    handle.omegaAuraGeo = haloGeo;
+    handle.twinCustomGeos.push(cardGeo, cryGeo);
+
+    handle.omegaHaloMesh = new THREE.Mesh(haloGeo, haloMat);
+    handle.omegaHaloMesh.position.set(0, 0.08, -0.12);
+    handle.omegaAuraGroup.add(handle.omegaHaloMesh);
+
+    const cardSpecs: ReadonlyArray<{ x: number; y: number; z: number; rz: number; phase: number }> = [
+      { x: -0.92, y: 0.36, z: -0.05, rz: 0.24, phase: 0.0 },
+      { x: -0.78, y: -0.26, z: -0.03, rz: -0.18, phase: 1.1 },
+      { x: 0.92, y: 0.36, z: -0.05, rz: -0.24, phase: 0.55 },
+      { x: 0.78, y: -0.26, z: -0.03, rz: 0.18, phase: 1.65 },
+    ];
+    for (let i = 0; i < cardSpecs.length; i++) {
+      const cs = cardSpecs[i];
+      const cm = new THREE.Mesh(cardGeo, cardMat);
+      cm.position.set(cs.x, cs.y, cs.z);
+      cm.rotation.set(0.08, cs.x < 0 ? 0.22 : -0.22, cs.rz);
+      handle.omegaAuraGroup.add(cm);
+      handle.roninFanKatanas.push({
+        mesh: cm,
+        baseX: cs.x,
+        baseY: cs.y,
+        baseZ: cs.z,
+        baseRotZ: cs.rz,
+        outX: Math.sign(cs.x) * 0.55,
+        outY: cs.y * 0.4,
+        phase: cs.phase,
+      });
+    }
+    for (let g = 0; g < 2; g++) {
+      const cry = new THREE.Mesh(cryGeo, cardMat);
+      cry.position.set(g === 0 ? -0.56 : 0.56, 0.76, -0.06);
+      cry.scale.set(0.6, 1.1, 0.6);
+      handle.omegaAuraGroup.add(cry);
+      handle.twinGearMeshes.push(cry);
+    }
+    handle.omegaAuraGroup.visible = true;
+    spritePivot.add(handle.omegaAuraGroup);
   } else if (defId === 'yukikage-twins') {
     handle.omegaAuraGroup = new THREE.Group();
     handle.omegaAuraGroup.position.set(0, spriteHeight * 0.56, -0.15);
@@ -1380,9 +1488,9 @@ export function updateChibiBackAttachmentGroup(
     handle.twinCustomMats[i].uniforms.uOpacity.value = opacity;
   }
   if (handle.roninFanKatanas.length > 0) {
-    const isCheshire = defId === 'glitch-cheshire';
+    const isCheshire = defId === 'glitch-cheshire' || defId === 'null-singularity';
     const isMonochrome = defId === 'monochrome-saint';
-    const isObsidianMonolith = defId === 'obsidian-sovereign';
+    const isObsidianMonolith = defId === 'obsidian-sovereign' || defId === 'void-asura';
     const isLeviathanTide = defId === 'abyssal-leviathan';
     const isEpicTier = handle.tierRarity === 'epic';
     const isSecretTier = handle.tierRarity === 'secret';

@@ -106,18 +106,18 @@ export const AOE_CLEAVE_RADIUS = 3.8;
 export const MAX_AOE_TARGETS = 20;
 const BASIC_ATTACK_DPS_SHARE = 0.65;
 
-/** Single-target (1 ore) for tiers common..limited; radius-wide AoE cleave for fusion, twin & omega. */
+/** Single-target (1 ore) for tiers common..limited; radius-wide AoE cleave for fusion, twin, omega & anomaly. */
 export function getAoeTargetCount(rarity?: string): number {
-  return rarity === 'fusion' || rarity === 'twin' || rarity === 'omega' ? MAX_AOE_TARGETS : 1;
+  return rarity === 'fusion' || rarity === 'twin' || rarity === 'omega' || rarity === 'anomaly' ? MAX_AOE_TARGETS : 1;
 }
 
 /** Returns AoE cleave radius around the target ore (0 for single-target tiers). */
 export function getAoeCleaveRadius(rarity?: string): number {
-  return rarity === 'fusion' || rarity === 'twin' || rarity === 'omega' ? AOE_CLEAVE_RADIUS : 0;
+  return rarity === 'fusion' || rarity === 'twin' || rarity === 'omega' || rarity === 'anomaly' ? AOE_CLEAVE_RADIUS : 0;
 }
 
 function getAoeSplashDamageMult(rarity: string): number {
-  return rarity === 'fusion' || rarity === 'limited' || rarity === 'twin' || rarity === 'omega' ? 1.0 : 0.8;
+  return rarity === 'fusion' || rarity === 'limited' || rarity === 'twin' || rarity === 'omega' || rarity === 'anomaly' ? 1.0 : 0.8;
 }
 
 function getMineAttackIntervalSec(miningMult: number): number {

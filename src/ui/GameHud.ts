@@ -66,6 +66,7 @@ import { ShopModalsUi } from './ShopModalsUi';
 import { TowerUi } from './TowerUi';
 import { TutorialUi } from './TutorialUi';
 import { TwinTrialModalUi } from './TwinTrialModalUi';
+import { RiftModalUi } from './RiftModalUi';
 import { UpgradesWorldsUi } from './UpgradesWorldsUi';
 import { WeatherDpsHudUi } from './WeatherDpsHudUi';
 import { WorldOverlayHudUi } from './WorldOverlayHudUi';
@@ -125,6 +126,7 @@ export class GameHud {
   private readonly omegaBossUi: OmegaBossModalUi;
   private readonly omegaArenaUi: OmegaArenaHudUi;
   private readonly twinTrialUi: TwinTrialModalUi;
+  private readonly riftUi: RiftModalUi;
 
   constructor(
     private readonly root: HTMLElement,
@@ -243,6 +245,11 @@ export class GameHud {
       () => this.render(),
       (bossId, tier) => this.omegaBridge.startOmegaBattle(bossId, tier),
       () => this.openModal('none'),
+      (msg) => this.pushToast(msg)
+    );
+    this.riftUi = new RiftModalUi(
+      this.state,
+      () => this.render(),
       (msg) => this.pushToast(msg)
     );
     this.omegaArenaUi = new OmegaArenaHudUi(
@@ -538,6 +545,9 @@ export class GameHud {
         pushToast: (msg) => this.pushToast(msg),
         render: () => this.render(),
       });
+      if (this.activeModal === 'rift') {
+        this.riftUi.stepTick(0.1, this.root);
+      }
     }, 100);
   }
 
@@ -888,6 +898,7 @@ export class GameHud {
         readyBounties: this.state.getReadyBountyCount(),
         readyAchievements: this.state.getReadyAchievementCount(),
         dailyReady: this.state.canClaimDailyLogin(),
+        riftOpen: this.state.getRiftWindowSnapshot().isOpen,
       });
       const activeWorld = getWorldById(this.state.activeWorldId);
       const activeWorldNum = Math.max(1, getWorldIndex(this.state.activeWorldId) + 1);
@@ -985,6 +996,7 @@ export class GameHud {
       fusionUi: this.fusionUi,
       omegaBossUi: this.omegaBossUi,
       twinTrialUi: this.twinTrialUi,
+      riftUi: this.riftUi,
     });
   }
 

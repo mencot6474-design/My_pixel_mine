@@ -318,8 +318,8 @@ describe('Pure 3D Mine World', () => {
     expect(finisherNode.alive).toBe(false);
   });
 
-  it('registers all 77 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
-    expect(CHIBI_CATALOG.length).toBe(77);
+  it('registers all 79 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
+    expect(CHIBI_CATALOG.length).toBe(79);
     for (const c of CHIBI_CATALOG) {
       for (const pose of ['idle', 'walk', 'attack', 'pose'] as const) {
         expect(existsSync(resolve(process.cwd(), 'public', 'chibi', c.id, `${pose}.webp`))).toBe(true);
@@ -481,7 +481,7 @@ describe('Pure 3D Mine World', () => {
     expect(getMinersByWorld('elysium').length).toBe(5);
 
     const gs = new GameState();
-    expect(gs.getTotalIndexCount()).toBe(150);
+    expect(gs.getTotalIndexCount()).toBe(152);
     gs.discovered.add('stormwater-opal');
     gs.discovered.add('glitch-cheshire');
     gs.discovered.add('cosmic-monarch');
@@ -5284,5 +5284,61 @@ describe('Pure 3D Mine World', () => {
     biome.setOverclockTier(0);
     expect(countVisibleCones()).toBe(0);
     biome.dispose();
+  });
+
+  it('creates custom ANOMALY back-attachments and fires 2.5s Sakuga skill VFX for void-asura and null-singularity', () => {
+    let impactCalls = 0;
+    const pool = new TierAttackVfxPool3D({
+      onImpactFrame: () => {
+        impactCalls += 1;
+      },
+    });
+    pool.setPitBounds({ centerX: 0, floorY: -0.42, centerZ: 1.65, radius: 6.4 });
+    const cam = new THREE.PerspectiveCamera(45, 1.6, 0.1, 100);
+    cam.position.set(0, 10, 18);
+    const target = { x: 0, y: -0.42, z: 1.65 };
+    const allTargets = [target, { x: 1.5, y: -0.42, z: 2.1 }];
+
+    pool.fireTierAttack({
+      rarity: 'anomaly',
+      chibiId: 'void-asura',
+      colorHex: '#ef4444',
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
+    for (let i = 0; i < 24; i++) pool.update(0.05, cam);
+    expect(impactCalls).toBeGreaterThan(0);
+
+    impactCalls = 0;
+    pool.fireTierAttack({
+      rarity: 'anomaly',
+      chibiId: 'null-singularity',
+      colorHex: '#a855f7',
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
+    for (let i = 0; i < 24; i++) pool.update(0.05, cam);
+    expect(impactCalls).toBeGreaterThan(0);
+
+    const asuraDef = getChibiById('void-asura')!;
+    const nullDef = getChibiById('null-singularity')!;
+    const asuraSprite = new ChibiSprite3D(asuraDef);
+    const nullSprite = new ChibiSprite3D(nullDef);
+    const asuraBack = asuraSprite.group.getObjectByName('chibiBackAttachmentGroup');
+    const nullBack = nullSprite.group.getObjectByName('chibiBackAttachmentGroup');
+    expect(asuraBack?.visible).toBe(true);
+    expect(asuraBack?.children.length).toBe(7); // 1 Eclipse Halo + 6 Spectral Demon Claws
+    expect(nullBack?.visible).toBe(true);
+    expect(nullBack?.children.length).toBe(7); // 1 Nebula Star Halo + 4 Mirror Cards + 2 Amethyst Crystals
+
+    asuraSprite.update(0.05, 1.0, cam);
+    nullSprite.update(0.05, 1.0, cam);
+    asuraSprite.dispose();
+    nullSprite.dispose();
+    pool.dispose();
   });
 });

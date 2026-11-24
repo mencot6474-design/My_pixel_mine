@@ -37,6 +37,9 @@ import * as OmegaDom from './OmegaBossDomain';
 import type { OmegaBattleState, OmegaBattleSummary, OmegaStrikeResult, OmegaTargetObject } from './OmegaBossDomain';
 import * as TwinTrialDom from './TwinTrialDomain';
 import type { TwinTrialState } from './TwinTrialDomain';
+import { type ActiveAnomalyPassives, getActiveAnomalyPassiveBonuses } from './AnomalyData';
+import * as RiftDom from './RiftDomain';
+import type { RiftBreachClaimResult, RiftWindowSnapshot } from './RiftDomain';
 
 export type {
   PlotUnitState,
@@ -126,6 +129,9 @@ export class GameState {
   public claimedAchievements = new Set<string>();
   public readonly overclock: OverclockState = OverclockDom.createInitialOverclockState();
   public twinTrial: TwinTrialState = TwinTrialDom.createInitialTwinTrialState();
+  public riftShards = 0;
+  public riftPassExpiresAt = 0;
+  public riftBreachesCompleted = 0;
   private loadedLastSavedAt = 0;
 
   private readonly listeners = new Set<StateListener>();
@@ -614,6 +620,76 @@ export class GameState {
 
   public getActiveOmegaPassives(): ActiveOmegaPassives {
     return getActiveOmegaPassiveBonuses(this.plotMiners, this.chibiStars);
+  }
+
+  public getActiveAnomalyPassives(): ActiveAnomalyPassives {
+    return getActiveAnomalyPassiveBonuses(this.plotMiners, this.chibiStars);
+  }
+
+  public getRiftWindowSnapshot(nowMs = Date.now()): RiftWindowSnapshot {
+    return RiftDom.getRiftWindowSnapshot(nowMs, this.riftPassExpiresAt);
+  }
+
+  public buyRiftPass(nowMs = Date.now()): 'bought' | 'no_gems' {
+    const self = this;
+    const res = RiftDom.buyRiftPassDomain(
+      {
+        get gems() { return self.gems; },
+        set gems(v: number) { self.gems = v; },
+        get riftShards() { return self.riftShards; },
+        set riftShards(v: number) { self.riftShards = v; },
+        get riftPassExpiresAt() { return self.riftPassExpiresAt; },
+        set riftPassExpiresAt(v: number) { self.riftPassExpiresAt = v; },
+        get riftBreachesCompleted() { return self.riftBreachesCompleted; },
+        set riftBreachesCompleted(v: number) { self.riftBreachesCompleted = v; },
+        miners: this.miners,
+        discovered: this.discovered,
+      },
+      nowMs,
+      () => this.emit()
+    );
+    return res;
+  }
+
+  public claimRiftBreachReward(nowMs = Date.now(), rng?: () => number): RiftBreachClaimResult {
+    const self = this;
+    return RiftDom.claimRiftBreachRewardDomain(
+      {
+        get gems() { return self.gems; },
+        set gems(v: number) { self.gems = v; },
+        get riftShards() { return self.riftShards; },
+        set riftShards(v: number) { self.riftShards = v; },
+        get riftPassExpiresAt() { return self.riftPassExpiresAt; },
+        set riftPassExpiresAt(v: number) { self.riftPassExpiresAt = v; },
+        get riftBreachesCompleted() { return self.riftBreachesCompleted; },
+        set riftBreachesCompleted(v: number) { self.riftBreachesCompleted = v; },
+        miners: this.miners,
+        discovered: this.discovered,
+      },
+      nowMs,
+      rng,
+      () => this.emit()
+    );
+  }
+
+  public redeemAnomalyChibi(chibiId: string): 'redeemed' | 'no_shards' | 'invalid' {
+    const self = this;
+    return RiftDom.redeemAnomalyChibiDomain(
+      {
+        get gems() { return self.gems; },
+        set gems(v: number) { self.gems = v; },
+        get riftShards() { return self.riftShards; },
+        set riftShards(v: number) { self.riftShards = v; },
+        get riftPassExpiresAt() { return self.riftPassExpiresAt; },
+        set riftPassExpiresAt(v: number) { self.riftPassExpiresAt = v; },
+        get riftBreachesCompleted() { return self.riftBreachesCompleted; },
+        set riftBreachesCompleted(v: number) { self.riftBreachesCompleted = v; },
+        miners: this.miners,
+        discovered: this.discovered,
+      },
+      chibiId,
+      () => this.emit()
+    );
   }
 
   public buyPremiumShopItem(chibiId: string): 'bought' | 'no_coins' | 'invalid' {

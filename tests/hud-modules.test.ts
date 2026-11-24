@@ -60,6 +60,7 @@ import {
 } from '../src/ui/HudChromeRenderer';
 import { stepHudSlowTick } from '../src/ui/HudActionRouter';
 import { TwinTrialModalUi } from '../src/ui/TwinTrialModalUi';
+import { RiftModalUi } from '../src/ui/RiftModalUi';
 import { PREMIUM_SHOP_ITEMS } from '../src/game/PremiumShopData';
 import { TWIN_TRIAL_DURATION_MS } from '../src/game/TwinTrialDomain';
 import {
@@ -2335,6 +2336,37 @@ describe('Tahap B HUD Modules', () => {
       expect(finisherCall[0]).toBe('ore-hit-3');
       expect((finisherCall[1]?.pitchMin ?? 0)).toBeGreaterThan(firstCall[1]?.pitchMin ?? 0);
       expect((finisherCall[1]?.volume ?? 0)).toBeGreaterThan(firstCall[1]?.volume ?? 0);
+    });
+  });
+
+  describe('ANOMALY tier badge & rarity wiring', () => {
+    it('renders ANOMALY crest badge, rarity card class, and valid animated SVG asset', () => {
+      const badgeHtml = renderRarityBadgeHtml('anomaly');
+      expect(badgeHtml).toContain('mam-rarity-anomaly');
+      expect(badgeHtml).toContain('is-crest');
+      expect(badgeHtml).toContain('/badges/anomaly.svg');
+      expect(badgeHtml).toContain('ANOMALY');
+
+      const cardCls = rarityCardClasses('anomaly');
+      expect(cardCls).toContain('mam-card');
+      expect(cardCls).toContain('rarity-anomaly');
+
+      const svgPath = resolve(process.cwd(), 'public/badges/anomaly.svg');
+      const svg = readFileSync(svgPath, 'utf8');
+      expect(svg).toContain('<svg');
+      expect(svg).toContain('</svg>');
+      expect(svg).toContain('ANOMALY');
+    });
+
+    it('renders RiftModalUi with 500K Force Open CTA, ANOMALY Chibi cards, and Pity Claim button', () => {
+      const state = new GameState();
+      const riftUi = new RiftModalUi(state, () => {}, () => {});
+      const html = riftUi.renderModal();
+      expect(html).toContain('Dimensional Rift Gate');
+      expect(html).toContain('Void Asura');
+      expect(html).toContain('Null Singularity');
+      expect(html).toContain('/badges/anomaly.svg');
+      expect(html).toContain('100 Shards');
     });
   });
 });

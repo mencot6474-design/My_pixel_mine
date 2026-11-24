@@ -140,6 +140,12 @@ export interface TierVfxChoreoContext {
   fireAbyssalLeviathanSakuga: (opts: {
     cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
   }) => void;
+  fireVoidAsuraSakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
+  }) => void;
+  fireNullSingularitySakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
+  }) => void;
   fireClockworkTwinsSakuga: (opts: {
     cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[];
     onSlashBeat?: (beatIdx: number, pt: WorldPoint3) => void;
@@ -480,6 +486,40 @@ export function fireTierAttackChoreography(
           pts.forEach((n) => {
             ctx.spawnDebrisBurst(n.x, n.y + 0.8, n.z, '#ef4444', '#fbbf24', 6);
             ctx.spawnSparks(n.x, n.y + 0.9, n.z, '#fef08a', '#ffffff', 8, 7.0);
+          });
+        },
+      });
+      break;
+    }
+
+    case 'anomaly': {
+      if (opts.chibiId === 'null-singularity') {
+        ctx.fireNullSingularitySakuga({
+          cx,
+          cy,
+          cz,
+          areaScale: as,
+          pts,
+          onImpact: () => {
+            pts.forEach((n) => {
+              ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#4c1d95', '#22d3ee', 6);
+              ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#fde047', '#e879f9', 8, 7.4);
+            });
+          },
+        });
+        break;
+      }
+
+      ctx.fireVoidAsuraSakuga({
+        cx,
+        cy,
+        cz,
+        areaScale: as,
+        pts,
+        onImpact: () => {
+          pts.forEach((n) => {
+            ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#18181b', '#ef4444', 6);
+            ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#ffffff', '#ef4444', 8, 7.4);
           });
         },
       });

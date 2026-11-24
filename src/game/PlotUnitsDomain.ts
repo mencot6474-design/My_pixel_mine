@@ -32,6 +32,11 @@ import {
   getOmegaBossByChibiId,
 } from './OmegaData';
 import {
+  computeAnomalyUpgradeCostScale,
+  getActiveAnomalyPassiveBonuses,
+  getAnomalyChibiById,
+} from './AnomalyData';
+import {
   computeTwinUpgradeCostScale,
   getActivePremiumPassiveBonuses,
   getPremiumShopItemByChibiId,
@@ -151,6 +156,10 @@ export function getChibiUpgradeCostMult(
     const omegaBoss = getOmegaBossByChibiId(chibiId);
     if (omegaBoss) {
       return computeOmegaUpgradeCostScale(anchor.upgradeCostScale, omegaBoss.upgradeCostMult);
+    }
+    const anomalyChibi = getAnomalyChibiById(chibiId);
+    if (anomalyChibi) {
+      return computeAnomalyUpgradeCostScale(anchor.upgradeCostScale, anomalyChibi.upgradeCostMult);
     }
     const dailyReward = getDailyLoginRewardByChibiId(chibiId);
     if (dailyReward?.upgradeCostScale !== undefined) {
@@ -346,7 +355,8 @@ function computeUnitBaseDmgParts(
     1 +
     getActiveFusionPassiveBonuses(ctx.plotMiners, ctx.chibiStars).teamDmgPct +
     getActivePremiumPassiveBonuses(ctx.plotMiners, ctx.chibiStars).teamDmgPct +
-    getActiveOmegaPassiveBonuses(ctx.plotMiners, ctx.chibiStars).teamDmgPct;
+    getActiveOmegaPassiveBonuses(ctx.plotMiners, ctx.chibiStars).teamDmgPct +
+    getActiveAnomalyPassiveBonuses(ctx.plotMiners, ctx.chibiStars).teamDmgPct;
   const indexAllDmgMult =
     1 +
     (ctx.claimedIndexRewards ? getActiveIndexPassiveBonusesDomain(ctx.claimedIndexRewards).allDmgPct : 0) +

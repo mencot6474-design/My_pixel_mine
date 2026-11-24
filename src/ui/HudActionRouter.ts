@@ -27,6 +27,7 @@ import type { InventoryModalUi } from './InventoryModalUi';
 import type { OfflineModalUi } from './OfflineModalUi';
 import type { OmegaArenaHudUi } from './OmegaArenaHudUi';
 import type { OmegaBossModalUi } from './OmegaBossModalUi';
+import type { RiftModalUi } from './RiftModalUi';
 import type { SettingsModalUi } from './SettingsModalUi';
 import type { ShopModalsUi } from './ShopModalsUi';
 import type { TowerUi } from './TowerUi';
@@ -50,6 +51,7 @@ export interface HudModalRenderers {
   fusionUi: FusionHudUi;
   omegaBossUi: OmegaBossModalUi;
   twinTrialUi?: TwinTrialModalUi;
+  riftUi?: RiftModalUi;
 }
 
 export interface HudActionRouterContext {
@@ -148,6 +150,8 @@ export function renderActiveModalHtml(activeModal: ModalKind, ui: HudModalRender
       return ui.omegaBossUi.renderOmegaModal();
     case 'twin-trial':
       return ui.twinTrialUi ? ui.twinTrialUi.renderModal() : '';
+    case 'rift':
+      return ui.riftUi ? ui.riftUi.renderModal() : '';
     default:
       return '';
   }
@@ -166,6 +170,7 @@ export function buildHudCoordinatorActions(ctx: HudActionRouterContext): Record<
     'open-bounties': () => ctx.toggleModal('bounties'),
     'open-achievements': () => ctx.toggleModal('achievements'),
     'open-daily-login': () => ctx.toggleModal('daily-login'),
+    'open-rift': () => ctx.toggleModal('rift'),
     'open-twin-trial': () => {
       audio.playSfx('ui-open');
       ctx.toggleModal('twin-trial');
@@ -540,4 +545,5 @@ export function bindHudRootEvents(ctx: HudBindRootEventsContext): void {
   ctx.omegaBossUi.bindEvents(ctx.root);
   ctx.omegaArenaUi.bindArenaEvents(ctx.root);
   ctx.twinTrialUi?.bindEvents(ctx.root);
+  ctx.riftUi?.bindEvents(ctx.root);
 }

@@ -1,4 +1,5 @@
 import { CHIBI_CATALOG, ChibiDef, ChibiRarity, getChibiById } from '../game3d/ChibiCatalog';
+import { ANOMALY_CHIBI_DEFS, computeAnomalyScaledBaseDps } from './AnomalyData';
 import { getDailyLoginRewardByChibiId } from './DailyLoginData';
 import { computeOmegaScaledBaseDps, OMEGA_BOSS_DEFS } from './OmegaData';
 import { computeTwinScaledBaseDps, PREMIUM_SHOP_ITEMS } from './PremiumShopData';
@@ -111,6 +112,7 @@ export const RARITY_BORDER: Record<ItemRarity, string> = {
   limited: '#fbbf24',
   twin: '#38bdf8',
   omega: '#ef4444',
+  anomaly: '#22d3ee',
 };
 
 export const WORLD_GRIND_SCALE: Record<WorldId, number> = {
@@ -271,6 +273,12 @@ export function getEffectiveChibiBaseDps(
     return Math.min(chibi.baseDps, computeOmegaScaledBaseDps(anchor.secretBaseDps, omega.dpsMult));
   }
 
+  const anomaly = ANOMALY_CHIBI_DEFS.find((a) => a.chibiId === chibiId);
+  if (anomaly) {
+    const anchor = getUnlockedWorldScaleAnchor(unlockedWorlds, discovered);
+    return Math.min(chibi.baseDps, computeAnomalyScaledBaseDps(anchor.secretBaseDps, anomaly.dpsMult));
+  }
+
   const daily = getDailyLoginRewardByChibiId(chibiId);
   if (daily) {
     const anchor = getUnlockedWorldScaleAnchor(unlockedWorlds, discovered);
@@ -294,6 +302,11 @@ export function syncTwinCatalogDpsFromAnchor(
     const chibi = getChibiById(boss.chibiId);
     if (!chibi) continue;
     chibi.baseDps = computeOmegaScaledBaseDps(anchor.secretBaseDps, boss.dpsMult);
+  }
+  for (const anom of ANOMALY_CHIBI_DEFS) {
+    const chibi = getChibiById(anom.chibiId);
+    if (!chibi) continue;
+    chibi.baseDps = computeAnomalyScaledBaseDps(anchor.secretBaseDps, anom.dpsMult);
   }
 }
 

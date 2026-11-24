@@ -438,6 +438,27 @@
     color: #14111d;
   }
 
+  .mam-card.rarity-anomaly,
+  .mam-strip-card.rarity-anomaly,
+  .mam-altar-card.rarity-anomaly {
+    border: 3px solid #14111d;
+    background:
+      repeating-conic-gradient(
+        from 0deg at 50% 48%,
+        rgba(255, 255, 255, 0.3) 0deg 15deg,
+        transparent 15deg 30deg
+      ),
+      radial-gradient(circle at 50% 46%, rgba(168, 85, 247, 0.34) 0%, transparent 64%),
+      linear-gradient(135deg, #22d3ee 0%, #67e8f9 22%, #c084fc 50%, #e879f9 76%, #fb7185 100%);
+    color: #14111d;
+    box-shadow: none;
+    animation: none;
+  }
+
+  .mam-card.rarity-anomaly .mam-card-name {
+    color: #14111d;
+  }
+
   .mam-fusion-text {
     background: linear-gradient(90deg, #0284c7, #7c3aed, #db2777);
     -webkit-background-clip: text;

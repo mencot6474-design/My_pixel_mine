@@ -6,6 +6,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { type ProceduralChestHandle } from './ChestVaultStation3D';
 import { createCyberCargoPod } from './CyberCargoPod3D';
+import { createRiftGate3D, type RiftGateHandle } from './RiftGate3D';
 import { configureSceneTextureSharpness } from './MeshHelpers3D';
 import { ImpactFrameShader } from './MeshFx3D';
 import type { MineEnvironment3D } from './MineEnvironment3D';
@@ -97,6 +98,7 @@ export interface MineSceneCallbacks {
   onSweetSpot?: (spot: SweetSpotScreen | null) => void;
   onHoldMineChange?: (active: boolean) => void;
   onChestClick?: () => void;
+  onRiftGateClick?: () => void;
   onPedestalClick?: (slotIndex: number) => void;
   onPlotAnchors?: (anchors: PlotAnchorScreen[]) => void;
   onChestAnchor?: (anchor: { x: number; y: number; visible: boolean }) => void;
@@ -202,6 +204,7 @@ export function buildMineStageAndChest(ctx: {
   stageNeonMat: THREE.MeshStandardMaterial;
   stageHoloMat: THREE.MeshBasicMaterial;
   chestVisual: ProceduralChestHandle;
+  riftGate: RiftGateHandle;
 } {
   const { palette } = ctx;
   const stageNeonMat = new THREE.MeshStandardMaterial({
@@ -256,7 +259,15 @@ export function buildMineStageAndChest(ctx: {
 
   ctx.scene.add(ctx.crateGroup);
   ctx.clickableMeshes.push(crateHit);
-  return { stageNeonMat, stageHoloMat, chestVisual };
+
+  // Left Floating Satellite Dimensional Rift Gate on Left Wing Hover-Pad (x=-9.85, y=0.98, z=3.85)
+  const riftGate = createRiftGate3D();
+  riftGate.group.position.set(-9.85, 0.98, 3.85);
+  riftGate.group.rotation.y = Math.PI / 6;
+  ctx.scene.add(riftGate.group);
+  ctx.clickableMeshes.push(riftGate.hitMesh);
+
+  return { stageNeonMat, stageHoloMat, chestVisual, riftGate };
 }
 
 export function applyMineWeatherAtmosphere(ctx: {
@@ -507,6 +518,7 @@ export function applyMineSceneModeTransition(ctx: {
   env: MineEnvironment3D;
   pit: OrePit3D;
   crateGroup: THREE.Group;
+  riftGate?: RiftGateHandle;
   pedestals: PlotPedestal3D[];
   plotAttackController: PlotAttackController3D;
   shopWorld: ShopWorld3D | null;
@@ -565,6 +577,7 @@ export function applyMineSceneModeTransition(ctx: {
   }
   ctx.pit.group.visible = isMine;
   ctx.crateGroup.visible = isMine;
+  if (ctx.riftGate) ctx.riftGate.group.visible = isMine;
   ctx.pedestals.forEach((p) => {
     p.group.visible = isMine;
   });
@@ -708,6 +721,9 @@ export function stepMineActiveWorldEntities(ctx: {
   omegaArena: OmegaArena3D | null;
   crateGroup: THREE.Group;
   chestVisual: ProceduralChestHandle;
+  riftGate: RiftGateHandle;
+  riftIsOpen: boolean;
+  riftLabelText: string;
   inputState: MineInputState;
   onTowerFighterStrike?: (
     slotIndex: number,
@@ -750,6 +766,7 @@ export function stepMineActiveWorldEntities(ctx: {
 
   if (inMine) {
     ctx.env.update(dtSec, elapsed, ctx.inputState.crateHovered, ctx.inputState.crateBounce);
+    ctx.riftGate.update(dtSec, elapsed, ctx.riftIsOpen, ctx.riftLabelText);
     for (let i = 0; i < ctx.pedestals.length; i++) {
       ctx.pedestals[i].update(dtSec, elapsed, ctx.camera);
     }

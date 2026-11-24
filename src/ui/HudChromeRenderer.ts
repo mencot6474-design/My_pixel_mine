@@ -430,8 +430,16 @@ export function renderMineQuickButtonsHtml(opts: {
   readyBounties: number;
   readyAchievements: number;
   dailyReady: boolean;
+  riftOpen?: boolean;
 }): string {
+  const riftBtnCls = opts.riftOpen
+    ? 'relative h-[36px] min-w-[36px] px-2.5 rounded-xl border-[2.5px] border-[#14111d] bg-[linear-gradient(135deg,#67e8f9,#e879f9)] shadow-none text-[#14111d] text-[12px] font-black inline-flex items-center justify-center gap-1 cursor-pointer touch-manipulation transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] active:scale-95'
+    : 'relative h-[36px] min-w-[36px] px-2.5 rounded-xl border-[2.5px] border-[#14111d] bg-[#e9d5ff] shadow-none text-[#14111d] text-[12px] font-black inline-flex items-center justify-center gap-1 cursor-pointer touch-manipulation transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] active:scale-95';
   return `
+    <button class="${riftBtnCls}" title="Dimensional Rift (:00–:15)" data-action="open-rift">
+      <span class="${TW_BADGE_BASE} min-w-[16px] h-4 px-1 text-[9px] ${opts.riftOpen ? '' : 'hidden'}" data-rift-badge="true">!</span>
+      <span>RIFT</span>
+    </button>
     <button class="${TW_QUICK_BTN_DAILY}" title="Daily Login" data-action="open-daily-login">
       <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] ${opts.dailyReady ? '' : 'hidden'}" data-daily-badge="true">1</span>
       <span class="text-[#b45309] text-[15px] leading-none" aria-hidden="true">✦</span>

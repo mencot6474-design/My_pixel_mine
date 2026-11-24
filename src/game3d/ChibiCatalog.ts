@@ -13,7 +13,8 @@ export type ChibiRarity =
   | 'fusion'
   | 'limited'
   | 'twin'
-  | 'omega';
+  | 'omega'
+  | 'anomaly';
 
 export interface ChibiPoseUrls {
   idle: string;
@@ -937,6 +938,30 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     accentColor: '#06b6d4',
     baseDps: 34_000_000,
     poseScale: 1.32,
+    smoothFilter: true,
+  },
+  {
+    id: 'void-asura',
+    name: 'Void Asura',
+    spriteUrl: '/chibi/void-asura/idle.webp',
+    poses: makePoses('void-asura'),
+    frames: 4,
+    rarity: 'anomaly',
+    accentColor: '#ef4444',
+    baseDps: 42_000_000,
+    poseScale: 1.18,
+    smoothFilter: true,
+  },
+  {
+    id: 'null-singularity',
+    name: 'Null Singularity',
+    spriteUrl: '/chibi/null-singularity/idle.webp',
+    poses: makePoses('null-singularity'),
+    frames: 4,
+    rarity: 'anomaly',
+    accentColor: '#a855f7',
+    baseDps: 48_000_000,
+    poseScale: 1.18,
     smoothFilter: true,
   },
 ] as const;

@@ -35,6 +35,7 @@ export interface GameMultipliersContext {
   getActiveFusionPassives: () => FusionPassiveBonuses;
   getActivePremiumPassives?: () => ActivePremiumPassives;
   getActiveOmegaPassives?: () => ActiveOmegaPassives;
+  getActiveAnomalyPassives?: () => { teamDmgPct: number; oreDropPct: number; oreSellPct: number };
   getActiveIndexPassiveBonuses: () => IndexPassiveBonuses;
   getAchievementAllDmgBonus: () => number;
   getActiveResearchBonus: (effectType: ResearchEffectType) => number;
@@ -126,6 +127,7 @@ export function getOreValueMultDomain(ctx: GameMultipliersContext): number {
   const { sellBonusPct } = ctx.getActiveStarDropAndGemBonus();
   const premSell = ctx.getActivePremiumPassives?.().oreSellPct ?? 0;
   const omegaSell = ctx.getActiveOmegaPassives?.().oreSellPct ?? 0;
+  const anomalySell = ctx.getActiveAnomalyPassives?.().oreSellPct ?? 0;
   return (
     1 +
     ctx.getActiveResearchBonus('oreValuePct') +
@@ -134,6 +136,7 @@ export function getOreValueMultDomain(ctx: GameMultipliersContext): number {
     ctx.getActiveFusionPassives().oreSellPct +
     premSell +
     omegaSell +
+    anomalySell +
     ctx.getActiveEnchantBonuses().sellValuePct +
     ctx.getActiveIndexPassiveBonuses().oreSellPct
   );
@@ -149,6 +152,7 @@ export function getOreOutputMultDomain(ctx: GameMultipliersContext): number {
   const { oreDropBonusPct } = ctx.getActiveStarDropAndGemBonus();
   const premDrop = ctx.getActivePremiumPassives?.().oreDropPct ?? 0;
   const omegaDrop = ctx.getActiveOmegaPassives?.().oreDropPct ?? 0;
+  const anomalyDrop = ctx.getActiveAnomalyPassives?.().oreDropPct ?? 0;
   let mult =
     1 +
     ctx.getActiveResearchBonus('oreOutputPct') +
@@ -157,6 +161,7 @@ export function getOreOutputMultDomain(ctx: GameMultipliersContext): number {
     ctx.getActiveFusionPassives().oreDropPct +
     premDrop +
     omegaDrop +
+    anomalyDrop +
     ctx.getActiveEnchantBonuses().oreDropPct +
     ctx.getActiveIndexPassiveBonuses().oreDropPct;
   if (isBoostActiveDomain(ctx, 'ore-elixir-1')) mult += 0.5;

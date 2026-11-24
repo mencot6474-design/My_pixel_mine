@@ -43,7 +43,8 @@ export type ModalKind =
   | 'daily-login'
   | 'altar-hub'
   | 'omega-boss'
-  | 'twin-trial';
+  | 'twin-trial'
+  | 'rift';
 
 export type ModalThemeId = Exclude<ModalKind, 'none'>;
 
@@ -60,12 +61,17 @@ export function rarityCardClasses(rarity: ItemRarity, extra = ''): string {
   if (rarity === 'limited') cls.push('rarity-limited');
   if (rarity === 'twin') cls.push('rarity-twin');
   if (rarity === 'omega') cls.push('rarity-omega');
+  if (rarity === 'anomaly') cls.push('rarity-anomaly');
   if (extra) cls.push(extra);
   return cls.join(' ');
 }
 
 export function renderRarityBadgeHtml(rarity: ItemRarity, extraCls = ''): string {
   const extra = extraCls ? ` ${extraCls}` : '';
+  if (rarity === 'anomaly') {
+    const src = assetUrl('/badges/anomaly.svg');
+    return `<span class="mam-rarity-badge mam-rarity-anomaly is-crest${extra}"><span class="mam-rarity-label sr-only">ANOMALY</span><img class="mam-rarity-crest-img" src="${src}" alt="ANOMALY" draggable="false" /></span>`;
+  }
   if (rarity === 'omega') {
     const src = assetUrl('/badges/omega.svg');
     return `<span class="mam-rarity-badge mam-rarity-omega is-crest${extra}"><span class="mam-rarity-label sr-only">OMEGA</span><img class="mam-rarity-crest-img" src="${src}" alt="OMEGA" draggable="false" /></span>`;
@@ -295,7 +301,9 @@ export function renderInspectorPanel(opts: {
                   ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#38bdf8_0%,#fde047_50%,#fb7185_100%)]'
                   : opts.rarity === 'omega'
                     ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#f43f5e_0%,#fde047_50%,#64748b_100%)]'
-                    : 'border-[3px] border-[#14111d]';
+                    : opts.rarity === 'anomaly'
+                      ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#22d3ee_0%,#a855f7_50%,#f43f5e_100%)]'
+                      : 'border-[3px] border-[#14111d]';
   const showcaseStyle =
     opts.rarity === 'rainbow' ||
     opts.rarity === 'mythic' ||
@@ -304,7 +312,8 @@ export function renderInspectorPanel(opts: {
     opts.rarity === 'fusion' ||
     opts.rarity === 'limited' ||
     opts.rarity === 'twin' ||
-    opts.rarity === 'omega'
+    opts.rarity === 'omega' ||
+    opts.rarity === 'anomaly'
       ? ''
       : `background:radial-gradient(circle at 50% 42%,${borderColor}7a 0%,${borderColor}38 90%);`;
   const statsHtml = opts.stats
