@@ -613,7 +613,7 @@ export class ObsidianSovereignSkillVfxPool {
     inst.onImpactCallback = opts.onImpact ?? null;
 
     inst.root.visible = true;
-    inst.vortexMesh.position.set(opts.cx, opts.cy + 0.08, opts.cz);
+    inst.vortexMesh.position.set(opts.cx, opts.cy + 0.18, opts.cz);
     inst.vortexMesh.scale.setScalar(11.8 * opts.areaScale);
     inst.vortexMat.uniforms.uProgress.value = 0;
 
@@ -629,10 +629,10 @@ export class ObsidianSovereignSkillVfxPool {
       spin: number;
       c: string;
     }> = [
-      { delay: 0.44, dx: -0.35, dy: 1.08, dz: 0.18, rx: 0.24, ry: 0.35, rz: 0.32, sc: 6.2, spin: 5.0, c: '#a855f7' },
-      { delay: 0.58, dx: 0.35, dy: 1.18, dz: 0.0, rx: -0.26, ry: Math.PI - 0.35, rz: -0.34, sc: 6.6, spin: -5.2, c: '#e879f9' },
-      { delay: 0.70, dx: 0.0, dy: 2.05, dz: 0.14, rx: Math.PI * 0.44, ry: 0.12, rz: 0.16, sc: 8.6, spin: -4.2, c: '#a855f7' },
-      { delay: 0.88, dx: 0.0, dy: 0.56, dz: 0.0, rx: 0.05, ry: 0.0, rz: 0.0, sc: 8.4, spin: -5.0, c: '#e879f9' },
+      { delay: 0.44, dx: -0.35, dy: 1.48, dz: 0.18, rx: 0.24, ry: 0.35, rz: 0.32, sc: 6.2, spin: 5.0, c: '#a855f7' },
+      { delay: 0.58, dx: 0.35, dy: 1.58, dz: 0.0, rx: -0.26, ry: Math.PI - 0.35, rz: -0.34, sc: 6.6, spin: -5.2, c: '#e879f9' },
+      { delay: 0.70, dx: 0.0, dy: 2.35, dz: 0.14, rx: Math.PI * 0.44, ry: 0.12, rz: 0.16, sc: 8.6, spin: -4.2, c: '#a855f7' },
+      { delay: 0.88, dx: 0.0, dy: 1.15, dz: 0.0, rx: 0.05, ry: 0.0, rz: 0.0, sc: 8.4, spin: -5.0, c: '#e879f9' },
     ];
 
     const waveLimit = this.lowQuality ? 3 : CRESCENT_COUNT;
@@ -660,15 +660,15 @@ export class ObsidianSovereignSkillVfxPool {
     inst.swordMesh.scale.setScalar(2.65 * Math.max(0.7, opts.areaScale));
     inst.swordMesh.visible = false;
 
-    inst.pillarMesh.position.set(opts.cx, opts.cy + 0.04, opts.cz);
+    inst.pillarMesh.position.set(opts.cx, opts.cy + 0.12, opts.cz);
     inst.pillarMesh.scale.set(1.4 * opts.areaScale, 0.01, 1.4 * opts.areaScale);
     inst.pillarMesh.visible = false;
 
-    inst.crownMesh.position.set(opts.cx, opts.cy + 0.06, opts.cz);
+    inst.crownMesh.position.set(opts.cx, opts.cy + 0.16, opts.cz);
     inst.crownMesh.scale.setScalar(0.01);
     inst.crownMesh.visible = false;
 
-    inst.machMesh.position.set(opts.cx, opts.cy + 0.14, opts.cz);
+    inst.machMesh.position.set(opts.cx, opts.cy + 0.22, opts.cz);
     inst.machMesh.scale.setScalar(13.2 * opts.areaScale);
     inst.machMesh.visible = false;
 

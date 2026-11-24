@@ -28,6 +28,7 @@ const TWIN_CUTSCENE_PALETTES: Record<string, TwinCutscenePalette> = {
   'nocturne-twins': { colorA: '#a855f7', colorB: '#f8fafc', ribbonClass: 'text-[#c084fc]' },
   'lullaby-twins': { colorA: '#f472b6', colorB: '#a855f7', ribbonClass: 'text-[#f472b6]' },
   'clockwork-twins': { colorA: '#f59e0b', colorB: '#2dd4bf', ribbonClass: 'text-[#fbbf24]' },
+  'paradox-twins': { colorA: '#fbbf24', colorB: '#ef4444', ribbonClass: 'text-[#fbbf24]' },
 };
 
 const DEFAULT_TWIN_PALETTE: TwinCutscenePalette = {

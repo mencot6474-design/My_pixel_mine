@@ -954,7 +954,7 @@ export class YukikageTwinsSkillVfxPool {
       sp.age = 0;
       sp.life = 0.38 + ((i * 19) % 10) * 0.025;
       sp.pos.copy(origin);
-      sp.floorY = inst.cy + 0.08;
+      sp.floorY = inst.cy + 0.16;
       const az = ((i - startIdx) / Math.max(1, count)) * Math.PI * 2 + (i % 3) * 0.29;
       const spd = (9.6 + ((i * 29) % 10) * 1.1) * speedMult * Math.max(0.75, inst.areaScale);
       const vy = (5.8 + ((i * 23) % 10) * 0.85) * speedMult;
@@ -994,7 +994,7 @@ export class YukikageTwinsSkillVfxPool {
 
     inst.root.visible = true;
 
-    inst.sealMesh.position.set(opts.cx, opts.cy + 0.08, opts.cz);
+    inst.sealMesh.position.set(opts.cx, opts.cy + 0.16, opts.cz);
     inst.sealMesh.scale.setScalar(12.2 * opts.areaScale);
     inst.sealMat.uniforms.uProgress.value = 0;
     inst.sealMat.uniforms.uBlastT.value = 0;
@@ -1036,7 +1036,7 @@ export class YukikageTwinsSkillVfxPool {
       ka.targetIdx = i % inst.pts.length;
       const tgt = inst.pts[ka.targetIdx];
       ka.delay = 0.08 + i * 0.062;
-      ka.mesh.position.set(tgt.x, tgt.y + 1.05 + (i % 3) * 0.22, tgt.z);
+      ka.mesh.position.set(tgt.x, tgt.y + 1.25 + (i % 3) * 0.22, tgt.z);
       ka.mesh.rotation.copy(ka.baseRot);
       ka.mesh.rotation.y = ka.startSpinY;
       ka.mesh.scale.setScalar((2.8 + (i % 2) * 0.8) * opts.areaScale);
@@ -1044,16 +1044,16 @@ export class YukikageTwinsSkillVfxPool {
       ka.mat.uniforms.uLocalT.value = 0;
     }
 
-    inst.finalSlashMesh.position.set(opts.cx, opts.cy + 1.25, opts.cz);
+    inst.finalSlashMesh.position.set(opts.cx, opts.cy + 1.4, opts.cz);
     inst.finalSlashMesh.rotation.set(0.32, -Math.PI * 0.5, 0.24);
     inst.finalSlashMesh.scale.setScalar(6.2 * opts.areaScale);
     inst.finalSlashMesh.visible = false;
 
-    inst.shockRingCyanMesh.position.set(opts.cx, opts.cy + 0.14, opts.cz);
+    inst.shockRingCyanMesh.position.set(opts.cx, opts.cy + 0.18, opts.cz);
     inst.shockRingCyanMesh.visible = false;
-    inst.shockRingAmberMesh.position.set(opts.cx, opts.cy + 0.18, opts.cz);
+    inst.shockRingAmberMesh.position.set(opts.cx, opts.cy + 0.22, opts.cz);
     inst.shockRingAmberMesh.visible = false;
-    inst.detoPillarMesh.position.set(opts.cx, opts.cy + 0.05, opts.cz);
+    inst.detoPillarMesh.position.set(opts.cx, opts.cy + 0.12, opts.cz);
     inst.detoPillarMesh.visible = false;
     inst.starFlareMesh.position.set(opts.cx, opts.cy + 1.35, opts.cz + 0.25);
     inst.starFlareMesh.visible = false;

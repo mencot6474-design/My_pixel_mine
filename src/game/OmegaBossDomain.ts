@@ -214,7 +214,7 @@ export function startOmegaBossDomain(
       durationSec: 2.3,
       consumed: false,
     },
-    mechanicCooldownSec: bossId === 'obsidian-sovereign' ? 5.5 : 999,
+    mechanicCooldownSec: bossId === 'obsidian-sovereign' || bossId === 'abyssal-leviathan' ? 5.5 : 999,
     phase60Triggered: false,
     phase30Triggered: false,
     targets: [],
@@ -391,9 +391,9 @@ export function applyOmegaSquadStrikeDomain(
   const critMult = isCrit ? 1.85 : 1.0;
   const breakMult = isBreak ? OMEGA_BREAK_DMG_MULT : 1.0;
 
-  // Obsidian Pillars reduce incoming damage by 60% while standing
+  // Obsidian / Leviathan Pillars reduce incoming damage by 60% while standing
   const hasPillarArmor =
-    battle.bossId === 'obsidian-sovereign' &&
+    (battle.bossId === 'obsidian-sovereign' || battle.bossId === 'abyssal-leviathan') &&
     !isBreak &&
     battle.targets.some((t) => t.kind === 'obsidian_pillar');
   const armorMult = hasPillarArmor ? 0.4 : 1.0;

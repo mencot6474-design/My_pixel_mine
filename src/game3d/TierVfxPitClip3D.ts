@@ -35,7 +35,8 @@ export function patchShaderMaterialWithPitClip(
 ): void {
   if (mat.userData.__pitClipPatched) return;
 
-  const floorGrace = (opts.floorGrace ?? (mat.depthWrite ? 0.14 : 0.04)).toFixed(3);
+  const safeFloorGrace = Math.max(0.06, opts.floorGrace ?? (mat.depthWrite ? 0.14 : 0.22));
+  const floorGrace = safeFloorGrace.toFixed(3);
   const radialFade = (opts.radialFade ?? 0.52).toFixed(3);
 
   mat.uniforms.uPitCenter = sharedUniforms.uPitCenter;
@@ -78,7 +79,7 @@ export function patchShaderMaterialWithPitClip(
     float wallR = uPitRadius + pitH * 0.42;
     float pitR = length(vPitWorldPos.xz - uPitCenter.xz);
     float wallMask = smoothstep(wallR, wallR - ${radialFade}, pitR);
-    float floorMask = smoothstep(uPitFloorY - ${floorGrace}, uPitFloorY - ${floorGrace} + 0.16, vPitWorldPos.y);
+    float floorMask = smoothstep(uPitFloorY - ${floorGrace}, uPitFloorY - 0.02, vPitWorldPos.y);
     float pitMask = wallMask * floorMask;
     if (pitMask < 0.01) discard;
     gl_FragColor.rgb *= pitMask;

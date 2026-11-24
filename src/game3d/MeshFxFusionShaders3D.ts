@@ -7,7 +7,8 @@ export type FusionChibiVariant =
   | 'thorn-maiden'
   | 'monochrome-saint'
   | 'prism-seraph'
-  | 'aether-monarch';
+  | 'aether-monarch'
+  | 'chrono-crystallis';
 
 const FUSION_NOISE_GLSL = `
   float fHash21(vec2 p) {
@@ -498,5 +499,145 @@ export function createAetherMonarchCrownGeometry(): THREE.BufferGeometry {
   apexCrystal.scale(0.75, 1.45, 0.75);
   apexCrystal.translate(0, 0.55, 0);
   parts.push(apexCrystal);
+  return mergeSimpleGeos(parts);
+}
+
+/** 11. CHRONO CRYSTALLIS: Roman Clockwork Sun-Dial & Time-Crystal Floor Seal shader. */
+export function createChronoCrystallisSealShaderMaterial(): THREE.ShaderMaterial {
+  return buildFusionFloorSealMaterial('#38bdf8', '#fbbf24', `
+    void main() {
+      vec2 p = (vUv - 0.5) * 2.0;
+      float r = length(p);
+      if (r > 1.0) discard;
+      float ang = atan(p.y, p.x);
+
+      float outerRing = smoothstep(0.020, 0.0, abs(r - 0.90));
+      float romanTicks = smoothstep(0.58, 0.94, cos((ang - uTime * 0.35) * 12.0)) * smoothstep(0.74, 0.78, r) * smoothstep(0.89, 0.85, r);
+      float crystalDiamond = smoothstep(0.022, 0.0, abs(r - (0.56 + 0.12 * abs(cos((ang + uTime * 0.65) * 3.0)))));
+      float gearTeeth = smoothstep(0.35, 0.82, cos((ang + uTime * 0.8) * 18.0)) * smoothstep(0.34, 0.38, r) * smoothstep(0.46, 0.42, r);
+      float vortexArc = smoothstep(0.86, 0.98, sin(ang * 6.0 - r * 12.0 + uTime * 4.2)) * smoothstep(0.88, 0.16, r);
+
+      float midnightPlate = smoothstep(0.96, 0.70, r) * 0.72;
+      float mask = clamp(outerRing + romanTicks + crystalDiamond + gearTeeth + vortexArc, 0.0, 1.0);
+      float edge = smoothstep(1.0, 0.90, r);
+      float alpha = clamp(max(mask, midnightPlate) * 1.16 * edge * uOpacity, 0.0, 0.99);
+      if (alpha < 0.015) discard;
+
+      vec3 deepChrono = vec3(0.02, 0.06, 0.16);
+      vec3 col = deepChrono + uColor * (crystalDiamond * 1.65 + vortexArc * 1.45);
+      col += uCoreColor * (outerRing * 1.55 + romanTicks * 1.6 + gearTeeth * 1.4);
+      col += vec3(0.95, 0.99, 1.0) * smoothstep(0.15, 0.0, r) * 0.9;
+      gl_FragColor = vec4(col, alpha);
+    }
+  `);
+}
+
+/** 12. CHRONO CRYSTALLIS: Faceted Time-Crystal & Gilded Cogwheel Spire shader. */
+export function createChronoCrystallisPropShaderMaterial(): THREE.ShaderMaterial {
+  return buildFusionPropMaterial('#38bdf8', '#fbbf24', `
+    void main() {
+      vec3 N = normalize(vNormalView);
+      vec3 V = normalize(vViewPos);
+      float fresnel = pow(max(0.0001, 1.0 - abs(dot(N, V))), 1.5);
+      float spec = pow(max(0.0, dot(N, normalize(vec3(0.25, 0.85, 0.45)))), 4.0);
+      float ringBand = smoothstep(0.28, 0.12, abs(vLocalPos.y + 0.15));
+      float pulse = 0.65 + 0.35 * sin(vLocalPos.y * 8.0 - uTime * 6.0 + uSeed);
+
+      vec3 iceDeep = vec3(0.03, 0.10, 0.24);
+      vec3 crystalCol = mix(iceDeep, uColor * 1.65, clamp(0.45 + fresnel * 0.85 + spec * 0.6, 0.0, 1.0));
+      vec3 gearCol = mix(vec3(0.14, 0.09, 0.02), uCoreColor * 1.55, clamp(0.5 + spec * 0.85 + fresnel * 0.5, 0.0, 1.0));
+      vec3 col = mix(crystalCol, gearCol, ringBand);
+      col += vec3(0.92, 0.98, 1.0) * pow(fresnel, 2.4) * pulse * 0.8;
+      gl_FragColor = vec4(col, clamp(uOpacity * 0.98, 0.0, 0.99));
+    }
+  `);
+}
+
+/** Custom 3D Chrono-Crystal Spire + Gilded Gear Halo geometry for Chrono Crystallis skill. */
+export function createChronoCrystallisPropGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const spire = new THREE.OctahedronGeometry(0.46, 0);
+  spire.scale(0.68, 1.88, 0.68);
+  spire.translate(0, 0.15, 0);
+  parts.push(spire);
+
+  const gearRim = new THREE.TorusGeometry(0.62, 0.055, 6, 20);
+  gearRim.rotateX(Math.PI / 2);
+  gearRim.translate(0, -0.15, 0);
+  parts.push(gearRim);
+
+  for (let i = 0; i < 8; i++) {
+    const ang = (i / 8) * Math.PI * 2;
+    const tooth = new THREE.BoxGeometry(0.11, 0.08, 0.14);
+    tooth.rotateY(-ang);
+    tooth.translate(Math.cos(ang) * 0.72, -0.15, Math.sin(ang) * 0.72);
+    parts.push(tooth);
+  }
+  return mergeSimpleGeos(parts);
+}
+
+/** Chrono Crystallis Back-Shader 1: Roman Numeral Golden Clock-Halo Disc shader. */
+export function createChronoCrystallisClockHaloBackShaderMaterial(): THREE.ShaderMaterial {
+  return buildFusionFloorSealMaterial('#fbbf24', '#38bdf8', `
+    void main() {
+      vec2 p = (vUv - 0.5) * 2.0;
+      float r = length(p);
+      if (r > 1.0) discard;
+      float ang = atan(p.y, p.x);
+
+      float outerRing = smoothstep(0.022, 0.0, abs(r - 0.86));
+      float innerRing = smoothstep(0.018, 0.0, abs(r - 0.62));
+      float spikes = smoothstep(0.52, 0.92, cos(ang * 12.0 - uTime * 0.45)) * smoothstep(0.84, 0.99, r) * smoothstep(1.0, 0.90, r);
+      float romanTicks = smoothstep(0.68, 0.96, cos((ang + uTime * 0.25) * 12.0)) * smoothstep(0.63, 0.67, r) * smoothstep(0.85, 0.81, r);
+      float runes = smoothstep(0.80, 0.98, sin(ang * 24.0 - uTime * 1.8)) * smoothstep(0.03, 0.0, abs(r - 0.50));
+
+      float mask = clamp(outerRing + innerRing + spikes + romanTicks + runes, 0.0, 1.0);
+      float auraBg = smoothstep(0.88, 0.35, r) * 0.26;
+      float alpha = clamp(max(mask, auraBg) * smoothstep(1.0, 0.92, r) * uOpacity, 0.0, 0.98);
+      if (alpha < 0.015) discard;
+
+      vec3 col = vec3(0.03, 0.08, 0.18) * auraBg + uColor * (outerRing * 1.45 + spikes * 1.55 + romanTicks * 1.35);
+      col += uCoreColor * (innerRing * 1.35 + runes * 1.2);
+      gl_FragColor = vec4(col, alpha);
+    }
+  `);
+}
+
+/** Chrono Crystallis Back-Shader 2: Faceted Cyan Time-Crystal & Gilded Cogwheel Back Shader. */
+export function createChronoCrystallisShardBackShaderMaterial(): THREE.ShaderMaterial {
+  return createChronoCrystallisPropShaderMaterial();
+}
+
+/** Custom 3D Tapered Time-Crystal Shard geometry for Chrono Crystallis back crown fan. */
+export function createChronoCrystallisCrystalShardGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const mainShard = new THREE.OctahedronGeometry(0.28, 0);
+  mainShard.scale(0.58, 1.78, 0.42);
+  mainShard.translate(0, 0.42, 0);
+  parts.push(mainShard);
+
+  const collar = new THREE.BoxGeometry(0.18, 0.06, 0.12);
+  collar.translate(0, -0.02, 0);
+  parts.push(collar);
+  return mergeSimpleGeos(parts);
+}
+
+/** Custom 3D Brass Cogwheel geometry for Chrono Crystallis back attachment. */
+export function createChronoCrystallisBrassGearGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  parts.push(new THREE.TorusGeometry(0.42, 0.045, 6, 20));
+  parts.push(new THREE.TorusGeometry(0.18, 0.03, 6, 14));
+  for (let i = 0; i < 3; i++) {
+    const spoke = new THREE.BoxGeometry(0.8, 0.04, 0.035);
+    spoke.rotateZ((i / 3) * Math.PI);
+    parts.push(spoke);
+  }
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    const tooth = new THREE.BoxGeometry(0.08, 0.12, 0.045);
+    tooth.translate(0, 0.49, 0);
+    tooth.rotateZ(a);
+    parts.push(tooth);
+  }
   return mergeSimpleGeos(parts);
 }

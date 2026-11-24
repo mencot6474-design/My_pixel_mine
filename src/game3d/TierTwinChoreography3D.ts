@@ -215,23 +215,64 @@ export function fireTwinChibiChoreography(
       break;
     }
 
+    case 'paradox-twins': {
+      // 6. PARADOX TWINS: 2.5s Sakuga Gilded Chrono & Crimson Chain Sovereign Execution
+      ctx.fireParadoxTwinsSakuga({
+        cx,
+        cy,
+        cz,
+        areaScale: as,
+        pts,
+        onSlashBeat: (beatIdx, pt) => {
+          const isGold = beatIdx % 2 === 0;
+          ctx.spawnSparks(
+            pt.x,
+            pt.y + 0.88,
+            pt.z,
+            isGold ? '#fbbf24' : '#ef4444',
+            isGold ? '#fef08a' : '#f43f5e',
+            6,
+            7.6
+          );
+          if (pts.length > 1) {
+            const other = pts[(beatIdx + 1) % pts.length];
+            ctx.spawnLightning(
+              new THREE.Vector3(pt.x, pt.y + 0.78, pt.z),
+              new THREE.Vector3(other.x, other.y + 0.78, other.z),
+              isGold ? '#fbbf24' : '#ef4444',
+              0.18,
+              0.18 * sc
+            );
+          }
+        },
+        onImpact: () => {
+          ctx.spawnSparks(cx, cy + 1.05, cz, '#fbbf24', '#ef4444', 14, 9.4);
+          pts.forEach((n, i) => {
+            ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, i % 2 === 0 ? '#fbbf24' : '#ef4444', '#f8fafc', 6);
+            ctx.spawnSparks(n.x, n.y + 0.9, n.z, i % 2 === 0 ? '#fbbf24' : '#ef4444', '#fef08a', 8, 8.2);
+          });
+        },
+      });
+      break;
+    }
+
     default: {
       ctx.hooks.onArenaDim?.(0.62, '#071c36', 0.76);
       for (let pass = 0; pass < 3; pass++) {
         ctx.after(pass * 0.1 * sc, () => {
           const nL = pts[(pass * 2) % pts.length];
           const nR = pts[(pass * 2 + 1) % pts.length];
-          ctx.spawnSlash({ x: nL.x, y: nL.y + 0.8, z: nL.z, color, coreColor: '#ffffff', rx: 0.4, ry: pass * 1.4, rz: 0.35, s0: 1.4 * as, s1: 2.9 * as, life: 0.28 * sc, spinSpeed: 4.5 });
-          ctx.spawnSlash({ x: nR.x, y: nR.y + 0.8, z: nR.z, color: secondary, coreColor: '#ffffff', rx: -0.4, ry: -pass * 1.4, rz: -0.35, s0: 1.4 * as, s1: 2.9 * as, life: 0.28 * sc, spinSpeed: -4.5 });
+          ctx.spawnSlash({ x: nL.x, y: nL.y + 1.05, z: nL.z, color, coreColor: '#ffffff', rx: 0.4, ry: pass * 1.4, rz: 0.35, s0: 1.4 * as, s1: 2.9 * as, life: 0.28 * sc, spinSpeed: 4.5 });
+          ctx.spawnSlash({ x: nR.x, y: nR.y + 1.05, z: nR.z, color: secondary, coreColor: '#ffffff', rx: -0.4, ry: -pass * 1.4, rz: -0.35, s0: 1.4 * as, s1: 2.9 * as, life: 0.28 * sc, spinSpeed: -4.5 });
           ctx.spawnDirectedWeapon('blade', new THREE.Vector3(cx, cy + 2.0, cz), new THREE.Vector3(nL.x, nL.y + 0.4, nL.z), color, 1.15, 0.16 * sc);
           ctx.spawnDirectedWeapon('blade', new THREE.Vector3(cx, cy + 2.0, cz), new THREE.Vector3(nR.x, nR.y + 0.4, nR.z), secondary, 1.15, 0.16 * sc);
         });
       }
       ctx.after(0.36 * sc, () => {
         ctx.hooks.onImpactFrame?.(1.0, 0.0, color, 0.048);
-        ctx.spawnBeam({ x: cx - 0.65 * as, y: cy, z: cz, color, coreColor: '#ffffff', radius: 0.68 * as, height: 1.05, life: 0.56 * sc });
-        ctx.spawnBeam({ x: cx + 0.65 * as, y: cy, z: cz, color: secondary, coreColor: '#ffffff', radius: 0.68 * as, height: 1.05, life: 0.56 * sc });
-        ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color, coreColor: '#ffffff', s0: 0.75 * as, s1: 6.2 * as, yScale: 0.58, life: 0.5 * sc });
+        ctx.spawnBeam({ x: cx - 0.65 * as, y: cy + 0.08, z: cz, color, coreColor: '#ffffff', radius: 0.68 * as, height: 1.05, life: 0.56 * sc });
+        ctx.spawnBeam({ x: cx + 0.65 * as, y: cy + 0.08, z: cz, color: secondary, coreColor: '#ffffff', radius: 0.68 * as, height: 1.05, life: 0.56 * sc });
+        ctx.spawnDome({ x: cx, y: cy + 0.16, z: cz, color, coreColor: '#ffffff', s0: 0.75 * as, s1: 6.2 * as, yScale: 0.58, life: 0.5 * sc });
       });
       break;
     }

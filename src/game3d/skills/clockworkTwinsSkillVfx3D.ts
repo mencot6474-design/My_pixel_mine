@@ -815,7 +815,7 @@ export class ClockworkTwinsSkillVfxPool {
       sp.age = 0;
       sp.life = 0.40 + ((i * 19) % 10) * 0.032;
       sp.pos.copy(origin);
-      sp.floorY = inst.cy + 0.08;
+      sp.floorY = inst.cy + 0.16;
       const az = ((i - startIdx) / Math.max(1, count)) * Math.PI * 2 + (i % 5) * 0.21;
       const spd = (5.4 + ((i * 31) % 10) * 0.65) * speedMult * Math.max(0.75, inst.areaScale);
       const vy = (3.2 + ((i * 23) % 10) * 0.62) * speedMult;
@@ -889,7 +889,7 @@ export class ClockworkTwinsSkillVfxPool {
     inst.minuteScytheMesh.scale.setScalar(3.1 * Math.max(0.7, opts.areaScale));
     inst.minuteScytheMesh.visible = false;
 
-    inst.pillarMesh.position.set(opts.cx, opts.cy + 0.04, opts.cz);
+    inst.pillarMesh.position.set(opts.cx, opts.cy + 0.12, opts.cz);
     inst.pillarMesh.scale.set(1.25 * opts.areaScale, 0.01, 1.25 * opts.areaScale);
     inst.pillarMesh.visible = false;
 
@@ -897,7 +897,7 @@ export class ClockworkTwinsSkillVfxPool {
     inst.climaxFlareMesh.scale.setScalar(0.01);
     inst.climaxFlareMesh.visible = false;
 
-    inst.groundShockMesh.position.set(opts.cx, opts.cy + 0.1, opts.cz);
+    inst.groundShockMesh.position.set(opts.cx, opts.cy + 0.18, opts.cz);
     inst.groundShockMesh.scale.setScalar(11.6 * opts.areaScale);
     inst.groundShockMesh.visible = false;
 

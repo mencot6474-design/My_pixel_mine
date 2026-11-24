@@ -81,7 +81,7 @@ export class OmegaArenaHudUi {
     const isInvul = battle.phase === 'invul_shield';
     const isBreak = battle.phase === 'active' && battle.breakRemainingSec > 0;
     const hasArmor =
-      battle.bossId === 'obsidian-sovereign' &&
+      (battle.bossId === 'obsidian-sovereign' || battle.bossId === 'abyssal-leviathan') &&
       battle.phase === 'active' &&
       !isBreak &&
       battle.targets.some((t) => t.kind === 'obsidian_pillar');
@@ -93,9 +93,11 @@ export class OmegaArenaHudUi {
       ? 'linear-gradient(90deg, #0284c7 0%, #38bdf8 52%, #7dd3fc 100%)'
       : isBreak
         ? 'linear-gradient(90deg, #f59e0b 0%, #fde047 50%, #fb923c 100%)'
-        : battle.bossId === 'obsidian-sovereign'
-          ? 'linear-gradient(90deg, #9333ea 0%, #c084fc 52%, #e879f9 100%)'
-          : 'linear-gradient(90deg, #dc2626 0%, #ef4444 52%, #fb7185 100%)';
+        : battle.bossId === 'abyssal-leviathan'
+          ? 'linear-gradient(90deg, #0891b2 0%, #06b6d4 52%, #67e8f9 100%)'
+          : battle.bossId === 'obsidian-sovereign'
+            ? 'linear-gradient(90deg, #9333ea 0%, #c084fc 52%, #e879f9 100%)'
+            : 'linear-gradient(90deg, #dc2626 0%, #ef4444 52%, #fb7185 100%)';
 
     const emblemHtml = chibi
       ? `<img src="${assetUrl(chibi.poses.pose)}" alt="${boss?.name ?? 'Boss'}" class="w-full h-full object-contain" />`

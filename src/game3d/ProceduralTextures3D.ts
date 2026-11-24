@@ -515,6 +515,26 @@ export function getCircularNexusPoolTexture(
           ctx.lineTo(256 + Math.cos(a) * 212, 256 + Math.sin(a) * 212);
           ctx.stroke();
         }
+      } else if (biomeKey === 'solaris') {
+        ctx.strokeStyle = '#fde047';
+        for (let i = 0; i < 16; i++) {
+          const a = (i * Math.PI * 2) / 16;
+          const rIn = i % 2 === 0 ? 148 : 168;
+          ctx.beginPath();
+          ctx.moveTo(256 + Math.cos(a) * rIn, 256 + Math.sin(a) * rIn);
+          ctx.lineTo(256 + Math.cos(a) * 224, 256 + Math.sin(a) * 224);
+          ctx.stroke();
+        }
+      } else if (biomeKey === 'elysium') {
+        ctx.strokeStyle = '#e879f9';
+        for (let i = 0; i < 8; i++) {
+          const a = (i * Math.PI) / 4;
+          const px = 256 + Math.cos(a) * 164;
+          const py = 256 + Math.sin(a) * 164;
+          ctx.beginPath();
+          ctx.ellipse(px, py, 24, 10, a, 0, Math.PI * 2);
+          ctx.stroke();
+        }
       }
       ctx.globalAlpha = 1;
     }

@@ -68,7 +68,7 @@ export class WorldsModalUi {
 
       return `
         <div class="group relative overflow-hidden rounded-xl border-[3px] ${cardBorder} min-h-[104px] px-4 py-3.5 flex items-center justify-between gap-3 @max-[680px]:flex-col @max-[680px]:items-stretch">
-          <img src="${assetUrl(`/worlds/${w.id}.webp`)}" alt="${w.name}" class="${imgClass}" />
+          <img src="${assetUrl(`/worlds/${w.id}.webp`)}" alt="${w.name}" class="${imgClass}" onerror="this.style.display='none'" />
           <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,17,29,0.88)_0%,rgba(20,17,29,0.58)_52%,rgba(20,17,29,0.28)_100%)] pointer-events-none"></div>
           <div class="relative z-[2] min-w-0 flex-1">
             <div class="flex items-center gap-2 flex-wrap">

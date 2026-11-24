@@ -412,7 +412,9 @@ export function buildTierMotionWaypoints(
                 ? ['#facc15', '#38bdf8']
                 : chibiId === 'aether-monarch'
                   ? ['#fbbf24', '#22d3ee']
-                  : ['#22d3ee', '#ec4899'];
+                  : chibiId === 'chrono-crystallis'
+                    ? ['#38bdf8', '#fbbf24']
+                    : ['#22d3ee', '#ec4899'];
       return {
         hero: [
           restStart,
@@ -557,6 +559,30 @@ export function buildTierMotionWaypoints(
             ],
           };
 
+        case 'paradox-twins':
+          return {
+            hero: [
+              restStart,
+              { t: 0.08, x: cx - 3.1 * ms, y: cy + 1.85, z: cz + 0.85 * ms, face: 1, rz: -0.32, pose: 'aura', snap: true, col: '#fbbf24', scale: 1.22 },
+              { t: 0.15, x: cx + 2.8 * ms, y: cy + 0.9, z: cz - 0.85 * ms, face: -1, rz: 0.40, pose: 'attack', snap: true, col: '#ef4444', scale: 1.22 },
+              { t: 0.22, x: cx - 2.6 * ms, y: cy + 1.05, z: cz + 0.75 * ms, face: 1, rz: -0.40, pose: 'attack', snap: true, col: '#fbbf24', scale: 1.24 },
+              { t: 0.31, x: cx - 0.72, y: cy + 2.55, z: cz + 0.15, face: 1, rz: -0.30, pose: 'aura', snap: true, col: '#fbbf24', scale: 1.30 },
+              { t: 0.43, x: cx - 0.62, y: cy + 0.98, z: cz + 0.15, face: 1, rz: 0.22, pose: 'attack', snap: true, col: '#ef4444', scale: 1.26 },
+              { t: 0.68, x: cx - 0.82, y: cy + 1.35, z: cz + 0.15, face: 1, rz: 0, pose: 'aura', snap: false, col: '#fbbf24', scale: 1.16 },
+              restEnd,
+            ],
+            clone: [
+              { t: 0.0, x: ax, y: ay, z: az, face: -1, rz: 0, pose: 'aura', snap: false, col: '#ef4444', scale: 1, opacity: 0 },
+              { t: 0.08, x: cx + 3.1 * ms, y: cy + 1.85, z: cz - 0.85 * ms, face: -1, rz: 0.32, pose: 'aura', snap: true, col: '#ef4444', scale: 1.20, opacity: 0.96 },
+              { t: 0.15, x: cx - 2.8 * ms, y: cy + 0.9, z: cz + 0.85 * ms, face: 1, rz: -0.40, pose: 'attack', snap: true, col: '#fbbf24', scale: 1.20, opacity: 0.96 },
+              { t: 0.22, x: cx + 2.6 * ms, y: cy + 1.05, z: cz - 0.75 * ms, face: -1, rz: 0.40, pose: 'attack', snap: true, col: '#ef4444', scale: 1.22, opacity: 0.96 },
+              { t: 0.31, x: cx + 0.72, y: cy + 2.55, z: cz + 0.15, face: -1, rz: 0.30, pose: 'aura', snap: true, col: '#ef4444', scale: 1.28, opacity: 0.98 },
+              { t: 0.43, x: cx + 0.62, y: cy + 0.98, z: cz + 0.15, face: -1, rz: -0.22, pose: 'attack', snap: true, col: '#fbbf24', scale: 1.24, opacity: 0.94 },
+              { t: 0.68, x: cx + 0.82, y: cy + 1.35, z: cz + 0.15, face: -1, rz: 0, pose: 'aura', snap: false, col: '#ef4444', scale: 1.14, opacity: 0.74 },
+              { t: 1.0, x: ax, y: ay, z: az, face: -1, rz: 0, pose: 'attack', snap: false, col: '#ef4444', scale: 1, opacity: 0 },
+            ],
+          };
+
         default:
           return {
             hero: [
@@ -579,6 +605,20 @@ export function buildTierMotionWaypoints(
       }
 
     case 'omega':
+      if (chibiId === 'abyssal-leviathan') {
+        return {
+          hero: [
+            restStart,
+            { t: 0.09, x: cx - 3.2 * ms, y: cy + 0.65, z: cz + 0.75 * ms, face: 1, rz: -0.32, pose: 'attack', snap: true, col: '#06b6d4', scale: 1.18 },
+            { t: 0.21, x: cx + 3.2 * ms, y: cy + 0.85, z: cz - 0.55 * ms, face: -1, rz: 0.32, pose: 'attack', snap: true, col: '#67e8f9', scale: 1.2 },
+            { t: 0.34, x: cx - 0.65 * ms, y: cy + 1.05, z: cz + 0.4 * ms, face: 1, rz: -0.22, pose: 'attack', snap: true, col: '#e0f2fe', scale: 1.24 },
+            { t: 0.48, x: cx, y: cy + 3.7, z: cz - 0.25, face: 1, rz: -0.18, pose: 'aura', snap: true, col: '#06b6d4', scale: 1.3 },
+            { t: 0.68, x: cx, y: cy + 0.65, z: cz + 0.25, face: 1, rz: 0.24, pose: 'attack', snap: true, col: '#67e8f9', scale: 1.32 },
+            { t: 0.84, x: cx, y: cy + 0.85, z: cz + 0.25, face: 1, rz: 0.06, pose: 'aura', snap: false, col: '#22d3ee', scale: 1.22 },
+            restEnd,
+          ],
+        };
+      }
       if (chibiId === 'obsidian-sovereign') {
         return {
           hero: [

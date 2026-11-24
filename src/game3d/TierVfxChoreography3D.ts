@@ -137,6 +137,9 @@ export interface TierVfxChoreoContext {
   fireObsidianSovereignSakuga: (opts: {
     cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
   }) => void;
+  fireAbyssalLeviathanSakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
+  }) => void;
   fireClockworkTwinsSakuga: (opts: {
     cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[];
     onSlashBeat?: (beatIdx: number, pt: WorldPoint3) => void;
@@ -158,6 +161,11 @@ export interface TierVfxChoreoContext {
     onImpact?: () => void;
   }) => void;
   fireYukikageTwinsSakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[];
+    onSlashBeat?: (beatIdx: number, pt: WorldPoint3) => void;
+    onImpact?: () => void;
+  }) => void;
+  fireParadoxTwinsSakuga: (opts: {
     cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[];
     onSlashBeat?: (beatIdx: number, pt: WorldPoint3) => void;
     onImpact?: () => void;
@@ -187,7 +195,7 @@ export function fireTierAttackChoreography(
         x: tx, y: ty + 0.65, z: tz, color, coreColor: '#ffffff',
         rx: tilt, ry: -Math.PI * 0.3 + comboStep * 0.8, rz: 0.25, s0: 1.4, s1: 2.5, life: 0.32 * sc, spinSpeed: 3.2,
       });
-      ctx.spawnQuad({ tex: ctx.ringTex, x: tx, y: ty + 0.06, z: tz, color, s0: 0.55, s1: 2.3, life: 0.26 * sc, flatFloor: true });
+      ctx.spawnQuad({ tex: ctx.ringTex, x: tx, y: ty + 0.16, z: tz, color, s0: 0.55, s1: 2.3, life: 0.26 * sc, flatFloor: true });
       ctx.spawnSparks(tx, ty + 0.6, tz, color, '#ffffff', 7, 4.2);
       ctx.spawnDebrisBurst(tx, ty + 0.5, tz, color, '#94a3b8', 3);
       break;
@@ -428,6 +436,23 @@ export function fireTierAttackChoreography(
     }
 
     case 'omega': {
+      if (opts.chibiId === 'abyssal-leviathan') {
+        ctx.fireAbyssalLeviathanSakuga({
+          cx,
+          cy,
+          cz,
+          areaScale: as,
+          pts,
+          onImpact: () => {
+            pts.forEach((n) => {
+              ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#083344', '#67e8f9', 6);
+              ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#ecfeff', '#22d3ee', 8, 7.2);
+            });
+          },
+        });
+        break;
+      }
+
       if (opts.chibiId === 'obsidian-sovereign') {
         ctx.fireObsidianSovereignSakuga({
           cx,

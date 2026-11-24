@@ -103,6 +103,28 @@ export const WORLD_PALETTES: Record<WorldId, MineWorldPalette> = {
     pitFloorColor: '#44403c',
     foliageColor: '#06b6d4',
   },
+  solaris: {
+    crystalColor: '#fb7185',
+    rockColor: '#3f2c2e',
+    skyTop: '#4c0519',
+    skyBottom: '#fed7aa',
+    fogColor: '#9f1239',
+    terrainColor: '#451a03',
+    cliffColor: '#271418',
+    pitFloorColor: '#57262d',
+    foliageColor: '#fde047',
+  },
+  elysium: {
+    crystalColor: '#c084fc',
+    rockColor: '#312e81',
+    skyTop: '#0f172a',
+    skyBottom: '#f5d0fe',
+    fogColor: '#581c87',
+    terrainColor: '#1e1b4b',
+    cliffColor: '#1e1b4b',
+    pitFloorColor: '#3b2d68',
+    foliageColor: '#22d3ee',
+  },
 };
 
 export const STAGE_PEDESTAL_COUNT = 5;

@@ -477,7 +477,12 @@ export class OmegaForgeCutsceneController {
       const scene = new THREE.Scene();
       const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
       const geo = new THREE.PlaneGeometry(2, 2);
-      const shaderAccent = boss.id === 'obsidian-sovereign' ? '#a855f7' : '#ef4444';
+      const shaderAccent =
+        boss.id === 'abyssal-leviathan'
+          ? '#06b6d4'
+          : boss.id === 'obsidian-sovereign'
+            ? '#a855f7'
+            : '#ef4444';
       const mat = new THREE.ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },

@@ -173,6 +173,13 @@ import {
   createCheshireGlitchClawBackShaderMaterial,
   createCheshireGlitchPixelWingGeometry,
   createCheshireGlitchSealShaderMaterial,
+  createChronoCrystallisBrassGearGeometry,
+  createChronoCrystallisClockHaloBackShaderMaterial,
+  createChronoCrystallisCrystalShardGeometry,
+  createChronoCrystallisPropGeometry,
+  createChronoCrystallisPropShaderMaterial,
+  createChronoCrystallisSealShaderMaterial,
+  createChronoCrystallisShardBackShaderMaterial,
   createClockworkChronoChassisShaderMaterial,
   createClockworkSakugaWeaponShaderMaterial,
   createClockworkScytheHandGeometry,
@@ -230,6 +237,11 @@ import {
   SpotlightAttackQueue,
   TierAttackVfxPool3D,
 } from '../src/game3d/TierAttackVfx3D';
+import {
+  createLeviathanHydroClawShaderMaterial,
+  createLeviathanHydroFinGeometry,
+  createLeviathanMaelstromHaloShaderMaterial,
+} from '../src/game3d/skills/abyssalLeviathanSkillVfx3D';
 import { createTowerCityEnvironment } from '../src/game3d/TowerCityEnvironment3D';
 import { WeatherFx3D } from '../src/game3d/WeatherFx3D';
 import { createWeatherSkyMaterial } from '../src/game3d/WeatherSkyShader';
@@ -285,8 +297,13 @@ describe('Pure 3D Mine World', () => {
     expect(applyNodeDamagePure(node, 20)).toBeNull();
   });
 
-  it('registers all 64 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
-    expect(CHIBI_CATALOG.length).toBe(64);
+  it('registers all 77 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
+    expect(CHIBI_CATALOG.length).toBe(77);
+    for (const c of CHIBI_CATALOG) {
+      for (const pose of ['idle', 'walk', 'attack', 'pose'] as const) {
+        expect(existsSync(resolve(process.cwd(), 'public', 'chibi', c.id, `${pose}.webp`))).toBe(true);
+      }
+    }
     expect(getChibiById('solar-striker')?.spriteUrl).toBe('/chibi/solar-striker/idle.webp');
     expect(getChibiById('solar-striker')?.poses.attack).toBe('/chibi/solar-striker/attack.webp');
     expect(getChibiFrameUvOffset(CHIBI_FRAME_INDEX.idle, 4)).toBe(0);
@@ -298,8 +315,8 @@ describe('Pure 3D Mine World', () => {
   it('formats Roblox My Anime Mine suffixes and populates Index/Inventory/Chest flows', () => {
     expect(fmtShort(1500)).toBe('1.5K');
     expect(fmtMoney(16.7e45)).toBe('$16.7Qad');
-    expect(ORES.length).toBe(58);
-    expect(WORLD_MINERS.length).toBe(40);
+    expect(ORES.length).toBe(68);
+    expect(WORLD_MINERS.length).toBe(50);
     expect(getOresByWorld('underground').map((o) => o.name)).toContain('Coalite');
     const crystalOres = getOresByWorld('crystal');
     expect(crystalOres.map((o) => o.name)).toEqual([
@@ -405,6 +422,32 @@ describe('Pure 3D Mine World', () => {
     expect(chronoOres[3].chancePct).toBeLessThan(abyssalOres[3].chancePct);
     expect(chronoOres[4].chancePct).toBeLessThan(abyssalOres[4].chancePct);
 
+    const solarisOres = getOresByWorld('solaris');
+    expect(solarisOres.map((o) => o.name)).toEqual([
+      'Helioslate',
+      'Solarprism',
+      'Coronite',
+      'Flareheart',
+      'Solarcrown',
+    ]);
+    expect(solarisOres.map((o) => o.rarity)).toEqual(['legendary', 'rainbow', 'mythic', 'exotic', 'secret']);
+    expect(solarisOres.reduce((acc, o) => acc + o.chancePct, 0)).toBeCloseTo(100, 4);
+    expect(solarisOres[0].sellValue).toBeGreaterThan(chronoOres[0].sellValue);
+    expect(solarisOres[4].sellValue).toBeGreaterThan(chronoOres[4].sellValue);
+
+    const elysiumOres = getOresByWorld('elysium');
+    expect(elysiumOres.map((o) => o.name)).toEqual([
+      'Pearlstone',
+      'Auroraglass',
+      'Seraphite',
+      'Elysianite',
+      'Genesisheart',
+    ]);
+    expect(elysiumOres.map((o) => o.rarity)).toEqual(['legendary', 'rainbow', 'mythic', 'exotic', 'secret']);
+    expect(elysiumOres.reduce((acc, o) => acc + o.chancePct, 0)).toBeCloseTo(100, 4);
+    expect(elysiumOres[0].sellValue).toBeGreaterThan(solarisOres[0].sellValue);
+    expect(elysiumOres[4].sellValue).toBeGreaterThan(solarisOres[4].sellValue);
+
     expect(getMinersByWorld('underground').length).toBe(5);
     expect(getMinersByWorld('crystal').length).toBe(5);
     expect(getMinersByWorld('magma').length).toBe(5);
@@ -413,9 +456,11 @@ describe('Pure 3D Mine World', () => {
     expect(getMinersByWorld('starwell').length).toBe(5);
     expect(getMinersByWorld('abyssal').length).toBe(5);
     expect(getMinersByWorld('chrono').length).toBe(5);
+    expect(getMinersByWorld('solaris').length).toBe(5);
+    expect(getMinersByWorld('elysium').length).toBe(5);
 
     const gs = new GameState();
-    expect(gs.getTotalIndexCount()).toBe(127);
+    expect(gs.getTotalIndexCount()).toBe(150);
     gs.discovered.add('stormwater-opal');
     gs.discovered.add('glitch-cheshire');
     gs.discovered.add('cosmic-monarch');
@@ -425,6 +470,8 @@ describe('Pure 3D Mine World', () => {
     expect(gs.getWorldIndexProgress('starwell')).toEqual({ found: 0, total: 13, pct: 0 });
     expect(gs.getWorldIndexProgress('abyssal')).toEqual({ found: 0, total: 10, pct: 0 });
     expect(gs.getWorldIndexProgress('chrono')).toEqual({ found: 0, total: 10, pct: 0 });
+    expect(gs.getWorldIndexProgress('solaris')).toEqual({ found: 0, total: 10, pct: 0 });
+    expect(gs.getWorldIndexProgress('elysium')).toEqual({ found: 0, total: 10, pct: 0 });
     expect(gs.hotbar.every((s) => s === null)).toBe(true);
     expect(gs.plotMiners[0]).toBe('astral-recruit');
     expect(gs.plotMiners.slice(1).every((s) => s === null)).toBe(true);
@@ -463,7 +510,7 @@ describe('Pure 3D Mine World', () => {
     expect(emitCount).toBe(1);
     expect(gs.pickaxeStock.sunwheel).toBe(beforeStock - 1);
     expect(gs.ownedPickaxes.sunwheel).toBe(1);
-    expect(gs.cash).toBe(550);
+    expect(gs.cash).toBe(100);
 
     gs.ores.coalite = 2;
     gs.miners['solar-striker'] = 2;
@@ -724,22 +771,24 @@ describe('Pure 3D Mine World', () => {
   });
 
   it('enforces sequential world unlock gates, Voidreach naming, global Core upgrades, and per-world tree isolation', () => {
-    expect(WORLDS).toHaveLength(8);
+    expect(WORLDS).toHaveLength(10);
     expect(getWorldById('astral').name).toBe('Voidreach');
     expect(getWorldById('starwell').name).toBe('Starwell');
     expect(getWorldById('abyssal').name).toBe('Abyssal Biolume');
     expect(getWorldById('chrono').name).toBe('Chrono Nexus');
+    expect(getWorldById('solaris').name).toBe('Solaris Sanctum');
+    expect(getWorldById('elysium').name).toBe('Elysium Core');
     expect(PIT_NODE_COUNT).toBe(5);
     expect(BASE_ORE_RESPAWN_SEC).toBeGreaterThanOrEqual(3.5);
 
-    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell', 'abyssal', 'chrono'] as const) {
-      expect(getResearchNodesForTree(wid)).toHaveLength(12);
-      expect(getResearchTreeMaxPoints(wid)).toBe(58);
+    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell', 'abyssal', 'chrono', 'solaris', 'elysium'] as const) {
       expect(existsSync(resolve(process.cwd(), 'public', 'worlds', `${wid}.webp`))).toBe(true);
     }
 
-    // Tap damage must live strictly in Core; Worlds 1-8 replace tap nodes with standardized denseOreScale (HP x10, Drops x3)
-    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell', 'abyssal', 'chrono'] as const) {
+    // Tap damage must live strictly in Core; Worlds 1-10 replace tap nodes with standardized denseOreScale (HP x10, Drops x3)
+    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell', 'abyssal', 'chrono', 'solaris', 'elysium'] as const) {
+      expect(getResearchNodesForTree(wid)).toHaveLength(12);
+      expect(getResearchTreeMaxPoints(wid)).toBe(58);
       const treeNodes = getResearchNodesForTree(wid);
       expect(treeNodes.some((n) => n.effectType === 'tapDamageFlat')).toBe(false);
       const denseNodes = treeNodes.filter((n) => n.effectType === 'denseOreScale');
@@ -1416,8 +1465,8 @@ describe('Pure 3D Mine World', () => {
     const nebula = inspectCosts('nebula-archon');
     const chrono = inspectCosts('chrono-sovereign');
 
-    expect(volt.dmgCost).toBe(50_000);
-    expect(nebula.dmgCost).toBe(50_000_000_000_000);
+    expect(volt.dmgCost).toBe(125_000);
+    expect(nebula.dmgCost).toBe(1_750_000_000_000_000);
     expect(zephyr.dmgCost).toBeGreaterThan(volt.dmgCost);
     expect(vesper.dmgCost).toBeGreaterThan(zephyr.dmgCost);
     expect(seraph.dmgCost).toBeGreaterThan(vesper.dmgCost);
@@ -1843,8 +1892,8 @@ describe('Pure 3D Mine World', () => {
     expect(enchantDiceIconHtml(34)).toContain('enchants/enchant_dice.webp');
   });
 
-  it('serves 2D fantasy PNG art for all 58 World 1–8 ores', () => {
-    expect(ORES.length).toBe(58);
+  it('serves 2D fantasy PNG art for all 68 World 1–10 ores', () => {
+    expect(ORES.length).toBe(68);
     for (const ore of ORES) {
       expect(existsSync(resolve(process.cwd(), 'public', 'ores', `${ore.id}.webp`))).toBe(true);
       expect(oreIconSvg(ore.color, ore.secondaryColor, ore.rarity, `ix_${ore.id}`)).toContain(`ores/${ore.id}.webp`);
@@ -2044,7 +2093,7 @@ describe('Pure 3D Mine World', () => {
       expect(meteorInfo).toBeDefined();
       expect(meteorInfo?.worldX).toBeLessThan(0);
       expect(meteorInfo?.worldY).toBeGreaterThan(5);
-      expect(meteorInfo?.maxHp).toBe(1000 * 2 * METEOR_HP_MULT);
+      expect(meteorInfo?.maxHp).toBe(2500 * 2 * METEOR_HP_MULT);
       expect(meteorInfo?.meteorWeatherId).toBe('celestial');
 
       for (let i = 0; i < 16; i++) {
@@ -3017,7 +3066,7 @@ describe('Pure 3D Mine World', () => {
     const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
     pit.spawnWeatherMeteor('void', 2, 0);
     const meteor = pit.getAliveNodesInfo().find((n) => n.isMeteor);
-    expect(meteor?.maxHp).toBe(1000 * 2 * 375);
+    expect(meteor?.maxHp).toBe(2500 * 2 * 375);
     pit.dispose();
   });
 
@@ -3138,8 +3187,8 @@ describe('Pure 3D Mine World', () => {
     pit.dispose();
   });
 
-  it('builds OmegaArena3D Duel Sanctum, swaps Crimson/Obsidian Bosses, syncs fighters & clickable targets, and disposes cleanly', () => {
-    for (const id of ['crimson-ronin', 'obsidian-sovereign']) {
+  it('builds OmegaArena3D Duel Sanctum, swaps Crimson/Obsidian/Abyssal Bosses, syncs fighters & clickable targets, and disposes cleanly', () => {
+    for (const id of ['crimson-ronin', 'obsidian-sovereign', 'abyssal-leviathan']) {
       for (const pose of ['idle', 'walk', 'attack', 'pose']) {
         expect(existsSync(resolve(process.cwd(), 'public', 'chibi', id, `${pose}.webp`))).toBe(true);
       }
@@ -3189,6 +3238,12 @@ describe('Pure 3D Mine World', () => {
       { id: 'pillar-1', kind: 'obsidian_pillar', hp: 1, maxHp: 1, xOffset: -3.2, zOffset: -0.2 },
     ]);
     expect(arena.clickables.some((c) => c.userData?.targetId === 'pillar-1')).toBe(true);
+
+    arena.setBossId('abyssal-leviathan');
+    arena.syncBattleTargets([
+      { id: 'tidal-pillar-1', kind: 'obsidian_pillar', hp: 1, maxHp: 1, xOffset: -3.2, zOffset: -0.2 },
+    ]);
+    expect(arena.clickables.some((c) => c.userData?.targetId === 'tidal-pillar-1')).toBe(true);
 
     // Entrance cutscene triggers slam callback once & blocks fighter attacks until active
     arena.startEntranceCutscene();
@@ -3474,7 +3529,7 @@ describe('Pure 3D Mine World', () => {
     const singlePed = new PlotPedestal3D(0, -3.22, -4.58);
     const commonDef = CHIBI_CATALOG.find((c) => c.rarity === 'common') ?? CHIBI_CATALOG[0];
     singlePed.setChibi(commonDef);
-    singleCtrl.setSlotUnit(0, commonDef, { dmg: 5000, speed: 1, miningMult: 1 });
+    singleCtrl.setSlotUnit(0, commonDef, { dmg: 15000, speed: 1, miningMult: 1 });
     let singleBroken = 0;
     let singleHits = 0;
     for (let i = 0; i < 8; i++) {
@@ -3526,7 +3581,7 @@ describe('Pure 3D Mine World', () => {
     const twinDef = CHIBI_CATALOG.find((c) => c.rarity === 'twin') ?? CHIBI_CATALOG[0];
     ped.setChibi(twinDef);
 
-    controller.setSlotUnit(0, twinDef, { dmg: 5000, speed: 1, miningMult: 1 });
+    controller.setSlotUnit(0, twinDef, { dmg: 15000, speed: 1, miningMult: 1 });
     let brokenCount = 0;
     const hitCoords: Array<{ x: number; z: number }> = [];
     const onHit = (_dmg: number, wx: number, _wy: number, wz: number) => {
@@ -3595,7 +3650,7 @@ describe('Pure 3D Mine World', () => {
     pit.dispose();
   });
 
-  it('executes bespoke Omega attack animations for crimson-ronin and obsidian-sovereign without rune circles, cracks, or lightning', () => {
+  it('executes bespoke Omega attack animations for crimson-ronin, obsidian-sovereign, and abyssal-leviathan without rune circles, cracks, or lightning', () => {
     const anchor = { x: -4, y: 0.4, z: -4 };
     const target = { x: 0, y: 0.05, z: 0.2 };
     const allTargets = [
@@ -3606,8 +3661,10 @@ describe('Pure 3D Mine World', () => {
 
     const roninTrack = buildTierMotionWaypoints('omega', anchor, target, allTargets, '#ef4444', '#fbbf24', target, 1.0, 'crimson-ronin');
     const sovTrack = buildTierMotionWaypoints('omega', anchor, target, allTargets, '#e2e8f0', '#e879f9', target, 1.0, 'obsidian-sovereign');
+    const levTrack = buildTierMotionWaypoints('omega', anchor, target, allTargets, '#06b6d4', '#67e8f9', target, 1.0, 'abyssal-leviathan');
     expect(roninTrack.hero.length).toBeGreaterThanOrEqual(7);
     expect(sovTrack.hero.length).toBeGreaterThanOrEqual(8);
+    expect(levTrack.hero.length).toBeGreaterThanOrEqual(7);
     expect(Math.max(...sovTrack.hero.map((w) => w.y))).toBeGreaterThan(3.5);
 
     const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
@@ -3643,6 +3700,16 @@ describe('Pure 3D Mine World', () => {
       areaScale: 0.72,
       wideCenter: target,
     });
+    pool.firePodiumWeaponCast({
+      rarity: 'omega',
+      chibiId: 'abyssal-leviathan',
+      colorHex: '#06b6d4',
+      origin: anchor,
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
     pool.fireAnticipation('omega', '#ef4444', target, allTargets, 0.72, target);
     pool.fireTierAttack({ rarity: 'omega', chibiId: 'crimson-ronin', colorHex: '#ef4444', target, allTargets, areaScale: 0.72, wideCenter: target });
     for (let i = 0; i < 16; i++) pool.update(0.05, cam);
@@ -3652,18 +3719,28 @@ describe('Pure 3D Mine World', () => {
     pool.fireTierAttack({ rarity: 'omega', chibiId: 'obsidian-sovereign', colorHex: '#e2e8f0', target, allTargets, areaScale: 0.72, wideCenter: target });
     for (let i = 0; i < 24; i++) pool.update(0.05, cam);
     expect(impactCalls).toBeGreaterThan(0);
+
+    impactCalls = 0;
+    pool.fireTierAttack({ rarity: 'omega', chibiId: 'abyssal-leviathan', colorHex: '#06b6d4', target, allTargets, areaScale: 0.72, wideCenter: target });
+    for (let i = 0; i < 24; i++) pool.update(0.05, cam);
+    expect(impactCalls).toBeGreaterThan(0);
     expect(camPushCalls).toBe(0);
 
     const roninDef = getChibiById('crimson-ronin')!;
     const sovDef = getChibiById('obsidian-sovereign')!;
+    const levDef = getChibiById('abyssal-leviathan')!;
     const roninSprite = new ChibiSprite3D(roninDef);
     const sovSprite = new ChibiSprite3D(sovDef);
+    const levSprite = new ChibiSprite3D(levDef);
     const roninBack = roninSprite.group.getObjectByName('chibiBackAttachmentGroup');
     const sovBack = sovSprite.group.getObjectByName('chibiBackAttachmentGroup');
+    const levBack = levSprite.group.getObjectByName('chibiBackAttachmentGroup');
     expect(roninBack?.visible).toBe(true);
     expect(roninBack?.children.length).toBe(9); // 1 Tsuba HUD Halo disc + 8 Floating Katana Fan blades
     expect(sovBack?.visible).toBe(true);
     expect(sovBack?.children.length).toBe(6); // 1 Black-Flame & White-Lightning Aura disc + 1 9-Spearhead Iron Halo + 4 Shattered Obsidian Monolith Crags
+    expect(levBack?.visible).toBe(true);
+    expect(levBack?.children.length).toBe(7); // 1 Maelstrom Halo disc + 6 Fanned Curved Hydro-Fin Crests
 
     const obsHaloMat = createObsidianCrownHaloShaderMaterial();
     const obsSwordMat = createObsidianGreatswordShaderMaterial();
@@ -3678,11 +3755,25 @@ describe('Pure 3D Mine World', () => {
     expect(obsMonolithGeo.getAttribute('position').count).toBeGreaterThan(20);
     obsMonolithGeo.dispose();
 
+    const levHaloMat = createLeviathanMaelstromHaloShaderMaterial();
+    const levClawMat = createLeviathanHydroClawShaderMaterial();
+    const levFinGeo = createLeviathanHydroFinGeometry();
+    for (const m of [levHaloMat, levClawMat]) {
+      expect(m.blending).toBe(THREE.NormalBlending);
+      expect(m.uniforms.uOpacity).toBeDefined();
+      expect(m.uniforms.uTime).toBeDefined();
+      m.dispose();
+    }
+    expect(levFinGeo.getAttribute('position').count).toBeGreaterThan(20);
+    levFinGeo.dispose();
+
     // Idle update keeps Omega back-attachments active and hides them in hologram mode
     roninSprite.update(0.05, 0.25, cam);
     sovSprite.update(0.05, 0.25, cam);
+    levSprite.update(0.05, 0.25, cam);
     expect(roninBack?.visible).toBe(true);
     expect(sovBack?.visible).toBe(true);
+    expect(levBack?.visible).toBe(true);
 
     roninSprite.setHologramMode(true);
     expect(roninBack?.visible).toBe(false);
@@ -3704,42 +3795,52 @@ describe('Pure 3D Mine World', () => {
 
     roninSprite.triggerBlitz({ rarity: 'omega', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
     sovSprite.triggerBlitz({ rarity: 'omega', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
+    levSprite.triggerBlitz({ rarity: 'omega', targetX: 0, targetY: 0, targetZ: 0, allTargets, durationSec: 1.0 });
     const roninBlitzPivot = roninSprite.group.getObjectByName('chibiBlitzHeroPivot');
     const sovBlitzPivot = sovSprite.group.getObjectByName('chibiBlitzHeroPivot');
+    const levBlitzPivot = levSprite.group.getObjectByName('chibiBlitzHeroPivot');
     expect(roninBlitzPivot).toBeDefined();
     expect(sovBlitzPivot).toBeDefined();
+    expect(levBlitzPivot).toBeDefined();
 
     // Advance mid-blitz: shadow moves to target while real podium chibi stays stationary at (0,0,0)
     for (let i = 0; i < 6; i++) {
       roninSprite.update(0.06, i * 0.06, cam);
       sovSprite.update(0.06, i * 0.06, cam);
+      levSprite.update(0.06, i * 0.06, cam);
     }
     expect(roninBlitzPivot?.visible).toBe(true);
     expect(sovBlitzPivot?.visible).toBe(true);
+    expect(levBlitzPivot?.visible).toBe(true);
     expect(roninMainPivot.position.lengthSq()).toBe(0);
 
     // Finish blitz: shadow hides cleanly, Omega back-attachment remains visible on podium
     for (let i = 6; i < 20; i++) {
       roninSprite.update(0.06, i * 0.06, cam);
       sovSprite.update(0.06, i * 0.06, cam);
+      levSprite.update(0.06, i * 0.06, cam);
     }
     expect(roninBlitzPivot?.visible).toBe(false);
     expect(sovBlitzPivot?.visible).toBe(false);
+    expect(levBlitzPivot?.visible).toBe(false);
     expect(roninBack?.visible).toBe(true);
     expect(sovBack?.visible).toBe(true);
+    expect(levBack?.visible).toBe(true);
 
     roninSprite.dispose();
     sovSprite.dispose();
+    levSprite.dispose();
     pool.dispose();
   });
 
-  it('executes bespoke shaders, 3D geometries, and Hero+Clone blitz choreography for all 5 Tier TWIN chibis', () => {
+  it('executes bespoke shaders, 3D geometries, and Hero+Clone blitz choreography for all 6 Tier TWIN chibis', () => {
     const twinIds = [
       'yukikage-twins',
       'halcyon-twins',
       'nocturne-twins',
       'lullaby-twins',
       'clockwork-twins',
+      'paradox-twins',
     ] as const;
     const anchor = { x: -4, y: 0.4, z: -4 };
     const target = { x: 0, y: 0.05, z: 0.2 };
@@ -3811,6 +3912,10 @@ describe('Pure 3D Mine World', () => {
       if (id === 'clockwork-twins') {
         const backGroup = sprite.group.getObjectByName('chibiBackAttachmentGroup');
         expect(backGroup?.children.length).toBe(6); // Chrono-Astrolabe Halo + 3 Gears + 2 Clock Hands
+      }
+      if (id === 'paradox-twins') {
+        const backGroup = sprite.group.getObjectByName('chibiBackAttachmentGroup');
+        expect(backGroup?.children.length).toBe(7); // Dual Polarity Halo + 2 Gold Gears + 4 Crimson Chain Spikes
       }
       // Verify Twin back-shader attachment updates in idle state as well as blitz state
       sprite.update(0.05, 0.25, cam);
@@ -3890,13 +3995,14 @@ describe('Pure 3D Mine World', () => {
     pool.dispose();
   });
 
-  it('executes bespoke shaders, 3D geometries, and blitz choreography for all 5 Synchro Fusion chibis', () => {
+  it('executes bespoke shaders, 3D geometries, and blitz choreography for all 6 Synchro Fusion chibis', () => {
     const fusionIds = [
       'glitch-cheshire',
       'thorn-maiden',
       'monochrome-saint',
       'prism-seraph',
       'aether-monarch',
+      'chrono-crystallis',
     ] as const;
 
     const sealMats = [
@@ -3905,6 +4011,7 @@ describe('Pure 3D Mine World', () => {
       createMonochromeSanctuarySealShaderMaterial(),
       createPrismRefractionSealShaderMaterial(),
       createAetherNexusSealShaderMaterial(),
+      createChronoCrystallisSealShaderMaterial(),
     ];
     const propMats = [
       createCheshireGlitchCardShaderMaterial(),
@@ -3912,6 +4019,7 @@ describe('Pure 3D Mine World', () => {
       createMonochromeJudgementObeliskShaderMaterial(),
       createPrismShardColumnShaderMaterial(),
       createAetherMonarchCrownShaderMaterial(),
+      createChronoCrystallisPropShaderMaterial(),
     ];
     const propGeos = [
       createGlitchPrismShardGeometry(),
@@ -3919,6 +4027,7 @@ describe('Pure 3D Mine World', () => {
       createMonochromeObeliskGeometry(),
       createPrismOctahedronGeometry(),
       createAetherMonarchCrownGeometry(),
+      createChronoCrystallisPropGeometry(),
     ];
     const backHaloMats = [
       createCheshireCyberBackHaloShaderMaterial(),
@@ -3926,6 +4035,7 @@ describe('Pure 3D Mine World', () => {
       createMonochromeSumiBackHaloShaderMaterial(),
       createPrismHexagramBackHaloShaderMaterial(),
       createAetherSunburstBackHaloShaderMaterial(),
+      createChronoCrystallisClockHaloBackShaderMaterial(),
     ];
     const backPropMats = [
       createCheshireGlitchClawBackShaderMaterial(),
@@ -3933,6 +4043,7 @@ describe('Pure 3D Mine World', () => {
       createMonochromeCruciformBackShaderMaterial(),
       createPrismIridescentBackShaderMaterial(),
       createAetherSpectrumSwordBackShaderMaterial(),
+      createChronoCrystallisShardBackShaderMaterial(),
     ];
     const backPropGeos = [
       createCheshireGlitchPixelWingGeometry(),
@@ -3942,6 +4053,8 @@ describe('Pure 3D Mine World', () => {
       createPrismTriangleCrownHaloGeometry(),
       createPrismWingDiamondGeometry(),
       createAetherDivineBroadSwordGeometry(),
+      createChronoCrystallisCrystalShardGeometry(),
+      createChronoCrystallisBrassGearGeometry(),
     ];
     for (const m of [...sealMats, ...propMats, ...backHaloMats, ...backPropMats]) {
       expect(m.blending).toBe(THREE.NormalBlending);
@@ -4020,6 +4133,8 @@ describe('Pure 3D Mine World', () => {
         expect(backGroup?.children.length).toBe(8); // 1 Hexagram Crystal Ring Halo + 1 Triangle Crown Halo + 6 Diamond Wing Shards
       } else if (id === 'aether-monarch') {
         expect(backGroup?.children.length).toBe(10); // 1 Golden Sunburst Astrolabe Halo + 9 Radially Fanned Divine Broadswords
+      } else if (id === 'chrono-crystallis') {
+        expect(backGroup?.children.length).toBe(9); // 1 Roman Clock Halo + 2 Brass Cogwheels + 6 Time-Crystal Shards
       }
 
       sprite.update(0.05, 0.25, cam);

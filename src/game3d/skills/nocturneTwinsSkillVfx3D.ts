@@ -1087,7 +1087,7 @@ export class NocturneTwinsSkillVfxPool {
       sp.age = 0;
       sp.life = 0.56 + ((i * 17) % 10) * 0.04;
       sp.pos.copy(origin);
-      sp.floorY = inst.cy + 0.10;
+      sp.floorY = inst.cy + 0.16;
       const az = ((i - startIdx) / Math.max(1, count)) * Math.PI * 2 + (i % 5) * 0.24;
       const spd = (4.8 + ((i * 29) % 10) * 0.62) * speedMult * Math.max(0.75, inst.areaScale);
       const vy = (3.4 + ((i * 23) % 10) * 0.56) * speedMult;
@@ -1126,7 +1126,7 @@ export class NocturneTwinsSkillVfxPool {
 
     inst.root.visible = true;
 
-    inst.shadowSeaMesh.position.set(opts.cx, opts.cy + 0.08, opts.cz);
+    inst.shadowSeaMesh.position.set(opts.cx, opts.cy + 0.16, opts.cz);
     inst.shadowSeaMesh.scale.setScalar(11.6 * opts.areaScale);
     inst.shadowSeaMat.uniforms.uProgress.value = 0;
 
@@ -1236,7 +1236,7 @@ export class NocturneTwinsSkillVfxPool {
       inst.oreFlashes[i].mesh.visible = false;
     }
 
-    inst.shockwaveMesh.position.set(opts.cx, opts.cy + 0.11, opts.cz);
+    inst.shockwaveMesh.position.set(opts.cx, opts.cy + 0.20, opts.cz);
     inst.shockwaveMesh.scale.setScalar(11.8 * opts.areaScale);
     inst.shockwaveMesh.visible = false;
 

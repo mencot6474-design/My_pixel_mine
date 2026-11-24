@@ -1380,7 +1380,7 @@ export class LullabyTwinsSkillVfxPool {
       fp.age = 0;
       fp.life = 0.56 + ((i * 17) % 10) * 0.042;
       fp.pos.copy(origin);
-      fp.floorY = inst.cy + 0.10;
+      fp.floorY = inst.cy + 0.16;
       const az = ((i - startIdx) / Math.max(1, count)) * Math.PI * 2 + (i % 5) * 0.24;
       const spd = (4.2 + ((i * 29) % 10) * 0.58) * speedMult * Math.max(0.75, inst.areaScale);
       const vy = (3.4 + ((i * 23) % 10) * 0.56) * speedMult;
@@ -1422,7 +1422,7 @@ export class LullabyTwinsSkillVfxPool {
     const as = opts.areaScale;
     const safeAs = Math.max(0.75, as);
 
-    inst.domainMesh.position.set(opts.cx, opts.cy + 0.08, opts.cz);
+    inst.domainMesh.position.set(opts.cx, opts.cy + 0.16, opts.cz);
     inst.domainMesh.rotation.z = 0;
     inst.domainMesh.scale.setScalar(0.01);
     inst.domainMat.uniforms.uProgress.value = 0;
@@ -1505,7 +1505,7 @@ export class LullabyTwinsSkillVfxPool {
     inst.climaxFlareMesh.scale.setScalar(0.01);
     inst.climaxFlareMesh.visible = false;
 
-    inst.shockwaveMesh.position.set(opts.cx, opts.cy + 0.12, opts.cz);
+    inst.shockwaveMesh.position.set(opts.cx, opts.cy + 0.20, opts.cz);
     inst.shockwaveMesh.scale.setScalar(12.2 * as);
     inst.shockwaveMesh.visible = false;
     inst.shockwaveMat.uniforms.uBlastT.value = 0;

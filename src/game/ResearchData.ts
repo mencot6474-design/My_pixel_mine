@@ -3,8 +3,10 @@ import {
   ABYSSAL_NODES,
   CHRONO_NODES,
   CRYSTAL_NODES,
+  ELYSIUM_NODES,
   MAGMA_NODES,
   RUINS_NODES,
+  SOLARIS_NODES,
   STARWELL_NODES,
   UNDERGROUND_NODES,
   VOIDREACH_NODES,
@@ -140,6 +142,22 @@ export const RESEARCH_TREE_META: Record<ResearchTreeId, ResearchTreeMeta> = {
     id: 'chrono',
     title: 'Chrono Nexus',
     subtitle: 'World 8 • Isolated',
+    global: false,
+    cols: 5,
+    rows: 4,
+  },
+  solaris: {
+    id: 'solaris',
+    title: 'Solaris Sanctum',
+    subtitle: 'World 9 • Isolated',
+    global: false,
+    cols: 5,
+    rows: 4,
+  },
+  elysium: {
+    id: 'elysium',
+    title: 'Elysium Core',
+    subtitle: 'World 10 • Isolated',
     global: false,
     cols: 5,
     rows: 4,
@@ -442,6 +460,8 @@ export const RESEARCH_NODES: readonly ResearchNodeDef[] = [
   ...STARWELL_NODES,
   ...ABYSSAL_NODES,
   ...CHRONO_NODES,
+  ...SOLARIS_NODES,
+  ...ELYSIUM_NODES,
 ] as const;
 
 export function getResearchNodesForTree(treeId: ResearchTreeId): readonly ResearchNodeDef[] {

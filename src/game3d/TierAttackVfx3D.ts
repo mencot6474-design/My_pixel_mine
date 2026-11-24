@@ -40,11 +40,13 @@ import {
 } from './TierVfxPitClip3D';
 import { CrimsonRoninSkillVfxPool } from './skills/crimsonRoninSkillVfx3D';
 import { ObsidianSovereignSkillVfxPool } from './skills/obsidianSovereignSkillVfx3D';
+import { AbyssalLeviathanSkillVfxPool } from './skills/abyssalLeviathanSkillVfx3D';
 import { ClockworkTwinsSkillVfxPool } from './skills/clockworkTwinsSkillVfx3D';
 import { LullabyTwinsSkillVfxPool } from './skills/lullabyTwinsSkillVfx3D';
 import { NocturneTwinsSkillVfxPool } from './skills/nocturneTwinsSkillVfx3D';
 import { HalcyonTwinsSkillVfxPool } from './skills/halcyonTwinsSkillVfx3D';
 import { YukikageTwinsSkillVfxPool } from './skills/yukikageTwinsSkillVfx3D';
+import { ParadoxTwinsSkillVfxPool } from './skills/paradoxTwinsSkillVfx3D';
 import {
   createTierVfxPoolCollections,
   firePodiumWeaponCastChoreography,
@@ -153,11 +155,13 @@ export class TierAttackVfxPool3D {
   private readonly pitClipUniforms: PitArenaClipUniforms = createPitArenaClipUniforms();
   private readonly crimsonRoninSkillPool: CrimsonRoninSkillVfxPool;
   private readonly obsidianSovereignSkillPool: ObsidianSovereignSkillVfxPool;
+  private readonly abyssalLeviathanSkillPool: AbyssalLeviathanSkillVfxPool;
   private readonly clockworkTwinsSkillPool: ClockworkTwinsSkillVfxPool;
   private readonly lullabyTwinsSkillPool: LullabyTwinsSkillVfxPool;
   private readonly nocturneTwinsSkillPool: NocturneTwinsSkillVfxPool;
   private readonly halcyonTwinsSkillPool: HalcyonTwinsSkillVfxPool;
   private readonly yukikageTwinsSkillPool: YukikageTwinsSkillVfxPool;
+  private readonly paradoxTwinsSkillPool: ParadoxTwinsSkillVfxPool;
   private readonly updateState: TierVfxPoolUpdateState;
 
   constructor(hooks: TierVfxHooks = {}) {
@@ -237,24 +241,31 @@ export class TierAttackVfxPool3D {
 
     this.crimsonRoninSkillPool = new CrimsonRoninSkillVfxPool(this.hooks);
     this.obsidianSovereignSkillPool = new ObsidianSovereignSkillVfxPool(this.hooks);
+    this.abyssalLeviathanSkillPool = new AbyssalLeviathanSkillVfxPool(this.hooks);
     this.clockworkTwinsSkillPool = new ClockworkTwinsSkillVfxPool(this.hooks);
     this.lullabyTwinsSkillPool = new LullabyTwinsSkillVfxPool(this.hooks);
     this.nocturneTwinsSkillPool = new NocturneTwinsSkillVfxPool(this.hooks);
     this.halcyonTwinsSkillPool = new HalcyonTwinsSkillVfxPool(this.hooks);
     this.yukikageTwinsSkillPool = new YukikageTwinsSkillVfxPool(this.hooks);
+    this.paradoxTwinsSkillPool = new ParadoxTwinsSkillVfxPool(this.hooks);
     this.group.add(
       this.crimsonRoninSkillPool.group,
       this.obsidianSovereignSkillPool.group,
+      this.abyssalLeviathanSkillPool.group,
       this.clockworkTwinsSkillPool.group,
       this.lullabyTwinsSkillPool.group,
       this.nocturneTwinsSkillPool.group,
       this.halcyonTwinsSkillPool.group,
-      this.yukikageTwinsSkillPool.group
+      this.yukikageTwinsSkillPool.group,
+      this.paradoxTwinsSkillPool.group
     );
     for (const mat of this.crimsonRoninSkillPool.getMaterials()) {
       patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
     }
     for (const mat of this.obsidianSovereignSkillPool.getMaterials()) {
+      patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
+    }
+    for (const mat of this.abyssalLeviathanSkillPool.getMaterials()) {
       patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
     }
     for (const mat of this.clockworkTwinsSkillPool.getMaterials()) {
@@ -270,6 +281,9 @@ export class TierAttackVfxPool3D {
       patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
     }
     for (const mat of this.yukikageTwinsSkillPool.getMaterials()) {
+      patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
+    }
+    for (const mat of this.paradoxTwinsSkillPool.getMaterials()) {
       patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
     }
   }
@@ -321,11 +335,13 @@ export class TierAttackVfxPool3D {
       spawnSparks: (x, y, z, c, s, cnt, spd) => this.spawnSparks(x, y, z, c, s, cnt, spd),
       fireCrimsonRoninSakuga: (o) => this.crimsonRoninSkillPool.fire(o),
       fireObsidianSovereignSakuga: (o) => this.obsidianSovereignSkillPool.fire(o),
+      fireAbyssalLeviathanSakuga: (o) => this.abyssalLeviathanSkillPool.fire(o),
       fireClockworkTwinsSakuga: (o) => this.clockworkTwinsSkillPool.fire(o),
       fireLullabyTwinsSakuga: (o) => this.lullabyTwinsSkillPool.fire(o),
       fireNocturneTwinsSakuga: (o) => this.nocturneTwinsSkillPool.fire(o),
       fireHalcyonTwinsSakuga: (o) => this.halcyonTwinsSkillPool.fire(o),
       fireYukikageTwinsSakuga: (o) => this.yukikageTwinsSkillPool.fire(o),
+      fireParadoxTwinsSakuga: (o) => this.paradoxTwinsSkillPool.fire(o),
     };
   }
 
@@ -333,22 +349,26 @@ export class TierAttackVfxPool3D {
     this.hooks = hooks;
     this.crimsonRoninSkillPool.setHooks(hooks);
     this.obsidianSovereignSkillPool.setHooks(hooks);
+    this.abyssalLeviathanSkillPool.setHooks(hooks);
     this.clockworkTwinsSkillPool.setHooks(hooks);
     this.lullabyTwinsSkillPool.setHooks(hooks);
     this.nocturneTwinsSkillPool.setHooks(hooks);
     this.halcyonTwinsSkillPool.setHooks(hooks);
     this.yukikageTwinsSkillPool.setHooks(hooks);
+    this.paradoxTwinsSkillPool.setHooks(hooks);
   }
 
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
     this.crimsonRoninSkillPool.setLowQuality(low);
     this.obsidianSovereignSkillPool.setLowQuality(low);
+    this.abyssalLeviathanSkillPool.setLowQuality(low);
     this.clockworkTwinsSkillPool.setLowQuality(low);
     this.lullabyTwinsSkillPool.setLowQuality(low);
     this.nocturneTwinsSkillPool.setLowQuality(low);
     this.halcyonTwinsSkillPool.setLowQuality(low);
     this.yukikageTwinsSkillPool.setLowQuality(low);
+    this.paradoxTwinsSkillPool.setLowQuality(low);
   }
 
   public clear(): void {
@@ -385,11 +405,13 @@ export class TierAttackVfxPool3D {
     resetArr(this.orbs);
     this.crimsonRoninSkillPool.clear();
     this.obsidianSovereignSkillPool.clear();
+    this.abyssalLeviathanSkillPool.clear();
     this.clockworkTwinsSkillPool.clear();
     this.lullabyTwinsSkillPool.clear();
     this.nocturneTwinsSkillPool.clear();
     this.halcyonTwinsSkillPool.clear();
     this.yukikageTwinsSkillPool.clear();
+    this.paradoxTwinsSkillPool.clear();
   }
 
   private after(delay: number, fn: () => void): void {
@@ -461,7 +483,10 @@ export class TierAttackVfxPool3D {
     slot.mat.uniforms.uTime.value = this.time;
     slot.mat.uniforms.uProgress.value = 0;
     slot.mat.uniforms.uOpacity.value = 1;
-    slot.mesh.position.set(opts.x, opts.y, opts.z);
+    const minY = this.pitClipUniforms.uPitClipActive.value > 0.5
+      ? this.pitClipUniforms.uPitFloorY.value + 0.16
+      : opts.y;
+    slot.mesh.position.set(opts.x, Math.max(opts.y, minY), opts.z);
     slot.mesh.scale.setScalar(slot.s0);
     slot.mesh.visible = true;
   }
@@ -613,7 +638,7 @@ export class TierAttackVfxPool3D {
     c.s1 = opts.s1;
     c.mat.uniforms.uProgress.value = 0;
     c.mat.uniforms.uOpacity.value = 1;
-    c.mesh.position.set(opts.x, opts.y, opts.z);
+    c.mesh.position.set(opts.x, this.clampPitFloorY(opts.y, 0.16), opts.z);
     c.mesh.scale.setScalar(opts.s0);
     c.mesh.visible = true;
   }
@@ -711,7 +736,8 @@ export class TierAttackVfxPool3D {
     slot.s0 = opts.s0 ?? 0.45;
     slot.s1 = opts.s1 ?? 3.8;
     slot.yScale = opts.yScale ?? 0.72;
-    slot.mesh.position.set(opts.x, opts.y ?? 0.04, opts.z);
+    const domeBaseY = opts.y ?? 0.16;
+    slot.mesh.position.set(opts.x, this.clampPitFloorY(domeBaseY, 0.16), opts.z);
     slot.mesh.scale.set(slot.s0, slot.s0 * slot.yScale, slot.s0);
     slot.mat.uniforms.uColor.value.set(opts.color);
     slot.mat.uniforms.uCoreColor.value.set(opts.coreColor ?? '#ffffff');
@@ -736,7 +762,7 @@ export class TierAttackVfxPool3D {
     slot.life = opts.life ?? 0.56;
     slot.radius = opts.radius ?? 0.8;
     slot.height = opts.height ?? 1.0;
-    slot.mesh.position.set(opts.x, opts.y ?? 0.0, opts.z);
+    slot.mesh.position.set(opts.x, this.clampPitFloorY(opts.y ?? 0.08, 0.08), opts.z);
     slot.mesh.scale.set(slot.radius, slot.height, slot.radius);
     slot.mat.uniforms.uColor.value.set(opts.color);
     slot.mat.uniforms.uCoreColor.value.set(opts.coreColor ?? '#ffffff');
@@ -756,7 +782,7 @@ export class TierAttackVfxPool3D {
     slot.sx = opts.sx ?? 1.4;
     slot.sy = opts.sy ?? 1.8;
     slot.spin = opts.spin ?? 9;
-    slot.mesh.position.set(opts.x, opts.y ?? 0.05, opts.z);
+    slot.mesh.position.set(opts.x, this.clampPitFloorY(opts.y ?? 0.16, 0.16), opts.z);
     slot.mesh.scale.set(slot.sx, slot.sy, slot.sx);
     slot.mat.uniforms.uColor.value.set(opts.color);
     slot.mat.uniforms.uCoreColor.value.set(opts.coreColor ?? '#ffffff');
@@ -888,6 +914,13 @@ export class TierAttackVfxPool3D {
     }
   }
 
+  private clampPitFloorY(y: number, minFloorOffset: number): number {
+    if (this.pitClipUniforms.uPitClipActive.value > 0.5) {
+      return Math.max(y, this.pitClipUniforms.uPitFloorY.value + minFloorOffset);
+    }
+    return y;
+  }
+
   private resolveParticleFloorY(y: number, minFloorOffset = 0.06): number {
     if (this.pitClipUniforms.uPitClipActive.value > 0.5) {
       return this.pitClipUniforms.uPitFloorY.value + minFloorOffset;
@@ -949,7 +982,7 @@ export class TierAttackVfxPool3D {
       const maxDia = Math.max(1.2, (this.pitClipUniforms.uPitRadius.value - dist) * 1.92);
       slot.s1 = Math.min(slot.s1, maxDia);
       slot.s0 = Math.min(slot.s0, slot.s1);
-      qy = Math.max(qy, this.pitClipUniforms.uPitFloorY.value + 0.04);
+      qy = Math.max(qy, this.pitClipUniforms.uPitFloorY.value + 0.16);
     }
     slot.baseRotZ = opts.rotZ ?? 0;
     slot.baseAlpha = opts.alpha ?? 1;
@@ -1115,11 +1148,13 @@ export class TierAttackVfxPool3D {
     this.time = this.updateState.time;
     this.crimsonRoninSkillPool.update(dtSec, this.time);
     this.obsidianSovereignSkillPool.update(dtSec, this.time);
+    this.abyssalLeviathanSkillPool.update(dtSec, this.time);
     this.clockworkTwinsSkillPool.update(dtSec, this.time);
     this.lullabyTwinsSkillPool.update(dtSec, this.time);
     this.nocturneTwinsSkillPool.update(dtSec, this.time);
     this.halcyonTwinsSkillPool.update(dtSec, this.time);
     this.yukikageTwinsSkillPool.update(dtSec, this.time);
+    this.paradoxTwinsSkillPool.update(dtSec, this.time);
   }
 
   public dispose(): void {
@@ -1128,11 +1163,13 @@ export class TierAttackVfxPool3D {
     this.clear();
     this.crimsonRoninSkillPool.dispose();
     this.obsidianSovereignSkillPool.dispose();
+    this.abyssalLeviathanSkillPool.dispose();
     this.clockworkTwinsSkillPool.dispose();
     this.lullabyTwinsSkillPool.dispose();
     this.nocturneTwinsSkillPool.dispose();
     this.halcyonTwinsSkillPool.dispose();
     this.yukikageTwinsSkillPool.dispose();
+    this.paradoxTwinsSkillPool.dispose();
     const mats = new Set<THREE.Material>();
     for (const s of this.slashes) mats.add(s.mat);
     for (const b of this.barrageLines) mats.add(b.mat);

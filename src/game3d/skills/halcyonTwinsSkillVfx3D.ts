@@ -1397,7 +1397,7 @@ export class HalcyonTwinsSkillVfxPool {
     const safeAs = Math.max(0.75, as);
 
     // 1. Open-Air Cathedral Octagram Seal on Pit Floor
-    inst.sealMesh.position.set(opts.cx, opts.cy + 0.05, opts.cz);
+    inst.sealMesh.position.set(opts.cx, opts.cy + 0.16, opts.cz);
     inst.sealMesh.scale.setScalar(11.6 * as);
     inst.sealMat.uniforms.uProgress.value = 0;
     inst.sealMat.uniforms.uBlastT.value = 0;
@@ -1463,7 +1463,7 @@ export class HalcyonTwinsSkillVfxPool {
       // Symmetrical Sanctuary Ring landing positions around center Excalibur (clean & harmonious!)
       const ex = opts.cx + Math.sin(az) * ringTargetRadius;
       const ez = opts.cz - Math.cos(az) * ringTargetRadius * 0.78;
-      const ey = opts.cy + 0.04;
+      const ey = opts.cy + 0.10;
 
       sw.targetIndex = i % inst.pts.length;
       // Fire in symmetrical left-right pairs from outer to inner!
@@ -1506,22 +1506,22 @@ export class HalcyonTwinsSkillVfxPool {
     inst.plungeBeamMat.uniforms.uLocalT.value = 0;
 
     // 6. Grand Excalibur Sweeps (#1 Azure-Dominant, #2 Gold-Dominant Cross Sweep)
-    inst.crescentAMesh.position.set(opts.cx, opts.cy + 0.72, opts.cz);
+    inst.crescentAMesh.position.set(opts.cx, opts.cy + 1.25, opts.cz);
     inst.crescentAMesh.rotation.set(0.18, -Math.PI * 0.45, 0.14);
     inst.crescentAMesh.scale.setScalar(0.01);
     inst.crescentAMesh.visible = false;
 
-    inst.crescentBMesh.position.set(opts.cx, opts.cy + 0.92, opts.cz);
+    inst.crescentBMesh.position.set(opts.cx, opts.cy + 1.45, opts.cz);
     inst.crescentBMesh.rotation.set(-0.22, Math.PI * 0.35, -0.18);
     inst.crescentBMesh.scale.setScalar(0.01);
     inst.crescentBMesh.visible = false;
 
     // 7. 3D Volumetric Celestial Light Pillar & Ground Shockwave Crown
-    inst.pillarMesh.position.set(opts.cx, opts.cy + 0.04, opts.cz);
+    inst.pillarMesh.position.set(opts.cx, opts.cy + 0.12, opts.cz);
     inst.pillarMesh.scale.set(1.25 * as, 1.0, 1.25 * as);
     inst.pillarMesh.visible = false;
 
-    inst.shockRingMesh.position.set(opts.cx, opts.cy + 0.10, opts.cz);
+    inst.shockRingMesh.position.set(opts.cx, opts.cy + 0.18, opts.cz);
     inst.shockRingMesh.scale.setScalar(0.01);
     inst.shockRingMesh.visible = false;
 
@@ -1564,7 +1564,7 @@ export class HalcyonTwinsSkillVfxPool {
       const bannerS = 1.28 * safeAs;
       const bx = inst.cx - 1.55 * as;
       const bz = inst.cz - 1.35 * as;
-      const bannerY = THREE.MathUtils.lerp(inst.cy + 8.5, inst.cy - 0.06, slamSnap);
+      const bannerY = THREE.MathUtils.lerp(inst.cy + 8.5, inst.cy + 0.04, slamSnap);
       inst.bannerPoleMesh.position.set(bx, bannerY, bz);
       inst.bannerPennantMesh.position.set(bx, bannerY + 2.95 * bannerS, bz);
       inst.bannerPoleMat.uniforms.uProgress.value = uProgress;
@@ -1646,12 +1646,12 @@ export class HalcyonTwinsSkillVfxPool {
           // 50ms 100% STRAIGHT VERTICAL PLUNGE straight into pit center!
           const dropT = (inst.elapsed - 0.56) / 0.05;
           const slamEase = dropT * dropT * dropT * dropT;
-          const slamY = THREE.MathUtils.lerp(inst.cy + 6.1, inst.cy - 0.04, slamEase);
+          const slamY = THREE.MathUtils.lerp(inst.cy + 6.1, inst.cy + 0.06, slamEase);
           inst.excaliburMesh.position.set(inst.cx, slamY, inst.cz);
           inst.excaliburMesh.rotation.set(0, 0, 0);
         } else {
-          // Planted monolithically upright at pit center (tip at cy - 0.04, full blade & crossguard towering up!)
-          inst.excaliburMesh.position.set(inst.cx, inst.cy - 0.04, inst.cz);
+          // Planted monolithically upright at pit center (tip at cy + 0.06, full blade & crossguard towering up!)
+          inst.excaliburMesh.position.set(inst.cx, inst.cy + 0.06, inst.cz);
           inst.excaliburMesh.rotation.set(0, 0, 0);
         }
       } else {

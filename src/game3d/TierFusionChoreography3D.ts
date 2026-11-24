@@ -89,7 +89,7 @@ export function fireFusionChibiChoreography(
         ctx.hooks.onSpeedLines?.(0.95, 0.4);
         ctx.spawnRift({ x: cx, y: cy + 1.45, z: cz, color: '#22d3ee', coreColor: '#d946ef', rz: 0.3, len: 11.4 * as, height: 1.35 * as, life: 0.56 * sc });
         ctx.spawnRift({ x: cx, y: cy + 1.45, z: cz, color: '#d946ef', coreColor: '#ffffff', rz: -0.3, len: 11.4 * as, height: 1.35 * as, life: 0.56 * sc });
-        ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#22d3ee', coreColor: '#d946ef', s0: 0.85 * as, s1: 7.0 * as, yScale: 0.56, life: 0.52 * sc });
+        ctx.spawnDome({ x: cx, y: cy + 0.16, z: cz, color: '#22d3ee', coreColor: '#d946ef', s0: 0.85 * as, s1: 7.0 * as, yScale: 0.56, life: 0.52 * sc });
         pts.forEach((n) => ctx.spawnDebrisBurst(n.x, n.y + 0.6, n.z, '#22d3ee', '#d946ef', 4));
       });
       break;
@@ -162,7 +162,7 @@ export function fireFusionChibiChoreography(
           x: cx, y: cy + 1.35, z: cz, color: '#f43f5e', coreColor: '#ffe4e6',
           rx: 0.16, ry: 0.2, rz: -0.32, s0: 2.8 * as, s1: 8.2 * as, life: 0.44 * sc, spinSpeed: 5.0, shaderMode: 8,
         });
-        ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#f43f5e', coreColor: '#fb7185', s0: 0.9 * as, s1: 7.4 * as, yScale: 0.56, life: 0.54 * sc });
+        ctx.spawnDome({ x: cx, y: cy + 0.16, z: cz, color: '#f43f5e', coreColor: '#fb7185', s0: 0.9 * as, s1: 7.4 * as, yScale: 0.56, life: 0.54 * sc });
         pts.forEach((n) => {
           ctx.spawnDebrisBurst(n.x, n.y + 0.65, n.z, '#f43f5e', '#881337', 5);
           ctx.spawnSparks(n.x, n.y + 0.85, n.z, '#fb7185', '#ffffff', 7, 6.2);
@@ -211,7 +211,7 @@ export function fireFusionChibiChoreography(
             life: 0.7 * sc,
             seed: idx * 0.5,
             onArrive: () => {
-              ctx.spawnQuad({ tex: ctx.ringTex, x: n.x, y: n.y + 0.08, z: n.z, color: '#f8fafc', s0: 0.5, s1: 3.2 * as, life: 0.34 * sc, flatFloor: true });
+              ctx.spawnQuad({ tex: ctx.ringTex, x: n.x, y: n.y + 0.16, z: n.z, color: '#f8fafc', s0: 0.5, s1: 3.2 * as, life: 0.34 * sc, flatFloor: true });
               ctx.spawnSparks(n.x, n.y + 0.6, n.z, '#f8fafc', '#18181b', 6, 5.6);
             },
           });
@@ -221,8 +221,8 @@ export function fireFusionChibiChoreography(
       ctx.after(0.46 * sc, () => {
         ctx.hooks.onImpactFrame?.(1.0, 1.0, '#f8fafc', 0.064);
         ctx.hooks.onSpeedLines?.(1.0, 0.45);
-        ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#09090b', coreColor: '#f8fafc', s0: 0.9 * as, s1: 7.8 * as, yScale: 0.56, life: 0.56 * sc });
-        ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#f8fafc', coreColor: '#94a3b8', s0: 0.65 * as, s1: 6.0 * as, yScale: 0.64, life: 0.48 * sc });
+        ctx.spawnDome({ x: cx, y: cy + 0.16, z: cz, color: '#09090b', coreColor: '#f8fafc', s0: 0.9 * as, s1: 7.8 * as, yScale: 0.56, life: 0.56 * sc });
+        ctx.spawnDome({ x: cx, y: cy + 0.16, z: cz, color: '#f8fafc', coreColor: '#94a3b8', s0: 0.65 * as, s1: 6.0 * as, yScale: 0.64, life: 0.48 * sc });
         ctx.spawnSlash({
           x: cx, y: cy + 1.4, z: cz, color: '#f8fafc', coreColor: '#ffffff',
           rx: 0.15, ry: 0, rz: 0.25, s0: 3.0 * as, s1: 8.6 * as, life: 0.46 * sc, spinSpeed: 5.2, shaderMode: 9,
@@ -277,8 +277,8 @@ export function fireFusionChibiChoreography(
       ctx.after(0.46 * sc, () => {
         ctx.hooks.onImpactFrame?.(1.0, 0.0, '#38bdf8', 0.058);
         ctx.hooks.onSpeedLines?.(1.0, 0.44);
-        ctx.spawnBeam({ x: cx, y: cy, z: cz, color: '#38bdf8', coreColor: '#facc15', radius: 1.35 * as, height: 1.18, life: 0.68 * sc });
-        ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#facc15', coreColor: '#38bdf8', s0: 0.85 * as, s1: 7.4 * as, yScale: 0.56, life: 0.56 * sc });
+        ctx.spawnBeam({ x: cx, y: cy + 0.08, z: cz, color: '#38bdf8', coreColor: '#facc15', radius: 1.35 * as, height: 1.18, life: 0.68 * sc });
+        ctx.spawnDome({ x: cx, y: cy + 0.16, z: cz, color: '#facc15', coreColor: '#38bdf8', s0: 0.85 * as, s1: 7.4 * as, yScale: 0.56, life: 0.56 * sc });
         ctx.spawnSlash({
           x: cx, y: cy + 1.35, z: cz, color: '#facc15', coreColor: '#38bdf8',
           rx: 0.2, ry: 0.35, rz: -0.28, s0: 2.9 * as, s1: 8.4 * as, life: 0.44 * sc, spinSpeed: 5.2, shaderMode: 10,
@@ -340,9 +340,9 @@ export function fireFusionChibiChoreography(
       ctx.after(0.46 * sc, () => {
         ctx.hooks.onImpactFrame?.(1.0, 1.0, '#fbbf24', 0.062);
         ctx.hooks.onSpeedLines?.(1.0, 0.48);
-        ctx.spawnBeam({ x: cx, y: cy, z: cz, color: '#fbbf24', coreColor: '#22d3ee', radius: 1.5 * as, height: 1.24, life: 0.72 * sc });
-        ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#fbbf24', coreColor: '#ffffff', s0: 0.9 * as, s1: 8.2 * as, yScale: 0.56, life: 0.58 * sc });
-        ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: '#22d3ee', coreColor: '#fbbf24', s0: 0.65 * as, s1: 6.4 * as, yScale: 0.64, life: 0.5 * sc });
+        ctx.spawnBeam({ x: cx, y: cy + 0.08, z: cz, color: '#fbbf24', coreColor: '#22d3ee', radius: 1.5 * as, height: 1.24, life: 0.72 * sc });
+        ctx.spawnDome({ x: cx, y: cy + 0.16, z: cz, color: '#fbbf24', coreColor: '#ffffff', s0: 0.9 * as, s1: 8.2 * as, yScale: 0.56, life: 0.58 * sc });
+        ctx.spawnDome({ x: cx, y: cy + 0.16, z: cz, color: '#22d3ee', coreColor: '#fbbf24', s0: 0.65 * as, s1: 6.4 * as, yScale: 0.64, life: 0.5 * sc });
         ctx.spawnSlash({
           x: cx, y: cy + 1.35, z: cz, color: '#fbbf24', coreColor: '#22d3ee',
           rx: 0.14, ry: 0, rz: 0.24, s0: 3.1 * as, s1: 8.8 * as, life: 0.46 * sc, spinSpeed: 5.4, shaderMode: 11,
@@ -355,10 +355,70 @@ export function fireFusionChibiChoreography(
       break;
     }
 
+    case 'chrono-crystallis': {
+      // 6. CHRONO CRYSTALLIS: Time-Crystal Clockwork Floor Seal + Hovering Gear-Crystal Spires + Azure-Gold Slashes (Mode 11)
+      ctx.hooks.onArenaDim?.(0.76, '#041224', 1.02 * sc);
+      ctx.spawnFusionSeal({
+        variant: 'chrono-crystallis',
+        x: cx,
+        y: cy + 0.16,
+        z: cz,
+        s0: 2.2 * as,
+        s1: 9.8 * as,
+        life: 1.24 * sc,
+      });
+
+      const spireCount = 6;
+      const apexCenter = new THREE.Vector3(cx, cy + 1.3, cz);
+      for (let k = 0; k < spireCount; k++) {
+        const ang = (k / spireCount) * Math.PI * 2 + 0.25;
+        const px = cx + Math.cos(ang) * 3.15 * as;
+        const pz = cz + Math.sin(ang) * 2.15 * as;
+        const start = new THREE.Vector3(px, cy + 5.2, pz);
+        const hover = new THREE.Vector3(px, cy + 1.55, pz);
+        ctx.after(k * 0.055 * sc, () => {
+          ctx.spawnFusionProp({
+            variant: 'chrono-crystallis',
+            mode: 'hover',
+            startPos: start,
+            endPos: hover,
+            scale: 1.45 * Math.max(0.76, as),
+            life: 0.78 * sc,
+            spinY: k % 2 === 0 ? 3.4 : -3.4,
+            seed: k * 0.7,
+            onArrive: () => {
+              ctx.spawnLightning(hover, apexCenter, k % 2 === 0 ? '#38bdf8' : '#fbbf24', 0.15, 0.24 * sc);
+              ctx.spawnSlash({
+                x: px, y: cy + 1.15, z: pz, color: '#38bdf8', coreColor: '#fbbf24',
+                rx: 0.32, ry: ang, rz: 0.28, s0: 1.35 * as, s1: 3.3 * as, life: 0.32 * sc, spinSpeed: 4.8, shaderMode: 11,
+              });
+            },
+          });
+        });
+      }
+
+      ctx.after(0.46 * sc, () => {
+        ctx.hooks.onImpactFrame?.(1.0, 1.0, '#38bdf8', 0.062);
+        ctx.hooks.onSpeedLines?.(1.0, 0.48);
+        ctx.spawnBeam({ x: cx, y: cy + 0.08, z: cz, color: '#38bdf8', coreColor: '#fbbf24', radius: 1.48 * as, height: 1.22, life: 0.72 * sc });
+        ctx.spawnDome({ x: cx, y: cy + 0.16, z: cz, color: '#38bdf8', coreColor: '#ffffff', s0: 0.9 * as, s1: 8.1 * as, yScale: 0.56, life: 0.58 * sc });
+        ctx.spawnDome({ x: cx, y: cy + 0.16, z: cz, color: '#fbbf24', coreColor: '#38bdf8', s0: 0.65 * as, s1: 6.3 * as, yScale: 0.64, life: 0.50 * sc });
+        ctx.spawnSlash({
+          x: cx, y: cy + 1.4, z: cz, color: '#38bdf8', coreColor: '#fbbf24',
+          rx: 0.16, ry: 0.2, rz: -0.22, s0: 3.1 * as, s1: 8.8 * as, life: 0.46 * sc, spinSpeed: 5.4, shaderMode: 11,
+        });
+        pts.forEach((n) => {
+          ctx.spawnDebrisBurst(n.x, n.y + 0.8, n.z, '#38bdf8', '#fbbf24', 6);
+          ctx.spawnSparks(n.x, n.y + 0.9, n.z, '#38bdf8', '#fbbf24', 9, 7.0);
+        });
+      });
+      break;
+    }
+
     default: {
       // Fallback generic fusion strike
       ctx.hooks.onArenaDim?.(0.64, '#0b1024', 0.7);
-      ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color, coreColor: secondary, s0: 0.8 * as, s1: 6.2 * as, yScale: 0.58, life: 0.48 * sc });
+      ctx.spawnDome({ x: cx, y: cy + 0.16, z: cz, color, coreColor: secondary, s0: 0.8 * as, s1: 6.2 * as, yScale: 0.58, life: 0.48 * sc });
       break;
     }
   }

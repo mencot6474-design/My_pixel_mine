@@ -1373,6 +1373,7 @@ describe('Tahap B HUD Modules', () => {
       expect(twinIdxHtml).toContain('Nocturne Twins');
       expect(twinIdxHtml).toContain('Lullaby Twins');
       expect(twinIdxHtml).toContain('Clockwork Twins');
+      expect(twinIdxHtml).toContain('Paradox Twins');
       expect(twinIdxHtml).toContain('Spire Shop Duo');
       expect(twinIdxHtml).toContain('is-holo-foil');
     });
@@ -1505,6 +1506,8 @@ describe('Tahap B HUD Modules', () => {
       expect(premiumShopHtml).toContain('data-buy-premium-item="lullaby-twins"');
       expect(premiumShopHtml).toContain('Clockwork Twins');
       expect(premiumShopHtml).toContain('data-buy-premium-item="clockwork-twins"');
+      expect(premiumShopHtml).toContain('Paradox Twins');
+      expect(premiumShopHtml).toContain('data-buy-premium-item="paradox-twins"');
       expect(premiumShopHtml).toContain('mam-rarity-twin');
 
       const towerUi = new TowerUi(state, () => {}, () => {}, () => {}, () => {}, () => {});
@@ -1626,7 +1629,11 @@ describe('Tahap B HUD Modules', () => {
   describe('OmegaBossModalUi, OmegaArenaHudUi & Omega Index Tab', () => {
     it('renders Omega Index tab, crest badge, Boss Hub Tier I–V drop percentages, and Omega Arena HUD', () => {
       const state = new GameState();
-      expect(getIndexTabEntryIds('omega')).toEqual(['crimson-ronin', 'obsidian-sovereign']);
+      expect(getIndexTabEntryIds('omega')).toEqual([
+        'crimson-ronin',
+        'obsidian-sovereign',
+        'abyssal-leviathan',
+      ]);
       expect(renderRarityBadgeHtml('omega')).toContain('/badges/omega.svg');
       expect(rarityCardClasses('omega')).toContain('rarity-omega');
 
@@ -1641,6 +1648,7 @@ describe('Tahap B HUD Modules', () => {
       expect(hubHtml).toContain('data-modal-theme="omega-boss"');
       expect(hubHtml).toContain('Crimson Ronin');
       expect(hubHtml).toContain('Obsidian Sovereign');
+      expect(hubHtml).toContain('Abyssal Leviathan');
       expect(hubHtml).toContain('HP 20Sp');
       expect(hubHtml).toContain('HP 2Oc');
       expect(hubHtml).toContain('HP 200Oc');
@@ -1657,6 +1665,17 @@ describe('Tahap B HUD Modules', () => {
       expect(hubHtml).toContain('+120%');
       expect(hubHtml).toContain('Sell Ore');
       expect(hubHtml).toContain('+80%');
+
+      hubUi.openForBoss('abyssal-leviathan');
+      const levHubHtml = hubUi.renderOmegaModal();
+      expect(levHubHtml).toContain('0 Leviathan Cores');
+      expect(levHubHtml).toContain('HP 45Sp');
+      expect(levHubHtml).toContain('HP 4.5Oc');
+      expect(levHubHtml).toContain('HP 450Oc');
+      expect(levHubHtml).toContain('+240%');
+      expect(levHubHtml).toContain('+140%');
+      expect(levHubHtml).toContain('+160%');
+      hubUi.openForBoss('crimson-ronin');
 
       // Verify Fullscreen Omega Forge Cutscene -> Post-Cutscene Confirmation Popup flow
       state.omegaCores['crimson-ronin'] = 5;
@@ -1955,8 +1974,8 @@ describe('Tahap B HUD Modules', () => {
       const shopUi = new ShopModalsUi(state, onToast, () => {});
       const html = shopUi.renderPickaxeShopModal();
       expect(html).toContain('Unlock Crystal Caves');
-      expect(html).toContain('$8M');
-      expect(html).toContain('$25Sp');
+      expect(html).toContain('$18M');
+      expect(html).toContain('$4.5Oc');
 
       let clickHandler: ((e: { stopPropagation: () => void }) => void) | null = null;
       const lockedBtn = {

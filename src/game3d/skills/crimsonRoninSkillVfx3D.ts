@@ -520,13 +520,13 @@ export class CrimsonRoninSkillVfxPool {
 
     inst.root.visible = true;
 
-    inst.latticeFloorMesh.position.set(opts.cx, opts.cy + 0.12, opts.cz);
+    inst.latticeFloorMesh.position.set(opts.cx, opts.cy + 0.18, opts.cz);
     inst.latticeFloorMesh.scale.setScalar(11.6 * opts.areaScale);
 
-    inst.latticeMidMesh.position.set(opts.cx, opts.cy + 1.05, opts.cz);
+    inst.latticeMidMesh.position.set(opts.cx, opts.cy + 1.15, opts.cz);
     inst.latticeMidMesh.scale.setScalar(10.8 * opts.areaScale);
 
-    inst.latticeTiltMesh.position.set(opts.cx, opts.cy + 1.45, opts.cz);
+    inst.latticeTiltMesh.position.set(opts.cx, opts.cy + 1.55, opts.cz);
     inst.latticeTiltMesh.scale.setScalar(9.8 * opts.areaScale);
     inst.latticeTiltMesh.visible = !this.lowQuality;
 
@@ -534,7 +534,7 @@ export class CrimsonRoninSkillVfxPool {
       m.uniforms.uProgress.value = 0;
     }
 
-    inst.gridMesh.position.set(opts.cx, opts.cy + 0.08, opts.cz);
+    inst.gridMesh.position.set(opts.cx, opts.cy + 0.16, opts.cz);
     inst.gridMesh.scale.setScalar(11.8 * opts.areaScale);
     inst.gridMesh.visible = false;
 
@@ -552,7 +552,7 @@ export class CrimsonRoninSkillVfxPool {
       slot.spinSpeed = (isLeft ? 1 : -1) * (11.0 + i * 0.8);
       slot.mesh.position.set(
         i >= 5 ? opts.cx : tgt.x,
-        (i >= 5 ? opts.cy + 1.1 : tgt.y + 0.85) + (i % 3) * 0.22,
+        (i >= 5 ? opts.cy + 1.45 : tgt.y + 1.2) + (i % 3) * 0.22,
         i >= 5 ? opts.cz : tgt.z
       );
       slot.mesh.rotation.set(

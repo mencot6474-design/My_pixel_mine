@@ -225,7 +225,7 @@ export function isTeamPresetPopulated(preset: TeamPresetSlots | undefined): bool
   return preset.some((id) => typeof id === 'string' && id.length > 0);
 }
 
-/** Creates an empty per-tree research level record for all 9 research trees. */
+/** Creates an empty per-tree research level record for all 11 research trees. */
 export function createEmptyResearchLevels(): ResearchLevelsMap {
   return {
     core: {},
@@ -237,6 +237,8 @@ export function createEmptyResearchLevels(): ResearchLevelsMap {
     starwell: {},
     abyssal: {},
     chrono: {},
+    solaris: {},
+    elysium: {},
   };
 }
 
@@ -344,7 +346,7 @@ export function deserializeSaveJson(
   try {
     const data = JSON.parse(raw) as Partial<SavePayload>;
     if (typeof data.cash === 'number' && Number.isFinite(data.cash)) {
-      state.cash = data.cash > 1e36 ? 1e24 : Math.max(0, data.cash);
+      state.cash = data.cash > 1e55 ? 1e24 : Math.max(0, data.cash);
     }
     if (typeof data.gems === 'number' && Number.isFinite(data.gems)) {
       state.gems = data.gems > 10_000_000 ? 250_000 : Math.max(0, Math.round(data.gems));

@@ -313,8 +313,9 @@ export class OmegaArena3D {
   public setBossId(bossId: OmegaBossId): void {
     this.bossId = bossId;
     const isSovereign = bossId === 'obsidian-sovereign';
-    const accentHex = isSovereign ? '#a855f7' : '#ef4444';
-    const secHex = isSovereign ? '#38bdf8' : '#fde047';
+    const isLeviathan = bossId === 'abyssal-leviathan';
+    const accentHex = isLeviathan ? '#06b6d4' : isSovereign ? '#a855f7' : '#ef4444';
+    const secHex = isLeviathan ? '#67e8f9' : isSovereign ? '#38bdf8' : '#fde047';
 
     this.trimNeonMat.color.set(accentHex);
     this.secondaryNeonMat.color.set(secHex);

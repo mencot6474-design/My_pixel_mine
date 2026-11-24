@@ -85,7 +85,7 @@ export function getChibiAttackStyle(def: ChibiDef): PlotAttackStyle {
   if (def.rarity === 'fusion') {
     if (def.id === 'glitch-cheshire') return 'beam';
     if (def.id === 'aether-monarch') return 'meteor';
-    if (def.id === 'prism-seraph' || def.id === 'monochrome-saint') return 'star';
+    if (def.id === 'prism-seraph' || def.id === 'monochrome-saint' || def.id === 'chrono-crystallis') return 'star';
     return 'crescent';
   }
   if (

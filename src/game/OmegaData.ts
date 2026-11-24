@@ -1,6 +1,6 @@
 import { getChibiById } from '../game3d/ChibiCatalog';
 
-export type OmegaBossId = 'crimson-ronin' | 'obsidian-sovereign';
+export type OmegaBossId = 'crimson-ronin' | 'obsidian-sovereign' | 'abyssal-leviathan';
 
 export interface OmegaTierDef {
   tier: 1 | 2 | 3 | 4 | 5;
@@ -17,8 +17,8 @@ export interface OmegaTierDef {
 export interface OmegaBossDef {
   id: OmegaBossId;
   chibiId: OmegaBossId;
-  stationId: 'omega-left' | 'omega-right';
-  padSide: 'left' | 'right';
+  stationId?: 'omega-left' | 'omega-right';
+  padSide?: 'left' | 'right' | 'center';
   name: string;
   bossTitle: string;
   mechanicTitle: string;
@@ -169,6 +169,35 @@ export const OMEGA_BOSS_DEFS: readonly OmegaBossDef[] = [
       300_000_000_000_000_000_000_000_000_000,
     ]),
   },
+  {
+    id: 'abyssal-leviathan',
+    chibiId: 'abyssal-leviathan',
+    padSide: 'center',
+    name: 'Abyssal Leviathan',
+    bossTitle: 'Tidal Maelstrom Sovereign',
+    mechanicTitle: 'Tidal Pillars & Abyssal Seals',
+    mechanicSummary:
+      'Shatter Tidal Pillars (-60% Boss Armor) and detonate Maelstrom Seals to build Stagger and unleash 2.5× OMEGA BREAK!',
+    coreName: 'Leviathan Core',
+    accentColor: '#06b6d4',
+    secondaryColor: '#67e8f9',
+    rarity: 'omega',
+    unlockCoreCost: 5,
+    awakenCoreCosts: [3, 5, 8, 12],
+    dpsMult: 7.5,
+    upgradeCostMult: 48,
+    passiveSummary: '+240% Team DMG • +140% Drop Ore • +160% Sell Ore',
+    teamDmgPct: 2.4,
+    oreDropPct: 1.4,
+    oreSellPct: 1.6,
+    tiers: buildTiers([
+      45_000_000_000_000_000_000_000_000,
+      450_000_000_000_000_000_000_000_000,
+      4_500_000_000_000_000_000_000_000_000,
+      45_000_000_000_000_000_000_000_000_000,
+      450_000_000_000_000_000_000_000_000_000,
+    ]),
+  },
 ] as const;
 
 /** Scales an OMEGA Chibi base DPS from the latest World's Secret DPS with 2-sig-fig nice rounding. */
@@ -184,7 +213,7 @@ export function computeOmegaScaledBaseDps(secretBaseDps: number, dpsMult: number
 export function computeOmegaUpgradeCostScale(worldCostScale: number, upgradeCostMult: number): number {
   const raw = worldCostScale * upgradeCostMult;
   if (!Number.isFinite(raw) || raw <= 0) return 1;
-  return Math.round(raw);
+  return Math.round(Number(raw.toPrecision(12)));
 }
 
 export function getOmegaBossById(id: string): OmegaBossDef | undefined {

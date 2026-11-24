@@ -16,7 +16,7 @@ export interface WorldArenaBiome {
 }
 
 /**
- * Clean Cyber E-Sports / Idol Sky-Stage color themes per World (W1-W8).
+ * Clean Cyber E-Sports / Idol Sky-Stage color themes per World (W1-W10).
  * Keeps outer architecture bright & crisp (silver/titanium/trim) while preserving dark center court contrast.
  */
 export const WORLD_ARENA_BIOMES: Record<WorldId, WorldArenaBiome> = {
@@ -99,6 +99,26 @@ export const WORLD_ARENA_BIOMES: Record<WorldId, WorldArenaBiome> = {
     secondaryGlowHex: '#22d3ee',
     crystalScale: 1.2,
     capEmissiveIntensity: 0.2,
+  },
+  solaris: {
+    id: 'solaris',
+    rockHex: '#57363c',
+    deckHex: '#7c2d12',
+    capHex: '#fecdd3',
+    crystalHex: '#fb7185',
+    secondaryGlowHex: '#fde047',
+    crystalScale: 1.24,
+    capEmissiveIntensity: 0.22,
+  },
+  elysium: {
+    id: 'elysium',
+    rockHex: '#4c4675',
+    deckHex: '#312e81',
+    capHex: '#f5d0fe',
+    crystalHex: '#c084fc',
+    secondaryGlowHex: '#22d3ee',
+    crystalScale: 1.28,
+    capEmissiveIntensity: 0.24,
   },
 };
 

@@ -81,6 +81,19 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     oreDropPct: 0,
     oreSellPct: 1.1,
   },
+  {
+    id: 'premium-paradox-twins',
+    chibiId: 'paradox-twins',
+    rarity: 'twin',
+    coinCost: 145,
+    dpsMult: 4.55,
+    upgradeCostMult: 29,
+    titleTag: 'Gilded Chrono & Crimson Chain Duo',
+    passiveSummary: '+175% Team DMG • +105% Ore Drop',
+    teamDmgPct: 1.75,
+    oreDropPct: 1.05,
+    oreSellPct: 0,
+  },
 ] as const;
 
 /** Scales a TWIN Chibi base DPS from the latest World's Secret DPS with 2-sig-fig nice rounding. */
@@ -96,7 +109,7 @@ export function computeTwinScaledBaseDps(secretBaseDps: number, dpsMult: number)
 export function computeTwinUpgradeCostScale(worldCostScale: number, upgradeCostMult: number): number {
   const raw = worldCostScale * upgradeCostMult;
   if (!Number.isFinite(raw) || raw <= 0) return 1;
-  return Math.round(raw);
+  return Math.round(Number(raw.toPrecision(12)));
 }
 
 export function getPremiumShopItemByChibiId(chibiId: string): PremiumShopItemDef | undefined {

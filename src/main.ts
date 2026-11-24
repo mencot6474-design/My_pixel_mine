@@ -566,14 +566,38 @@ async function bootstrap(): Promise<void> {
   );
   hud.setOnModalVisibilityChange((open) => scene.setModalBackdropThrottled(open));
 
+  const host = window.location.hostname;
+  const isPrivateOrLocalHost =
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '::1' ||
+    host === '[::1]' ||
+    host.endsWith('.local') ||
+    host.startsWith('192.168.') ||
+    host.startsWith('10.') ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host);
   const isLocalDev = Boolean(
-    (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV &&
-      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV && isPrivateOrLocalHost
   );
   if (isLocalDev) {
     interface DevDebugWindow extends Window {
       __unlockAllChibis?: () => number;
     }
+    const LOCAL_DEV_NEW_CHIBI_IDS: readonly string[] = [
+      'crimson-inkweaver',
+      'ocular-maw',
+      'crimson-adjudicator',
+      'gilded-chainking',
+      'solaris-queen',
+      'verdant-runeborn',
+      'pale-spiritcaller',
+      'spiral-nightmare',
+      'amethyst-dracomech',
+      'elysian-seraph',
+      'paradox-twins',
+      'chrono-crystallis',
+      'abyssal-leviathan',
+    ];
     const unlockAllLocalChibis = (): number => {
       const added = gameState.unlockChibisByIds(CHIBI_CATALOG.map((c) => c.id));
       hud?.pushToast(`Unlocked all ${CHIBI_CATALOG.length} Chibis!`);
@@ -582,6 +606,14 @@ async function bootstrap(): Promise<void> {
     (window as DevDebugWindow).__unlockAllChibis = unlockAllLocalChibis;
     if (window.location.search.includes('unlock=1')) {
       unlockAllLocalChibis();
+    } else {
+      const missingNew = LOCAL_DEV_NEW_CHIBI_IDS.filter(
+        (id) => (gameState.miners[id] || 0) < 1 || !gameState.discovered.has(id)
+      );
+      if (missingNew.length > 0) {
+        const added = gameState.unlockChibisByIds(missingNew);
+        if (added > 0) hud?.pushToast(`Unlocked ${added} new Chibi(s)!`);
+      }
     }
   }
 

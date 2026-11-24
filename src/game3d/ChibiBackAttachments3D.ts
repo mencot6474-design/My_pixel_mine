@@ -10,6 +10,10 @@ import {
   createCheshireCyberBackHaloShaderMaterial,
   createCheshireGlitchClawBackShaderMaterial,
   createCheshireGlitchPixelWingGeometry,
+  createChronoCrystallisBrassGearGeometry,
+  createChronoCrystallisClockHaloBackShaderMaterial,
+  createChronoCrystallisCrystalShardGeometry,
+  createChronoCrystallisShardBackShaderMaterial,
   createClockworkChronoChassisShaderMaterial,
   createClockworkDialShaderMaterial,
   createClockworkGearGeometry,
@@ -86,6 +90,18 @@ import {
   createYukikageWagasaShaderMaterial,
   createYukikageWagasaUmbrellaGeometry,
 } from './MeshFx3D';
+import {
+  createParadoxChainSpikeGeometry,
+  createParadoxCrimsonChainShaderMaterial,
+  createParadoxDualHaloShaderMaterial,
+  createParadoxGoldGearGeometry,
+  createParadoxGoldGearShaderMaterial,
+} from './skills/paradoxTwinsSkillVfx3D';
+import {
+  createLeviathanHydroClawShaderMaterial,
+  createLeviathanHydroFinGeometry,
+  createLeviathanMaelstromHaloShaderMaterial,
+} from './skills/abyssalLeviathanSkillVfx3D';
 
 export interface RoninFanKatanaSlot {
   mesh: THREE.Mesh;
@@ -290,6 +306,66 @@ export function createChibiBackAttachments(
     handle.omegaHandWeaponMat.uniforms.uCoreColor.value.set('#ffffff');
     handle.omegaHandWeaponGeo = createAbyssalGreatswordGeometry();
     handle.omegaHandWeaponMesh = new THREE.Mesh(handle.omegaHandWeaponGeo, handle.omegaHandWeaponMat);
+    handle.omegaHandPivot.add(handle.omegaHandWeaponMesh);
+    handle.omegaHandPivot.visible = false;
+    blitzHeroPivot.add(handle.omegaHandPivot);
+  } else if (defId === 'abyssal-leviathan') {
+    handle.omegaAuraGroup = new THREE.Group();
+    handle.omegaAuraGroup.position.set(0, spriteHeight * 0.52, -0.14);
+    const haloMat = createLeviathanMaelstromHaloShaderMaterial();
+    const hydroFinMat = createLeviathanHydroClawShaderMaterial();
+    handle.omegaAuraMat = haloMat;
+    handle.twinCustomMats.push(hydroFinMat);
+
+    const haloGeo = new THREE.PlaneGeometry(2.75, 2.75);
+    const finGeo = createLeviathanHydroFinGeometry();
+    handle.omegaAuraGeo = haloGeo;
+    handle.twinCustomGeos.push(finGeo);
+
+    // 1 swirling Abyssal Maelstrom Halo disc behind the chibi
+    handle.omegaHaloMesh = new THREE.Mesh(haloGeo, haloMat);
+    handle.omegaHaloMesh.position.set(0, 0.08, -0.11);
+    handle.omegaAuraGroup.add(handle.omegaHaloMesh);
+
+    // 6 Fanned Curved Hydro-Fin Crests flanking the Sovereign's tide mantle (7 children total)
+    const finSpecs: ReadonlyArray<{ x: number; y: number; z: number; rz: number; sc: number; phase: number }> = [
+      { x: -0.78, y: 0.44, z: -0.05, rz: 0.52, sc: 0.52, phase: 0.0 },
+      { x: -0.92, y: 0.06, z: -0.04, rz: 0.92, sc: 0.62, phase: 0.9 },
+      { x: -0.82, y: -0.32, z: -0.03, rz: 1.32, sc: 0.54, phase: 1.8 },
+      { x: 0.78, y: 0.44, z: -0.05, rz: -0.52, sc: 0.52, phase: 0.45 },
+      { x: 0.92, y: 0.06, z: -0.04, rz: -0.92, sc: 0.62, phase: 1.35 },
+      { x: 0.82, y: -0.32, z: -0.03, rz: -1.32, sc: 0.54, phase: 2.25 },
+    ];
+    for (let i = 0; i < finSpecs.length; i++) {
+      const fs = finSpecs[i];
+      const fm = new THREE.Mesh(finGeo, hydroFinMat);
+      fm.position.set(fs.x, fs.y, fs.z);
+      fm.rotation.set(0.05, fs.x < 0 ? 0.14 : -0.14, fs.rz);
+      fm.scale.set(fs.x < 0 ? fs.sc : -fs.sc, fs.sc, fs.sc);
+      handle.omegaAuraGroup.add(fm);
+      handle.roninFanKatanas.push({
+        mesh: fm,
+        baseX: fs.x,
+        baseY: fs.y,
+        baseZ: fs.z,
+        baseRotZ: fs.rz,
+        outX: fs.x < 0 ? -0.35 : 0.35,
+        outY: 0.45,
+        phase: fs.phase,
+      });
+    }
+
+    handle.omegaAuraGroup.visible = true;
+    spritePivot.add(handle.omegaAuraGroup);
+
+    handle.omegaHandPivot = new THREE.Group();
+    handle.omegaHandPivot.position.set(0.22, spriteHeight * 0.52, 0.16);
+    handle.omegaHandWeaponMat = createEnergyWeaponMaterial();
+    handle.omegaHandWeaponMat.uniforms.uColor.value.set('#06b6d4');
+    handle.omegaHandWeaponMat.uniforms.uCoreColor.value.set('#ecfeff');
+    handle.omegaHandWeaponGeo = createLeviathanHydroFinGeometry();
+    handle.omegaHandWeaponMesh = new THREE.Mesh(handle.omegaHandWeaponGeo, handle.omegaHandWeaponMat);
+    handle.omegaHandWeaponMesh.scale.setScalar(1.08);
     handle.omegaHandPivot.add(handle.omegaHandWeaponMesh);
     handle.omegaHandPivot.visible = false;
     blitzHeroPivot.add(handle.omegaHandPivot);
@@ -545,6 +621,63 @@ export function createChibiBackAttachments(
 
     handle.omegaAuraGroup.visible = true;
     spritePivot.add(handle.omegaAuraGroup);
+  } else if (defId === 'paradox-twins') {
+    handle.omegaAuraGroup = new THREE.Group();
+    handle.omegaAuraGroup.position.set(0, spriteHeight * 0.56, -0.15);
+    const dualHaloMat = createParadoxDualHaloShaderMaterial();
+    const goldGearMat = createParadoxGoldGearShaderMaterial();
+    const crimsonChainMat = createParadoxCrimsonChainShaderMaterial();
+    handle.omegaAuraMat = goldGearMat;
+    handle.twinCustomMats.push(dualHaloMat, goldGearMat, crimsonChainMat);
+
+    const haloGeo = new THREE.PlaneGeometry(2.06, 2.06);
+    const gearGeo = createParadoxGoldGearGeometry();
+    const spikeGeo = createParadoxChainSpikeGeometry();
+    handle.twinCustomGeos.push(haloGeo, gearGeo, spikeGeo);
+
+    const haloDisc = new THREE.Mesh(haloGeo, dualHaloMat);
+    haloDisc.position.set(0, 0.05, -0.1);
+    handle.omegaHaloMesh = haloDisc;
+    handle.omegaAuraGroup.add(haloDisc);
+
+    const gearSpecs: Array<{ x: number; y: number; z: number; sc: number }> = [
+      { x: -0.56, y: 0.34, z: -0.04, sc: 0.48 },
+      { x: -0.62, y: -0.18, z: -0.06, sc: 0.36 },
+    ];
+    for (const gs of gearSpecs) {
+      const gm = new THREE.Mesh(gearGeo, goldGearMat);
+      gm.scale.setScalar(gs.sc);
+      gm.position.set(gs.x, gs.y, gs.z);
+      handle.omegaAuraGroup.add(gm);
+      handle.twinGearMeshes.push(gm);
+    }
+
+    const spikeAngles = [-0.46, -0.94, 0.52, -1.32];
+    for (let i = 0; i < spikeAngles.length; i++) {
+      const ang = spikeAngles[i];
+      const baseX = -Math.sin(ang) * 0.72;
+      const baseY = 0.08 + Math.cos(ang) * 0.52;
+      const baseZ = i % 2 === 0 ? -0.02 : -0.05;
+      const baseRotZ = ang * 0.88;
+      const sm = new THREE.Mesh(spikeGeo, crimsonChainMat);
+      sm.position.set(baseX, baseY, baseZ);
+      sm.rotation.set(0.04, i % 2 === 0 ? 0.12 : -0.12, baseRotZ);
+      sm.scale.setScalar(0.56 - (i % 2) * 0.08);
+      handle.omegaAuraGroup.add(sm);
+      handle.roninFanKatanas.push({
+        mesh: sm,
+        baseX,
+        baseY,
+        baseZ,
+        baseRotZ,
+        outX: -Math.sin(ang),
+        outY: Math.cos(ang),
+        phase: i * 0.75,
+      });
+    }
+
+    handle.omegaAuraGroup.visible = true;
+    spritePivot.add(handle.omegaAuraGroup);
   } else if (defId === 'glitch-cheshire') {
     handle.omegaAuraGroup = new THREE.Group();
     handle.omegaAuraGroup.position.set(0, spriteHeight * 0.55, -0.15);
@@ -777,6 +910,66 @@ export function createChibiBackAttachments(
         outX: -Math.sin(ang),
         outY: Math.cos(ang),
         phase: i * 0.65,
+      });
+    }
+    handle.omegaAuraGroup.visible = true;
+    spritePivot.add(handle.omegaAuraGroup);
+  } else if (defId === 'chrono-crystallis') {
+    handle.omegaAuraGroup = new THREE.Group();
+    handle.omegaAuraGroup.position.set(0, spriteHeight * 0.56, -0.15);
+    const clockHaloMat = createChronoCrystallisClockHaloBackShaderMaterial();
+    const crystalBackMat = createChronoCrystallisShardBackShaderMaterial();
+    handle.omegaAuraMat = crystalBackMat;
+    handle.twinCustomMats.push(clockHaloMat, crystalBackMat);
+
+    const discGeo = new THREE.PlaneGeometry(2.14, 2.14);
+    const gearGeo = createChronoCrystallisBrassGearGeometry();
+    const shardGeo = createChronoCrystallisCrystalShardGeometry();
+    handle.twinCustomGeos.push(discGeo, gearGeo, shardGeo);
+
+    const haloDisc = new THREE.Mesh(discGeo, clockHaloMat);
+    haloDisc.position.set(0, 0.05, -0.1);
+    handle.omegaHaloMesh = haloDisc;
+    handle.omegaAuraGroup.add(haloDisc);
+
+    const gearSpecs: Array<{ x: number; y: number; z: number; sc: number }> = [
+      { x: -0.58, y: 0.38, z: -0.04, sc: 0.62 },
+      { x: 0.56, y: -0.22, z: -0.05, sc: 0.52 },
+    ];
+    for (const gs of gearSpecs) {
+      const gm = new THREE.Mesh(gearGeo, crystalBackMat);
+      gm.scale.setScalar(gs.sc);
+      gm.position.set(gs.x, gs.y, gs.z);
+      handle.omegaAuraGroup.add(gm);
+      handle.twinGearMeshes.push(gm);
+    }
+
+    handle.omegaAuraGeo = shardGeo;
+    const shardAngles = [0.32, 0.78, 1.24, -0.32, -0.78, -1.24];
+    for (let i = 0; i < shardAngles.length; i++) {
+      const ang = shardAngles[i];
+      const tierIdx = i % 3;
+      const rad = 0.68 + (tierIdx % 2) * 0.08;
+      const baseX = -Math.sin(ang) * rad * 1.12;
+      const baseY = 0.08 + Math.cos(ang) * rad * 0.78;
+      const baseZ = tierIdx % 2 === 0 ? -0.02 : -0.05;
+      const baseRotZ = ang * 0.92;
+      const s = 0.66 - tierIdx * 0.04;
+
+      const sm = new THREE.Mesh(shardGeo, crystalBackMat);
+      sm.position.set(baseX, baseY, baseZ);
+      sm.rotation.set(0.04, ang > 0 ? -0.12 : 0.12, baseRotZ);
+      sm.scale.setScalar(s);
+      handle.omegaAuraGroup.add(sm);
+      handle.roninFanKatanas.push({
+        mesh: sm,
+        baseX,
+        baseY,
+        baseZ,
+        baseRotZ,
+        outX: -Math.sin(ang),
+        outY: Math.cos(ang),
+        phase: i * 0.72,
       });
     }
     handle.omegaAuraGroup.visible = true;
@@ -1190,14 +1383,15 @@ export function updateChibiBackAttachmentGroup(
     const isCheshire = defId === 'glitch-cheshire';
     const isMonochrome = defId === 'monochrome-saint';
     const isObsidianMonolith = defId === 'obsidian-sovereign';
+    const isLeviathanTide = defId === 'abyssal-leviathan';
     const isEpicTier = handle.tierRarity === 'epic';
     const isSecretTier = handle.tierRarity === 'secret';
     const isRareTier = handle.tierRarity === 'rare';
     const isCommonTier = handle.tierRarity === 'common';
     for (let k = 0; k < handle.roninFanKatanas.length; k++) {
       const slot = handle.roninFanKatanas[k];
-      const hover = Math.sin(elapsed * (isCommonTier ? 1.9 : 2.4) + slot.phase);
-      const expand = Math.sin(elapsed * 1.8 + slot.phase) * (isCommonTier ? 0.018 : 0.032);
+      const hover = Math.sin(elapsed * (isCommonTier ? 1.9 : isLeviathanTide ? 2.2 : 2.4) + slot.phase);
+      const expand = Math.sin(elapsed * 1.8 + slot.phase) * (isCommonTier ? 0.018 : isLeviathanTide ? 0.044 : 0.032);
       const glitchJump =
         isCheshire && Math.sin(elapsed * 19.0 + k * 2.7) > 0.86
           ? (k % 2 === 0 ? 1 : -1) * 0.042
@@ -1212,12 +1406,12 @@ export function updateChibiBackAttachmentGroup(
           : 0;
       slot.mesh.position.set(
         slot.baseX + slot.outX * expand + glitchJump + epicSnap + monolithTremor,
-        slot.baseY + hover * (isObsidianMonolith ? 0.068 : isCommonTier ? 0.024 : 0.044) + slot.outY * expand,
+        slot.baseY + hover * (isObsidianMonolith ? 0.068 : isLeviathanTide ? 0.056 : isCommonTier ? 0.024 : 0.044) + slot.outY * expand,
         slot.baseZ
       );
       slot.mesh.rotation.z = isMonochrome
         ? Math.sin(elapsed * 1.4 + slot.phase) * 0.014
-        : slot.baseRotZ + Math.sin(elapsed * 1.6 + slot.phase) * (isCommonTier ? 0.018 : 0.034);
+        : slot.baseRotZ + Math.sin(elapsed * 1.6 + slot.phase) * (isCommonTier ? 0.018 : isLeviathanTide ? 0.048 : 0.034);
       if (isRareTier) {
         slot.mesh.rotation.y = elapsed * (k % 2 === 0 ? 0.85 : -0.85);
       }
@@ -1226,6 +1420,9 @@ export function updateChibiBackAttachmentGroup(
       if (defId === 'obsidian-sovereign') {
         handle.omegaHaloMesh.position.y = 0.14 + Math.sin(elapsed * 2.1) * 0.022;
         handle.omegaHaloMesh.rotation.z = Math.sin(elapsed * 1.5) * 0.032;
+      } else if (defId === 'abyssal-leviathan') {
+        handle.omegaHaloMesh.position.y = 0.08 + Math.sin(elapsed * 2.0) * 0.024;
+        handle.omegaHaloMesh.rotation.z = elapsed * 0.42;
       } else if (defId === 'yukikage-twins') {
         handle.omegaHaloMesh.position.y = 0.26 + Math.sin(elapsed * 2.2) * 0.024;
         handle.omegaHaloMesh.rotation.set(0, 0, elapsed * 0.55);
@@ -1236,10 +1433,14 @@ export function updateChibiBackAttachmentGroup(
         handle.omegaHaloMesh.rotation.z = elapsed * 0.45;
       }
     }
-    if (handle.tierRarity === 'exotic' && handle.twinGearMeshes.length >= 2) {
+    if ((handle.tierRarity === 'exotic' || defId === 'paradox-twins' || defId === 'chrono-crystallis') && handle.twinGearMeshes.length >= 2) {
       for (let g = 0; g < handle.twinGearMeshes.length; g++) {
-        handle.twinGearMeshes[g].position.y = 0.42 + Math.sin(elapsed * 2.6 + g * 1.5) * 0.04;
-        handle.twinGearMeshes[g].rotation.y = elapsed * (g % 2 === 0 ? 1.4 : -1.4);
+        if (defId === 'paradox-twins' || defId === 'chrono-crystallis') {
+          handle.twinGearMeshes[g].rotation.z = elapsed * (g % 2 === 0 ? 1 : -1) * (2.6 + g * 0.9);
+        } else {
+          handle.twinGearMeshes[g].position.y = 0.42 + Math.sin(elapsed * 2.6 + g * 1.5) * 0.04;
+          handle.twinGearMeshes[g].rotation.y = elapsed * (g % 2 === 0 ? 1.4 : -1.4);
+        }
       }
     }
   } else if (handle.omegaOrbitKatanas.length > 0) {

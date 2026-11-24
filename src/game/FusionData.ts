@@ -150,6 +150,30 @@ export const FUSION_RECIPES: readonly FusionRecipeDef[] = [
     ],
     gemCost: 160_000,
   },
+  {
+    id: 'fusion-chrono-crystallis',
+    resultChibiId: 'chrono-crystallis',
+    title: 'Chrono Crystallis',
+    subtitle: 'Time-Crystal Synchro • 3-Unit Fusion',
+    accentColor: '#38bdf8',
+    glowColor: '#fbbf24',
+    upgradeCostScale: 1_500_000_000_000_000_000_000_000_000,
+    passive: {
+      stat: 'oreSellPct',
+      value: 2.5,
+      label: '+250% Ore Sell',
+    },
+    requiredMiners: [
+      { chibiId: 'crimson-adjudicator', count: 1 },
+      { chibiId: 'gilded-chainking', count: 1 },
+      { chibiId: 'amethyst-dracomech', count: 1 },
+    ],
+    requiredOres: [
+      { oreId: 'flareheart', count: 12 },
+      { oreId: 'elysianite', count: 12 },
+    ],
+    gemCost: 300_000,
+  },
 ] as const;
 
 export function getFusionRecipeById(id: string): FusionRecipeDef | undefined {

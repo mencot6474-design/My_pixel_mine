@@ -135,6 +135,22 @@ const TAB_MILESTONE_CONFIG: Record<
       passive: { kind: 'allDmgPct', value: 0.05, label: '+5% All DMG' },
     },
   },
+  solaris: {
+    half: { gems: 100000, enchantDice: 3 },
+    full: {
+      gems: 250000,
+      enchantDice: 8,
+      passive: { kind: 'oreDropPct', value: 0.05, label: '+5% Ore Drop' },
+    },
+  },
+  elysium: {
+    half: { gems: 160000, enchantDice: 4 },
+    full: {
+      gems: 400000,
+      enchantDice: 10,
+      passive: { kind: 'allDmgPct', value: 0.05, label: '+5% All DMG' },
+    },
+  },
   weather: {
     half: { gems: 5000, enchantDice: 1 },
     full: {

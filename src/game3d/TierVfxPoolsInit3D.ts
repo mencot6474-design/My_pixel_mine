@@ -4,6 +4,9 @@ import {
   createAetherMonarchCrownGeometry,
   createAetherMonarchCrownShaderMaterial,
   createAetherNexusSealShaderMaterial,
+  createChronoCrystallisPropGeometry,
+  createChronoCrystallisPropShaderMaterial,
+  createChronoCrystallisSealShaderMaterial,
   createArrowGeometry,
   createBladeMeshGeometry,
   createCheshireGlitchCardShaderMaterial,
@@ -113,6 +116,22 @@ export function firePodiumWeaponCastChoreography(
   const oy = origin.y + 1.45;
   const oz = origin.z - 0.12;
 
+  if (rarity === 'omega' && chibiId === 'abyssal-leviathan') {
+    [-0.55, 0, 0.55].forEach((dx, idx) => {
+      const end = new THREE.Vector3(dest.x + dx * 0.85, dest.y, dest.z);
+      ctx.spawnDirectedWeapon(
+        idx === 1 ? 'spear' : 'blade',
+        new THREE.Vector3(ox + dx, oy + 0.35 + (idx === 1 ? 0.35 : 0), oz),
+        end,
+        idx % 2 === 0 ? '#06b6d4' : '#67e8f9',
+        1.22,
+        0.24,
+        () => ctx.spawnSparks(end.x, end.y, end.z, '#67e8f9', '#06b6d4', 5, 5.2)
+      );
+    });
+    return;
+  }
+
   if (rarity === 'omega' && chibiId === 'obsidian-sovereign') {
     ctx.spawnDirectedWeapon(
       'greatsword',
@@ -169,6 +188,29 @@ export function firePodiumWeaponCastChoreography(
       );
       return;
     }
+    if (chibiId === 'paradox-twins') {
+      ctx.spawnWeapon({
+        kind: 'gear',
+        color: '#fbbf24',
+        coreColor: '#fef08a',
+        startPos: new THREE.Vector3(ox - 0.55, oy + 0.35, oz),
+        endPos: new THREE.Vector3(dest.x - 0.45, dest.y, dest.z),
+        startRot: new THREE.Euler(-Math.PI / 2, 0, 0),
+        endRot: new THREE.Euler(-Math.PI / 2, 0, Math.PI * 3),
+        scale: 1.08,
+        mode: 'swing',
+        life: 0.24,
+      });
+      ctx.spawnDirectedWeapon(
+        'blade',
+        new THREE.Vector3(ox + 0.55, oy + 0.35, oz),
+        new THREE.Vector3(dest.x + 0.45, dest.y, dest.z),
+        '#ef4444',
+        1.18,
+        0.22
+      );
+      return;
+    }
     const twinKind: 'kunai' | 'arrow' | 'blade' | 'spear' | 'crystal' =
       chibiId === 'yukikage-twins'
         ? 'kunai'
@@ -220,7 +262,9 @@ export function firePodiumWeaponCastChoreography(
               ? 'crystal'
               : chibiId === 'aether-monarch'
                 ? 'spear'
-                : 'blade';
+                : chibiId === 'chrono-crystallis'
+                  ? 'crystal'
+                  : 'blade';
     const [colA, colB]: [string, string] =
       chibiId === 'glitch-cheshire'
         ? ['#22d3ee', '#d946ef']
@@ -232,7 +276,9 @@ export function firePodiumWeaponCastChoreography(
               ? ['#facc15', '#38bdf8']
               : chibiId === 'aether-monarch'
                 ? ['#fbbf24', '#22d3ee']
-                : [colorHex, secondary];
+                : chibiId === 'chrono-crystallis'
+                  ? ['#38bdf8', '#fbbf24']
+                  : [colorHex, secondary];
     [-0.55, 0, 0.55].forEach((dx, idx) => {
       ctx.spawnDirectedWeapon(
         fusionKind,
@@ -365,6 +411,7 @@ export function createTierVfxPoolCollections(
     'monochrome-saint': [],
     'prism-seraph': [],
     'aether-monarch': [],
+    'chrono-crystallis': [],
   };
   const fusionProps: FusionPropSlot[] = [];
   const halcyonPillars: HalcyonPillarSlot[] = [];
@@ -404,6 +451,7 @@ export function createTierVfxPoolCollections(
   const monoObeliskGeo = createMonochromeObeliskGeometry();
   const prismCrystalGeo = createPrismOctahedronGeometry();
   const aetherCrownGeo = createAetherMonarchCrownGeometry();
+  const chronoCrystalGeo = createChronoCrystallisPropGeometry();
   const halcyonPillarGeo = createHalcyonRailPillarGeometry();
   const boltGeo = new THREE.PlaneGeometry(1, 1);
   boltGeo.translate(0, 0.5, 0);
@@ -417,7 +465,7 @@ export function createTierVfxPoolCollections(
   sharedGeos.push(
     slashGeo, domeGeo, beamGeo, vortexGeo, riftGeo, bladeGeo, arrowGeo, kunaiGeo, katanaGeo, spearGeo, crystalGeo, greatswordGeo, gearGeo, clockHandGeo,
     eclipseMonolithGeo, mirrorCageGeo, crescentMoonGeo, clocktowerGeo,
-    glitchCardGeo, thornLanceGeo, monoObeliskGeo, prismCrystalGeo, aetherCrownGeo, halcyonPillarGeo,
+    glitchCardGeo, thornLanceGeo, monoObeliskGeo, prismCrystalGeo, aetherCrownGeo, chronoCrystalGeo, halcyonPillarGeo,
     boltGeo, chunkGeo, quadGeo, orbGeo
   );
 
@@ -552,6 +600,7 @@ export function createTierVfxPoolCollections(
     'monochrome-saint': createMonochromeSanctuarySealShaderMaterial,
     'prism-seraph': createPrismRefractionSealShaderMaterial,
     'aether-monarch': createAetherNexusSealShaderMaterial,
+    'chrono-crystallis': createChronoCrystallisSealShaderMaterial,
   };
   for (const variant of Object.keys(fusionSealFactories) as FusionChibiVariant[]) {
     const makeMat = fusionSealFactories[variant];
@@ -600,6 +649,7 @@ export function createTierVfxPoolCollections(
   addFusionPropPool('monochrome-saint', monoObeliskGeo, createMonochromeJudgementObeliskShaderMaterial, 6);
   addFusionPropPool('prism-seraph', prismCrystalGeo, createPrismShardColumnShaderMaterial, 6);
   addFusionPropPool('aether-monarch', aetherCrownGeo, createAetherMonarchCrownShaderMaterial, 2);
+  addFusionPropPool('chrono-crystallis', chronoCrystalGeo, createChronoCrystallisPropShaderMaterial, 6);
 
   for (let i = 0; i < 2; i++) {
     const mat = createHalcyonOrbitalSealShaderMaterial();

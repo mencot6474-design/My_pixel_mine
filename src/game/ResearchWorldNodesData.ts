@@ -327,11 +327,11 @@ export const CRYSTAL_NODES = buildStandardWorldTree({
     apexDmgPerLv: 0.55,
   },
   costs: {
-    root: 6_000_000,
-    tier1: 20_000_000,
-    dense: 480_000_000,
-    tier2: 80_000_000,
-    apex: 600_000_000,
+    root: 15_000_000,
+    tier1: 50_000_000,
+    dense: 1_200_000_000,
+    tier2: 200_000_000,
+    apex: 1_500_000_000,
   },
 });
 
@@ -366,11 +366,11 @@ export const MAGMA_NODES = buildStandardWorldTree({
     apexDmgPerLv: 0.65,
   },
   costs: {
-    root: 6_000_000_000,
-    tier1: 20_000_000_000,
-    dense: 480_000_000_000,
-    tier2: 80_000_000_000,
-    apex: 600_000_000_000,
+    root: 36_000_000_000,
+    tier1: 120_000_000_000,
+    dense: 2_880_000_000_000,
+    tier2: 480_000_000_000,
+    apex: 3_600_000_000_000,
   },
 });
 
@@ -405,11 +405,11 @@ export const RUINS_NODES = buildStandardWorldTree({
     apexDmgPerLv: 0.75,
   },
   costs: {
-    root: 6_000_000_000_000,
-    tier1: 20_000_000_000_000,
-    dense: 480_000_000_000_000,
-    tier2: 80_000_000_000_000,
-    apex: 600_000_000_000_000,
+    root: 90_000_000_000_000,
+    tier1: 300_000_000_000_000,
+    dense: 7_200_000_000_000_000,
+    tier2: 1_200_000_000_000_000,
+    apex: 9_000_000_000_000_000,
   },
 });
 
@@ -444,11 +444,11 @@ export const VOIDREACH_NODES = buildStandardWorldTree({
     apexDmgPerLv: 0.85,
   },
   costs: {
-    root: 6_000_000_000_000_000,
-    tier1: 20_000_000_000_000_000,
-    dense: 480_000_000_000_000_000,
-    tier2: 80_000_000_000_000_000,
-    apex: 600_000_000_000_000_000,
+    root: 210_000_000_000_000_000,
+    tier1: 700_000_000_000_000_000,
+    dense: 16_800_000_000_000_000_000,
+    tier2: 2_800_000_000_000_000_000,
+    apex: 21_000_000_000_000_000_000,
   },
 });
 
@@ -483,11 +483,11 @@ export const STARWELL_NODES = buildStandardWorldTree({
     apexDmgPerLv: 0.95,
   },
   costs: {
-    root: 6_000_000_000_000_000_000,
-    tier1: 20_000_000_000_000_000_000,
-    dense: 480_000_000_000_000_000_000,
-    tier2: 80_000_000_000_000_000_000,
-    apex: 600_000_000_000_000_000_000,
+    root: 480_000_000_000_000_000_000,
+    tier1: 1_600_000_000_000_000_000_000,
+    dense: 38_400_000_000_000_000_000_000,
+    tier2: 6_400_000_000_000_000_000_000,
+    apex: 48_000_000_000_000_000_000_000,
   },
 });
 
@@ -522,11 +522,11 @@ export const ABYSSAL_NODES = buildStandardWorldTree({
     apexDmgPerLv: 1.05,
   },
   costs: {
-    root: 6_000_000_000_000_000_000_000,
-    tier1: 20_000_000_000_000_000_000_000,
-    dense: 480_000_000_000_000_000_000_000,
-    tier2: 80_000_000_000_000_000_000_000,
-    apex: 600_000_000_000_000_000_000_000,
+    root: 1_080_000_000_000_000_000_000_000,
+    tier1: 3_600_000_000_000_000_000_000_000,
+    dense: 86_400_000_000_000_000_000_000_000,
+    tier2: 14_400_000_000_000_000_000_000_000,
+    apex: 108_000_000_000_000_000_000_000_000,
   },
 });
 
@@ -561,11 +561,89 @@ export const CHRONO_NODES = buildStandardWorldTree({
     apexDmgPerLv: 1.15,
   },
   costs: {
-    root: 6_000_000_000_000_000_000_000_000,
-    tier1: 20_000_000_000_000_000_000_000_000,
-    dense: 480_000_000_000_000_000_000_000_000,
-    tier2: 80_000_000_000_000_000_000_000_000,
-    apex: 600_000_000_000_000_000_000_000_000,
+    root: 2_400_000_000_000_000_000_000_000_000,
+    tier1: 8_000_000_000_000_000_000_000_000_000,
+    dense: 192_000_000_000_000_000_000_000_000_000,
+    tier2: 32_000_000_000_000_000_000_000_000_000,
+    apex: 240_000_000_000_000_000_000_000_000_000,
+  },
+});
+
+export const SOLARIS_NODES = buildStandardWorldTree({
+  treeId: 'solaris',
+  worldLabel: 'Solaris Sanctum',
+  prefix: 'sl',
+  names: {
+    root: 'Corona Seams',
+    dmg: 'Solar Flare Strike',
+    oreLuck: 'Sunburst Fortune',
+    respawn: 'Plasma Cycle',
+    value: 'Solaris Appraisal',
+    fragility: 'Flare Fracture',
+    dense: 'Dense Sun Core',
+    output: 'Prism Surge',
+    charLuck: 'Helios Beacon',
+    find: 'Corona Lens',
+    chest: 'Sunforge Vault',
+    apex: 'Solarcrown Mastery',
+  },
+  stats: {
+    dmgPerLv: 0.7,
+    oreLuckPerLv: 2.3,
+    respawnPerLv: 0.6,
+    valuePerLv: 0.38,
+    fragilityPerLv: 0.16,
+    outputPerLv: 0.33,
+    charLuckPerLv: 1.6,
+    findPerLv: 0.14,
+    chestPerLv: 3_500_000,
+    apexDmgPerLv: 1.25,
+  },
+  costs: {
+    root: 5_400_000_000_000_000_000_000_000_000_000,
+    tier1: 18_000_000_000_000_000_000_000_000_000_000,
+    dense: 432_000_000_000_000_000_000_000_000_000_000,
+    tier2: 72_000_000_000_000_000_000_000_000_000_000,
+    apex: 540_000_000_000_000_000_000_000_000_000_000,
+  },
+});
+
+export const ELYSIUM_NODES = buildStandardWorldTree({
+  treeId: 'elysium',
+  worldLabel: 'Elysium Core',
+  prefix: 'el',
+  names: {
+    root: 'Origin Veins',
+    dmg: 'Genesis Force',
+    oreLuck: 'Elysian Fortune',
+    respawn: 'Aurora Revival',
+    value: 'Genesis Appraisal',
+    fragility: 'Prism Cleave',
+    dense: 'Dense Origin Core',
+    output: 'Seraphic Cascade',
+    charLuck: 'Elysium Halo',
+    find: 'Origin Sight',
+    chest: 'Celestial Treasury',
+    apex: 'Genesisheart Mastery',
+  },
+  stats: {
+    dmgPerLv: 0.75,
+    oreLuckPerLv: 2.75,
+    respawnPerLv: 0.65,
+    valuePerLv: 0.42,
+    fragilityPerLv: 0.17,
+    outputPerLv: 0.36,
+    charLuckPerLv: 1.9,
+    findPerLv: 0.16,
+    chestPerLv: 6_000_000,
+    apexDmgPerLv: 1.35,
+  },
+  costs: {
+    root: 12_000_000_000_000_000_000_000_000_000_000_000,
+    tier1: 40_000_000_000_000_000_000_000_000_000_000_000,
+    dense: 960_000_000_000_000_000_000_000_000_000_000_000,
+    tier2: 160_000_000_000_000_000_000_000_000_000_000_000,
+    apex: 1_200_000_000_000_000_000_000_000_000_000_000_000,
   },
 });
 
