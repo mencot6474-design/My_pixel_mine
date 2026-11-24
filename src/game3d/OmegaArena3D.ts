@@ -699,6 +699,15 @@ export class OmegaArena3D {
           ez: a.ez,
         });
       }
+      this.tierVfx.fireBarrageHitSlash({
+        x: a.ex,
+        y: a.ey,
+        z: a.ez,
+        colorHex: a.accentColor,
+        beatIndex: 0,
+        isFinisher: false,
+        scale: 1.38,
+      });
       onStrike?.({
         slotIndex: a.slotIndex,
         attackInterval: a.attackInterval * BARRAGE_BEAT_WEIGHTS[0],
@@ -707,6 +716,8 @@ export class OmegaArena3D {
         wy: a.ey,
         wz: a.ez,
         accentColor: a.accentColor,
+        beatIndex: 0,
+        isFinisher: false,
       });
     };
 
@@ -786,6 +797,15 @@ export class OmegaArena3D {
           this.pendingBarrages.splice(i, 1);
           const isFinisher = b.beatIndex === BARRAGE_BEAT_WEIGHTS.length - 1;
           this.bossHitBounce = Math.max(this.bossHitBounce, isFinisher ? 0.14 : 0.08);
+          this.tierVfx.fireBarrageHitSlash({
+            x: b.ex,
+            y: b.ey,
+            z: b.ez,
+            colorHex: b.accentColor,
+            beatIndex: b.beatIndex,
+            isFinisher,
+            scale: 1.38,
+          });
           this.impactFx.spawnImpact({
             targetX: b.ex,
             targetY: b.ey,
@@ -805,6 +825,8 @@ export class OmegaArena3D {
             wy: b.ey,
             wz: b.ez,
             accentColor: b.accentColor,
+            beatIndex: b.beatIndex,
+            isFinisher,
           });
         }
       }

@@ -174,7 +174,9 @@ export const TW_HOTBAR_SLOT =
   'mam-hotbar-slot relative w-[74px] h-[76px] @max-[860px]:w-[60px] @max-[860px]:h-[62px] overflow-hidden cursor-pointer flex flex-col items-center justify-between p-0.5';
 export const TW_HOTBAR_NUM = 'mam-hotbar-keycap';
 export const TW_TOAST_STACK =
-  'absolute bottom-[118px] @max-[640px]:bottom-[158px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none z-50';
+  'absolute top-[78px] @max-[720px]:top-[66px] [[data-hud-compact=true]_&]:top-[158px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none z-50';
+export const TW_TOAST_STACK_ARENA =
+  'absolute top-[68px] left-3 @max-[660px]:top-[224px] flex flex-col items-start gap-1 pointer-events-none z-50';
 export const TW_TOAST_ITEM =
   'px-4 py-1.5 rounded-xl bg-[#fff8e7] border-[2.5px] border-[#14111d] shadow-none text-[14px] font-black text-[#14111d]';
 export const TW_ACTIVE_POT_PILL =

@@ -344,7 +344,7 @@ async function bootstrap(): Promise<void> {
       }
       hud?.notifyTutorialOreBroken();
     },
-    onOreDamage: (dmg, sx, sy, isClick, isCrit, pitEventKind, isMeteor, isPerfect) => {
+    onOreDamage: (dmg, sx, sy, isClick, isCrit, pitEventKind, isMeteor, isPerfect, beatIndex, isFinisher) => {
       hud?.spawnDamagePopup(dmg, sx, sy, isClick, isCrit, isPerfect);
       if (isClick) {
         triggerTapCombo(Boolean(isCrit || isPerfect), sx, sy);
@@ -370,7 +370,11 @@ async function bootstrap(): Promise<void> {
           );
         }
       } else {
-        audio.playOreHit(false);
+        if (beatIndex !== undefined) {
+          audio.playBarrageHitSfx(beatIndex, Boolean(isCrit), Boolean(isFinisher));
+        } else if (scene.getMode() === 'mine') {
+          audio.playOreHit(false);
+        }
         if (isMeteor) {
           gameState.chargeOverclock(OVERCLOCK_CHIBI_METEOR_CHARGE);
         }
@@ -432,8 +436,8 @@ async function bootstrap(): Promise<void> {
       hud?.updateAltarAnchors(anchors);
     },
     onTowerTargetClick: (targetOreIndex, opts) => hud?.handleTowerTargetClick(targetOreIndex, opts),
-    onTowerFighterStrike: (slotIndex, targetOreIndex, attackInterval) =>
-      hud?.handleTowerFighterStrike(slotIndex, targetOreIndex, attackInterval),
+    onTowerFighterStrike: (slotIndex, targetOreIndex, attackInterval, beatIndex, isFinisher) =>
+      hud?.handleTowerFighterStrike(slotIndex, targetOreIndex, attackInterval, beatIndex, isFinisher),
     onTowerOreBars: (bars) => {
       hud?.updateTowerOreBars(bars);
     },
@@ -443,8 +447,8 @@ async function bootstrap(): Promise<void> {
       audio.playOreBreak('geode');
       audio.playCrystalChord('meteor');
     },
-    onOmegaFighterStrike: (slotIndex, attackInterval) =>
-      hud?.handleOmegaFighterStrike(slotIndex, attackInterval),
+    onOmegaFighterStrike: (slotIndex, attackInterval, beatIndex, isFinisher) =>
+      hud?.handleOmegaFighterStrike(slotIndex, attackInterval, beatIndex, isFinisher),
     onOmegaArenaOverlay: (data) => {
       hud?.updateOmegaArenaOverlay(data);
     },

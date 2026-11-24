@@ -12,6 +12,16 @@ export interface SlashSlot {
   s1: number;
   spinSpeed: number;
 }
+export interface BarrageLineSlot {
+  mesh: THREE.Mesh;
+  mat: THREE.ShaderMaterial;
+  active: boolean;
+  age: number;
+  life: number;
+  roll: number;
+  len: number;
+  thickness: number;
+}
 export interface DomeSlot {
   mesh: THREE.Mesh;
   mat: THREE.ShaderMaterial;
@@ -239,6 +249,7 @@ export interface TierVfxPoolUpdateState {
   time: number;
   events: Array<{ delay: number; fn: () => void }>;
   slashes: SlashSlot[];
+  barrageLines: BarrageLineSlot[];
   domes: DomeSlot[];
   beams: BeamSlot[];
   vortices: VortexSlot[];
@@ -302,6 +313,19 @@ for (let i = 0; i < state.slashes.length; i++) {
   s.mesh.scale.setScalar(sc);
   s.mesh.rotation.y += s.spinSpeed * dt;
   if (p >= 1) { s.active = false; s.mesh.visible = false; }
+}
+
+for (let i = 0; i < state.barrageLines.length; i++) {
+  const b = state.barrageLines[i];
+  if (!b.active) continue;
+  b.age += dt;
+  const p = Math.min(1, b.age / b.life);
+  b.mat.uniforms.uProgress.value = p;
+  b.mesh.quaternion.copy(camera.quaternion);
+  b.mesh.rotateZ(b.roll);
+  const grow = 0.82 + 0.24 * easeOutCubic(Math.min(1, p * 2.2));
+  b.mesh.scale.set(b.len * grow, b.thickness, 1);
+  if (p >= 1) { b.active = false; b.mesh.visible = false; }
 }
 
 for (let i = 0; i < state.domes.length; i++) {

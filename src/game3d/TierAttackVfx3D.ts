@@ -51,6 +51,7 @@ import {
   type PodiumWeaponCastOpts,
 } from './TierVfxPoolsInit3D';
 import {
+  type BarrageLineSlot,
   type BeamSlot,
   type BoltSlot,
   type ClockDialSlot,
@@ -112,6 +113,7 @@ export class TierAttackVfxPool3D {
 
   private readonly sharedGeos: THREE.BufferGeometry[];
   private readonly slashes: SlashSlot[];
+  private readonly barrageLines: BarrageLineSlot[];
   private readonly domes: DomeSlot[];
   private readonly beams: BeamSlot[];
   private readonly vortices: VortexSlot[];
@@ -143,6 +145,7 @@ export class TierAttackVfxPool3D {
   private time = 0;
   private activeTargetFloorY = 0;
   private disposed = false;
+  private lastCamera?: THREE.Camera;
 
   private readonly tmpDir = new THREE.Vector3();
   private readonly tmpUp = new THREE.Vector3(0, 1, 0);
@@ -169,6 +172,7 @@ export class TierAttackVfxPool3D {
     const pools = createTierVfxPoolCollections(this.group, this.streakTex);
     this.sharedGeos = pools.sharedGeos;
     this.slashes = pools.slashes;
+    this.barrageLines = pools.barrageLines;
     this.domes = pools.domes;
     this.beams = pools.beams;
     this.vortices = pools.vortices;
@@ -199,6 +203,7 @@ export class TierAttackVfxPool3D {
       time: 0,
       events: this.events,
       slashes: this.slashes,
+      barrageLines: this.barrageLines,
       domes: this.domes,
       beams: this.beams,
       vortices: this.vortices,
@@ -355,6 +360,7 @@ export class TierAttackVfxPool3D {
       }
     };
     resetArr(this.slashes);
+    resetArr(this.barrageLines);
     resetArr(this.domes);
     resetArr(this.beams);
     resetArr(this.vortices);
@@ -1047,6 +1053,51 @@ export class TierAttackVfxPool3D {
 
 
   /** Launches bespoke 3D weapons directly from behind the podium chibi toward the target(s). */
+  /**
+   * Spawns a single razor-thin Crimson-style GLSL slash line directly across an ore or boss
+   * on each barrage hit so multi-hit spam looks crisp without obscuring underlying shaders.
+   */
+  public fireBarrageHitSlash(opts: {
+    x: number;
+    y: number;
+    z: number;
+    colorHex: string;
+    secondaryHex?: string;
+    beatIndex: number;
+    isFinisher?: boolean;
+    scale?: number;
+  }): void {
+    if (this.disposed) return;
+    const slot = this.barrageLines.find((b) => !b.active) ?? this.barrageLines[0];
+    if (!slot) return;
+    const beat = Math.max(0, Math.min(6, Math.floor(opts.beatIndex)));
+    const isFinisher = Boolean(opts.isFinisher);
+    const dirSign = beat % 2 === 0 ? 1 : -1;
+    const scale = opts.scale ?? 1.0;
+
+    slot.active = true;
+    slot.age = 0;
+    slot.life = isFinisher ? 0.30 : 0.24;
+    slot.roll = dirSign * (0.58 + ((beat * 3) % 4) * 0.22);
+    slot.len = (isFinisher ? 3.55 : 2.75 + beat * 0.06) * scale;
+    slot.thickness = (isFinisher ? 1.48 : 1.18) * scale;
+    slot.mesh.position.set(
+      opts.x + (Math.random() - 0.5) * 0.22,
+      opts.y + (Math.random() - 0.5) * 0.18,
+      opts.z + 0.18
+    );
+    if (this.lastCamera) {
+      slot.mesh.quaternion.copy(this.lastCamera.quaternion);
+      slot.mesh.rotateZ(slot.roll);
+    } else {
+      slot.mesh.rotation.set(0, 0, slot.roll);
+    }
+    slot.mesh.scale.set(slot.len * 0.85, slot.thickness, 1);
+    slot.mat.uniforms.uProgress.value = 0;
+    slot.mat.uniforms.uColor.value.set(opts.colorHex);
+    slot.mesh.visible = true;
+  }
+
   public firePodiumWeaponCast(opts: PodiumWeaponCastOpts): void {
     firePodiumWeaponCastChoreography(this.getChoreoContext(), opts);
   }
@@ -1057,6 +1108,7 @@ export class TierAttackVfxPool3D {
   }
 
   public update(dtSec: number, camera: THREE.Camera): void {
+    this.lastCamera = camera;
     this.updateState.disposed = this.disposed;
     this.updateState.time = this.time;
     stepTierAttackVfxPool(this.updateState, dtSec, camera);
@@ -1083,6 +1135,7 @@ export class TierAttackVfxPool3D {
     this.yukikageTwinsSkillPool.dispose();
     const mats = new Set<THREE.Material>();
     for (const s of this.slashes) mats.add(s.mat);
+    for (const b of this.barrageLines) mats.add(b.mat);
     for (const d of this.domes) mats.add(d.mat);
     for (const b of this.beams) mats.add(b.mat);
     for (const v of this.vortices) mats.add(v.mat);

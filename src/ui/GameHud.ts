@@ -52,6 +52,7 @@ import {
   renderToastBannerHtml,
   restoreRootScrolls,
   TW_TOAST_STACK,
+  TW_TOAST_STACK_ARENA,
 } from './HudShared';
 import { OfflineModalUi } from './OfflineModalUi';
 import { OmegaArenaHudUi } from './OmegaArenaHudUi';
@@ -699,9 +700,17 @@ export class GameHud {
   public handleTowerFighterStrike(
     slotIndex: number,
     targetOreIndex: number | null,
-    attackInterval: number
+    attackInterval: number,
+    beatIndex?: number,
+    isFinisher?: boolean
   ): { dmg: number; broken?: boolean; isCrit?: boolean } | undefined {
-    return this.towerBridge.handleTowerFighterStrike(slotIndex, targetOreIndex, attackInterval);
+    return this.towerBridge.handleTowerFighterStrike(
+      slotIndex,
+      targetOreIndex,
+      attackInterval,
+      beatIndex,
+      isFinisher
+    );
   }
 
   public handleTowerMonolithClick(): { dmg: number } | undefined {
@@ -765,7 +774,8 @@ export class GameHud {
   }
 
   private renderToastStack(): string {
-    return `<div class="${TW_TOAST_STACK}" data-toast-stack="true"></div>`;
+    const cls = this.sceneMode === 'tower' || this.sceneMode === 'omega' ? TW_TOAST_STACK_ARENA : TW_TOAST_STACK;
+    return `<div class="${cls}" data-toast-stack="true"></div>`;
   }
 
   private updateViewportScale(): void {
@@ -945,8 +955,13 @@ export class GameHud {
     });
   }
 
-  public handleOmegaFighterStrike(slotIndex: number, attackInterval: number) {
-    return this.omegaBridge.handleOmegaFighterStrike(slotIndex, attackInterval);
+  public handleOmegaFighterStrike(
+    slotIndex: number,
+    attackInterval: number,
+    beatIndex?: number,
+    isFinisher?: boolean
+  ) {
+    return this.omegaBridge.handleOmegaFighterStrike(slotIndex, attackInterval, beatIndex, isFinisher);
   }
 
   public handleOmegaTargetClick(targetId: string): void {

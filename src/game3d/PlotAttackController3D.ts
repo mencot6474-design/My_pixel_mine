@@ -26,6 +26,7 @@ export { getChibiAttackStyle, type PlotAttackStyle };
 interface PendingBlitzStrike {
   slotIndex: number;
   targetId: number;
+  beatIndex: number;
   dmg: number;
   comboStep: number;
   accentColor: string;
@@ -53,7 +54,9 @@ export type PlotOreHitCb = (
   worldY: number,
   worldZ: number,
   isMeteor?: boolean,
-  isCrit?: boolean
+  isCrit?: boolean,
+  beatIndex?: number,
+  isFinisher?: boolean
 ) => void;
 
 interface PlotUnitState {
@@ -90,32 +93,9 @@ function getMineAttackIntervalSec(miningMult: number): number {
   return Math.max(CHIBI_ATTACK_ANIM_SEC, Math.min(2.85, 2.85 / (1 + (safeMult - 1) * 0.15)));
 }
 
-function computeZoneWideCenter(
-  target: WorldPoint3,
-  allTargets: readonly WorldPoint3[]
-): WorldPoint3 {
-  if (allTargets.length === 0) return target;
-  let cx = 0;
-  let cy = 0;
-  let cz = 0;
-  for (let i = 0; i < allTargets.length; i++) {
-    cx += allTargets[i].x;
-    cy += allTargets[i].y;
-    cz += allTargets[i].z;
-  }
-  cx /= allTargets.length;
-  cy /= allTargets.length;
-  cz /= allTargets.length;
-  // Blend 68% target stone + 32% pit center and clamp inside inner colosseum core (r <= 2.35m)
-  let bx = target.x * 0.68 + cx * 0.32;
-  let dz = (target.z * 0.68 + cz * 0.32) - PIT_CENTER_Z;
-  const dist = Math.hypot(bx, dz);
-  if (dist > 2.35) {
-    const k = 2.35 / dist;
-    bx *= k;
-    dz *= k;
-  }
-  return { x: bx, y: target.y * 0.68 + cy * 0.32, z: PIT_CENTER_Z + dz };
+/** Locks true AoE domain skills (fusion/twin/omega) cleanly to the circular Mine Pit center. */
+function computeZoneWideCenter(): WorldPoint3 {
+  return { x: 0, y: PIT_FLOOR_Y, z: PIT_CENTER_Z };
 }
 
 function computeSafePitAreaScale(center: WorldPoint3): number {
@@ -297,7 +277,8 @@ export class PlotAttackController3D {
     critMult = 2.25,
     rarity = 'common',
     heavy = false,
-    unit?: PlotUnitState
+    unit?: PlotUnitState,
+    beatIndex = 0
   ): void {
     const alive = pit.getAliveNodesInfo();
     if (alive.length === 0) return;
@@ -371,7 +352,25 @@ export class PlotAttackController3D {
 
       const hitY = hitNodeTarget.worldY + 0.7;
       if (renderVisuals) {
-        onOreHit?.(hitRes.dmgDealt, hitNodeTarget.worldX, hitY, hitNodeTarget.worldZ, hitRes.isMeteor, isCrit);
+        this.tierVfx.fireBarrageHitSlash({
+          x: hitNodeTarget.worldX,
+          y: hitNodeTarget.worldY + 0.72,
+          z: hitNodeTarget.worldZ,
+          colorHex: accentColor,
+          beatIndex,
+          isFinisher: heavy,
+          scale: hitNodeTarget.isMeteor ? 1.35 : 0.96,
+        });
+        onOreHit?.(
+          hitRes.dmgDealt,
+          hitNodeTarget.worldX,
+          hitY,
+          hitNodeTarget.worldZ,
+          hitRes.isMeteor,
+          isCrit,
+          beatIndex,
+          heavy
+        );
       }
       if (hitRes.broken) {
         this.tmpWorldPos.x = hitNodeTarget.worldX;
@@ -409,7 +408,7 @@ export class PlotAttackController3D {
         }
         const speedScale = computeAttackVfxSpeedScale(a.attackInterval);
         const targetPt: WorldPoint3 = { x: a.ex, y: Math.max(PIT_FLOOR_Y, a.ey - 0.65), z: a.ez };
-        const wideCenter = computeZoneWideCenter(targetPt, this.alivePointScratch);
+        const wideCenter = computeZoneWideCenter();
         const areaScale = computeSafePitAreaScale(wideCenter);
         this.tierVfx.fireTierAttack({
           rarity: unit.def.rarity,
@@ -445,7 +444,8 @@ export class PlotAttackController3D {
       arrivalUnit?.critMult ?? 2.25,
       arrivalUnit?.def.rarity ?? 'common',
       Boolean(a.isFinisher),
-      arrivalUnit
+      arrivalUnit,
+      a.beatIndex
     );
   }
 
@@ -463,7 +463,7 @@ export class PlotAttackController3D {
       this.alivePointScratch.push({ x: an.worldX, y: an.worldY, z: an.worldZ });
     }
     const targetPt: WorldPoint3 = { x: target.worldX, y: target.worldY, z: target.worldZ };
-    const wideCenter = computeZoneWideCenter(targetPt, this.alivePointScratch);
+    const wideCenter = computeZoneWideCenter();
     const areaScale = computeSafePitAreaScale(wideCenter);
     const accentColor = ped.getActiveAccentColor();
 
@@ -498,6 +498,7 @@ export class PlotAttackController3D {
       this.pendingStrikes.push({
         slotIndex: unit.slotIndex,
         targetId: target.id,
+        beatIndex: bi,
         dmg: beatDmg,
         comboStep: isFinisher ? 2 : (unit.comboStep + bi) % 2,
         accentColor,

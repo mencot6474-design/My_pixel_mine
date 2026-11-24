@@ -134,12 +134,25 @@ export class MineSceneProjector {
     isCrit = false,
     pitEventKind?: PitEventKind,
     isMeteor?: boolean,
-    isPerfect = false
+    isPerfect = false,
+    beatIndex?: number,
+    isFinisher?: boolean
   ): void {
     if (!this.ctx.callbacks.onOreDamage || dmg <= 0) return;
     const pt = this.projectWorldToScreen(wx, wy, wz);
     if (!pt) return;
-    this.ctx.callbacks.onOreDamage(dmg, pt.x, pt.y, isClick, isCrit, pitEventKind, isMeteor, isPerfect);
+    this.ctx.callbacks.onOreDamage(
+      dmg,
+      pt.x,
+      pt.y,
+      isClick,
+      isCrit,
+      pitEventKind,
+      isMeteor,
+      isPerfect,
+      beatIndex,
+      isFinisher
+    );
   }
 
   public emitPlotAnchors(): void {

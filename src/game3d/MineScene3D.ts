@@ -497,8 +497,8 @@ export class MineScene3D {
         this.callbacks.onOmegaEntranceSlam?.();
       },
       onOreBroken: this.callbacks.onOreBroken,
-      emitDamageScreen: (dmg, wx, wy, wz, isClick, isCrit, pitEventKind, isMeteor) =>
-        this.emitDamageScreen(dmg, wx, wy, wz, isClick, isCrit, pitEventKind, isMeteor),
+      emitDamageScreen: (dmg, wx, wy, wz, isClick, isCrit, pitEventKind, isMeteor, isPerfect, beatIndex, isFinisher) =>
+        this.emitDamageScreen(dmg, wx, wy, wz, isClick, isCrit, pitEventKind, isMeteor, isPerfect, beatIndex, isFinisher),
       projectWorldToScreen: (wx, wy, wz) => this.projectWorldToScreen(wx, wy, wz),
     });
 
@@ -558,8 +558,32 @@ export class MineScene3D {
   private projectWorldToScreen(wx: number, wy: number, wz: number): { x: number; y: number } | null {
     return this.projector.projectWorldToScreen(wx, wy, wz);
   }
-  private emitDamageScreen(dmg: number, wx: number, wy: number, wz: number, isClick: boolean, isCrit = false, pitEventKind?: PitEventKind, isMeteor?: boolean, isPerfect = false): void {
-    this.projector.emitDamageScreen(dmg, wx, wy, wz, isClick, isCrit, pitEventKind, isMeteor, isPerfect);
+  private emitDamageScreen(
+    dmg: number,
+    wx: number,
+    wy: number,
+    wz: number,
+    isClick: boolean,
+    isCrit = false,
+    pitEventKind?: PitEventKind,
+    isMeteor?: boolean,
+    isPerfect = false,
+    beatIndex?: number,
+    isFinisher?: boolean
+  ): void {
+    this.projector.emitDamageScreen(
+      dmg,
+      wx,
+      wy,
+      wz,
+      isClick,
+      isCrit,
+      pitEventKind,
+      isMeteor,
+      isPerfect,
+      beatIndex,
+      isFinisher
+    );
   }
   public setMode(mode: SceneMode): void {
     const modeChanged = this.mode !== mode;

@@ -51,6 +51,7 @@ import {
   type FusionChibiVariant,
 } from './MeshFx3D';
 import type {
+  BarrageLineSlot,
   BeamSlot,
   BoltSlot,
   ClockDialSlot,
@@ -272,12 +273,55 @@ export function firePodiumWeaponCastChoreography(
   );
 }
 
+export function createBarrageRazorLineMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uProgress: { value: 0 },
+      uColor: { value: new THREE.Color('#38bdf8') },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uProgress;
+      uniform vec3 uColor;
+      varying vec2 vUv;
+      void main() {
+        vec2 p = (vUv - 0.5) * 2.0;
+        float sweep = mix(-1.05, 1.15, smoothstep(0.0, 0.18, uProgress));
+        float fade = 1.0 - smoothstep(0.38, 1.0, uProgress);
+        float tipMask = smoothstep(1.0, 0.42, abs(p.x)) * smoothstep(sweep + 0.14, sweep - 0.08, p.x);
+        float taper = mix(0.24, 1.0, smoothstep(1.0, 0.18, abs(p.x)));
+        float d = abs(p.y) / max(0.20, taper);
+        float core = smoothstep(0.052, 0.010, d);
+        float needle = (0.016 / (d + 0.008)) * smoothstep(0.26, 0.0, d);
+        float aura = (0.048 / (d + 0.032)) * smoothstep(0.72, 0.0, d);
+        float intensity = (core * 1.2 + needle * 0.8 + aura * 0.65) * tipMask * fade;
+        float alpha = clamp(intensity, 0.0, 1.0);
+        if (alpha < 0.015) discard;
+        vec3 col = uColor * clamp(aura * 1.45 + needle * 0.75, 0.0, 1.75) + vec3(1.0) * clamp(core * 1.4 + needle * 0.45, 0.0, 1.6);
+        gl_FragColor = vec4(col, alpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+  });
+}
+
 export function createTierVfxPoolCollections(
   group: THREE.Group,
   streakTex: THREE.Texture
 ): {
   sharedGeos: THREE.BufferGeometry[];
   slashes: SlashSlot[];
+  barrageLines: BarrageLineSlot[];
   domes: DomeSlot[];
   beams: BeamSlot[];
   vortices: VortexSlot[];
@@ -305,6 +349,7 @@ export function createTierVfxPoolCollections(
 } {
   const sharedGeos: THREE.BufferGeometry[] = [];
   const slashes: SlashSlot[] = [];
+  const barrageLines: BarrageLineSlot[] = [];
   const domes: DomeSlot[] = [];
   const beams: BeamSlot[] = [];
   const vortices: VortexSlot[] = [];
@@ -382,6 +427,25 @@ export function createTierVfxPoolCollections(
     mesh.visible = false;
     group.add(mesh);
     slashes.push({ mesh, mat, active: false, age: 0, life: 0.4, s0: 1, s1: 1, spinSpeed: 0 });
+  }
+
+  for (let i = 0; i < 24; i++) {
+    const mat = createBarrageRazorLineMaterial();
+    const mesh = new THREE.Mesh(quadGeo, mat);
+    mesh.visible = false;
+    mesh.renderOrder = 24;
+    mesh.frustumCulled = false;
+    group.add(mesh);
+    barrageLines.push({
+      mesh,
+      mat,
+      active: false,
+      age: 0,
+      life: 0.24,
+      roll: 0,
+      len: 2.5,
+      thickness: 1.15,
+    });
   }
 
   for (let i = 0; i < 16; i++) {
@@ -707,6 +771,7 @@ export function createTierVfxPoolCollections(
   return {
     sharedGeos,
     slashes,
+    barrageLines,
     domes,
     beams,
     vortices,

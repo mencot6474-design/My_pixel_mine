@@ -74,9 +74,17 @@ export class HudOmegaBridge {
     this.omegaArenaUi.syncShieldTargetPos(this.root, targetIndex);
   }
 
-  public handleOmegaFighterStrike(slotIndex: number, attackInterval: number): { dmg: number; isCrit?: boolean } | undefined {
+  public handleOmegaFighterStrike(
+    slotIndex: number,
+    attackInterval: number,
+    beatIndex = 0,
+    isFinisher = false
+  ): { dmg: number; isCrit?: boolean } | undefined {
     if (this.getSceneMode() !== 'omega' || !this.state.omegaBattle) return undefined;
     const res = this.state.applyOmegaSquadStrike(slotIndex, attackInterval);
+    if (res.dmgDealt > 0) {
+      audio.playBarrageHitSfx(beatIndex, Boolean(res.isCrit), isFinisher);
+    }
     if (res.breakTriggered) {
       audio.playCrystalChord('fever');
       this.pushToast('⚡ OMEGA BREAK! 2.5× Team DMG!');

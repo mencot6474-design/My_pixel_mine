@@ -2234,4 +2234,25 @@ describe('Tahap B HUD Modules', () => {
       expect(shouldShowTwinTrialHudButton('mine', false)).toBe(false);
     });
   });
+
+  describe('AudioManager barrage hit SFX', () => {
+    it('dispatches crescendo barrage hit SFX across beats 0..6 with 65ms cooldown bucket', () => {
+      const mgr = new AudioManager();
+      const spy = vi.spyOn(mgr, 'playSfx');
+      expect(() => {
+        for (let b = 0; b <= 6; b++) {
+          mgr.playBarrageHitSfx(b, b === 3, b === 6);
+        }
+      }).not.toThrow();
+
+      expect(spy).toHaveBeenCalledTimes(7);
+      const firstCall = spy.mock.calls[0];
+      const finisherCall = spy.mock.calls[6];
+      expect(firstCall[1]?.bucket).toBe('barrage-hit');
+      expect(firstCall[1]?.cooldownMs).toBe(65);
+      expect(finisherCall[0]).toBe('ore-hit-3');
+      expect((finisherCall[1]?.pitchMin ?? 0)).toBeGreaterThan(firstCall[1]?.pitchMin ?? 0);
+      expect((finisherCall[1]?.volume ?? 0)).toBeGreaterThan(firstCall[1]?.volume ?? 0);
+    });
+  });
 });

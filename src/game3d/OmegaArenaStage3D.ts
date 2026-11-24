@@ -33,6 +33,8 @@ export interface OmegaStrikeEvent {
   wy: number;
   wz: number;
   accentColor?: string;
+  beatIndex?: number;
+  isFinisher?: boolean;
 }
 
 export interface OmegaTargetScreenAnchor {

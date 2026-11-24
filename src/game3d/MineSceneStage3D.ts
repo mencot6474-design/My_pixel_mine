@@ -85,7 +85,9 @@ export interface MineSceneCallbacks {
     isCrit?: boolean,
     pitEventKind?: PitEventKind,
     isMeteor?: boolean,
-    isPerfect?: boolean
+    isPerfect?: boolean,
+    beatIndex?: number,
+    isFinisher?: boolean
   ) => void;
   onSweetSpot?: (spot: SweetSpotScreen | null) => void;
   onHoldMineChange?: (active: boolean) => void;
@@ -106,13 +108,20 @@ export interface MineSceneCallbacks {
   onTowerFighterStrike?: (
     slotIndex: number,
     targetOreIndex: number | null,
-    attackInterval: number
+    attackInterval: number,
+    beatIndex?: number,
+    isFinisher?: boolean
   ) => { dmg: number; broken?: boolean; isCrit?: boolean } | void;
   onTowerOreBars?: (bars: TowerOreBarScreen[]) => void;
   onOmegaTargetClick?: (targetId: string) => void;
   onOmegaBossClick?: () => void;
   onOmegaEntranceSlam?: () => void;
-  onOmegaFighterStrike?: (slotIndex: number, attackInterval: number) => { dmg: number; isCrit?: boolean } | void;
+  onOmegaFighterStrike?: (
+    slotIndex: number,
+    attackInterval: number,
+    beatIndex?: number,
+    isFinisher?: boolean
+  ) => { dmg: number; isCrit?: boolean } | void;
   onOmegaArenaOverlay?: (data: { bossHead: { x: number; y: number } | null; targets: OmegaTargetScreenAnchor[] } | null) => void;
   onFpsUpdate?: (fps: number) => void;
 }
@@ -127,7 +136,7 @@ export function getDefaultOrbitPitchForMode(mode: SceneMode): number {
     case 'fusion':
       return -0.18;
     case 'tower':
-      return -0.34;
+      return -0.22;
     case 'omega':
       return -0.32;
     default:
@@ -162,8 +171,9 @@ export function applyCameraOrbitDrag(opts: {
 
 /** Clamps camera zoom radius to the mode's safe orbit bounds. */
 export function clampCameraZoomRadius(radius: number, mode: SceneMode): number {
-  const maxRad = mode === 'shop' ? 38 : mode === 'fusion' ? 34 : 28;
-  const fallback = mode === 'shop' ? 30.4 : mode === 'fusion' ? 23.4 : mode === 'tower' || mode === 'omega' ? 16.4 : 20.4;
+  const maxRad = mode === 'shop' ? 38 : mode === 'fusion' ? 34 : mode === 'tower' ? 32 : 28;
+  const fallback =
+    mode === 'shop' ? 30.4 : mode === 'fusion' ? 23.4 : mode === 'tower' ? 23.6 : mode === 'omega' ? 16.4 : 20.4;
   const safeRadius = Number.isFinite(radius) ? radius : fallback;
   return Math.max(9, Math.min(maxRad, safeRadius));
 }
@@ -566,13 +576,15 @@ export function applyMineSceneModeTransition(ctx: {
     ctx.lookAtPos.set(0, 2.85, -2.5);
     ctx.applyWeatherAtmosphere();
   } else if (mode === 'tower') {
+    const rawAspect = ctx.camera.aspect;
+    const aspect = Number.isFinite(rawAspect) && rawAspect > 0 ? rawAspect : 1;
     ctx.scene.background = new THREE.Color(0x7dd3fc);
-    ctx.scene.fog = new THREE.Fog(0xbae6fd, 34, 96);
+    ctx.scene.fog = new THREE.Fog(0xbae6fd, 40, 108);
     ctx.applyWeatherAtmosphere();
     ctx.inputState.targetOrbitYaw = 0;
     ctx.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('tower');
-    ctx.inputState.targetCamRadius = 16.4;
-    ctx.lookAtPos.set(0, 2.25, -1.6);
+    ctx.inputState.targetCamRadius = aspect < 0.85 ? 27.8 : aspect < 1.15 ? 24.8 : 23.6;
+    ctx.lookAtPos.set(0, 1.5, -1.35);
     ctx.syncTowerFighters();
     towerArena?.resetFloorCharge();
   } else if (mode === 'omega') {
@@ -689,9 +701,16 @@ export function stepMineActiveWorldEntities(ctx: {
   onTowerFighterStrike?: (
     slotIndex: number,
     targetOreIndex: number | null,
-    attackInterval: number
+    attackInterval: number,
+    beatIndex?: number,
+    isFinisher?: boolean
   ) => { dmg: number; broken?: boolean; isCrit?: boolean } | void;
-  onOmegaFighterStrike?: (slotIndex: number, attackInterval: number) => { dmg: number; isCrit?: boolean } | void;
+  onOmegaFighterStrike?: (
+    slotIndex: number,
+    attackInterval: number,
+    beatIndex?: number,
+    isFinisher?: boolean
+  ) => { dmg: number; isCrit?: boolean } | void;
   onOmegaEntranceSlam: () => void;
   onOreBroken?: (
     variantKey: import('./MineWorldPalette').OreVariantKey,
@@ -707,7 +726,10 @@ export function stepMineActiveWorldEntities(ctx: {
     isClick: boolean,
     isCrit?: boolean,
     pitEventKind?: import('../game/PitEventsDomain').PitEventKind,
-    isMeteor?: boolean
+    isMeteor?: boolean,
+    isPerfect?: boolean,
+    beatIndex?: number,
+    isFinisher?: boolean
   ) => void;
   projectWorldToScreen: (wx: number, wy: number, wz: number) => { x: number; y: number } | null;
 }): void {
@@ -729,7 +751,13 @@ export function stepMineActiveWorldEntities(ctx: {
   } else if (mode === 'tower' && ctx.towerArena) {
     const towerArena = ctx.towerArena;
     towerArena.update(dtSec, elapsed, ctx.camera, (strike) => {
-      const res = ctx.onTowerFighterStrike?.(strike.slotIndex, strike.targetOreIndex, strike.attackInterval);
+      const res = ctx.onTowerFighterStrike?.(
+        strike.slotIndex,
+        strike.targetOreIndex,
+        strike.attackInterval,
+        strike.beatIndex,
+        strike.isFinisher
+      );
       const shownDmg = res ? res.dmg : strike.dmg;
       if (res && res.dmg > 0 && strike.targetOreIndex !== null) {
         towerArena.triggerOreHitBounce(strike.targetOreIndex, Boolean(res.broken), strike);
@@ -745,7 +773,12 @@ export function stepMineActiveWorldEntities(ctx: {
       elapsed,
       ctx.camera,
       (strike) => {
-        const res = ctx.onOmegaFighterStrike?.(strike.slotIndex, strike.attackInterval);
+        const res = ctx.onOmegaFighterStrike?.(
+          strike.slotIndex,
+          strike.attackInterval,
+          strike.beatIndex,
+          strike.isFinisher
+        );
         const shownDmg = res ? res.dmg : strike.dmg;
         if (shownDmg > 0) {
           omegaArena.triggerBossHitEffect(strike.accentColor, Boolean(res?.isCrit));
@@ -758,8 +791,29 @@ export function stepMineActiveWorldEntities(ctx: {
   ctx.weatherFx.update(dtSec, elapsed, inMine || mode === 'shop');
 
   const hitCb = inMine
-    ? (dmg: number, wx: number, wy: number, wz: number, isMeteor?: boolean, isCrit?: boolean) =>
-        ctx.emitDamageScreen(dmg, wx, wy, wz, false, Boolean(isCrit), undefined, isMeteor)
+    ? (
+        dmg: number,
+        wx: number,
+        wy: number,
+        wz: number,
+        isMeteor?: boolean,
+        isCrit?: boolean,
+        beatIndex?: number,
+        isFinisher?: boolean
+      ) =>
+        ctx.emitDamageScreen(
+          dmg,
+          wx,
+          wy,
+          wz,
+          false,
+          Boolean(isCrit),
+          undefined,
+          isMeteor,
+          false,
+          beatIndex,
+          isFinisher
+        )
     : undefined;
   const minerBreakCb = (
     variantKey: import('./MineWorldPalette').OreVariantKey,

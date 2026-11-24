@@ -192,7 +192,7 @@ export function getRaritySecondaryColor(rarity: string): string {
 }
 
 export function isWideAoeRarity(rarity: string): boolean {
-  return rarity === 'fusion' || rarity === 'limited' || rarity === 'twin' || rarity === 'omega';
+  return rarity === 'fusion' || rarity === 'twin' || rarity === 'omega';
 }
 
 export function resolvePitBounds(

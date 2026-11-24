@@ -400,7 +400,7 @@ export function createCraterBedTexture(): THREE.CanvasTexture | null {
  * Generates procedural 3D branching, zig-zag, tapering-to-point ground crack ribbons
  * laid flat on the crater basin (charred outer rock fissures + narrow deep-center ember seams).
  */
-export function createJaggedCraterFissureGeometries(): {
+export function createJaggedCraterFissureGeometries(radialScale = 1.0): {
   charredGeo: THREE.BufferGeometry;
   emberGeo: THREE.BufferGeometry;
 } {
@@ -457,11 +457,11 @@ export function createJaggedCraterFissureGeometries(): {
   mainAngles.forEach((baseAng, idx) => {
     const seed = idx * 37 + 5;
     const steps = 6;
-    const totalLen = 3.6 + (idx % 3) * 0.85;
+    const totalLen = (3.6 + (idx % 3) * 0.85) * radialScale;
     const pts: THREE.Vector2[] = [];
 
-    let curX = Math.cos(baseAng) * 0.38;
-    let curZ = Math.sin(baseAng) * 0.38;
+    let curX = Math.cos(baseAng) * 0.38 * radialScale;
+    let curZ = Math.sin(baseAng) * 0.38 * radialScale;
     let ang = baseAng;
     pts.push(new THREE.Vector2(curX, curZ));
 
@@ -508,6 +508,125 @@ export function createJaggedCraterFissureGeometries(): {
   emberGeo.computeVertexNormals();
 
   return { charredGeo, emberGeo };
+}
+
+/**
+ * Builds the stepped circular wide-open sky-overpass plaza hull below y = 0 (top lip flush at y = 0.02),
+ * keeping the arena completely wall-free for unobstructed camera framing and 2.5s shader VFX.
+ */
+export function createOverpassPlazaHullGeometry(
+  floorRadius: number,
+  outerRadius: number,
+  depth = 0.72
+): THREE.LatheGeometry {
+  const pts: THREE.Vector2[] = [
+    new THREE.Vector2(Math.max(2, floorRadius - 0.35), -depth),
+    new THREE.Vector2(outerRadius - 0.55, -depth),
+    new THREE.Vector2(outerRadius + 0.18, -depth * 0.42),
+    new THREE.Vector2(outerRadius + 0.18, -0.08),
+    new THREE.Vector2(outerRadius - 0.08, 0.02),
+    new THREE.Vector2(floorRadius - 0.02, 0.02),
+    new THREE.Vector2(floorRadius - 0.02, -0.02),
+  ];
+  const geo = new THREE.LatheGeometry(pts, 48);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/**
+ * Generates a high-contrast Cyber-Colosseum Overpass battle court texture:
+ * dark tactical titanium core, subtle armor seams, glowing concentric sector rings,
+ * 8-point colosseum compass ticks, and central scorched impact lines.
+ */
+export function createOverpassCourtTexture(): THREE.CanvasTexture | null {
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = 512;
+  const ctx = c.getContext('2d');
+  if (!ctx) return null;
+
+  const cx = 256;
+  const cy = 256;
+
+  // Deep dark-titanium core gradient so additive Sakuga shaders and Chibi silhouettes pop cleanly
+  const bg = ctx.createRadialGradient(cx, cy, 18, cx, cy, 256);
+  bg.addColorStop(0.0, '#0f1b33');
+  bg.addColorStop(0.42, '#162238');
+  bg.addColorStop(0.78, '#1e293b');
+  bg.addColorStop(1.0, '#0f172a');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Radial armor plate seams (12 sectors)
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.16)';
+  ctx.lineWidth = 1.6;
+  for (let i = 0; i < 12; i++) {
+    const a = (i * Math.PI * 2) / 12;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * 44, cy + Math.sin(a) * 44);
+    ctx.lineTo(cx + Math.cos(a) * 246, cy + Math.sin(a) * 246);
+    ctx.stroke();
+  }
+
+  // Concentric cyber-colosseum court rings
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.34)';
+  ctx.lineWidth = 2.2;
+  for (const r of [64, 124, 184, 232]) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Twin rotated octagram tactical grid inside court
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
+  ctx.lineWidth = 2;
+  for (const rotOff of [0, Math.PI / 4]) {
+    ctx.beginPath();
+    for (let k = 0; k <= 4; k++) {
+      const a = rotOff + (k * Math.PI) / 2;
+      const px = cx + Math.cos(a) * 176;
+      const py = cy + Math.sin(a) * 176;
+      if (k === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  // Segmented outer gold/amber runway arc markers
+  ctx.strokeStyle = 'rgba(251, 191, 36, 0.42)';
+  ctx.lineWidth = 3.2;
+  for (let i = 0; i < 8; i++) {
+    const a0 = (i * Math.PI) / 4 + 0.1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 208, a0, a0 + Math.PI / 4 - 0.2);
+    ctx.stroke();
+  }
+
+  // Precision radial degree ticks along outer perimeter
+  ctx.strokeStyle = 'rgba(186, 230, 253, 0.36)';
+  ctx.lineWidth = 1.6;
+  for (let i = 0; i < 48; i++) {
+    const a = (i * Math.PI * 2) / 48;
+    const r0 = i % 4 === 0 ? 216 : 222;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+    ctx.lineTo(cx + Math.cos(a) * 230, cy + Math.sin(a) * 230);
+    ctx.stroke();
+  }
+
+  // Subtle dark scorched impact grain for cyber-battle texture
+  for (let i = 0; i < 1200; i++) {
+    const x = (i * 193 + 11) % 512;
+    const y = (i * 311 + 29) % 512;
+    ctx.fillStyle = i % 3 === 0 ? 'rgba(2, 6, 23, 0.35)' : 'rgba(148, 163, 184, 0.08)';
+    ctx.fillRect(x, y, 2, 2);
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
 }
 
 export function createCrackedGlassTexture(): THREE.CanvasTexture | null {

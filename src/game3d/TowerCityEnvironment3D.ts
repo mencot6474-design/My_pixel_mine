@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { createChamferSlabGeometry, enableShadows } from './MeshHelpers3D';
 import {
   createAsphaltHighwayTexture,
-  createCraterBedTexture,
   createCyberCitySkyTexture,
   createGuardrailBeamGeometry,
-  createHoledHighwayGeometry,
   createJaggedCraterFissureGeometries,
+  createOverpassCourtTexture,
+  createOverpassPlazaHullGeometry,
 } from './TowerCityAssets3D';
 import { buildTowerRuinedSkyscrapers } from './TowerCitySkyscrapers3D';
 
@@ -28,9 +28,9 @@ const ARENA_CENTER_Z = -1.6;
 const CRATER_FLOOR_Y = 0.08;
 const ROAD_Y = 0.52;
 const SIDEWALK_Y = 0.88;
-const HIGHWAY_HALF_W = 7.4;
-const CRATER_FLOOR_R = 6.8;
-const CRATER_HOLE_R = 7.25;
+const HIGHWAY_HALF_W = 8.4;
+const PLAZA_FLOOR_R = 10.2;
+const PLAZA_OUTER_R = 11.45;
 
 function createExtrudedChamferSlab(
   width: number,
@@ -46,8 +46,8 @@ function createExtrudedChamferSlab(
 }
 
 /**
- * Builds the procedural "Ruined Cyber City & Deep Central Meteor Crater" environment
- * for Battle Tower while preserving exact gameplay surface y = 0.08 inside the crater.
+ * Builds the procedural "Wide-Open Apex Sky-Overpass Colosseum & Ruined Cyber City" environment
+ * for Battle Tower while preserving exact gameplay surface y = 0.08 across the open plaza.
  */
 export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
   const group = new THREE.Group();
@@ -116,18 +116,6 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
     metalness: 0.28,
     flatShading: true,
   });
-  const scorchedRockMat = new THREE.MeshStandardMaterial({
-    color: 0x3f495a,
-    roughness: 0.94,
-    metalness: 0.06,
-    flatShading: true,
-  });
-  const basaltStepMat = new THREE.MeshStandardMaterial({
-    color: 0x525e72,
-    roughness: 0.9,
-    metalness: 0.1,
-    flatShading: true,
-  });
   const charredFissureMat = new THREE.MeshStandardMaterial({
     color: 0x050609,
     roughness: 0.96,
@@ -173,124 +161,228 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
   group.add(cityGroundSkirt);
 
   // =========================================================================
-  // 2. RAISED SHATTERED HIGHWAY (y = 0.52) WITH TRUE 3D CENTRAL CRATER HOLE (y = 0.08)
+  // 2. RUINED HIGHWAY APPROACHES & WIDE-OPEN OVERPASS COLOSSEUM PLAZA (y = 0.08)
   // =========================================================================
-  const roadZMin = -44;
-  const roadZMax = 14;
-  const holedHighwayGeo = createHoledHighwayGeometry(
-    HIGHWAY_HALF_W,
-    roadZMin,
-    roadZMax,
-    ARENA_CENTER_Z,
-    CRATER_HOLE_R
-  );
-  // Multi-material or clean asphalt top + dark foundation sides
-  const highwayMesh = new THREE.Mesh(holedHighwayGeo, [asphaltMat, roadFoundationMat]);
-  highwayMesh.receiveShadow = true;
-  highwayMesh.castShadow = true;
-  group.add(highwayMesh);
+  const buildHighwaySection = (zStart: number, zEnd: number): THREE.Mesh => {
+    const len = Math.abs(zEnd - zStart);
+    const cz = (zStart + zEnd) * 0.5;
+    const geo = createExtrudedChamferSlab(HIGHWAY_HALF_W * 2, ROAD_Y - CRATER_FLOOR_Y, len, 0.22, 0.02);
+    const posAttr = geo.getAttribute('position');
+    const uvAttr = geo.getAttribute('uv');
+    for (let i = 0; i < posAttr.count; i++) {
+      const wx = posAttr.getX(i);
+      const wz = posAttr.getZ(i) + cz;
+      uvAttr.setXY(i, (wx + HIGHWAY_HALF_W) / (HIGHWAY_HALF_W * 2), wz / 16.0);
+    }
+    uvAttr.needsUpdate = true;
+    const mesh = new THREE.Mesh(geo, asphaltMat);
+    mesh.position.set(0, CRATER_FLOOR_Y + (ROAD_Y - CRATER_FLOOR_Y) * 0.5, cz);
+    mesh.receiveShadow = true;
+    mesh.castShadow = true;
+    return mesh;
+  };
 
-  // Sub-foundation under roadway outside hole (y = -0.55 .. 0.08)
+  // Rear highway vanishing toward the AI Mainframe Core, and front bridge approach behind camera
+  const rearHighwayMesh = buildHighwaySection(-44, -13.2);
+  const frontHighwayMesh = buildHighwaySection(10.0, 16.0);
+  group.add(rearHighwayMesh, frontHighwayMesh);
+
+  // Sub-foundation strictly below CRATER_FLOOR_Y (createExtrudedChamferSlab bottom=0, height=0.63 -> top=0.06 < 0.08)
   const underBase = new THREE.Mesh(
-    new THREE.BoxGeometry(HIGHWAY_HALF_W * 2 + 6.4, 0.63, roadZMax - roadZMin),
+    createExtrudedChamferSlab(HIGHWAY_HALF_W * 2 + 5.6, 0.63, 60, 0.6, 0.02),
     roadFoundationMat
   );
-  underBase.position.set(0, CRATER_FLOOR_Y - 0.316, (roadZMin + roadZMax) * 0.5);
+  underBase.position.set(0, CRATER_FLOOR_Y - 0.65, -14.0);
   underBase.receiveShadow = true;
   group.add(underBase);
 
-  // Deep Scorched Crater Floor Basin strictly at gameplay y = 0.08 (r = 7.4 overlaps safely under stepped rim walls)
-  const craterTex = createCraterBedTexture();
-  if (craterTex) ownedTextures.push(craterTex);
+  // Wide-Open Cyber-Colosseum Overpass Plaza Floor strictly at gameplay y = 0.08 (diameter 20.4m, wall-free!)
+  const courtTex = createOverpassCourtTexture();
+  if (courtTex) ownedTextures.push(courtTex);
 
   const craterBedMat = new THREE.MeshStandardMaterial({
-    ...(craterTex ? { map: craterTex } : {}),
-    color: craterTex ? 0xffffff : 0x0b101b,
-    roughness: 0.92,
-    metalness: 0.08,
+    ...(courtTex ? { map: courtTex } : {}),
+    color: courtTex ? 0xffffff : 0x0b101b,
+    roughness: 0.72,
+    metalness: 0.24,
   });
   const craterGroup = new THREE.Group();
   craterGroup.position.set(0, CRATER_FLOOR_Y, ARENA_CENTER_Z);
   group.add(craterGroup);
 
-  const craterFloorMesh = new THREE.Mesh(new THREE.CircleGeometry(7.6, 36), craterBedMat);
+  const craterFloorMesh = new THREE.Mesh(new THREE.CircleGeometry(PLAZA_FLOOR_R, 48), craterBedMat);
   craterFloorMesh.rotation.x = -Math.PI / 2;
   craterFloorMesh.position.y = 0.002;
   craterFloorMesh.receiveShadow = true;
   craterGroup.add(craterFloorMesh);
 
-  // Natural Branching Jagged Ground Fissures (Charred Rock + Muted Deep-Core Magma Embers) flush on Crater Floor
-  const { charredGeo, emberGeo } = createJaggedCraterFissureGeometries();
+  // Sculpted beveled outer Overpass Plaza hull below y = 0.08 (zero tall blocking walls!)
+  const plazaHullMesh = new THREE.Mesh(
+    createOverpassPlazaHullGeometry(PLAZA_FLOOR_R, PLAZA_OUTER_R, 0.72),
+    concreteDarkMat
+  );
+  plazaHullMesh.receiveShadow = true;
+  plazaHullMesh.castShadow = true;
+  craterGroup.add(plazaHullMesh);
+
+  // Brushed Titanium Outer Rim Collar + Reactive Neon Arena Accent Material
+  const brightAlloyMat = new THREE.MeshStandardMaterial({
+    color: 0xcbd5e1,
+    roughness: 0.3,
+    metalness: 0.56,
+    flatShading: true,
+  });
+  const arenaAccentMat = new THREE.MeshStandardMaterial({
+    color: 0x38bdf8,
+    emissive: 0x38bdf8,
+    emissiveIntensity: 1.35,
+    roughness: 0.2,
+    metalness: 0.25,
+    flatShading: true,
+  });
+  const goldAccentMat = new THREE.MeshStandardMaterial({
+    color: 0xfde047,
+    emissive: 0xf59e0b,
+    emissiveIntensity: 1.05,
+    roughness: 0.22,
+    metalness: 0.35,
+    flatShading: true,
+  });
+
+  // 100% Horizontal flush dual neon perimeter rings defining the open combat court
+  const plazaNeonRingMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.68,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const plazaNeonRing = new THREE.Mesh(
+    new THREE.RingGeometry(PLAZA_FLOOR_R - 0.28, PLAZA_FLOOR_R - 0.02, 64),
+    plazaNeonRingMat
+  );
+  plazaNeonRing.rotation.x = -Math.PI / 2;
+  plazaNeonRing.position.y = 0.012;
+  craterGroup.add(plazaNeonRing);
+
+  const outerGlowRing = new THREE.Mesh(
+    new THREE.RingGeometry(PLAZA_OUTER_R - 0.24, PLAZA_OUTER_R - 0.08, 64),
+    plazaNeonRingMat
+  );
+  outerGlowRing.rotation.x = -Math.PI / 2;
+  outerGlowRing.position.y = 0.026;
+  craterGroup.add(outerGlowRing);
+
+  // 8 Segmented Outer Titanium Armor Deck Plates flush along the perimeter rim (r = 10.8m)
+  const rimArmorPlateGeo = createExtrudedChamferSlab(2.85, 0.045, 0.92, 0.14, 0.012);
+  const rimStripGeo = createExtrudedChamferSlab(2.2, 0.025, 0.14, 0.03, 0.006);
+  for (let i = 0; i < 8; i++) {
+    const ang = (i * Math.PI) / 4 + Math.PI / 8;
+    const plateDist = PLAZA_FLOOR_R + 0.6;
+    const seg = new THREE.Group();
+    seg.position.set(Math.cos(ang) * plateDist, 0.01, Math.sin(ang) * plateDist);
+    seg.rotation.y = -ang + Math.PI * 0.5;
+    const plate = new THREE.Mesh(rimArmorPlateGeo, brightAlloyMat);
+    const strip = new THREE.Mesh(rimStripGeo, i % 2 === 0 ? arenaAccentMat : goldAccentMat);
+    strip.position.set(0, 0.042, 0);
+    enableShadows(plate);
+    seg.add(plate, strip);
+    craterGroup.add(seg);
+  }
+
+  // 4 Cantilevered Structural Overpass Wing Buttresses + 4 Multi-Part Cyber-Colosseum Stadium Pylons
+  const buttressGeo = createExtrudedChamferSlab(2.7, 0.54, 3.2, 0.26, 0.025);
+  const buttressFinGeo = createExtrudedChamferSlab(0.32, 0.42, 2.7, 0.06, 0.015);
+  const pylonPlinthGeo = createExtrudedChamferSlab(1.55, 0.26, 1.55, 0.28, 0.025);
+  const pylonCollarGeo = createExtrudedChamferSlab(1.18, 0.18, 1.18, 0.22, 0.02);
+  const pylonShaftGeo = createExtrudedChamferSlab(0.68, 2.25, 0.68, 0.14, 0.02);
+  const pylonCoreGeo = createExtrudedChamferSlab(0.24, 1.75, 0.78, 0.05, 0.01);
+  const pylonCrownGeo = createExtrudedChamferSlab(0.92, 0.26, 0.92, 0.18, 0.02);
+  const pylonFinGeo = new THREE.ConeGeometry(0.18, 0.72, 4);
+  for (let i = 0; i < 4; i++) {
+    const ang = Math.PI * 0.25 + (i * Math.PI) * 0.5;
+    const dist = PLAZA_OUTER_R - 0.12;
+    const wing = new THREE.Group();
+    wing.position.set(Math.cos(ang) * dist, -0.28, Math.sin(ang) * dist);
+    wing.rotation.y = -ang + Math.PI * 0.5;
+    const body = new THREE.Mesh(buttressGeo, steelMat);
+    const fin = new THREE.Mesh(buttressFinGeo, concreteDarkMat);
+    fin.position.set(0, 0.28, 0);
+    const underVent = new THREE.Mesh(rimStripGeo, arenaAccentMat);
+    underVent.position.set(0, -0.02, 1.35);
+    enableShadows(body);
+    enableShadows(fin);
+    wing.add(body, fin, underVent);
+    craterGroup.add(wing);
+
+    // Stadium Light Pylon outside combat court (r = 11.4m, well clear of R = 9.5m court!)
+    const pylon = new THREE.Group();
+    pylon.position.set(Math.cos(ang) * (PLAZA_OUTER_R + 0.02), 0.01, Math.sin(ang) * (PLAZA_OUTER_R + 0.02));
+    pylon.rotation.y = -ang + Math.PI * 0.5;
+    const plinth = new THREE.Mesh(pylonPlinthGeo, concreteDarkMat);
+    const collar = new THREE.Mesh(pylonCollarGeo, brightAlloyMat);
+    collar.position.y = 0.26;
+    const shaft = new THREE.Mesh(pylonShaftGeo, steelMat);
+    shaft.position.y = 0.44;
+    const core = new THREE.Mesh(pylonCoreGeo, arenaAccentMat);
+    core.position.y = 0.65;
+    const crown = new THREE.Mesh(pylonCrownGeo, brightAlloyMat);
+    crown.position.y = 2.66;
+    const spire = new THREE.Mesh(pylonFinGeo, goldAccentMat);
+    spire.position.y = 3.24;
+    spire.rotation.y = Math.PI * 0.25;
+    enableShadows(plinth);
+    enableShadows(collar);
+    enableShadows(shaft);
+    enableShadows(crown);
+    pylon.add(plinth, collar, shaft, core, crown, spire);
+    craterGroup.add(pylon);
+  }
+
+  // 2 Rear Boss-Framing Cyber-Monolith Towers flanking the rear highway entrance (x = ±9.6, z = -12.8)
+  const monoBaseGeo = createExtrudedChamferSlab(1.9, 0.34, 1.9, 0.32, 0.025);
+  const monoBodyGeo = createExtrudedChamferSlab(1.15, 3.3, 1.15, 0.22, 0.025);
+  const monoChevronGeo = createExtrudedChamferSlab(1.26, 0.16, 1.26, 0.22, 0.015);
+  const monoAntennaGeo = new THREE.CylinderGeometry(0.04, 0.08, 1.35, 6);
+  for (const sx of [-1, 1]) {
+    const mono = new THREE.Group();
+    mono.position.set(sx * 9.8, CRATER_FLOOR_Y, -12.6);
+    const mBase = new THREE.Mesh(monoBaseGeo, concreteDarkMat);
+    const mBody = new THREE.Mesh(monoBodyGeo, steelMat);
+    mBody.position.y = 0.34;
+    const mGlow1 = new THREE.Mesh(monoChevronGeo, arenaAccentMat);
+    mGlow1.position.y = 1.45;
+    const mGlow2 = new THREE.Mesh(monoChevronGeo, goldAccentMat);
+    mGlow2.position.y = 2.45;
+    const mGlow3 = new THREE.Mesh(monoChevronGeo, arenaAccentMat);
+    mGlow3.position.y = 3.35;
+    const mAnt = new THREE.Mesh(monoAntennaGeo, brightAlloyMat);
+    mAnt.position.set(-sx * 0.2, 4.25, 0);
+    enableShadows(mBase);
+    enableShadows(mBody);
+    mono.add(mBase, mBody, mGlow1, mGlow2, mGlow3, mAnt);
+    group.add(mono);
+  }
+
+  // Natural Branching Jagged Ground Fissures scaled to the wide plaza floor (flush, zero occlusion)
+  const { charredGeo, emberGeo } = createJaggedCraterFissureGeometries(1.38);
   const charredFissures = new THREE.Mesh(charredGeo, charredFissureMat);
   charredFissures.receiveShadow = true;
   const emberSeams = new THREE.Mesh(emberGeo, emberSeamMat);
   craterGroup.add(charredFissures, emberSeams);
 
-  // Stepped Basalt Crater Inner Wall Terraces Descending from ROAD_Y (0.52) down to CRATER_FLOOR_Y (0.08)
-  // Keeps r_inner >= 6.82 so summon pads (r = 6.3) and wave ores (r <= 4.46) stand completely free inside the bowl!
-  const wallSegments = 28;
   const rockWallGeo = new THREE.DodecahedronGeometry(1.0, 0);
-  const rimBlockData: { pos: THREE.Vector3; scale: THREE.Vector3; rot: THREE.Euler; dark: boolean }[] = [];
-
-  for (let i = 0; i < wallSegments; i++) {
-    const ang = (i / wallSegments) * Math.PI * 2;
-    const isFrontCameraArc = Math.sin(ang) > 0.22; // Keep entire front podium arc clean & unobstructed
-    const jag = Math.sin(i * 2.7) * 0.18;
-
-    // Lower inner rock step (pushed back on front arc so spawn podiums stay 100% clear)
-    const rStep1 = CRATER_FLOOR_R + (isFrontCameraArc ? 0.48 : 0.24) + jag;
-    rimBlockData.push({
-      pos: new THREE.Vector3(Math.cos(ang) * rStep1, 0.1, Math.sin(ang) * rStep1),
-      scale: new THREE.Vector3(0.95, 0.22, 0.82),
-      rot: new THREE.Euler(i * 0.3, -ang, (i % 3) * 0.15),
-      dark: i % 2 === 0,
-    });
-
-    // Upper rim rock wall rising to road lip (y = 0.32 .. 0.62, higher on rear & sides!)
-    const rStep2 = CRATER_HOLE_R + (isFrontCameraArc ? 0.32 : 0.15) + jag;
-    const rimH = isFrontCameraArc ? 0.24 : 0.44 + (i % 3) * 0.14;
-    rimBlockData.push({
-      pos: new THREE.Vector3(Math.cos(ang) * rStep2, 0.26 + rimH * 0.45, Math.sin(ang) * rStep2),
-      scale: new THREE.Vector3(1.08, rimH, 0.92),
-      rot: new THREE.Euler((i % 2) * 0.22, -ang + 0.2, -0.18),
-      dark: i % 3 === 0,
-    });
-
-    // Tilted Upturned Broken Asphalt Slabs Around Rear & Side Crater Lip (never over front spawn podiums)
-    if (!isFrontCameraArc) {
-      const rSlab = CRATER_HOLE_R + 0.32 + (i % 2) * 0.18;
-      const slab = new THREE.Mesh(
-        createExtrudedChamferSlab(1.65 + (i % 2) * 0.35, 0.15, 1.15, 0.14, 0.018),
-        concreteDarkMat
-      );
-      slab.position.set(Math.cos(ang) * rSlab, ROAD_Y - CRATER_FLOOR_Y - 0.05, Math.sin(ang) * rSlab);
-      slab.lookAt(0, slab.position.y, 0);
-      slab.rotateX(-0.36 - (i % 3) * 0.09);
-      enableShadows(slab);
-      craterGroup.add(slab);
-    }
-  }
-
-  for (const rb of rimBlockData) {
-    const boulder = new THREE.Mesh(rockWallGeo, rb.dark ? scorchedRockMat : basaltStepMat);
-    boulder.position.copy(rb.pos);
-    boulder.scale.copy(rb.scale);
-    boulder.rotation.copy(rb.rot);
-    enableShadows(boulder);
-    craterGroup.add(boulder);
-  }
 
   // =========================================================================
-  // 3. RAISED SIDEWALKS (y = 0.88), GUARDRAILS, ROAD DEBRIS & STREETLIGHTS
+  // 3. REAR/FRONT SIDEWALKS (y = 0.88), GUARDRAILS, ROAD DEBRIS & OUTER STREETLIGHTS
   // =========================================================================
   const sidewalkSegments: [number, number, number][] = [
-    [9.4, 6.8, 0],
-    [2.6, 5.4, 0.02],
-    [-4.2, 5.6, -0.03],
-    [-11.0, 6.4, 0.015],
-    [-18.2, 7.8, -0.02],
-    [-27.0, 9.2, 0],
-    [-37.5, 10.6, 0],
+    [13.0, 6.0, 0],
+    [-16.4, 6.4, 0.015],
+    [-23.6, 7.8, -0.02],
+    [-31.8, 9.2, 0],
+    [-40.5, 10.6, 0],
   ];
   for (const sideSign of [-1, 1]) {
     for (const [cz, len, tilt] of sidewalkSegments) {
@@ -304,15 +396,12 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
       group.add(slab);
     }
 
-    // Dented & Interrupted Metal Guardrails along x = ±(HIGHWAY_HALF_W + 0.2)
+    // Dented & Interrupted Metal Guardrails cleanly outside the open central plaza
     const guardrailSegments: { z: number; len: number; yaw: number; roll: number; pitch: number }[] = [
-      { z: 9.2, len: 5.2, yaw: 0.02, roll: 0, pitch: 0 },
-      { z: 4.0, len: 2.8, yaw: -0.16 * sideSign, roll: 0.24 * sideSign, pitch: 0.08 },
-      // Blown out across the crater blast!
-      { z: -7.4, len: 3.4, yaw: 0.2 * sideSign, roll: -0.26 * sideSign, pitch: -0.07 },
-      { z: -13.8, len: 6.4, yaw: -0.03, roll: 0.04, pitch: 0 },
-      { z: -21.8, len: 6.8, yaw: 0.02, roll: 0, pitch: 0 },
-      { z: -30.0, len: 6.8, yaw: 0, roll: 0, pitch: 0 },
+      { z: 13.0, len: 5.0, yaw: 0.02, roll: 0, pitch: 0 },
+      { z: -16.4, len: 6.4, yaw: -0.04, roll: 0.04, pitch: 0 },
+      { z: -23.6, len: 6.8, yaw: 0.02, roll: 0, pitch: 0 },
+      { z: -31.8, len: 6.8, yaw: 0, roll: 0, pitch: 0 },
     ];
     const postGeo = new THREE.BoxGeometry(0.11, 0.62, 0.11);
     for (const seg of guardrailSegments) {
@@ -337,28 +426,28 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
     }
   }
 
-  // Tilted Cyberpunk Streetlights on Sidewalks (y = SIDEWALK_Y)
+  // Tilted Cyberpunk Streetlights pushed outside the combat plaza so shaders & silhouettes stay 100% clear
   const poleBaseGeo = new THREE.CylinderGeometry(0.16, 0.22, 0.32, 6);
   const poleShaftGeo = new THREE.CylinderGeometry(0.075, 0.11, 3.85, 6);
   const armGeo = new THREE.BoxGeometry(1.15, 0.1, 0.12);
   const hoodGeo = new THREE.BoxGeometry(0.58, 0.12, 0.26);
   const bulbGeo = new THREE.BoxGeometry(0.48, 0.06, 0.18);
 
-  const streetlightSpecs: { side: -1 | 1; z: number; tiltZ: number; tiltX: number; cyan: boolean; flicker: boolean }[] = [
-    { side: -1, z: 5.4, tiltZ: -0.05, tiltX: 0.03, cyan: true, flicker: false },
-    { side: 1, z: 5.4, tiltZ: 0.16, tiltX: -0.04, cyan: false, flicker: true },
-    { side: -1, z: -1.6, tiltZ: -0.28, tiltX: 0.12, cyan: true, flicker: true },
-    { side: 1, z: -1.6, tiltZ: 0.24, tiltX: -0.1, cyan: true, flicker: false },
-    { side: -1, z: -8.8, tiltZ: -0.09, tiltX: -0.05, cyan: false, flicker: true },
-    { side: 1, z: -8.8, tiltZ: 0.04, tiltX: 0.02, cyan: true, flicker: false },
-    { side: -1, z: -16.8, tiltZ: -0.03, tiltX: 0.02, cyan: true, flicker: false },
-    { side: 1, z: -16.8, tiltZ: 0.12, tiltX: 0.04, cyan: false, flicker: false },
+  const streetlightSpecs: { side: -1 | 1; xDist: number; yBase: number; z: number; tiltZ: number; tiltX: number; cyan: boolean; flicker: boolean }[] = [
+    { side: -1, xDist: 11.45, yBase: CRATER_FLOOR_Y, z: 3.4, tiltZ: -0.07, tiltX: 0.03, cyan: true, flicker: false },
+    { side: 1, xDist: 11.45, yBase: CRATER_FLOOR_Y, z: 3.4, tiltZ: 0.14, tiltX: -0.04, cyan: false, flicker: true },
+    { side: -1, xDist: 11.45, yBase: CRATER_FLOOR_Y, z: -6.8, tiltZ: -0.22, tiltX: 0.1, cyan: true, flicker: true },
+    { side: 1, xDist: 11.45, yBase: CRATER_FLOOR_Y, z: -6.8, tiltZ: 0.2, tiltX: -0.08, cyan: true, flicker: false },
+    { side: -1, xDist: HIGHWAY_HALF_W + 1.05, yBase: SIDEWALK_Y, z: -13.8, tiltZ: -0.09, tiltX: -0.05, cyan: false, flicker: true },
+    { side: 1, xDist: HIGHWAY_HALF_W + 1.05, yBase: SIDEWALK_Y, z: -13.8, tiltZ: 0.04, tiltX: 0.02, cyan: true, flicker: false },
+    { side: -1, xDist: HIGHWAY_HALF_W + 1.05, yBase: SIDEWALK_Y, z: -21.2, tiltZ: -0.03, tiltX: 0.02, cyan: true, flicker: false },
+    { side: 1, xDist: HIGHWAY_HALF_W + 1.05, yBase: SIDEWALK_Y, z: -21.2, tiltZ: 0.12, tiltX: 0.04, cyan: false, flicker: false },
   ];
 
   for (let idx = 0; idx < streetlightSpecs.length; idx++) {
     const spec = streetlightSpecs[idx];
     const lampGroup = new THREE.Group();
-    lampGroup.position.set(spec.side * (HIGHWAY_HALF_W + 1.05), SIDEWALK_Y, spec.z);
+    lampGroup.position.set(spec.side * spec.xDist, spec.yBase, spec.z);
     lampGroup.rotation.set(spec.tiltX, 0, spec.tiltZ);
 
     const base = new THREE.Mesh(poleBaseGeo, concreteDarkMat);
@@ -395,14 +484,14 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
     }
   }
 
-  // Cracked Tilted Road Slabs & Concrete/Rebar Rubble along Upper Highway & Sidewalks
+  // Cracked Tilted Road Slabs & Concrete/Rebar Rubble along Rear/Front Highway Approaches
   const roadDebrisPositions: [number, number, number, number, number][] = [
-    [-6.2, 7.6, 1.4, 0.95, 0.2],
-    [6.1, 7.4, 1.3, 0.9, -0.18],
-    [-5.8, -10.4, 1.55, 1.1, 0.25],
-    [5.9, -10.8, 1.45, 1.05, -0.22],
-    [-2.4, -12.6, 1.4, 1.0, 0.15],
-    [2.8, -13.2, 1.5, 1.05, -0.17],
+    [-6.6, 12.2, 1.4, 0.95, 0.2],
+    [6.5, 12.0, 1.3, 0.9, -0.18],
+    [-6.4, -15.4, 1.55, 1.1, 0.25],
+    [6.5, -15.8, 1.45, 1.05, -0.22],
+    [-2.8, -18.2, 1.4, 1.0, 0.15],
+    [3.1, -18.8, 1.5, 1.05, -0.17],
   ];
   for (const [dx, dz, w, d, tilt] of roadDebrisPositions) {
     const slab = new THREE.Mesh(
@@ -416,17 +505,17 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
   }
 
   const rubbleData: [number, number, number, number][] = [
-    [-7.6, 4.4, 0.3, SIDEWALK_Y],
-    [-7.3, -1.6, 0.36, SIDEWALK_Y],
-    [-7.6, -7.2, 0.32, SIDEWALK_Y],
-    [7.6, 4.1, 0.3, SIDEWALK_Y],
-    [7.3, -1.6, 0.36, SIDEWALK_Y],
-    [7.6, -7.0, 0.32, SIDEWALK_Y],
-    [-4.2, -9.2, 0.36, ROAD_Y],
-    [4.2, -9.1, 0.36, ROAD_Y],
-    [0.2, -9.6, 0.4, ROAD_Y],
-    [-6.6, 6.4, 0.34, ROAD_Y],
-    [6.6, 6.2, 0.34, ROAD_Y],
+    [-8.6, 12.0, 0.3, SIDEWALK_Y],
+    [-10.8, 2.2, 0.36, CRATER_FLOOR_Y],
+    [-10.8, -5.6, 0.32, CRATER_FLOOR_Y],
+    [8.6, 11.8, 0.3, SIDEWALK_Y],
+    [10.8, 2.2, 0.36, CRATER_FLOOR_Y],
+    [10.8, -5.4, 0.32, CRATER_FLOOR_Y],
+    [-4.8, -14.6, 0.36, ROAD_Y],
+    [4.8, -14.5, 0.36, ROAD_Y],
+    [0.2, -15.4, 0.4, ROAD_Y],
+    [-7.4, 11.2, 0.34, ROAD_Y],
+    [7.4, 11.0, 0.34, ROAD_Y],
   ];
   const rubbleInst = new THREE.InstancedMesh(rockWallGeo, concreteMat, rubbleData.length);
   rubbleInst.castShadow = false;
@@ -485,7 +574,7 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
   const emberSeeds: EmberParticleSeed[] = [];
   for (let i = 0; i < EMBER_COUNT; i++) {
     const ang = ((i * 137.5) % 360) * (Math.PI / 180);
-    const rad = 0.45 + ((i * 29) % 100) / 100 * 2.95;
+    const rad = 1.2 + ((i * 29) % 100) / 100 * 6.8;
     emberSeeds.push({
       baseX: Math.cos(ang) * rad,
       baseZ: ARENA_CENTER_Z + Math.sin(ang) * rad,
@@ -521,7 +610,7 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
   const ashSeeds: AshParticleSeed[] = [];
   for (let i = 0; i < ASH_COUNT; i++) {
     const ang = ((i * 97.3 + 22) % 360) * (Math.PI / 180);
-    const rad = 1.1 + ((i * 43) % 100) / 100 * 5.2;
+    const rad = 2.0 + ((i * 43) % 100) / 100 * 7.6;
     ashSeeds.push({
       baseX: Math.cos(ang) * rad,
       baseZ: ARENA_CENTER_Z + Math.sin(ang) * rad,
@@ -585,14 +674,14 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
   }
   const electricSparks: ElectricSparkNode[] = [];
   const sparkAnchors: [number, number, number][] = [
-    [-6.42, 4.18, 5.4], // Tilted left front streetlight
-    [6.42, 4.12, 5.4], // Tilted right front streetlight
-    [-6.25, 3.92, -1.6], // Heavily tilted left crater streetlight
-    [6.32, 3.98, -1.6], // Tilted right crater streetlight
-    [-6.68, 1.24, 3.6], // Snapped left guardrail end
-    [6.68, 1.24, 3.8], // Snapped right guardrail end
-    [-6.68, 1.22, -6.8], // Broken left rear guardrail
-    [6.68, 1.22, -6.8], // Broken right rear guardrail
+    [-10.45, 3.88, 3.4], // Outer left front plaza streetlight
+    [10.45, 3.82, 3.4], // Outer right front plaza streetlight
+    [-10.45, 3.72, -6.8], // Outer left rear plaza streetlight
+    [10.45, 3.78, -6.8], // Outer right rear plaza streetlight
+    [-7.68, 1.24, 9.2], // Front left guardrail end
+    [7.68, 1.24, 9.2], // Front right guardrail end
+    [-7.68, 1.22, -12.6], // Rear left guardrail end
+    [7.68, 1.22, -12.6], // Rear right guardrail end
   ];
   sparkAnchors.forEach(([sx, sy, sz], idx) => {
     const sg = new THREE.Group();
@@ -621,9 +710,15 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
   const setBossState = (
     isBossWave: boolean,
     isBossMode: boolean,
-    _anomalyColorHex: string
+    anomalyColorHex: string
   ): void => {
     bossEmberBoost = isBossWave ? (isBossMode ? 0.22 : 0.14) : 0;
+    const activeHex = isBossWave ? '#f43f5e' : anomalyColorHex || '#38bdf8';
+    plazaNeonRingMat.color.set(activeHex);
+    plazaNeonRingMat.opacity = isBossWave ? 0.78 : 0.58;
+    arenaAccentMat.color.set(activeHex);
+    arenaAccentMat.emissive.set(activeHex);
+    arenaAccentMat.emissiveIntensity = isBossWave ? 1.65 : 1.3;
   };
 
   const update = (dtSec: number, elapsed: number): void => {

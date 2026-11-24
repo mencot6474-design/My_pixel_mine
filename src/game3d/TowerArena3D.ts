@@ -161,6 +161,12 @@ export class TowerArena3D {
     this.sharedShardGeo.scale(0.75, 1.45, 0.75);
     this.group.add(this.impactFx.group);
     this.group.add(this.projectiles.group);
+    this.tierVfx.setPitBounds({
+      centerX: 0,
+      floorY: 0.08,
+      centerZ: ARENA_CENTER_Z,
+      radius: 9.6,
+    });
     this.group.add(this.tierVfx.group);
     this.group.add(this.shardGroup);
 
@@ -193,7 +199,7 @@ export class TowerArena3D {
   }
 
   private getSpawnPos(slotIndex: number): THREE.Vector3 {
-    const ang = (0.17 + (slotIndex / 4) * 0.66) * Math.PI;
+    const ang = (0.19 + (slotIndex / 4) * 0.62) * Math.PI;
     const topY = this.spawnPodiums[slotIndex]?.topY ?? 0.22;
     return new THREE.Vector3(
       Math.cos(ang) * SUMMON_RADIUS,
@@ -226,7 +232,8 @@ export class TowerArena3D {
       }
 
       if (!existing) {
-        const sprite = new ChibiSprite3D(cfg.def, 1.92, cfg.slotIndex * 0.9);
+        // 50% larger Chibi sprite height (1.92 -> 2.88) matching scaled podiums
+        const sprite = new ChibiSprite3D(cfg.def, 2.88, cfg.slotIndex * 0.9);
         sprite.group.userData = { chibiId: cfg.def.id };
         const spawnPos = this.getSpawnPos(cfg.slotIndex);
         sprite.group.position.copy(spawnPos);
@@ -333,7 +340,7 @@ export class TowerArena3D {
     this.bossChibiDef = nextDef;
     const sprite = new ChibiSprite3D(nextDef, 1.24, 0);
     sprite.group.position.set(0, 0.04, 0);
-    sprite.group.scale.setScalar(3.35);
+    sprite.group.scale.setScalar(3.65);
     sprite.setFacing(-1);
     sprite.setAnimState('aura');
     sprite.setLowQuality(this.lowQuality);

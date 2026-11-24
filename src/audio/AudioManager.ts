@@ -304,6 +304,60 @@ export class AudioManager {
     });
   }
 
+  /**
+   * Snappy crescendo barrage hit + synthesized blade-slash transient synced to each 7-hit beat
+   * so multi-hit Chibi barrage spam sounds punchy and alive across Mine, Tower, and Omega.
+   */
+  public playBarrageHitSfx(beatIndex = 0, isCrit = false, isFinisher = false): void {
+    const beat = Math.max(0, Math.min(6, Math.floor(beatIndex)));
+    const u = beat / 6;
+    const key: SfxKey = isFinisher || isCrit
+      ? 'ore-hit-3'
+      : beat % 3 === 0
+        ? 'ore-hit-1'
+        : beat % 3 === 1
+          ? 'ore-hit-2'
+          : 'ore-hit-3';
+    const pitchBase = 0.94 + u * 0.32 + (isCrit ? 0.08 : 0);
+    this.playSfx(key, {
+      volume: isFinisher ? 0.48 : isCrit ? 0.42 : 0.30 + u * 0.12,
+      pitchMin: pitchBase * 0.97,
+      pitchMax: pitchBase * 1.03,
+      cooldownMs: 65,
+      bucket: 'barrage-hit',
+    });
+
+    const audioCtx = this.prepareSynthCtx(65, 'barrage-slash');
+    if (!audioCtx) return;
+    const { ctx, gain } = audioCtx;
+    const t0 = ctx.currentTime + 0.003;
+    const jitter = 0.96 + Math.random() * 0.08;
+
+    this.scheduleNoiseClick(ctx, gain, t0, {
+      centerFreq: (2300 + u * 1900) * jitter,
+      q: 3.1,
+      dur: isFinisher ? 0.075 : 0.045,
+      peakGain: isFinisher ? 0.34 : 0.22 + u * 0.06,
+    });
+    this.scheduleTone(ctx, gain, t0, {
+      type: 'triangle',
+      freqStart: (880 + u * 540) * jitter,
+      freqEnd: 320 + u * 160,
+      dur: isFinisher ? 0.095 : 0.052,
+      peakGain: isFinisher ? 0.24 : 0.14 + u * 0.04,
+      attack: 0.002,
+    });
+    if (isFinisher || isCrit) {
+      this.scheduleTone(ctx, gain, t0 + 0.014, {
+        type: 'sine',
+        freqStart: (isFinisher ? 1567.98 : 1318.51) * jitter,
+        dur: isFinisher ? 0.13 : 0.085,
+        peakGain: isFinisher ? 0.16 : 0.11,
+        attack: 0.004,
+      });
+    }
+  }
+
   public playOreBreak(variantKey: OreVariantKey | 'tower' = 'common', comboStepOverride?: number): void {
     const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
     let step: number;

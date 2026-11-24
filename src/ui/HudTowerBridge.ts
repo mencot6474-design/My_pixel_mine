@@ -179,12 +179,17 @@ export class HudTowerBridge {
   public handleTowerFighterStrike(
     slotIndex: number,
     targetOreIndex: number | null,
-    attackInterval: number
+    attackInterval: number,
+    beatIndex = 0,
+    isFinisher = false
   ): { dmg: number; broken?: boolean; isCrit?: boolean } | undefined {
     if (this.getSceneMode() !== 'tower' || !this.state.towerRun) return undefined;
     const res = this.state.applyTowerChibiStrike(slotIndex, targetOreIndex, attackInterval);
     if (res.dmgDealt > 0) {
-      audio.playSfx('chibi-swing', { volume: 0.28, cooldownMs: 120, bucket: 'chibi-swing' });
+      audio.playBarrageHitSfx(beatIndex, Boolean(res.isCrit), isFinisher);
+      if (beatIndex === 0) {
+        audio.playSfx('chibi-swing', { volume: 0.24, cooldownMs: 120, bucket: 'chibi-swing' });
+      }
     }
     return this.handleTowerHitResolution(res);
   }

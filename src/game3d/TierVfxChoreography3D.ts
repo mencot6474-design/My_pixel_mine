@@ -392,28 +392,28 @@ export function fireTierAttackChoreography(
     }
 
     case 'limited': {
-      // FULL WIDE AoE: Left -> Right 13m Eclipse Moon Slashes + Central Solar Pillar + 6 Golden Spears!
-      ctx.hooks.onArenaDim?.(0.7, '#3b0712', 0.78);
-      ctx.spawnSlash({ x: cx - 1.5 * as, y: cy + 1.15, z: cz, color: secondary, coreColor: color, rx: 0.35, ry: -0.4, rz: 0.35, s0: 2.8 * as, s1: 6.6 * as, life: 0.42 * sc, spinSpeed: 3.5 });
+      // Single-target Imperial Eclipse finisher focused directly on the struck ore (tx, ty, tz)
+      ctx.hooks.onArenaDim?.(0.7, '#3b0712', 0.72);
+      ctx.spawnSlash({ x: tx - 0.85 * as, y: ty + 1.05, z: tz, color: secondary, coreColor: color, rx: 0.35, ry: -0.4, rz: 0.35, s0: 1.9 * as, s1: 4.1 * as, life: 0.40 * sc, spinSpeed: 3.5 });
       ctx.after(0.12 * sc, () => {
-        ctx.spawnSlash({ x: cx + 1.5 * as, y: cy + 1.25, z: cz, color, coreColor: '#ffffff', rx: -0.35, ry: 2.7, rz: -0.35, s0: 2.8 * as, s1: 6.6 * as, life: 0.42 * sc, spinSpeed: -3.5 });
+        ctx.spawnSlash({ x: tx + 0.85 * as, y: ty + 1.15, z: tz, color, coreColor: '#ffffff', rx: -0.35, ry: 2.7, rz: -0.35, s0: 1.9 * as, s1: 4.1 * as, life: 0.40 * sc, spinSpeed: -3.5 });
       });
       ctx.after(0.24 * sc, () => {
         ctx.hooks.onImpactFrame?.(1.0, 0.0, color, 0.05);
-        ctx.spawnBeam({ x: cx, y: cy, z: cz, color, coreColor: '#ffffff', radius: 1.05 * as, height: 1.05, life: 0.62 * sc });
-        ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color: secondary, coreColor: color, s0: 0.85 * as, s1: 6.6 * as, yScale: 0.54, life: 0.54 * sc });
-        pts.forEach((n, idx) => {
-          ctx.after(idx * 0.038 * sc, () => {
+        ctx.spawnBeam({ x: tx, y: ty, z: tz, color, coreColor: '#ffffff', radius: 0.92 * as, height: 1.0, life: 0.56 * sc });
+        ctx.spawnDome({ x: tx, y: ty + 0.04, z: tz, color: secondary, coreColor: color, s0: 0.65 * as, s1: 4.5 * as, yScale: 0.68, life: 0.48 * sc });
+        [-0.7, 0, 0.7].forEach((ox, idx) => {
+          ctx.after(idx * 0.045 * sc, () => {
             ctx.spawnDirectedWeapon(
               'spear',
-              new THREE.Vector3(n.x + (idx % 2 === 0 ? -1.6 : 1.6), n.y + 7.0, n.z - 1.8),
-              new THREE.Vector3(n.x, n.y + 0.4, n.z),
+              new THREE.Vector3(tx + ox * 1.4, ty + 6.4, tz - 1.5),
+              new THREE.Vector3(tx + ox * 0.25, ty + 0.4, tz),
               color,
-              1.68 * Math.max(0.78, as),
-              0.22 * sc,
+              1.48 * Math.max(0.78, as),
+              0.21 * sc,
               () => {
-                ctx.spawnQuad({ tex: ctx.ringTex, x: n.x, y: n.y + 0.08, z: n.z, color, s0: 0.55, s1: 3.2 * as, life: 0.34 * sc, flatFloor: true });
-                ctx.spawnDebrisBurst(n.x, n.y + 0.6, n.z, color, secondary, 4);
+                ctx.spawnQuad({ tex: ctx.ringTex, x: tx, y: ty + 0.08, z: tz, color, s0: 0.5, s1: 2.8 * as, life: 0.32 * sc, flatFloor: true });
+                ctx.spawnDebrisBurst(tx, ty + 0.6, tz, color, secondary, 4);
               }
             );
           });

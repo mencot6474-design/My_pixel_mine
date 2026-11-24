@@ -246,9 +246,21 @@ export function buildTowerArenaStage(ctx: TowerArenaStageCtx): TowerArenaStagePa
 
     const spawnPodiums: CyberShowcasePodiumHandle[] = [];
     const summonHoloTex = getPedestalHoloRingTexture();
+    const conduitMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.42,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    ctx.ownedMats.push(conduitMat);
+    const arenaCenterVec = new THREE.Vector3(0, 0.088, -1.6);
+
     for (let i = 0; i < 5; i++) {
       const sp = getSpawnPos(i);
-      const podium = createCyberShowcasePodium(podiumCtx, `0${i + 1}`, 0.78, false);
+      // 50% larger podium scale (0.78 -> 1.17) for commanding Chibi presence
+      const podium = createCyberShowcasePodium(podiumCtx, `0${i + 1}`, 1.17, false);
       podium.group.position.set(sp.x, 0.08, sp.z);
       podium.group.rotation.y = Math.atan2(-sp.x, BOSS_CENTER_Z - sp.z);
       podium.auraGroup.visible = false;
@@ -256,13 +268,13 @@ export function buildTowerArenaStage(ctx: TowerArenaStageCtx): TowerArenaStagePa
       spawnPodiums.push(podium);
 
       const pad = new THREE.Mesh(
-        summonHoloTex ? new THREE.PlaneGeometry(1.75, 1.75) : new THREE.RingGeometry(0.58, 0.82, 20),
+        summonHoloTex ? new THREE.PlaneGeometry(2.625, 2.625) : new THREE.RingGeometry(0.87, 1.23, 24),
         new THREE.MeshBasicMaterial({
           ...(summonHoloTex ? { map: summonHoloTex } : {}),
           color: 0x38bdf8,
           side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.16,
+          opacity: 0.2,
           blending: THREE.AdditiveBlending,
           depthWrite: false,
         })
@@ -271,10 +283,41 @@ export function buildTowerArenaStage(ctx: TowerArenaStageCtx): TowerArenaStagePa
       pad.position.set(sp.x, 0.095, sp.z);
       ctx.group.add(pad);
       ctx.summonPads.push(pad);
+
+      // Flush floor energy conduit connecting each podium inward to the central battle court
+      const toCenterX = arenaCenterVec.x - sp.x;
+      const toCenterZ = arenaCenterVec.z - sp.z;
+      const totalDist = Math.hypot(toCenterX, toCenterZ);
+      const conduitLen = Math.max(0.5, totalDist - 2.35);
+      const conduitGeo = new THREE.PlaneGeometry(0.14, conduitLen);
+      ctx.ownedGeos.push(conduitGeo);
+      const conduitMesh = new THREE.Mesh(conduitGeo, conduitMat);
+      conduitMesh.rotation.x = -Math.PI / 2;
+      conduitMesh.rotation.z = Math.atan2(-toCenterX, -toCenterZ);
+      const midDist = 1.45 + conduitLen * 0.5;
+      conduitMesh.position.set(
+        sp.x + (toCenterX / Math.max(0.01, totalDist)) * midDist,
+        0.088,
+        sp.z + (toCenterZ / Math.max(0.01, totalDist)) * midDist
+      );
+      ctx.group.add(conduitMesh);
     }
 
-    // 4. Central Boss Anchor Group (Populated with 2D Twin Chibi Boss Sprite in TowerArena3D)
-    ctx.monolithGroup.position.set(0, 0.08, BOSS_CENTER_Z);
+    // 4. Central Boss Dais & Anchor Group (Populated with 2D Twin Chibi Boss Sprite in TowerArena3D)
+    const bossDaisBaseGeo = new THREE.CylinderGeometry(2.15, 2.42, 0.08, 8);
+    const bossDaisTrimGeo = new THREE.CylinderGeometry(2.2, 2.24, 0.03, 8);
+    ctx.ownedGeos.push(bossDaisBaseGeo, bossDaisTrimGeo);
+    const bossDaisBase = new THREE.Mesh(bossDaisBaseGeo, armorDarkMat);
+    bossDaisBase.position.set(0, 0.115, BOSS_CENTER_Z);
+    bossDaisBase.rotation.y = Math.PI / 8;
+    bossDaisBase.receiveShadow = true;
+    const bossDaisTrim = new THREE.Mesh(bossDaisTrimGeo, armorSteelMat);
+    bossDaisTrim.position.set(0, 0.165, BOSS_CENTER_Z);
+    bossDaisTrim.rotation.y = Math.PI / 8;
+    bossDaisTrim.receiveShadow = true;
+    ctx.group.add(bossDaisBase, bossDaisTrim);
+
+    ctx.monolithGroup.position.set(0, 0.16, BOSS_CENTER_Z);
     ctx.group.add(ctx.monolithGroup);
 
     // 4b. Crater Floor Boss Feet Aura: Contact Shadow, Dim Red-Orange Shockwave, Anti-Gravity Rocks & Ground-to-Body Sparks

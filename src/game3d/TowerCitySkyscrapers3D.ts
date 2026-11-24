@@ -67,25 +67,25 @@ export function buildTowerRuinedSkyscrapers(ctx: TowerSkyscrapersCtx): void {
   }
 
   const buildings: TowerBuildingDef[] = [
-    // Left Skyscrapers (x <= -13.6 so sidewalks/roadway x ∈ [-10.4, +10.4] stay clear)
-    { x: -13.8, z: 5.2, w: 5.2, d: 5.0, h: 11.2, ruined: true, hasStairs: true, hasHvac: false, antenna: false, cols: 3, rows: 6, winW: 0.72, winH: 0.78 },
-    { x: -14.2, z: -2.2, w: 5.6, d: 5.8, h: 15.8, ruined: false, hasStairs: false, hasHvac: true, antenna: true, cols: 4, rows: 9, winW: 0.62, winH: 0.72 },
-    { x: -13.8, z: -10.2, w: 5.4, d: 5.4, h: 13.6, ruined: true, hasStairs: true, hasHvac: false, antenna: true, cols: 3, rows: 7, winW: 0.8, winH: 0.85 },
-    { x: -14.2, z: -18.5, w: 5.8, d: 5.6, h: 19.5, ruined: false, hasStairs: false, hasHvac: true, antenna: true, cols: 4, rows: 11, winW: 0.68, winH: 0.76 },
-    { x: -14.0, z: -27.0, w: 5.8, d: 5.8, h: 16.5, ruined: true, hasStairs: false, hasHvac: true, antenna: false, cols: 3, rows: 8, winW: 0.85, winH: 0.92 },
-    { x: -21.0, z: -5.5, w: 6.4, d: 6.4, h: 22.0, ruined: false, hasStairs: false, hasHvac: true, antenna: true, cols: 4, rows: 11, winW: 0.76, winH: 0.84 },
-    { x: -21.2, z: -15.5, w: 6.4, d: 6.4, h: 24.5, ruined: true, hasStairs: false, hasHvac: false, antenna: true, cols: 4, rows: 12, winW: 0.74, winH: 0.82 },
-    { x: -20.8, z: -25.0, w: 6.0, d: 6.0, h: 20.5, ruined: false, hasStairs: false, hasHvac: true, antenna: false, cols: 3, rows: 9, winW: 0.88, winH: 0.96 },
+    // Left Skyscrapers (x <= -15.0 so the wide 11.45m Overpass Plaza & outer lights stay 100% clear)
+    { x: -15.2, z: 5.2, w: 5.2, d: 5.0, h: 11.2, ruined: true, hasStairs: true, hasHvac: false, antenna: false, cols: 3, rows: 6, winW: 0.72, winH: 0.78 },
+    { x: -15.4, z: -2.2, w: 5.6, d: 5.8, h: 15.8, ruined: false, hasStairs: false, hasHvac: true, antenna: true, cols: 4, rows: 9, winW: 0.62, winH: 0.72 },
+    { x: -15.2, z: -10.2, w: 5.4, d: 5.4, h: 13.6, ruined: true, hasStairs: true, hasHvac: false, antenna: true, cols: 3, rows: 7, winW: 0.8, winH: 0.85 },
+    { x: -14.8, z: -18.5, w: 5.8, d: 5.6, h: 19.5, ruined: false, hasStairs: false, hasHvac: true, antenna: true, cols: 4, rows: 11, winW: 0.68, winH: 0.76 },
+    { x: -14.6, z: -27.0, w: 5.8, d: 5.8, h: 16.5, ruined: true, hasStairs: false, hasHvac: true, antenna: false, cols: 3, rows: 8, winW: 0.85, winH: 0.92 },
+    { x: -22.2, z: -5.5, w: 6.4, d: 6.4, h: 22.0, ruined: false, hasStairs: false, hasHvac: true, antenna: true, cols: 4, rows: 11, winW: 0.76, winH: 0.84 },
+    { x: -22.2, z: -15.5, w: 6.4, d: 6.4, h: 24.5, ruined: true, hasStairs: false, hasHvac: false, antenna: true, cols: 4, rows: 12, winW: 0.74, winH: 0.82 },
+    { x: -21.8, z: -25.0, w: 6.0, d: 6.0, h: 20.5, ruined: false, hasStairs: false, hasHvac: true, antenna: false, cols: 3, rows: 9, winW: 0.88, winH: 0.96 },
 
-    // Right Skyscrapers (x >= +13.6)
-    { x: 13.8, z: 5.2, w: 5.2, d: 5.0, h: 11.8, ruined: true, hasStairs: true, hasHvac: false, antenna: false, cols: 3, rows: 6, winW: 0.72, winH: 0.78 },
-    { x: 14.2, z: -2.2, w: 5.6, d: 5.8, h: 16.4, ruined: false, hasStairs: false, hasHvac: true, antenna: true, cols: 4, rows: 9, winW: 0.62, winH: 0.72 },
-    { x: 13.8, z: -10.2, w: 5.4, d: 5.4, h: 13.2, ruined: true, hasStairs: true, hasHvac: false, antenna: true, cols: 3, rows: 7, winW: 0.8, winH: 0.85 },
-    { x: 14.2, z: -18.5, w: 5.8, d: 5.6, h: 20.0, ruined: false, hasStairs: false, hasHvac: true, antenna: true, cols: 4, rows: 11, winW: 0.68, winH: 0.76 },
-    { x: 14.0, z: -27.0, w: 5.8, d: 5.8, h: 17.0, ruined: true, hasStairs: false, hasHvac: true, antenna: false, cols: 3, rows: 8, winW: 0.85, winH: 0.92 },
-    { x: 21.0, z: -5.5, w: 6.4, d: 6.4, h: 23.0, ruined: false, hasStairs: false, hasHvac: true, antenna: true, cols: 4, rows: 11, winW: 0.76, winH: 0.84 },
-    { x: 21.2, z: -15.5, w: 6.4, d: 6.4, h: 25.0, ruined: true, hasStairs: false, hasHvac: false, antenna: true, cols: 4, rows: 12, winW: 0.74, winH: 0.82 },
-    { x: 20.8, z: -25.0, w: 6.0, d: 6.0, h: 21.0, ruined: false, hasStairs: false, hasHvac: true, antenna: false, cols: 3, rows: 9, winW: 0.88, winH: 0.96 },
+    // Right Skyscrapers (x >= +15.0)
+    { x: 15.2, z: 5.2, w: 5.2, d: 5.0, h: 11.8, ruined: true, hasStairs: true, hasHvac: false, antenna: false, cols: 3, rows: 6, winW: 0.72, winH: 0.78 },
+    { x: 15.4, z: -2.2, w: 5.6, d: 5.8, h: 16.4, ruined: false, hasStairs: false, hasHvac: true, antenna: true, cols: 4, rows: 9, winW: 0.62, winH: 0.72 },
+    { x: 15.2, z: -10.2, w: 5.4, d: 5.4, h: 13.2, ruined: true, hasStairs: true, hasHvac: false, antenna: true, cols: 3, rows: 7, winW: 0.8, winH: 0.85 },
+    { x: 14.8, z: -18.5, w: 5.8, d: 5.6, h: 20.0, ruined: false, hasStairs: false, hasHvac: true, antenna: true, cols: 4, rows: 11, winW: 0.68, winH: 0.76 },
+    { x: 14.6, z: -27.0, w: 5.8, d: 5.8, h: 17.0, ruined: true, hasStairs: false, hasHvac: true, antenna: false, cols: 3, rows: 8, winW: 0.85, winH: 0.92 },
+    { x: 22.2, z: -5.5, w: 6.4, d: 6.4, h: 23.0, ruined: false, hasStairs: false, hasHvac: true, antenna: true, cols: 4, rows: 11, winW: 0.76, winH: 0.84 },
+    { x: 22.2, z: -15.5, w: 6.4, d: 6.4, h: 25.0, ruined: true, hasStairs: false, hasHvac: false, antenna: true, cols: 4, rows: 12, winW: 0.74, winH: 0.82 },
+    { x: 21.8, z: -25.0, w: 6.0, d: 6.0, h: 21.0, ruined: false, hasStairs: false, hasHvac: true, antenna: false, cols: 3, rows: 9, winW: 0.88, winH: 0.96 },
 
     // Background Horizon Towers Flanking Highway End (center lane open for elevated AI Core)
     { x: -11.4, z: -35.5, w: 5.6, d: 5.6, h: 23.5, ruined: false, hasStairs: false, hasHvac: true, antenna: true, cols: 3, rows: 10, winW: 0.78, winH: 0.84 },

@@ -103,6 +103,7 @@ export function patchShaderMaterialWithPitClip(
 
 export interface PatchableTierVfxPools {
   slashes: ReadonlyArray<{ mat: THREE.ShaderMaterial }>;
+  barrageLines: ReadonlyArray<{ mat: THREE.ShaderMaterial }>;
   domes: ReadonlyArray<{ mat: THREE.ShaderMaterial }>;
   beams: ReadonlyArray<{ mat: THREE.ShaderMaterial }>;
   vortices: ReadonlyArray<{ mat: THREE.ShaderMaterial }>;
@@ -135,6 +136,7 @@ export function patchTierVfxPoolMaterialsWithPitClip(
     }
   };
   patchList(pools.slashes);
+  patchList(pools.barrageLines);
   patchList(pools.domes);
   patchList(pools.beams);
   patchList(pools.vortices);

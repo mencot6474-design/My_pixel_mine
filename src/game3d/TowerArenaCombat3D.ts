@@ -42,6 +42,8 @@ export interface TowerStrikeEvent {
   comboStep?: number;
   attackerX?: number;
   attackerZ?: number;
+  beatIndex?: number;
+  isFinisher?: boolean;
 }
 
 export interface TowerOreBarScreen {
@@ -113,15 +115,15 @@ export interface TowerPendingBarrage {
 }
 
 export const TOWER_ARENA_CENTER_Z = -1.6;
-export const TOWER_BOSS_CENTER_Z = TOWER_ARENA_CENTER_Z - 3.25;
-export const TOWER_SUMMON_RADIUS = 5.55;
+export const TOWER_BOSS_CENTER_Z = TOWER_ARENA_CENTER_Z - 4.35;
+export const TOWER_SUMMON_RADIUS = 7.45;
 
 export const TOWER_WAVE_ORE_POSITIONS: ReadonlyArray<[number, number]> = [
-  [-3.7, TOWER_ARENA_CENTER_Z + 1.55],
-  [3.7, TOWER_ARENA_CENTER_Z + 1.55],
-  [-4.25, TOWER_ARENA_CENTER_Z - 1.35],
-  [4.25, TOWER_ARENA_CENTER_Z - 1.35],
-  [0, TOWER_ARENA_CENTER_Z - 2.35],
+  [-4.6, TOWER_ARENA_CENTER_Z + 1.15],
+  [4.6, TOWER_ARENA_CENTER_Z + 1.15],
+  [-5.25, TOWER_ARENA_CENTER_Z - 2.05],
+  [5.25, TOWER_ARENA_CENTER_Z - 2.05],
+  [0, TOWER_ARENA_CENTER_Z - 3.35],
 ];
 
 export function createTowerWaveOreSlot(index: number): TowerWaveRockSlot {
@@ -293,6 +295,15 @@ export function stepTowerFightersAndBarrages(ctx: {
     const isFinisher = b.beatIndex === beatCount - 1;
     if (b.isBoss) {
       ctx.triggerBossBounce();
+      ctx.tierVfx.fireBarrageHitSlash({
+        x: b.ex,
+        y: 2.35,
+        z: TOWER_BOSS_CENTER_Z + 0.95,
+        colorHex: b.accentColor,
+        beatIndex: b.beatIndex,
+        isFinisher,
+        scale: 1.38,
+      });
       ctx.impactFx.spawnImpact({
         targetX: b.ex,
         targetY: 2.45,
@@ -317,6 +328,8 @@ export function stepTowerFightersAndBarrages(ctx: {
         comboStep: b.comboStep,
         attackerX: b.sx,
         attackerZ: b.sz,
+        beatIndex: b.beatIndex,
+        isFinisher,
       });
     } else {
       let rock = ctx.waveRocks[b.targetOreIndex];
@@ -328,6 +341,15 @@ export function stepTowerFightersAndBarrages(ctx: {
           rock;
       }
       if (!rock || !rock.alive) return;
+      ctx.tierVfx.fireBarrageHitSlash({
+        x: rock.x,
+        y: 0.95,
+        z: rock.z,
+        colorHex: b.accentColor,
+        beatIndex: b.beatIndex,
+        isFinisher,
+        scale: 1.08,
+      });
       ctx.impactFx.spawnImpact({
         targetX: rock.x,
         targetY: 1.05,
@@ -352,6 +374,8 @@ export function stepTowerFightersAndBarrages(ctx: {
         comboStep: b.comboStep,
         attackerX: b.sx,
         attackerZ: b.sz,
+        beatIndex: b.beatIndex,
+        isFinisher,
       });
     }
   };
@@ -397,8 +421,19 @@ export function stepTowerFightersAndBarrages(ctx: {
           allTargets: [bossPt],
           comboStep: a.comboStep,
           speedScale,
+          areaScale: 0.96,
+          wideCenter: { x: 0, y: 0.45, z: TOWER_BOSS_CENTER_Z + 1.15 },
         });
       }
+      ctx.tierVfx.fireBarrageHitSlash({
+        x: a.ex,
+        y: 2.35,
+        z: TOWER_BOSS_CENTER_Z + 0.95,
+        colorHex: a.accentColor,
+        beatIndex: 0,
+        isFinisher: false,
+        scale: 1.38,
+      });
       ctx.impactFx.spawnImpact({
         targetX: a.ex,
         targetY: 2.45,
@@ -422,6 +457,8 @@ export function stepTowerFightersAndBarrages(ctx: {
         comboStep: a.comboStep,
         attackerX: a.sx,
         attackerZ: a.sz,
+        beatIndex: 0,
+        isFinisher: false,
       });
     } else {
       if (ctx.bossWave) return;
@@ -444,8 +481,19 @@ export function stepTowerFightersAndBarrages(ctx: {
           allTargets: ctx.targetPtsScratch,
           comboStep: a.comboStep,
           speedScale,
+          areaScale: 0.92,
+          wideCenter: { x: 0, y: 0.45, z: TOWER_ARENA_CENTER_Z - 0.5 },
         });
       }
+      ctx.tierVfx.fireBarrageHitSlash({
+        x: rock.x,
+        y: 0.95,
+        z: rock.z,
+        colorHex: a.accentColor,
+        beatIndex: 0,
+        isFinisher: false,
+        scale: 1.08,
+      });
       ctx.onFighterStrike?.({
         slotIndex: a.slotIndex,
         targetOreIndex: rock.index,
@@ -458,6 +506,8 @@ export function stepTowerFightersAndBarrages(ctx: {
         comboStep: a.comboStep,
         attackerX: a.sx,
         attackerZ: a.sz,
+        beatIndex: 0,
+        isFinisher: false,
       });
     }
   };
@@ -511,6 +561,7 @@ export function stepTowerFightersAndBarrages(ctx: {
             if (wr.alive) ctx.targetPtsScratch.push({ x: wr.x, y: 0.45, z: wr.z });
           }
           const targetPt: WorldPoint3 = { x: targetRock.x, y: 0.45, z: targetRock.z };
+          const waveWideCenter: WorldPoint3 = { x: 0, y: 0.45, z: TOWER_ARENA_CENTER_Z - 0.5 };
 
           activeFighter.sprite.triggerPodiumCast(0.36);
           ctx.tierVfx.firePodiumWeaponCast({
@@ -520,12 +571,15 @@ export function stepTowerFightersAndBarrages(ctx: {
             origin: { x: pos.x, y: pos.y, z: pos.z },
             target: targetPt,
             allTargets: ctx.targetPtsScratch,
+            wideCenter: waveWideCenter,
           });
           ctx.tierVfx.fireAnticipation(
             activeFighter.def.rarity,
             activeFighter.colorHex,
             targetPt,
-            ctx.targetPtsScratch
+            ctx.targetPtsScratch,
+            0.92,
+            waveWideCenter
           );
 
           ctx.projectiles.launch(
@@ -537,7 +591,7 @@ export function stepTowerFightersAndBarrages(ctx: {
               comboStep: step,
               accentColor: activeFighter.colorHex,
               sx: pos.x,
-              sy: pos.y + 1.25,
+              sy: pos.y + 1.85,
               sz: pos.z,
               ex: targetRock.x,
               ey: 1.05,
@@ -579,7 +633,7 @@ export function stepTowerFightersAndBarrages(ctx: {
             comboStep: step,
             accentColor: activeFighter.colorHex,
             sx: pos.x,
-            sy: pos.y + 1.25,
+            sy: pos.y + 1.85,
             sz: pos.z,
             ex: bossTargetX,
             ey: bossTargetY,

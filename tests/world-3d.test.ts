@@ -151,6 +151,12 @@ import {
 import { createSeraphimBoss3D } from '../src/game3d/SeraphimBoss3D';
 import { TowerArena3D } from '../src/game3d/TowerArena3D';
 import {
+  TOWER_ARENA_CENTER_Z,
+  TOWER_BOSS_CENTER_Z,
+  TOWER_SUMMON_RADIUS,
+  TOWER_WAVE_ORE_POSITIONS,
+} from '../src/game3d/TowerArenaCombat3D';
+import {
   getHarmonizedWorldFogColor,
   getMiningSkyDomeTexture,
   getPlazaSkyDomeTexture,
@@ -219,6 +225,7 @@ import {
 import {
   buildTierMotionWaypoints,
   CHIBI_ATTACK_ANIM_SEC,
+  isWideAoeRarity,
   splitBarrageDamage,
   SpotlightAttackQueue,
   TierAttackVfxPool3D,
@@ -3451,9 +3458,11 @@ describe('Pure 3D Mine World', () => {
       'limited',
     ]) {
       expect(getAoeTargetCount(r)).toBe(1);
+      expect(isWideAoeRarity(r)).toBe(false);
     }
     for (const r of ['fusion', 'twin', 'omega']) {
       expect(getAoeTargetCount(r)).toBe(3);
+      expect(isWideAoeRarity(r)).toBe(true);
     }
 
     const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
@@ -4228,7 +4237,7 @@ describe('Pure 3D Mine World', () => {
     expect(getDefaultOrbitPitchForMode('shop')).toBe(0.02);
     expect(getDefaultOrbitPitchForMode('altar')).toBe(-0.18);
     expect(getDefaultOrbitPitchForMode('fusion')).toBe(-0.18);
-    expect(getDefaultOrbitPitchForMode('tower')).toBe(-0.34);
+    expect(getDefaultOrbitPitchForMode('tower')).toBe(-0.22);
     expect(getDefaultOrbitPitchForMode('omega')).toBe(-0.32);
 
     const locked = applyCameraOrbitDrag({
@@ -4786,5 +4795,110 @@ describe('Pure 3D Mine World', () => {
     pit.setLowQuality(false);
     pit.update(0.05, 1.35, cam, true);
     expect(() => pit.dispose()).not.toThrow();
+  });
+
+  it('opens Battle Tower into a wide-open Apex Overpass Plaza with expanded podium arc, camera pullback, and clear combat court', () => {
+    expect(TOWER_SUMMON_RADIUS).toBeGreaterThanOrEqual(7.1);
+    expect(TOWER_BOSS_CENTER_Z).toBeLessThanOrEqual(TOWER_ARENA_CENTER_Z - 4.0);
+    expect(Math.abs(TOWER_WAVE_ORE_POSITIONS[0][0])).toBeGreaterThanOrEqual(4.5);
+    expect(clampCameraZoomRadius(Number.NaN, 'tower')).toBe(23.6);
+    expect(clampCameraZoomRadius(30, 'tower')).toBe(30);
+
+    const cityEnv = createTowerCityEnvironment();
+    cityEnv.group.updateMatrixWorld(true);
+    const probe = new THREE.Box3();
+    const size = new THREE.Vector3();
+    // No structural rocks, foundation slabs, or guardrails protrude above y=0.14 inside the open R=9.5m combat plaza
+    let obstructingMeshCount = 0;
+    cityEnv.group.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh) || obj instanceof THREE.InstancedMesh) return;
+      if (obj.material instanceof THREE.MeshBasicMaterial) return;
+      probe.setFromObject(obj);
+      probe.getSize(size);
+      if (probe.max.y > 0.14 && probe.min.y < 1.8 && probe.min.x < 9.5 && probe.max.x > -9.5 && probe.min.z < TOWER_ARENA_CENTER_Z + 9.5 && probe.max.z > TOWER_ARENA_CENTER_Z - 9.5) {
+        // Ignore the outer skyline/approach meshes whose horizontal bounds start outside the plaza
+        const cx = (probe.min.x + probe.max.x) * 0.5;
+        const cz = (probe.min.z + probe.max.z) * 0.5 - TOWER_ARENA_CENTER_Z;
+        if (Math.hypot(cx, cz) < 9.5 || (size.x > 16 && size.z > 30)) {
+          obstructingMeshCount++;
+        }
+      }
+    });
+    expect(obstructingMeshCount).toBe(0);
+    cityEnv.dispose();
+  });
+
+  it('spawns 1 single Crimson-style razor slash line per barrage hit (0..6) without extra clutter and forwards beatIndex/isFinisher', () => {
+    const pool = new TierAttackVfxPool3D();
+    const isEffectiveVisible = (obj: THREE.Object3D): boolean => {
+      let cur: THREE.Object3D | null = obj;
+      while (cur) {
+        if (!cur.visible) return false;
+        cur = cur.parent;
+      }
+      return true;
+    };
+    const getVisibleMeshes = (): THREE.Mesh[] => {
+      const list: THREE.Mesh[] = [];
+      pool.group.traverse((obj) => {
+        if (obj instanceof THREE.Mesh && isEffectiveVisible(obj)) list.push(obj);
+      });
+      return list;
+    };
+
+    pool.fireBarrageHitSlash({
+      x: 1,
+      y: 0.72,
+      z: 0,
+      colorHex: '#38bdf8',
+      beatIndex: 2,
+      isFinisher: false,
+    });
+    const beat2Meshes = getVisibleMeshes();
+    expect(beat2Meshes).toHaveLength(1);
+    const beat2Len = beat2Meshes[0].scale.x;
+
+    pool.clear();
+    pool.fireBarrageHitSlash({
+      x: 1,
+      y: 0.72,
+      z: 0,
+      colorHex: '#f43f5e',
+      secondaryHex: '#fde047',
+      beatIndex: 6,
+      isFinisher: true,
+    });
+    const finisherMeshes = getVisibleMeshes();
+    expect(finisherMeshes).toHaveLength(1);
+    expect(finisherMeshes[0].scale.x).toBeGreaterThan(beat2Len);
+    pool.dispose();
+
+    const tower = new TowerArena3D();
+    tower.group.visible = true;
+    tower.syncFighters([
+      { slotIndex: 0, def: CHIBI_CATALOG[0], enchantId: null, dmg: 100, speed: 1, miningMult: 1.5 },
+    ]);
+    tower.syncWaveState({
+      floor: 1,
+      wave: 1,
+      isBossWave: false,
+      isCheckpointFloor: false,
+      waveOres: rollTowerWaveOres(1, 1),
+      anomalyColorHex: '#38bdf8',
+      equippedMinerCount: 1,
+      paused: false,
+    });
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    const seenBeats = new Set<number>();
+    let sawFinisher = false;
+    for (let i = 0; i < 65; i++) {
+      tower.update(0.05, (i + 1) * 0.05, cam, (ev) => {
+        if (ev.beatIndex !== undefined) seenBeats.add(ev.beatIndex);
+        if (ev.isFinisher) sawFinisher = true;
+      });
+    }
+    expect(seenBeats.size).toBe(7);
+    expect(sawFinisher).toBe(true);
+    tower.dispose();
   });
 });
