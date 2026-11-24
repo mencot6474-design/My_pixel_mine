@@ -74,7 +74,11 @@ export interface RiftDomainContext {
   plotMiners: (string | null)[];
   miners: Record<string, number>;
   discovered: Set<string>;
-  getPlotUnitStats(slotIndex: number): { dmg: number; critChance: number; critMult: number } | null;
+  getPlotUnitStats(
+    slotIndex: number,
+    nowMs?: number,
+    includeOverclock?: boolean
+  ): { dmg: number; critChance: number; critMult: number } | null;
 }
 
 export interface RiftBreachClaimResult {
@@ -205,11 +209,11 @@ export function buyRiftPassDomain(
   return 'bought';
 }
 
-/** Computes total effective Squad DPS for Rift Meteor Storm scaling. */
+/** Computes total effective Squad DPS (excluding Overclock Fever) for Rift Meteor Storm scaling. */
 export function getRiftSquadEffectiveDpsDomain(ctx: Pick<RiftDomainContext, 'getPlotUnitStats'>): number {
   let total = 0;
   for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {
-    const st = ctx.getPlotUnitStats(i);
+    const st = ctx.getPlotUnitStats(i, Date.now(), false);
     if (st) total += st.dmg;
   }
   return total;
@@ -274,7 +278,7 @@ export function applyRiftSquadStrikeDomain(
 ): { dmgDealt: number; isCrit: boolean; newTier: number; tierUp: boolean } {
   const battle = ctx.riftBattle;
   if (!battle) return { dmgDealt: 0, isCrit: false, newTier: 0, tierUp: false };
-  const st = ctx.getPlotUnitStats(slotIndex);
+  const st = ctx.getPlotUnitStats(slotIndex, Date.now(), false);
   if (!st || st.dmg <= 0) {
     return { dmgDealt: 0, isCrit: false, newTier: battle.currentTier, tierUp: false };
   }

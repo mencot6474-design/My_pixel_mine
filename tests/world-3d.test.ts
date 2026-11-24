@@ -5363,6 +5363,7 @@ describe('Pure 3D Mine World', () => {
     expect(arena.clickables.some((c) => c.userData?.kind === 'rift-boss')).toBe(true);
 
     arena.group.visible = true;
+    arena.setBattleActive(true);
     arena.setBossConfig('null-singularity');
     arena.setSurgeActive(true);
     arena.syncFighters([
@@ -5388,6 +5389,16 @@ describe('Pure 3D Mine World', () => {
       });
     }
     expect(strikes.length).toBeGreaterThan(0);
+
+    // Stopping battle freezes further combat strikes immediately
+    arena.setBattleActive(false);
+    const afterEndStrikes: number[] = [];
+    for (let i = 0; i < 40; i++) {
+      arena.update(0.05, 2.0 + i * 0.05, cam, (ev) => {
+        afterEndStrikes.push(ev.dmg);
+      });
+    }
+    expect(afterEndStrikes).toHaveLength(0);
 
     arena.triggerBossHit('#22d3ee', true);
     arena.triggerTierShockwave(4);

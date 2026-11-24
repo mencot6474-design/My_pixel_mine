@@ -390,7 +390,8 @@ function computeUnitBaseDmgParts(
 export function computePlotUnitStats(
   ctx: PlotUnitsContext,
   slotIndex: number,
-  nowMs = Date.now()
+  nowMs = Date.now(),
+  includeOverclock = true
 ): PlotUnitStatsResult | null {
   const unit = ctx.plotUnits[slotIndex];
   if (!unit) return null;
@@ -403,7 +404,7 @@ export function computePlotUnitStats(
   const enc = getEnchantById(unit.enchantId);
   const weatherDmgMult = ctx.getWeatherDamageMult();
   const starTier = getChibiStarTier(getChibiStarCount(ctx, chibi.id));
-  const ocActive = ctx.isOverclockActive ? ctx.isOverclockActive(nowMs) : false;
+  const ocActive = includeOverclock && ctx.isOverclockActive ? ctx.isOverclockActive(nowMs) : false;
   const ocTier = ocActive ? (ctx.getOverclockTier ? ctx.getOverclockTier(nowMs) : 1) : 0;
   const ocChibiDmgMult = ocActive ? getOverclockTierBuffs(ocTier || 1).chibiDmgMult : 1;
   const dmg = Math.round(baseDmg * weatherDmgMult * ocChibiDmgMult);

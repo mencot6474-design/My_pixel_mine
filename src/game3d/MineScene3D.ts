@@ -830,6 +830,9 @@ export class MineScene3D {
     ra.setBossConfig(bossId);
     ra.setSurgeActive(surgeActive);
   }
+  public setRiftBattleActive(active: boolean): void {
+    this.ensureRiftArena().setBattleActive(active);
+  }
   public triggerRiftBossHit(color?: string, isCrit = false): void { this.riftArena?.triggerBossHit(color, isCrit); }
   public triggerRiftTierShockwave(tier: number): void { this.riftArena?.triggerTierShockwave(tier); }
 

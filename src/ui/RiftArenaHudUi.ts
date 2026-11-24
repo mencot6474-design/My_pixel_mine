@@ -242,7 +242,7 @@ export class RiftArenaHudUi {
                   : 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed'
               } text-[13.5px] font-black transition-transform"
               ${canRetry ? '' : 'disabled'}
-            >${canRetry ? `BATTLE AGAIN (${snap.attemptsRemaining}/3)` : 'NO ATTEMPTS (0/3)'}</button>
+            >${canRetry ? `BATTLE AGAIN (${snap.attemptsRemaining}/3)` : !snap.isOpen ? 'RIFT CLOSED' : 'NO ATTEMPTS (0/3)'}</button>
           </div>
         </div>
       </div>

@@ -2445,6 +2445,57 @@ describe('Tahap B HUD Modules', () => {
       expect(summaryHtml).toContain('TIER 4 / 10');
       expect(summaryHtml).toContain('+4');
       expect(summaryHtml).toContain('BATTLE AGAIN');
+
+      // When pass expires while viewing summary, button should show RIFT CLOSED
+      state.riftPassExpiresAt = Date.now() - 1000;
+      const closedSummaryHtml = arenaUi.renderRiftArenaHud();
+      expect(closedSummaryHtml).toContain('RIFT CLOSED');
+    });
+
+    it('does not steal tap/barrage audio cooldowns in HudRiftBridge and re-renders RiftModalUi on window state transition', () => {
+      const state = new GameState();
+      state.miners['astral-recruit'] = 1;
+      state.equipBestMiners();
+      state.gems = 500_000;
+      state.buyRiftPass();
+
+      const fakeRoot = { querySelector: () => null, querySelectorAll: () => [] } as unknown as HTMLElement;
+      let curMode: 'mine' | 'rift' = 'mine';
+      const arenaUi = new RiftArenaHudUi(state, () => {}, () => {}, () => {});
+      const bridge = new HudRiftBridge(
+        fakeRoot,
+        state,
+        arenaUi,
+        () => curMode,
+        (m) => { curMode = m as 'mine' | 'rift'; },
+        () => {},
+        () => {},
+        () => {},
+        {
+          setBossConfig: () => {},
+          setBattleActive: () => {},
+          triggerBossHit: () => {},
+          triggerTierShockwave: () => {},
+        }
+      );
+
+      const tapSpy = vi.spyOn(AudioManager.prototype, 'playOreHit');
+      const barrageSpy = vi.spyOn(AudioManager.prototype, 'playBarrageHitSfx');
+      bridge.startRiftBattle();
+      bridge.handleRiftBossTap(100, 100);
+      bridge.handleRiftFighterStrike(0, 1, false, 0, false);
+      expect(tapSpy).not.toHaveBeenCalled();
+      expect(barrageSpy).not.toHaveBeenCalled();
+      tapSpy.mockRestore();
+      barrageSpy.mockRestore();
+
+      // RiftModalUi.stepTick should trigger onRender when pass closes mid-modal
+      let renders = 0;
+      const modalUi = new RiftModalUi(state, () => { renders += 1; }, () => {});
+      modalUi.renderModal();
+      state.riftPassExpiresAt = Date.now() - 1000;
+      modalUi.stepTick(0.1, fakeRoot);
+      expect(renders).toBe(1);
     });
   });
 });

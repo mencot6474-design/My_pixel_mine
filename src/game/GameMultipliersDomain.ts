@@ -84,16 +84,22 @@ export function getWorldIndexProgressDomain(
   return { found, total, pct };
 }
 
-export function getTapDamageDomain(ctx: GameMultipliersContext, nowMs = Date.now()): number {
+export function getTapDamageDomain(
+  ctx: GameMultipliersContext,
+  nowMs = Date.now(),
+  includeOverclock = true
+): number {
   const tapMult =
     1 +
     ctx.getActiveIndexPassiveBonuses().allDmgPct +
     ctx.getAchievementAllDmgBonus();
-  const tier: 0 | OverclockTier = ctx.getOverclockTier
-    ? ctx.getOverclockTier(nowMs)
-    : ctx.isOverclockActive(nowMs)
-      ? 1
-      : 0;
+  const tier: 0 | OverclockTier = !includeOverclock
+    ? 0
+    : ctx.getOverclockTier
+      ? ctx.getOverclockTier(nowMs)
+      : ctx.isOverclockActive(nowMs)
+        ? 1
+        : 0;
   const overclockMult = getOverclockTierBuffs(tier).tapMult;
   const basePlotShare = Math.round((ctx.getBasePlotDps ? ctx.getBasePlotDps() : 0) * 0.03);
   const preOverclock = Math.max(

@@ -346,37 +346,42 @@ async function bootstrap(): Promise<void> {
     },
     onOreDamage: (dmg, sx, sy, isClick, isCrit, pitEventKind, isMeteor, isPerfect, beatIndex, isFinisher) => {
       hud?.spawnDamagePopup(dmg, sx, sy, isClick, isCrit, isPerfect);
+      const curMode = scene.getMode();
       if (isClick) {
-        triggerTapCombo(Boolean(isCrit || isPerfect), sx, sy);
-        audio.playOreHit(true, Boolean(isPerfect), tapComboState.count);
-        if (holdMiningVisualActive) {
-          spawnElectricSpark(sx, sy);
-        }
-        if (isCrit || isPerfect) gameState.recordCritTap(dmg);
-        if (isPerfect) {
-          audio.playCrystalChord('perfect');
-          triggerPerfectStrikeFlash();
-          if (gameState.isOverclockActive()) {
-            gameState.extendOverclock(OVERCLOCK_PERFECT_EXTEND_SEC, false);
-            gameState.chargeOverclock(OVERCLOCK_SWEET_SPOT_CHARGE * 1.6);
-          } else {
-            gameState.chargeOverclock(OVERCLOCK_SWEET_SPOT_CHARGE);
+        if (curMode === 'mine') {
+          triggerTapCombo(Boolean(isCrit || isPerfect), sx, sy);
+          audio.playOreHit(true, Boolean(isPerfect), tapComboState.count);
+          if (holdMiningVisualActive) {
+            spawnElectricSpark(sx, sy);
           }
-          hud?.pushToast('⚡ PERFECT STRIKE! +15% Fever Gauge!');
+          if (isCrit || isPerfect) gameState.recordCritTap(dmg);
+          if (isPerfect) {
+            audio.playCrystalChord('perfect');
+            triggerPerfectStrikeFlash();
+            if (gameState.isOverclockActive()) {
+              gameState.extendOverclock(OVERCLOCK_PERFECT_EXTEND_SEC, false);
+              gameState.chargeOverclock(OVERCLOCK_SWEET_SPOT_CHARGE * 1.6);
+            } else {
+              gameState.chargeOverclock(OVERCLOCK_SWEET_SPOT_CHARGE);
+            }
+            hud?.pushToast('⚡ PERFECT STRIKE! +15% Fever Gauge!');
+          } else {
+            const eventFeverMult = pitEventKind ? PIT_EVENT_DEFS[pitEventKind].feverChargeMult : 1;
+            const meteorFeverMult = isMeteor ? OVERCLOCK_METEOR_TAP_MULT : 1;
+            gameState.chargeOverclock(
+              (isCrit ? OVERCLOCK_TAP_CHARGE * 1.5 : OVERCLOCK_TAP_CHARGE) * eventFeverMult * meteorFeverMult
+            );
+          }
         } else {
-          const eventFeverMult = pitEventKind ? PIT_EVENT_DEFS[pitEventKind].feverChargeMult : 1;
-          const meteorFeverMult = isMeteor ? OVERCLOCK_METEOR_TAP_MULT : 1;
-          gameState.chargeOverclock(
-            (isCrit ? OVERCLOCK_TAP_CHARGE * 1.5 : OVERCLOCK_TAP_CHARGE) * eventFeverMult * meteorFeverMult
-          );
+          audio.playOreHit(true, Boolean(isCrit || isPerfect), tapComboState.count);
         }
       } else {
         if (beatIndex !== undefined) {
           audio.playBarrageHitSfx(beatIndex, Boolean(isCrit), Boolean(isFinisher));
-        } else if (scene.getMode() === 'mine') {
+        } else if (curMode === 'mine') {
           audio.playOreHit(false);
         }
-        if (isMeteor) {
+        if (isMeteor && curMode === 'mine') {
           gameState.chargeOverclock(OVERCLOCK_CHIBI_METEOR_CHARGE);
         }
       }
@@ -590,6 +595,7 @@ async function bootstrap(): Promise<void> {
     },
     {
       setBossConfig: (bossId, surgeActive) => scene.setRiftBossConfig(bossId, surgeActive),
+      setBattleActive: (active) => scene.setRiftBattleActive(active),
       triggerBossHit: (color, isCrit) => scene.triggerRiftBossHit(color, isCrit),
       triggerTierShockwave: (tier) => scene.triggerRiftTierShockwave(tier),
     }

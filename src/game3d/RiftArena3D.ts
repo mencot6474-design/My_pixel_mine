@@ -178,6 +178,7 @@ export class RiftArena3D {
   }> = [];
 
   private lowQuality = false;
+  private battleActive = false;
   private bossHitBounce = 0;
   private tierShockwaveTimer = 0;
 
@@ -407,6 +408,13 @@ export class RiftArena3D {
 
   public setSurgeActive(active: boolean): void {
     this.surgeActive = active;
+  }
+
+  public setBattleActive(active: boolean): void {
+    this.battleActive = active;
+    if (!active) {
+      this.resetCombatState();
+    }
   }
 
   public setTierVfxHooks(hooks: TierVfxHooks): void {
@@ -652,7 +660,9 @@ export class RiftArena3D {
     };
 
     const maxChargeSec = computeSpotlightMaxChargeSec(this.fighters.size);
-    this.spotlight.step(safeDt);
+    if (this.battleActive) {
+      this.spotlight.step(safeDt);
+    }
 
     for (const f of this.fighters.values()) {
       f.fx.update(elapsed, camera);
@@ -660,14 +670,21 @@ export class RiftArena3D {
       f.sprite.setAccentColor(f.colorHex);
       f.sprite.group.position.copy(f.spawnPos);
       f.sprite.setAnimState('idle');
-      f.attackCooldown = Math.max(0, f.attackCooldown - safeDt);
-      if (f.ultActiveTimer > 0) f.ultActiveTimer = Math.max(0, f.ultActiveTimer - safeDt);
-      f.chargeSec = Math.min(maxChargeSec, f.chargeSec + safeDt);
-      const effInterval = f.attackInterval / cadenceMult;
-      if (f.ultCharge >= ultReq && !f.ultArmed && f.attackCooldown <= effInterval * 0.55) {
-        f.ultArmed = true;
+      if (this.battleActive) {
+        f.attackCooldown = Math.max(0, f.attackCooldown - safeDt);
+        if (f.ultActiveTimer > 0) f.ultActiveTimer = Math.max(0, f.ultActiveTimer - safeDt);
+        f.chargeSec = Math.min(maxChargeSec, f.chargeSec + safeDt);
+        const effInterval = f.attackInterval / cadenceMult;
+        if (f.ultCharge >= ultReq && !f.ultArmed && f.attackCooldown <= effInterval * 0.55) {
+          f.ultArmed = true;
+        }
       }
       f.sprite.update(safeDt, elapsed, camera);
+    }
+
+    if (!this.battleActive) {
+      this.impactFx.update(safeDt, camera);
+      return;
     }
 
     const launchRiftAttack = (f: OmegaFighterEntry, isUltimate: boolean, effectiveSec: number): void => {

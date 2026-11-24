@@ -268,8 +268,8 @@ export class GameState {
     return this.plotUnits[slotIndex] ?? null;
   }
 
-  public getPlotUnitStats(slotIndex: number, nowMs = Date.now()) {
-    return PlotUnits.computePlotUnitStats(this, slotIndex, nowMs);
+  public getPlotUnitStats(slotIndex: number, nowMs = Date.now(), includeOverclock = true) {
+    return PlotUnits.computePlotUnitStats(this, slotIndex, nowMs, includeOverclock);
   }
 
   public getBasePlotDps(): number {
@@ -664,7 +664,7 @@ export class GameState {
   }
 
   public applyRiftTapDamage(
-    baseTapDmg = this.getTapDamage(),
+    baseTapDmg = this.getTapDamage(Date.now(), false),
     baseCritChance = 0.15,
     baseCritMult = 2.5,
     rng: () => number = Math.random
@@ -712,8 +712,8 @@ export class GameState {
     );
   }
 
-  public getTapDamage(nowMs = Date.now()): number {
-    return Multipliers.getTapDamageDomain(this, nowMs);
+  public getTapDamage(nowMs = Date.now(), includeOverclock = true): number {
+    return Multipliers.getTapDamageDomain(this, nowMs, includeOverclock);
   }
 
   public getMaxChestCapacity(): number {
@@ -997,6 +997,7 @@ export class GameState {
   public claimDailyLogin(now = Date.now()): DailyLoginRewardDef | null { return DailyLoginDom.claimDailyLoginDomain(this, now, () => this.emit()); }
 
   public chargeOverclock(amount: number, nowMs = Date.now()): boolean {
+    if (this.riftBattle) return this.isOverclockActive(nowMs);
     const wasActive = this.isOverclockActive(nowMs);
     const mult = this.isReturnRushActive(nowMs) ? 1 + OfflineDom.RETURN_RUSH_FEVER_CHARGE_BONUS : 1;
     const activated = OverclockDom.chargeOverclockDomain(this.overclock, amount * mult, nowMs);

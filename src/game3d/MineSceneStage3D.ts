@@ -874,16 +874,15 @@ export function stepMineActiveWorldEntities(ctx: {
         strike.beatIndex,
         strike.isFinisher
       );
-      const shownDmg = res ? res.dmg : strike.dmg;
-      if (shownDmg > 0) {
-        riftArena.triggerBossHit(strike.accentColor, Boolean(res?.isCrit));
+      if (res && res.dmg > 0) {
+        riftArena.triggerBossHit(strike.accentColor, Boolean(res.isCrit));
         ctx.emitDamageScreen(
-          shownDmg,
+          res.dmg,
           strike.wx,
           strike.wy,
           strike.wz,
           false,
-          Boolean(res?.isCrit),
+          Boolean(res.isCrit),
           undefined,
           false,
           false,

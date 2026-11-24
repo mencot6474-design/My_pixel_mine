@@ -24,6 +24,7 @@ import {
 
 export class RiftModalUi {
   private selectedChibiId: AnomalyChibiId = ANOMALY_CHIBI_DEFS[0].chibiId;
+  private lastSnapKey = '';
 
   constructor(
     private readonly state: GameState,
@@ -32,9 +33,19 @@ export class RiftModalUi {
     private readonly onStartBattle?: () => void
   ) {}
 
-  /** Updates the open/closed Rift Gate timer cleanly while the hub modal is open. */
+  private buildSnapKey(snap: ReturnType<GameState['getRiftWindowSnapshot']>): string {
+    return `${snap.isOpen ? 1 : 0}:${snap.source}:${snap.attemptsRemaining}:${snap.bossId}:${snap.anomaly.id}`;
+  }
+
+  /** Updates the open/closed Rift Gate timer and refreshes modal on window/quota state transitions. */
   public stepTick(_dtSec: number, root: HTMLElement): void {
     const snap = this.state.getRiftWindowSnapshot();
+    const nextKey = this.buildSnapKey(snap);
+    if (this.lastSnapKey && nextKey !== this.lastSnapKey) {
+      this.lastSnapKey = nextKey;
+      this.onRender();
+      return;
+    }
     const timerEl = root.querySelector<HTMLElement>('[data-rift-timer="true"]');
     if (timerEl) {
       timerEl.textContent = formatCountdownTimer(snap.isOpen ? snap.remainingSec : snap.nextOpenSec);
@@ -43,6 +54,7 @@ export class RiftModalUi {
 
   public renderModal(): string {
     const snap = this.state.getRiftWindowSnapshot();
+    this.lastSnapKey = this.buildSnapKey(snap);
     const timerStr = formatCountdownTimer(snap.isOpen ? snap.remainingSec : snap.nextOpenSec);
     const statusPill = snap.isOpen
       ? `<span class="mam-pill bg-[#67e8f9] text-[#14111d]">OPEN • <span data-rift-timer="true">${timerStr}</span></span>`

@@ -2337,5 +2337,25 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(reloaded.riftBestDamage).toBe(stateMeteor.riftBestDamage);
       expect(reloaded.getRiftWindowSnapshot(meteorStormMs).attemptsRemaining).toBe(2);
     });
+
+    it('isolates Rift squad DPS, squad strikes, and tap damage from Overclock Fever buffs', () => {
+      const state = new GameState();
+      state.miners['astral-recruit'] = 1;
+      state.equipBestMiners();
+      const baseRiftDps = state.getRiftSquadEffectiveDps();
+      const baseTap = state.getTapDamage(Date.now(), false);
+
+      state.chargeOverclock(100);
+      expect(state.isOverclockActive()).toBe(true);
+      expect(state.getTapDamage()).toBeGreaterThan(baseTap);
+      expect(state.getTapDamage(Date.now(), false)).toBe(baseTap);
+      expect(state.getRiftSquadEffectiveDps()).toBe(baseRiftDps);
+
+      const openMs = new Date(2026, 10, 25, 14, 5, 0).getTime();
+      expect(state.startRiftBattle(openMs)).toBe(true);
+      const strike = state.applyRiftSquadStrike(0, 1, false, () => 0.99);
+      const unboostedUnitDmg = state.getPlotUnitStats(0, Date.now(), false)!.dmg;
+      expect(strike.dmgDealt).toBe(unboostedUnitDmg);
+    });
   });
 });

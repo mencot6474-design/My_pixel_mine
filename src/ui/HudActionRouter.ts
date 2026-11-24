@@ -364,7 +364,7 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
     ctx.onOverclockChange?.(ocActive, ocTier);
     const tierUp = ocActive && ocTier > prevTier;
     ctx.syncFeverScreenFx(ocActive, tierUp, ocTier, encoreInfo);
-    if (tierUp) {
+    if (tierUp && ctx.sceneMode === 'mine') {
       audio.playSfx('rare-fanfare', { volume: ocTier >= 2 ? 0.72 : 0.65 });
       audio.playCrystalChord('fever');
       const orePct = Math.round((ocSnap.dropMult - 1) * 100);
@@ -418,8 +418,24 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
     return;
   }
 
-  if (ctx.sceneMode === 'rift' && ctx.state.riftBattle) {
-    ctx.riftBridge?.stepTick(0.1);
+  if (ctx.sceneMode === 'rift') {
+    if (ctx.state.riftBattle) {
+      ctx.riftBridge?.stepTick(0.1);
+    } else if (ctx.state.riftLastSummary) {
+      const retryBtn = ctx.root.querySelector<HTMLButtonElement>('[data-rift-summary-retry="true"]');
+      if (retryBtn) {
+        const snap = ctx.state.getRiftWindowSnapshot();
+        const canRetry = snap.isOpen && snap.attemptsRemaining > 0;
+        const expectedLabel = canRetry
+          ? `BATTLE AGAIN (${snap.attemptsRemaining}/3)`
+          : !snap.isOpen
+            ? 'RIFT CLOSED'
+            : 'NO ATTEMPTS (0/3)';
+        if (retryBtn.disabled === canRetry || retryBtn.textContent !== expectedLabel) {
+          ctx.render();
+        }
+      }
+    }
     return;
   }
 
