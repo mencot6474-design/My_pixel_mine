@@ -458,6 +458,9 @@ async function bootstrap(): Promise<void> {
     onOmegaArenaOverlay: (data) => {
       hud?.updateOmegaArenaOverlay(data);
     },
+    onRiftBossTap: (sx, sy) => hud?.handleRiftBossTap(sx, sy),
+    onRiftFighterStrike: (slotIndex, attackInterval, isUltimate, beatIndex, isFinisher) =>
+      hud?.handleRiftFighterStrike(slotIndex, attackInterval, isUltimate, beatIndex, isFinisher),
     onPlotUltFired: (info) => {
       hud?.triggerFeverUltCutIn(info);
     },
@@ -584,6 +587,11 @@ async function bootstrap(): Promise<void> {
         scene.syncOmegaBattleVisuals(targets, breakActive, parryActive),
       triggerBossHit: (color, isCrit) => scene.triggerOmegaBossHit(color, isCrit),
       triggerTargetShatter: (wx, wz, color) => scene.triggerOmegaTargetShatter(wx, wz, color),
+    },
+    {
+      setBossConfig: (bossId, surgeActive) => scene.setRiftBossConfig(bossId, surgeActive),
+      triggerBossHit: (color, isCrit) => scene.triggerRiftBossHit(color, isCrit),
+      triggerTierShockwave: (tier) => scene.triggerRiftTierShockwave(tier),
     }
   );
   hud.setOnModalVisibilityChange((open) => scene.setModalBackdropThrottled(open));

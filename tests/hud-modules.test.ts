@@ -61,6 +61,8 @@ import {
 import { stepHudSlowTick } from '../src/ui/HudActionRouter';
 import { TwinTrialModalUi } from '../src/ui/TwinTrialModalUi';
 import { RiftModalUi } from '../src/ui/RiftModalUi';
+import { RiftArenaHudUi } from '../src/ui/RiftArenaHudUi';
+import { HudRiftBridge } from '../src/ui/HudRiftBridge';
 import { PREMIUM_SHOP_ITEMS } from '../src/game/PremiumShopData';
 import { TWIN_TRIAL_DURATION_MS } from '../src/game/TwinTrialDomain';
 import {
@@ -2373,7 +2375,7 @@ describe('Tahap B HUD Modules', () => {
       expect(svg).toContain('ANOMALY');
     });
 
-    it('renders RiftModalUi with 500K Force Open CTA, ANOMALY Chibi cards, and Pity Claim button', () => {
+    it('renders RiftModalUi with 500K Force Open CTA, Tier 1-10 ladder, attempts badge, ANOMALY Chibi cards, and Pity Claim button', () => {
       const state = new GameState();
       const riftUi = new RiftModalUi(state, () => {}, () => {});
       const html = riftUi.renderModal();
@@ -2382,6 +2384,67 @@ describe('Tahap B HUD Modules', () => {
       expect(html).toContain('Null Singularity');
       expect(html).toContain('/badges/anomaly.svg');
       expect(html).toContain('100 Shards');
+      expect(html).toContain('Attempts');
+      expect(html).toContain('Tier 1');
+      expect(html).toContain('Tier 10');
+      expect(html).not.toContain('VOID');
+    });
+
+    it('renders RiftArenaHudUi 30s Tier 1-10 Damage Meter and HudRiftBridge battle summary flow', () => {
+      const state = new GameState();
+      state.miners['astral-recruit'] = 1;
+      state.equipBestMiners();
+      const fakeRoot = { querySelector: () => null, querySelectorAll: () => [] } as unknown as HTMLElement;
+      let curMode: 'mine' | 'rift' = 'mine';
+      let lastBoss: string | null = null;
+      let shockwaveTier = 0;
+
+      const arenaUi = new RiftArenaHudUi(state, () => {}, () => {}, () => {});
+      const bridge = new HudRiftBridge(
+        fakeRoot,
+        state,
+        arenaUi,
+        () => curMode,
+        (m) => { curMode = m as 'mine' | 'rift'; },
+        () => {},
+        () => {},
+        () => {},
+        {
+          setBossConfig: (bossId) => { lastBoss = bossId; },
+          triggerBossHit: () => {},
+          triggerTierShockwave: (t) => { shockwaveTier = t; },
+        }
+      );
+
+      // Force pass so battle can start regardless of current wall-clock minute
+      state.gems = 500_000;
+      state.buyRiftPass();
+      bridge.startRiftBattle();
+      expect(curMode).toBe('rift');
+      expect(lastBoss).toBeTruthy();
+      expect(state.riftBattle).not.toBeNull();
+
+      const liveHtml = arenaUi.renderRiftArenaHud();
+      expect(liveHtml).toContain('30.0s');
+      expect(liveHtml).toContain('TIER 0');
+      expect(liveHtml).toContain('T10');
+
+      // Deal enough tap damage to reach Tier 4 (50T)
+      state.applyRiftTapDamage(50_000_000_000_000, 0, 1, () => 0.99);
+      const afterTapHtml = arenaUi.renderRiftArenaHud();
+      expect(afterTapHtml).toContain('TIER 4');
+      expect(afterTapHtml).toContain('+4 Shards');
+
+      bridge.handleRiftFighterStrike(0, 1, true, 6, true);
+      bridge.retreatRiftBattle();
+      expect(state.riftBattle).toBeNull();
+      expect(state.riftShards).toBe(4);
+      expect(shockwaveTier).toBeGreaterThanOrEqual(0);
+
+      const summaryHtml = arenaUi.renderRiftArenaHud();
+      expect(summaryHtml).toContain('TIER 4 / 10');
+      expect(summaryHtml).toContain('+4');
+      expect(summaryHtml).toContain('BATTLE AGAIN');
     });
   });
 });

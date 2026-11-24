@@ -380,7 +380,8 @@ export class WorldOverlayHudUi {
 
     if (this.plotLayerEl) {
       const { sceneMode, activeModal, inspectedSlot } = this.getUiContext();
-      const showCombatBadges = sceneMode === 'mine' || sceneMode === 'tower' || sceneMode === 'omega';
+      const showCombatBadges =
+        sceneMode === 'mine' || sceneMode === 'tower' || sceneMode === 'omega' || sceneMode === 'rift';
       if (!showCombatBadges || activeModal !== 'none' || inspectedSlot !== null) {
         if (this.plotLayerEl.innerHTML !== '') {
           this.plotLayerEl.innerHTML = '';

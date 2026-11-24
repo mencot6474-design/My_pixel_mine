@@ -199,7 +199,7 @@ export class AudioManager {
 
   public setSceneMode(mode: SceneMode, isBossWave = false): void {
     const nextBgm: BgmKind =
-      mode === 'omega'
+      mode === 'omega' || mode === 'rift'
         ? 'boss'
         : mode === 'tower'
           ? isBossWave

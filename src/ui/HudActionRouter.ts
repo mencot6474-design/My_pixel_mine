@@ -28,6 +28,8 @@ import type { OfflineModalUi } from './OfflineModalUi';
 import type { OmegaArenaHudUi } from './OmegaArenaHudUi';
 import type { OmegaBossModalUi } from './OmegaBossModalUi';
 import type { RiftModalUi } from './RiftModalUi';
+import type { RiftArenaHudUi } from './RiftArenaHudUi';
+import type { HudRiftBridge } from './HudRiftBridge';
 import type { SettingsModalUi } from './SettingsModalUi';
 import type { ShopModalsUi } from './ShopModalsUi';
 import type { TowerUi } from './TowerUi';
@@ -52,6 +54,7 @@ export interface HudModalRenderers {
   omegaBossUi: OmegaBossModalUi;
   twinTrialUi?: TwinTrialModalUi;
   riftUi?: RiftModalUi;
+  riftArenaUi?: RiftArenaHudUi;
 }
 
 export interface HudActionRouterContext {
@@ -91,6 +94,7 @@ export interface HudFastTickContext {
   weatherDpsUi: WeatherDpsHudUi;
   towerUi: TowerUi;
   omegaArenaUi?: OmegaArenaHudUi;
+  riftBridge?: HudRiftBridge;
   lastOverclockActive: boolean;
   setLastOverclockActive: (active: boolean) => void;
   lastOverclockTier: 0 | OverclockTier;
@@ -414,6 +418,11 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
     return;
   }
 
+  if (ctx.sceneMode === 'rift' && ctx.state.riftBattle) {
+    ctx.riftBridge?.stepTick(0.1);
+    return;
+  }
+
   if (ctx.sceneMode !== 'tower' || !ctx.state.towerRun) return;
   const wasShielded = Boolean(ctx.state.towerRun.isBossWave && (ctx.state.towerRun.bossInvulLeft ?? 0) > 0);
   const tick = ctx.state.stepTowerTick(0.1);
@@ -546,4 +555,5 @@ export function bindHudRootEvents(ctx: HudBindRootEventsContext): void {
   ctx.omegaArenaUi.bindArenaEvents(ctx.root);
   ctx.twinTrialUi?.bindEvents(ctx.root);
   ctx.riftUi?.bindEvents(ctx.root);
+  ctx.riftArenaUi?.bindEvents(ctx.root);
 }

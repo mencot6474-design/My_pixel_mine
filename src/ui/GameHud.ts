@@ -67,6 +67,8 @@ import { TowerUi } from './TowerUi';
 import { TutorialUi } from './TutorialUi';
 import { TwinTrialModalUi } from './TwinTrialModalUi';
 import { RiftModalUi } from './RiftModalUi';
+import { RiftArenaHudUi } from './RiftArenaHudUi';
+import { HudRiftBridge, type RiftSceneOps } from './HudRiftBridge';
 import { UpgradesWorldsUi } from './UpgradesWorldsUi';
 import { WeatherDpsHudUi } from './WeatherDpsHudUi';
 import { WorldOverlayHudUi } from './WorldOverlayHudUi';
@@ -127,6 +129,8 @@ export class GameHud {
   private readonly omegaArenaUi: OmegaArenaHudUi;
   private readonly twinTrialUi: TwinTrialModalUi;
   private readonly riftUi: RiftModalUi;
+  private readonly riftArenaUi: RiftArenaHudUi;
+  private readonly riftBridge: HudRiftBridge;
 
   constructor(
     private readonly root: HTMLElement,
@@ -163,7 +167,8 @@ export class GameHud {
       triggerFusionAnimation: (recipe: FusionRecipeDef, onComplete: () => void) => void;
       setFusionRevealHold?: (active: boolean) => void;
     },
-    omegaOps?: OmegaSceneOps
+    omegaOps?: OmegaSceneOps,
+    riftOps?: RiftSceneOps
   ) {
     this.shopUi = new ShopModalsUi(
       this.state,
@@ -250,7 +255,25 @@ export class GameHud {
     this.riftUi = new RiftModalUi(
       this.state,
       () => this.render(),
-      (msg) => this.pushToast(msg)
+      (msg) => this.pushToast(msg),
+      () => this.riftBridge.startRiftBattle()
+    );
+    this.riftArenaUi = new RiftArenaHudUi(
+      this.state,
+      () => this.riftBridge.retreatRiftBattle(),
+      () => this.riftBridge.startRiftBattle(),
+      () => this.riftBridge.returnToHub()
+    );
+    this.riftBridge = new HudRiftBridge(
+      this.root,
+      this.state,
+      this.riftArenaUi,
+      () => this.sceneMode,
+      (mode) => this.setSceneMode(mode),
+      (kind) => this.openModal(kind),
+      (msg) => this.pushToast(msg),
+      () => this.render(),
+      riftOps
     );
     this.omegaArenaUi = new OmegaArenaHudUi(
       this.state,
@@ -472,6 +495,8 @@ export class GameHud {
           this.omegaBossUi.openForBoss(this.state.omegaLastSummary.bossId);
           this.setSceneMode('shop');
           this.openModal('omega-boss');
+        } else if (this.sceneMode === 'rift' && !this.state.riftBattle && this.state.riftLastSummary) {
+          this.riftBridge.returnToHub();
         } else if (this.activeModal !== 'none') this.openModal('none');
       } else if (e.key >= '1' && e.key <= '9' && this.inspectedSlot === null) {
         this.state.selectHotbarSlot(Number(e.key) - 1);
@@ -539,6 +564,7 @@ export class GameHud {
           this.syncFeverScreenFx(active, burst, tier, encore),
         syncTowerSceneVisual: () => this.syncTowerSceneVisual(),
         omegaArenaUi: this.omegaArenaUi,
+        riftBridge: this.riftBridge,
         syncOmegaSceneVisual: () => this.omegaBridge.syncOmegaSceneVisual(),
         setSceneMode: (mode) => this.setSceneMode(mode),
         openModal: (kind) => this.openModal(kind),
@@ -669,6 +695,9 @@ export class GameHud {
     if (this.sceneMode === 'omega' && mode !== 'omega' && this.state.omegaBattle) {
       this.state.abandonOmegaBoss();
     }
+    if (this.sceneMode === 'rift' && mode !== 'rift' && this.state.riftBattle) {
+      this.state.retreatRiftBattle();
+    }
     if (mode !== 'altar') {
       this.altarShopUi.cancelSpinOnSceneExit();
     }
@@ -786,7 +815,10 @@ export class GameHud {
   }
 
   private renderToastStack(): string {
-    const cls = this.sceneMode === 'tower' || this.sceneMode === 'omega' ? TW_TOAST_STACK_ARENA : TW_TOAST_STACK;
+    const cls =
+      this.sceneMode === 'tower' || this.sceneMode === 'omega' || this.sceneMode === 'rift'
+        ? TW_TOAST_STACK_ARENA
+        : TW_TOAST_STACK;
     return `<div class="${cls}" data-toast-stack="true"></div>`;
   }
 
@@ -885,6 +917,11 @@ export class GameHud {
 
       if (this.sceneMode === 'omega') {
         this.renderOmegaArenaHud();
+        return;
+      }
+
+      if (this.sceneMode === 'rift') {
+        this.renderRiftArenaHud();
         return;
       }
 
@@ -1017,6 +1054,26 @@ export class GameHud {
     this.omegaBridge.handleOmegaBossClick();
   }
 
+  public handleRiftBossTap(sx: number, sy: number) {
+    return this.riftBridge.handleRiftBossTap(sx, sy);
+  }
+
+  public handleRiftFighterStrike(
+    slotIndex: number,
+    attackInterval: number,
+    isUltimate: boolean,
+    beatIndex?: number,
+    isFinisher?: boolean
+  ) {
+    return this.riftBridge.handleRiftFighterStrike(slotIndex, attackInterval, isUltimate, beatIndex, isFinisher);
+  }
+
+  private renderRiftArenaHud(): void {
+    this.root.innerHTML = this.riftArenaUi.renderRiftArenaHud() + this.renderToastStack();
+    this.bindEvents();
+    this.renderToasts();
+  }
+
   public updateOmegaArenaOverlay(data: { bossHead: { x: number; y: number } | null; targets: OmegaTargetScreenAnchor[] } | null): void {
     this.worldOverlayUi.updateOmegaArenaOverlay(
       data,
@@ -1110,6 +1167,8 @@ export class GameHud {
       omegaBossUi: this.omegaBossUi,
       omegaArenaUi: this.omegaArenaUi,
       twinTrialUi: this.twinTrialUi,
+      riftUi: this.riftUi,
+      riftArenaUi: this.riftArenaUi,
     });
   }
 
