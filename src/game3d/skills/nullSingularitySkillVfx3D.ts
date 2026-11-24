@@ -4,7 +4,8 @@ import type { TierVfxHooks, WorldPoint3 } from '../TierMotionPath3D';
 const SKILL_DURATION_SEC = 2.5;
 const POOL_SIZE = 2;
 const MIRROR_COUNT = 8;
-const SHARD_COUNT = 14;
+const SHARDS_PER_DOOR = 3;
+const SHARD_COUNT = MIRROR_COUNT * SHARDS_PER_DOOR;
 const SHOCK_RING_COUNT = 2;
 const STAR_SPARK_COUNT = 36;
 
@@ -375,6 +376,8 @@ interface MirrorSlot {
 interface ShardSlot {
   mesh: THREE.Mesh;
   mat: THREE.ShaderMaterial;
+  doorIndex: number;
+  subIndex: number;
   angle: number;
   speed: number;
   ySpeed: number;
@@ -491,6 +494,8 @@ export class NullSingularitySkillVfxPool {
 
       const shards: ShardSlot[] = [];
       for (let s = 0; s < SHARD_COUNT; s++) {
+        const doorIndex = Math.floor(s / SHARDS_PER_DOOR);
+        const subIndex = s % SHARDS_PER_DOOR;
         const mat = createNullMirrorCardShaderMaterial();
         const mesh = new THREE.Mesh(shardGeo, mat);
         mesh.visible = false;
@@ -499,9 +504,11 @@ export class NullSingularitySkillVfxPool {
         shards.push({
           mesh,
           mat,
-          angle: (s / SHARD_COUNT) * Math.PI * 2 + (s % 2) * 0.12,
-          speed: 3.4 + (s % 4) * 1.1,
-          ySpeed: 3.6 + (s % 3) * 1.2,
+          doorIndex,
+          subIndex,
+          angle: (doorIndex / MIRROR_COUNT) * Math.PI * 2 + (subIndex - 1) * 0.42,
+          speed: 2.5 + subIndex * 0.85 + (doorIndex % 2) * 0.45,
+          ySpeed: 2.2 + (2 - subIndex) * 1.15,
         });
       }
 
@@ -619,26 +626,53 @@ export class NullSingularitySkillVfxPool {
       inst.floorMat.uniforms.uOpacity.value = 1;
       inst.floorMesh.rotation.y -= dt * 0.55;
 
-      // Phase 1-2: 8 Giant Galaxy Mirror-Monoliths fire 8 Thick Quasar Lasers into Blinding 4-Point Star-Prism Convergence
+      const mirrorLimit = this.lowQuality ? 4 : MIRROR_COUNT;
+      const dropStepSec = this.lowQuality ? 0.055 : 0.028;
+      const shatterStepSec = this.lowQuality ? 0.068 : 0.036;
+
+      // Phase 1-2: 8 Giant Galaxy Doors drop in 1-by-1 from above, resonate, and shatter 1-by-1
       if (inst.elapsed < 0.86) {
-        const introT = Math.min(1, inst.elapsed / 0.35);
         const beamT = Math.max(0, Math.min(1, (inst.elapsed - 0.16) / 0.65));
         const r = 4.6 * as;
-        const mirrorLimit = this.lowQuality ? 4 : MIRROR_COUNT;
 
-        for (let m = 0; m < mirrorLimit; m++) {
+        for (let m = 0; m < MIRROR_COUNT; m++) {
           const mr = inst.mirrors[m];
-          const a = mr.angle + inst.elapsed * 0.35;
-          const mx = inst.cx + Math.cos(a) * r;
-          const mz = inst.cz + Math.sin(a) * r;
-          const my = inst.cy + 2.2 * as;
+          if (m >= mirrorLimit) {
+            mr.mirrorMesh.visible = false;
+            continue;
+          }
 
-          mr.mirrorMesh.visible = true;
+          const dropDelay = m * dropStepSec;
+          const localDrop = inst.elapsed - dropDelay;
+          const shatterTime = 0.54 + m * shatterStepSec;
+          if (localDrop < 0 || inst.elapsed >= shatterTime) {
+            mr.mirrorMesh.visible = false;
+            continue;
+          }
+
+          const dropT = Math.min(1, localDrop / 0.16);
+          const dropEase = 1 - Math.pow(1 - dropT, 3);
+          const settle = dropT > 0.78 ? Math.sin(((dropT - 0.78) / 0.22) * Math.PI) : 0;
+
+          // Brief crack-shake right before this door shatters
+          const crackT = Math.max(0, Math.min(1, (inst.elapsed - (shatterTime - 0.055)) / 0.055));
+          const shakeOffset = crackT > 0 ? Math.sin(inst.elapsed * 95.0 + m * 3.1) * 0.14 * crackT * as : 0;
+
+          const a = mr.angle + inst.elapsed * 0.35;
+          const mx = inst.cx + Math.cos(a) * r + shakeOffset;
+          const mz = inst.cz + Math.sin(a) * r;
+          const my = inst.cy + (8.6 - 6.4 * dropEase) * as;
+
+          const scaleX = (1 + 0.06 * settle + 0.08 * crackT) * as;
+          const scaleY = (1 - 0.07 * settle + 0.08 * crackT) * as;
+          const opacity = Math.min(1, dropT * 3.0);
+
+          mr.mirrorMesh.visible = opacity > 0.015;
           mr.mirrorMesh.position.set(mx, my, mz);
           mr.mirrorMesh.lookAt(inst.cx, my, inst.cz);
-          mr.mirrorMesh.scale.setScalar((0.55 + 0.45 * introT) * as);
+          mr.mirrorMesh.scale.set(scaleX, scaleY, as);
           mr.mirrorMat.uniforms.uTime.value = timeSec;
-          mr.mirrorMat.uniforms.uOpacity.value = 1;
+          mr.mirrorMat.uniforms.uOpacity.value = opacity;
         }
 
         const coreY = inst.cy + 2.2 * as;
@@ -678,6 +712,42 @@ export class NullSingularitySkillVfxPool {
         inst.prismMesh.visible = false;
       }
 
+      // 1-by-1 Shattered Door Shards: each door bursts into 3 tumbling shards at its shatterTime
+      const shardFade = 1 - Math.max(0, (uProgress - 0.66) / 0.32);
+      for (let s = 0; s < SHARD_COUNT; s++) {
+        const sh = inst.shards[s];
+        if (sh.doorIndex >= mirrorLimit || shardFade <= 0.02) {
+          sh.mesh.visible = false;
+          continue;
+        }
+        const shatterTime = 0.54 + sh.doorIndex * shatterStepSec;
+        const dtShard = inst.elapsed - shatterTime;
+        if (dtShard < 0) {
+          sh.mesh.visible = false;
+          continue;
+        }
+        const doorAngle = inst.mirrors[sh.doorIndex].angle + shatterTime * 0.35;
+        const doorR = 4.6 * as;
+        const spawnX = inst.cx + Math.cos(doorAngle) * doorR;
+        const spawnZ = inst.cz + Math.sin(doorAngle) * doorR;
+        const spawnY = 2.2 + (sh.subIndex - 1) * 1.1;
+
+        const flyAngle = doorAngle + (sh.subIndex - 1) * 0.48;
+        const outDist = dtShard * sh.speed * as;
+        const y = Math.max(0.25, (spawnY + dtShard * sh.ySpeed - 4.0 * dtShard * dtShard) * as);
+
+        sh.mesh.visible = true;
+        sh.mesh.position.set(
+          spawnX + Math.cos(flyAngle) * outDist,
+          inst.cy + y,
+          spawnZ + Math.sin(flyAngle) * outDist
+        );
+        sh.mesh.rotation.set(dtShard * 5.2 + s, dtShard * 4.4 + sh.doorIndex, dtShard * 3.1);
+        sh.mesh.scale.setScalar(1.05 * shardFade * as);
+        sh.mat.uniforms.uTime.value = timeSec;
+        sh.mat.uniforms.uOpacity.value = shardFade;
+      }
+
       // Hit-Stop Impact Frame
       if (!inst.impactFired && inst.elapsed >= 0.82) {
         inst.impactFired = true;
@@ -688,7 +758,7 @@ export class NullSingularitySkillVfxPool {
         inst.onImpactCallback?.();
       }
 
-      // Finale: Colossal 12.0m Quasar Jet Beam + 2 Massive Shock Rings + 14 Shattered Mirrors + 36 Sparks
+      // Finale: Colossal 12.0m Quasar Jet Beam + 2 Massive Shock Rings + 36 Sparks
       if (uProgress >= 0.33) {
         const bt = Math.min(1, (uProgress - 0.33) / 0.18);
         const ease = 1 - Math.pow(1 - bt, 3);
@@ -717,23 +787,6 @@ export class NullSingularitySkillVfxPool {
         }
 
         const dtBoom = Math.max(0, inst.elapsed - 0.82);
-        const shardLimit = this.lowQuality ? 7 : SHARD_COUNT;
-        for (let s = 0; s < shardLimit; s++) {
-          const sh = inst.shards[s];
-          if (fade <= 0.02) {
-            sh.mesh.visible = false;
-            continue;
-          }
-          sh.mesh.visible = true;
-          const r = dtBoom * sh.speed * as;
-          const y = Math.max(0.25, 1.0 + dtBoom * sh.ySpeed - 2.2 * dtBoom * dtBoom);
-          sh.mesh.position.set(inst.cx + Math.cos(sh.angle) * r, inst.cy + y, inst.cz + Math.sin(sh.angle) * r);
-          sh.mesh.rotation.x += dt * 4.8;
-          sh.mesh.rotation.y += dt * 4.2;
-          sh.mesh.scale.setScalar(1.1 * fade * as);
-          sh.mat.uniforms.uTime.value = timeSec;
-          sh.mat.uniforms.uOpacity.value = fade;
-        }
 
         const sparkLimit = this.lowQuality ? 16 : STAR_SPARK_COUNT;
         for (let k = 0; k < sparkLimit; k++) {

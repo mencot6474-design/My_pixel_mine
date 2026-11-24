@@ -824,6 +824,21 @@ describe('Tahap B HUD Modules', () => {
       expect(cutinEl.innerHTML).toContain('mam-rarity-label');
       expect(cutinEl.innerHTML).toContain('Legendary');
 
+      triggerFeverUltCutInDom(cutinHost, {
+        chibiId: 'void-asura',
+        name: 'Void Asura',
+        rarity: 'anomaly',
+        accentColor: '#e879f9',
+        isEncore: false,
+        encoreIndex: 0,
+        encoreTotal: 0,
+        tier: 3,
+      });
+      expect(cutinEl.innerHTML).toContain('HYPER ULT!');
+      expect(cutinEl.innerHTML).toContain('mam-rarity-badge mam-rarity-anomaly is-crest');
+      expect(cutinEl.innerHTML).toContain('anomaly.svg');
+      expect(cutinEl.innerHTML).not.toContain('mam-rarity-common');
+
       const ocToast = renderToastBannerHtml('⚡ OVERCLOCK ACTIVE! 2x DMG');
       expect(ocToast).toContain('data-toast-tone="overclock"');
       expect(ocToast).not.toContain('⚡');

@@ -5311,6 +5311,7 @@ describe('Pure 3D Mine World', () => {
     for (let i = 0; i < 24; i++) pool.update(0.05, cam);
     expect(impactCalls).toBeGreaterThan(0);
 
+    pool.clear();
     impactCalls = 0;
     pool.fireTierAttack({
       rarity: 'anomaly',
@@ -5321,7 +5322,20 @@ describe('Pure 3D Mine World', () => {
       areaScale: 0.72,
       wideCenter: target,
     });
-    for (let i = 0; i < 24; i++) pool.update(0.05, cam);
+    pool.update(0.03, cam);
+    const nullPoolGroup = pool.group.children.find((g) => g.children.some((r) => r.visible));
+    const nullInstRoot = nullPoolGroup?.children.find((r) => r.visible);
+    expect(nullInstRoot).toBeDefined();
+    // Staggered 1-by-1 entrance from above: at 0.03s only doors 0..1 have dropped in, doors 2..7 are still queued
+    const visibleAtIntro = nullInstRoot!.children.filter((c) => c.visible).length;
+    expect(visibleAtIntro).toBeLessThan(11);
+
+    // By 0.23s all 8 doors have dropped in; by 0.63s earlier doors shatter 1-by-1 into flying shards
+    for (let i = 0; i < 12; i++) pool.update(0.05, cam);
+    const visibleMidShatter = nullInstRoot!.children.filter((c) => c.visible).length;
+    expect(visibleMidShatter).toBeGreaterThan(8);
+
+    for (let i = 0; i < 12; i++) pool.update(0.05, cam);
     expect(impactCalls).toBeGreaterThan(0);
 
     const asuraDef = getChibiById('void-asura')!;

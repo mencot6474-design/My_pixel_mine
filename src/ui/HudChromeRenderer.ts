@@ -361,6 +361,7 @@ const VALID_CUTIN_RARITIES = new Set<ItemRarity>([
   'limited',
   'twin',
   'omega',
+  'anomaly',
 ]);
 
 function normalizeCutInRarity(raw: string): ItemRarity {
