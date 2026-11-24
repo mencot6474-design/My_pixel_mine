@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { getEnchantById } from '../game/GameData';
+import { type OverclockTier } from '../game/OverclockDomain';
 import { ChibiAnimState, ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
 import { disposeObject3D } from './ChestVaultStation3D';
@@ -80,6 +81,7 @@ export class PlotPedestal3D {
   private auraMoteMat: THREE.ShaderMaterial | null = null;
   private auraMotePoints: THREE.Points | null = null;
   private lowQuality = false;
+  private overclockTier: 0 | OverclockTier = 0;
   private castRingPulse = 0;
   private readonly tmpScale = new THREE.Vector3(1, 1, 1);
 
@@ -640,10 +642,15 @@ export class PlotPedestal3D {
     this.holoDiscMat.opacity = hover ? 0.86 : 0.68;
   }
 
+  public setOverclockTier(tier: 0 | OverclockTier): void {
+    this.overclockTier = tier;
+  }
+
   public update(dtSec: number, elapsed = 0, camera?: THREE.Camera): void {
     this.lastElapsed = elapsed;
     const safeDt = Math.min(Math.max(0, dtSec), 0.1);
-    this.hoverBobOffset = Math.sin(elapsed * 1.85 + this.index * 1.15) * 0.045;
+    const feverScale = this.overclockTier;
+    this.hoverBobOffset = Math.sin(elapsed * (1.85 + feverScale * 0.55) + this.index * 1.15) * 0.045;
     this.podiumBodyGroup.position.y = this.hoverBobOffset;
     if (this.chibiSprite) {
       this.chibiSprite.group.position.y = 0.28 + this.hoverBobOffset;
@@ -654,22 +661,28 @@ export class PlotPedestal3D {
     if (this.castRingPulse > 0) {
       this.castRingPulse = Math.max(0, this.castRingPulse - safeDt * 2.6);
     }
-    const baseRingIntensity = this.hovered ? 1.3 : this.enchantId ? 1.05 : 0.85;
+    const baseRingIntensity = (this.hovered ? 1.3 : this.enchantId ? 1.05 : 0.85) + feverScale * 0.18;
     this.ringMat.emissiveIntensity = baseRingIntensity + this.castRingPulse * 0.95;
-    this.holoDiscMat.opacity = Math.min(0.95, (this.hovered ? 0.86 : 0.68) + this.castRingPulse * 0.22);
+    this.holoDiscMat.opacity = Math.min(
+      0.95,
+      (this.hovered ? 0.86 : 0.68) + this.castRingPulse * 0.22 + feverScale * 0.05
+    );
     const pulseWave = Math.sin(elapsed * 4.2 + this.index) * 0.05;
     this.syncUnderHoloColors();
+    const beamBoost = feverScale * 0.08;
     this.thrusterBeamOuterMat.uniforms.uTime.value = elapsed + this.index * 0.7;
     this.thrusterBeamOuterMat.uniforms.uOpacity.value =
-      (this.hovered ? 0.56 : 0.42) + this.castRingPulse * 0.28 + pulseWave;
+      (this.hovered ? 0.56 : 0.42) + this.castRingPulse * 0.28 + beamBoost + pulseWave;
     this.thrusterBeamCoreMat.uniforms.uTime.value = elapsed * 1.2 + this.index * 0.7;
     this.thrusterBeamCoreMat.uniforms.uOpacity.value =
-      (this.hovered ? 0.74 : 0.58) + this.castRingPulse * 0.3 + pulseWave;
-    this.holoProjOuterMat.opacity = (this.hovered ? 0.78 : 0.56) + this.castRingPulse * 0.25;
-    this.holoProjOuterMesh.rotation.z = elapsed * 0.48 + this.index;
-    this.holoProjInnerMat.opacity = (this.hovered ? 0.6 : 0.4) + this.castRingPulse * 0.25;
+      (this.hovered ? 0.74 : 0.58) + this.castRingPulse * 0.3 + beamBoost + pulseWave;
+    const ringSpinMult = 1 + feverScale * 0.45;
+    const ringBoost = feverScale * 0.07;
+    this.holoProjOuterMat.opacity = (this.hovered ? 0.78 : 0.56) + this.castRingPulse * 0.25 + ringBoost;
+    this.holoProjOuterMesh.rotation.z = elapsed * 0.48 * ringSpinMult + this.index;
+    this.holoProjInnerMat.opacity = (this.hovered ? 0.6 : 0.4) + this.castRingPulse * 0.25 + ringBoost;
     if (!this.lowQuality) {
-      this.holoProjInnerMesh.rotation.z = -elapsed * 0.76 - this.index;
+      this.holoProjInnerMesh.rotation.z = -elapsed * 0.76 * ringSpinMult - this.index;
     }
     const targetScale = (this.hovered ? 1.06 : 1) * PLOT_PODIUM_SCALE;
     this.tmpScale.set(targetScale, PLOT_PODIUM_SCALE, targetScale);

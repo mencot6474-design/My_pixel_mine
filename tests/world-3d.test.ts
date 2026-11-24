@@ -25,7 +25,7 @@ import {
   stepMineSceneCamera,
 } from '../src/game3d/MineSceneStage3D';
 import { createNexusLeftGate, createVaultCoreDais } from '../src/game3d/ArenaWings3D';
-import { WORLD_ARENA_BIOMES } from '../src/game3d/ColosseumBiome3D';
+import { createColosseumBiomeHandle, WORLD_ARENA_BIOMES } from '../src/game3d/ColosseumBiome3D';
 import { createCyberCargoPod } from '../src/game3d/CyberCargoPod3D';
 import { AudioManager } from '../src/audio/AudioManager';
 import {
@@ -5192,5 +5192,97 @@ describe('Pure 3D Mine World', () => {
     expect(fxShaderPlanes).toBe(1);
     fx.update(0.25, cam);
     fx.dispose();
+  });
+
+  it('accelerates Ult charge in Fever Lv.1/Lv.2, runs 5-Ult round-robin Hyper Encore in Lv.3 (for 5/3/2/0 Chibis), and toggles 3D stage spotlights', () => {
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
+    const commonDef = CHIBI_CATALOG.find((c) => c.rarity === 'common') ?? CHIBI_CATALOG[0];
+
+    // 1. Lv.1 -> maxCharge 4, Lv.2 -> maxCharge 3
+    const ctrlCharge = new PlotAttackController3D();
+    ctrlCharge.setSlotUnit(0, commonDef, { dmg: 100, speed: 1, miningMult: 1, critChance: 0 });
+    expect(ctrlCharge.getSlotUltState(0)?.maxCharge).toBe(5);
+    ctrlCharge.setOverclockTier(1);
+    expect(ctrlCharge.getSlotUltState(0)?.maxCharge).toBe(4);
+    ctrlCharge.setOverclockTier(2);
+    expect(ctrlCharge.getSlotUltState(0)?.maxCharge).toBe(3);
+    ctrlCharge.dispose();
+
+    // 2. Helper to simulate Lv.3 Hyper Encore with arbitrary equipped slot indices
+    const runEncoreWithSlots = (
+      slots: number[]
+    ): { order: number[]; ultDoneCount: number; completedCount: number } => {
+      const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
+      pit.setHpScale(100_000);
+      const ctrl = new PlotAttackController3D();
+      const peds = [0, 1, 2, 3, 4].map((idx) => new PlotPedestal3D(idx, (idx - 2) * 3.22, -4.58));
+      for (const s of slots) {
+        peds[s].setChibi(commonDef);
+        ctrl.setSlotUnit(s, commonDef, { dmg: 100, speed: 1, miningMult: 2, critChance: 0 });
+      }
+      const order: number[] = [];
+      let ultDoneCount = 0;
+      let completedCount = 0;
+      ctrl.setUltFiredHook((info) => {
+        if (info.isEncore) order.push(info.slotIndex);
+      });
+      ctrl.setEncoreUltCompletedHook(() => {
+        ultDoneCount += 1;
+      });
+      ctrl.setHyperEncoreCompleteHook(() => {
+        expect(ultDoneCount).toBe(5);
+        completedCount += 1;
+      });
+
+      ctrl.setOverclockTier(3);
+      for (let i = 0; i < 200; i++) {
+        pit.update(0.05, (i + 1) * 0.05, cam, false);
+        ctrl.update(0.05, cam, pit, peds, true);
+      }
+      ctrl.dispose();
+      peds.forEach((p) => p.dispose());
+      pit.dispose();
+      return { order, ultDoneCount, completedCount };
+    };
+
+    expect(runEncoreWithSlots([0, 1, 2, 3, 4])).toEqual({
+      order: [0, 1, 2, 3, 4],
+      ultDoneCount: 5,
+      completedCount: 1,
+    });
+    expect(runEncoreWithSlots([0, 1, 2])).toEqual({
+      order: [0, 1, 2, 0, 1],
+      ultDoneCount: 5,
+      completedCount: 1,
+    });
+    expect(runEncoreWithSlots([0, 2])).toEqual({
+      order: [0, 2, 0, 2, 0],
+      ultDoneCount: 5,
+      completedCount: 1,
+    });
+    expect(runEncoreWithSlots([])).toEqual({
+      order: [],
+      ultDoneCount: 0,
+      completedCount: 0,
+    });
+
+    // 3. ColosseumBiome3D spotlights turn on during Overclock Tier 1-3 and off on Tier 0
+    const biome = createColosseumBiomeHandle('underground');
+    const countVisibleCones = (): number => {
+      let n = 0;
+      biome.group.traverse((obj) => {
+        if (obj instanceof THREE.Mesh && obj.geometry instanceof THREE.ConeGeometry && obj.visible) {
+          n += 1;
+        }
+      });
+      return n;
+    };
+    expect(countVisibleCones()).toBe(0);
+    biome.setOverclockTier(2);
+    expect(countVisibleCones()).toBe(4);
+    biome.update(0.5, 0.4);
+    biome.setOverclockTier(0);
+    expect(countVisibleCones()).toBe(0);
+    biome.dispose();
   });
 });

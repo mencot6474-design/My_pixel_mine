@@ -358,6 +358,7 @@ async function bootstrap(): Promise<void> {
           triggerPerfectStrikeFlash();
           if (gameState.isOverclockActive()) {
             gameState.extendOverclock(OVERCLOCK_PERFECT_EXTEND_SEC, false);
+            gameState.chargeOverclock(OVERCLOCK_SWEET_SPOT_CHARGE * 1.6);
           } else {
             gameState.chargeOverclock(OVERCLOCK_SWEET_SPOT_CHARGE);
           }
@@ -451,6 +452,22 @@ async function bootstrap(): Promise<void> {
       hud?.handleOmegaFighterStrike(slotIndex, attackInterval, beatIndex, isFinisher),
     onOmegaArenaOverlay: (data) => {
       hud?.updateOmegaArenaOverlay(data);
+    },
+    onPlotUltFired: (info) => {
+      hud?.triggerFeverUltCutIn(info);
+    },
+    onEncoreUltCompleted: () => {
+      gameState.consumeOverclockEncoreUlt();
+      hud?.syncOverclockHudLive();
+    },
+    onHyperEncoreComplete: () => {
+      if (gameState.finishOverclockEncore()) {
+        scene.setOverclockActive(false, 0);
+        syncWorldToScene();
+        syncPlotStatsToScene();
+        hud?.syncOverclockHudLive();
+        hud?.pushToast('★ HYPER ENCORE COMPLETE! Fever reset.');
+      }
     },
   });
   scene.setWeather(gameState.weatherId);

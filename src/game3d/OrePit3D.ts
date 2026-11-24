@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { type WorldId } from '../game/GameData';
+import { type OverclockTier } from '../game/OverclockDomain';
 import { getWeatherById, type WeatherId } from '../game/WeatherData';
 import { PIT_EVENT_DEFS, type PitEventKind } from '../game/PitEventsDomain';
 import {
@@ -154,6 +155,7 @@ export class OrePit3D {
   private sweetSpotCooldownSec = 4.5;
   private skillPulseTimer = 0;
   private skillPulsePeakIntensity = 1.05;
+  private overclockTier: 0 | OverclockTier = 0;
   private readonly skillPulseColor = new THREE.Color();
   private readonly paletteColorHelper = new THREE.Color();
 
@@ -737,6 +739,16 @@ export class OrePit3D {
     return list;
   }
 
+  public setOverclockTier(tier: 0 | OverclockTier): void {
+    this.overclockTier = tier;
+    this.biomeIsland.setOverclockTier(tier);
+    if (tier === 0 && this.skillPulseTimer <= 0) {
+      this.pitNeonMat.color.set(this.activePalette.crystalColor);
+      this.pitNeonMat.emissive.set(this.activePalette.crystalColor);
+      this.pitNeonMat.emissiveIntensity = 1.05;
+    }
+  }
+
   public triggerSkillPulse(colorHex: string, strength = 1): void {
     this.skillPulseColor.set(colorHex);
     this.skillPulseTimer = 0.45;
@@ -840,6 +852,9 @@ export class OrePit3D {
         this.pitNeonMat.color.copy(this.paletteColorHelper).lerp(this.skillPulseColor, t);
         this.pitNeonMat.emissive.copy(this.pitNeonMat.color);
         this.pitNeonMat.emissiveIntensity = 1.05 + (this.skillPulsePeakIntensity - 1.05) * t;
+      } else if (this.overclockTier > 0) {
+        this.pitNeonMat.emissiveIntensity =
+          1.15 + this.overclockTier * 0.22 + Math.sin(elapsed * 4.2) * 0.16;
       }
       this.biomeIsland.update(elapsed, this.skillPulseTimer > 0 ? this.skillPulseTimer / 0.45 : 0);
       stepOrePitShards(dtSec, {

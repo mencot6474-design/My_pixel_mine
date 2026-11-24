@@ -1,6 +1,7 @@
 import { audio } from '../audio/AudioManager';
 import { cgTryMidgameAd } from '../sdk/crazygames';
 import { OreHpScreen, PlotAnchorScreen, SceneMode, SweetSpotScreen } from '../game3d/MineScene3D';
+import type { PlotUltFiredInfo } from '../game3d/PlotAttackController3D';
 import { type LootVacuumBreakKind, spawnLootVacuumParticles } from './LootVacuumFx';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
 import type { OmegaTargetScreenAnchor } from '../game3d/OmegaArena3D';
@@ -25,6 +26,7 @@ import { FusionHudUi } from './FusionHudUi';
 import { HotbarHudUi, canDropHotbarOnPlot } from './HotbarHudUi';
 import {
   applyHudViewportScale,
+  type FeverEncoreHudInfo,
   renderAudioControlsHtml,
   renderCurrencyRailHtml,
   renderFeverScreenFxHtml,
@@ -32,6 +34,7 @@ import {
   renderMineQuickButtonsHtml,
   shouldShowTwinTrialHudButton,
   syncFeverScreenFxDom,
+  triggerFeverUltCutInDom,
   updateFpsBadgeDom,
 } from './HudChromeRenderer';
 import { HudTowerBridge } from './HudTowerBridge';
@@ -525,7 +528,8 @@ export class GameHud {
           this.lastOverclockTier = tier;
         },
         onOverclockChange: this.onOverclockChange,
-        syncFeverScreenFx: (active, burst, tier) => this.syncFeverScreenFx(active, burst, tier),
+        syncFeverScreenFx: (active, burst, tier, encore) =>
+          this.syncFeverScreenFx(active, burst, tier, encore),
         syncTowerSceneVisual: () => this.syncTowerSceneVisual(),
         omegaArenaUi: this.omegaArenaUi,
         syncOmegaSceneVisual: () => this.omegaBridge.syncOmegaSceneVisual(),
@@ -922,15 +926,46 @@ export class GameHud {
 
   private renderFeverScreenFx(): string {
     const ocSnap = this.state.getOverclockSnapshot();
-    return renderFeverScreenFxHtml(this.sceneMode === 'mine' && ocSnap.active, ocSnap.tier);
+    return renderFeverScreenFxHtml(this.sceneMode === 'mine' && ocSnap.active, ocSnap.tier, {
+      remaining: ocSnap.encoreRemaining,
+      completed: ocSnap.encoreCompleted,
+      total: ocSnap.encoreTotal,
+    });
   }
 
   private syncFeverScreenFx(
     active: boolean,
     triggerBurst: boolean,
-    tier: 0 | OverclockTier = active ? 1 : 0
+    tier: 0 | OverclockTier = active ? 1 : 0,
+    encore?: FeverEncoreHudInfo
   ): void {
-    syncFeverScreenFxDom(this.root, this.sceneMode === 'mine', active, triggerBurst, tier);
+    syncFeverScreenFxDom(this.root, this.sceneMode === 'mine', active, triggerBurst, tier, encore);
+  }
+
+  public triggerFeverUltCutIn(info: PlotUltFiredInfo): void {
+    if (this.sceneMode !== 'mine' || this.activeModal !== 'none') return;
+    if (info.overclockTier < 2) return;
+    triggerFeverUltCutInDom(this.root, {
+      chibiId: info.def.id,
+      name: info.def.name,
+      rarity: info.def.rarity,
+      accentColor: info.accentColor,
+      isEncore: info.isEncore,
+      encoreIndex: info.encoreIndex,
+      encoreTotal: info.encoreTotal,
+      tier: info.overclockTier,
+    });
+  }
+
+  public syncOverclockHudLive(): void {
+    if (this.sceneMode !== 'mine') return;
+    const ocSnap = this.state.getOverclockSnapshot();
+    this.weatherDpsUi.syncOverclockWidget(this.root);
+    this.syncFeverScreenFx(ocSnap.active, false, ocSnap.tier, {
+      remaining: ocSnap.encoreRemaining,
+      completed: ocSnap.encoreCompleted,
+      total: ocSnap.encoreTotal,
+    });
   }
 
   private renderActiveModal(): string {

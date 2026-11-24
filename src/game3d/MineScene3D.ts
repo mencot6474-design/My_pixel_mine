@@ -251,6 +251,15 @@ export class MineScene3D {
     this.plotAttackController.setSkillPulseHook((colorHex, strength) => {
       this.pit.triggerSkillPulse(colorHex, strength);
     });
+    this.plotAttackController.setUltFiredHook((info) => {
+      this.callbacks.onPlotUltFired?.(info);
+    });
+    this.plotAttackController.setEncoreUltCompletedHook(() => {
+      this.callbacks.onEncoreUltCompleted?.();
+    });
+    this.plotAttackController.setHyperEncoreCompleteHook(() => {
+      this.callbacks.onHyperEncoreComplete?.();
+    });
     this.scene.add(this.plotAttackController.group);
 
     this.projector = new MineSceneProjector({
@@ -922,6 +931,9 @@ export class MineScene3D {
       activePalette: this.activePalette,
       weatherFx: this.weatherFx,
       env: this.env,
+      pit: this.pit,
+      pedestals: this.pedestals,
+      plotAttackController: this.plotAttackController,
       stageNeonMat: this.stageNeonMat,
       stageHoloMat: this.stageHoloMat,
       rimLight: this.rimLight,

@@ -623,7 +623,7 @@ export class WeatherDpsHudUi {
     if (!host) return;
     const snap = this.state.getOverclockSnapshot(now);
     const key = snap.active
-      ? `active:${snap.tier}:${snap.remainingSec.toFixed(1)}`
+      ? `active:${snap.tier}:${Math.round(snap.chargePct)}:${snap.remainingSec.toFixed(1)}:${snap.encoreRemaining}/${snap.encoreTotal}`
       : `charge:${Math.round(snap.chargePct)}`;
     if (host.dataset.ocKey === key) return;
     host.dataset.ocKey = key;
@@ -651,7 +651,13 @@ export class WeatherDpsHudUi {
     titleEl.textContent = snap.active ? buffs.label : 'OVERCLOCK FEVER';
     titleEl.className = OVERCLOCK_TITLE_CLASS;
 
-    valEl.textContent = snap.active ? `${snap.remainingSec.toFixed(1)}s` : `${pct}%`;
+    const valText =
+      snap.active && tier === 3 && snap.encoreTotal > 0
+        ? `ENCORE ${snap.encoreRemaining}/${snap.encoreTotal}`
+        : snap.active
+          ? `${snap.remainingSec.toFixed(1)}s`
+          : `${pct}%`;
+    valEl.textContent = valText;
     valEl.className = getOverclockValueClass(snap.active, tier);
 
     badgesEl.className = getOverclockBadgesClass(snap.active);
@@ -693,7 +699,7 @@ const OVERCLOCK_TICKS_HTML = '<div class="mam-fever-ticks" aria-hidden="true">' 
 
 export function buildOverclockGaugeInnerHtml(
   snap: Pick<OverclockSnapshot, 'active' | 'chargePct' | 'remainingSec' | 'durationSec'> &
-    Partial<Pick<OverclockSnapshot, 'tier'>>
+    Partial<Pick<OverclockSnapshot, 'tier' | 'encoreTotal' | 'encoreRemaining' | 'encoreCompleted'>>
 ): string {
   const pct = Math.max(0, Math.min(100, Math.round(snap.chargePct)));
   const tier: 0 | OverclockTier = snap.active ? (snap.tier === 2 || snap.tier === 3 ? snap.tier : 1) : 0;
@@ -702,7 +708,14 @@ export function buildOverclockGaugeInnerHtml(
   const shellCls = snap.active ? `mam-fever-shell is-active${tierCls}` : 'mam-fever-shell';
   const stateAttr = snap.active ? 'active' : 'charging';
   const titleText = snap.active ? buffs.label : 'OVERCLOCK FEVER';
-  const valText = snap.active ? `${snap.remainingSec.toFixed(1)}s` : `${pct}%`;
+  const encoreTotal = snap.encoreTotal ?? 0;
+  const encoreRemaining = snap.encoreRemaining ?? 0;
+  const valText =
+    snap.active && tier === 3 && encoreTotal > 0
+      ? `ENCORE ${encoreRemaining}/${encoreTotal}`
+      : snap.active
+        ? `${snap.remainingSec.toFixed(1)}s`
+        : `${pct}%`;
 
   return `
     <div class="${shellCls}" data-overclock-state="${stateAttr}" data-overclock-tier="${tier}">

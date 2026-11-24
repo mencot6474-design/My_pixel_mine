@@ -56,6 +56,7 @@ import {
   renderCurrencyRailHtml,
   renderFeverScreenFxHtml,
   shouldShowTwinTrialHudButton,
+  triggerFeverUltCutInDom,
 } from '../src/ui/HudChromeRenderer';
 import { stepHudSlowTick } from '../src/ui/HudActionRouter';
 import { TwinTrialModalUi } from '../src/ui/TwinTrialModalUi';
@@ -743,23 +744,84 @@ describe('Tahap B HUD Modules', () => {
       const tier3GaugeHtml = buildOverclockGaugeInnerHtml({
         active: true,
         tier: 3,
-        chargePct: 90,
+        chargePct: 60,
         remainingSec: 21.5,
         durationSec: 25,
+        encoreTotal: 5,
+        encoreRemaining: 3,
+        encoreCompleted: 2,
       });
       expect(tier3GaugeHtml).toContain('HYPER FEVER LV.3');
       expect(tier3GaugeHtml).toContain('mam-fever-shell is-active is-tier-3');
+      expect(tier3GaugeHtml).toContain('ENCORE 3/5');
       expect(tier3GaugeHtml).toContain('3x DMG');
       expect(tier3GaugeHtml).toContain('3.5x TAP');
       expect(tier3GaugeHtml).toContain('+150% ORE');
 
-      const feverRainHtml = renderFeverScreenFxHtml(true, 2);
-      expect(feverRainHtml).toContain('mam-fever-rain');
-      expect(feverRainHtml).toContain('mam-fever-drop');
-      expect(feverRainHtml).toContain('FEVER!');
-      expect(feverRainHtml).toContain('data-fever-tier="2"');
-      expect(feverRainHtml).toContain('SUPER FEVER LV.2!');
-      expect(feverRainHtml).not.toContain('mam-fever-burst-sub');
+      const feverFxHtml = renderFeverScreenFxHtml(true, 2);
+      expect(feverFxHtml).not.toContain('mam-fever-rain');
+      expect(feverFxHtml).not.toContain('mam-fever-drop');
+      expect(feverFxHtml).toContain('mam-fever-speedlines');
+      expect(feverFxHtml).toContain('mam-fever-cutin');
+      expect(feverFxHtml).toContain('data-fever-tier="2"');
+      expect(feverFxHtml).toContain('SUPER FEVER LV.2!');
+      expect(feverFxHtml).not.toContain('mam-fever-burst-sub');
+
+      const encoreFxHtml = renderFeverScreenFxHtml(true, 3, {
+        remaining: 4,
+        completed: 1,
+        total: 5,
+      });
+      expect(encoreFxHtml).toContain('HYPER ENCORE!!');
+      expect(encoreFxHtml).toContain('mam-fever-encore-pill is-visible');
+      expect(encoreFxHtml).toContain('4/5');
+
+      const cutinClasses = new Set<string>();
+      const cutinEl = {
+        innerHTML: '',
+        offsetWidth: 0,
+        dataset: {} as Record<string, string>,
+        style: { setProperty: () => {} },
+        classList: {
+          add: (c: string) => cutinClasses.add(c),
+          remove: (c: string) => cutinClasses.delete(c),
+          contains: (c: string) => cutinClasses.has(c),
+        },
+      };
+      const cutinHost = {
+        querySelector: (sel: string) => (sel === '[data-fever-cutin="true"]' ? cutinEl : null),
+      } as unknown as HTMLElement;
+      triggerFeverUltCutInDom(cutinHost, {
+        chibiId: 'yukikage-twins',
+        name: 'Yukikage Twins',
+        rarity: 'twin',
+        accentColor: '#38bdf8',
+        isEncore: true,
+        encoreIndex: 2,
+        encoreTotal: 5,
+        tier: 3,
+      });
+      expect(cutinEl.innerHTML).toContain('mam-fever-cutin-plate');
+      expect(cutinEl.innerHTML).toContain('ENCORE 2/5');
+      expect(cutinEl.innerHTML).toContain('Yukikage Twins');
+      expect(cutinEl.innerHTML).toContain('mam-rarity-badge mam-rarity-twin is-crest');
+      expect(cutinEl.innerHTML).toContain('twin.svg');
+      expect(cutinEl.classList.contains('is-showing')).toBe(true);
+
+      triggerFeverUltCutInDom(cutinHost, {
+        chibiId: 'abyssal-empress',
+        name: 'Abyssal Empress',
+        rarity: 'legendary',
+        accentColor: '#f59e0b',
+        isEncore: false,
+        encoreIndex: 0,
+        encoreTotal: 0,
+        tier: 2,
+      });
+      expect(cutinEl.innerHTML).toContain('FEVER ULT!');
+      expect(cutinEl.innerHTML).toContain('mam-rarity-badge mam-rarity-legendary');
+      expect(cutinEl.innerHTML).toContain('mam-rarity-label');
+      expect(cutinEl.innerHTML).toContain('Legendary');
 
       const ocToast = renderToastBannerHtml('⚡ OVERCLOCK ACTIVE! 2x DMG');
       expect(ocToast).toContain('data-toast-tone="overclock"');

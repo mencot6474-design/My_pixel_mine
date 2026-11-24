@@ -13,6 +13,7 @@ import type { ChestModalUi } from './ChestModalUi';
 import type { DailyLoginModalUi } from './DailyLoginModalUi';
 import type { ForgeModalUi } from './ForgeModalUi';
 import type { FusionHudUi } from './FusionHudUi';
+import type { FeverEncoreHudInfo } from './HudChromeRenderer';
 import {
   formatCountdownTimer,
   type ModalKind,
@@ -93,7 +94,12 @@ export interface HudFastTickContext {
   lastOverclockTier: 0 | OverclockTier;
   setLastOverclockTier: (tier: 0 | OverclockTier) => void;
   onOverclockChange?: (active: boolean, tier: 0 | OverclockTier) => void;
-  syncFeverScreenFx: (active: boolean, triggerBurst: boolean, tier: 0 | OverclockTier) => void;
+  syncFeverScreenFx: (
+    active: boolean,
+    triggerBurst: boolean,
+    tier: 0 | OverclockTier,
+    encore?: FeverEncoreHudInfo
+  ) => void;
   syncTowerSceneVisual: () => void;
   syncOmegaSceneVisual?: () => void;
   setSceneMode: (mode: SceneMode) => void;
@@ -337,25 +343,32 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
   const ocSnap = ctx.state.getOverclockSnapshot();
   const ocActive = ocSnap.active;
   const ocTier = ocSnap.tier;
+  const encoreInfo: FeverEncoreHudInfo = {
+    remaining: ocSnap.encoreRemaining,
+    completed: ocSnap.encoreCompleted,
+    total: ocSnap.encoreTotal,
+  };
   if (ocActive !== ctx.lastOverclockActive || ocTier !== ctx.lastOverclockTier) {
     const prevTier = ctx.lastOverclockTier;
     ctx.setLastOverclockActive(ocActive);
     ctx.setLastOverclockTier(ocTier);
     ctx.onOverclockChange?.(ocActive, ocTier);
     const tierUp = ocActive && ocTier > prevTier;
-    ctx.syncFeverScreenFx(ocActive, tierUp, ocTier);
+    ctx.syncFeverScreenFx(ocActive, tierUp, ocTier, encoreInfo);
     if (tierUp) {
       audio.playSfx('rare-fanfare', { volume: ocTier >= 2 ? 0.72 : 0.65 });
       audio.playCrystalChord('fever');
       const orePct = Math.round((ocSnap.dropMult - 1) * 100);
       if (ocTier === 3) {
-        ctx.pushToast(`⚡ HYPER OVERDRIVE LV.3! ${ocSnap.chibiDmgMult}x DMG • ${ocSnap.tapMult}x Tap • +${orePct}% Ore!`);
+        ctx.pushToast(`⚡ HYPER ENCORE LV.3! 5x Squad Ult • ${ocSnap.chibiDmgMult}x DMG • ${ocSnap.tapMult}x Tap • +${orePct}% Ore!`);
       } else if (ocTier === 2) {
         ctx.pushToast(`⚡ SUPER FEVER LV.2! ${ocSnap.chibiDmgMult}x DMG • ${ocSnap.tapMult}x Tap • +${orePct}% Ore!`);
       } else {
         ctx.pushToast('⚡ OVERCLOCK ACTIVE! 2x DMG • 2x Tap • +50% Ore!');
       }
     }
+  } else if (ocActive && ocTier === 3 && ocSnap.encoreTotal > 0) {
+    ctx.syncFeverScreenFx(true, false, 3, encoreInfo);
   }
   if (ctx.sceneMode === 'mine') {
     ctx.weatherDpsUi.syncOverclockWidget(ctx.root);

@@ -48,11 +48,17 @@ import {
 } from '../src/game/BountiesDomain';
 import {
   chargeOverclockDomain,
+  consumeOverclockEncoreUltDomain,
   createInitialOverclockState,
   extendOverclockDomain,
+  finishOverclockEncoreDomain,
   getOverclockSnapshotDomain,
+  getOverclockUltChargeReq,
   OVERCLOCK_DURATION_SEC,
+  OVERCLOCK_HYPER_ENCORE_ULTS,
   OVERCLOCK_MAX_DURATION_SEC,
+  OVERCLOCK_TIER1_CHARGE_MULT,
+  OVERCLOCK_TIER2_CHARGE_MULT,
   stepOverclockDomain,
 } from '../src/game/OverclockDomain';
 import {
@@ -841,7 +847,7 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(snap2.dropMult).toBe(2.0);
       expect(snap2.critChance).toBe(0.4);
 
-      // Advance to Tier 3 (HYPER FEVER) & verify remaining time cap (25s)
+      // Advance to Tier 3 (HYPER FEVER) & verify remaining time cap (25s) + 5-Ult Encore init
       const t3Ext = extendOverclockDomain(oc, 20, true, t0 + 3_500);
       expect(t3Ext.tierUp).toBe(true);
       expect(t3Ext.tier).toBe(3);
@@ -852,6 +858,26 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(snap3.tapMult).toBe(3.5);
       expect(snap3.dropMult).toBe(2.5);
       expect(snap3.critChance).toBe(0.5);
+      expect(snap3.encoreTotal).toBe(OVERCLOCK_HYPER_ENCORE_ULTS);
+      expect(snap3.encoreRemaining).toBe(OVERCLOCK_HYPER_ENCORE_ULTS);
+      expect(snap3.encoreCompleted).toBe(0);
+      expect(getOverclockUltChargeReq(0)).toBe(5);
+      expect(getOverclockUltChargeReq(1)).toBe(4);
+      expect(getOverclockUltChargeReq(2)).toBe(3);
+      expect(getOverclockUltChargeReq(3)).toBe(1);
+
+      // Consume 5 Hyper Encore Ults then finish Encore -> immediate reset to 0%
+      for (let i = 1; i <= 5; i++) {
+        const res = consumeOverclockEncoreUltDomain(oc, t0 + 4_000 + i * 1000);
+        expect(res.completed).toBe(i);
+        expect(res.remaining).toBe(5 - i);
+      }
+      expect(finishOverclockEncoreDomain(oc, t0 + 10_000)).toBe(true);
+      const resetSnap = getOverclockSnapshotDomain(oc, t0 + 10_000);
+      expect(resetSnap.active).toBe(false);
+      expect(resetSnap.tier).toBe(0);
+      expect(resetSnap.chargePct).toBe(0);
+      expect(resetSnap.encoreTotal).toBe(0);
 
       // GameState pit event & expiry reset tier back to 1
       const state = new GameState();
@@ -869,6 +895,54 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(state.getOverclockTier(t0 + 30_000)).toBe(0);
       expect(state.chargeOverclock(100, t0 + 31_000)).toBe(true);
       expect(state.getOverclockTier(t0 + 31_000)).toBe(1);
+
+      // GameState consumeOverclockEncoreUlt + finishOverclockEncore wrappers
+      state.extendOverclock(5, true, t0 + 31_500);
+      state.extendOverclock(5, true, t0 + 32_000);
+      expect(state.getOverclockTier(t0 + 32_000)).toBe(3);
+      expect(state.consumeOverclockEncoreUlt(t0 + 32_500).remaining).toBe(4);
+      expect(state.finishOverclockEncore(t0 + 33_000)).toBe(true);
+      expect(state.isOverclockActive(t0 + 33_000)).toBe(false);
+    });
+
+    it('fills active Lv.1 & Lv.2 bars to 100% via chargeOverclockDomain / ore breaks to auto-promote Lv.1 -> Lv.2 -> Lv.3', () => {
+      const oc = createInitialOverclockState();
+      const t0 = 100_000;
+      expect(chargeOverclockDomain(oc, 100, t0)).toBe(true);
+      expect(getOverclockSnapshotDomain(oc, t0).tier).toBe(1);
+      expect(getOverclockSnapshotDomain(oc, t0).chargePct).toBe(0);
+
+      // Partial active charge in Lv.1 keeps tier 1 & raises bar %
+      const step1 = Math.ceil(50 / OVERCLOCK_TIER1_CHARGE_MULT);
+      expect(chargeOverclockDomain(oc, 40, t0 + 500)).toBe(false);
+      expect(getOverclockSnapshotDomain(oc, t0 + 500).chargePct).toBeCloseTo(40 * OVERCLOCK_TIER1_CHARGE_MULT, 4);
+      expect(getOverclockSnapshotDomain(oc, t0 + 500).tier).toBe(1);
+
+      // Crossing 100% in Lv.1 promotes to Lv.2, resets bar to 0%, and adds +4s (min 15s)
+      expect(chargeOverclockDomain(oc, step1 + 60, t0 + 1_000)).toBe(true);
+      const snap2 = getOverclockSnapshotDomain(oc, t0 + 1_000);
+      expect(snap2.tier).toBe(2);
+      expect(snap2.chargePct).toBe(0);
+      expect(snap2.remainingSec).toBeCloseTo(18, 2);
+
+      // Crossing 100% in Lv.2 promotes to Lv.3 Hyper Encore (5/5)
+      const fullLv2 = Math.ceil(100 / OVERCLOCK_TIER2_CHARGE_MULT);
+      expect(chargeOverclockDomain(oc, fullLv2, t0 + 2_000)).toBe(true);
+      const snap3 = getOverclockSnapshotDomain(oc, t0 + 2_000);
+      expect(snap3.tier).toBe(3);
+      expect(snap3.encoreTotal).toBe(OVERCLOCK_HYPER_ENCORE_ULTS);
+      expect(snap3.encoreRemaining).toBe(OVERCLOCK_HYPER_ENCORE_ULTS);
+
+      // Further chargeOverclockDomain calls at Lv.3 return false
+      expect(chargeOverclockDomain(oc, 100, t0 + 2_500)).toBe(false);
+
+      // GameState.onOreBroken feeds active Lv.1 bar toward Lv.2 without inflating overclockTriggers
+      const state = new GameState();
+      state.chargeOverclock(100, t0);
+      const triggersBefore = state.careerStats.overclockTriggers;
+      state.onOreBroken('common');
+      expect(state.getOverclockSnapshot().chargePct).toBeGreaterThan(0);
+      expect(state.careerStats.overclockTriggers).toBe(triggersBefore);
     });
   });
 

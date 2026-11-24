@@ -74,6 +74,7 @@ export function lerpNum(a: number, b: number, t: number): number {
 
 export const CHIBI_ATTACK_ANIM_SEC = 2.5;
 export const ULT_SPOTLIGHT_LOCK_SEC = 1.5;
+export const HYPER_ENCORE_RELAY_LOCK_SEC = 1.35;
 export const ULT_CHARGE_BASIC_ATTACKS = 5;
 export const CHIBI_BLITZ_SHADOW_SEC = 0.88;
 export const BARRAGE_BEAT_WEIGHTS = [0.08, 0.1, 0.11, 0.13, 0.15, 0.18, 0.25] as const;
@@ -137,6 +138,12 @@ export class SpotlightAttackQueue {
     if (this.lockRemaining > 0) {
       const next = this.lockRemaining - dtSec;
       this.lockRemaining = next <= 1e-6 ? 0 : next;
+    }
+  }
+
+  public clampLock(maxSec: number): void {
+    if (this.lockRemaining > maxSec) {
+      this.lockRemaining = Math.max(0, maxSec);
     }
   }
 

@@ -1,4 +1,9 @@
 import * as THREE from 'three';
+import {
+  getOverclockUltChargeReq,
+  OVERCLOCK_HYPER_ENCORE_ULTS,
+  type OverclockTier,
+} from '../game/OverclockDomain';
 import { type PitEventKind } from '../game/PitEventsDomain';
 import { type WeatherId } from '../game/WeatherData';
 import { type ChibiDef } from './ChibiCatalog';
@@ -14,6 +19,7 @@ import {
   computeAttackVfxSpeedScale,
   computeSpotlightMaxChargeSec,
   getBasicAttackIntervalSec,
+  HYPER_ENCORE_RELAY_LOCK_SEC,
   splitBarrageDamage,
   SpotlightAttackQueue,
   TierAttackVfxPool3D,
@@ -24,6 +30,16 @@ import {
 } from './TierAttackVfx3D';
 
 export { getChibiAttackStyle, type PlotAttackStyle };
+
+export interface PlotUltFiredInfo {
+  slotIndex: number;
+  def: ChibiDef;
+  accentColor: string;
+  isEncore: boolean;
+  encoreIndex: number;
+  encoreTotal: number;
+  overclockTier: 0 | OverclockTier;
+}
 
 interface PendingBlitzStrike {
   slotIndex: number;
@@ -41,6 +57,7 @@ interface PendingBlitzStrike {
   delayLeft: number;
   fireShader: boolean;
   isFinisher?: boolean;
+  isEncoreFinisher?: boolean;
   isBasic?: boolean;
   affectedIds?: Set<number>;
 }
@@ -149,6 +166,16 @@ export class PlotAttackController3D {
   private readonly originVec = new THREE.Vector3();
   private readonly tmpWorldPos = { x: 0, y: 0, z: 0 };
   private skillPulseHook?: (colorHex: string, strength: number) => void;
+  private onUltFiredHook?: (info: PlotUltFiredInfo) => void;
+  private onEncoreUltCompletedHook?: () => void;
+  private onHyperEncoreCompleteHook?: () => void;
+
+  private overclockTier: 0 | OverclockTier = 0;
+  private hyperEncoreActive = false;
+  private hyperEncoreTotal = 0;
+  private hyperEncoreShotsLeft = 0;
+  private hyperEncoreCursorSlot = 0;
+  private hyperEncorePendingFinishers = 0;
 
   private disposed = false;
 
@@ -168,6 +195,61 @@ export class PlotAttackController3D {
 
   public setSkillPulseHook(cb?: (colorHex: string, strength: number) => void): void {
     this.skillPulseHook = cb;
+  }
+
+  public setUltFiredHook(cb?: (info: PlotUltFiredInfo) => void): void {
+    this.onUltFiredHook = cb;
+  }
+
+  public setEncoreUltCompletedHook(cb?: () => void): void {
+    this.onEncoreUltCompletedHook = cb;
+  }
+
+  public setHyperEncoreCompleteHook(cb?: () => void): void {
+    this.onHyperEncoreCompleteHook = cb;
+  }
+
+  public getHyperEncoreState(): {
+    active: boolean;
+    total: number;
+    shotsLeft: number;
+    pendingFinishers: number;
+  } {
+    return {
+      active: this.hyperEncoreActive,
+      total: this.hyperEncoreTotal,
+      shotsLeft: this.hyperEncoreShotsLeft,
+      pendingFinishers: this.hyperEncorePendingFinishers,
+    };
+  }
+
+  public setOverclockTier(tier: 0 | OverclockTier): void {
+    const prevTier = this.overclockTier;
+    this.overclockTier = tier;
+    if (tier === 0) {
+      this.hyperEncoreActive = false;
+      this.hyperEncoreTotal = 0;
+      this.hyperEncoreShotsLeft = 0;
+      this.hyperEncoreCursorSlot = 0;
+      this.hyperEncorePendingFinishers = 0;
+      return;
+    }
+    if (tier === 3 && prevTier !== 3) {
+      if (this.units.size > 0) {
+        this.hyperEncoreActive = true;
+        this.hyperEncoreTotal = OVERCLOCK_HYPER_ENCORE_ULTS;
+        this.hyperEncoreShotsLeft = OVERCLOCK_HYPER_ENCORE_ULTS;
+        this.hyperEncoreCursorSlot = 0;
+        this.hyperEncorePendingFinishers = 0;
+        for (const unit of this.units.values()) {
+          unit.ultCharge = ULT_CHARGE_BASIC_ATTACKS;
+          unit.ultArmed = true;
+        }
+        this.spotlight.clampLock(0.35);
+      } else {
+        this.hyperEncoreActive = false;
+      }
+    }
   }
 
   public setLowQuality(low: boolean): void {
@@ -244,7 +326,9 @@ export class PlotAttackController3D {
     if (!unit) return null;
     return {
       charge: unit.ultCharge,
-      maxCharge: ULT_CHARGE_BASIC_ATTACKS,
+      maxCharge: this.hyperEncoreActive
+        ? ULT_CHARGE_BASIC_ATTACKS
+        : getOverclockUltChargeReq(this.overclockTier),
       armed: unit.ultArmed,
       ulting: unit.ultActiveTimer > 0,
     };
@@ -256,8 +340,43 @@ export class PlotAttackController3D {
 
   public clearProjectiles(): void {
     this.pendingStrikes.length = 0;
+    this.hyperEncorePendingFinishers = 0;
+    this.finishEncoreIfComplete();
     this.spotlight.reset();
     this.tierVfx.clear();
+  }
+
+  private pickNextEncoreUnit(): PlotUnitState | null {
+    let bestAfterCursor: PlotUnitState | null = null;
+    let bestWrap: PlotUnitState | null = null;
+    for (const u of this.units.values()) {
+      if (u.slotIndex >= this.hyperEncoreCursorSlot) {
+        if (!bestAfterCursor || u.slotIndex < bestAfterCursor.slotIndex) {
+          bestAfterCursor = u;
+        }
+      } else {
+        if (!bestWrap || u.slotIndex < bestWrap.slotIndex) {
+          bestWrap = u;
+        }
+      }
+    }
+    return bestAfterCursor ?? bestWrap;
+  }
+
+  private finishEncoreIfComplete(): void {
+    if (
+      this.hyperEncoreActive &&
+      this.hyperEncoreShotsLeft <= 0 &&
+      this.hyperEncorePendingFinishers <= 0
+    ) {
+      this.hyperEncoreActive = false;
+      this.hyperEncoreTotal = 0;
+      for (const u of this.units.values()) {
+        u.ultCharge = 0;
+        u.ultArmed = false;
+      }
+      this.onHyperEncoreCompleteHook?.();
+    }
   }
 
   private pickTarget(
@@ -545,6 +664,11 @@ export class PlotAttackController3D {
       a.ex,
       a.ez
     );
+    if (a.isEncoreFinisher) {
+      this.hyperEncorePendingFinishers = Math.max(0, this.hyperEncorePendingFinishers - 1);
+      this.onEncoreUltCompletedHook?.();
+      this.finishEncoreIfComplete();
+    }
   }
 
   private fireVisualBasicStrike(
@@ -599,7 +723,8 @@ export class PlotAttackController3D {
     target: AliveNodeTarget,
     alive: AliveNodeTarget[],
     attackInterval: number,
-    strikeDamage: number
+    strikeDamage: number,
+    isEncore = false
   ): void {
     this.alivePointScratch.length = 0;
     for (let ai = 0; ai < alive.length; ai++) {
@@ -662,6 +787,7 @@ export class PlotAttackController3D {
         delayLeft,
         fireShader: bi === 0,
         isFinisher,
+        isEncoreFinisher: isEncore && isFinisher,
         affectedIds,
       });
     }
@@ -739,6 +865,8 @@ export class PlotAttackController3D {
 
     this.spotlight.step(safeDt);
 
+    const ultReq = getOverclockUltChargeReq(this.overclockTier);
+
     for (const unit of this.units.values()) {
       unit.cooldown = Math.max(0, unit.cooldown - safeDt);
       if (unit.ultActiveTimer > 0) {
@@ -747,7 +875,7 @@ export class PlotAttackController3D {
       if (alive.length > 0) {
         unit.chargeSec = Math.min(maxChargeSec, unit.chargeSec + safeDt);
       }
-      if (unit.ultCharge >= ULT_CHARGE_BASIC_ATTACKS && !unit.ultArmed) {
+      if (!this.hyperEncoreActive && unit.ultCharge >= ultReq && !unit.ultArmed) {
         const basicInterval = getMineAttackIntervalSec(unit.miningMult);
         if (unit.cooldown <= basicInterval * 0.55) {
           unit.ultArmed = true;
@@ -755,48 +883,139 @@ export class PlotAttackController3D {
       }
     }
 
+    if (this.hyperEncoreActive && this.units.size === 0) {
+      this.hyperEncoreActive = false;
+      this.hyperEncoreTotal = 0;
+      this.hyperEncoreShotsLeft = 0;
+      this.hyperEncoreCursorSlot = 0;
+      this.hyperEncorePendingFinishers = 0;
+    }
+
     if (alive.length > 0) {
-      // 1) Ult relay queue: any armed Chibi (5/5 basic charge) triggers 2.5s Sakuga Ult spaced 1.5s apart
-      const activeUltUnit = this.spotlight.pickNextReady(this.units.values(), (u) => (u.ultArmed ? 0 : 1));
-      if (activeUltUnit) {
-        const ped = pedestals[activeUltUnit.slotIndex];
-        const pedX = ped ? ped.group.position.x : (activeUltUnit.slotIndex - 2) * 3.22;
-        const pedZ = ped ? ped.group.position.z : -4.58;
-        const target = this.pickTarget(activeUltUnit, alive, pedX);
-        if (target) {
-          const attackInterval = getMineAttackIntervalSec(activeUltUnit.miningMult);
-          const ultSec = Math.max(0.01, activeUltUnit.ultBankSec + activeUltUnit.chargeSec);
-          activeUltUnit.cooldown = Math.max(attackInterval, ULT_SPOTLIGHT_LOCK_SEC);
-          activeUltUnit.chargeSec = 0;
-          activeUltUnit.ultBankSec = 0;
-          activeUltUnit.ultCharge = 0;
-          activeUltUnit.ultArmed = false;
-          activeUltUnit.ultActiveTimer = ULT_SPOTLIGHT_LOCK_SEC;
-          this.spotlight.claim(activeUltUnit.slotIndex, ULT_SPOTLIGHT_LOCK_SEC);
-          const strikeDamage = Math.max(1, activeUltUnit.dmg * ultSec);
-          if (ped) {
-            this.fireVisualUnitStrike(activeUltUnit, ped, target, alive, attackInterval, strikeDamage);
-          } else {
-            this.applyImpact(
-              pit,
-              target.id,
-              target,
-              strikeDamage,
-              activeUltUnit.def.accentColor,
-              pedX,
-              pedZ,
-              activeUltUnit.comboStep,
-              false,
-              onOreBroken,
-              onOreHit,
-              activeUltUnit.critChance,
-              activeUltUnit.critMult,
-              activeUltUnit.def.rarity,
-              false,
-              activeUltUnit
-            );
+      if (this.hyperEncoreActive) {
+        if (this.hyperEncoreShotsLeft > 0 && this.spotlight.getLockRemaining() <= 0) {
+          const encoreUnit = this.pickNextEncoreUnit();
+          if (encoreUnit) {
+            const ped = pedestals[encoreUnit.slotIndex];
+            const pedX = ped ? ped.group.position.x : (encoreUnit.slotIndex - 2) * 3.22;
+            const pedZ = ped ? ped.group.position.z : -4.58;
+            const target = this.pickTarget(encoreUnit, alive, pedX);
+            if (target) {
+              this.hyperEncoreCursorSlot = encoreUnit.slotIndex + 1;
+              this.hyperEncoreShotsLeft -= 1;
+              const encoreIndex = this.hyperEncoreTotal - this.hyperEncoreShotsLeft;
+              const attackInterval = getMineAttackIntervalSec(encoreUnit.miningMult);
+              const ultSec = Math.max(1.25, encoreUnit.ultBankSec + encoreUnit.chargeSec);
+              const accentColor = ped ? ped.getActiveAccentColor() : encoreUnit.def.accentColor;
+              encoreUnit.cooldown = Math.max(attackInterval, HYPER_ENCORE_RELAY_LOCK_SEC);
+              encoreUnit.chargeSec = 0;
+              encoreUnit.ultBankSec = 0;
+              encoreUnit.ultActiveTimer = HYPER_ENCORE_RELAY_LOCK_SEC;
+              this.spotlight.claim(encoreUnit.slotIndex, HYPER_ENCORE_RELAY_LOCK_SEC);
+              this.skillPulseHook?.(accentColor, 1.2);
+              this.onUltFiredHook?.({
+                slotIndex: encoreUnit.slotIndex,
+                def: encoreUnit.def,
+                accentColor,
+                isEncore: true,
+                encoreIndex,
+                encoreTotal: this.hyperEncoreTotal,
+                overclockTier: this.overclockTier,
+              });
+              const strikeDamage = Math.max(1, encoreUnit.dmg * ultSec);
+              if (ped) {
+                this.hyperEncorePendingFinishers += 1;
+                this.fireVisualUnitStrike(
+                  encoreUnit,
+                  ped,
+                  target,
+                  alive,
+                  attackInterval,
+                  strikeDamage,
+                  true
+                );
+              } else {
+                this.applyImpact(
+                  pit,
+                  target.id,
+                  target,
+                  strikeDamage,
+                  encoreUnit.def.accentColor,
+                  pedX,
+                  pedZ,
+                  encoreUnit.comboStep,
+                  false,
+                  onOreBroken,
+                  onOreHit,
+                  encoreUnit.critChance,
+                  encoreUnit.critMult,
+                  encoreUnit.def.rarity,
+                  true,
+                  encoreUnit
+                );
+                this.onEncoreUltCompletedHook?.();
+                this.finishEncoreIfComplete();
+              }
+              encoreUnit.comboStep = (encoreUnit.comboStep + 1) % 3;
+            }
           }
-          activeUltUnit.comboStep = (activeUltUnit.comboStep + 1) % 3;
+        }
+      } else {
+        // 1) Ult relay queue: any armed Chibi triggers 2.5s Sakuga Ult spaced 1.5s apart
+        const activeUltUnit = this.spotlight.pickNextReady(this.units.values(), (u) => (u.ultArmed ? 0 : 1));
+        if (activeUltUnit) {
+          const ped = pedestals[activeUltUnit.slotIndex];
+          const pedX = ped ? ped.group.position.x : (activeUltUnit.slotIndex - 2) * 3.22;
+          const pedZ = ped ? ped.group.position.z : -4.58;
+          const target = this.pickTarget(activeUltUnit, alive, pedX);
+          if (target) {
+            const attackInterval = getMineAttackIntervalSec(activeUltUnit.miningMult);
+            const ultSec = Math.max(0.01, activeUltUnit.ultBankSec + activeUltUnit.chargeSec);
+            const accentColor = ped ? ped.getActiveAccentColor() : activeUltUnit.def.accentColor;
+            activeUltUnit.cooldown = Math.max(attackInterval, ULT_SPOTLIGHT_LOCK_SEC);
+            activeUltUnit.chargeSec = 0;
+            activeUltUnit.ultBankSec = 0;
+            activeUltUnit.ultCharge = 0;
+            activeUltUnit.ultArmed = false;
+            activeUltUnit.ultActiveTimer = ULT_SPOTLIGHT_LOCK_SEC;
+            this.spotlight.claim(activeUltUnit.slotIndex, ULT_SPOTLIGHT_LOCK_SEC);
+            if (this.overclockTier >= 1) {
+              this.skillPulseHook?.(accentColor, this.overclockTier >= 2 ? 1.0 : 0.78);
+            }
+            this.onUltFiredHook?.({
+              slotIndex: activeUltUnit.slotIndex,
+              def: activeUltUnit.def,
+              accentColor,
+              isEncore: false,
+              encoreIndex: 0,
+              encoreTotal: 0,
+              overclockTier: this.overclockTier,
+            });
+            const strikeDamage = Math.max(1, activeUltUnit.dmg * ultSec);
+            if (ped) {
+              this.fireVisualUnitStrike(activeUltUnit, ped, target, alive, attackInterval, strikeDamage);
+            } else {
+              this.applyImpact(
+                pit,
+                target.id,
+                target,
+                strikeDamage,
+                activeUltUnit.def.accentColor,
+                pedX,
+                pedZ,
+                activeUltUnit.comboStep,
+                false,
+                onOreBroken,
+                onOreHit,
+                activeUltUnit.critChance,
+                activeUltUnit.critMult,
+                activeUltUnit.def.rarity,
+                false,
+                activeUltUnit
+              );
+            }
+            activeUltUnit.comboStep = (activeUltUnit.comboStep + 1) % 3;
+          }
         }
       }
 
@@ -815,7 +1034,9 @@ export class PlotAttackController3D {
         unit.ultBankSec = Math.min(maxChargeSec, unit.ultBankSec + elapsedSec * (1 - BASIC_ATTACK_DPS_SHARE));
         unit.chargeSec = 0;
         unit.cooldown = basicInterval;
-        unit.ultCharge = Math.min(ULT_CHARGE_BASIC_ATTACKS, unit.ultCharge + 1);
+        if (!this.hyperEncoreActive) {
+          unit.ultCharge = Math.min(ultReq, unit.ultCharge + 1);
+        }
         const strikeDamage = Math.max(1, unit.dmg * basicSec);
         if (ped) {
           this.fireVisualBasicStrike(unit, ped, target, alive, basicInterval, strikeDamage);
@@ -865,6 +1086,13 @@ export class PlotAttackController3D {
     if (this.disposed) return;
     this.disposed = true;
     this.skillPulseHook = undefined;
+    this.onUltFiredHook = undefined;
+    this.onEncoreUltCompletedHook = undefined;
+    this.onHyperEncoreCompleteHook = undefined;
+    this.hyperEncoreActive = false;
+    this.hyperEncoreTotal = 0;
+    this.hyperEncoreShotsLeft = 0;
+    this.hyperEncorePendingFinishers = 0;
     this.units.clear();
     this.pendingStrikes.length = 0;
     this.tierVfx.dispose();

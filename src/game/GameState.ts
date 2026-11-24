@@ -428,6 +428,9 @@ export class GameState {
     if (this.isOverclockActive()) {
       if (variantKey === 'geode') {
         this.extendOverclock(OverclockDom.OVERCLOCK_GEODE_EXTEND_SEC, false);
+        this.chargeOverclock(OverclockDom.OVERCLOCK_GEODE_FEVER_CHARGE);
+      } else {
+        this.chargeOverclock(OverclockDom.OVERCLOCK_BREAK_CHARGE);
       }
     } else {
       this.chargeOverclock(OverclockDom.OVERCLOCK_BREAK_CHARGE);
@@ -932,6 +935,20 @@ export class GameState {
 
   public stepOverclock(nowMs = Date.now()): boolean {
     return OverclockDom.stepOverclockDomain(this.overclock, nowMs);
+  }
+
+  public consumeOverclockEncoreUlt(
+    nowMs = Date.now()
+  ): { remaining: number; completed: number; total: number } {
+    return OverclockDom.consumeOverclockEncoreUltDomain(this.overclock, nowMs);
+  }
+
+  public finishOverclockEncore(nowMs = Date.now()): boolean {
+    const finished = OverclockDom.finishOverclockEncoreDomain(this.overclock, nowMs);
+    if (finished) {
+      this.emit();
+    }
+    return finished;
   }
 
   public isOverclockActive(nowMs = Date.now()): boolean { return OverclockDom.isOverclockActiveDomain(this.overclock, nowMs); }

@@ -25,7 +25,7 @@ import type { FusionWorld3D } from './FusionWorld3D';
 import type { MineInputState } from './MineSceneInput';
 import type { OmegaArena3D, OmegaTargetScreenAnchor } from './OmegaArena3D';
 import type { OrePit3D } from './OrePit3D';
-import type { PlotAttackController3D } from './PlotAttackController3D';
+import type { PlotAttackController3D, PlotUltFiredInfo } from './PlotAttackController3D';
 import type {
   AltarPedestalAnchor,
   ShopChibiBubbleAnchor,
@@ -128,6 +128,9 @@ export interface MineSceneCallbacks {
     isFinisher?: boolean
   ) => { dmg: number; isCrit?: boolean } | void;
   onOmegaArenaOverlay?: (data: { bossHead: { x: number; y: number } | null; targets: OmegaTargetScreenAnchor[] } | null) => void;
+  onPlotUltFired?: (info: PlotUltFiredInfo) => void;
+  onEncoreUltCompleted?: () => void;
+  onHyperEncoreComplete?: () => void;
   onFpsUpdate?: (fps: number) => void;
 }
 
@@ -523,9 +526,12 @@ export function applyMineSceneModeTransition(ctx: {
   setOrbitImmediate: (yaw: number, pitch: number, radius: number) => void;
 }): void {
   const { mode } = ctx;
+  const mineTier: 0 | OverclockTier = mode === 'mine' ? ctx.overclockTier : 0;
   ctx.weatherFx.setShopMode(mode === 'shop');
-  ctx.weatherFx.setFeverTier(mode === 'mine' ? ctx.overclockTier : 0);
-  ctx.env.setOverclockTier(mode === 'mine' ? ctx.overclockTier : 0);
+  ctx.weatherFx.setFeverTier(mineTier);
+  ctx.env.setOverclockTier(mineTier);
+  ctx.pit.setOverclockTier(mineTier);
+  ctx.pedestals.forEach((p) => p.setOverclockTier(mineTier));
   if (mode !== 'mine' && mode !== 'tower') {
     ctx.renderer.domElement.classList.remove('mam-mining-cursor');
   }
@@ -863,13 +869,20 @@ export function applyMineOverclockVisual(ctx: {
   activePalette: MineWorldPalette;
   weatherFx: WeatherFx3D;
   env?: MineEnvironment3D;
+  pit?: OrePit3D;
+  pedestals?: readonly PlotPedestal3D[];
+  plotAttackController?: PlotAttackController3D;
   stageNeonMat: THREE.MeshStandardMaterial;
   stageHoloMat: THREE.MeshBasicMaterial;
   rimLight: THREE.DirectionalLight;
   applyWeatherAtmosphere: () => void;
 }): void {
-  ctx.weatherFx.setFeverTier(ctx.mode === 'mine' ? ctx.tier : 0);
-  ctx.env?.setOverclockTier(ctx.mode === 'mine' ? ctx.tier : 0);
+  const mineTier: 0 | OverclockTier = ctx.mode === 'mine' ? ctx.tier : 0;
+  ctx.weatherFx.setFeverTier(mineTier);
+  ctx.env?.setOverclockTier(mineTier);
+  ctx.pit?.setOverclockTier(mineTier);
+  ctx.pedestals?.forEach((p) => p.setOverclockTier(mineTier));
+  ctx.plotAttackController?.setOverclockTier(ctx.tier);
   if (ctx.active) {
     const hex = ctx.tier === 3 ? 0x22d3ee : ctx.tier === 2 ? 0xfb7185 : 0xf59e0b;
     ctx.stageNeonMat.color.setHex(hex);

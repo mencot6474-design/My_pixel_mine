@@ -1,10 +1,12 @@
 import { assetUrl } from '../game/AssetUrl';
+import type { ItemRarity } from '../game/GameData';
 import { fmtInt, fmtMoney } from '../game/NumberFormat';
 import type { OverclockTier } from '../game/OverclockDomain';
 import type { SceneMode } from '../game3d/MineScene3D';
 import { hudIconHtml } from './HudIcons';
 import {
   formatCountdownTimer,
+  renderRarityBadgeHtml,
   TW_BADGE_BASE,
   TW_CURRENCY_BAR,
   TW_PLUS_BTN,
@@ -208,54 +210,13 @@ export function renderCurrencyRailHtml(opts: {
   `;
 }
 
-const FEVER_RAIN_LABELS: readonly {
-  x: number;
-  delay: number;
-  dur: number;
-  scale: number;
-  rot: number;
-  kind: 0 | 1 | 2;
-  font: 0 | 1 | 2 | 3 | 4 | 5;
-}[] = [
-  { x: 4, delay: -0.3, dur: 2.35, scale: 0.96, rot: -10, kind: 0, font: 1 },
-  { x: 10, delay: -1.6, dur: 2.75, scale: 0.88, rot: 8, kind: 1, font: 3 },
-  { x: 17, delay: -0.9, dur: 2.2, scale: 1.08, rot: -6, kind: 2, font: 2 },
-  { x: 23, delay: -2.1, dur: 2.6, scale: 0.92, rot: 11, kind: 0, font: 4 },
-  { x: 30, delay: -0.5, dur: 2.45, scale: 1.02, rot: -12, kind: 1, font: 0 },
-  { x: 37, delay: -1.8, dur: 2.85, scale: 0.88, rot: 7, kind: 2, font: 5 },
-  { x: 44, delay: -1.1, dur: 2.15, scale: 1.1, rot: -8, kind: 0, font: 3 },
-  { x: 51, delay: -2.4, dur: 2.55, scale: 0.94, rot: 10, kind: 1, font: 1 },
-  { x: 58, delay: -0.4, dur: 2.4, scale: 1.04, rot: -9, kind: 2, font: 4 },
-  { x: 65, delay: -1.5, dur: 2.7, scale: 0.9, rot: 6, kind: 0, font: 2 },
-  { x: 72, delay: -0.8, dur: 2.25, scale: 1.06, rot: -11, kind: 1, font: 5 },
-  { x: 78, delay: -2.0, dur: 2.8, scale: 0.88, rot: 9, kind: 2, font: 1 },
-  { x: 84, delay: -1.2, dur: 2.3, scale: 1.0, rot: -7, kind: 0, font: 0 },
-  { x: 90, delay: -0.6, dur: 2.65, scale: 0.92, rot: 12, kind: 1, font: 3 },
-  { x: 14, delay: -2.5, dur: 2.5, scale: 0.94, rot: 8, kind: 2, font: 2 },
-  { x: 81, delay: -1.7, dur: 2.35, scale: 0.98, rot: -9, kind: 0, font: 4 },
-];
-
-function getFeverRainLabelText(tier: 0 | OverclockTier, idx: number, font: number): string {
-  const mixedCase = font === 1 || font === 5;
-  if (tier === 3) {
-    if (idx % 2 === 0) return mixedCase ? 'Hyper!' : 'HYPER!';
-    return mixedCase ? 'Fever!' : 'FEVER!';
-  }
-  if (tier === 2) {
-    if (idx % 3 === 0) return mixedCase ? 'Super!' : 'SUPER!';
-    return mixedCase ? 'Fever!' : 'FEVER!';
-  }
-  return mixedCase ? 'Fever!' : 'FEVER!';
-}
-
-function buildFeverRainHtml(tier: 0 | OverclockTier): string {
-  return FEVER_RAIN_LABELS.map((d, idx) => {
-    const cls = d.kind === 1 ? 'is-alt' : d.kind === 2 ? 'is-spark' : '';
-    return `<span class="mam-fever-drop is-font-${d.font} ${cls}" data-fever-rain-tag="true" data-font-idx="${d.font}" style="left:${d.x}%;animation-delay:${d.delay}s;animation-duration:${d.dur}s;--drop-scale:${d.scale};--tag-rot:${d.rot}deg;">${getFeverRainLabelText(tier, idx, d.font)}</span>`;
-  }).join('');
-}
-
 const FEVER_CORNER_SVG = `<svg viewBox="0 0 40 40" width="40" height="40" fill="none" aria-hidden="true"><path d="M5 34V11C5 7.7 7.7 5 11 5H34C36.2 5 38 6.8 38 9C38 11.2 36.2 13 34 13H13V34C13 36.2 11.2 38 9 38C6.8 38 5 36.2 5 34Z" fill="currentColor" stroke="#14111d" stroke-width="3" stroke-linejoin="round"/></svg>`;
+
+export interface FeverEncoreHudInfo {
+  remaining: number;
+  completed: number;
+  total: number;
+}
 
 function getFeverBurstCopy(tier: 0 | OverclockTier): {
   ticker: string;
@@ -264,8 +225,8 @@ function getFeverBurstCopy(tier: 0 | OverclockTier): {
   const safeTier: 0 | OverclockTier = tier === 2 || tier === 3 ? tier : 1;
   if (safeTier === 3) {
     return {
-      ticker: 'HYPER OVERDRIVE // LV.3 // MAX FEVER // HYPER OVERDRIVE // LV.3 //',
-      title: 'HYPER OVERDRIVE!!',
+      ticker: 'HYPER ENCORE // 5x SQUAD ULT // OVERDRIVE // HYPER ENCORE //',
+      title: 'HYPER ENCORE!!',
     };
   }
   if (safeTier === 2) {
@@ -280,19 +241,44 @@ function getFeverBurstCopy(tier: 0 | OverclockTier): {
   };
 }
 
-export function renderFeverScreenFxHtml(active: boolean, tier: 0 | OverclockTier = active ? 1 : 0): string {
+function buildFeverEncorePipsHtml(encore?: FeverEncoreHudInfo): string {
+  const total = Math.max(0, encore?.total ?? 0);
+  const completed = Math.max(0, Math.min(total, encore?.completed ?? 0));
+  const remaining = Math.max(0, Math.min(total, encore?.remaining ?? 0));
+  let pips = '';
+  for (let i = 0; i < Math.max(5, total); i++) {
+    const isSpent = i < completed;
+    const isNext = i === completed && remaining > 0;
+    pips += `<span class="mam-fever-encore-pip ${isSpent ? 'is-spent' : isNext ? 'is-next' : 'is-ready'}"></span>`;
+  }
+  return `
+    <span class="text-[10px] font-black italic uppercase tracking-[0.08em] text-[#14111d]">HYPER ENCORE</span>
+    <span class="flex items-center gap-1">${pips}</span>
+    <span class="mam-pill-xs bg-[#14111d] text-[#67e8f9] tabular-nums" data-fever-encore-count="true">${remaining}/${total || 5}</span>
+  `;
+}
+
+export function renderFeverScreenFxHtml(
+  active: boolean,
+  tier: 0 | OverclockTier = active ? 1 : 0,
+  encore?: FeverEncoreHudInfo
+): string {
   const effectiveTier: 0 | OverclockTier = active ? (tier === 2 || tier === 3 ? tier : 1) : 0;
   const copy = getFeverBurstCopy(effectiveTier);
+  const showEncore = active && effectiveTier === 3 && (encore?.total ?? 0) > 0;
   return `
     <div class="mam-fever-screen-fx ${active ? 'is-active' : ''}" data-fever-screen-fx="true" data-fever-tier="${effectiveTier}" aria-hidden="true">
       <div class="mam-fever-speedlines"></div>
       <div class="mam-fever-vignette"></div>
       <div class="mam-fever-frame"><div class="mam-fever-frame-spin"></div></div>
-      <div class="mam-fever-rain">${buildFeverRainHtml(effectiveTier)}</div>
       <span class="mam-fever-corner is-tl">${FEVER_CORNER_SVG}</span>
       <span class="mam-fever-corner is-tr">${FEVER_CORNER_SVG}</span>
       <span class="mam-fever-corner is-bl">${FEVER_CORNER_SVG}</span>
       <span class="mam-fever-corner is-br">${FEVER_CORNER_SVG}</span>
+      <div class="mam-fever-encore-pill ${showEncore ? 'is-visible' : ''}" data-fever-encore-pill="true">
+        ${buildFeverEncorePipsHtml(encore)}
+      </div>
+      <div class="mam-fever-cutin" data-fever-cutin="true"></div>
       <div class="mam-fever-burst" data-fever-burst="true">
         <div class="mam-fever-fold-crease"></div>
         <div class="mam-fever-ticker" data-fever-ticker="true">${copy.ticker}</div>
@@ -312,7 +298,8 @@ export function syncFeverScreenFxDom(
   inMine: boolean,
   active: boolean,
   triggerBurst: boolean,
-  tier: 0 | OverclockTier = active ? 1 : 0
+  tier: 0 | OverclockTier = active ? 1 : 0,
+  encore?: FeverEncoreHudInfo
 ): void {
   const fx = root.querySelector<HTMLElement>('[data-fever-screen-fx="true"]');
   if (!fx) return;
@@ -325,12 +312,26 @@ export function syncFeverScreenFxDom(
     const titleEl = fx.querySelector<HTMLElement>('[data-fever-title="true"]');
     if (tickerEl) tickerEl.textContent = copy.ticker;
     if (titleEl) titleEl.textContent = copy.title;
-    const tagEls = fx.querySelectorAll<HTMLElement>('[data-fever-rain-tag="true"]');
-    tagEls.forEach((el, idx) => {
-      const fontIdx = Number(el.dataset.fontIdx || 0);
-      const nextText = getFeverRainLabelText(effectiveTier, idx, fontIdx);
-      if (el.textContent !== nextText) el.textContent = nextText;
-    });
+  }
+  const encorePill = fx.querySelector<HTMLElement>('[data-fever-encore-pill="true"]');
+  if (encorePill) {
+    const showEncore = active && inMine && effectiveTier === 3 && (encore?.total ?? 0) > 0;
+    encorePill.classList.toggle('is-visible', showEncore);
+    if (showEncore) {
+      const nextKey = `${encore?.remaining ?? 0}:${encore?.completed ?? 0}:${encore?.total ?? 0}`;
+      if (encorePill.dataset.encoreKey !== nextKey) {
+        encorePill.dataset.encoreKey = nextKey;
+        encorePill.innerHTML = buildFeverEncorePipsHtml(encore);
+      }
+    } else if (encorePill.dataset.encoreKey) {
+      delete encorePill.dataset.encoreKey;
+    }
+  }
+  if (!active || !inMine) {
+    const cutinEl = fx.querySelector<HTMLElement>('[data-fever-cutin="true"]');
+    if (cutinEl) {
+      cutinEl.classList.remove('is-showing');
+    }
   }
   if (triggerBurst && active && inMine) {
     const burst = fx.querySelector<HTMLElement>('[data-fever-burst="true"]');
@@ -340,6 +341,88 @@ export function syncFeverScreenFxDom(
       burst.classList.add('is-bursting');
     }
   }
+}
+
+function escapeCutInText(raw: string): string {
+  return raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+const VALID_CUTIN_RARITIES = new Set<ItemRarity>([
+  'common',
+  'uncommon',
+  'rare',
+  'epic',
+  'legendary',
+  'rainbow',
+  'mythic',
+  'exotic',
+  'secret',
+  'fusion',
+  'limited',
+  'twin',
+  'omega',
+]);
+
+function normalizeCutInRarity(raw: string): ItemRarity {
+  const lower = raw.toLowerCase() as ItemRarity;
+  return VALID_CUTIN_RARITIES.has(lower) ? lower : 'common';
+}
+
+/** Triggers a widescreen cyber-anime slash cut-in banner with real rarity badge when a Chibi fires an Ult during Fever Lv.2/Lv.3. */
+export function triggerFeverUltCutInDom(
+  root: HTMLElement,
+  info: {
+    chibiId: string;
+    name: string;
+    rarity: string;
+    accentColor: string;
+    isEncore: boolean;
+    encoreIndex: number;
+    encoreTotal: number;
+    tier: 0 | OverclockTier;
+  }
+): void {
+  const cutinEl = root.querySelector<HTMLElement>('[data-fever-cutin="true"]');
+  if (!cutinEl) return;
+  const tagText = info.isEncore
+    ? `ENCORE ${info.encoreIndex}/${info.encoreTotal}`
+    : info.tier === 3
+      ? 'HYPER ULT!'
+      : 'FEVER ULT!';
+  const safeName = escapeCutInText(info.name);
+  const safeRarity = normalizeCutInRarity(info.rarity);
+  const rarityBadgeHtml = renderRarityBadgeHtml(safeRarity, '!ml-0 mam-cutin-rarity');
+  const safeAccent = /^#[0-9a-fA-F]{3,8}$/.test(info.accentColor) ? info.accentColor : '#38bdf8';
+  const portraitSrc = assetUrl(`chibi/${encodeURIComponent(info.chibiId)}/attack.webp`);
+  const mode = info.isEncore ? 'encore' : info.tier === 3 ? 'hyper' : 'super';
+
+  cutinEl.style.setProperty('--cutin-accent', safeAccent);
+  cutinEl.dataset.cutinMode = mode;
+  cutinEl.innerHTML = `
+    <div class="mam-fever-cutin-plate" aria-hidden="true">
+      <div class="mam-fever-cutin-bg"></div>
+      <div class="mam-fever-cutin-halftone"></div>
+      <div class="mam-fever-cutin-speedlines"></div>
+      <div class="mam-fever-cutin-watermark">${tagText}</div>
+      <div class="mam-fever-cutin-glint"></div>
+      <div class="mam-fever-cutin-chevrons">&gt;&gt;&gt;</div>
+    </div>
+    <div class="mam-fever-cutin-portrait-wrap" aria-hidden="true">
+      <div class="mam-fever-cutin-aura"></div>
+      <img class="mam-fever-cutin-img" src="${portraitSrc}" alt="" draggable="false" />
+    </div>
+    <div class="mam-fever-cutin-body">
+      <div class="mam-fever-cutin-meta">
+        <span class="mam-fever-cutin-tag ${info.isEncore ? 'is-encore' : ''}">${tagText}</span>
+        ${rarityBadgeHtml}
+      </div>
+      <div class="mam-fever-cutin-name">${safeName}</div>
+      <div class="mam-fever-cutin-bar" aria-hidden="true"><span class="mam-fever-cutin-bar-fill"></span></div>
+    </div>
+  `;
+  cutinEl.classList.remove('is-showing');
+  void cutinEl.offsetWidth;
+  cutinEl.classList.add('is-showing');
 }
 
 export function renderMineQuickButtonsHtml(opts: {
