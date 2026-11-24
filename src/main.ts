@@ -387,10 +387,12 @@ async function bootstrap(): Promise<void> {
       pickaxeCursorEl.classList.toggle('is-hold-mining', active);
     },
     onChestClick: () => {
+      if (hud && !hud.canTutorialInteract('chest')) return;
       audio.playSfx('ui-open');
       hud?.openModal('chest');
     },
     onPedestalClick: (slotIndex) => {
+      if (hud && !hud.canTutorialInteract('plot', slotIndex)) return;
       const res = gameState.placeSelectedOnPlot(slotIndex);
       if (res === 'need-select') {
         audio.playSfx('ui-error', { volume: 0.45 });
@@ -416,6 +418,7 @@ async function bootstrap(): Promise<void> {
       hud?.updateOreBars(bars);
     },
     onShopStationClick: (station) => {
+      if (hud && !hud.canTutorialInteract('shop-station', station)) return;
       audio.playSfx('ui-open');
       hud?.openShopStation(station);
     },

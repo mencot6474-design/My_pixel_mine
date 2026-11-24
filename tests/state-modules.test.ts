@@ -261,6 +261,17 @@ describe('Tahap C GameState Domain Modules', () => {
       deserializeSaveJson(state, '{corrupt json', () => {});
       expect(state.cash).toBe(999);
     });
+
+    it('defaults autoMeteor to false for new players while preserving explicit saved preference', () => {
+      const fresh = new GameState();
+      expect(fresh.autoMeteor).toBe(false);
+
+      deserializeSaveJson(fresh, JSON.stringify({ cash: 100 }), () => {});
+      expect(fresh.autoMeteor).toBe(false);
+
+      deserializeSaveJson(fresh, JSON.stringify({ autoMeteor: true }), () => {});
+      expect(fresh.autoMeteor).toBe(true);
+    });
   });
 
   describe('PlotUnitsDomain (Task 2)', () => {

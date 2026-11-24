@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { PlotInspectUi, shouldStopAutoMutationRoll, sortInspectPickaxes } from '../src/ui/PlotInspectUi';
 import { AudioManager, getMusicalScaleRate, MUSICAL_SCALE_SEMITONES } from '../src/audio/AudioManager';
@@ -84,7 +86,19 @@ import { ShopModalsUi } from '../src/ui/ShopModalsUi';
 import { getTapComboTier, stepTapCombo, TAP_COMBO_WINDOW_MS } from '../src/game/TapComboHelper';
 import { OfflineModalUi } from '../src/ui/OfflineModalUi';
 import { SettingsModalUi } from '../src/ui/SettingsModalUi';
-import { buildTutorialCardHtml, getTutorialStageMeta, TUTORIAL_REWARD_DICE, TUTORIAL_REWARD_GEMS } from '../src/ui/TutorialUi';
+import {
+  buildTutorialCardHtml,
+  getTutorialStageMeta,
+  TUTORIAL_AUTO_CLOSE_DELAY_MS,
+  TUTORIAL_REWARD_DICE,
+  TUTORIAL_REWARD_GEMS,
+  TutorialStep,
+  TutorialUi,
+} from '../src/ui/TutorialUi';
+import {
+  shouldAdvanceTutorialOnSellSelectAll,
+  shouldIgnoreHudShortcutDuringTutorial,
+} from '../src/ui/GameHud';
 
 interface FakeDomHandle {
   el: HTMLElement;
@@ -760,17 +774,36 @@ describe('Tahap B HUD Modules', () => {
   });
 
   describe('TutorialUi FTUE Overhaul', () => {
-    it('maps steps across 5 stages, renders pop-out pose card with Skip & Starter Bonus, and grants reward once', () => {
+    it('maps steps across 5 stages, renders streamlined Cargo Pod / Tap-or-Hold copy, and grants reward once', () => {
       expect(getTutorialStageMeta('welcome')).toEqual({ stage: 1, total: 5, label: 'Mine' });
+      expect(getTutorialStageMeta('mine-ore')).toEqual({ stage: 1, total: 5, label: 'Mine' });
+      expect(getTutorialStageMeta('click-plot')).toEqual({ stage: 2, total: 5, label: 'Upgrade' });
       expect(getTutorialStageMeta('upgrade-dmg')).toEqual({ stage: 2, total: 5, label: 'Upgrade' });
       expect(getTutorialStageMeta('click-chest')).toEqual({ stage: 3, total: 5, label: 'Collect' });
+      expect(getTutorialStageMeta('take-all-chest')).toEqual({ stage: 3, total: 5, label: 'Collect' });
       expect(getTutorialStageMeta('go-shop')).toEqual({ stage: 4, total: 5, label: 'Sell' });
+      expect(getTutorialStageMeta('click-sell-shop')).toEqual({ stage: 4, total: 5, label: 'Sell' });
+      expect(getTutorialStageMeta('select-ore-sell')).toEqual({ stage: 4, total: 5, label: 'Sell' });
+      expect(getTutorialStageMeta('click-sell-btn')).toEqual({ stage: 4, total: 5, label: 'Sell' });
       expect(getTutorialStageMeta('congrats')).toEqual({ stage: 5, total: 5, label: 'Reward' });
 
       const welcomeHtml = buildTutorialCardHtml('welcome');
       expect(welcomeHtml).toContain('pose.webp');
       expect(welcomeHtml).toContain('data-tutorial-skip="true"');
       expect(welcomeHtml).toContain('Stage 1/5');
+      expect(welcomeHtml).toContain('Cargo Pod');
+
+      const mineHtml = buildTutorialCardHtml('mine-ore');
+      expect(mineHtml.toLowerCase()).toContain('tap or hold');
+
+      const plotHtml = buildTutorialCardHtml('click-plot');
+      expect(plotHtml.toLowerCase()).toContain('auto-mines');
+
+      const chestHtml = buildTutorialCardHtml('click-chest');
+      expect(chestHtml).toContain('Cargo Pod (Chest)');
+
+      const selectSellHtml = buildTutorialCardHtml('select-ore-sell');
+      expect(selectSellHtml).toContain('Select All');
 
       const congratsHtml = buildTutorialCardHtml('congrats');
       expect(congratsHtml).toContain(`+${TUTORIAL_REWARD_GEMS}`);
@@ -784,6 +817,284 @@ describe('Tahap B HUD Modules', () => {
       expect(reward).toEqual({ gems: TUTORIAL_REWARD_GEMS, dice: TUTORIAL_REWARD_DICE });
       expect(state.gems).toBe(startGems + TUTORIAL_REWARD_GEMS);
       expect(state.enchantDice).toBe(startDice + TUTORIAL_REWARD_DICE);
+    });
+
+    it('auto-closes after Upgrade/TakeAll/Sell, cancels pending timers on skip or manual close, and triggers wrong-click nudge', () => {
+      vi.useFakeTimers();
+      const origWin = globalThis.window;
+      const origDoc = globalThis.document;
+      const origStorage = globalThis.localStorage;
+      try {
+        const storage = new Map<string, string>();
+        (globalThis as unknown as { localStorage: unknown }).localStorage = {
+          getItem: (k: string) => storage.get(k) ?? null,
+          setItem: (k: string, v: string) => void storage.set(k, v),
+        };
+
+        const docListeners = new Map<string, Array<(e: unknown) => void>>();
+        const bodyDataset: Record<string, string | undefined> = {};
+        const overlayCard = {
+          attrs: new Map<string, string>(),
+          setAttribute(k: string, v: string) {
+            this.attrs.set(k, v);
+          },
+          removeAttribute(k: string) {
+            this.attrs.delete(k);
+          },
+          getAttribute(k: string) {
+            return this.attrs.get(k) ?? null;
+          },
+          addEventListener: vi.fn(),
+        };
+        const overlayHint = {
+          textContent: '',
+          attrs: new Map<string, string>(),
+          setAttribute(k: string, v: string) {
+            this.attrs.set(k, v);
+          },
+          removeAttribute(k: string) {
+            this.attrs.delete(k);
+          },
+          getAttribute(k: string) {
+            return this.attrs.get(k) ?? null;
+          },
+        };
+        const overlayEl = {
+          id: '',
+          className: '',
+          innerHTML: '',
+          querySelector: (sel: string) => {
+            if (sel === '[data-tutorial-card]') return overlayCard;
+            if (sel === '[data-tutorial-hint]') return overlayHint;
+            return null;
+          },
+          addEventListener: vi.fn(),
+        };
+
+        (globalThis as unknown as { window: unknown }).window = {
+          location: { search: '' },
+          requestAnimationFrame: (cb: () => void) => {
+            cb();
+            return 1;
+          },
+          setTimeout: (cb: () => void, ms: number) => setTimeout(cb, ms),
+          clearTimeout: (id: ReturnType<typeof setTimeout>) => clearTimeout(id),
+        };
+        (globalThis as unknown as { document: unknown }).document = {
+          body: {
+            dataset: bodyDataset,
+            appendChild: vi.fn(),
+          },
+          createElement: () => overlayEl,
+          querySelectorAll: () => [],
+          querySelector: () => null,
+          addEventListener: (type: string, cb: (e: unknown) => void) => {
+            const arr = docListeners.get(type) ?? [];
+            arr.push(cb);
+            docListeners.set(type, arr);
+          },
+        };
+
+        const onClosePlotInspect = vi.fn();
+        const onCloseModal = vi.fn();
+        const onSetPitZoom = vi.fn();
+        const onSetChestZoom = vi.fn();
+        const onSetSellShopZoom = vi.fn();
+
+        const tut = new TutorialUi(
+          onSetPitZoom,
+          onSetChestZoom,
+          onSetSellShopZoom,
+          undefined,
+          undefined,
+          { onClosePlotInspect, onCloseModal }
+        );
+        tut.mount();
+        expect(bodyDataset.tutorialActive).toBe('true');
+        expect(bodyDataset.tutorialStep).toBe('welcome');
+
+        tut.advance();
+        expect(bodyDataset.tutorialStep).toBe('mine-ore');
+        tut.notifyOreBroken();
+        expect(bodyDataset.tutorialStep).toBe('click-plot');
+        tut.syncView('mine', 'none', 0);
+        expect(bodyDataset.tutorialStep).toBe('upgrade-dmg');
+
+        // Upgrade triggers delayed auto-close and advances to click-chest
+        tut.notifyUpgraded();
+        expect(onClosePlotInspect).not.toHaveBeenCalled();
+        vi.advanceTimersByTime(TUTORIAL_AUTO_CLOSE_DELAY_MS);
+        expect(onClosePlotInspect).toHaveBeenCalledTimes(1);
+        expect(bodyDataset.tutorialStep as TutorialStep).toBe('click-chest');
+        expect(onSetChestZoom).toHaveBeenLastCalledWith(true);
+
+        // Wrong-click outside allowed targets triggers nudge & hint, then clears after 1200ms
+        const clickGuards = docListeners.get('click') ?? [];
+        expect(clickGuards.length).toBeGreaterThan(0);
+        const preventDefault = vi.fn();
+        const stopPropagation = vi.fn();
+        const stopImmediatePropagation = vi.fn();
+        clickGuards[0]({
+          target: { closest: () => null },
+          preventDefault,
+          stopPropagation,
+          stopImmediatePropagation,
+        });
+        expect(preventDefault).toHaveBeenCalled();
+        expect(overlayCard.getAttribute('data-tutorial-nudge')).toBe('true');
+        expect(overlayHint.getAttribute('data-nudge-hint')).toBe('true');
+        expect(overlayHint.textContent).toBe('Follow the glowing arrow!');
+        vi.advanceTimersByTime(1250);
+        expect(overlayCard.getAttribute('data-tutorial-nudge')).toBeNull();
+        expect(overlayHint.getAttribute('data-nudge-hint')).toBeNull();
+
+        // Multi-selector allows open-sell-shop on click-sell-shop
+        tut.syncView('mine', 'chest', null);
+        expect(bodyDataset.tutorialStep).toBe('take-all-chest');
+        tut.notifyChestTaken();
+        // Manual close before timer fires advances immediately without double-firing onCloseModal
+        tut.syncView('mine', 'none', null);
+        expect(bodyDataset.tutorialStep).toBe('go-shop');
+        vi.advanceTimersByTime(TUTORIAL_AUTO_CLOSE_DELAY_MS);
+        expect(onCloseModal).not.toHaveBeenCalled();
+
+        tut.syncView('shop', 'none', null);
+        expect(bodyDataset.tutorialStep).toBe('click-sell-shop');
+        const sellPrevent = vi.fn();
+        clickGuards[0]({
+          target: {
+            closest: (sel: string) =>
+              sel.includes('[data-action="open-sell-shop"]') ? {} : null,
+          },
+          preventDefault: sellPrevent,
+          stopPropagation: vi.fn(),
+          stopImmediatePropagation: vi.fn(),
+        });
+        expect(sellPrevent).not.toHaveBeenCalled();
+
+        // Skip cancels pending auto-close timer and clears body dataset
+        tut.syncView('shop', 'sell-shop', null);
+        tut.notifySellOreSelected();
+        expect(bodyDataset.tutorialStep).toBe('click-sell-btn');
+        tut.notifySellCompleted();
+        tut.skip();
+        vi.advanceTimersByTime(TUTORIAL_AUTO_CLOSE_DELAY_MS + 100);
+        expect(onCloseModal).not.toHaveBeenCalled();
+        expect(tut.isActive()).toBe(false);
+        expect(bodyDataset.tutorialActive).toBeUndefined();
+        expect(bodyDataset.tutorialStep).toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+        (globalThis as unknown as { window: unknown }).window = origWin;
+        (globalThis as unknown as { document: unknown }).document = origDoc;
+        (globalThis as unknown as { localStorage: unknown }).localStorage = origStorage;
+      }
+    });
+
+    it('advances sell-select-all tutorial step only when at least one sell card is selected', () => {
+      const emptyRoot = {
+        querySelectorAll: (sel: string) => (sel === '[data-sell-key].is-selected' ? [] : []),
+      } as unknown as ParentNode;
+      expect(shouldAdvanceTutorialOnSellSelectAll(emptyRoot)).toBe(false);
+
+      const selectedRoot = {
+        querySelectorAll: (sel: string) =>
+          sel === '[data-sell-key].is-selected' ? ([{}] as unknown as NodeListOf<Element>) : [],
+      } as unknown as ParentNode;
+      expect(shouldAdvanceTutorialOnSellSelectAll(selectedRoot)).toBe(true);
+    });
+
+    it('defines spotlight HUD dimming, step exemptions, and wrong-click nudge keyframes in hud-widgets.css', () => {
+      const css = readFileSync(resolve(process.cwd(), 'src/styles/hud-widgets.css'), 'utf8');
+      expect(css).toContain('body[data-tutorial-active="true"]');
+      expect(css).toContain('body[data-tutorial-step="click-chest"] [data-action="open-chest"]');
+      expect(css).toContain('body[data-tutorial-step="go-shop"] [data-action="shops-pill"]');
+      expect(css).toContain('body[data-tutorial-step="click-sell-shop"] [data-action="open-sell-shop"]');
+      expect(css).toContain('@keyframes mamTutNudge');
+      expect(css).toContain('[data-tutorial-nudge="true"]');
+      expect(css).toContain('.mam-tut-card-enter');
+      expect(css).toContain('animation: mamTutNudge 0.36s ease-in-out !important');
+      expect(css).toContain('color: #dc2626 !important');
+    });
+
+    it('guards 3D targets and keyboard shortcuts during active tutorial without soft-locking unintended modals', () => {
+      const origWin = globalThis.window;
+      const origDoc = globalThis.document;
+      const origStorage = globalThis.localStorage;
+      try {
+        (globalThis as unknown as { localStorage: unknown }).localStorage = {
+          getItem: () => null,
+          setItem: vi.fn(),
+        };
+        const overlayEl = {
+          id: '',
+          className: '',
+          innerHTML: '',
+          querySelector: () => null,
+          addEventListener: vi.fn(),
+        };
+        (globalThis as unknown as { window: unknown }).window = {
+          location: { search: '' },
+          requestAnimationFrame: (cb: () => void) => {
+            cb();
+            return 1;
+          },
+        };
+        (globalThis as unknown as { document: unknown }).document = {
+          body: { dataset: {}, appendChild: vi.fn() },
+          createElement: () => overlayEl,
+          querySelectorAll: () => [],
+          querySelector: () => null,
+          addEventListener: vi.fn(),
+        };
+
+        const tut = new TutorialUi(vi.fn(), vi.fn(), vi.fn());
+        tut.mount();
+        tut.advance(); // mine-ore
+        expect(tut.canInteractWith3DTarget('chest')).toBe(false);
+        expect(tut.canInteractWith3DTarget('plot', 0)).toBe(false);
+
+        tut.notifyOreBroken(); // click-plot
+        expect(tut.canInteractWith3DTarget('plot', 0)).toBe(true);
+        expect(tut.canInteractWith3DTarget('plot', 1)).toBe(false);
+        expect(tut.canInteractWith3DTarget('chest')).toBe(false);
+
+        tut.syncView('mine', 'none', 0); // upgrade-dmg
+        tut.syncView('mine', 'none', null); // stays upgrade-dmg if not upgraded
+        tut.notifyUpgraded();
+        // Fast-forward manually to click-chest via complete/skip check on shop-station
+        tut.skip();
+        expect(tut.canInteractWith3DTarget('plot', 1)).toBe(true);
+        expect(tut.canInteractWith3DTarget('shop-station', 'pickaxe')).toBe(true);
+
+        // Fresh tutorial at click-sell-shop only allows 'sell' station
+        const tut2 = new TutorialUi(vi.fn(), vi.fn(), vi.fn());
+        tut2.mount();
+        tut2.advance(); // mine-ore
+        tut2.notifyOreBroken(); // click-plot
+        tut2.syncView('mine', 'none', 0); // upgrade-dmg
+        vi.useFakeTimers();
+        tut2.notifyUpgraded();
+        vi.advanceTimersByTime(TUTORIAL_AUTO_CLOSE_DELAY_MS); // click-chest
+        expect(tut2.canInteractWith3DTarget('chest')).toBe(true);
+        tut2.syncView('mine', 'chest', null); // take-all-chest
+        tut2.notifyChestTaken();
+        vi.advanceTimersByTime(TUTORIAL_AUTO_CLOSE_DELAY_MS); // go-shop
+        tut2.syncView('shop', 'none', null); // click-sell-shop
+        expect(tut2.canInteractWith3DTarget('shop-station', 'sell')).toBe(true);
+        expect(tut2.canInteractWith3DTarget('shop-station', 'pickaxe')).toBe(false);
+        expect(tut2.canInteractWith3DTarget('shop-station', 'tower')).toBe(false);
+
+        expect(shouldIgnoreHudShortcutDuringTutorial(true, 'Escape')).toBe(true);
+        expect(shouldIgnoreHudShortcutDuringTutorial(true, '`')).toBe(true);
+        expect(shouldIgnoreHudShortcutDuringTutorial(true, '1')).toBe(true);
+        expect(shouldIgnoreHudShortcutDuringTutorial(false, 'Escape')).toBe(false);
+      } finally {
+        vi.useRealTimers();
+        (globalThis as unknown as { window: unknown }).window = origWin;
+        (globalThis as unknown as { document: unknown }).document = origDoc;
+        (globalThis as unknown as { localStorage: unknown }).localStorage = origStorage;
+      }
     });
   });
 

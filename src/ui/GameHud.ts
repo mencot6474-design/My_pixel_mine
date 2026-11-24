@@ -66,6 +66,17 @@ import { UpgradesWorldsUi } from './UpgradesWorldsUi';
 import { WeatherDpsHudUi } from './WeatherDpsHudUi';
 import { WorldOverlayHudUi } from './WorldOverlayHudUi';
 
+/** Returns true when at least one Sell Shop item card is currently selected after a Select All click. */
+export function shouldAdvanceTutorialOnSellSelectAll(root: ParentNode): boolean {
+  return root.querySelectorAll('[data-sell-key].is-selected').length > 0;
+}
+
+/** Returns true when keyboard shortcuts should be blocked while the FTUE tutorial is active. */
+export function shouldIgnoreHudShortcutDuringTutorial(isTutorialActive: boolean, key: string): boolean {
+  if (!isTutorialActive) return false;
+  return key === '`' || key === '~' || key === 'Escape' || (key >= '1' && key <= '9');
+}
+
 export class GameHud {
   private activeModal: ModalKind = 'none';
   private sceneMode: SceneMode = 'mine';
@@ -272,6 +283,18 @@ export class GameHud {
         const reward = this.state.grantTutorialStarterReward();
         audio.playSfx('rare-fanfare', { volume: 0.7 });
         this.pushToast(`Starter Bonus: +${fmtInt(reward.gems)} Gems • +${fmtInt(reward.dice)} Enchant Dice!`);
+      },
+      {
+        onClosePlotInspect: () => {
+          if (this.inspectedSlot !== null) {
+            this.openPlotInspector(null);
+          }
+        },
+        onCloseModal: () => {
+          if (this.activeModal !== 'none') {
+            this.openModal('none');
+          }
+        },
       }
     );
     if (!this.tutorialUi.isActive() && TutorialUi.isStoredDone()) {
@@ -351,6 +374,12 @@ export class GameHud {
           window.setTimeout(() => this.tutorialUi.notifyChestTaken(), 20);
         } else if (target.closest('[data-sell-key]')) {
           window.setTimeout(() => this.tutorialUi.notifySellOreSelected(), 20);
+        } else if (target.closest('[data-action="sell-select-all"]')) {
+          window.setTimeout(() => {
+            if (shouldAdvanceTutorialOnSellSelectAll(this.root)) {
+              this.tutorialUi.notifySellOreSelected();
+            }
+          }, 20);
         } else if (target.closest('[data-action="sell-selected"]')) {
           window.setTimeout(() => this.tutorialUi.notifySellCompleted(), 20);
         }
@@ -419,6 +448,11 @@ export class GameHud {
 
     window.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement) return;
+      if (shouldIgnoreHudShortcutDuringTutorial(this.tutorialUi.isActive(), e.key)) {
+        if (e.key === 'Escape' || e.key === '`' || e.key === '~') e.preventDefault();
+        this.tutorialUi.nudgeBlockedAction();
+        return;
+      }
       if (e.key === '`' || e.key === '~') {
         e.preventDefault();
         if (this.inspectedSlot === null) this.toggleModal('inventory');
@@ -560,6 +594,10 @@ export class GameHud {
     return this.tutorialUi.isActive();
   }
 
+  public canTutorialInteract(kind: 'chest' | 'plot' | 'shop-station', id?: number | string): boolean {
+    return this.tutorialUi.canInteractWith3DTarget(kind, id);
+  }
+
   public openModal(kind: ModalKind): void {
     const prev = this.activeModal;
     if (prev === 'offline' && kind !== 'offline' && this.state.pendingOfflineEarnings) {
@@ -671,6 +709,7 @@ export class GameHud {
   }
 
   public openShopStation(station: ShopStationId): void {
+    if (!this.tutorialUi.canInteractWith3DTarget('shop-station', station)) return;
     if (station === 'altar') {
       this.activeModal = 'altar-hub';
       this.render();

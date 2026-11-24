@@ -4,21 +4,21 @@ import { enchantDiceIconHtml, hudIconHtml } from './HudIcons';
 
 export const TUTORIAL_REWARD_GEMS = 150;
 export const TUTORIAL_REWARD_DICE = 1;
+export const TUTORIAL_AUTO_CLOSE_DELAY_MS = 350;
+const TUTORIAL_NUDGE_DURATION_MS = 1200;
+const TUTORIAL_NUDGE_SFX_COOLDOWN_MS = 350;
 
 export type TutorialStep =
   | 'welcome'
   | 'mine-ore'
   | 'click-plot'
   | 'upgrade-dmg'
-  | 'exit-plot'
   | 'click-chest'
   | 'take-all-chest'
-  | 'close-chest'
   | 'go-shop'
   | 'click-sell-shop'
   | 'select-ore-sell'
   | 'click-sell-btn'
-  | 'close-sell-shop'
   | 'congrats'
   | 'done';
 
@@ -26,6 +26,11 @@ export interface TutorialStageMeta {
   stage: number;
   total: number;
   label: string;
+}
+
+export interface TutorialAutoCloseHooks {
+  onClosePlotInspect?: () => void;
+  onCloseModal?: () => void;
 }
 
 const TUTORIAL_STORAGE_KEY = 'mam_tutorial_done_v1';
@@ -50,22 +55,22 @@ const DIALOG_COPY: Record<Exclude<TutorialStep, 'done'>, TutorialDialogCopy> = {
   welcome: {
     stage: 1,
     stageLabel: 'Mine',
-    text: 'Welcome, Miner! Ready to strike your first fortune and build your Chibi squad?',
+    text: 'Mine glowing ores, collect loot from your Cargo Pod, and sell at the Plaza for Cash!',
     cta: 'Start Mining!',
   },
   'mine-ore': {
     stage: 1,
     stageLabel: 'Mine',
-    text: 'Tap the glowing Ore in the center until it shatters!',
-    hint: 'Tap the ore rock in the pit',
-    badge: 'TAP THIS ORE',
+    text: 'Tap or hold the glowing Ore in the pit until it shatters!',
+    hint: 'Tap or hold the center ore',
+    badge: 'TAP OR HOLD ORE',
     allowCanvas: true,
     topCard: true,
   },
   'click-plot': {
     stage: 2,
     stageLabel: 'Upgrade',
-    text: 'Awesome drop! Now click Plot #1 where the arrow points to power up Onee.',
+    text: 'Nice! Your Chibi Onee auto-mines for you — click Plot #1 to boost her power!',
     hint: 'Click Onee on Plot #1',
     badge: 'PLOT #1',
     allowCanvas: true,
@@ -79,21 +84,13 @@ const DIALOG_COPY: Record<Exclude<TutorialStep, 'done'>, TutorialDialogCopy> = {
     domSelector: '[data-inspect-action="up-dmg"]',
     topCard: true,
   },
-  'exit-plot': {
-    stage: 2,
-    stageLabel: 'Upgrade',
-    text: 'Power boosted! Click Exit to return to the Mine.',
-    hint: 'Click Exit',
-    badge: 'EXIT',
-    domSelector: '[data-inspect-action="exit"]',
-    arrowPlacement: 'beside',
-  },
   'click-chest': {
     stage: 3,
     stageLabel: 'Collect',
-    text: 'Your mined ores are stored safely in your Chest. Click the 3D Chest to open it!',
-    hint: 'Click the 3D Chest',
-    badge: 'OPEN CHEST',
+    text: 'Mined ores go into your Cargo Pod (Chest). Click the glowing Pod or Chest button to open it!',
+    hint: 'Click the Cargo Pod or Chest button',
+    badge: 'CARGO POD (CHEST)',
+    domSelector: '[data-action="open-chest"]',
     allowCanvas: true,
     topCard: true,
   },
@@ -106,19 +103,10 @@ const DIALOG_COPY: Record<Exclude<TutorialStep, 'done'>, TutorialDialogCopy> = {
     domSelector: '[data-action="chest-take-all"]',
     topCard: true,
   },
-  'close-chest': {
-    stage: 3,
-    stageLabel: 'Collect',
-    text: 'Loot secured! Close the Chest window.',
-    hint: 'Click × to close',
-    badge: 'CLOSE',
-    domSelector: '[data-action="close-modal"]',
-    arrowPlacement: 'beside',
-  },
   'go-shop': {
     stage: 4,
     stageLabel: 'Sell',
-    text: 'Time to cash in! Click Plaza at the top to travel to the Shop Plaza.',
+    text: 'Time to get paid! Click Plaza at the top to visit Shop Plaza.',
     hint: 'Click Plaza',
     badge: 'PLAZA',
     domSelector: '[data-action="shops-pill"]',
@@ -127,39 +115,30 @@ const DIALOG_COPY: Record<Exclude<TutorialStep, 'done'>, TutorialDialogCopy> = {
   'click-sell-shop': {
     stage: 4,
     stageLabel: 'Sell',
-    text: 'Welcome to Shop Plaza! Click the Sell Items shop building to trade ores.',
-    hint: 'Click Sell Items shop',
+    text: 'Welcome to Shop Plaza! Click the Sell shop building or Sell button below.',
+    hint: 'Click Sell shop',
     badge: 'SELL SHOP',
-    domSelector: '[data-shop-station="sell"]',
+    domSelector: '[data-shop-station="sell"], [data-action="open-sell-shop"]',
     allowCanvas: true,
     topCard: true,
   },
   'select-ore-sell': {
     stage: 4,
     stageLabel: 'Sell',
-    text: 'Click an Ore card in your list to select it for selling!',
-    hint: 'Click an Ore card',
+    text: 'Click an Ore card (or hit Select All) to mark ores for sale!',
+    hint: 'Select an Ore or click Select All',
     badge: 'SELECT ORE',
-    domSelector: '[data-sell-key]',
+    domSelector: '[data-sell-key], [data-action="sell-select-all"]',
     topCard: true,
   },
   'click-sell-btn': {
     stage: 4,
     stageLabel: 'Sell',
-    text: 'Now hit Sell to trade your ore for Cash!',
+    text: 'Now hit Sell to trade your ores for Cash!',
     hint: 'Click Sell',
     badge: 'SELL ORE',
     domSelector: '[data-action="sell-selected"]',
     topCard: true,
-  },
-  'close-sell-shop': {
-    stage: 4,
-    stageLabel: 'Sell',
-    text: 'Cha-ching! Close the Sell Shop to claim your Miner Starter Bonus.',
-    hint: 'Click × to close',
-    badge: 'CLOSE',
-    domSelector: '[data-action="close-modal"]',
-    arrowPlacement: 'beside',
   },
   congrats: {
     stage: 5,
@@ -259,8 +238,8 @@ export function buildTutorialCardHtml(step: Exclude<TutorialStep, 'done'>): stri
         <div class="flex items-center justify-between gap-2 mt-0.5">
           ${
             copy.hint
-              ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-black text-[#b45309] animate-pulse"><span class="w-1.5 h-1.5 rounded-full bg-[#ea580c]"></span>${copy.hint}</span>`
-              : '<span class="text-[11px] font-bold text-[#64748b]">Click anywhere to continue</span>'
+              ? `<span class="inline-flex items-center gap-1.5 text-[11px] font-black text-[#b45309] animate-pulse"><span class="w-1.5 h-1.5 rounded-full bg-[#ea580c]"></span><span data-tutorial-hint="true">${copy.hint}</span></span>`
+              : '<span class="text-[11px] font-bold text-[#64748b]" data-tutorial-hint="true">Click anywhere to continue</span>'
           }
           ${
             copy.cta
@@ -281,13 +260,18 @@ export class TutorialUi {
   private plotAnchorPos = { x: 0, y: 0, visible: false };
   private chestAnchorPos = { x: 0, y: 0, visible: false };
   private guardBound = false;
+  private pendingAdvanceTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingTransitionFrom: TutorialStep | null = null;
+  private nudgeTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastNudgeSfxAtMs = 0;
 
   constructor(
     private readonly onSetPitZoom: (zoomed: boolean) => void,
     private readonly onSetChestZoom: (zoomed: boolean) => void,
     private readonly onSetSellShopZoom: (zoomed: boolean) => void,
     private readonly onComplete?: () => void,
-    private readonly onClaimReward?: () => void
+    private readonly onClaimReward?: () => void,
+    private readonly autoCloseHooks?: TutorialAutoCloseHooks
   ) {
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
       this.step = 'done';
@@ -326,6 +310,17 @@ export class TutorialUi {
     this.render();
   }
 
+  private syncBodyTutorialDataset(): void {
+    if (typeof document === 'undefined' || !document.body?.dataset) return;
+    if (this.step === 'done') {
+      delete document.body.dataset.tutorialActive;
+      delete document.body.dataset.tutorialStep;
+    } else {
+      document.body.dataset.tutorialActive = 'true';
+      document.body.dataset.tutorialStep = this.step;
+    }
+  }
+
   private clearTargetHighlight(): void {
     if (this.highlightedEl) {
       this.highlightedEl.classList.remove('mam-tut-target-ring');
@@ -342,6 +337,80 @@ export class TutorialUi {
     }
   }
 
+  private clearPendingAdvance(): void {
+    if (this.pendingAdvanceTimer !== null) {
+      clearTimeout(this.pendingAdvanceTimer);
+      this.pendingAdvanceTimer = null;
+    }
+    this.pendingTransitionFrom = null;
+  }
+
+  private clearNudge(): void {
+    if (this.nudgeTimer !== null) {
+      clearTimeout(this.nudgeTimer);
+      this.nudgeTimer = null;
+    }
+    if (!this.overlayEl) return;
+    const cardEl = this.overlayEl.querySelector<HTMLElement>('[data-tutorial-card]');
+    cardEl?.removeAttribute('data-tutorial-nudge');
+    this.arrowEl?.removeAttribute('data-tutorial-nudge');
+    const hintEl = this.overlayEl.querySelector<HTMLElement>('[data-tutorial-hint]');
+    if (hintEl) {
+      hintEl.removeAttribute('data-nudge-hint');
+      if (this.step !== 'done') {
+        const copy = DIALOG_COPY[this.step];
+        hintEl.textContent = copy.hint ?? 'Click anywhere to continue';
+      }
+    }
+  }
+
+  private triggerWrongClickNudge(): void {
+    const now = Date.now();
+    if (now - this.lastNudgeSfxAtMs >= TUTORIAL_NUDGE_SFX_COOLDOWN_MS) {
+      this.lastNudgeSfxAtMs = now;
+      audio.playSfx('ui-error', { volume: 0.35 });
+    }
+    if (!this.overlayEl || this.step === 'done') return;
+
+    const cardEl = this.overlayEl.querySelector<HTMLElement>('[data-tutorial-card]');
+    if (cardEl) {
+      cardEl.removeAttribute('data-tutorial-nudge');
+      void cardEl.offsetWidth;
+      cardEl.setAttribute('data-tutorial-nudge', 'true');
+    }
+    if (this.arrowEl) {
+      this.arrowEl.removeAttribute('data-tutorial-nudge');
+      void this.arrowEl.offsetWidth;
+      this.arrowEl.setAttribute('data-tutorial-nudge', 'true');
+    }
+
+    const hintEl = this.overlayEl.querySelector<HTMLElement>('[data-tutorial-hint]');
+    if (hintEl) {
+      hintEl.setAttribute('data-nudge-hint', 'true');
+      hintEl.textContent = DIALOG_COPY[this.step].cta
+        ? 'Click Start or anywhere on the card!'
+        : 'Follow the glowing arrow!';
+    }
+
+    if (this.nudgeTimer !== null) {
+      clearTimeout(this.nudgeTimer);
+    }
+    this.nudgeTimer = setTimeout(() => {
+      this.nudgeTimer = null;
+      this.clearNudge();
+    }, TUTORIAL_NUDGE_DURATION_MS);
+  }
+
+  private findVisibleTarget(selector: string): HTMLElement | null {
+    const matches = document.querySelectorAll<HTMLElement>(selector);
+    for (const el of matches) {
+      if (typeof el.getBoundingClientRect !== 'function') return el;
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) return el;
+    }
+    return null;
+  }
+
   private bindInputGuard(): void {
     if (this.guardBound || typeof document === 'undefined') return;
     this.guardBound = true;
@@ -352,24 +421,39 @@ export class TutorialUi {
       if (target.closest('#tutorialOverlayLayer')) return;
 
       const copy = DIALOG_COPY[this.step];
-      if (copy.cta) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        return;
-      }
-      if (copy.domSelector && target.closest(copy.domSelector)) {
-        return;
-      }
-      if (copy.allowCanvas && target.closest('#threeRoot')) {
-        return;
+      if (!copy.cta) {
+        if (copy.domSelector && target.closest(copy.domSelector)) {
+          return;
+        }
+        if (copy.allowCanvas && target.closest('#threeRoot')) {
+          return;
+        }
       }
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
+      this.triggerWrongClickNudge();
     };
     document.addEventListener('pointerdown', guard, true);
     document.addEventListener('click', guard, true);
+  }
+
+  public canInteractWith3DTarget(kind: 'chest' | 'plot' | 'shop-station', id?: number | string): boolean {
+    if (this.step === 'done') return true;
+    const allowed =
+      (kind === 'chest' && this.step === 'click-chest') ||
+      (kind === 'plot' && this.step === 'click-plot' && id === 0) ||
+      (kind === 'shop-station' && this.step === 'click-sell-shop' && id === 'sell');
+    if (!allowed) {
+      this.triggerWrongClickNudge();
+    }
+    return allowed;
+  }
+
+  public nudgeBlockedAction(): void {
+    if (this.step !== 'done') {
+      this.triggerWrongClickNudge();
+    }
   }
 
   public updatePlotAnchor(x: number, y: number, visible: boolean): void {
@@ -381,7 +465,11 @@ export class TutorialUi {
   public updateChestAnchor(x: number, y: number, visible: boolean): void {
     this.chestAnchorPos = { x, y, visible };
     if (this.step !== 'click-chest' || !this.arrowEl) return;
-    this.positionArrow(x, y - 20, visible);
+    if (visible) {
+      this.positionArrow(x, y - 20, true);
+    } else {
+      this.syncDomArrow();
+    }
   }
 
   private positionArrow(x: number, y: number, visible: boolean): void {
@@ -406,19 +494,21 @@ export class TutorialUi {
       this.clearTargetHighlight();
       return;
     }
-    const el = document.querySelector<HTMLElement>(copy.domSelector);
+    const el = this.findVisibleTarget(copy.domSelector);
     if (!el) {
       this.clearTargetHighlight();
-      this.arrowEl.style.display = 'none';
-      return;
-    }
-    const r = el.getBoundingClientRect();
-    if (r.width <= 0 || r.height <= 0) {
-      this.clearTargetHighlight();
-      this.arrowEl.style.display = 'none';
+      if (this.step !== 'click-chest' || !this.chestAnchorPos.visible) {
+        this.arrowEl.style.display = 'none';
+      }
       return;
     }
     this.applyTargetHighlight(el);
+
+    if (this.step === 'click-chest' && this.chestAnchorPos.visible) {
+      return;
+    }
+
+    const r = el.getBoundingClientRect();
     const placement = copy.arrowPlacement ?? 'above';
     if (placement === 'below') {
       this.arrowEl.style.display = 'block';
@@ -445,6 +535,40 @@ export class TutorialUi {
     this.positionArrow(r.left + r.width / 2, r.top - 10, true);
   }
 
+  private finishUpgradeStep(closeInspector: boolean): void {
+    this.clearPendingAdvance();
+    if (this.step !== 'upgrade-dmg') return;
+    if (closeInspector) {
+      this.autoCloseHooks?.onClosePlotInspect?.();
+    }
+    audio.playSfx('ui-close');
+    this.onSetChestZoom(true);
+    this.step = 'click-chest';
+    this.render();
+  }
+
+  private finishChestTakeStep(closeModal: boolean): void {
+    this.clearPendingAdvance();
+    if (this.step !== 'take-all-chest') return;
+    if (closeModal) {
+      this.autoCloseHooks?.onCloseModal?.();
+    }
+    this.onSetChestZoom(false);
+    this.step = 'go-shop';
+    this.render();
+  }
+
+  private finishSellStep(closeModal: boolean): void {
+    this.clearPendingAdvance();
+    if (this.step !== 'click-sell-btn') return;
+    if (closeModal) {
+      this.autoCloseHooks?.onCloseModal?.();
+    }
+    audio.playSfx('rare-fanfare', { volume: 0.65 });
+    this.step = 'congrats';
+    this.render();
+  }
+
   public syncView(sceneMode: string, activeModal: string, inspectedSlot: number | null): void {
     if (this.step === 'done') return;
 
@@ -454,11 +578,8 @@ export class TutorialUi {
       this.render();
       return;
     }
-    if (this.step === 'exit-plot' && inspectedSlot === null) {
-      audio.playSfx('ui-close');
-      this.onSetChestZoom(true);
-      this.step = 'click-chest';
-      this.render();
+    if (this.step === 'upgrade-dmg' && inspectedSlot === null && this.pendingTransitionFrom === 'upgrade-dmg') {
+      this.finishUpgradeStep(false);
       return;
     }
     if (this.step === 'click-chest' && activeModal === 'chest') {
@@ -468,10 +589,8 @@ export class TutorialUi {
       this.render();
       return;
     }
-    if (this.step === 'close-chest' && activeModal === 'none') {
-      this.onSetChestZoom(false);
-      this.step = 'go-shop';
-      this.render();
+    if (this.step === 'take-all-chest' && activeModal === 'none' && this.pendingTransitionFrom === 'take-all-chest') {
+      this.finishChestTakeStep(false);
       return;
     }
     if (this.step === 'go-shop' && sceneMode === 'shop') {
@@ -486,10 +605,8 @@ export class TutorialUi {
       this.render();
       return;
     }
-    if (this.step === 'close-sell-shop' && activeModal === 'none') {
-      audio.playSfx('rare-fanfare', { volume: 0.65 });
-      this.step = 'congrats';
-      this.render();
+    if (this.step === 'click-sell-btn' && activeModal === 'none' && this.pendingTransitionFrom === 'click-sell-btn') {
+      this.finishSellStep(false);
       return;
     }
 
@@ -507,15 +624,19 @@ export class TutorialUi {
   }
 
   public notifyUpgraded(): void {
-    if (this.step !== 'upgrade-dmg') return;
-    this.step = 'exit-plot';
-    this.render();
+    if (this.step !== 'upgrade-dmg' || this.pendingTransitionFrom === 'upgrade-dmg') return;
+    this.pendingTransitionFrom = 'upgrade-dmg';
+    this.pendingAdvanceTimer = setTimeout(() => {
+      this.finishUpgradeStep(true);
+    }, TUTORIAL_AUTO_CLOSE_DELAY_MS);
   }
 
   public notifyChestTaken(): void {
-    if (this.step !== 'take-all-chest') return;
-    this.step = 'close-chest';
-    this.render();
+    if (this.step !== 'take-all-chest' || this.pendingTransitionFrom === 'take-all-chest') return;
+    this.pendingTransitionFrom = 'take-all-chest';
+    this.pendingAdvanceTimer = setTimeout(() => {
+      this.finishChestTakeStep(true);
+    }, TUTORIAL_AUTO_CLOSE_DELAY_MS);
   }
 
   public notifySellOreSelected(): void {
@@ -525,9 +646,11 @@ export class TutorialUi {
   }
 
   public notifySellCompleted(): void {
-    if (this.step !== 'click-sell-btn') return;
-    this.step = 'close-sell-shop';
-    this.render();
+    if (this.step !== 'click-sell-btn' || this.pendingTransitionFrom === 'click-sell-btn') return;
+    this.pendingTransitionFrom = 'click-sell-btn';
+    this.pendingAdvanceTimer = setTimeout(() => {
+      this.finishSellStep(true);
+    }, TUTORIAL_AUTO_CLOSE_DELAY_MS);
   }
 
   public advance(): void {
@@ -561,6 +684,8 @@ export class TutorialUi {
   }
 
   public complete(): void {
+    this.clearPendingAdvance();
+    this.clearNudge();
     this.clearTargetHighlight();
     this.onSetPitZoom(false);
     this.onSetChestZoom(false);
@@ -576,7 +701,9 @@ export class TutorialUi {
   }
 
   public render(): void {
+    this.syncBodyTutorialDataset();
     if (!this.overlayEl) return;
+    this.clearNudge();
     this.clearTargetHighlight();
     if (this.step === 'done') {
       this.overlayEl.innerHTML = '';
@@ -591,7 +718,7 @@ export class TutorialUi {
     if (copy.badge) {
       if (this.step === 'mine-ore') {
         pointerArrowHtml = `
-          <div class="fixed left-1/2 top-[34%] -translate-x-1/2 -translate-y-full pointer-events-none z-20">
+          <div id="tutorialArrow" class="fixed left-1/2 top-[34%] -translate-x-1/2 -translate-y-full pointer-events-none z-20">
             <div class="flex flex-col items-center gap-1 animate-bounce">
               ${badgePillHtml(copy.badge, 'cyan')}
               ${crystalPointerSvg('down', '#22d3ee')}
@@ -638,7 +765,7 @@ export class TutorialUi {
       ${hasCta ? '<div class="fixed inset-0 bg-slate-950/48 pointer-events-auto" data-tutorial-backdrop="true"></div>' : ''}
       ${pointerArrowHtml}
       <div class="fixed ${positionClass} ${cardWidthCls} ${hasCta ? 'pointer-events-auto' : 'pointer-events-none'} z-10">
-        ${buildTutorialCardHtml(this.step)}
+        <div class="mam-tut-card-enter">${buildTutorialCardHtml(this.step)}</div>
       </div>
     `;
 

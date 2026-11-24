@@ -311,6 +311,9 @@
     color: #14111d;
     border: 3.5px solid #14111d;
     box-shadow: none;
+  }
+
+  .mam-tut-card-enter {
     animation: mamTutCardIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
@@ -416,6 +419,79 @@
       0 0 0 6px rgba(250, 204, 21, 0.28),
       0 0 26px rgba(56, 189, 248, 0.65) !important;
     animation: mamTutRingPulse 1.15s ease-in-out infinite !important;
+  }
+
+  body[data-tutorial-active="true"] :is(
+    [data-hud-weather="true"],
+    [data-hud-dps="true"],
+    [data-hud-overclock="true"],
+    [data-active-pots="true"],
+    .mam-hotbar-dock,
+    [data-action="open-worlds"],
+    [data-action="open-shop"],
+    [data-action="open-upgrades"],
+    [data-action="open-index"],
+    [data-action="open-daily-login"],
+    [data-action="open-bounties"],
+    [data-action="open-achievements"],
+    [data-action="open-chest"],
+    [data-action="shops-pill"],
+    [data-action="toggle-camera-lock"],
+    [data-action="open-settings"],
+    [data-action="toggle-audio"],
+    [data-action="gems-plus"],
+    [data-action="back-to-mine"],
+    [data-action="open-pickaxe-shop"],
+    [data-action="open-sell-shop"],
+    [data-action="open-relic-forge"],
+    [data-action="open-gem-shop"],
+    [data-action="open-enchant-altar"],
+    [data-action="open-gem-tower"],
+    [data-action="open-omega-boss"]
+  ) {
+    opacity: 0.24;
+    filter: grayscale(0.35);
+    transition: opacity 0.2s ease, filter 0.2s ease;
+  }
+
+  body[data-tutorial-active="true"] .mam-tut-target-ring,
+  body[data-tutorial-step="click-chest"] [data-action="open-chest"],
+  body[data-tutorial-step="go-shop"] [data-action="shops-pill"],
+  body[data-tutorial-step="click-sell-shop"] [data-action="open-sell-shop"] {
+    opacity: 1 !important;
+    filter: none !important;
+  }
+
+  .mam-tut-card[data-tutorial-nudge="true"] {
+    animation: mamTutNudge 0.36s ease-in-out;
+    border-color: #dc2626;
+  }
+
+  #tutorialArrow[data-tutorial-nudge="true"] > div {
+    animation: mamTutNudge 0.36s ease-in-out !important;
+  }
+
+  [data-tutorial-hint="true"][data-nudge-hint="true"] {
+    color: #dc2626 !important;
+  }
+
+  @keyframes mamTutNudge {
+    0%,
+    100% {
+      transform: translateX(0) scale(1);
+    }
+    20% {
+      transform: translateX(-6px) scale(1.03);
+    }
+    40% {
+      transform: translateX(6px) scale(1.03);
+    }
+    60% {
+      transform: translateX(-4px) scale(1.02);
+    }
+    80% {
+      transform: translateX(4px) scale(1.01);
+    }
   }
 
   @keyframes mamTutFloat {

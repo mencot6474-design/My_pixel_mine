@@ -92,7 +92,7 @@ export class GameState {
   public autoSell = false;
   public autoSellRarities = new Set<ItemRarity>();
   public lockedOreIds = new Set<string>();
-  public autoMeteor = true;
+  public autoMeteor = false;
   public discovered = new Set<string>(['astral-recruit']);
   public activeBoosts: Record<string, number> = {};
   public towerBestFloor = 0;
