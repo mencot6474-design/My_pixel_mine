@@ -5,6 +5,74 @@ export const RIFT_WINDOW_DURATION_MIN = 15;
 export const RIFT_PASS_DURATION_MS = 15 * 60 * 1000;
 export const RIFT_SHARD_PITY_COST = 100;
 export const RIFT_INSTANT_DROP_CHANCE = 0.08;
+export const RIFT_BATTLE_DURATION_SEC = 30;
+export const RIFT_MAX_ATTEMPTS_PER_WINDOW = 3;
+
+export interface RiftTierDef {
+  readonly tier: number;
+  readonly worldLabel: string;
+  readonly damageTarget: number;
+  readonly shards: number;
+  readonly dropChance: number;
+}
+
+export const RIFT_TIER_DEFS: readonly RiftTierDef[] = [
+  { tier: 1, worldLabel: 'W1 Underground', damageTarget: 5_000, shards: 1, dropChance: 0.02 },
+  { tier: 2, worldLabel: 'W2 Crystal', damageTarget: 50_000_000, shards: 2, dropChance: 0.025 },
+  { tier: 3, worldLabel: 'W3 Magma', damageTarget: 50_000_000_000, shards: 3, dropChance: 0.03 },
+  { tier: 4, worldLabel: 'W4 Ruins', damageTarget: 50_000_000_000_000, shards: 4, dropChance: 0.04 },
+  { tier: 5, worldLabel: 'W5 Voidreach', damageTarget: 50_000_000_000_000_000, shards: 5, dropChance: 0.05 },
+  { tier: 6, worldLabel: 'W6 Starwell', damageTarget: 5e19, shards: 6, dropChance: 0.06 },
+  { tier: 7, worldLabel: 'W7 Abyssal', damageTarget: 5e22, shards: 7, dropChance: 0.07 },
+  { tier: 8, worldLabel: 'W8 Chrono', damageTarget: 5e25, shards: 8, dropChance: 0.08 },
+  { tier: 9, worldLabel: 'W9 Solaris', damageTarget: 5e28, shards: 9, dropChance: 0.1 },
+  { tier: 10, worldLabel: 'W10 Elysium', damageTarget: 5e31, shards: 10, dropChance: 0.12 },
+] as const;
+
+export interface RiftTierProgress {
+  tier: number;
+  currentTarget: number;
+  nextTarget: number | null;
+  progressPct: number;
+  shards: number;
+  dropChance: number;
+}
+
+/** Resolves the reached Rift Tier (0..10), progress toward the next Tier, and projected rewards for cumulative damage. */
+export function getRiftTierProgress(damage: number): RiftTierProgress {
+  const safeDmg = Number.isFinite(damage) ? Math.max(0, damage) : 0;
+  let reachedIdx = -1;
+  for (let i = 0; i < RIFT_TIER_DEFS.length; i++) {
+    if (safeDmg >= RIFT_TIER_DEFS[i].damageTarget) {
+      reachedIdx = i;
+    } else {
+      break;
+    }
+  }
+  const currentDef = reachedIdx >= 0 ? RIFT_TIER_DEFS[reachedIdx] : null;
+  const nextDef = reachedIdx + 1 < RIFT_TIER_DEFS.length ? RIFT_TIER_DEFS[reachedIdx + 1] : null;
+  const currentTarget = currentDef ? currentDef.damageTarget : 0;
+  const nextTarget = nextDef ? nextDef.damageTarget : null;
+  let progressPct = 100;
+  if (nextTarget !== null) {
+    const span = Math.max(1, nextTarget - currentTarget);
+    progressPct = Math.max(0, Math.min(100, ((safeDmg - currentTarget) / span) * 100));
+  }
+  return {
+    tier: currentDef ? currentDef.tier : 0,
+    currentTarget,
+    nextTarget,
+    progressPct,
+    shards: currentDef ? currentDef.shards : 0,
+    dropChance: currentDef ? currentDef.dropChance : 0,
+  };
+}
+
+/** Alternates the active Dimensional Rift Boss each hour. */
+export function getRiftHourlyBossId(hourIndex: number): AnomalyChibiId {
+  const safeIdx = Number.isFinite(hourIndex) ? Math.max(0, Math.floor(hourIndex)) : 0;
+  return ANOMALY_CHIBI_DEFS[safeIdx % ANOMALY_CHIBI_DEFS.length].chibiId;
+}
 
 export type AnomalyChibiId = 'void-asura' | 'null-singularity';
 
@@ -62,25 +130,25 @@ export const RIFT_ANOMALIES: readonly RiftAnomalyDef[] = [
     id: 'hyper-crit',
     name: 'Hyper-Crit Rift',
     accentColor: '#fde047',
-    summary: 'Golden Crit crystals charge +30% Core (2x speed).',
+    summary: '+25% Crit Chance & 1.5x Crit DMG for Squad & Tap hits.',
   },
   {
     id: 'meteor-storm',
     name: 'Meteor Storm Rift',
     accentColor: '#fb7185',
-    summary: 'Rift Meteors rain down frequently (+25% Core & bonus shards).',
+    summary: 'Void Meteors strike every 4s for 4x Squad DPS burst.',
   },
   {
     id: 'overclock-surge',
     name: 'Overclock Surge Rift',
     accentColor: '#22d3ee',
-    summary: '+30% Rift Shards per Breach with faster spawns & extra Mimics.',
+    summary: '+30% Squad Attack Speed & DMG; Ults trigger every 3 hits.',
   },
   {
     id: 'mirror-echo',
     name: 'Mirror Echo Rift',
     accentColor: '#c084fc',
-    summary: 'Shattering a True Crystal echoes to 1 adjacent crystal.',
+    summary: 'Chibi Ults trigger a +35% Dimensional Echo Strike.',
   },
 ] as const;
 

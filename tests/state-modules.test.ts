@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { isNonSellableChibi } from '../src/game/DailyLoginData';
-import { RIFT_PASS_GEM_COST, RIFT_SHARD_PITY_COST } from '../src/game/AnomalyData';
+import {
+  getRiftHourlyBossId,
+  getRiftTierProgress,
+  RIFT_BATTLE_DURATION_SEC,
+  RIFT_MAX_ATTEMPTS_PER_WINDOW,
+  RIFT_PASS_GEM_COST,
+  RIFT_SHARD_PITY_COST,
+  RIFT_TIER_DEFS,
+} from '../src/game/AnomalyData';
 import { getRiftWindowSnapshot } from '../src/game/RiftDomain';
 import {
   TOWER_BOSS_COIN_CHANCE,
@@ -2159,6 +2167,25 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(state.riftShards).toBe(0);
       expect(state.discovered.has('void-asura')).toBe(true);
       expect(isNonSellableChibi('void-asura')).toBe(true);
+    });
+
+    it('defines Tier 1-10 damage thresholds (1 Shard per Tier), tier progress math, and hourly boss rotation', () => {
+      expect(RIFT_BATTLE_DURATION_SEC).toBe(30);
+      expect(RIFT_MAX_ATTEMPTS_PER_WINDOW).toBe(3);
+      expect(RIFT_TIER_DEFS).toHaveLength(10);
+      expect(RIFT_TIER_DEFS[0]).toMatchObject({ tier: 1, damageTarget: 5_000, shards: 1 });
+      expect(RIFT_TIER_DEFS[3]).toMatchObject({ tier: 4, damageTarget: 50_000_000_000_000, shards: 4 });
+      expect(RIFT_TIER_DEFS[9]).toMatchObject({ tier: 10, damageTarget: 5e31, shards: 10 });
+
+      expect(getRiftTierProgress(0)).toMatchObject({ tier: 0, shards: 0, nextTarget: 5_000, progressPct: 0 });
+      expect(getRiftTierProgress(2_500)).toMatchObject({ tier: 0, shards: 0, nextTarget: 5_000, progressPct: 50 });
+      expect(getRiftTierProgress(5_000)).toMatchObject({ tier: 1, shards: 1, currentTarget: 5_000, nextTarget: 50_000_000 });
+      expect(getRiftTierProgress(50_000_000_000_000)).toMatchObject({ tier: 4, shards: 4 });
+      expect(getRiftTierProgress(5e31)).toMatchObject({ tier: 10, shards: 10, nextTarget: null, progressPct: 100 });
+
+      expect(getRiftHourlyBossId(0)).toBe('void-asura');
+      expect(getRiftHourlyBossId(1)).toBe('null-singularity');
+      expect(getRiftHourlyBossId(0)).not.toBe(getRiftHourlyBossId(1));
     });
   });
 });
