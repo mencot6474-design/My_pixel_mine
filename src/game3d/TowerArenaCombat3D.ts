@@ -546,7 +546,7 @@ export function stepTowerFightersAndBarrages(ctx: {
   }
 
   for (const f of ctx.fighters.values()) {
-    f.fx.update(ctx.elapsed);
+    f.fx.update(ctx.elapsed, ctx.camera);
     f.colorHex = f.fx.getAccentColor();
     f.sprite.setAccentColor(f.colorHex);
     f.sprite.group.position.copy(f.spawnPos);

@@ -16,8 +16,10 @@ import {
 import {
   createAnimeAuraShaderMaterial,
   createAnimeParticlePoints,
+  createEnchantAuraSheetHandle,
   createThrusterBeamShaderMaterial,
   ENCHANT_SECONDARY_COLOR,
+  type EnchantAuraSheetHandle,
   getEnchantSigilTexture,
   getPedestalHoloRingTexture,
   getThrusterHoloProjectionTexture,
@@ -73,10 +75,7 @@ export class PlotPedestal3D {
   private auraGroup: THREE.Group | null = null;
   private auraSigilMesh: THREE.Mesh | null = null;
   private auraGroundMat: THREE.MeshBasicMaterial | null = null;
-  private auraVeilMat: THREE.ShaderMaterial | null = null;
-  private auraVeilMesh: THREE.Mesh | null = null;
-  private auraOuterVeilMat: THREE.ShaderMaterial | null = null;
-  private auraOuterVeilMesh: THREE.Mesh | null = null;
+  private auraSheetHandle: EnchantAuraSheetHandle | null = null;
   private auraMoteGeo: THREE.BufferGeometry | null = null;
   private auraMoteMat: THREE.ShaderMaterial | null = null;
   private auraMotePoints: THREE.Points | null = null;
@@ -426,15 +425,13 @@ export class PlotPedestal3D {
     if (targetId === this.enchantId) return;
 
     if (this.auraGroup) {
+      this.auraSheetHandle?.dispose();
+      this.auraSheetHandle = null;
       disposeObject3D(this.auraGroup);
       this.group.remove(this.auraGroup);
       this.auraGroup = null;
       this.auraSigilMesh = null;
       this.auraGroundMat = null;
-      this.auraVeilMat = null;
-      this.auraVeilMesh = null;
-      this.auraOuterVeilMat = null;
-      this.auraOuterVeilMesh = null;
       this.auraMoteGeo?.dispose();
       this.auraMoteGeo = null;
       this.auraMoteMat?.dispose();
@@ -499,28 +496,16 @@ export class PlotPedestal3D {
     this.auraSigilMesh = groundSigil;
     this.auraGroundMat = groundMat;
 
-    // 2. Concentric Thick Outward-Flared Fresnel Rim Aura Shells (parallel to rear stanchions, keeps face clear)
-    const veilMat = createAnimeAuraShaderMaterial(enc.color, secondaryHex, 0.96);
-    const auraVeil = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.76, 0.58, 1.62, 28, 1, true),
-      veilMat
-    );
-    auraVeil.position.y = 1.06;
-
-    const outerVeilMat = createAnimeAuraShaderMaterial(secondaryHex, enc.color, 0.64);
-    const outerAuraVeil = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.9, 0.64, 1.7, 28, 1, true),
-      outerVeilMat
-    );
-    outerAuraVeil.position.y = 1.1;
-
-    auraGroup.add(auraVeil, outerAuraVeil);
-    this.auraVeilMat = veilMat;
-    this.auraVeilMesh = auraVeil;
-    this.auraOuterVeilMat = outerVeilMat;
-    this.auraOuterVeilMesh = outerAuraVeil;
-    auraVeil.visible = true;
-    outerAuraVeil.visible = !this.lowQuality;
+    // 2. 14 FPS 4x2 Animated 2D Sprite-Sheet Aura ("Pas" scale behind Chibi & back-attachments)
+    const auraSheet = createEnchantAuraSheetHandle(enc.id, 2.05, {
+      baseY: 0.25,
+      zOffset: -0.32,
+      phaseOffset: this.index * 0.13,
+      opacity: 0.96,
+      renderOrder: 2,
+    });
+    auraGroup.add(auraSheet.pivotGroup);
+    this.auraSheetHandle = auraSheet;
 
     // 3. GPU Lifetime-Shaded Anime Aura Wisps & Vertical Energy Streaks (smooth birth/death fade)
     const particles = createAnimeParticlePoints(enc.color, secondaryHex, {
@@ -543,12 +528,6 @@ export class PlotPedestal3D {
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
     this.chibiSprite?.setLowQuality(low);
-    if (this.auraVeilMesh) {
-      this.auraVeilMesh.visible = true;
-    }
-    if (this.auraOuterVeilMesh) {
-      this.auraOuterVeilMesh.visible = !low;
-    }
     if (this.auraMotePoints) {
       this.auraMotePoints.visible = !low;
     }
@@ -702,28 +681,17 @@ export class PlotPedestal3D {
     }
     if (this.auraGroup) {
       const phase = elapsed + this.index * 0.65;
-      if (this.enchantIsRainbow && this.auraGroundMat && this.auraVeilMat && this.auraOuterVeilMat && this.auraMoteMat) {
+      this.auraSheetHandle?.update(elapsed, camera);
+      if (this.enchantIsRainbow && this.auraGroundMat && this.auraMoteMat) {
         const hue = (phase * 0.08) % 1;
         this.auraGroundMat.color.setHSL(hue, 0.85, 0.62);
         (this.auraMoteMat.uniforms.uColorA.value as THREE.Color).setHSL(hue, 0.88, 0.62);
         (this.auraMoteMat.uniforms.uColorB.value as THREE.Color).setHSL((hue + 0.28) % 1, 0.92, 0.7);
-        (this.auraVeilMat.uniforms.uColorA.value as THREE.Color).setHSL(hue, 0.85, 0.62);
-        (this.auraVeilMat.uniforms.uColorB.value as THREE.Color).setHSL((hue + 0.3) % 1, 0.9, 0.68);
-        (this.auraOuterVeilMat.uniforms.uColorA.value as THREE.Color).setHSL((hue + 0.3) % 1, 0.88, 0.66);
-        (this.auraOuterVeilMat.uniforms.uColorB.value as THREE.Color).setHSL(hue, 0.85, 0.6);
         this.ringMat.color.setHSL(hue, 0.82, 0.6);
         this.ringMat.emissive.setHSL(hue, 0.82, 0.56);
       }
       if (this.auraSigilMesh) {
         this.auraSigilMesh.rotation.z = phase * 0.12;
-      }
-      if (!this.lowQuality && this.auraVeilMat) {
-        this.auraVeilMat.uniforms.uTime.value = phase;
-        this.auraVeilMat.uniforms.uOpacity.value = 0.7 + Math.sin(phase * 1.8) * 0.12;
-      }
-      if (!this.lowQuality && this.auraOuterVeilMat) {
-        this.auraOuterVeilMat.uniforms.uTime.value = phase + 0.7;
-        this.auraOuterVeilMat.uniforms.uOpacity.value = 0.4 + Math.sin(phase * 1.8) * 0.08;
       }
       if (this.auraGroundMat) {
         this.auraGroundMat.opacity = 0.76 + Math.sin(phase * 1.8) * 0.12;
@@ -784,6 +752,8 @@ export class PlotPedestal3D {
 
   public dispose(): void {
     this.disposed = true;
+    this.auraSheetHandle?.dispose();
+    this.auraSheetHandle = null;
     this.auraMoteGeo?.dispose();
     this.auraMoteGeo = null;
     this.auraMoteMat?.dispose();

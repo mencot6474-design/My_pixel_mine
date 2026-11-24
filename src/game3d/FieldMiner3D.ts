@@ -13,6 +13,7 @@ import {
   getEnchantSigilTexture,
   getPedestalHoloRingTexture,
 } from './PlotPedestal3D';
+import { createEnchantAuraSheetHandle, type EnchantAuraSheetHandle } from './PlotAuraFx3D';
 
 /**
  * Shared ground halo + Enchant sigil + rising particle emitter for field Chibis
@@ -29,18 +30,21 @@ export class ChibiFieldFxController {
   private enchantId: string | null = null;
   private enchantRainbow = false;
   private readonly defaultAccentColor: string;
+  private readonly spriteHeight: number;
   private accentColorHex: string;
   private auraGroup: THREE.Group | null = null;
   private sigilMesh: THREE.Mesh | null = null;
   private sigilMat: THREE.MeshBasicMaterial | null = null;
+  private auraSheetHandle: EnchantAuraSheetHandle | null = null;
   private moteGeo: THREE.BufferGeometry | null = null;
   private moteMat: THREE.ShaderMaterial | null = null;
   private motePoints: THREE.Points | null = null;
   private lowQuality = false;
 
-  constructor(hostGroup: THREE.Group, defAccentColor: string, slotIndex: number) {
+  constructor(hostGroup: THREE.Group, defAccentColor: string, slotIndex: number, spriteHeight = 1.95) {
     this.hostGroup = hostGroup;
     this.slotIndex = slotIndex;
+    this.spriteHeight = spriteHeight;
     this.defaultAccentColor = defAccentColor;
     this.accentColorHex = defAccentColor;
     this.baseHaloGroup = new THREE.Group();
@@ -119,6 +123,17 @@ export class ChibiFieldFxController {
     innerWash.position.y = 0.025;
     g.add(innerWash);
 
+    // 14 FPS 4x2 Animated 2D Sprite-Sheet Aura behind arena/field Chibi
+    const auraSheet = createEnchantAuraSheetHandle(enc.id, this.spriteHeight, {
+      baseY: 0,
+      zOffset: -0.3,
+      phaseOffset: this.slotIndex * 0.13,
+      opacity: 0.94,
+      renderOrder: 2,
+    });
+    this.auraSheetHandle = auraSheet;
+    g.add(auraSheet.pivotGroup);
+
     // Particles only around active field chibis (keeps face & target ore unobstructed)
     const particles = createAnimeParticlePoints(enc.color, secHex, {
       count: 12,
@@ -146,6 +161,8 @@ export class ChibiFieldFxController {
 
   private clearEnchantFx(): void {
     if (!this.auraGroup) return;
+    this.auraSheetHandle?.dispose();
+    this.auraSheetHandle = null;
     this.hostGroup.remove(this.auraGroup);
     disposeObject3D(this.auraGroup);
     this.moteGeo?.dispose();
@@ -158,11 +175,12 @@ export class ChibiFieldFxController {
     this.motePoints = null;
   }
 
-  public update(elapsed: number): void {
+  public update(elapsed: number, camera?: THREE.Camera): void {
     this.baseRingMesh.rotation.z = elapsed * 0.14 + this.slotIndex * 0.85;
     if (this.sigilMesh) {
       this.sigilMesh.rotation.z = -elapsed * 0.12 - this.slotIndex * 0.6;
     }
+    this.auraSheetHandle?.update(elapsed, camera);
     if (!this.lowQuality && this.moteMat) {
       this.moteMat.uniforms.uTime.value = elapsed;
     }
@@ -244,7 +262,7 @@ export class FieldMiner3D {
     renderVisuals = true
   ): void {
     if (renderVisuals) {
-      this.fx.update(elapsed);
+      this.fx.update(elapsed, camera);
       this.sprite.setAccentColor(this.fx.getAccentColor());
     }
 

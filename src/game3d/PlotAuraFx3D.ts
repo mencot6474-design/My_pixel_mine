@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { loadPublicSpriteTexture } from './OreBillboard3D';
 
 export const ENCHANT_SECONDARY_COLOR: Record<string, string> = {
   blazing: '#fde047',
@@ -455,4 +456,170 @@ export function createAnimeParticlePoints(
   const points = new THREE.Points(geo, mat);
   return { points, geo, mat };
 }
+
+export const ENCHANT_AURA_FPS = 14;
+export const ENCHANT_AURA_COLS = 4;
+export const ENCHANT_AURA_ROWS = 2;
+/** "Pas" aura scale relative to Chibi spriteHeight (2.05 / 1.56 from prototype). */
+export const ENCHANT_AURA_SIZE_RATIO = 2.05 / 1.56;
+
+const ENCHANT_AURA_STEADY_FRAMES: Record<string, readonly number[]> = {
+  blazing: [2, 3, 4, 5, 6, 7],
+};
+const DEFAULT_AURA_FRAMES: readonly number[] = [0, 1, 2, 3, 4, 5, 6, 7];
+
+export function getEnchantAuraSheetUrl(enchantId: string): string {
+  return `/enchants/auras/${enchantId}.webp`;
+}
+
+export function getEnchantAuraSequence(enchantId: string): readonly number[] {
+  return ENCHANT_AURA_STEADY_FRAMES[enchantId] ?? DEFAULT_AURA_FRAMES;
+}
+
+export interface EnchantAuraSheetOptions {
+  baseY?: number;
+  zOffset?: number;
+  phaseOffset?: number;
+  opacity?: number;
+  renderOrder?: number;
+}
+
+export interface EnchantAuraSheetHandle {
+  pivotGroup: THREE.Group;
+  mesh: THREE.Mesh;
+  mat: THREE.ShaderMaterial;
+  geo: THREE.PlaneGeometry;
+  update: (elapsed: number, camera?: THREE.Camera) => void;
+  dispose: () => void;
+}
+
+/**
+ * Creates a camera-aligned 14 FPS 4x2 animated 2D sprite-sheet aura billboard
+ * grounded at the Chibi's feet and tucked cleanly behind the sprite & back-attachments.
+ */
+export function createEnchantAuraSheetHandle(
+  enchantId: string,
+  chibiSpriteHeight: number,
+  options: EnchantAuraSheetOptions = {}
+): EnchantAuraSheetHandle {
+  const auraSize = chibiSpriteHeight * ENCHANT_AURA_SIZE_RATIO;
+  const baseY = options.baseY ?? 0;
+  const zOffset = options.zOffset ?? -0.3;
+  const phaseOffset = options.phaseOffset ?? 0;
+  const baseOpacity = options.opacity ?? 0.96;
+
+  const pivotGroup = new THREE.Group();
+  pivotGroup.position.set(0, baseY, 0);
+  pivotGroup.rotation.order = 'YXZ';
+
+  const geo = new THREE.PlaneGeometry(auraSize, auraSize);
+  const seq = getEnchantAuraSequence(enchantId);
+  const initialFrame = seq[0] ?? 0;
+  const initCol = initialFrame % ENCHANT_AURA_COLS;
+  const initRow = Math.floor(initialFrame / ENCHANT_AURA_COLS);
+
+  const mat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.NormalBlending,
+    uniforms: {
+      uMap: { value: null },
+      uHasMap: { value: 0 },
+      uUvRect: {
+        value: new THREE.Vector4(
+          initCol / ENCHANT_AURA_COLS + 0.002,
+          (ENCHANT_AURA_ROWS - 1 - initRow) / ENCHANT_AURA_ROWS + 0.002,
+          1 / ENCHANT_AURA_COLS - 0.004,
+          1 / ENCHANT_AURA_ROWS - 0.004
+        ),
+      },
+      uOpacity: { value: baseOpacity },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D uMap;
+      uniform float uHasMap;
+      uniform vec4 uUvRect;
+      uniform float uOpacity;
+      varying vec2 vUv;
+      void main() {
+        if (uHasMap < 0.5) discard;
+        vec2 atlasUv = vUv * uUvRect.zw + uUvRect.xy;
+        vec4 tex = texture2D(uMap, atlasUv);
+        float a = tex.a * uOpacity;
+        if (a < 0.015) discard;
+        gl_FragColor = vec4(tex.rgb, a);
+      }
+    `,
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(0, auraSize * 0.5 - auraSize * 0.03, zOffset);
+  mesh.renderOrder = options.renderOrder ?? 2;
+  mesh.raycast = () => {};
+  pivotGroup.add(mesh);
+
+  let disposed = false;
+  void loadPublicSpriteTexture(getEnchantAuraSheetUrl(enchantId))
+    .then((tex) => {
+      if (disposed) return;
+      mat.uniforms.uMap.value = tex;
+      mat.uniforms.uHasMap.value = 1;
+    })
+    .catch(() => {
+      // Headless / test environments without DOM Image skip texture load safely
+    });
+
+  const worldPos = new THREE.Vector3();
+  let lastFrameIdx = initialFrame;
+
+  return {
+    pivotGroup,
+    mesh,
+    mat,
+    geo,
+    update(elapsed: number, camera?: THREE.Camera): void {
+      if (disposed) return;
+      const step = Math.floor((elapsed + phaseOffset) * ENCHANT_AURA_FPS);
+      const seqIdx = ((step % seq.length) + seq.length) % seq.length;
+      const frameIdx = seq[seqIdx];
+      if (frameIdx !== lastFrameIdx) {
+        lastFrameIdx = frameIdx;
+        const col = frameIdx % ENCHANT_AURA_COLS;
+        const row = Math.floor(frameIdx / ENCHANT_AURA_COLS);
+        const uvRect = mat.uniforms.uUvRect.value as THREE.Vector4;
+        uvRect.set(
+          col / ENCHANT_AURA_COLS + 0.002,
+          (ENCHANT_AURA_ROWS - 1 - row) / ENCHANT_AURA_ROWS + 0.002,
+          1 / ENCHANT_AURA_COLS - 0.004,
+          1 / ENCHANT_AURA_ROWS - 0.004
+        );
+      }
+
+      if (camera) {
+        pivotGroup.getWorldPosition(worldPos);
+        const dx = camera.position.x - worldPos.x;
+        const dy = camera.position.y - worldPos.y;
+        const dz = camera.position.z - worldPos.z;
+        const horizDist = Math.max(0.001, Math.hypot(dx, dz));
+        const camPitch = Math.atan2(dy, horizDist);
+        pivotGroup.rotation.y = Math.atan2(dx, dz);
+        pivotGroup.rotation.x = -Math.max(0, Math.min(0.66, camPitch * 0.72));
+      }
+    },
+    dispose(): void {
+      disposed = true;
+      geo.dispose();
+      mat.dispose();
+    },
+  };
+}
+
 

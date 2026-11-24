@@ -788,7 +788,7 @@ export class OmegaArena3D {
     }
 
     for (const f of this.fighters.values()) {
-      f.fx.update(elapsed);
+      f.fx.update(elapsed, camera);
       f.colorHex = f.fx.getAccentColor();
       f.sprite.setAccentColor(f.colorHex);
       f.sprite.group.position.copy(f.spawnPos);

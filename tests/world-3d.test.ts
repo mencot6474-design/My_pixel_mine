@@ -129,6 +129,12 @@ import {
 } from '../src/game3d/OrePit3D';
 import { PlotPedestal3D } from '../src/game3d/PlotPedestal3D';
 import {
+  createEnchantAuraSheetHandle,
+  ENCHANT_AURA_FPS,
+  ENCHANT_AURA_SIZE_RATIO,
+  getEnchantAuraSequence,
+} from '../src/game3d/PlotAuraFx3D';
+import {
   getBroadcastBannerTexture,
   getCyberColosseumDeckTexture,
   getDualSlashArcTexture,
@@ -5135,5 +5141,56 @@ describe('Pure 3D Mine World', () => {
     expect(seenBeats.size).toBe(7);
     expect(sawFinisher).toBe(true);
     tower.dispose();
+  });
+
+  it('ships 10 RGBA 4x2 enchant aura sprite sheets and animates them at 14 FPS with Pas scale on pedestals & field chibis', () => {
+    expect(ENCHANT_AURA_FPS).toBe(14);
+    expect(ENCHANT_AURA_SIZE_RATIO).toBeCloseTo(2.05 / 1.56, 4);
+    expect(getEnchantAuraSequence('blazing')).toEqual([2, 3, 4, 5, 6, 7]);
+    expect(getEnchantAuraSequence('spellbound')).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+
+    for (const enc of ENCHANTS) {
+      const sheetPath = resolve(process.cwd(), 'public/enchants/auras', `${enc.id}.webp`);
+      expect(existsSync(sheetPath), `Missing aura sprite sheet ${sheetPath}`).toBe(true);
+    }
+
+    const handle = createEnchantAuraSheetHandle('blazing', 2.05, { baseY: 0.25, zOffset: -0.32 });
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 120);
+    cam.position.set(2, 6, 14);
+    const uvRect = handle.mat.uniforms.uUvRect.value as THREE.Vector4;
+    const initX = uvRect.x;
+    const initY = uvRect.y;
+
+    handle.update(1 / 14, cam);
+    expect(uvRect.x !== initX || uvRect.y !== initY).toBe(true);
+    expect(handle.pivotGroup.rotation.y).not.toBe(0);
+    expect(handle.pivotGroup.rotation.x).toBeLessThan(0);
+    handle.dispose();
+
+    const ped = new PlotPedestal3D(0, 0, -4.5);
+    ped.setChibi(CHIBI_CATALOG[0]);
+    ped.setEnchant('radiant');
+    let shaderAuraPlanes = 0;
+    ped.group.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.geometry instanceof THREE.PlaneGeometry && obj.material instanceof THREE.ShaderMaterial) {
+        shaderAuraPlanes++;
+      }
+    });
+    expect(shaderAuraPlanes).toBeGreaterThanOrEqual(1);
+    ped.update(0.05, 0.25, cam);
+    ped.dispose();
+
+    const host = new THREE.Group();
+    const fx = new ChibiFieldFxController(host, CHIBI_CATALOG[0].accentColor, 0);
+    fx.setEnchant('sundering');
+    let fxShaderPlanes = 0;
+    host.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.geometry instanceof THREE.PlaneGeometry && obj.material instanceof THREE.ShaderMaterial) {
+        fxShaderPlanes++;
+      }
+    });
+    expect(fxShaderPlanes).toBe(1);
+    fx.update(0.25, cam);
+    fx.dispose();
   });
 });
