@@ -7,6 +7,7 @@ import type { OrePit3D } from './OrePit3D';
 import type { PlotPedestal3D } from './PlotPedestal3D';
 import type { TowerArena3D } from './TowerArena3D';
 import type { OmegaArena3D } from './OmegaArena3D';
+import type { RiftArena3D } from './RiftArena3D';
 
 export interface MineProjectorCtx {
   mountEl: HTMLElement;
@@ -16,6 +17,7 @@ export interface MineProjectorCtx {
   pit: OrePit3D;
   getTowerArena: () => TowerArena3D | null;
   getOmegaArena: () => OmegaArena3D | null;
+  getRiftArena?: () => RiftArena3D | null;
   pedestals: PlotPedestal3D[];
   crateGroup: THREE.Group;
   callbacks: MineSceneCallbacks;
@@ -221,7 +223,7 @@ export class MineSceneProjector {
     const modeChanged = this.lastOverlayMode !== mode;
     if (modeChanged) {
       this.lastOverlayMode = mode;
-      if (mode !== 'mine' && mode !== 'tower' && mode !== 'omega') {
+      if (mode !== 'mine' && mode !== 'tower' && mode !== 'omega' && mode !== 'rift') {
         this.ctx.callbacks.onPlotAnchors?.([]);
       }
       if (mode !== 'mine') {
@@ -277,6 +279,12 @@ export class MineSceneProjector {
             targets: omegaArena.getTargetScreenAnchors(this.ctx.camera, w, h),
           });
         }
+      }
+    } else if (mode === 'rift') {
+      const riftArena = this.ctx.getRiftArena?.();
+      if (riftArena) {
+        const { width: w, height: h } = this.getViewportSize();
+        this.ctx.callbacks.onPlotAnchors?.(riftArena.getFighterPlotAnchors(this.ctx.camera, w, h));
       }
     } else if (mode === 'fusion' && fusionWorld) {
       if (fusionWorld.isAnimating() || fusionWorld.isRevealHolding()) {

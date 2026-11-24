@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
+import { RiftArena3D } from '../src/game3d/RiftArena3D';
 import {
   PIT_EVENT_COOLDOWN_MAX_SEC,
   PIT_EVENT_COOLDOWN_MIN_SEC,
@@ -5354,5 +5355,51 @@ describe('Pure 3D Mine World', () => {
     asuraSprite.dispose();
     nullSprite.dispose();
     pool.dispose();
+  });
+
+  it('builds RiftArena3D Dimensional Void arena, handles boss switching/surge/shockwave/taps, and transitions sceneMode rift', () => {
+    const arena = new RiftArena3D();
+    expect(arena.group.visible).toBe(false);
+    expect(arena.clickables.some((c) => c.userData?.kind === 'rift-boss')).toBe(true);
+
+    arena.group.visible = true;
+    arena.setBossConfig('null-singularity');
+    arena.setSurgeActive(true);
+    arena.syncFighters([
+      {
+        slotIndex: 0,
+        def: getChibiById('astral-recruit')!,
+        enchantId: 'blazing',
+        dmg: 100,
+        speed: 10,
+        miningMult: 1,
+      },
+    ]);
+
+    const cam = new THREE.PerspectiveCamera(42, 1.6, 1, 220);
+    cam.position.set(0, 10, 20);
+    cam.lookAt(0, 1.5, -1.5);
+    cam.updateMatrixWorld();
+
+    const strikes: number[] = [];
+    for (let i = 0; i < 40; i++) {
+      arena.update(0.05, i * 0.05, cam, (ev) => {
+        strikes.push(ev.dmg);
+      });
+    }
+    expect(strikes.length).toBeGreaterThan(0);
+
+    arena.triggerBossHit('#22d3ee', true);
+    arena.triggerTierShockwave(4);
+    const anchors = arena.getFighterPlotAnchors(cam, 1280, 720);
+    expect(anchors).toHaveLength(1);
+    expect(anchors[0].ultMaxCharge).toBe(3);
+
+    arena.setLowQuality(true);
+    arena.setLowQuality(false);
+    arena.dispose();
+
+    expect(getDefaultOrbitPitchForMode('rift')).toBeCloseTo(-0.24, 5);
+    expect(clampCameraZoomRadius(NaN, 'rift')).toBeCloseTo(21.0, 5);
   });
 });

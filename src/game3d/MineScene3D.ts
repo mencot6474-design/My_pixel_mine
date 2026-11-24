@@ -17,6 +17,8 @@ import { FusionWorld3D } from './FusionWorld3D';
 import { ShopWorld3D } from './ShopWorld3D';
 import { TowerArena3D, TowerFighterConfig } from './TowerArena3D';
 import { OmegaArena3D } from './OmegaArena3D';
+import { RiftArena3D } from './RiftArena3D';
+import type { AnomalyChibiId } from '../game/AnomalyData';
 import type { OmegaBossId } from '../game/OmegaData';
 import type { OmegaBattlePhase, OmegaTargetObject } from '../game/OmegaBossDomain';
 import { TowerWaveOreState } from '../game/TowerData';
@@ -115,6 +117,7 @@ export class MineScene3D {
   private fusionWorld: FusionWorld3D | null = null;
   private towerArena: TowerArena3D | null = null;
   private omegaArena: OmegaArena3D | null = null;
+  private riftArena: RiftArena3D | null = null;
   private lastSyncedPlazaChibiIds: (string | null)[] = [];
   private readonly weatherFx = new WeatherFx3D();
   private readonly clickableMeshes: THREE.Object3D[] = [];
@@ -276,6 +279,7 @@ export class MineScene3D {
       pit: this.pit,
       getTowerArena: () => this.towerArena,
       getOmegaArena: () => this.omegaArena,
+      getRiftArena: () => this.riftArena,
       pedestals: this.pedestals,
       crateGroup: this.crateGroup,
       callbacks: this.callbacks,
@@ -365,6 +369,19 @@ export class MineScene3D {
     return this.omegaArena;
   }
 
+  private ensureRiftArena(): RiftArena3D {
+    if (!this.riftArena) {
+      const ra = new RiftArena3D();
+      ra.setLowQuality(this.graphicsQuality === 'low');
+      ra.setTierVfxHooks(this.createTierVfxHooks());
+      this.riftArena = ra;
+      this.scene.add(ra.group);
+      configureSceneTextureSharpness(this.renderer, ra.group, this.getTextureAnisoCap());
+      this.syncTowerFighters();
+    }
+    return this.riftArena;
+  }
+
   private inputCtx(): MineInputCtx {
     return {
       state: this.inputState,
@@ -378,6 +395,7 @@ export class MineScene3D {
       getShopWorld: () => this.shopWorld,
       getTowerArena: () => this.towerArena,
       getOmegaArena: () => this.omegaArena,
+      getRiftArena: () => this.riftArena,
       clickableMeshes: this.clickableMeshes,
       callbacks: this.callbacks,
       getMode: () => this.mode,
@@ -503,6 +521,7 @@ export class MineScene3D {
       fusionWorld: this.fusionWorld,
       towerArena: this.towerArena,
       omegaArena: this.omegaArena,
+      riftArena: this.riftArena,
       crateGroup: this.crateGroup,
       chestVisual: this.chestVisual,
       riftGate: this.riftGate,
@@ -511,6 +530,7 @@ export class MineScene3D {
       inputState: this.inputState,
       onTowerFighterStrike: this.callbacks.onTowerFighterStrike,
       onOmegaFighterStrike: this.callbacks.onOmegaFighterStrike,
+      onRiftFighterStrike: this.callbacks.onRiftFighterStrike,
       onOmegaEntranceSlam: () => {
         this.tapShakeIntensity = Math.max(this.tapShakeIntensity, 0.34);
         this.callbacks.onOmegaEntranceSlam?.();
@@ -635,10 +655,12 @@ export class MineScene3D {
       fusionWorld: this.fusionWorld,
       towerArena: this.towerArena,
       omegaArena: this.omegaArena,
+      riftArena: this.riftArena,
       ensureShopWorld: () => this.ensureShopWorld(),
       ensureFusionWorld: () => this.ensureFusionWorld(),
       ensureTowerArena: () => this.ensureTowerArena(),
       ensureOmegaArena: () => this.ensureOmegaArena(),
+      ensureRiftArena: () => this.ensureRiftArena(),
       applyWeatherAtmosphere: () => this.applyWeatherAtmosphere(),
       syncTowerFighters: () => this.syncTowerFighters(),
       inputState: this.inputState,
@@ -770,7 +792,7 @@ export class MineScene3D {
   }
 
   private syncTowerFighters(): void {
-    if (!this.towerArena && !this.omegaArena) return;
+    if (!this.towerArena && !this.omegaArena && !this.riftArena) return;
     const configs: TowerFighterConfig[] = [];
     for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {
       const def = this.pedestals[i]?.getChibi() ?? null;
@@ -787,6 +809,7 @@ export class MineScene3D {
     }
     this.towerArena?.syncFighters(configs);
     this.omegaArena?.syncFighters(configs);
+    this.riftArena?.syncFighters(configs);
   }
 
   public setOmegaBossConfig(bossId: OmegaBossId): void { this.ensureOmegaArena().setBossId(bossId); }
@@ -801,6 +824,14 @@ export class MineScene3D {
   }
   public triggerOmegaBossHit(color?: string, isCrit = false): void { this.omegaArena?.triggerBossHitEffect(color, isCrit); }
   public triggerOmegaTargetShatter(wx: number, wz: number, color: string): void { this.omegaArena?.triggerTargetShatterFx(wx, wz, color); }
+
+  public setRiftBossConfig(bossId: AnomalyChibiId, surgeActive = false): void {
+    const ra = this.ensureRiftArena();
+    ra.setBossConfig(bossId);
+    ra.setSurgeActive(surgeActive);
+  }
+  public triggerRiftBossHit(color?: string, isCrit = false): void { this.riftArena?.triggerBossHit(color, isCrit); }
+  public triggerRiftTierShockwave(tier: number): void { this.riftArena?.triggerTierShockwave(tier); }
 
   public triggerEnchantSpin(targetEnchantId: string, onComplete?: () => void): void {
     this.ensureShopWorld().triggerSpin(targetEnchantId, onComplete);
@@ -886,14 +917,14 @@ export class MineScene3D {
   ): void {
     this.slotCombatStats.set(slotIndex, { dmg, speed, miningMult, critChance, critMult });
     this.plotAttackController.setSlotStats(slotIndex, dmg, speed, miningMult, critChance, critMult);
-    if (this.mode === 'tower') this.syncTowerFighters();
+    if (this.mode === 'tower' || this.mode === 'omega' || this.mode === 'rift') this.syncTowerFighters();
   }
 
   public syncPlotEnchant(slotIndex: number, enchantId: string | null): void {
     if (slotIndex < 0 || slotIndex >= STAGE_PEDESTAL_COUNT) return;
     this.slotEnchants[slotIndex] = enchantId;
     this.pedestals[slotIndex]?.setEnchant(enchantId);
-    if (this.mode === 'tower') this.syncTowerFighters();
+    if (this.mode === 'tower' || this.mode === 'omega' || this.mode === 'rift') this.syncTowerFighters();
   }
 
   public syncPlotMiners(chibiIds: (string | null)[]): void {
@@ -970,6 +1001,7 @@ export class MineScene3D {
       pit: this.pit,
       towerArena: this.towerArena,
       omegaArena: this.omegaArena,
+      riftArena: this.riftArena,
       pedestals: this.pedestals,
       plotAttackController: this.plotAttackController,
     });
@@ -1031,6 +1063,7 @@ export class MineScene3D {
     this.fusionWorld?.dispose();
     this.towerArena?.dispose();
     this.omegaArena?.dispose();
+    this.riftArena?.dispose();
     this.weatherFx.dispose();
     this.composer.dispose();
     this.renderer.dispose();

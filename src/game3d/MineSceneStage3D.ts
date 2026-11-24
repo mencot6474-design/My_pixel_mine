@@ -25,6 +25,7 @@ import { getWeatherById, type WeatherId } from '../game/WeatherData';
 import type { FusionWorld3D } from './FusionWorld3D';
 import type { MineInputState } from './MineSceneInput';
 import type { OmegaArena3D, OmegaTargetScreenAnchor } from './OmegaArena3D';
+import type { RiftArena3D } from './RiftArena3D';
 import type { OrePit3D } from './OrePit3D';
 import type { PlotAttackController3D, PlotUltFiredInfo } from './PlotAttackController3D';
 import type {
@@ -38,7 +39,7 @@ import type { TowerArena3D, TowerOreBarScreen } from './TowerArena3D';
 import type { WeatherFx3D } from './WeatherFx3D';
 import { getHarmonizedWorldFogColor } from './WorldSkyTextures3D';
 
-export type SceneMode = 'mine' | 'shop' | 'altar' | 'fusion' | 'tower' | 'omega';
+export type SceneMode = 'mine' | 'shop' | 'altar' | 'fusion' | 'tower' | 'omega' | 'rift';
 
 export interface PlotAnchorScreen {
   slotIndex: number;
@@ -130,6 +131,14 @@ export interface MineSceneCallbacks {
     isFinisher?: boolean
   ) => { dmg: number; isCrit?: boolean } | void;
   onOmegaArenaOverlay?: (data: { bossHead: { x: number; y: number } | null; targets: OmegaTargetScreenAnchor[] } | null) => void;
+  onRiftBossTap?: (screenX: number, screenY: number) => { dmg: number; isCrit?: boolean } | void;
+  onRiftFighterStrike?: (
+    slotIndex: number,
+    attackInterval: number,
+    isUltimate: boolean,
+    beatIndex: number,
+    isFinisher: boolean
+  ) => { dmg: number; isCrit?: boolean } | void;
   onPlotUltFired?: (info: PlotUltFiredInfo) => void;
   onEncoreUltCompleted?: () => void;
   onHyperEncoreComplete?: () => void;
@@ -149,6 +158,8 @@ export function getDefaultOrbitPitchForMode(mode: SceneMode): number {
       return -0.22;
     case 'omega':
       return -0.32;
+    case 'rift':
+      return -0.24;
     default:
       return -0.18;
   }
@@ -183,7 +194,17 @@ export function applyCameraOrbitDrag(opts: {
 export function clampCameraZoomRadius(radius: number, mode: SceneMode): number {
   const maxRad = mode === 'shop' ? 38 : mode === 'fusion' ? 34 : mode === 'tower' ? 32 : 28;
   const fallback =
-    mode === 'shop' ? 30.4 : mode === 'fusion' ? 23.4 : mode === 'tower' ? 23.6 : mode === 'omega' ? 16.4 : 20.4;
+    mode === 'shop'
+      ? 30.4
+      : mode === 'fusion'
+        ? 23.4
+        : mode === 'tower'
+          ? 23.6
+          : mode === 'omega'
+            ? 16.4
+            : mode === 'rift'
+              ? 21.0
+              : 20.4;
   const safeRadius = Number.isFinite(radius) ? radius : fallback;
   return Math.max(9, Math.min(maxRad, safeRadius));
 }
@@ -286,29 +307,34 @@ export function applyMineWeatherAtmosphere(ctx: {
     const isFusion = ctx.mode === 'fusion';
     const isTowerScene = ctx.mode === 'tower';
     const isOmegaScene = ctx.mode === 'omega';
+    const isRiftScene = ctx.mode === 'rift';
     ctx.hemiLight.color.set(
-      isTowerScene ? 0xe0f2fe : isOmegaScene ? 0xffedd5 : isFusion ? 0xf8fafc : weather.hemiTintHex
+      isTowerScene ? 0xe0f2fe : isOmegaScene ? 0xffedd5 : isRiftScene ? 0xe9d5ff : isFusion ? 0xf8fafc : weather.hemiTintHex
     );
     ctx.hemiLight.intensity = isTowerScene
       ? 1.68
       : isOmegaScene
         ? 1.74
-        : isFusion
-          ? 1.88
-          : isShop
-            ? Math.max(weather.hemiIntensity, 1.24)
-            : Math.max(weather.hemiIntensity, 1.18);
+        : isRiftScene
+          ? 1.62
+          : isFusion
+            ? 1.88
+            : isShop
+              ? Math.max(weather.hemiIntensity, 1.24)
+              : Math.max(weather.hemiIntensity, 1.18);
     ctx.sunLight.intensity = isTowerScene
       ? 2.18
       : isOmegaScene
         ? 2.28
-        : isFusion
-          ? 2.24
-          : isShop
-            ? Math.max(weather.sunIntensity, 1.62)
-            : Math.max(weather.sunIntensity, 1.55);
+        : isRiftScene
+          ? 2.1
+          : isFusion
+            ? 2.24
+            : isShop
+              ? Math.max(weather.sunIntensity, 1.62)
+              : Math.max(weather.sunIntensity, 1.55);
     ctx.rimLight.color.set(
-      isTowerScene ? 0xbae6fd : isOmegaScene ? 0xfb923c : isShop || isFusion ? 0x38bdf8 : weather.rimTintHex
+      isTowerScene ? 0xbae6fd : isOmegaScene ? 0xfb923c : isRiftScene ? 0x22d3ee : isShop || isFusion ? 0x38bdf8 : weather.rimTintHex
     );
 
     if (ctx.mode !== 'mine' && !isShop) return;
@@ -525,10 +551,12 @@ export function applyMineSceneModeTransition(ctx: {
   fusionWorld: FusionWorld3D | null;
   towerArena: TowerArena3D | null;
   omegaArena: OmegaArena3D | null;
+  riftArena?: RiftArena3D | null;
   ensureShopWorld: () => ShopWorld3D;
   ensureFusionWorld: () => FusionWorld3D;
   ensureTowerArena: () => TowerArena3D;
   ensureOmegaArena: () => OmegaArena3D;
+  ensureRiftArena?: () => RiftArena3D;
   applyWeatherAtmosphere: () => void;
   syncTowerFighters: () => void;
   inputState: MineInputState;
@@ -552,6 +580,7 @@ export function applyMineSceneModeTransition(ctx: {
   let fusionWorld = ctx.fusionWorld;
   let towerArena = ctx.towerArena;
   let omegaArena = ctx.omegaArena;
+  let riftArena = ctx.riftArena ?? null;
 
   if (mode !== 'altar') shopWorld?.cancelSpin();
   if (mode !== 'fusion') fusionWorld?.cancelAnimation();
@@ -560,6 +589,7 @@ export function applyMineSceneModeTransition(ctx: {
   else if (mode === 'fusion') fusionWorld = ctx.ensureFusionWorld();
   else if (mode === 'tower') towerArena = ctx.ensureTowerArena();
   else if (mode === 'omega') omegaArena = ctx.ensureOmegaArena();
+  else if (mode === 'rift' && ctx.ensureRiftArena) riftArena = ctx.ensureRiftArena();
 
   const isMine = mode === 'mine';
   if (shopWorld) {
@@ -569,6 +599,7 @@ export function applyMineSceneModeTransition(ctx: {
   if (fusionWorld) fusionWorld.group.visible = mode === 'fusion';
   if (towerArena) towerArena.group.visible = mode === 'tower';
   if (omegaArena) omegaArena.group.visible = mode === 'omega';
+  if (riftArena) riftArena.group.visible = mode === 'rift';
 
   ctx.env.group.visible = isMine;
   ctx.env.skyDome.visible = mode === 'mine' || mode === 'shop';
@@ -620,6 +651,16 @@ export function applyMineSceneModeTransition(ctx: {
     ctx.inputState.targetCamRadius = 16.4;
     ctx.lookAtPos.set(0, 2.1, -1.5);
     ctx.syncTowerFighters();
+  } else if (mode === 'rift') {
+    ctx.scene.background = new THREE.Color(0x090418);
+    ctx.scene.fog = new THREE.Fog(0x14082e, 42, 112);
+    ctx.applyWeatherAtmosphere();
+    ctx.inputState.targetOrbitYaw = 0;
+    ctx.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('rift');
+    ctx.inputState.targetCamRadius = 21.0;
+    ctx.lookAtPos.set(0, 1.85, -1.5);
+    ctx.syncTowerFighters();
+    riftArena?.resetCombatState();
   } else if (mode === 'shop') {
     const rawAspect = ctx.camera.aspect;
     const aspect = Number.isFinite(rawAspect) && rawAspect > 0 ? rawAspect : 1;
@@ -719,6 +760,7 @@ export function stepMineActiveWorldEntities(ctx: {
   fusionWorld: FusionWorld3D | null;
   towerArena: TowerArena3D | null;
   omegaArena: OmegaArena3D | null;
+  riftArena?: RiftArena3D | null;
   crateGroup: THREE.Group;
   chestVisual: ProceduralChestHandle;
   riftGate: RiftGateHandle;
@@ -737,6 +779,13 @@ export function stepMineActiveWorldEntities(ctx: {
     attackInterval: number,
     beatIndex?: number,
     isFinisher?: boolean
+  ) => { dmg: number; isCrit?: boolean } | void;
+  onRiftFighterStrike?: (
+    slotIndex: number,
+    attackInterval: number,
+    isUltimate: boolean,
+    beatIndex: number,
+    isFinisher: boolean
   ) => { dmg: number; isCrit?: boolean } | void;
   onOmegaEntranceSlam: () => void;
   onOreBroken?: (
@@ -815,6 +864,34 @@ export function stepMineActiveWorldEntities(ctx: {
       },
       ctx.onOmegaEntranceSlam
     );
+  } else if (mode === 'rift' && ctx.riftArena) {
+    const riftArena = ctx.riftArena;
+    riftArena.update(dtSec, elapsed, ctx.camera, (strike) => {
+      const res = ctx.onRiftFighterStrike?.(
+        strike.slotIndex,
+        strike.attackInterval,
+        strike.isUltimate,
+        strike.beatIndex,
+        strike.isFinisher
+      );
+      const shownDmg = res ? res.dmg : strike.dmg;
+      if (shownDmg > 0) {
+        riftArena.triggerBossHit(strike.accentColor, Boolean(res?.isCrit));
+        ctx.emitDamageScreen(
+          shownDmg,
+          strike.wx,
+          strike.wy,
+          strike.wz,
+          false,
+          Boolean(res?.isCrit),
+          undefined,
+          false,
+          false,
+          strike.beatIndex,
+          strike.isFinisher
+        );
+      }
+    });
   }
   ctx.weatherFx.update(dtSec, elapsed, inMine || mode === 'shop');
 
@@ -931,6 +1008,7 @@ export function applyMineGraphicsQuality(ctx: {
   pit: OrePit3D;
   towerArena: TowerArena3D | null;
   omegaArena: OmegaArena3D | null;
+  riftArena?: RiftArena3D | null;
   pedestals: PlotPedestal3D[];
   plotAttackController: PlotAttackController3D;
 }): void {
@@ -951,6 +1029,7 @@ export function applyMineGraphicsQuality(ctx: {
   ctx.pit.setLowQuality(low);
   ctx.towerArena?.setLowQuality(low);
   ctx.omegaArena?.setLowQuality(low);
+  ctx.riftArena?.setLowQuality(low);
   for (let i = 0; i < ctx.pedestals.length; i++) {
     ctx.pedestals[i].setLowQuality(low);
   }

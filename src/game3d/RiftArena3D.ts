@@ -1,0 +1,819 @@
+import * as THREE from 'three';
+import type { AnomalyChibiId } from '../game/AnomalyData';
+import { AttackImpactFxController } from './AttackImpactFx3D';
+import { type ChibiDef, getChibiById } from './ChibiCatalog';
+import { ChibiSprite3D } from './ChibiSprite3D';
+import { type CyberShowcasePodiumHandle, createCyberShowcasePodium, type FusionPodiumBuildCtx } from './FusionWorldPodium3D';
+import { createChamferSlabGeometry, createLatheProfileGeometry, disposeObject3D, enableShadows } from './MeshHelpers3D';
+import {
+  applyOmegaPodiumColors,
+  OMEGA_PLAYER_PAD_POSITIONS,
+  type OmegaConduitFlowEntry,
+  type OmegaFighterEntry,
+  syncOmegaFighterEntries,
+} from './OmegaArenaStage3D';
+import type { PlotAnchorScreen } from './MineSceneStage3D';
+import { type SignatureProjectileArrival, SignatureProjectilePool3D } from './SignatureProjectilePool3D';
+import {
+  BARRAGE_BEAT_WEIGHTS,
+  BARRAGE_FOLLOWUP_DELAYS,
+  computeAttackVfxSpeedScale,
+  computeSpotlightMaxChargeSec,
+  SpotlightAttackQueue,
+  TierAttackVfxPool3D,
+  type TierVfxHooks,
+  ULT_CHARGE_BASIC_ATTACKS,
+  ULT_SPOTLIGHT_LOCK_SEC,
+  type WorldPoint3,
+} from './TierAttackVfx3D';
+import type { TowerFighterConfig } from './TowerArena3D';
+
+const RIFT_BOSS_POS_Z = -4.2;
+const RIFT_BOSS_DAIS_Y = 0.56;
+const RIFT_BOSS_SCALE = 3.2;
+const BASIC_ATTACK_DPS_SHARE = 0.65;
+const RIFT_SHARD_COUNT = 20;
+
+export interface RiftStrikeEvent {
+  slotIndex: number;
+  attackInterval: number;
+  isUltimate: boolean;
+  beatIndex: number;
+  isFinisher: boolean;
+  dmg: number;
+  wx: number;
+  wy: number;
+  wz: number;
+  accentColor: string;
+}
+
+function createRiftVoidSkyTexture(): THREE.CanvasTexture | null {
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = 256;
+  const ctx = c.getContext('2d');
+  if (!ctx) return null;
+  const g = ctx.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, '#040214');
+  g.addColorStop(0.45, '#12082e');
+  g.addColorStop(0.8, '#1e0b36');
+  g.addColorStop(1, '#090418');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 512, 256);
+
+  const nebula = ctx.createRadialGradient(256, 128, 12, 256, 128, 190);
+  nebula.addColorStop(0, 'rgba(34, 211, 238, 0.24)');
+  nebula.addColorStop(0.5, 'rgba(168, 85, 247, 0.16)');
+  nebula.addColorStop(1, 'rgba(168, 85, 247, 0)');
+  ctx.fillStyle = nebula;
+  ctx.fillRect(0, 0, 512, 256);
+
+  ctx.fillStyle = '#e0f2fe';
+  for (let i = 0; i < 90; i++) {
+    const sx = ((i * 137) % 508) + 2;
+    const sy = ((i * 73) % 210) + 4;
+    const r = i % 7 === 0 ? 1.8 : 0.9;
+    ctx.globalAlpha = 0.35 + (i % 5) * 0.12;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function createRiftBackdropPortalShader(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uColorA: { value: new THREE.Color('#22d3ee') },
+      uColorB: { value: new THREE.Color('#a855f7') },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float uTime;
+      uniform vec3 uColorA;
+      uniform vec3 uColorB;
+      varying vec2 vUv;
+      void main() {
+        vec2 p = vUv * 2.0 - 1.0;
+        float r = length(p);
+        if (r > 1.0) discard;
+        float ang = atan(p.y, p.x);
+        float swirl = ang + 3.6 / (r + 0.26) - uTime * 2.1;
+        float w1 = 0.5 + 0.5 * sin(swirl * 3.0 + r * 8.0 - uTime * 3.5);
+        float w2 = 0.5 + 0.5 * cos(swirl * 5.0 - uTime * 2.4);
+        float core = exp(-r * r * 5.2);
+        float rim = smoothstep(0.76, 0.98, r) * (1.0 - smoothstep(0.96, 1.0, r));
+        vec3 col = mix(vec3(0.05, 0.03, 0.16), uColorB, w1 * 0.72);
+        col = mix(col, uColorA, w2 * (0.45 + 0.55 * (1.0 - r)));
+        col += vec3(0.95, 0.98, 1.0) * core * 0.9 + uColorA * rim * 1.4;
+        float alpha = clamp((1.0 - smoothstep(0.88, 1.0, r)) * (0.68 + core * 0.32) + rim * 0.85, 0.0, 1.0);
+        gl_FragColor = vec4(col, alpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}
+
+/** Dedicated 3D Dimensional Void Arena for 30s Rift Boss DPS-Check battles. */
+export class RiftArena3D {
+  public readonly group = new THREE.Group();
+  public readonly clickables: THREE.Object3D[] = [];
+
+  private bossId: AnomalyChibiId = 'void-asura';
+  private surgeActive = false;
+  private bossSprite: ChibiSprite3D | null = null;
+  private readonly bossHitMesh: THREE.Mesh;
+  private readonly bossPodium: CyberShowcasePodiumHandle;
+  private readonly bossStageY: number;
+  private readonly playerPodiums: CyberShowcasePodiumHandle[] = [];
+  private readonly conduitFlows: OmegaConduitFlowEntry[] = [];
+  private readonly primaryNeonMat: THREE.MeshBasicMaterial;
+  private readonly secondaryNeonMat: THREE.MeshBasicMaterial;
+  private readonly portalMat: THREE.ShaderMaterial;
+  private readonly daisSealMat: THREE.MeshBasicMaterial;
+  private readonly shockwaveRing: THREE.Mesh;
+  private readonly shockwaveMat: THREE.MeshBasicMaterial;
+  private readonly voidShardsMesh: THREE.InstancedMesh;
+  private readonly shardBasePos: Array<{ x: number; y: number; z: number; phase: number; speed: number; scale: number }> = [];
+  private readonly shardDummy = new THREE.Object3D();
+  private readonly voidLight: THREE.PointLight;
+  private readonly squadLight: THREE.PointLight;
+
+  private readonly ownedGeos: THREE.BufferGeometry[] = [];
+  private readonly ownedMats: THREE.Material[] = [];
+  private readonly ownedTexs: THREE.Texture[] = [];
+
+  private readonly fighters = new Map<number, OmegaFighterEntry>();
+  private readonly impactFx = new AttackImpactFxController();
+  private readonly projectiles = new SignatureProjectilePool3D();
+  private readonly spotlight = new SpotlightAttackQueue();
+  private readonly tierVfx = new TierAttackVfxPool3D();
+  private readonly projVec = new THREE.Vector3();
+  private readonly pendingBarrages: Array<{
+    slotIndex: number;
+    beatIndex: number;
+    delayLeft: number;
+    beatInterval: number;
+    dmg: number;
+    accentColor: string;
+    comboStep: number;
+    sx: number;
+    sz: number;
+    ex: number;
+    ey: number;
+    ez: number;
+  }> = [];
+
+  private lowQuality = false;
+  private bossHitBounce = 0;
+  private tierShockwaveTimer = 0;
+
+  constructor() {
+    this.group.visible = false;
+
+    this.primaryNeonMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    this.secondaryNeonMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
+    this.daisSealMat = new THREE.MeshBasicMaterial({
+      color: 0x22d3ee,
+      transparent: true,
+      opacity: 0.72,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.shockwaveMat = new THREE.MeshBasicMaterial({
+      color: 0x22d3ee,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.portalMat = createRiftBackdropPortalShader();
+
+    const voidDeckMat = new THREE.MeshStandardMaterial({
+      color: 0x1a1633,
+      roughness: 0.56,
+      metalness: 0.32,
+      flatShading: true,
+    });
+    const armorMat = new THREE.MeshStandardMaterial({
+      color: 0x2a244c,
+      roughness: 0.42,
+      metalness: 0.52,
+      flatShading: true,
+    });
+    const steelMat = new THREE.MeshStandardMaterial({
+      color: 0x433b72,
+      roughness: 0.36,
+      metalness: 0.56,
+      flatShading: true,
+    });
+    const brightMat = new THREE.MeshStandardMaterial({
+      color: 0x94a3b8,
+      roughness: 0.28,
+      metalness: 0.58,
+      flatShading: true,
+    });
+    const shardMat = new THREE.MeshStandardMaterial({
+      color: 0x3b2c68,
+      emissive: 0x6d28d9,
+      emissiveIntensity: 0.65,
+      roughness: 0.3,
+      metalness: 0.48,
+      flatShading: true,
+    });
+    this.ownedMats.push(
+      this.primaryNeonMat,
+      this.secondaryNeonMat,
+      this.daisSealMat,
+      this.shockwaveMat,
+      this.portalMat,
+      voidDeckMat,
+      armorMat,
+      steelMat,
+      brightMat,
+      shardMat
+    );
+
+    // Dimensional Void sky dome
+    const skyTex = createRiftVoidSkyTexture();
+    if (skyTex) this.ownedTexs.push(skyTex);
+    const skyGeo = new THREE.SphereGeometry(95, 24, 16);
+    const skyMat = new THREE.MeshBasicMaterial({
+      ...(skyTex ? { map: skyTex } : { color: 0x0b0520 }),
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false,
+    });
+    this.ownedGeos.push(skyGeo);
+    this.ownedMats.push(skyMat);
+    this.group.add(new THREE.Mesh(skyGeo, skyMat));
+
+    this.voidLight = new THREE.PointLight(0xa855f7, 18, 28, 1.3);
+    this.voidLight.position.set(0, 5.5, RIFT_BOSS_POS_Z);
+    this.squadLight = new THREE.PointLight(0x22d3ee, 14, 24, 1.3);
+    this.squadLight.position.set(0, 4.4, 4.4);
+    this.group.add(this.voidLight, this.squadLight);
+
+    // Floating arena platform deck
+    const deckGeo = new THREE.CylinderGeometry(9.8, 8.6, 0.72, 12);
+    const deck = new THREE.Mesh(deckGeo, voidDeckMat);
+    deck.position.set(0, -0.36, 0);
+    deck.receiveShadow = true;
+
+    const rimGeo = new THREE.RingGeometry(8.9, 9.25, 24);
+    const rim = new THREE.Mesh(rimGeo, this.secondaryNeonMat);
+    rim.rotation.x = -Math.PI / 2;
+    rim.position.set(0, 0.015, 0);
+
+    // Stepped Rift Boss Dais
+    const daisGeo = createLatheProfileGeometry(
+      [
+        [0.01, 0],
+        [3.4, 0],
+        [3.28, 0.24],
+        [3.05, 0.28],
+        [2.9, RIFT_BOSS_DAIS_Y],
+        [0.01, RIFT_BOSS_DAIS_Y],
+      ],
+      20
+    );
+    const dais = new THREE.Mesh(daisGeo, armorMat);
+    dais.position.set(0, 0, RIFT_BOSS_POS_Z);
+    enableShadows(dais);
+
+    const sealGeo = new THREE.RingGeometry(2.15, 2.55, 32);
+    const seal = new THREE.Mesh(sealGeo, this.daisSealMat);
+    seal.rotation.x = -Math.PI / 2;
+    seal.position.set(0, RIFT_BOSS_DAIS_Y + 0.02, RIFT_BOSS_POS_Z);
+
+    const shockGeo = new THREE.RingGeometry(2.7, 3.25, 40);
+    this.shockwaveRing = new THREE.Mesh(shockGeo, this.shockwaveMat);
+    this.shockwaveRing.rotation.x = -Math.PI / 2;
+    this.shockwaveRing.position.set(0, 0.05, RIFT_BOSS_POS_Z);
+
+    // Vertical Dimensional Portal Gate in background (strictly vertical backdrop)
+    const portalArchGeo = new THREE.TorusGeometry(4.4, 0.24, 8, 36);
+    const portalArch = new THREE.Mesh(portalArchGeo, steelMat);
+    portalArch.position.set(0, 4.4, -7.8);
+    const portalPlaneGeo = new THREE.PlaneGeometry(8.6, 8.6);
+    const portalPlane = new THREE.Mesh(portalPlaneGeo, this.portalMat);
+    portalPlane.position.set(0, 4.4, -7.82);
+
+    this.ownedGeos.push(deckGeo, rimGeo, daisGeo, sealGeo, shockGeo, portalArchGeo, portalPlaneGeo);
+    this.group.add(deck, rim, dais, seal, this.shockwaveRing, portalArch, portalPlane);
+
+    const podiumCtx: FusionPodiumBuildCtx = {
+      armorDarkMat: armorMat,
+      armorSteelMat: steelMat,
+      brightSteelMat: brightMat,
+      ownedGeos: this.ownedGeos,
+      ownedMats: this.ownedMats,
+      ownedTextures: this.ownedTexs,
+    };
+
+    this.bossPodium = createCyberShowcasePodium(podiumCtx, 'RIFT', 1.85, true);
+    this.bossPodium.group.position.set(0, RIFT_BOSS_DAIS_Y + 0.04, RIFT_BOSS_POS_Z);
+    this.group.add(this.bossPodium.group);
+    this.bossStageY = RIFT_BOSS_DAIS_Y + 0.04 + this.bossPodium.topY;
+
+    for (let i = 0; i < OMEGA_PLAYER_PAD_POSITIONS.length; i++) {
+      const [sx, sz] = OMEGA_PLAYER_PAD_POSITIONS[i];
+      const podium = createCyberShowcasePodium(podiumCtx, `0${i + 1}`, 0.92, false);
+      podium.group.position.set(sx, 0, sz);
+      applyOmegaPodiumColors(podium, '#22d3ee', '#a855f7', false, 0.72);
+      this.group.add(podium.group);
+      this.playerPodiums.push(podium);
+    }
+
+    // Floating vertical Void Crystal Shards (InstancedMesh)
+    const shardGeo = createChamferSlabGeometry(0.45, 2.2, 0.45, 0.14, 0.02);
+    this.ownedGeos.push(shardGeo);
+    this.voidShardsMesh = new THREE.InstancedMesh(shardGeo, shardMat, RIFT_SHARD_COUNT);
+    for (let i = 0; i < RIFT_SHARD_COUNT; i++) {
+      const ang = (i / RIFT_SHARD_COUNT) * Math.PI * 2;
+      const rad = 11.2 + (i % 3) * 1.4;
+      const y = 0.6 + (i % 5) * 0.95;
+      this.shardBasePos.push({
+        x: Math.cos(ang) * rad,
+        y,
+        z: Math.sin(ang) * rad - 1.2,
+        phase: i * 0.7,
+        speed: 0.6 + (i % 4) * 0.2,
+        scale: 0.75 + (i % 3) * 0.35,
+      });
+    }
+    this.group.add(this.voidShardsMesh);
+
+    // Boss click hitbox
+    const hitGeo = new THREE.CylinderGeometry(2.4, 2.4, 4.8, 12);
+    const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+    this.ownedGeos.push(hitGeo);
+    this.ownedMats.push(hitMat);
+    this.bossHitMesh = new THREE.Mesh(hitGeo, hitMat);
+    this.bossHitMesh.position.set(0, this.bossStageY + 2.2, RIFT_BOSS_POS_Z);
+    this.bossHitMesh.userData = { kind: 'rift-boss' };
+    this.group.add(this.bossHitMesh);
+    this.clickables.push(this.bossHitMesh);
+
+    this.group.add(this.impactFx.group, this.projectiles.group, this.tierVfx.group);
+    this.setBossConfig('void-asura');
+  }
+
+  public setBossConfig(bossId: AnomalyChibiId): void {
+    this.bossId = bossId;
+    const isAsura = bossId === 'void-asura';
+    const primaryHex = isAsura ? '#ef4444' : '#a855f7';
+    const secHex = isAsura ? '#fbbf24' : '#22d3ee';
+
+    this.primaryNeonMat.color.set(primaryHex);
+    this.secondaryNeonMat.color.set(secHex);
+    this.daisSealMat.color.set(secHex);
+    this.shockwaveMat.color.set(secHex);
+    this.portalMat.uniforms.uColorA.value.set(secHex);
+    this.portalMat.uniforms.uColorB.value.set(primaryHex);
+    this.voidLight.color.set(primaryHex);
+    this.squadLight.color.set(secHex);
+    applyOmegaPodiumColors(this.bossPodium, primaryHex, secHex, true, 1.35);
+
+    if (this.bossSprite) {
+      this.group.remove(this.bossSprite.group);
+      this.bossSprite.dispose();
+      this.bossSprite = null;
+    }
+
+    const chibiDef: ChibiDef | undefined = getChibiById(bossId);
+    if (chibiDef) {
+      this.bossSprite = new ChibiSprite3D(chibiDef);
+      this.bossSprite.group.position.set(0, this.bossStageY, RIFT_BOSS_POS_Z);
+      this.bossSprite.group.scale.setScalar(RIFT_BOSS_SCALE);
+      this.bossSprite.setFacing(-1);
+      this.bossSprite.setLowQuality(this.lowQuality);
+      this.group.add(this.bossSprite.group);
+    }
+  }
+
+  public setSurgeActive(active: boolean): void {
+    this.surgeActive = active;
+  }
+
+  public setTierVfxHooks(hooks: TierVfxHooks): void {
+    this.tierVfx.setHooks(hooks);
+  }
+
+  public setLowQuality(low: boolean): void {
+    this.lowQuality = low;
+    this.impactFx.setLowQuality(low);
+    this.projectiles.setLowQuality(low);
+    this.tierVfx.setLowQuality(low);
+    this.bossSprite?.setLowQuality(low);
+    this.bossPodium.setLowQuality(low);
+    for (const p of this.playerPodiums) p.setLowQuality(low);
+    for (const f of this.fighters.values()) {
+      f.sprite.setLowQuality(low);
+      f.fx.setLowQuality(low);
+    }
+  }
+
+  public resetCombatState(): void {
+    this.projectiles.clear();
+    this.pendingBarrages.length = 0;
+    this.tierVfx.clear();
+    this.spotlight.reset();
+    this.tierShockwaveTimer = 0;
+    this.shockwaveMat.opacity = 0;
+    for (const f of this.fighters.values()) {
+      f.sprite.setAnimState('idle');
+      f.sprite.group.position.copy(f.spawnPos);
+      f.attackCooldown = 0.08 + f.slotIndex * 0.14;
+      f.chargeSec = 0;
+      f.ultCharge = 0;
+      f.ultBankSec = 0;
+      f.ultArmed = false;
+      f.ultActiveTimer = 0;
+    }
+  }
+
+  public syncFighters(configs: TowerFighterConfig[]): void {
+    syncOmegaFighterEntries({
+      configs,
+      group: this.group,
+      fighters: this.fighters,
+      playerPodiums: this.playerPodiums,
+      conduitFlows: this.conduitFlows,
+      lowQuality: this.lowQuality,
+    });
+  }
+
+  public triggerBossHit(accentColor?: string, isCrit = false): void {
+    this.bossHitBounce = 0.24;
+    this.impactFx.spawnImpact({
+      targetX: (Math.random() - 0.5) * 0.6,
+      targetY: this.bossStageY + 1.5,
+      targetZ: RIFT_BOSS_POS_Z + 0.35,
+      accentColor: accentColor ?? (this.bossId === 'void-asura' ? '#ef4444' : '#22d3ee'),
+      heavy: isCrit,
+      shockwaveScale: isCrit ? 1.65 : 1.15,
+    });
+  }
+
+  public triggerTierShockwave(tier: number): void {
+    this.tierShockwaveTimer = 0.65;
+    this.shockwaveRing.scale.setScalar(1);
+    this.shockwaveMat.color.setHex(tier >= 8 ? 0xfde047 : tier >= 4 ? 0xa855f7 : 0x22d3ee);
+    this.impactFx.spawnImpact({
+      targetX: 0,
+      targetY: this.bossStageY + 0.6,
+      targetZ: RIFT_BOSS_POS_Z + 0.4,
+      accentColor: tier >= 8 ? '#fde047' : '#22d3ee',
+      heavy: true,
+      shockwaveScale: 2.3,
+    });
+  }
+
+  public getBossWorldPos(): { x: number; y: number; z: number } {
+    return { x: 0, y: this.bossStageY + 1.75, z: RIFT_BOSS_POS_Z + 0.3 };
+  }
+
+  public getFighterPlotAnchors(
+    camera: THREE.Camera,
+    width: number,
+    height: number
+  ): PlotAnchorScreen[] {
+    const out: PlotAnchorScreen[] = [];
+    if (!this.group.visible) return out;
+    const ultReq = this.surgeActive ? 3 : ULT_CHARGE_BASIC_ATTACKS;
+    for (const f of this.fighters.values()) {
+      f.sprite.getLabelAnchorWorldPosition(this.projVec, 0.14, true).project(camera);
+      const visible = this.projVec.z > -1 && this.projVec.z < 1;
+      const labelX = (this.projVec.x * 0.5 + 0.5) * width;
+      const labelY = (-this.projVec.y * 0.5 + 0.5) * height;
+      out.push({
+        slotIndex: f.slotIndex,
+        labelX,
+        labelY,
+        btnX: labelX,
+        btnY: labelY,
+        visible,
+        rarity: f.rarity,
+        ultCharge: Math.min(ultReq, f.ultCharge),
+        ultMaxCharge: ultReq,
+        ultArmed: f.ultArmed,
+        ulting: f.ultActiveTimer > 0,
+      });
+    }
+    return out;
+  }
+
+  public update(
+    dt: number,
+    elapsed: number,
+    camera: THREE.Camera,
+    onStrike?: (ev: RiftStrikeEvent) => void
+  ): void {
+    if (!this.group.visible) return;
+    const safeDt = Math.min(Math.max(0, dt), 0.1);
+    const ultReq = this.surgeActive ? 3 : ULT_CHARGE_BASIC_ATTACKS;
+    const cadenceMult = this.surgeActive ? 1.3 : 1;
+
+    if (this.bossHitBounce > 0) this.bossHitBounce = Math.max(0, this.bossHitBounce - safeDt);
+
+    if (this.tierShockwaveTimer > 0) {
+      this.tierShockwaveTimer = Math.max(0, this.tierShockwaveTimer - safeDt);
+      const p = 1 - this.tierShockwaveTimer / 0.65;
+      this.shockwaveRing.scale.setScalar(1 + p * 3.4);
+      this.shockwaveMat.opacity = (1 - p) * 0.85;
+    } else {
+      this.shockwaveMat.opacity = 0;
+    }
+
+    this.portalMat.uniforms.uTime.value = elapsed;
+
+    if (this.bossSprite) {
+      const bob = Math.sin(elapsed * 2.3) * 0.1;
+      const bounceZ = this.bossHitBounce > 0 ? -Math.sin((this.bossHitBounce / 0.24) * Math.PI) * 0.18 : 0;
+      this.bossSprite.group.position.set(0, this.bossStageY + bob, RIFT_BOSS_POS_Z + bounceZ);
+      this.bossSprite.group.scale.setScalar(RIFT_BOSS_SCALE);
+      this.bossSprite.update(safeDt, elapsed, camera);
+    }
+
+    for (let i = 0; i < this.shardBasePos.length; i++) {
+      const s = this.shardBasePos[i];
+      this.shardDummy.position.set(s.x, s.y + Math.sin(elapsed * s.speed + s.phase) * 0.35, s.z);
+      this.shardDummy.rotation.set(0, elapsed * 0.3 + s.phase, 0);
+      this.shardDummy.scale.setScalar(s.scale);
+      this.shardDummy.updateMatrix();
+      this.voidShardsMesh.setMatrixAt(i, this.shardDummy.matrix);
+    }
+    this.voidShardsMesh.instanceMatrix.needsUpdate = true;
+
+    const animatePodium = (pod: CyberShowcasePodiumHandle, phaseOffset: number): void => {
+      const pTime = elapsed + phaseOffset;
+      pod.sigilMesh.rotation.z = pTime * 0.32;
+      if (pod.auraGroup.visible) {
+        pod.auraVeilMat.uniforms.uTime.value = pTime;
+        pod.auraVeilMat.uniforms.uOpacity.value = 0.65 + Math.sin(pTime * 1.8) * 0.12;
+        pod.auraOuterVeilMat.uniforms.uTime.value = pTime + 0.6;
+        pod.auraOuterVeilMat.uniforms.uOpacity.value = 0.36 + Math.sin(pTime * 1.8) * 0.08;
+        pod.particleMat.uniforms.uTime.value = pTime;
+      }
+    };
+    animatePodium(this.bossPodium, 0);
+    for (let i = 0; i < this.playerPodiums.length; i++) {
+      animatePodium(this.playerPodiums[i], i * 0.55);
+    }
+
+    const handleRiftArrival = (a: SignatureProjectileArrival): void => {
+      const fighter = this.fighters.get(a.slotIndex);
+      const isUlt = a.isUltimate;
+      if (isUlt && fighter) {
+        const lateralX = Math.max(-0.95, Math.min(0.95, fighter.spawnPos.x * 0.22));
+        const bossPt: WorldPoint3 = { x: lateralX, y: this.bossStageY, z: RIFT_BOSS_POS_Z + 0.25 };
+        const speedScale = computeAttackVfxSpeedScale(fighter.attackInterval / cadenceMult);
+        this.tierVfx.fireTierAttack({
+          rarity: fighter.rarity,
+          chibiId: fighter.chibiId,
+          colorHex: a.accentColor,
+          target: bossPt,
+          allTargets: [bossPt],
+          comboStep: a.comboStep,
+          speedScale,
+          areaScale: 0.92,
+          wideCenter: { x: lateralX * 0.75, y: this.bossStageY, z: RIFT_BOSS_POS_Z + 0.25 },
+        });
+      }
+      if (isUlt) {
+        const beatCount = BARRAGE_BEAT_WEIGHTS.length;
+        for (let bi = 1; bi < beatCount; bi++) {
+          const w = BARRAGE_BEAT_WEIGHTS[bi];
+          const isFinisher = bi === beatCount - 1;
+          this.pendingBarrages.push({
+            slotIndex: a.slotIndex,
+            beatIndex: bi,
+            delayLeft: BARRAGE_FOLLOWUP_DELAYS[bi - 1],
+            beatInterval: a.attackInterval * w,
+            dmg: Math.max(1, Math.round(a.dmg * w)),
+            accentColor: a.accentColor,
+            comboStep: isFinisher ? 2 : (a.comboStep + bi) % 2,
+            sx: a.sx,
+            sz: a.sz,
+            ex: a.ex,
+            ey: a.ey,
+            ez: a.ez,
+          });
+        }
+      }
+      this.tierVfx.fireBarrageHitSlash({
+        x: a.ex,
+        y: a.ey,
+        z: a.ez,
+        colorHex: a.accentColor,
+        beatIndex: 0,
+        isFinisher: false,
+        scale: isUlt ? 1.38 : 1.0,
+      });
+      if (!isUlt) {
+        this.impactFx.spawnImpact({
+          targetX: a.ex,
+          targetY: a.ey,
+          targetZ: a.ez,
+          accentColor: a.accentColor,
+          heavy: false,
+          comboStep: a.comboStep % 2,
+          attackerX: a.sx,
+          attackerZ: a.sz,
+          shockwaveScale: 0.72,
+        });
+      }
+      onStrike?.({
+        slotIndex: a.slotIndex,
+        attackInterval: isUlt ? a.attackInterval * BARRAGE_BEAT_WEIGHTS[0] : a.attackInterval,
+        isUltimate: isUlt,
+        beatIndex: 0,
+        isFinisher: false,
+        dmg: isUlt ? Math.max(1, Math.round(a.dmg * BARRAGE_BEAT_WEIGHTS[0])) : a.dmg,
+        wx: a.ex,
+        wy: a.ey,
+        wz: a.ez,
+        accentColor: a.accentColor,
+      });
+    };
+
+    const maxChargeSec = computeSpotlightMaxChargeSec(this.fighters.size);
+    this.spotlight.step(safeDt);
+
+    for (const f of this.fighters.values()) {
+      f.fx.update(elapsed, camera);
+      f.colorHex = f.fx.getAccentColor();
+      f.sprite.setAccentColor(f.colorHex);
+      f.sprite.group.position.copy(f.spawnPos);
+      f.sprite.setAnimState('idle');
+      f.attackCooldown = Math.max(0, f.attackCooldown - safeDt);
+      if (f.ultActiveTimer > 0) f.ultActiveTimer = Math.max(0, f.ultActiveTimer - safeDt);
+      f.chargeSec = Math.min(maxChargeSec, f.chargeSec + safeDt);
+      const effInterval = f.attackInterval / cadenceMult;
+      if (f.ultCharge >= ultReq && !f.ultArmed && f.attackCooldown <= effInterval * 0.55) {
+        f.ultArmed = true;
+      }
+      f.sprite.update(safeDt, elapsed, camera);
+    }
+
+    const launchRiftAttack = (f: OmegaFighterEntry, isUltimate: boolean, effectiveSec: number): void => {
+      const step = f.comboStep;
+      f.comboStep = (f.comboStep + 1) % 3;
+      const bossPt: WorldPoint3 = { x: 0, y: this.bossStageY, z: RIFT_BOSS_POS_Z + 0.25 };
+      if (isUltimate) {
+        f.sprite.triggerUltOpening(0.52);
+        this.tierVfx.fireUltOpeningBurst({
+          x: f.spawnPos.x,
+          y: f.spawnPos.y,
+          z: f.spawnPos.z,
+          colorHex: f.colorHex,
+        });
+      } else {
+        f.sprite.triggerPodiumCast(0.24);
+      }
+      this.tierVfx.firePodiumWeaponCast({
+        rarity: isUltimate ? f.rarity : 'common',
+        chibiId: f.chibiId,
+        colorHex: f.colorHex,
+        origin: { x: f.spawnPos.x, y: f.spawnPos.y, z: f.spawnPos.z },
+        target: bossPt,
+        allTargets: [bossPt],
+      });
+      if (isUltimate) {
+        this.tierVfx.fireAnticipation(f.rarity, f.colorHex, bossPt, [bossPt]);
+      }
+      this.projectiles.launch(
+        {
+          style: f.style,
+          slotIndex: f.slotIndex,
+          targetId: -1,
+          dmg: Math.max(1, Math.round(f.dmg * effectiveSec)),
+          comboStep: step,
+          accentColor: f.colorHex,
+          sx: f.spawnPos.x,
+          sy: f.spawnPos.y + 1.25,
+          sz: f.spawnPos.z,
+          ex: (Math.random() - 0.5) * 0.9,
+          ey: this.bossStageY + 1.85,
+          ez: RIFT_BOSS_POS_Z + 0.25,
+          attackInterval: effectiveSec,
+          isBoss: true,
+          isUltimate,
+        },
+        handleRiftArrival
+      );
+    };
+
+    const activeUltFighter = this.spotlight.pickNextReady(this.fighters.values(), (f) => (f.ultArmed ? 0 : 1));
+    if (activeUltFighter) {
+      const ultSec = Math.max(0.01, activeUltFighter.ultBankSec + activeUltFighter.chargeSec);
+      const effInterval = activeUltFighter.attackInterval / cadenceMult;
+      activeUltFighter.attackCooldown = Math.max(effInterval, ULT_SPOTLIGHT_LOCK_SEC);
+      activeUltFighter.chargeSec = 0;
+      activeUltFighter.ultBankSec = 0;
+      activeUltFighter.ultCharge = 0;
+      activeUltFighter.ultArmed = false;
+      activeUltFighter.ultActiveTimer = ULT_SPOTLIGHT_LOCK_SEC;
+      this.spotlight.claim(activeUltFighter.slotIndex, ULT_SPOTLIGHT_LOCK_SEC);
+      launchRiftAttack(activeUltFighter, true, ultSec);
+    }
+
+    for (const f of this.fighters.values()) {
+      if (f.attackCooldown > 0 || f.ultActiveTimer > 0) continue;
+      const elapsedSec = Math.max(0.01, f.chargeSec);
+      const basicSec = elapsedSec * BASIC_ATTACK_DPS_SHARE;
+      f.ultBankSec = Math.min(maxChargeSec, f.ultBankSec + elapsedSec * (1 - BASIC_ATTACK_DPS_SHARE));
+      f.chargeSec = 0;
+      f.attackCooldown = f.attackInterval / cadenceMult;
+      f.ultCharge = Math.min(ultReq, f.ultCharge + 1);
+      launchRiftAttack(f, false, basicSec);
+    }
+
+    this.projectiles.step(safeDt, camera, handleRiftArrival);
+    for (let i = this.pendingBarrages.length - 1; i >= 0; i--) {
+      if (this.pendingBarrages.length === 0) break;
+      if (i >= this.pendingBarrages.length) i = this.pendingBarrages.length - 1;
+      const b = this.pendingBarrages[i];
+      if (!b) continue;
+      b.delayLeft -= safeDt;
+      if (b.delayLeft <= 0) {
+        this.pendingBarrages.splice(i, 1);
+        const isFinisher = b.beatIndex === BARRAGE_BEAT_WEIGHTS.length - 1;
+        this.bossHitBounce = Math.max(this.bossHitBounce, isFinisher ? 0.14 : 0.08);
+        this.tierVfx.fireBarrageHitSlash({
+          x: b.ex,
+          y: b.ey,
+          z: b.ez,
+          colorHex: b.accentColor,
+          beatIndex: b.beatIndex,
+          isFinisher,
+          scale: 1.38,
+        });
+        this.impactFx.spawnImpact({
+          targetX: b.ex,
+          targetY: b.ey,
+          targetZ: b.ez,
+          accentColor: b.accentColor,
+          heavy: isFinisher,
+          comboStep: b.comboStep,
+          attackerX: b.sx,
+          attackerZ: b.sz,
+          shockwaveScale: isFinisher ? 1.65 : 1.0,
+        });
+        onStrike?.({
+          slotIndex: b.slotIndex,
+          attackInterval: b.beatInterval,
+          isUltimate: true,
+          beatIndex: b.beatIndex,
+          isFinisher,
+          dmg: b.dmg,
+          wx: b.ex,
+          wy: b.ey,
+          wz: b.ez,
+          accentColor: b.accentColor,
+        });
+      }
+    }
+
+    this.tierVfx.update(safeDt, camera);
+    this.impactFx.update(safeDt, camera);
+  }
+
+  public dispose(): void {
+    this.projectiles.dispose();
+    this.tierVfx.dispose();
+    if (this.bossSprite) {
+      this.bossSprite.dispose();
+      this.bossSprite = null;
+    }
+    for (const f of this.fighters.values()) {
+      f.fx.dispose();
+      f.sprite.dispose();
+    }
+    this.fighters.clear();
+    this.impactFx.dispose();
+    for (const g of this.ownedGeos) g.dispose();
+    for (const m of this.ownedMats) m.dispose();
+    for (const t of this.ownedTexs) t.dispose();
+    this.ownedGeos.length = 0;
+    this.ownedMats.length = 0;
+    this.ownedTexs.length = 0;
+    this.playerPodiums.length = 0;
+    this.conduitFlows.length = 0;
+    disposeObject3D(this.group);
+  }
+}

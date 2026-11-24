@@ -9,6 +9,7 @@ import type { PlotPedestal3D } from './PlotPedestal3D';
 import type { ShopWorld3D } from './ShopWorld3D';
 import type { TowerArena3D } from './TowerArena3D';
 import type { OmegaArena3D } from './OmegaArena3D';
+import type { RiftArena3D } from './RiftArena3D';
 import {
   applyCameraOrbitDrag,
   clampCameraZoomRadius,
@@ -103,6 +104,7 @@ export interface MineInputCtx {
   getShopWorld: () => ShopWorld3D | null;
   getTowerArena: () => TowerArena3D | null;
   getOmegaArena: () => OmegaArena3D | null;
+  getRiftArena?: () => RiftArena3D | null;
   clickableMeshes: THREE.Object3D[];
   callbacks: MineSceneCallbacks;
   getMode: () => SceneMode;
@@ -150,7 +152,9 @@ export function raycastAtInScene(ctx: MineInputCtx, clientX: number, clientY: nu
             ? (ctx.getTowerArena()?.getActiveClickables() ?? [])
             : ctx.getMode() === 'omega'
               ? (ctx.getOmegaArena()?.clickables ?? [])
-              : [];
+              : ctx.getMode() === 'rift'
+                ? (ctx.getRiftArena?.()?.clickables ?? [])
+                : [];
     if (!targets.length) return null;
     const hits = ctx.raycaster.intersectObjects(targets, false);
     const visibleHit = hits.find((h) => h.object.visible);
@@ -296,7 +300,10 @@ export function bindMineSceneEvents(ctx: MineInputCtx): ResizeObserver | null {
       ctx.pit.setHoveredNode(hoveredNode);
 
       let overMineArea =
-        hoveredNode >= 0 || hit?.userData.kind === 'tower-ore' || hit?.userData.kind === 'tower-core';
+        hoveredNode >= 0 ||
+        hit?.userData.kind === 'tower-ore' ||
+        hit?.userData.kind === 'tower-core' ||
+        hit?.userData.kind === 'rift-boss';
       if (!overMineArea && ctx.getMode() === 'mine' && !ctx.state.crateHovered && hoveredSlot < 0) {
         overMineArea = getPitFloorHitInScene(ctx, e.clientX, e.clientY) !== null;
       }
@@ -359,6 +366,16 @@ export function bindMineSceneEvents(ctx: MineInputCtx): ResizeObserver | null {
         ctx.performMineTapAt(e.clientX, e.clientY, null);
         return;
       }
+      if (!hit && ctx.getMode() === 'rift') {
+        const res = ctx.callbacks.onRiftBossTap?.(e.clientX, e.clientY);
+        const ra = ctx.getRiftArena?.();
+        if (res && res.dmg > 0 && ra) {
+          ra.triggerBossHit('#22d3ee', Boolean(res.isCrit));
+          const wp = ra.getBossWorldPos();
+          ctx.emitDamageScreen(res.dmg, wp.x, wp.y, wp.z, true, Boolean(res.isCrit));
+        }
+        return;
+      }
       if (!hit) return;
       if (hit.userData.kind === 'ore-node') {
         ctx.performMineTapAt(e.clientX, e.clientY, hit);
@@ -392,6 +409,14 @@ export function bindMineSceneEvents(ctx: MineInputCtx): ResizeObserver | null {
         if (targetId) ctx.callbacks.onOmegaTargetClick?.(targetId);
       } else if (hit.userData.kind === 'omega-boss') {
         ctx.callbacks.onOmegaBossClick?.();
+      } else if (hit.userData.kind === 'rift-boss') {
+        const res = ctx.callbacks.onRiftBossTap?.(e.clientX, e.clientY);
+        const ra = ctx.getRiftArena?.();
+        if (res && res.dmg > 0 && ra) {
+          ra.triggerBossHit('#22d3ee', Boolean(res.isCrit));
+          const wp = ra.getBossWorldPos();
+          ctx.emitDamageScreen(res.dmg, wp.x, wp.y, wp.z, true, Boolean(res.isCrit));
+        }
       } else if (hit.userData.kind === 'tower-ore') {
         const oreIndex = Number(hit.userData.oreIndex ?? -1);
         const towerArena = ctx.getTowerArena();
