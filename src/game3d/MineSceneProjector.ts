@@ -58,7 +58,7 @@ export class MineSceneProjector {
     }
     const pt = this.projectWorldToScreen(
       spot.worldX,
-      spot.worldY + (spot.isMeteor ? 1.15 : 0.72),
+      spot.worldY + (spot.isMeteor ? 1.15 : 1.08),
       spot.worldZ
     );
     if (!pt) {
@@ -107,7 +107,7 @@ export class MineSceneProjector {
     const bars: OreHpScreen[] = [];
     for (const node of this.ctx.pit.getAliveNodesInfo()) {
       if (!node.isMeteor && !node.pitEventKind && node.hp >= node.maxHp) continue;
-      const yOffset = node.isMeteor ? 2.22 : node.pitEventKind ? 1.56 : 1.32;
+      const yOffset = node.isMeteor ? 2.22 : node.pitEventKind ? 2.28 : 1.92;
       const pt = this.projectWorldToScreen(node.worldX, node.worldY + yOffset, node.worldZ);
       if (!pt) continue;
       bars.push({

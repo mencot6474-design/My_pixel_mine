@@ -121,7 +121,7 @@ export const TOWER_MAX_FLOOR = 80;
 export const TOWER_MAX_KEYS = 5;
 export const TOWER_KEY_REGEN_MS = 15 * 60 * 1000; // 15 minutes per key
 export const TOWER_KEY_GEM_COST = 5000;
-export const TOWER_CHECKPOINT_STEP = 5;
+export const TOWER_MILESTONE_STEP = 5;
 export const TOWER_WAVES_PER_FLOOR = 10;
 export const TOWER_ORE_ROCKS_PER_WAVE = 5;
 export const TOWER_BOSS_WAVE = 10;
@@ -390,7 +390,7 @@ export function getAnomalyForFloor(floor: number): TowerAnomalyDef {
 
 export function getTowerFloorDef(floor: number): TowerFloorDef {
   const f = clampTowerFloor(floor);
-  const isBoss = f % TOWER_CHECKPOINT_STEP === 0;
+  const isBoss = f % TOWER_MILESTONE_STEP === 0;
   const isFinalBoss = f === TOWER_MAX_FLOOR;
   const anomaly = getAnomalyForFloor(f);
   const tier = getTowerWorldTier(f);
@@ -407,7 +407,7 @@ export function getTowerFloorDef(floor: number): TowerFloorDef {
   const title = isFinalBoss
     ? `Final Floor ${f}`
     : isBoss
-      ? `Checkpoint Floor ${f}`
+      ? `Milestone Floor ${f}`
       : `Floor ${f}`;
 
   return {
@@ -483,15 +483,6 @@ export function rollTowerWaveOres(
     });
   }
   return ores;
-}
-
-export function getTowerCheckpoints(bestFloor: number): number[] {
-  const cappedBest = Math.min(TOWER_MAX_FLOOR, Math.max(0, Math.floor(bestFloor)));
-  const list = [1];
-  for (let f = TOWER_CHECKPOINT_STEP; f <= cappedBest; f += TOWER_CHECKPOINT_STEP) {
-    list.push(f);
-  }
-  return list;
 }
 
 export function getTowerKeyCashCost(bestFloor: number): number {

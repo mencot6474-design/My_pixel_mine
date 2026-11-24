@@ -480,10 +480,12 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(timeoutRes.summary?.remainingHpPct).toBe(10);
       expect(timeoutRes.summary?.bestStreakMult).toBe(getTowerStreakGemMult(2));
 
-      // Verify Floor 80 Final Boss victory completes the Tower ("tamat") without advancing to Floor 81
+      // Verify every run starts at Floor 1 (no checkpoints) and Floor 80 Final Boss victory completes the Tower ("tamat")
       state.towerBestFloor = TOWER_MAX_FLOOR;
       state.towerKeys = 3;
       expect(startTowerRunDomain(state, TOWER_MAX_FLOOR, 30_000, () => 0.1)).toBe(true);
+      expect(state.towerRun!.floor).toBe(1);
+      state.towerRun!.floor = TOWER_MAX_FLOOR;
       state.towerRun!.wave = 10;
       state.towerRun!.isBossWave = true;
       state.towerRun!.bossInvulLeft = 0;

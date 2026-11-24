@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import type { WorldId } from '../game/GameData';
-import { createChamferSlabGeometry, disposeObject3D, mergeStaticMeshesByMaterial } from './MeshHelpers3D';
+import {
+  createChamferSlabGeometry,
+  createExtrudedProfileGeometry,
+  disposeObject3D,
+  mergeStaticMeshesByMaterial,
+} from './MeshHelpers3D';
 import { PIT_CENTER_Z, PIT_FLOOR_Y, PIT_RADIUS } from './OrePitStage3D';
 import { getRuneSealTexture } from './ProceduralTextures3D';
 
@@ -229,8 +234,8 @@ export function createColosseumBiomeHandle(initialWorld: WorldId = 'underground'
   ownedMats.push(alloyMat, slateMat, hullDarkMat, neonMat, secondaryNeonMat, holoGlassMat);
 
   // 1. Watertight Crescent North Stage Extension (flat clean outer deck r=8.35..10.65 at y_world=0)
-  const outerWingGeo = createClosedArcDeckGeometry(8.35, 10.65, 1.12, 0.28);
-  const outerTrimGeo = createClosedArcDeckGeometry(10.52, 10.72, 1.12, 0.06);
+  const outerWingGeo = createClosedArcDeckGeometry(8.35, 10.65, 1.2, 0.28);
+  const outerTrimGeo = createClosedArcDeckGeometry(10.52, 10.72, 1.2, 0.06);
   ownedGeos.push(outerWingGeo, outerTrimGeo);
 
   const outerWing = new THREE.Mesh(outerWingGeo, slateMat);
@@ -243,10 +248,10 @@ export function createColosseumBiomeHandle(initialWorld: WorldId = 'underground'
   staticGroup.add(outerWing, outerTrim);
 
   // Low Translucent Holo-Glass Guardrail curving cleanly along outer rim (r = 10.62)
-  const rearRailGeo = new THREE.CylinderGeometry(10.62, 10.62, 0.34, 32, 1, true, Math.PI - 1.08, 2.16);
+  const rearRailGeo = new THREE.CylinderGeometry(10.62, 10.62, 0.34, 32, 1, true, Math.PI - 1.15, 2.3);
   ownedGeos.push(rearRailGeo);
   const rearRail = new THREE.Mesh(rearRailGeo, holoGlassMat);
-  rearRail.position.y = 0.6;
+  rearRail.position.y = 0.57;
   rearRail.raycast = () => {};
   group.add(rearRail);
 
@@ -398,42 +403,96 @@ export function createColosseumBiomeHandle(initialWorld: WorldId = 'underground'
     staticGroup.add(nacelle, nGlow);
   }
 
-  // 4. 2 Sleek Rear Framing Stage Light-Pylons on the outer rear corners (zero overlap with Slot 0/4!)
-  const pylonBaseGeo = createChamferSlabGeometry(1.1, 0.32, 1.1, 0.18, 0.016);
-  const pylonStemGeo = createChamferSlabGeometry(0.4, 2.75, 0.52, 0.09, 0.014);
-  const pylonBladeGeo = createChamferSlabGeometry(0.14, 2.45, 0.32, 0.05, 0.01);
-  const pylonCrownGeo = new THREE.OctahedronGeometry(0.25, 0);
-  pylonCrownGeo.scale(0.9, 1.5, 0.9);
-  ownedGeos.push(pylonBaseGeo, pylonStemGeo, pylonBladeGeo, pylonCrownGeo);
+  // 4. 2 Low-Profile Swept Cyber Stage Wing-Fins seated cleanly on outerWing left & right ends
+  const wingBaseGeo = createChamferSlabGeometry(0.84, 0.16, 0.92, 0.16, 0.014);
+  const wingBaseRimGeo = createChamferSlabGeometry(0.76, 0.045, 0.84, 0.14, 0.008);
+  ownedGeos.push(wingBaseGeo, wingBaseRimGeo);
 
+  const mainFinPts: ReadonlyArray<readonly [number, number]> = [
+    [-0.2, 0.0],
+    [0.28, 0.0],
+    [0.62, 1.24],
+    [0.44, 1.4],
+    [0.14, 1.18],
+    [-0.08, 0.72],
+  ];
+  const neonFinPts: ReadonlyArray<readonly [number, number]> = [
+    [-0.25, 0.0],
+    [-0.12, 0.0],
+    [0.24, 1.24],
+    [0.1, 1.18],
+  ];
+  const subFinPts: ReadonlyArray<readonly [number, number]> = [
+    [-0.26, 0.0],
+    [0.14, 0.0],
+    [0.36, 0.68],
+    [0.2, 0.78],
+    [-0.08, 0.52],
+  ];
+  const subAccentPts: ReadonlyArray<readonly [number, number]> = [
+    [-0.28, 0.04],
+    [-0.17, 0.04],
+    [0.14, 0.72],
+    [0.03, 0.68],
+  ];
+  const holoChevronPts: ReadonlyArray<readonly [number, number]> = [
+    [-0.36, 0.1],
+    [-0.26, 0.1],
+    [0.06, 1.14],
+    [-0.06, 1.08],
+  ];
+  const orientPts = (
+    pts: ReadonlyArray<readonly [number, number]>,
+    side: -1 | 1
+  ): ReadonlyArray<readonly [number, number]> =>
+    side === 1 ? pts : [...pts].reverse().map(([x, y]) => [-x, y] as const);
+
+  const pylonBeams: THREE.Mesh[] = [];
   for (const side of [-1, 1] as const) {
-    const px = side * 9.85;
-    const pz = -5.65;
-    const py = 0.42;
-    const yaw = side * -0.46;
+    const mountAng = side * 1.12;
+    const mountR = 9.95;
+    const finRoot = new THREE.Group();
+    finRoot.position.set(Math.sin(mountAng) * mountR, 0.39, -Math.cos(mountAng) * mountR);
+    finRoot.rotation.y = side * -0.44;
 
-    const pGroup = new THREE.Group();
-    pGroup.position.set(px, py, pz);
-    pGroup.rotation.y = yaw;
+    const basePod = new THREE.Mesh(wingBaseGeo, hullDarkMat);
+    basePod.castShadow = true;
+    basePod.receiveShadow = true;
 
-    const pBase = new THREE.Mesh(pylonBaseGeo, hullDarkMat);
-    pBase.position.y = 0.16;
-    pBase.castShadow = true;
+    const baseRim = new THREE.Mesh(wingBaseRimGeo, neonMat);
+    baseRim.position.y = 0.14;
 
-    const pStem = new THREE.Mesh(pylonStemGeo, alloyMat);
-    pStem.position.set(0, 1.62, 0);
-    pStem.rotation.z = side * 0.12;
-    pStem.castShadow = true;
+    const mainFinGeo = createExtrudedProfileGeometry(orientPts(mainFinPts, side), 0.18, 0.016);
+    const neonFinGeo = createExtrudedProfileGeometry(orientPts(neonFinPts, side), 0.11, 0.01);
+    const subFinGeo = createExtrudedProfileGeometry(orientPts(subFinPts, side), 0.14, 0.014);
+    const subAccentGeo = createExtrudedProfileGeometry(orientPts(subAccentPts, side), 0.09, 0.008);
+    const holoChevronGeo = createExtrudedProfileGeometry(orientPts(holoChevronPts, side), 0.03, 0.004);
+    ownedGeos.push(mainFinGeo, neonFinGeo, subFinGeo, subAccentGeo, holoChevronGeo);
 
-    const pBlade = new THREE.Mesh(pylonBladeGeo, neonMat);
-    pBlade.position.set(-side * 0.24, 1.8, 0.12);
-    pBlade.rotation.z = side * 0.12;
+    const mainFin = new THREE.Mesh(mainFinGeo, alloyMat);
+    mainFin.position.set(0, 0.14, -0.08);
+    mainFin.castShadow = true;
+    mainFin.receiveShadow = true;
 
-    const pCrown = new THREE.Mesh(pylonCrownGeo, secondaryNeonMat);
-    pCrown.position.set(-side * 0.18, 3.2, 0);
+    const neonFin = new THREE.Mesh(neonFinGeo, neonMat);
+    neonFin.position.set(0, 0.16, -0.06);
 
-    pGroup.add(pBase, pStem, pBlade, pCrown);
-    staticGroup.add(pGroup);
+    const subFin = new THREE.Mesh(subFinGeo, hullDarkMat);
+    subFin.position.set(0, 0.14, 0.14);
+    subFin.castShadow = true;
+
+    const subAccent = new THREE.Mesh(subAccentGeo, secondaryNeonMat);
+    subAccent.position.set(0, 0.15, 0.15);
+
+    finRoot.add(basePod, baseRim, mainFin, neonFin, subFin, subAccent);
+    staticGroup.add(finRoot);
+
+    const holoWing = new THREE.Mesh(holoChevronGeo, holoGlassMat);
+    holoWing.position.set(Math.sin(mountAng) * mountR, 0.55, -Math.cos(mountAng) * mountR);
+    holoWing.rotation.y = side * -0.44;
+    holoWing.raycast = () => {};
+    group.add(holoWing);
+    pylonBeams.push(holoWing);
   }
 
   mergeStaticMeshesByMaterial(staticGroup);
@@ -466,7 +525,7 @@ export function createColosseumBiomeHandle(initialWorld: WorldId = 'underground'
     const barrierGeo = new THREE.CylinderGeometry(8.56, 8.56, 0.26, 14, 1, true, arcStart, 0.68);
     ownedGeos.push(barrierGeo);
     const barrier = new THREE.Mesh(barrierGeo, holoGlassMat);
-    barrier.position.y = 0.56;
+    barrier.position.y = 0.53;
     barrier.raycast = () => {};
     group.add(barrier);
   }
@@ -552,6 +611,9 @@ export function createColosseumBiomeHandle(initialWorld: WorldId = 'underground'
       lowQuality = low;
       eqInst.visible = !low;
       sealRingMesh.visible = !low;
+      for (let i = 0; i < pylonBeams.length; i++) {
+        pylonBeams[i].visible = !low;
+      }
       if (!low) updateEqualizer(0, 0);
     },
     update(elapsed: number, pulseBoost: number): void {

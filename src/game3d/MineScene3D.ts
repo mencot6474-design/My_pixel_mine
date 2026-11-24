@@ -732,7 +732,6 @@ export class MineScene3D {
     floor: number;
     wave: number;
     isBossWave: boolean;
-    isCheckpointFloor: boolean;
     waveOres: readonly TowerWaveOreState[];
     anomalyColorHex: string;
     equippedMinerCount: number;

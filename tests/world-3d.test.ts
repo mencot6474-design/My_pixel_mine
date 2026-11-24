@@ -248,7 +248,6 @@ import { createWeatherSkyMaterial } from '../src/game3d/WeatherSkyShader';
 import { enchantAuraIconHtml, enchantDiceIconHtml, gemPotionIconHtml, hudIconHtml, oreIconSvg, pickaxeIconHtml, towerIconHtml, weatherIconHtml } from '../src/ui/HudIcons';
 import {
   getGlobalGemGainBonus,
-  getTowerCheckpoints,
   getTowerFloorDef,
   getTowerSweepGemReward,
   getTowerWaveDef,
@@ -882,7 +881,7 @@ describe('Pure 3D Mine World', () => {
     expect(gs.sellAllOres()).toBeGreaterThan(0);
   });
 
-  it('scales Gem Tower floors, 10 waves per floor, 5-floor checkpoints/milestones, anomalies, and global gem bonus', () => {
+  it('scales Gem Tower floors, 10 waves per floor, 5-floor milestones, anomalies, and global gem bonus', () => {
     const f1 = getTowerFloorDef(1);
     const f4 = getTowerFloorDef(4);
     const f5 = getTowerFloorDef(5);
@@ -906,12 +905,7 @@ describe('Pure 3D Mine World', () => {
     expect(w1Ores.every((o) => o.alive && o.hp >= 100_000)).toBe(true);
     expect(rollTowerWaveOres(1, TOWER_WAVES_PER_FLOOR, f1.anomaly)).toHaveLength(0);
 
-    // Checkpoints and Milestones every 5 floors up to Floor 80 (W1..W8)
-    expect(getTowerCheckpoints(0)).toEqual([1]);
-    expect(getTowerCheckpoints(5)).toEqual([1, 5]);
-    expect(getTowerCheckpoints(12)).toEqual([1, 5, 10]);
-    expect(getTowerCheckpoints(99)).toContain(80);
-    expect(getTowerCheckpoints(99).at(-1)).toBe(80);
+    // Milestones every 5 floors up to Floor 80 (W1..W8)
     expect(TOWER_MILESTONES.map((m) => m.floor)).toEqual([
       5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80,
     ]);
@@ -1136,7 +1130,6 @@ describe('Pure 3D Mine World', () => {
       floor: 1,
       wave: 1,
       isBossWave: false,
-      isCheckpointFloor: false,
       waveOres: wave1Ores,
       anomalyColorHex: '#38bdf8',
       equippedMinerCount: 2,
@@ -1206,7 +1199,6 @@ describe('Pure 3D Mine World', () => {
       floor: 1,
       wave: 9,
       isBossWave: false,
-      isCheckpointFloor: false,
       waveOres: rollTowerWaveOres(1, 9),
       anomalyColorHex: '#38bdf8',
       equippedMinerCount: 5,
@@ -1224,7 +1216,6 @@ describe('Pure 3D Mine World', () => {
             floor: 1,
             wave: 10,
             isBossWave: true,
-            isCheckpointFloor: false,
             waveOres: [],
             anomalyColorHex: '#f43f5e',
             equippedMinerCount: 5,
@@ -2812,7 +2803,6 @@ describe('Pure 3D Mine World', () => {
       floor: 1,
       wave: 1,
       isBossWave: false,
-      isCheckpointFloor: false,
       waveOres: rollTowerWaveOres(1, 1),
       anomalyColorHex: '#38bdf8',
       equippedMinerCount: 1,
@@ -2824,7 +2814,6 @@ describe('Pure 3D Mine World', () => {
       floor: 1,
       wave: 2,
       isBossWave: false,
-      isCheckpointFloor: false,
       waveOres: rollTowerWaveOres(1, 2),
       anomalyColorHex: '#38bdf8',
       equippedMinerCount: 1,
@@ -2854,7 +2843,6 @@ describe('Pure 3D Mine World', () => {
       floor: 1,
       wave: 1,
       isBossWave: false,
-      isCheckpointFloor: false,
       waveOres: wave1Ores,
       anomalyColorHex: '#38bdf8',
       equippedMinerCount: 1,
@@ -4170,12 +4158,12 @@ describe('Pure 3D Mine World', () => {
 
   it('arranges 5 floating crescent pedestals with anti-grav thrusters, isolated hover bob, and rotated attack origins', () => {
     expect(STAGE_CRESCENT_SLOTS).toHaveLength(5);
-    expect(STAGE_CRESCENT_SLOTS[2]).toEqual({ x: 0, y: 1.38, z: -5.9, visualYaw: 0 });
-    expect(STAGE_CRESCENT_SLOTS[0]).toEqual({ x: -7.35, y: 0.72, z: -3.15, visualYaw: 0.58 });
-    expect(STAGE_CRESCENT_SLOTS[4]).toEqual({ x: 7.35, y: 0.72, z: -3.15, visualYaw: -0.58 });
+    expect(STAGE_CRESCENT_SLOTS[2]).toEqual({ x: 0, y: 1.59, z: -5.9, visualYaw: 0 });
+    expect(STAGE_CRESCENT_SLOTS[0]).toEqual({ x: -7.35, y: 0.83, z: -3.15, visualYaw: 0.58 });
+    expect(STAGE_CRESCENT_SLOTS[4]).toEqual({ x: 7.35, y: 0.83, z: -3.15, visualYaw: -0.58 });
 
     const ped = new PlotPedestal3D(0, -7.35, -3.15, 0.58);
-    ped.group.position.y = 0.72;
+    ped.group.position.y = 0.83;
     ped.group.updateMatrixWorld(true);
     const pedBox = new THREE.Box3().setFromObject(ped.group);
     expect(pedBox.min.y).toBeLessThan(0.5);
@@ -4195,7 +4183,7 @@ describe('Pure 3D Mine World', () => {
     expect(hasPlaqueMesh).toBe(true);
 
     ped.update(0.05, 0.85);
-    expect(ped.group.position.y).toBe(0.72);
+    expect(ped.group.position.y).toBe(0.83);
     expect(Math.abs(ped.getHoverBobOffset())).toBeGreaterThan(0.005);
 
     const origin = ped.getAttackOriginWorldPosition(new THREE.Vector3());
@@ -4384,7 +4372,7 @@ describe('Pure 3D Mine World', () => {
 
     expect(envGroup.children).toHaveLength(0);
     expect(pedestals).toHaveLength(5);
-    expect(pedestals[2].group.position.y).toBe(1.38);
+    expect(pedestals[2].group.position.y).toBe(1.59);
     expect(crateGroup.position.x).toBeCloseTo(9.85, 2);
     expect(crateGroup.position.y).toBeCloseTo(1.03, 2);
     expect(crateGroup.position.z).toBeCloseTo(3.85, 2);
@@ -4834,7 +4822,6 @@ describe('Pure 3D Mine World', () => {
       floor: 1,
       wave: 1,
       isBossWave: false,
-      isCheckpointFloor: false,
       waveOres: rollTowerWaveOres(1, 1),
       anomalyColorHex: '#38bdf8',
       equippedMinerCount: 5,
@@ -4997,7 +4984,6 @@ describe('Pure 3D Mine World', () => {
       floor: 1,
       wave: 1,
       isBossWave: false,
-      isCheckpointFloor: false,
       waveOres: rollTowerWaveOres(1, 1),
       anomalyColorHex: '#38bdf8',
       equippedMinerCount: 1,

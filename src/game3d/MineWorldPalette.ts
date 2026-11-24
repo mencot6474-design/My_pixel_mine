@@ -140,11 +140,11 @@ export interface CrescentSlotTransform {
 
 /** 3-tier floating curved crescent slots hovering around the northern rim of the circular arena pool. */
 export const STAGE_CRESCENT_SLOTS: readonly CrescentSlotTransform[] = [
-  { x: -7.35, y: 0.72, z: -3.15, visualYaw: 0.58 },
-  { x: -3.85, y: 1.04, z: -5.1, visualYaw: 0.3 },
-  { x: 0, y: 1.38, z: -5.9, visualYaw: 0 },
-  { x: 3.85, y: 1.04, z: -5.1, visualYaw: -0.3 },
-  { x: 7.35, y: 0.72, z: -3.15, visualYaw: -0.58 },
+  { x: -7.35, y: 0.83, z: -3.15, visualYaw: 0.58 },
+  { x: -3.85, y: 1.2, z: -5.1, visualYaw: 0.3 },
+  { x: 0, y: 1.59, z: -5.9, visualYaw: 0 },
+  { x: 3.85, y: 1.2, z: -5.1, visualYaw: -0.3 },
+  { x: 7.35, y: 0.83, z: -3.15, visualYaw: -0.58 },
 ] as const;
 
 export type OreVariantKey = 'common' | 'vein' | 'geode';

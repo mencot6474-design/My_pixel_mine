@@ -8,11 +8,9 @@ import { CG_ADS_ENABLED, cgRequestRewardedAd } from '../sdk/crazygames';
 import { fmtInt, fmtShort } from '../game/NumberFormat';
 import {
   getGlobalGemGainBonus,
-  getTowerCheckpoints,
   getTowerFloorDef,
   getTowerSweepGemReward,
   getTowerWaveDef,
-  getTowerWorldTier,
   TOWER_DICE_PITY_MAX,
   TOWER_KEY_GEM_COST,
   TOWER_MAX_FLOOR,
@@ -26,7 +24,6 @@ import { chibiPortraitHtml, ModalKind, renderModalShell, TW_TAB_BTN } from './Hu
 import { TowerArenaHudUi } from './TowerArenaHudUi';
 
 export class TowerUi {
-  private selectedCheckpoint = 1;
   private rightTab: 'drops' | 'milestones' = 'drops';
   private readonly arenaHudUi: TowerArenaHudUi;
 
@@ -47,23 +44,9 @@ export class TowerUi {
     );
   }
 
-  private ensureValidCheckpoint(): number {
-    const cps = getTowerCheckpoints(this.state.towerBestFloor);
-    if (!cps.includes(this.selectedCheckpoint)) {
-      this.selectedCheckpoint = cps[cps.length - 1] ?? 1;
-    }
-    return this.selectedCheckpoint;
-  }
-
-  public syncDefaultCheckpoint(): void {
-    const cps = getTowerCheckpoints(this.state.towerBestFloor);
-    this.selectedCheckpoint = cps[cps.length - 1] ?? 1;
-  }
-
   public renderTowerHubModal(): string {
     this.state.syncTowerKeys();
-    const startFloor = this.ensureValidCheckpoint();
-    const cps = getTowerCheckpoints(this.state.towerBestFloor);
+    const startFloor = 1;
     const previewDef = getTowerFloorDef(startFloor);
     const wave1Def = getTowerWaveDef(startFloor, 1);
     const regenSec = this.state.getTowerNextKeyRegenSec();
@@ -197,9 +180,9 @@ export class TowerUi {
                   : 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed'
               } transition-transform"
               data-action="tower-retry-run"
-              data-retry-floor="${summary.startFloor}"
+              data-retry-floor="1"
               ${this.state.towerKeys <= 0 ? 'disabled' : ''}
-            >⚡ ${isVictory ? `Replay Fl ${summary.startFloor}` : `Retry Floor ${summary.startFloor}`}</button>
+            >⚡ ${isVictory ? 'Replay Floor 1' : 'Retry Floor 1'}</button>
           </div>
         </div>
       `
@@ -222,17 +205,6 @@ export class TowerUi {
         </div>
       `;
     }).join('');
-
-    const checkpointChips = cps
-      .map((cp) => {
-        const active = cp === startFloor;
-        const tier = getTowerWorldTier(cp);
-        const cls = active
-          ? 'bg-[#38bdf8] text-[#14111d]'
-          : 'bg-[#fcecc8] text-[#14111d] hover:bg-[#fde047]';
-        return `<button class="mam-tower-cp-btn ${cls}" data-tower-cp="${cp}"><span class="w-2 h-2 rounded-full border border-[#14111d] shrink-0" style="background:${tier.world.iconColor}"></span><span>Fl ${cp}</span></button>`;
-      })
-      .join('');
 
     const milestonesHtml = TOWER_MILESTONES.map((m) => {
       const done = this.state.towerBestFloor >= m.floor;
@@ -265,8 +237,7 @@ export class TowerUi {
               <div class="text-[12px] font-bold text-[#475569]">Best Floor: <span class="text-[#14111d] font-black tabular-nums">${this.state.towerBestFloor}/${TOWER_MAX_FLOOR}</span></div>
             </div>
             <div class="flex items-center gap-1.5 flex-wrap">${worldCampaignStripHtml}</div>
-            <div class="text-[11px] font-bold text-[#64748b] pt-0.5">Select Checkpoint (every 5 floors unlocks a Checkpoint &amp; Spire Milestone):</div>
-            <div class="flex items-center gap-1.5 flex-wrap">${checkpointChips}</div>
+            <div class="text-[11px] font-bold text-[#64748b] pt-0.5">Every run climbs from Floor 1 • Every 5 floors clears a Spire Milestone &amp; permanent Global Gem Bonus.</div>
           </div>
 
           <div class="mam-inspector-well rounded-xl p-3.5 flex flex-col gap-3 shrink-0">
@@ -285,7 +256,7 @@ export class TowerUi {
                         : previewDef.isBoss
                           ? 'bg-[#fde047] text-[#14111d]'
                           : 'bg-[#bae6fd] text-[#14111d]'
-                    }">${previewDef.isFinalBoss ? 'FINAL BOSS 80' : previewDef.isBoss ? 'CHECKPOINT BOSS' : '9 WAVES + BOSS'}</span>
+                    }">${previewDef.isFinalBoss ? 'FINAL BOSS 80' : previewDef.isBoss ? 'MILESTONE BOSS' : '9 WAVES + BOSS'}</span>
                   </div>
                   <div class="text-[19px] font-black !text-white leading-tight drop-shadow-[0_2px_0_rgba(20,17,29,0.9)]">${previewDef.title} • 10 Waves</div>
                   <div class="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-white/25 bg-black/45 px-2 py-0.5 text-[11.5px] font-black text-[#e9d5ff]">
@@ -534,17 +505,6 @@ export class TowerUi {
       });
     });
 
-    root.querySelectorAll('[data-tower-cp]').forEach((el) => {
-      el.addEventListener('click', () => {
-        const cp = Number((el as HTMLElement).dataset.towerCp || 1);
-        if (cp >= 1) {
-          audio.playSfx('ui-tab');
-          this.selectedCheckpoint = cp;
-          this.onRequestRender();
-        }
-      });
-    });
-
     root.querySelector('[data-action="tower-buy-key"]')?.addEventListener('click', () => {
       const res = this.state.buyTowerKeyWithGems();
       if (res === 'bought') {
@@ -583,8 +543,7 @@ export class TowerUi {
     });
 
     root.querySelector('[data-action="tower-enter-run"]')?.addEventListener('click', () => {
-      const cp = this.ensureValidCheckpoint();
-      if (!this.state.startTowerRun(cp)) {
+      if (!this.state.startTowerRun(1)) {
         audio.playSfx('ui-error');
         this.pushToast('Out of Tower Keys!');
         return;
@@ -594,11 +553,8 @@ export class TowerUi {
       this.onEnterTowerArena();
     });
 
-    root.querySelector('[data-action="tower-retry-run"]')?.addEventListener('click', (e) => {
-      const floorAttr = Number((e.currentTarget as HTMLElement).dataset.retryFloor || 0);
-      const cp = floorAttr >= 1 ? floorAttr : this.ensureValidCheckpoint();
-      this.selectedCheckpoint = cp;
-      if (!this.state.startTowerRun(cp)) {
+    root.querySelector('[data-action="tower-retry-run"]')?.addEventListener('click', () => {
+      if (!this.state.startTowerRun(1)) {
         audio.playSfx('ui-error');
         this.pushToast('Out of Tower Keys!');
         return;

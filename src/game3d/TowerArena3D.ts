@@ -195,7 +195,7 @@ export class TowerArena3D {
   public getOreWorldPos(oreIndex: number): THREE.Vector3 {
     const rock = this.waveRocks[oreIndex];
     if (!rock) return this.getMonolithWorldPos();
-    return new THREE.Vector3(rock.x, 1.05, rock.z);
+    return new THREE.Vector3(rock.x, 1.4, rock.z);
   }
 
   private getSpawnPos(slotIndex: number): THREE.Vector3 {
@@ -362,7 +362,6 @@ export class TowerArena3D {
     floor: number;
     wave: number;
     isBossWave: boolean;
-    isCheckpointFloor: boolean;
     waveOres: readonly TowerWaveOreState[];
     anomalyColorHex: string;
     equippedMinerCount: number;
@@ -382,7 +381,7 @@ export class TowerArena3D {
     }
 
     this.bossWave = opts.isBossWave;
-    this.bossMode = opts.isBossWave || opts.isCheckpointFloor;
+    this.bossMode = opts.isBossWave;
     this.anomalyColorHex = opts.anomalyColorHex;
     this.paused = opts.paused;
     this.activeMiners = Math.max(0, Math.min(5, opts.equippedMinerCount));
@@ -429,7 +428,7 @@ export class TowerArena3D {
       slot.root.visible = true;
       slot.hitMesh.visible = true;
 
-      const baseSize = state.variantKey === 'geode' ? 2.02 : state.variantKey === 'vein' ? 1.7 : 1.44;
+      const baseSize = state.variantKey === 'geode' ? 3.03 : state.variantKey === 'vein' ? 2.55 : 2.16;
       slot.oreSprite.setOre(state.oreId, baseSize);
       slot.oreSprite.setCollarAccent(state.color);
       slot.ringMat.color.set(state.color);
@@ -467,7 +466,6 @@ export class TowerArena3D {
       floor: floorNumber,
       wave: isBoss ? 10 : 1,
       isBossWave: true,
-      isCheckpointFloor: isBoss,
       waveOres: [],
       anomalyColorHex,
       equippedMinerCount,
@@ -605,11 +603,11 @@ export class TowerArena3D {
           : -1;
     rock.recoilAmt = broken ? 0.24 : 0.16;
     rock.flashTimer = 0.09;
-    this.spawnTowerShardsAt(rock.x, 0.85, rock.z, rock.color, broken ? 18 : 5, broken, false);
+    this.spawnTowerShardsAt(rock.x, 1.1, rock.z, rock.color, broken ? 18 : 5, broken, false);
     if (broken) {
       this.impactFx.spawnShatter({
         targetX: rock.x,
-        targetY: 1.05,
+        targetY: 1.35,
         targetZ: rock.z,
         oreColor: rock.color,
         secondaryColor: attackFx?.accentColor ?? '#fde047',
@@ -617,7 +615,7 @@ export class TowerArena3D {
     } else {
       this.impactFx.spawnImpact({
         targetX: rock.x,
-        targetY: 1.05,
+        targetY: 1.35,
         targetZ: rock.z,
         accentColor: attackFx?.accentColor ?? rock.color,
         heavy: false,
@@ -646,7 +644,7 @@ export class TowerArena3D {
     const bars: TowerOreBarScreen[] = [];
     for (const rock of this.waveRocks) {
       if (!rock.alive) continue;
-      projVec.set(rock.x, 1.85, rock.z).project(camera);
+      projVec.set(rock.x, 2.65, rock.z).project(camera);
       if (projVec.z <= -1 || projVec.z >= 1) continue;
       bars.push({
         index: rock.index,

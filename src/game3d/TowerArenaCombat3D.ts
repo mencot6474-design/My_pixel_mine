@@ -132,7 +132,7 @@ export function createTowerWaveOreSlot(index: number): TowerWaveRockSlot {
   root.position.set(x, 0.08, z);
   root.visible = false;
 
-  const oreSprite = new OreBillboard2D(1.58);
+  const oreSprite = new OreBillboard2D(2.37);
   root.add(oreSprite.root);
 
   const geodeTex = getGeodeGlowTexture();
@@ -146,7 +146,7 @@ export function createTowerWaveOreSlot(index: number): TowerWaveRockSlot {
     depthWrite: false,
   });
   const ringMesh = new THREE.Mesh(
-    geodeTex ? new THREE.PlaneGeometry(2.12, 2.12) : new THREE.RingGeometry(0.82, 1.04, 24),
+    geodeTex ? new THREE.PlaneGeometry(3.18, 3.18) : new THREE.RingGeometry(1.23, 1.56, 24),
     ringMat
   );
   ringMesh.rotation.x = -Math.PI / 2;
@@ -154,10 +154,10 @@ export function createTowerWaveOreSlot(index: number): TowerWaveRockSlot {
   root.add(ringMesh);
 
   const hitMesh = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.05, 1.15, 2.2, 8),
+    new THREE.CylinderGeometry(1.55, 1.68, 3.25, 8),
     new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
   );
-  hitMesh.position.y = 1.0;
+  hitMesh.position.y = 1.55;
   hitMesh.userData = { kind: 'tower-ore', oreIndex: index };
   hitMesh.visible = false;
   root.add(hitMesh);
@@ -343,16 +343,16 @@ export function stepTowerFightersAndBarrages(ctx: {
       if (!rock || !rock.alive) return;
       ctx.tierVfx.fireBarrageHitSlash({
         x: rock.x,
-        y: 0.95,
+        y: 1.3,
         z: rock.z,
         colorHex: b.accentColor,
         beatIndex: b.beatIndex,
         isFinisher,
-        scale: 1.08,
+        scale: 1.24,
       });
       ctx.impactFx.spawnImpact({
         targetX: rock.x,
-        targetY: 1.05,
+        targetY: 1.35,
         targetZ: rock.z,
         accentColor: b.accentColor,
         heavy: isFinisher,
@@ -361,14 +361,14 @@ export function stepTowerFightersAndBarrages(ctx: {
         attackerZ: b.sz,
         shockwaveScale: isFinisher ? 1.45 : 0.9,
       });
-      ctx.spawnTowerShardsAt(rock.x, 0.85, rock.z, b.accentColor, isFinisher ? 5 : 2, false);
+      ctx.spawnTowerShardsAt(rock.x, 1.1, rock.z, b.accentColor, isFinisher ? 5 : 2, false);
       ctx.onFighterStrike?.({
         slotIndex: b.slotIndex,
         targetOreIndex: rock.index,
         attackInterval: b.beatInterval,
         dmg: b.dmg,
         wx: rock.x,
-        wy: 1.05,
+        wy: 1.35,
         wz: rock.z,
         accentColor: b.accentColor,
         comboStep: b.comboStep,
@@ -487,12 +487,12 @@ export function stepTowerFightersAndBarrages(ctx: {
       }
       ctx.tierVfx.fireBarrageHitSlash({
         x: rock.x,
-        y: 0.95,
+        y: 1.3,
         z: rock.z,
         colorHex: a.accentColor,
         beatIndex: 0,
         isFinisher: false,
-        scale: 1.08,
+        scale: 1.24,
       });
       ctx.onFighterStrike?.({
         slotIndex: a.slotIndex,
@@ -500,7 +500,7 @@ export function stepTowerFightersAndBarrages(ctx: {
         attackInterval: beat0Interval,
         dmg: beat0Dmg,
         wx: rock.x,
-        wy: 1.05,
+        wy: 1.35,
         wz: rock.z,
         accentColor: a.accentColor,
         comboStep: a.comboStep,

@@ -1419,7 +1419,8 @@ describe('Tahap B HUD Modules', () => {
       expect(hubHtml).toContain('SO CLOSE!');
       expect(hubHtml).toContain('8% HP left');
       expect(hubHtml).toContain('data-action="tower-retry-run"');
-      expect(hubHtml).toContain('Retry Floor 5');
+      expect(hubHtml).toContain('Retry Floor 1');
+      expect(hubHtml).not.toContain('data-tower-cp');
       expect(hubHtml).toContain('GUARANTEED!');
       expect(hubHtml).toContain('Spire Campaign (W1–W8)');
       expect(hubHtml).toContain('F71-80');

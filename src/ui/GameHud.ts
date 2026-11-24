@@ -134,7 +134,6 @@ export class GameHud {
       floor: number;
       wave: number;
       isBossWave: boolean;
-      isCheckpointFloor: boolean;
       waveOres: readonly TowerWaveOreState[];
       anomalyColorHex: string;
       equippedMinerCount: number;
@@ -723,7 +722,6 @@ export class GameHud {
       this.activeModal = 'altar-hub';
       this.render();
     } else if (station === 'tower') {
-      this.towerUi.syncDefaultCheckpoint();
       this.activeModal = 'tower';
       this.render();
     } else if (station === 'pickaxe') {

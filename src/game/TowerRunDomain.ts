@@ -3,7 +3,6 @@ import { getEnchantById } from './GameData';
 import type { PlotUnitState } from './GameStateSave';
 import {
   getGlobalGemGainBonus,
-  getTowerCheckpoints,
   getTowerFloorDef,
   getTowerStreakGemMult,
   getTowerSweepGemReward,
@@ -203,15 +202,14 @@ function setupTowerWave(
 
 export function startTowerRunDomain(
   ctx: TowerRunContext,
-  startFloor = 1,
+  _startFloor = 1,
   now = Date.now(),
   rng: () => number = Math.random,
   hooks: { save?: () => void; emit?: () => void } = {}
 ): boolean {
   syncTowerKeysDomain(ctx, now, hooks.save);
   if (ctx.towerKeys <= 0) return false;
-  const checkpoints = getTowerCheckpoints(ctx.towerBestFloor);
-  const validStart = checkpoints.includes(startFloor) ? startFloor : 1;
+  const validStart = 1;
   if (ctx.towerKeys === TOWER_MAX_KEYS) {
     ctx.towerLastKeyRegenAt = now;
   }

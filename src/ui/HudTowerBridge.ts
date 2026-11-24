@@ -13,7 +13,6 @@ export type TowerVisualSyncCallback = (opts: {
   floor: number;
   wave: number;
   isBossWave: boolean;
-  isCheckpointFloor: boolean;
   waveOres: readonly TowerWaveOreState[];
   anomalyColorHex: string;
   equippedMinerCount: number;
@@ -48,7 +47,6 @@ export class HudTowerBridge {
       floor,
       wave: run?.wave ?? 1,
       isBossWave: Boolean(run?.isBossWave),
-      isCheckpointFloor: def.isBoss,
       waveOres: run?.waveOres ?? [],
       anomalyColorHex: def.anomaly.color,
       equippedMinerCount: placedCount,

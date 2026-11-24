@@ -206,8 +206,8 @@ export class OrePit3D {
     this.meteorNode.alive = false;
     this.meteorNode.root.visible = false;
     this.meteorNode.hitMesh.visible = false;
-    this.meteorNode.hitMesh.scale.set(1.85, 1.65, 1.85);
-    this.meteorNode.geodeRing.scale.setScalar(1.95);
+    this.meteorNode.hitMesh.scale.set(1.25, 1.15, 1.25);
+    this.meteorNode.geodeRing.scale.setScalar(1.3);
     this.group.add(this.meteorNode.root);
     this.clickableMeshes.push(this.meteorNode.hitMesh);
 
@@ -243,12 +243,12 @@ export class OrePit3D {
 
   private createNodeSlot(id: number): InternalOreNode {
     const root = new THREE.Group();
-    const oreSprite = new OreBillboard2D(1.45);
+    const oreSprite = new OreBillboard2D(2.175);
     root.add(oreSprite.root);
 
     const geodeTex = getGeodeGlowTexture();
     const geodeRing = new THREE.Mesh(
-      geodeTex ? new THREE.PlaneGeometry(2.15, 2.15) : new THREE.RingGeometry(0.8, 0.98, 24),
+      geodeTex ? new THREE.PlaneGeometry(3.2, 3.2) : new THREE.RingGeometry(1.2, 1.47, 24),
       new THREE.MeshBasicMaterial({
         ...(geodeTex ? { map: geodeTex } : {}),
         color: this.activePalette.crystalColor,
@@ -264,10 +264,10 @@ export class OrePit3D {
     root.add(geodeRing);
 
     const hitMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.94, 1.0, 1.9, 8),
+      new THREE.CylinderGeometry(1.38, 1.48, 2.75, 8),
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
     );
-    hitMesh.position.y = 0.95;
+    hitMesh.position.y = 1.38;
     hitMesh.userData = { kind: 'ore-node', nodeId: id };
     root.add(hitMesh);
 
@@ -442,13 +442,13 @@ export class OrePit3D {
   }
 
   private pickNonOverlappingSpot(excludeId: number): { x: number; z: number } {
-    const maxR = Math.max(1.5, PIT_RADIUS - 1.05);
+    const maxR = Math.max(1.5, PIT_RADIUS - 1.35);
     const r0 = Math.sqrt(Math.random()) * maxR;
     const a0 = Math.random() * Math.PI * 2;
     let bestX = Math.cos(a0) * r0;
     let bestZ = Math.sin(a0) * r0;
     let bestMinDist = -1;
-    const desiredMinDist = this.activeNodeCount > 14 ? 1.85 : 2.25;
+    const desiredMinDist = this.activeNodeCount > 14 ? 2.15 : 2.75;
 
     for (let attempt = 0; attempt < 28; attempt++) {
       const r = Math.sqrt(Math.random()) * maxR;
@@ -480,7 +480,7 @@ export class OrePit3D {
     const variant = rollOreVariant();
     const oreDef = pickWorldOreForVariant(this.activeWorldId, variant.key);
     const maxHp = Math.max(10, Math.round(BASE_ORE_HP * this.hpScale * variant.hpMult));
-    const baseSize = variant.key === 'geode' ? 1.9 : variant.key === 'vein' ? 1.58 : 1.32;
+    const baseSize = variant.key === 'geode' ? 2.85 : variant.key === 'vein' ? 2.37 : 1.98;
 
     node.variant = variant;
     node.oreDef = oreDef;
@@ -518,7 +518,7 @@ export class OrePit3D {
     const variant = ORE_VARIANTS.find((v) => v.key === 'geode') ?? rollOreVariant();
     const oreDef = pickWorldOreForVariant(this.activeWorldId, variant.key);
     const safeHp = Math.max(10, Math.round(hp));
-    const baseSize = 2.05;
+    const baseSize = 3.08;
 
     node.variant = variant;
     node.oreDef = oreDef;
@@ -601,7 +601,7 @@ export class OrePit3D {
             : this.activePalette.crystalColor;
         this.impactFx.spawnShatter({
           targetX: node.x,
-          targetY: node.isMeteor ? 1.15 : 0.92,
+          targetY: node.isMeteor ? 1.15 : 1.25,
           targetZ: node.z,
           oreColor: oreBreakColor,
           secondaryColor: fxAccent,
@@ -610,7 +610,7 @@ export class OrePit3D {
       } else {
         this.impactFx.spawnImpact({
           targetX: node.x,
-          targetY: 0.92,
+          targetY: node.isMeteor ? 1.15 : 1.25,
           targetZ: node.z,
           accentColor: fxAccent,
           heavy,
