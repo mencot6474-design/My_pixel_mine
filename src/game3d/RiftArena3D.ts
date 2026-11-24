@@ -13,6 +13,12 @@ import {
   syncOmegaFighterEntries,
 } from './OmegaArenaStage3D';
 import type { PlotAnchorScreen } from './MineSceneStage3D';
+import {
+  buildRiftPlazaArchitecture,
+  createRiftCityEnvironment,
+  type RiftCityEnvironmentHandle,
+  type RiftEmberSeed,
+} from './RiftCityEnvironment3D';
 import { type SignatureProjectileArrival, SignatureProjectilePool3D } from './SignatureProjectilePool3D';
 import {
   BARRAGE_BEAT_WEIGHTS,
@@ -45,44 +51,6 @@ export interface RiftStrikeEvent {
   wy: number;
   wz: number;
   accentColor: string;
-}
-
-function createRiftVoidSkyTexture(): THREE.CanvasTexture | null {
-  if (typeof document === 'undefined') return null;
-  const c = document.createElement('canvas');
-  c.width = 512;
-  c.height = 256;
-  const ctx = c.getContext('2d');
-  if (!ctx) return null;
-  const g = ctx.createLinearGradient(0, 0, 0, 256);
-  g.addColorStop(0, '#040214');
-  g.addColorStop(0.45, '#12082e');
-  g.addColorStop(0.8, '#1e0b36');
-  g.addColorStop(1, '#090418');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 512, 256);
-
-  const nebula = ctx.createRadialGradient(256, 128, 12, 256, 128, 190);
-  nebula.addColorStop(0, 'rgba(34, 211, 238, 0.24)');
-  nebula.addColorStop(0.5, 'rgba(168, 85, 247, 0.16)');
-  nebula.addColorStop(1, 'rgba(168, 85, 247, 0)');
-  ctx.fillStyle = nebula;
-  ctx.fillRect(0, 0, 512, 256);
-
-  ctx.fillStyle = '#e0f2fe';
-  for (let i = 0; i < 90; i++) {
-    const sx = ((i * 137) % 508) + 2;
-    const sy = ((i * 73) % 210) + 4;
-    const r = i % 7 === 0 ? 1.8 : 0.9;
-    ctx.globalAlpha = 0.35 + (i % 5) * 0.12;
-    ctx.beginPath();
-    ctx.arc(sx, sy, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
 }
 
 function createRiftBackdropPortalShader(): THREE.ShaderMaterial {
@@ -135,6 +103,7 @@ export class RiftArena3D {
   private bossId: AnomalyChibiId = 'void-asura';
   private surgeActive = false;
   private bossSprite: ChibiSprite3D | null = null;
+  private readonly cityEnv: RiftCityEnvironmentHandle;
   private readonly bossHitMesh: THREE.Mesh;
   private readonly bossPodium: CyberShowcasePodiumHandle;
   private readonly bossStageY: number;
@@ -149,6 +118,9 @@ export class RiftArena3D {
   private readonly voidShardsMesh: THREE.InstancedMesh;
   private readonly shardBasePos: Array<{ x: number; y: number; z: number; phase: number; speed: number; scale: number }> = [];
   private readonly shardDummy = new THREE.Object3D();
+  private readonly emberPoints: THREE.Points;
+  private readonly emberPosAttr: THREE.BufferAttribute;
+  private readonly emberSeeds: RiftEmberSeed[];
   private readonly voidLight: THREE.PointLight;
   private readonly squadLight: THREE.PointLight;
 
@@ -203,12 +175,6 @@ export class RiftArena3D {
     });
     this.portalMat = createRiftBackdropPortalShader();
 
-    const voidDeckMat = new THREE.MeshStandardMaterial({
-      color: 0x1a1633,
-      roughness: 0.56,
-      metalness: 0.32,
-      flatShading: true,
-    });
     const armorMat = new THREE.MeshStandardMaterial({
       color: 0x2a244c,
       roughness: 0.42,
@@ -241,80 +207,45 @@ export class RiftArena3D {
       this.daisSealMat,
       this.shockwaveMat,
       this.portalMat,
-      voidDeckMat,
       armorMat,
       steelMat,
       brightMat,
       shardMat
     );
 
-    // Dimensional Void sky dome
-    const skyTex = createRiftVoidSkyTexture();
-    if (skyTex) this.ownedTexs.push(skyTex);
-    const skyGeo = new THREE.SphereGeometry(95, 24, 16);
-    const skyMat = new THREE.MeshBasicMaterial({
-      ...(skyTex ? { map: skyTex } : { color: 0x0b0520 }),
-      side: THREE.BackSide,
-      depthWrite: false,
-      fog: false,
-    });
-    this.ownedGeos.push(skyGeo);
-    this.ownedMats.push(skyMat);
-    this.group.add(new THREE.Mesh(skyGeo, skyMat));
+    // Subterranean Underground Cyber-Rift City Environment
+    this.cityEnv = createRiftCityEnvironment();
+    this.group.add(this.cityEnv.group);
 
-    this.voidLight = new THREE.PointLight(0xa855f7, 18, 28, 1.3);
-    this.voidLight.position.set(0, 5.5, RIFT_BOSS_POS_Z);
-    this.squadLight = new THREE.PointLight(0x22d3ee, 14, 24, 1.3);
-    this.squadLight.position.set(0, 4.4, 4.4);
+    this.voidLight = new THREE.PointLight(0xa855f7, 20, 32, 1.25);
+    this.voidLight.position.set(0, 5.6, RIFT_BOSS_POS_Z);
+    this.squadLight = new THREE.PointLight(0x22d3ee, 15, 26, 1.25);
+    this.squadLight.position.set(0, 4.6, 4.4);
     this.group.add(this.voidLight, this.squadLight);
 
-    // Floating arena platform deck
-    const deckGeo = new THREE.CylinderGeometry(9.8, 8.6, 0.72, 12);
-    const deck = new THREE.Mesh(deckGeo, voidDeckMat);
-    deck.position.set(0, -0.36, 0);
-    deck.receiveShadow = true;
-
-    const rimGeo = new THREE.RingGeometry(8.9, 9.25, 24);
-    const rim = new THREE.Mesh(rimGeo, this.secondaryNeonMat);
-    rim.rotation.x = -Math.PI / 2;
-    rim.position.set(0, 0.015, 0);
-
-    // Stepped Rift Boss Dais
-    const daisGeo = createLatheProfileGeometry(
-      [
-        [0.01, 0],
-        [3.4, 0],
-        [3.28, 0.24],
-        [3.05, 0.28],
-        [2.9, RIFT_BOSS_DAIS_Y],
-        [0.01, RIFT_BOSS_DAIS_Y],
-      ],
-      20
-    );
-    const dais = new THREE.Mesh(daisGeo, armorMat);
-    dais.position.set(0, 0, RIFT_BOSS_POS_Z);
-    enableShadows(dais);
-
-    const sealGeo = new THREE.RingGeometry(2.15, 2.55, 32);
-    const seal = new THREE.Mesh(sealGeo, this.daisSealMat);
-    seal.rotation.x = -Math.PI / 2;
-    seal.position.set(0, RIFT_BOSS_DAIS_Y + 0.02, RIFT_BOSS_POS_Z);
-
-    const shockGeo = new THREE.RingGeometry(2.7, 3.25, 40);
-    this.shockwaveRing = new THREE.Mesh(shockGeo, this.shockwaveMat);
-    this.shockwaveRing.rotation.x = -Math.PI / 2;
-    this.shockwaveRing.position.set(0, 0.05, RIFT_BOSS_POS_Z);
-
-    // Vertical Dimensional Portal Gate in background (strictly vertical backdrop)
-    const portalArchGeo = new THREE.TorusGeometry(4.4, 0.24, 8, 36);
-    const portalArch = new THREE.Mesh(portalArchGeo, steelMat);
-    portalArch.position.set(0, 4.4, -7.8);
-    const portalPlaneGeo = new THREE.PlaneGeometry(8.6, 8.6);
-    const portalPlane = new THREE.Mesh(portalPlaneGeo, this.portalMat);
-    portalPlane.position.set(0, 4.4, -7.82);
-
-    this.ownedGeos.push(deckGeo, rimGeo, daisGeo, sealGeo, shockGeo, portalArchGeo, portalPlaneGeo);
-    this.group.add(deck, rim, dais, seal, this.shockwaveRing, portalArch, portalPlane);
+    const plazaStage = buildRiftPlazaArchitecture({
+      group: this.group,
+      armorMat,
+      steelMat,
+      brightMat,
+      primaryNeonMat: this.primaryNeonMat,
+      secondaryNeonMat: this.secondaryNeonMat,
+      daisSealMat: this.daisSealMat,
+      shockwaveMat: this.shockwaveMat,
+      portalMat: this.portalMat,
+      bossPosZ: RIFT_BOSS_POS_Z,
+      bossDaisY: RIFT_BOSS_DAIS_Y,
+      ownedGeos: this.ownedGeos,
+      ownedMats: this.ownedMats,
+      ownedTexs: this.ownedTexs,
+      createChamfer: createChamferSlabGeometry,
+      createLathe: createLatheProfileGeometry,
+      enableShadow: enableShadows,
+    });
+    this.shockwaveRing = plazaStage.shockwaveRing;
+    this.emberPoints = plazaStage.emberPoints;
+    this.emberPosAttr = plazaStage.emberPosAttr;
+    this.emberSeeds = plazaStage.emberSeeds;
 
     const podiumCtx: FusionPodiumBuildCtx = {
       armorDarkMat: armorMat,
@@ -330,6 +261,10 @@ export class RiftArena3D {
     this.group.add(this.bossPodium.group);
     this.bossStageY = RIFT_BOSS_DAIS_Y + 0.04 + this.bossPodium.topY;
 
+    const pulseGeo = new THREE.OctahedronGeometry(0.085, 0);
+    pulseGeo.scale(0.85, 0.55, 2.2);
+    this.ownedGeos.push(pulseGeo);
+
     for (let i = 0; i < OMEGA_PLAYER_PAD_POSITIONS.length; i++) {
       const [sx, sz] = OMEGA_PLAYER_PAD_POSITIONS[i];
       const podium = createCyberShowcasePodium(podiumCtx, `0${i + 1}`, 0.92, false);
@@ -337,6 +272,58 @@ export class RiftArena3D {
       applyOmegaPodiumColors(podium, '#22d3ee', '#a855f7', false, 0.72);
       this.group.add(podium.group);
       this.playerPodiums.push(podium);
+
+      // Radial illuminated energy conduit from player pad to Boss dais
+      const dx = -sx;
+      const dz = RIFT_BOSS_POS_Z - sz;
+      const totalDist = Math.hypot(dx, dz);
+      const startOff = 0.92;
+      const endOff = 3.42;
+      const segLen = totalDist - startOff - endOff;
+      if (segLen > 0.4) {
+        const nx = dx / totalDist;
+        const nz = dz / totalDist;
+        const startX = sx + nx * startOff;
+        const startZ = sz + nz * startOff;
+        const endX = sx + nx * (totalDist - endOff);
+        const endZ = sz + nz * (totalDist - endOff);
+        const yaw = Math.atan2(dx, dz);
+
+        const conduitGroup = new THREE.Group();
+        conduitGroup.position.set((startX + endX) * 0.5, 0, (startZ + endZ) * 0.5);
+        conduitGroup.rotation.y = yaw;
+
+        const channelGeo = new THREE.BoxGeometry(0.28, 0.026, segLen);
+        const coreGeo = new THREE.BoxGeometry(0.095, 0.02, Math.max(0.2, segLen - 0.06));
+        const railGeo = new THREE.BoxGeometry(0.024, 0.016, Math.max(0.2, segLen - 0.02));
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.42 });
+        this.ownedGeos.push(channelGeo, coreGeo, railGeo);
+        this.ownedMats.push(coreMat);
+
+        const channel = new THREE.Mesh(channelGeo, armorMat);
+        channel.position.y = 0.024;
+        const coreVein = new THREE.Mesh(coreGeo, coreMat);
+        coreVein.position.y = 0.042;
+        conduitGroup.add(channel, coreVein);
+
+        for (const rx of [-0.125, 0.125]) {
+          const rail = new THREE.Mesh(railGeo, this.secondaryNeonMat);
+          rail.position.set(rx, 0.043, 0);
+          conduitGroup.add(rail);
+        }
+        this.group.add(conduitGroup);
+
+        const pulses: THREE.Mesh[] = [];
+        for (let p = 0; p < 2; p++) {
+          const pulse = new THREE.Mesh(pulseGeo, coreMat);
+          pulse.rotation.y = yaw;
+          pulse.position.set(startX, 0.065, startZ);
+          pulse.visible = false;
+          this.group.add(pulse);
+          pulses.push(pulse);
+        }
+        this.conduitFlows.push({ slotIndex: i, startX, startZ, endX, endZ, coreMat, pulses });
+      }
     }
 
     // Floating vertical Void Crystal Shards (InstancedMesh)
@@ -387,6 +374,7 @@ export class RiftArena3D {
     this.portalMat.uniforms.uColorB.value.set(primaryHex);
     this.voidLight.color.set(primaryHex);
     this.squadLight.color.set(secHex);
+    this.cityEnv.setAccentPalette(primaryHex, secHex);
     applyOmegaPodiumColors(this.bossPodium, primaryHex, secHex, true, 1.35);
 
     if (this.bossSprite) {
@@ -423,6 +411,8 @@ export class RiftArena3D {
 
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
+    this.cityEnv.setLowQuality(low);
+    this.emberPoints.visible = !low;
     this.impactFx.setLowQuality(low);
     this.projectiles.setLowQuality(low);
     this.tierVfx.setLowQuality(low);
@@ -548,6 +538,34 @@ export class RiftArena3D {
     }
 
     this.portalMat.uniforms.uTime.value = elapsed;
+    this.cityEnv.update(safeDt, elapsed);
+
+    if (this.emberPoints.visible) {
+      const arr = this.emberPosAttr.array as Float32Array;
+      for (let i = 0; i < this.emberSeeds.length; i++) {
+        const seed = this.emberSeeds[i];
+        const y = ((elapsed * seed.speed + seed.phase) % 1) * 7.8;
+        arr[i * 3] = seed.baseX + Math.cos(elapsed * 0.9 + seed.phase) * seed.radius;
+        arr[i * 3 + 1] = y;
+        arr[i * 3 + 2] = seed.baseZ + Math.sin(elapsed * 0.9 + seed.phase) * seed.radius;
+      }
+      this.emberPosAttr.needsUpdate = true;
+    }
+
+    const pulseSpeed = this.battleActive ? (this.surgeActive ? 1.55 : 1.1) : 0.45;
+    for (let i = 0; i < this.conduitFlows.length; i++) {
+      const cf = this.conduitFlows[i];
+      for (let p = 0; p < cf.pulses.length; p++) {
+        const pulse = cf.pulses[p];
+        if (!pulse.visible) continue;
+        const frac = (elapsed * pulseSpeed + i * 0.17 + p * 0.5) % 1;
+        pulse.position.set(
+          cf.startX + (cf.endX - cf.startX) * frac,
+          0.065,
+          cf.startZ + (cf.endZ - cf.startZ) * frac
+        );
+      }
+    }
 
     if (this.bossSprite) {
       const bob = Math.sin(elapsed * 2.3) * 0.1;
@@ -811,6 +829,8 @@ export class RiftArena3D {
   }
 
   public dispose(): void {
+    this.cityEnv.dispose();
+    this.voidShardsMesh.dispose();
     this.projectiles.dispose();
     this.tierVfx.dispose();
     if (this.bossSprite) {

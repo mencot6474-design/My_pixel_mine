@@ -204,6 +204,11 @@ export function towerIconHtml(sizePx = 22): string {
   return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="Gem Tower" />`;
 }
 
+export function riftShardIconHtml(sizePx = 18, alt = 'Rift Shard'): string {
+  const artUrl = assetUrl('/hud/rift_shard.webp');
+  return `<img class="mam-3d-icon" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="${alt}" style="width:${sizePx}px;height:${sizePx}px;object-fit:contain;display:inline-block;vertical-align:middle;filter:drop-shadow(0 2px 5px rgba(0,0,0,0.55));flex-shrink:0;" draggable="false" />`;
+}
+
 /** Crisp crimson-gold Omega crest SVG for Victory/Forge slots, Duel Sanctum modal plaque, and Plaza dock button. */
 export function omegaCrestIconHtml(sizePx = 22): string {
   return `<svg viewBox="0 0 28 28" width="${sizePx}" height="${sizePx}" fill="none" aria-hidden="true" class="shrink-0">

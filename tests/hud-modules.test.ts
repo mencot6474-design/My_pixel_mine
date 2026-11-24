@@ -2383,6 +2383,8 @@ describe('Tahap B HUD Modules', () => {
       expect(html).toContain('Void Asura');
       expect(html).toContain('Null Singularity');
       expect(html).toContain('/badges/anomaly.svg');
+      expect(html).toContain('/hud/rift_shard.webp');
+      expect(html).toContain('!flex-row');
       expect(html).toContain('100 Shards');
       expect(html).toContain('Attempts');
       expect(html).toContain('Tier 1');
@@ -2428,6 +2430,7 @@ describe('Tahap B HUD Modules', () => {
       expect(liveHtml).toContain('30.0s');
       expect(liveHtml).toContain('TIER 0');
       expect(liveHtml).toContain('T10');
+      expect(liveHtml).toContain('/hud/rift_shard.webp');
 
       // Deal enough tap damage to reach Tier 4 (50T)
       state.applyRiftTapDamage(50_000_000_000_000, 0, 1, () => 0.99);
@@ -2443,6 +2446,7 @@ describe('Tahap B HUD Modules', () => {
 
       const summaryHtml = arenaUi.renderRiftArenaHud();
       expect(summaryHtml).toContain('TIER 4 / 10');
+      expect(summaryHtml).toContain('/hud/rift_shard.webp');
       expect(summaryHtml).toContain('+4');
       expect(summaryHtml).toContain('BATTLE AGAIN');
 

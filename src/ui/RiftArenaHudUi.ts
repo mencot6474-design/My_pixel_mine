@@ -9,7 +9,7 @@ import { GameState } from '../game/GameState';
 import { fmtInt, fmtShort } from '../game/NumberFormat';
 import type { RiftBattleSummary } from '../game/RiftDomain';
 import { getChibiById } from '../game3d/ChibiCatalog';
-import { hudIconHtml } from './HudIcons';
+import { hudIconHtml, riftShardIconHtml } from './HudIcons';
 import { TW_CLOSE_BTN } from './HudShared';
 
 export class RiftArenaHudUi {
@@ -97,7 +97,7 @@ export class RiftArenaHudUi {
 
             <div class="flex items-center justify-between gap-2 text-[11px] font-black text-[#14111d]">
               <span data-rift-hud-dmg="true" class="tabular-nums">DMG: ${nextTargetLabel}</span>
-              <span data-rift-hud-reward="true" class="text-[#6d28d9] tabular-nums">+${prog.shards} Shard${prog.shards === 1 ? '' : 's'} • ${Math.round(prog.dropChance * 1000) / 10}% Drop</span>
+              <span data-rift-hud-reward="true" class="text-[#6d28d9] tabular-nums inline-flex items-center gap-1">${riftShardIconHtml(15, 'Shard')}<span>+${prog.shards} Shard${prog.shards === 1 ? '' : 's'} • ${Math.round(prog.dropChance * 1000) / 10}% Drop</span></span>
             </div>
 
             <div class="w-full h-3 rounded-full border-2 border-[#14111d] bg-[#1e1b2e] overflow-hidden">
@@ -150,7 +150,7 @@ export class RiftArenaHudUi {
 
     const rewardEl = root.querySelector<HTMLElement>('[data-rift-hud-reward="true"]');
     if (rewardEl) {
-      rewardEl.textContent = `+${prog.shards} Shard${prog.shards === 1 ? '' : 's'} • ${Math.round(prog.dropChance * 1000) / 10}% Drop`;
+      rewardEl.innerHTML = `${riftShardIconHtml(15, 'Shard')}<span>+${prog.shards} Shard${prog.shards === 1 ? '' : 's'} • ${Math.round(prog.dropChance * 1000) / 10}% Drop</span>`;
     }
 
     const barEl = root.querySelector<HTMLElement>('[data-rift-hud-bar="true"]');
@@ -212,14 +212,14 @@ export class RiftArenaHudUi {
 
           <div class="grid grid-cols-2 gap-2">
             <div class="rounded-xl border-2 border-[#14111d] bg-white px-3 py-2 flex items-center gap-2">
-              <img class="w-7 h-7 object-contain shrink-0" src="${assetUrl('/badges/anomaly.svg')}" alt="" />
+              ${riftShardIconHtml(30, 'Rift Shards')}
               <div class="flex flex-col min-w-0">
                 <span class="text-[9.5px] font-black uppercase text-[#64748b]">Rift Shards</span>
                 <span class="text-[16px] font-black text-[#6d28d9] tabular-nums">+${fmtInt(summary.shardsEarned)}</span>
               </div>
             </div>
             <div class="rounded-xl border-2 border-[#14111d] bg-white px-3 py-2 flex items-center gap-2">
-              <span class="shrink-0">${hudIconHtml('gem', 24, 'Vault')}</span>
+              <span class="shrink-0">${hudIconHtml('chest', 26, 'Vault')}</span>
               <div class="flex flex-col min-w-0">
                 <span class="text-[9.5px] font-black uppercase text-[#64748b]">Vault Total</span>
                 <span class="text-[15px] font-black text-[#14111d] tabular-nums">${fmtInt(this.state.riftShards)} / 100</span>

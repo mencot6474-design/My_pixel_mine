@@ -5361,6 +5361,14 @@ describe('Pure 3D Mine World', () => {
     const arena = new RiftArena3D();
     expect(arena.group.visible).toBe(false);
     expect(arena.clickables.some((c) => c.userData?.kind === 'rift-boss')).toBe(true);
+    let instancedCount = 0;
+    let hasPoints = false;
+    arena.group.traverse((obj) => {
+      if ((obj as THREE.InstancedMesh).isInstancedMesh) instancedCount += 1;
+      if ((obj as THREE.Points).isPoints) hasPoints = true;
+    });
+    expect(instancedCount).toBeGreaterThanOrEqual(4);
+    expect(hasPoints).toBe(true);
 
     arena.group.visible = true;
     arena.setBattleActive(true);

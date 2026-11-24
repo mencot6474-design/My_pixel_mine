@@ -3,7 +3,7 @@ import type { ItemRarity } from '../game/GameData';
 import { fmtInt, fmtMoney } from '../game/NumberFormat';
 import type { OverclockTier } from '../game/OverclockDomain';
 import type { SceneMode } from '../game3d/MineScene3D';
-import { hudIconHtml } from './HudIcons';
+import { hudIconHtml, riftShardIconHtml } from './HudIcons';
 import {
   formatCountdownTimer,
   renderRarityBadgeHtml,
@@ -439,6 +439,7 @@ export function renderMineQuickButtonsHtml(opts: {
   return `
     <button class="${riftBtnCls}" title="Dimensional Rift (:00–:15)" data-action="open-rift">
       <span class="${TW_BADGE_BASE} min-w-[16px] h-4 px-1 text-[9px] ${opts.riftOpen ? '' : 'hidden'}" data-rift-badge="true">!</span>
+      ${riftShardIconHtml(18, 'Rift')}
       <span>RIFT</span>
     </button>
     <button class="${TW_QUICK_BTN_DAILY}" title="Daily Login" data-action="open-daily-login">

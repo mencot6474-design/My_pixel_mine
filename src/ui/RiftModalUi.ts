@@ -12,6 +12,7 @@ import {
 import { GameState } from '../game/GameState';
 import { fmtInt, fmtShort } from '../game/NumberFormat';
 import { getChibiById } from '../game3d/ChibiCatalog';
+import { riftShardIconHtml } from './HudIcons';
 import {
   chibiPortraitHtml,
   formatCountdownTimer,
@@ -62,7 +63,7 @@ export class RiftModalUi {
     const attemptsPill = `<span class="mam-pill ${
       snap.attemptsRemaining > 0 ? 'bg-[#bbf7d0] text-[#14532d]' : 'bg-[#fecdd3] text-[#881337]'
     }" data-rift-attempts="true">${snap.attemptsRemaining}/${snap.maxAttempts} Attempts</span>`;
-    const shardsPill = `<span class="mam-pill bg-[#e9d5ff] text-[#4c1d95]" data-rift-shards="true">◆ ${fmtInt(this.state.riftShards)} Shards</span>`;
+    const shardsPill = `<span class="mam-pill bg-[#e9d5ff] text-[#4c1d95] inline-flex items-center gap-1" data-rift-shards="true">${riftShardIconHtml(16, 'Shards')}<span>${fmtInt(this.state.riftShards)} Shards</span></span>`;
 
     return renderModalShell({
       title: 'Dimensional Rift Gate',
@@ -78,8 +79,8 @@ export class RiftModalUi {
     const canBuyPass = this.state.gems >= RIFT_PASS_GEM_COST;
     const canEnter = snap.isOpen && snap.attemptsRemaining > 0;
     const enterOrPassBtn = canEnter
-      ? `<button type="button" data-rift-action="enter-battle" class="mam-sheen-hover relative overflow-hidden w-full py-2.5 rounded-2xl border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#22d3ee,#a855f7)] text-white text-[14px] font-black cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.98] active:scale-[0.95]">ENTER RIFT BATTLE (30s) • ${snap.attemptsRemaining}/${snap.maxAttempts} →</button>`
-      : `<button type="button" data-rift-action="buy-pass" class="mam-sheen-hover relative overflow-hidden w-full py-2.5 rounded-2xl border-[3px] border-[#14111d] ${canBuyPass ? 'bg-[#fde047] hover:bg-[#fef08a] text-[#14111d] cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.98] active:scale-[0.95]' : 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed'} text-[13.5px] font-black">FORCE OPEN 15m • 3 ATTEMPTS (${fmtShort(RIFT_PASS_GEM_COST)} Gems)</button>`;
+      ? `<button type="button" data-rift-action="enter-battle" class="mam-sheen-hover relative overflow-hidden shrink-0 w-full py-2.5 rounded-2xl border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#22d3ee,#a855f7)] text-white text-[14px] font-black cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.98] active:scale-[0.95]">ENTER RIFT BATTLE (30s) • ${snap.attemptsRemaining}/${snap.maxAttempts} →</button>`
+      : `<button type="button" data-rift-action="buy-pass" class="mam-sheen-hover relative overflow-hidden shrink-0 w-full py-2.5 rounded-2xl border-[3px] border-[#14111d] ${canBuyPass ? 'bg-[#fde047] hover:bg-[#fef08a] text-[#14111d] cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.98] active:scale-[0.95]' : 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed'} text-[13.5px] font-black">FORCE OPEN 15m • 3 ATTEMPTS (${fmtShort(RIFT_PASS_GEM_COST)} Gems)</button>`;
 
     const activeBossDef = getAnomalyChibiById(snap.bossId) ?? ANOMALY_CHIBI_DEFS[0];
 
@@ -89,25 +90,25 @@ export class RiftModalUi {
       const owned = this.state.miners[anom.chibiId] || 0;
       const isSelected = this.selectedChibiId === anom.chibiId;
       const isActiveBoss = snap.bossId === anom.chibiId;
-      const ringCls = isSelected ? 'ring-[2.5px] ring-inset ring-[#38bdf8]' : '';
+      const ringCls = isSelected ? 'ring-[3px] ring-inset ring-[#22d3ee] brightness-[1.03]' : 'opacity-95 hover:opacity-100';
       return `
         <button
           type="button"
           data-rift-select="${anom.chibiId}"
-          class="${rarityCardClasses('anomaly', `!aspect-auto p-2.5 flex items-center gap-2.5 text-left cursor-pointer ${ringCls}`)}"
+          class="${rarityCardClasses('anomaly', `!aspect-auto !flex-row !items-center !justify-start !gap-3 !p-2.5 min-h-[78px] shrink-0 text-left cursor-pointer ${ringCls}`)}"
           style="${rarityVars('anomaly')}"
         >
-          <div class="w-13 h-13 rounded-xl border-2 border-[#14111d] bg-[#fff8e7]/90 flex items-center justify-center shrink-0 overflow-hidden [&_.mam-chibi-portrait_img]:max-h-11">
+          <div class="w-14 h-14 rounded-xl border-2 border-[#14111d] bg-[#fff8e7]/95 flex items-center justify-center shrink-0 overflow-hidden [&_.mam-chibi-portrait_img]:max-h-12">
             ${chibiPortraitHtml(chibi, { usePose: true })}
           </div>
-          <div class="min-w-0 flex-1 flex flex-col gap-0.5">
+          <div class="min-w-0 flex-1 flex flex-col justify-center gap-0.5">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="text-[13.5px] font-black text-[#14111d] truncate">${anom.name}</span>
+              <span class="text-[14px] font-black text-[#14111d] leading-tight truncate">${anom.name}</span>
               ${renderRarityBadgeHtml('anomaly', 'is-compact !ml-0')}
               ${isActiveBoss ? `<span class="mam-pill-xs bg-[#14111d] text-[#22d3ee]">ACTIVE BOSS</span>` : ''}
             </div>
-            <div class="text-[10.5px] font-bold text-[#14111d]/80 truncate">${anom.title}</div>
-            <div class="text-[11px] font-black text-[#14111d] tabular-nums">Base DPS: ${fmtShort(this.state.getEffectiveChibiDps(anom.chibiId))}/s • Owned: ${fmtInt(owned)}</div>
+            <div class="text-[10.5px] font-bold text-[#14111d]/80 leading-tight truncate">${anom.title}</div>
+            <div class="text-[11px] font-black text-[#14111d] tabular-nums leading-tight">Base DPS: ${fmtShort(this.state.getEffectiveChibiDps(anom.chibiId))}/s • Owned: ${fmtInt(owned)}</div>
           </div>
         </button>
       `;
@@ -116,10 +117,10 @@ export class RiftModalUi {
     const tierLadderHtml = RIFT_TIER_DEFS.map((t) => {
       const beaten = this.state.riftBestTier >= t.tier;
       return `
-        <div class="px-2 py-1 rounded-lg border-[1.5px] border-[#14111d] ${beaten ? 'bg-[#cffafe]' : 'bg-white'} flex items-center justify-between gap-1 text-[10px] font-black tabular-nums">
-          <span class="text-[#14111d]">Tier ${t.tier}</span>
+        <div class="px-2 py-0.5 rounded-lg border-[1.5px] border-[#14111d] ${beaten ? 'bg-[#cffafe] ring-1 ring-inset ring-[#06b6d4]' : 'bg-white'} flex items-center justify-between gap-1 text-[10.5px] font-black tabular-nums">
+          <span class="${beaten ? 'text-[#0e7490]' : 'text-[#14111d]'} inline-flex items-center gap-1">${beaten ? '<span class="text-[#059669]">✓</span>' : ''}Tier ${t.tier}</span>
           <span class="text-[#475569]">${fmtShort(t.damageTarget)}</span>
-          <span class="text-[#6d28d9]">+${t.shards}◆</span>
+          <span class="text-[#6d28d9] inline-flex items-center gap-0.5">+${t.shards}${riftShardIconHtml(13, 'Shard')}</span>
         </div>
       `;
     }).join('');
@@ -150,10 +151,10 @@ export class RiftModalUi {
       .join('');
 
     return `
-      <div class="flex-1 min-h-0 flex flex-col gap-2.5 overflow-hidden @max-[860px]:overflow-y-auto">
+      <div class="flex-1 min-h-0 flex flex-col gap-2.5 overflow-y-auto mam-no-scrollbar">
         <div class="grid grid-cols-[minmax(0,1.18fr)_minmax(290px,0.88fr)] @max-[860px]:grid-cols-1 gap-3 flex-1 min-h-0">
-          <div class="flex flex-col gap-2 min-h-0">
-            <div class="shrink-0 p-2.5 rounded-2xl border-[2.5px] border-[#14111d] bg-[#fcecc8] flex flex-col gap-1">
+          <div class="flex flex-col justify-between gap-2 min-h-0">
+            <div class="shrink-0 p-2.5 rounded-2xl border-[2.5px] border-[#14111d] bg-[linear-gradient(135deg,#fef3c7,#fde68a)] flex flex-col gap-1">
               <div class="flex items-center justify-between gap-2 flex-wrap">
                 <span class="text-[10.5px] font-black uppercase tracking-wider text-[#5b526e]">30s Boss DPS Check • Boss: ${activeBossDef.name}</span>
                 <span class="mam-pill-xs bg-[#14111d] text-[#67e8f9]">2%–12% Instant Drop</span>
@@ -162,7 +163,7 @@ export class RiftModalUi {
               <div class="text-[11px] font-bold text-[#475569] leading-snug">${snap.anomaly.summary}</div>
             </div>
 
-            <div class="shrink-0 rounded-2xl border-2 border-[#14111d] bg-[#fff8e7] p-2 flex flex-col gap-1.5">
+            <div class="shrink-0 rounded-2xl border-2 border-[#14111d] bg-[#fff8e7] p-2 flex flex-col gap-1">
               <div class="flex items-center justify-between text-[10.5px] font-black text-[#14111d]">
                 <span>TIER 1–10 DAMAGE TARGETS (1 SHARD / TIER)</span>
                 <span class="text-[#0369a1] tabular-nums">Best: Tier ${this.state.riftBestTier} (${fmtShort(this.state.riftBestDamage)})</span>
@@ -170,7 +171,7 @@ export class RiftModalUi {
               <div class="grid grid-cols-2 gap-1">${tierLadderHtml}</div>
             </div>
 
-            <div class="flex-1 min-h-0 overflow-y-auto mam-no-scrollbar flex flex-col gap-1.5 pr-0.5">
+            <div class="shrink-0 flex flex-col gap-2">
               ${rosterHtml}
             </div>
 
@@ -180,7 +181,7 @@ export class RiftModalUi {
           <div class="mam-inspector-well mam-no-scrollbar rounded-2xl p-3 flex flex-col justify-between gap-2.5 min-h-0 overflow-y-auto @max-[860px]:overflow-visible">
             <div class="flex items-center justify-between gap-2 shrink-0 flex-wrap">
               <span class="text-[12.5px] font-black tracking-wide text-[#14111d]">ANOMALY RIFT VAULT</span>
-              <span class="mam-pill-xs bg-[#14111d] text-[#67e8f9]">${fmtInt(this.state.riftShards)} / ${RIFT_SHARD_PITY_COST} Shards</span>
+              <span class="mam-pill-xs bg-[#14111d] text-[#67e8f9] inline-flex items-center gap-1">${riftShardIconHtml(14, 'Shards')}<span>${fmtInt(this.state.riftShards)} / ${RIFT_SHARD_PITY_COST} Shards</span></span>
             </div>
 
             ${
@@ -189,7 +190,7 @@ export class RiftModalUi {
                     <div class="w-full h-[96px] flex items-center justify-center [&_.mam-chibi-portrait_img]:max-h-[92px]">
                       ${chibiPortraitHtml(selectedChibi, { usePose: true })}
                     </div>
-                    <div class="text-[14px] font-black text-[#14111d] leading-tight">${selectedDef.name}</div>
+                    <div class="text-[14.5px] font-black text-[#14111d] leading-tight">${selectedDef.name}</div>
                     <div class="flex items-center gap-2">
                       ${renderRarityBadgeHtml('anomaly', 'is-compact !ml-0')}
                       <span class="mam-pill-xs bg-white text-[#b45309] border-[1.5px] border-[#14111d]">${fmtShort(this.state.getEffectiveChibiDps(selectedDef.chibiId))}/s Base</span>
@@ -217,9 +218,10 @@ export class RiftModalUi {
             <button
               type="button"
               data-rift-redeem="${selectedDef.chibiId}"
-              class="shrink-0 w-full h-10 rounded-xl border-[2.5px] border-[#14111d] ${canRedeem ? 'bg-[#2ee59d] hover:brightness-105 text-[#14111d] cursor-pointer active:scale-95' : 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed'} text-[13px] font-black"
+              class="shrink-0 w-full h-10 rounded-xl border-[2.5px] border-[#14111d] inline-flex items-center justify-center gap-1.5 ${canRedeem ? 'bg-[#2ee59d] hover:brightness-105 text-[#14111d] cursor-pointer active:scale-95' : 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed'} text-[13px] font-black"
             >
-              PITY CLAIM (${RIFT_SHARD_PITY_COST} Shards)
+              ${riftShardIconHtml(18, 'Shard')}
+              <span>PITY CLAIM (${RIFT_SHARD_PITY_COST} Shards)</span>
             </button>
           </div>
         </div>
