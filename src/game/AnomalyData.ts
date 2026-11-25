@@ -27,6 +27,8 @@ export const RIFT_TIER_DEFS: readonly RiftTierDef[] = [
   { tier: 8, worldLabel: 'W8 Chrono', damageTarget: 5e25, shards: 8, dropChance: 0.08 },
   { tier: 9, worldLabel: 'W9 Solaris', damageTarget: 5e28, shards: 9, dropChance: 0.1 },
   { tier: 10, worldLabel: 'W10 Elysium', damageTarget: 5e31, shards: 10, dropChance: 0.12 },
+  { tier: 11, worldLabel: 'W11 Nightmare', damageTarget: 5e34, shards: 11, dropChance: 0.14 },
+  { tier: 12, worldLabel: 'W12 Singularity', damageTarget: 5e37, shards: 12, dropChance: 0.16 },
 ] as const;
 
 export interface RiftTierProgress {
@@ -38,7 +40,7 @@ export interface RiftTierProgress {
   dropChance: number;
 }
 
-/** Resolves the reached Rift Tier (0..10), progress toward the next Tier, and projected rewards for cumulative damage. */
+/** Resolves the reached Rift Tier (0..12), progress toward the next Tier, and projected rewards for cumulative damage. */
 export function getRiftTierProgress(damage: number): RiftTierProgress {
   const safeDmg = Number.isFinite(damage) ? Math.max(0, damage) : 0;
   let reachedIdx = -1;

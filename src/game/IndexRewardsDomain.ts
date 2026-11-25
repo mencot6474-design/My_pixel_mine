@@ -153,6 +153,22 @@ const TAB_MILESTONE_CONFIG: Record<
       passive: { kind: 'allDmgPct', value: 0.05, label: '+5% All DMG' },
     },
   },
+  nightmare: {
+    half: { gems: 250000, enchantDice: 5 },
+    full: {
+      gems: 650000,
+      enchantDice: 12,
+      passive: { kind: 'oreDropPct', value: 0.05, label: '+5% Ore Drop' },
+    },
+  },
+  singularity: {
+    half: { gems: 400000, enchantDice: 6 },
+    full: {
+      gems: 1000000,
+      enchantDice: 15,
+      passive: { kind: 'allDmgPct', value: 0.05, label: '+5% All DMG' },
+    },
+  },
   weather: {
     half: { gems: 5000, enchantDice: 1 },
     full: {

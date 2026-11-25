@@ -17,7 +17,7 @@ import {
   TOWER_ORE_TWIN_CHANCE,
 } from '../src/game/TowerData';
 import { computeBulkUpgradePlan, getPlotStatUpgradeCost } from '../src/game/UpgradeBulkHelper';
-import { getIndexTabEntryIds } from '../src/game/IndexRewardsDomain';
+import { ALL_INDEX_TABS, getIndexTabEntryIds } from '../src/game/IndexRewardsDomain';
 import { rollTapCriticalDamage, TAP_CRIT_MULT } from '../src/game3d/MineScene3D';
 import {
   getEffectiveChibiBaseDps,
@@ -174,11 +174,17 @@ describe('Tahap C GameState Domain Modules', () => {
         'crystal',
         'elysium',
         'magma',
+        'nightmare',
         'ruins',
+        'singularity',
         'solaris',
         'starwell',
         'underground',
       ]);
+      const idxState = new GameState();
+      expect(idxState.getTotalIndexCount()).toBe(172);
+      expect(ALL_INDEX_TABS).toContain('nightmare');
+      expect(ALL_INDEX_TABS).toContain('singularity');
     });
 
     it('serializes, migrates legacy saves, refunds excess plot pickaxes, and ignores corrupt JSON', () => {
@@ -1514,26 +1520,26 @@ describe('Tahap C GameState Domain Modules', () => {
   });
 
   describe('Twin Tier Auto-Scaling by Latest World & Non-Sellable Protection', () => {
-    it('matches current W10 Twin baseDps and upgradeCostScale from latest world anchor', () => {
+    it('matches current W12 Twin baseDps and upgradeCostScale from latest world anchor', () => {
       const anchor = getLatestWorldScaleAnchor();
-      expect(anchor.worldId).toBe('elysium');
-      expect(anchor.secretBaseDps).toBe(1e29);
-      expect(anchor.upgradeCostScale).toBe(2e30);
+      expect(anchor.worldId).toBe('singularity');
+      expect(anchor.secretBaseDps).toBe(1e35);
+      expect(anchor.upgradeCostScale).toBe(1e37);
 
-      expect(getChibiById('yukikage-twins')?.baseDps).toBe(2.3e29);
-      expect(getChibiById('halcyon-twins')?.baseDps).toBe(2.8e29);
-      expect(getChibiById('nocturne-twins')?.baseDps).toBe(3.2e29);
-      expect(getChibiById('lullaby-twins')?.baseDps).toBe(3.7e29);
-      expect(getChibiById('clockwork-twins')?.baseDps).toBe(4.1e29);
+      expect(getChibiById('yukikage-twins')?.baseDps).toBe(2.3e35);
+      expect(getChibiById('halcyon-twins')?.baseDps).toBe(2.8e35);
+      expect(getChibiById('nocturne-twins')?.baseDps).toBe(3.2e35);
+      expect(getChibiById('lullaby-twins')?.baseDps).toBe(3.7e35);
+      expect(getChibiById('clockwork-twins')?.baseDps).toBe(4.1e35);
 
-      expect(getChibiUpgradeCostMult('yukikage-twins')).toBe(2.2e31);
-      expect(getChibiUpgradeCostMult('halcyon-twins')).toBe(2.8e31);
-      expect(getChibiUpgradeCostMult('nocturne-twins')).toBe(3.5e31);
-      expect(getChibiUpgradeCostMult('lullaby-twins')).toBe(4.2e31);
-      expect(getChibiUpgradeCostMult('clockwork-twins')).toBe(5e31);
+      expect(getChibiUpgradeCostMult('yukikage-twins')).toBe(1.1e38);
+      expect(getChibiUpgradeCostMult('halcyon-twins')).toBe(1.4e38);
+      expect(getChibiUpgradeCostMult('nocturne-twins')).toBe(1.75e38);
+      expect(getChibiUpgradeCostMult('lullaby-twins')).toBe(2.1e38);
+      expect(getChibiUpgradeCostMult('clockwork-twins')).toBe(2.5e38);
     });
 
-    it('computes clean scaled Twin DPS and upgrade costs for boundaries and simulated W11+', () => {
+    it('computes clean scaled Twin DPS and upgrade costs for boundaries and simulated W13+', () => {
       expect(computeTwinScaledBaseDps(4_400_000, 2.3)).toBe(10_000_000);
       expect(computeTwinScaledBaseDps(25_000_000, 2.3)).toBe(58_000_000);
       expect(computeTwinScaledBaseDps(25_000_000, 4.1)).toBe(100_000_000);
@@ -1541,48 +1547,48 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(computeTwinScaledBaseDps(0, 2.3)).toBe(1);
       expect(computeTwinScaledBaseDps(-100, 2.3)).toBe(1);
 
-      const simW11Id = 'astral_w11' as unknown as (typeof WORLDS)[number]['id'];
-      const simW12Id = 'celestia_w12' as unknown as (typeof WORLDS)[number]['id'];
+      const simW13Id = 'astral_w13' as unknown as (typeof WORLDS)[number]['id'];
+      const simW14Id = 'celestia_w14' as unknown as (typeof WORLDS)[number]['id'];
       const simWorlds = [
         ...WORLDS,
-        { id: simW11Id, name: 'W11', iconColor: '#fff', unlockCost: 2e37, oreHpMult: 3.6288e37 },
-        { id: simW12Id, name: 'W12', iconColor: '#fff', unlockCost: 5e40, oreHpMult: 4e41 },
+        { id: simW13Id, name: 'W13', iconColor: '#fff', unlockCost: 1.2e44, oreHpMult: 6.227e45 },
+        { id: simW14Id, name: 'W14', iconColor: '#fff', unlockCost: 3e47, oreHpMult: 8.7178e49 },
       ];
-      expect(getWorldUpgradeCostScale(simW11Id, simWorlds)).toBe(2e33);
-      expect(getWorldUpgradeCostScale(simW12Id, simWorlds)).toBe(2e36);
+      expect(getWorldUpgradeCostScale(simW13Id, simWorlds)).toBe(1e40);
+      expect(getWorldUpgradeCostScale(simW14Id, simWorlds)).toBe(1e43);
 
-      // W11 added to WORLDS without miners yet falls back to latest populated world (elysium 1e29)
+      // W13 added to WORLDS without miners yet falls back to latest populated world (singularity 1e35)
       const noMinerAnchor = getLatestWorldScaleAnchor(simWorlds, WORLD_MINERS);
-      expect(noMinerAnchor.secretBaseDps).toBe(1e29);
-      expect(noMinerAnchor.upgradeCostScale).toBe(2e36);
+      expect(noMinerAnchor.secretBaseDps).toBe(1e35);
+      expect(noMinerAnchor.upgradeCostScale).toBe(1e43);
 
-      // W11 with a 1e32 Secret miner scales anchor and Twin catalog while leaving Fusion untouched
+      // W13 with a 1e38 Secret miner scales anchor and Twin catalog while leaving Fusion untouched
       const simCatalogLookup = (id: string) =>
-        id === 'w11-secret' ? { baseDps: 1e32 } : getChibiById(id);
+        id === 'w13-secret' ? { baseDps: 1e38 } : getChibiById(id);
       const simMiners = [
         ...WORLD_MINERS,
-        { chibiId: 'w11-secret', worldId: simW11Id, chancePct: 0.005, rarity: 'secret' as const },
+        { chibiId: 'w13-secret', worldId: simW13Id, chancePct: 0.0003, rarity: 'secret' as const },
       ];
-      const w11Anchor = getLatestWorldScaleAnchor(
+      const w13Anchor = getLatestWorldScaleAnchor(
         simWorlds.slice(0, WORLDS.length + 1),
         simMiners,
         simCatalogLookup
       );
-      expect(w11Anchor.worldId).toBe(simW11Id);
-      expect(w11Anchor.secretBaseDps).toBe(1e32);
-      expect(w11Anchor.upgradeCostScale).toBe(2e33);
-      expect(computeTwinUpgradeCostScale(w11Anchor.upgradeCostScale, PREMIUM_SHOP_ITEMS[0].upgradeCostMult)).toBe(2.2e34);
+      expect(w13Anchor.worldId).toBe(simW13Id);
+      expect(w13Anchor.secretBaseDps).toBe(1e38);
+      expect(w13Anchor.upgradeCostScale).toBe(1e40);
+      expect(computeTwinUpgradeCostScale(w13Anchor.upgradeCostScale, PREMIUM_SHOP_ITEMS[0].upgradeCostMult)).toBe(1.1e41);
 
       const aetherBefore = getChibiById('aether-monarch')?.baseDps;
       try {
-        syncTwinCatalogDpsFromAnchor(w11Anchor);
-        expect(getChibiById('yukikage-twins')?.baseDps).toBe(2.3e32);
-        expect(getChibiById('clockwork-twins')?.baseDps).toBe(4.1e32);
+        syncTwinCatalogDpsFromAnchor(w13Anchor);
+        expect(getChibiById('yukikage-twins')?.baseDps).toBe(2.3e38);
+        expect(getChibiById('clockwork-twins')?.baseDps).toBe(4.1e38);
         expect(getChibiById('aether-monarch')?.baseDps).toBe(aetherBefore);
       } finally {
         syncTwinCatalogDpsFromAnchor();
       }
-      expect(getChibiById('yukikage-twins')?.baseDps).toBe(2.3e29);
+      expect(getChibiById('yukikage-twins')?.baseDps).toBe(2.3e35);
     });
 
     it('blocks all Twin chibis from selling even with unplaced excess duplicates or custom twin rarity entries', () => {
@@ -1790,8 +1796,9 @@ describe('Tahap C GameState Domain Modules', () => {
   });
 
   describe('1000x World Scaling Ladder', () => {
-    it('scales WORLDS unlockCost ($12M..$10.8Dc), progressive oreHpMult (2000..10000 step), upgradeCostScale, and 5 miners/world', () => {
-      const grindSteps = [1, 2.5, 6, 15, 35, 80, 180, 400, 900, 2_000];
+    it('scales WORLDS unlockCost ($12M..$54Dd), progressive oreHpMult (2000..12000 step), upgradeCostScale, and 5 miners/world', () => {
+      const grindSteps = [1, 2.5, 6, 15, 35, 80, 180, 400, 900, 2_000, 4_500, 10_000];
+      expect(WORLDS).toHaveLength(12);
       let expectedHp = 1;
       for (let w = 0; w < WORLDS.length; w++) {
         if (w > 0) expectedHp *= (w + 1) * 1000;
@@ -1806,25 +1813,27 @@ describe('Tahap C GameState Domain Modules', () => {
         expect(worldDps).toEqual([10, 20, 35, 65, 100].map((v) => Number(`${v}e${3 * w}`)));
       }
 
-      const simW11Id = 'astral_w11' as unknown as (typeof WORLDS)[number]['id'];
+      const simW13Id = 'astral_w13' as unknown as (typeof WORLDS)[number]['id'];
       const simWorlds = [
         ...WORLDS,
-        { id: simW11Id, name: 'W11', iconColor: '#fff', unlockCost: 2e37, oreHpMult: 3.6288e37 },
+        { id: simW13Id, name: 'W13', iconColor: '#fff', unlockCost: 1.2e44, oreHpMult: 6.227e45 },
       ];
-      expect(getWorldUpgradeCostScale(simW11Id, simWorlds)).toBe(2e33);
+      expect(getWorldUpgradeCostScale(simW13Id, simWorlds)).toBe(1e40);
 
       expect(getWorldStarterChibiId('underground')).toBe('astral-recruit');
       expect(getWorldStarterChibiId('crystal')).toBe('volt-kensei');
       expect(getWorldStarterChibiId('chrono')).toBe('glitch-warden');
       expect(getWorldStarterChibiId('solaris')).toBe('crimson-inkweaver');
       expect(getWorldStarterChibiId('elysium')).toBe('verdant-runeborn');
+      expect(getWorldStarterChibiId('nightmare')).toBe('bramble-cat');
+      expect(getWorldStarterChibiId('singularity')).toBe('azure-esper');
     });
 
     it('caps Twin, Omega, and Limited effective baseDps via unlocked-world anchor while preserving catalog sync', () => {
       const anchor = getLatestWorldScaleAnchor();
-      expect(anchor.secretBaseDps).toBe(100_000_000_000_000_000_000_000_000_000);
+      expect(anchor.secretBaseDps).toBe(1e35);
       expect(getChibiById('yukikage-twins')?.baseDps).toBe(
-        computeTwinScaledBaseDps(100_000_000_000_000_000_000_000_000_000, 2.3)
+        computeTwinScaledBaseDps(1e35, 2.3)
       );
 
       // W1 with only starter discovered: anchor sits at W1 starter (10 baseDps)
@@ -1854,7 +1863,7 @@ describe('Tahap C GameState Domain Modules', () => {
     });
 
     it('aligns World Research tree root/apex costs to hardcore idle ladder inside unlock affordability and keeps valuePerLv bounded', () => {
-      const grindSteps = [1, 2.5, 6, 15, 35, 80, 180, 400, 900, 2_000];
+      const grindSteps = [1, 2.5, 6, 15, 35, 80, 180, 400, 900, 2_000, 4_500, 10_000];
       for (let w = 0; w < WORLDS.length; w++) {
         const nodes = getResearchNodesForTree(WORLDS[w].id);
         const root = nodes.find((n) => n.requires.length === 0)!;
@@ -1911,6 +1920,19 @@ describe('Tahap C GameState Domain Modules', () => {
       const ocTap = reloaded.getTapDamage(now + 1000);
       expect(ocTap).toBeGreaterThanOrEqual(baseTap * 2 - 1);
       expect(ocTap).toBeLessThanOrEqual(baseTap * 2 + 1);
+
+      // W11-W12 endgame cash (5.4e40+), unlocked worlds, and Rift Tier 12 survive save/reload without clamp
+      reloaded.cash = 5.4e40;
+      reloaded.riftBestTier = 12;
+      reloaded.riftBestDamage = 5e37;
+      const w11w12Raw = JSON.stringify(serializeSavePayload(reloaded));
+      const w11w12Loaded = new GameState();
+      deserializeSaveJson(w11w12Loaded, w11w12Raw);
+      expect(w11w12Loaded.cash).toBe(5.4e40);
+      expect(w11w12Loaded.unlockedWorlds).toContain('nightmare');
+      expect(w11w12Loaded.unlockedWorlds).toContain('singularity');
+      expect(w11w12Loaded.riftBestTier).toBe(12);
+      expect(w11w12Loaded.riftBestDamage).toBe(5e37);
     });
   });
 
@@ -2211,19 +2233,23 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(state.discovered.has('null-singularity')).toBe(true);
     });
 
-    it('defines Tier 1-10 damage thresholds (1 Shard per Tier), tier progress math, and hourly boss rotation', () => {
+    it('defines Tier 1-12 damage thresholds (1 Shard per Tier), tier progress math, and hourly boss rotation', () => {
       expect(RIFT_BATTLE_DURATION_SEC).toBe(30);
       expect(RIFT_MAX_ATTEMPTS_PER_WINDOW).toBe(3);
-      expect(RIFT_TIER_DEFS).toHaveLength(10);
+      expect(RIFT_TIER_DEFS).toHaveLength(12);
       expect(RIFT_TIER_DEFS[0]).toMatchObject({ tier: 1, damageTarget: 5_000, shards: 1 });
       expect(RIFT_TIER_DEFS[3]).toMatchObject({ tier: 4, damageTarget: 50_000_000_000_000, shards: 4 });
       expect(RIFT_TIER_DEFS[9]).toMatchObject({ tier: 10, damageTarget: 5e31, shards: 10 });
+      expect(RIFT_TIER_DEFS[10]).toMatchObject({ tier: 11, worldLabel: 'W11 Nightmare', damageTarget: 5e34, shards: 11, dropChance: 0.14 });
+      expect(RIFT_TIER_DEFS[11]).toMatchObject({ tier: 12, worldLabel: 'W12 Singularity', damageTarget: 5e37, shards: 12, dropChance: 0.16 });
 
       expect(getRiftTierProgress(0)).toMatchObject({ tier: 0, shards: 0, nextTarget: 5_000, progressPct: 0 });
       expect(getRiftTierProgress(2_500)).toMatchObject({ tier: 0, shards: 0, nextTarget: 5_000, progressPct: 50 });
       expect(getRiftTierProgress(5_000)).toMatchObject({ tier: 1, shards: 1, currentTarget: 5_000, nextTarget: 50_000_000 });
       expect(getRiftTierProgress(50_000_000_000_000)).toMatchObject({ tier: 4, shards: 4 });
-      expect(getRiftTierProgress(5e31)).toMatchObject({ tier: 10, shards: 10, nextTarget: null, progressPct: 100 });
+      expect(getRiftTierProgress(5e31)).toMatchObject({ tier: 10, shards: 10, nextTarget: 5e34 });
+      expect(getRiftTierProgress(5e34)).toMatchObject({ tier: 11, shards: 11, nextTarget: 5e37 });
+      expect(getRiftTierProgress(5e37)).toMatchObject({ tier: 12, shards: 12, nextTarget: null, progressPct: 100 });
 
       expect(getRiftHourlyBossId(0)).toBe('void-asura');
       expect(getRiftHourlyBossId(1)).toBe('null-singularity');

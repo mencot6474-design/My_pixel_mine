@@ -535,6 +535,34 @@ export function getCircularNexusPoolTexture(
           ctx.ellipse(px, py, 24, 10, a, 0, Math.PI * 2);
           ctx.stroke();
         }
+      } else if (biomeKey === 'nightmare') {
+        ctx.strokeStyle = '#c084fc';
+        for (let r = 136; r <= 196; r += 20) {
+          ctx.beginPath();
+          ctx.arc(256, 256, r, 0, Math.PI * 1.65);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = '#f43f5e';
+        for (let i = 0; i < 12; i++) {
+          const a = (i * Math.PI * 2) / 12;
+          ctx.beginPath();
+          ctx.moveTo(256 + Math.cos(a) * 164, 256 + Math.sin(a) * 164);
+          ctx.lineTo(256 + Math.cos(a + 0.08) * 218, 256 + Math.sin(a + 0.08) * 218);
+          ctx.stroke();
+        }
+      } else if (biomeKey === 'singularity') {
+        ctx.strokeStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(256, 256, 152, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = '#38bdf8';
+        for (let i = 0; i < 12; i++) {
+          const a = (i * Math.PI * 2) / 12;
+          ctx.beginPath();
+          ctx.moveTo(256 + Math.cos(a) * 168, 256 + Math.sin(a) * 168);
+          ctx.lineTo(256 + Math.cos(a) * 212, 256 + Math.sin(a) * 212);
+          ctx.stroke();
+        }
       }
       ctx.globalAlpha = 1;
     }

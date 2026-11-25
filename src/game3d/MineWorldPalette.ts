@@ -125,6 +125,28 @@ export const WORLD_PALETTES: Record<WorldId, MineWorldPalette> = {
     pitFloorColor: '#3b2d68',
     foliageColor: '#22d3ee',
   },
+  nightmare: {
+    crystalColor: '#a855f7',
+    rockColor: '#2a1829',
+    skyTop: '#1a091f',
+    skyBottom: '#7f1d1d',
+    fogColor: '#581c87',
+    terrainColor: '#1e1024',
+    cliffColor: '#160b1c',
+    pitFloorColor: '#3b1c45',
+    foliageColor: '#f43f5e',
+  },
+  singularity: {
+    crystalColor: '#ef4444',
+    rockColor: '#18181b',
+    skyTop: '#050509',
+    skyBottom: '#450a0a',
+    fogColor: '#7f1d1d',
+    terrainColor: '#09090b',
+    cliffColor: '#111116',
+    pitFloorColor: '#271319',
+    foliageColor: '#22d3ee',
+  },
 };
 
 export const STAGE_PEDESTAL_COUNT = 5;

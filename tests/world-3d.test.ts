@@ -138,6 +138,7 @@ import {
 } from '../src/game3d/PlotAuraFx3D';
 import {
   getBroadcastBannerTexture,
+  getCircularNexusPoolTexture,
   getCyberColosseumDeckTexture,
   getDualSlashArcTexture,
   getFusionMagicCircuitTexture,
@@ -325,8 +326,8 @@ describe('Pure 3D Mine World', () => {
     expect(finisherNode.alive).toBe(false);
   });
 
-  it('registers all 79 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
-    expect(CHIBI_CATALOG.length).toBe(79);
+  it('registers all 89 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
+    expect(CHIBI_CATALOG.length).toBe(89);
     for (const c of CHIBI_CATALOG) {
       for (const pose of ['idle', 'walk', 'attack', 'pose'] as const) {
         expect(existsSync(resolve(process.cwd(), 'public', 'chibi', c.id, `${pose}.webp`))).toBe(true);
@@ -343,8 +344,8 @@ describe('Pure 3D Mine World', () => {
   it('formats Roblox My Anime Mine suffixes and populates Index/Inventory/Chest flows', () => {
     expect(fmtShort(1500)).toBe('1.5K');
     expect(fmtMoney(16.7e45)).toBe('$16.7Qad');
-    expect(ORES.length).toBe(68);
-    expect(WORLD_MINERS.length).toBe(50);
+    expect(ORES.length).toBe(78);
+    expect(WORLD_MINERS.length).toBe(60);
     expect(getOresByWorld('underground').map((o) => o.name)).toContain('Coalite');
     const crystalOres = getOresByWorld('crystal');
     expect(crystalOres.map((o) => o.name)).toEqual([
@@ -476,6 +477,37 @@ describe('Pure 3D Mine World', () => {
     expect(elysiumOres[0].sellValue).toBeGreaterThan(solarisOres[0].sellValue);
     expect(elysiumOres[4].sellValue).toBeGreaterThan(solarisOres[4].sellValue);
 
+    const nightmareOres = getOresByWorld('nightmare');
+    expect(nightmareOres.map((o) => o.name)).toEqual([
+      'Bramblethorn',
+      'Bloodmoonite',
+      'Mawfang',
+      'Oculite',
+      'Vortexspire',
+    ]);
+    expect(nightmareOres.map((o) => o.rarity)).toEqual(['legendary', 'rainbow', 'mythic', 'exotic', 'secret']);
+    expect(nightmareOres.reduce((acc, o) => acc + o.chancePct, 0)).toBeCloseTo(100, 4);
+    expect(nightmareOres[0].sellValue).toBeGreaterThan(elysiumOres[0].sellValue);
+    expect(nightmareOres[4].sellValue).toBeGreaterThan(elysiumOres[4].sellValue);
+
+    const singularityOres = getOresByWorld('singularity');
+    expect(singularityOres.map((o) => o.name)).toEqual([
+      'Azurespiral',
+      'Crimsongaze',
+      'Duallance',
+      'Eventhorizon',
+      'Sovereigneclipse',
+    ]);
+    expect(singularityOres.map((o) => o.rarity)).toEqual(['legendary', 'rainbow', 'mythic', 'exotic', 'secret']);
+    expect(singularityOres.reduce((acc, o) => acc + o.chancePct, 0)).toBeCloseTo(100, 4);
+    expect(singularityOres[0].sellValue).toBeGreaterThan(nightmareOres[0].sellValue);
+    expect(singularityOres[4].sellValue).toBeGreaterThan(nightmareOres[4].sellValue);
+    for (const o of [...nightmareOres, ...singularityOres]) {
+      expect(existsSync(resolve(process.cwd(), 'public', 'ores', `${o.id}.webp`))).toBe(true);
+    }
+    expect(existsSync(resolve(process.cwd(), 'public', 'worlds', 'nightmare.webp'))).toBe(true);
+    expect(existsSync(resolve(process.cwd(), 'public', 'worlds', 'singularity.webp'))).toBe(true);
+
     expect(getMinersByWorld('underground').length).toBe(5);
     expect(getMinersByWorld('crystal').length).toBe(5);
     expect(getMinersByWorld('magma').length).toBe(5);
@@ -486,9 +518,11 @@ describe('Pure 3D Mine World', () => {
     expect(getMinersByWorld('chrono').length).toBe(5);
     expect(getMinersByWorld('solaris').length).toBe(5);
     expect(getMinersByWorld('elysium').length).toBe(5);
+    expect(getMinersByWorld('nightmare').length).toBe(5);
+    expect(getMinersByWorld('singularity').length).toBe(5);
 
     const gs = new GameState();
-    expect(gs.getTotalIndexCount()).toBe(152);
+    expect(gs.getTotalIndexCount()).toBe(172);
     gs.discovered.add('stormwater-opal');
     gs.discovered.add('glitch-cheshire');
     gs.discovered.add('cosmic-monarch');
@@ -500,6 +534,8 @@ describe('Pure 3D Mine World', () => {
     expect(gs.getWorldIndexProgress('chrono')).toEqual({ found: 0, total: 10, pct: 0 });
     expect(gs.getWorldIndexProgress('solaris')).toEqual({ found: 0, total: 10, pct: 0 });
     expect(gs.getWorldIndexProgress('elysium')).toEqual({ found: 0, total: 10, pct: 0 });
+    expect(gs.getWorldIndexProgress('nightmare')).toEqual({ found: 0, total: 10, pct: 0 });
+    expect(gs.getWorldIndexProgress('singularity')).toEqual({ found: 0, total: 10, pct: 0 });
     expect(gs.hotbar.every((s) => s === null)).toBe(true);
     expect(gs.plotMiners[0]).toBe('astral-recruit');
     expect(gs.plotMiners.slice(1).every((s) => s === null)).toBe(true);
@@ -799,22 +835,39 @@ describe('Pure 3D Mine World', () => {
   });
 
   it('enforces sequential world unlock gates, Voidreach naming, global Core upgrades, and per-world tree isolation', () => {
-    expect(WORLDS).toHaveLength(10);
+    expect(WORLDS).toHaveLength(12);
     expect(getWorldById('astral').name).toBe('Voidreach');
     expect(getWorldById('starwell').name).toBe('Starwell');
     expect(getWorldById('abyssal').name).toBe('Abyssal Biolume');
     expect(getWorldById('chrono').name).toBe('Chrono Nexus');
     expect(getWorldById('solaris').name).toBe('Solaris Sanctum');
     expect(getWorldById('elysium').name).toBe('Elysium Core');
+    expect(getWorldById('nightmare').name).toBe('Nightmare Hollow');
+    expect(getWorldById('singularity').name).toBe('Eclipse Singularity');
     expect(PIT_NODE_COUNT).toBe(5);
     expect(BASE_ORE_RESPAWN_SEC).toBeGreaterThanOrEqual(3.5);
 
-    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell', 'abyssal', 'chrono', 'solaris', 'elysium'] as const) {
+    const allWorldIds = [
+      'underground',
+      'crystal',
+      'magma',
+      'ruins',
+      'astral',
+      'starwell',
+      'abyssal',
+      'chrono',
+      'solaris',
+      'elysium',
+      'nightmare',
+      'singularity',
+    ] as const;
+
+    for (const wid of allWorldIds) {
       expect(existsSync(resolve(process.cwd(), 'public', 'worlds', `${wid}.webp`))).toBe(true);
     }
 
-    // Tap damage must live strictly in Core; Worlds 1-10 replace tap nodes with standardized denseOreScale (HP x10, Drops x3)
-    for (const wid of ['underground', 'crystal', 'magma', 'ruins', 'astral', 'starwell', 'abyssal', 'chrono', 'solaris', 'elysium'] as const) {
+    // Tap damage must live strictly in Core; Worlds 1-12 replace tap nodes with standardized denseOreScale (HP x10, Drops x3)
+    for (const wid of allWorldIds) {
       expect(getResearchNodesForTree(wid)).toHaveLength(12);
       expect(getResearchTreeMaxPoints(wid)).toBe(58);
       const treeNodes = getResearchNodesForTree(wid);
@@ -1918,8 +1971,8 @@ describe('Pure 3D Mine World', () => {
     expect(enchantDiceIconHtml(34)).toContain('enchants/enchant_dice.webp');
   });
 
-  it('serves 2D fantasy PNG art for all 68 World 1–10 ores', () => {
-    expect(ORES.length).toBe(68);
+  it('serves 2D fantasy PNG art for all 78 World 1–12 ores', () => {
+    expect(ORES.length).toBe(78);
     for (const ore of ORES) {
       expect(existsSync(resolve(process.cwd(), 'public', 'ores', `${ore.id}.webp`))).toBe(true);
       expect(oreIconSvg(ore.color, ore.secondaryColor, ore.rarity, `ix_${ore.id}`)).toContain(`ores/${ore.id}.webp`);
@@ -5040,10 +5093,18 @@ describe('Pure 3D Mine World', () => {
     omega.dispose();
   });
 
-  it('builds Cyber E-Sports / Idol Sky-Stage crescent balcony, symmetric wing decks, and distinct W1-W8 stage themes', () => {
+  it('builds Cyber E-Sports / Idol Sky-Stage crescent balcony, symmetric wing decks, and distinct W1-W12 stage themes', () => {
     expect(Object.keys(WORLD_ARENA_BIOMES)).toHaveLength(WORLDS.length);
     const distinctCaps = new Set(Object.values(WORLD_ARENA_BIOMES).map((b) => b.capHex));
     expect(distinctCaps.size).toBe(WORLDS.length);
+    expect(WORLD_PALETTES.nightmare.crystalColor).toBeTruthy();
+    expect(WORLD_PALETTES.singularity.crystalColor).toBeTruthy();
+    expect(
+      getCircularNexusPoolTexture(WORLD_PALETTES.nightmare.pitFloorColor, WORLD_PALETTES.nightmare.crystalColor, 'nightmare')
+    ).toBeInstanceOf(THREE.Texture);
+    expect(
+      getCircularNexusPoolTexture(WORLD_PALETTES.singularity.pitFloorColor, WORLD_PALETTES.singularity.crystalColor, 'singularity')
+    ).toBeInstanceOf(THREE.Texture);
 
     const pit = new OrePit3D(DEFAULT_WORLD_PALETTE);
     pit.group.updateMatrixWorld(true);

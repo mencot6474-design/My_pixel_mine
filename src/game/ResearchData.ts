@@ -5,7 +5,9 @@ import {
   CRYSTAL_NODES,
   ELYSIUM_NODES,
   MAGMA_NODES,
+  NIGHTMARE_NODES,
   RUINS_NODES,
+  SINGULARITY_NODES,
   SOLARIS_NODES,
   STARWELL_NODES,
   UNDERGROUND_NODES,
@@ -158,6 +160,22 @@ export const RESEARCH_TREE_META: Record<ResearchTreeId, ResearchTreeMeta> = {
     id: 'elysium',
     title: 'Elysium Core',
     subtitle: 'World 10 • Isolated',
+    global: false,
+    cols: 5,
+    rows: 4,
+  },
+  nightmare: {
+    id: 'nightmare',
+    title: 'Nightmare Hollow',
+    subtitle: 'World 11 • Isolated',
+    global: false,
+    cols: 5,
+    rows: 4,
+  },
+  singularity: {
+    id: 'singularity',
+    title: 'Eclipse Singularity',
+    subtitle: 'World 12 • Isolated',
     global: false,
     cols: 5,
     rows: 4,
@@ -462,6 +480,8 @@ export const RESEARCH_NODES: readonly ResearchNodeDef[] = [
   ...CHRONO_NODES,
   ...SOLARIS_NODES,
   ...ELYSIUM_NODES,
+  ...NIGHTMARE_NODES,
+  ...SINGULARITY_NODES,
 ] as const;
 
 export function getResearchNodesForTree(treeId: ResearchTreeId): readonly ResearchNodeDef[] {

@@ -640,6 +640,16 @@ async function bootstrap(): Promise<void> {
       'abyssal-leviathan',
       'void-asura',
       'null-singularity',
+      'bramble-cat',
+      'cleaver-bunny',
+      'maw-devourer',
+      'abyss-watcher',
+      'spiral-ringmaster',
+      'azure-esper',
+      'crimson-esper',
+      'fate-duelist',
+      'horizon-walker',
+      'eclipse-monarch',
     ];
     const unlockAllLocalChibis = (): number => {
       const added = gameState.unlockChibisByIds(CHIBI_CATALOG.map((c) => c.id));

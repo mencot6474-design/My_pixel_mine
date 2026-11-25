@@ -500,7 +500,7 @@ export class IndexModalUi {
 
     return `
       <aside class="mam-inspector-well mam-no-scrollbar w-[212px] @max-[920px]:w-full shrink-0 rounded-xl p-2 flex flex-col @max-[920px]:flex-row @max-[920px]:items-center gap-1.5 overflow-y-auto @max-[920px]:overflow-y-hidden @max-[920px]:overflow-x-auto" data-index-sidebar="true">
-        <div class="px-1.5 pt-0.5 text-[10px] font-black tracking-[0.08em] uppercase text-[#5b526e] @max-[920px]:hidden">Worlds (W1–W8)</div>
+        <div class="px-1.5 pt-0.5 text-[10px] font-black tracking-[0.08em] uppercase text-[#5b526e] @max-[920px]:hidden">Worlds (W1–W${WORLDS.length})</div>
         ${worldButtons}
         <div class="px-1.5 pt-1.5 mt-0.5 border-t border-[#14111d]/15 text-[10px] font-black tracking-[0.08em] uppercase text-[#5b526e] @max-[920px]:hidden">Special Tiers</div>
         <span class="hidden @max-[920px]:inline-block w-[2px] h-6 bg-[#14111d]/20 shrink-0 mx-0.5" aria-hidden="true"></span>

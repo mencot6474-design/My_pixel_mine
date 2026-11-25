@@ -15,7 +15,9 @@ export type WorldId =
   | 'abyssal'
   | 'chrono'
   | 'solaris'
-  | 'elysium';
+  | 'elysium'
+  | 'nightmare'
+  | 'singularity';
 
 export type ItemRarity = ChibiRarity;
 
@@ -126,6 +128,8 @@ export const WORLD_GRIND_SCALE: Record<WorldId, number> = {
   chrono: 400,
   solaris: 900,
   elysium: 2_000,
+  nightmare: 4_500,
+  singularity: 10_000,
 };
 
 export const WORLDS: readonly WorldDef[] = [
@@ -139,6 +143,8 @@ export const WORLDS: readonly WorldDef[] = [
   { id: 'chrono', name: 'Chrono Nexus', iconColor: '#fbbf24', unlockCost: 2_160_000_000_000_000_000_000_000_000, oreHpMult: 40_320_000_000_000_000_000_000_000 },
   { id: 'solaris', name: 'Solaris Sanctum', iconColor: '#fb7185', unlockCost: 4_800_000_000_000_000_000_000_000_000_000, oreHpMult: 362_880_000_000_000_000_000_000_000_000 },
   { id: 'elysium', name: 'Elysium Core', iconColor: '#c084fc', unlockCost: 10_800_000_000_000_000_000_000_000_000_000_000, oreHpMult: 3_628_800_000_000_000_000_000_000_000_000_000 },
+  { id: 'nightmare', name: 'Nightmare Hollow', iconColor: '#a855f7', unlockCost: 24_000_000_000_000_000_000_000_000_000_000_000_000, oreHpMult: 39_916_800_000_000_000_000_000_000_000_000_000_000 },
+  { id: 'singularity', name: 'Eclipse Singularity', iconColor: '#ef4444', unlockCost: 54_000_000_000_000_000_000_000_000_000_000_000_000_000, oreHpMult: 479_001_600_000_000_000_000_000_000_000_000_000_000_000 },
 ] as const;
 
 export const WORLD_UPGRADE_COST_SCALE: Record<string, number> = {
@@ -152,6 +158,8 @@ export const WORLD_UPGRADE_COST_SCALE: Record<string, number> = {
   chrono: 400_000_000_000_000_000_000_000,
   solaris: 900_000_000_000_000_000_000_000_000,
   elysium: 2_000_000_000_000_000_000_000_000_000_000,
+  nightmare: 4_500_000_000_000_000_000_000_000_000_000_000,
+  singularity: 10_000_000_000_000_000_000_000_000_000_000_000_000,
 };
 
 /** Returns upgrade cost scale for a world, extrapolating ×1,000 per world added beyond the explicit map. */
@@ -406,6 +414,20 @@ export const ORES: readonly OreDef[] = [
   { id: 'seraphite', name: 'Seraphite', worldId: 'elysium', chancePct: 0.75, rarity: 'mythic', color: '#c084fc', secondaryColor: '#0f172a', sellValue: 380_000_000_000_000_000_000_000_000_000 },
   { id: 'elysianite', name: 'Elysianite', worldId: 'elysium', chancePct: 0.02, rarity: 'exotic', color: '#38bdf8', secondaryColor: '#f472b6', sellValue: 1_800_000_000_000_000_000_000_000_000_000 },
   { id: 'genesisheart', name: 'Genesisheart', worldId: 'elysium', chancePct: 0.0005, rarity: 'secret', color: '#f472b6', secondaryColor: '#fde047', sellValue: 14_000_000_000_000_000_000_000_000_000_000 },
+
+  // 11. Nightmare Hollow (World 11 Index — 5 endgame ores climbing to Exotic & Secret)
+  { id: 'bramblethorn', name: 'Bramblethorn', worldId: 'nightmare', chancePct: 89.6846, rarity: 'legendary', color: '#dc2626', secondaryColor: '#2dd4bf', sellValue: 35_000_000_000_000_000_000_000_000_000_000 },
+  { id: 'bloodmoonite', name: 'Bloodmoonite', worldId: 'nightmare', chancePct: 9.7, rarity: 'rainbow', color: '#f43f5e', secondaryColor: '#fef2f2', sellValue: 110_000_000_000_000_000_000_000_000_000_000 },
+  { id: 'mawfang', name: 'Mawfang', worldId: 'nightmare', chancePct: 0.6, rarity: 'mythic', color: '#ef4444', secondaryColor: '#1e1b4b', sellValue: 380_000_000_000_000_000_000_000_000_000_000 },
+  { id: 'oculite', name: 'Oculite', worldId: 'nightmare', chancePct: 0.015, rarity: 'exotic', color: '#94a3b8', secondaryColor: '#09090b', sellValue: 1_800_000_000_000_000_000_000_000_000_000_000 },
+  { id: 'vortexspire', name: 'Vortexspire', worldId: 'nightmare', chancePct: 0.0004, rarity: 'secret', color: '#c084fc', secondaryColor: '#a855f7', sellValue: 14_000_000_000_000_000_000_000_000_000_000_000 },
+
+  // 12. Eclipse Singularity (World 12 Index — 5 endgame ores climbing to Exotic & Secret)
+  { id: 'azurespiral', name: 'Azurespiral', worldId: 'singularity', chancePct: 90.9097, rarity: 'legendary', color: '#38bdf8', secondaryColor: '#0f172a', sellValue: 35_000_000_000_000_000_000_000_000_000_000_000 },
+  { id: 'crimsongaze', name: 'Crimsongaze', worldId: 'singularity', chancePct: 8.6, rarity: 'rainbow', color: '#fb7185', secondaryColor: '#c084fc', sellValue: 110_000_000_000_000_000_000_000_000_000_000_000 },
+  { id: 'duallance', name: 'Duallance', worldId: 'singularity', chancePct: 0.48, rarity: 'mythic', color: '#3b82f6', secondaryColor: '#ef4444', sellValue: 380_000_000_000_000_000_000_000_000_000_000_000 },
+  { id: 'eventhorizon', name: 'Eventhorizon', worldId: 'singularity', chancePct: 0.01, rarity: 'exotic', color: '#e2e8f0', secondaryColor: '#09090b', sellValue: 1_800_000_000_000_000_000_000_000_000_000_000_000 },
+  { id: 'sovereigneclipse', name: 'Sovereigneclipse', worldId: 'singularity', chancePct: 0.0003, rarity: 'secret', color: '#ef4444', secondaryColor: '#09090b', sellValue: 14_000_000_000_000_000_000_000_000_000_000_000_000 },
 ] as const;
 
 export interface WeatherOreDef extends OreDef {
@@ -507,6 +529,8 @@ export const WORLD_MINER_DROP_SCALE: Record<WorldId, number> = {
   chrono: 0.25,
   solaris: 0.2,
   elysium: 0.16,
+  nightmare: 0.13,
+  singularity: 0.105,
 };
 
 export function getWorldMinerDropScale(worldId: WorldId): number {
@@ -583,6 +607,20 @@ export const WORLD_MINERS: readonly WorldMinerEntry[] = [
   { chibiId: 'spiral-nightmare', worldId: 'elysium', chancePct: 0.052, rarity: 'mythic' },
   { chibiId: 'amethyst-dracomech', worldId: 'elysium', chancePct: 0.007, rarity: 'exotic' },
   { chibiId: 'elysian-seraph', worldId: 'elysium', chancePct: 0.0009, rarity: 'secret' },
+
+  // 11. Nightmare Hollow (5 miners)
+  { chibiId: 'bramble-cat', worldId: 'nightmare', chancePct: 0.55, rarity: 'legendary' },
+  { chibiId: 'cleaver-bunny', worldId: 'nightmare', chancePct: 0.17, rarity: 'rainbow' },
+  { chibiId: 'maw-devourer', worldId: 'nightmare', chancePct: 0.041, rarity: 'mythic' },
+  { chibiId: 'abyss-watcher', worldId: 'nightmare', chancePct: 0.0052, rarity: 'exotic' },
+  { chibiId: 'spiral-ringmaster', worldId: 'nightmare', chancePct: 0.00065, rarity: 'secret' },
+
+  // 12. Eclipse Singularity (5 miners)
+  { chibiId: 'azure-esper', worldId: 'singularity', chancePct: 0.46, rarity: 'legendary' },
+  { chibiId: 'crimson-esper', worldId: 'singularity', chancePct: 0.14, rarity: 'rainbow' },
+  { chibiId: 'fate-duelist', worldId: 'singularity', chancePct: 0.032, rarity: 'mythic' },
+  { chibiId: 'horizon-walker', worldId: 'singularity', chancePct: 0.0038, rarity: 'exotic' },
+  { chibiId: 'eclipse-monarch', worldId: 'singularity', chancePct: 0.00048, rarity: 'secret' },
 ] as const;
 
 syncTwinCatalogDpsFromAnchor();
@@ -970,6 +1008,8 @@ export const WORLD_RESONANCE_WORLD_SCALES: Record<WorldId, number> = {
   chrono: 2.5,
   solaris: 2.8,
   elysium: 3.2,
+  nightmare: 3.6,
+  singularity: 4.0,
 };
 
 export function getWorldResonanceScale(worldId: WorldId): number {

@@ -151,6 +151,9 @@ export class RiftModalUi {
       )
       .join('');
 
+    const minDropPct = Math.round((RIFT_TIER_DEFS[0]?.dropChance ?? 0.02) * 100);
+    const maxDropPct = Math.round((RIFT_TIER_DEFS[RIFT_TIER_DEFS.length - 1]?.dropChance ?? 0.16) * 100);
+
     return `
       <div class="flex-1 min-h-0 flex flex-col gap-2.5 overflow-y-auto mam-no-scrollbar">
         <div class="grid grid-cols-[minmax(0,1.18fr)_minmax(290px,0.88fr)] @max-[860px]:grid-cols-1 gap-3 flex-1 min-h-0">
@@ -158,7 +161,7 @@ export class RiftModalUi {
             <div class="shrink-0 p-2.5 rounded-2xl border-[2.5px] border-[#14111d] bg-[linear-gradient(135deg,#fef3c7,#fde68a)] flex flex-col gap-1">
               <div class="flex items-center justify-between gap-2 flex-wrap">
                 <span class="text-[10.5px] font-black uppercase tracking-wider text-[#5b526e]">30s Boss DPS Check • Boss: ${activeBossDef.name}</span>
-                <span class="mam-pill-xs bg-[#14111d] text-[#67e8f9]">2%–12% Instant Drop</span>
+                <span class="mam-pill-xs bg-[#14111d] text-[#67e8f9]">${minDropPct}%–${maxDropPct}% Instant Drop</span>
               </div>
               <div class="text-[14.5px] font-black text-[#14111d] leading-tight">${snap.anomaly.name}</div>
               <div class="text-[11px] font-bold text-[#475569] leading-snug">${snap.anomaly.summary}</div>
@@ -166,7 +169,7 @@ export class RiftModalUi {
 
             <div class="shrink-0 rounded-2xl border-2 border-[#14111d] bg-[#fff8e7] p-2 flex flex-col gap-1">
               <div class="flex items-center justify-between text-[10.5px] font-black text-[#14111d]">
-                <span>TIER 1–10 DAMAGE TARGETS (1 SHARD / TIER)</span>
+                <span>TIER 1–${RIFT_TIER_DEFS.length} DAMAGE TARGETS (1 SHARD / TIER)</span>
                 <span class="text-[#0369a1] tabular-nums">Best: Tier ${this.state.riftBestTier} (${fmtShort(this.state.riftBestDamage)})</span>
               </div>
               <div class="grid grid-cols-2 gap-1">${tierLadderHtml}</div>

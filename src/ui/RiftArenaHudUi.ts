@@ -116,7 +116,7 @@ export class RiftArenaHudUi {
 
         <div class="flex justify-center pb-1">
           <div class="px-3.5 py-1 rounded-full border-2 border-[#14111d] bg-[#14111d]/85 text-[#e0f2fe] text-[11px] font-black tracking-wide">
-            TAP RIFT BOSS TO ADD DAMAGE • CLIMB TIER 1–10 IN 30s!
+            TAP RIFT BOSS TO ADD DAMAGE • CLIMB TIER 1–${RIFT_TIER_DEFS.length} IN 30s!
           </div>
         </div>
       </div>
@@ -197,7 +197,7 @@ export class RiftArenaHudUi {
               </div>
               <div class="flex flex-col gap-0.5 min-w-0">
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="mam-pill-xs bg-[#14111d] text-[#22d3ee]">TIER ${summary.tierReached} / 10</span>
+                  <span class="mam-pill-xs bg-[#14111d] text-[#22d3ee]">TIER ${summary.tierReached} / ${RIFT_TIER_DEFS.length}</span>
                   ${summary.isNewBest ? `<span class="mam-pill-xs bg-[#fde047] text-[#14111d]">NEW BEST!</span>` : ''}
                   ${summary.retreated ? `<span class="mam-pill-xs bg-[#e2e8f0] text-[#475569]">RETREATED</span>` : ''}
                 </div>

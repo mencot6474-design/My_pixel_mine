@@ -17,6 +17,7 @@ import { BountyEntry, isValidBountyEntry } from './BountiesDomain';
 import { isValidIndexMilestoneId } from './IndexRewardsDomain';
 import { ResearchTreeId } from './ResearchData';
 import { TOWER_DICE_PITY_MAX, TOWER_MAX_FLOOR, TOWER_MAX_KEYS, TowerSaveData } from './TowerData';
+import { RIFT_TIER_DEFS } from './AnomalyData';
 import { getOmegaBossById, OMEGA_MAX_KEYS } from './OmegaData';
 import { isPremiumShopChibi } from './PremiumShopData';
 import {
@@ -241,7 +242,7 @@ export function isTeamPresetPopulated(preset: TeamPresetSlots | undefined): bool
   return preset.some((id) => typeof id === 'string' && id.length > 0);
 }
 
-/** Creates an empty per-tree research level record for all 11 research trees. */
+/** Creates an empty per-tree research level record for all 13 research trees. */
 export function createEmptyResearchLevels(): ResearchLevelsMap {
   return {
     core: {},
@@ -255,6 +256,8 @@ export function createEmptyResearchLevels(): ResearchLevelsMap {
     chrono: {},
     solaris: {},
     elysium: {},
+    nightmare: {},
+    singularity: {},
   };
 }
 
@@ -689,7 +692,7 @@ export function deserializeSaveJson(
       state.riftBestDamage = data.riftBestDamage;
     }
     if (typeof data.riftBestTier === 'number' && Number.isFinite(data.riftBestTier) && data.riftBestTier >= 0) {
-      state.riftBestTier = Math.min(10, Math.floor(data.riftBestTier));
+      state.riftBestTier = Math.min(RIFT_TIER_DEFS.length, Math.floor(data.riftBestTier));
     }
     if (Array.isArray(data.bounties)) {
       state.bounties = data.bounties.filter((b): b is BountyEntry => isValidBountyEntry(b));

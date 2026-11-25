@@ -841,6 +841,35 @@ describe('Tahap B HUD Modules', () => {
       expect(cutinEl.innerHTML).toContain('anomaly.svg');
       expect(cutinEl.innerHTML).not.toContain('mam-rarity-common');
 
+      // W11 & W12 Chibis render cleanly in Fever Ult Cut-In banner
+      triggerFeverUltCutInDom(cutinHost, {
+        chibiId: 'spiral-ringmaster',
+        name: 'Spiral Ringmaster',
+        rarity: 'secret',
+        accentColor: '#a855f7',
+        isEncore: false,
+        encoreIndex: 0,
+        encoreTotal: 0,
+        tier: 2,
+      });
+      expect(cutinEl.innerHTML).toContain('Spiral Ringmaster');
+      expect(cutinEl.innerHTML).toContain('chibi/spiral-ringmaster/attack.webp');
+      expect(cutinEl.innerHTML).toContain('mam-rarity-secret');
+
+      triggerFeverUltCutInDom(cutinHost, {
+        chibiId: 'eclipse-monarch',
+        name: 'Eclipse Monarch',
+        rarity: 'secret',
+        accentColor: '#ef4444',
+        isEncore: true,
+        encoreIndex: 5,
+        encoreTotal: 5,
+        tier: 3,
+      });
+      expect(cutinEl.innerHTML).toContain('ENCORE 5/5');
+      expect(cutinEl.innerHTML).toContain('Eclipse Monarch');
+      expect(cutinEl.innerHTML).toContain('chibi/eclipse-monarch/attack.webp');
+
       const ocToast = renderToastBannerHtml('⚡ OVERCLOCK ACTIVE! 2x DMG');
       expect(ocToast).toContain('data-toast-tone="overclock"');
       expect(ocToast).not.toContain('⚡');
@@ -1436,7 +1465,7 @@ describe('Tahap B HUD Modules', () => {
       const idxUi = new IndexModalUi(state, () => {});
       const idxHtml = idxUi.renderModal();
       expect(idxHtml).toContain('data-index-sidebar="true"');
-      expect(idxHtml).toContain('Worlds (W1–W8)');
+      expect(idxHtml).toContain('Worlds (W1–W12)');
       expect(idxHtml).toContain('Special Tiers');
       expect(idxHtml).toContain('data-index-world="twin"');
       expect(idxHtml).toContain('data-index-maxed-stamp="true"');
@@ -2394,11 +2423,12 @@ describe('Tahap B HUD Modules', () => {
       expect(html).toContain('250 Shards');
       expect(html).toContain('Attempts');
       expect(html).toContain('Tier 1');
-      expect(html).toContain('Tier 10');
+      expect(html).toContain('TIER 1–12 DAMAGE TARGETS');
+      expect(html).toContain('Tier 12');
       expect(html).not.toContain('VOID');
     });
 
-    it('renders RiftArenaHudUi 30s Tier 1-10 Damage Meter and HudRiftBridge battle summary flow', () => {
+    it('renders RiftArenaHudUi 30s Tier 1-12 Damage Meter and HudRiftBridge battle summary flow', () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date(2026, 10, 25, 14, 25, 0));
       try {
@@ -2438,7 +2468,8 @@ describe('Tahap B HUD Modules', () => {
       const liveHtml = arenaUi.renderRiftArenaHud();
       expect(liveHtml).toContain('30.0s');
       expect(liveHtml).toContain('TIER 0');
-      expect(liveHtml).toContain('T10');
+      expect(liveHtml).toContain('T12');
+      expect(liveHtml).toContain('CLIMB TIER 1–12');
       expect(liveHtml).toContain('/hud/rift_shard.webp');
 
       // Deal enough tap damage to reach Tier 4 (50T)
@@ -2454,7 +2485,7 @@ describe('Tahap B HUD Modules', () => {
       expect(shockwaveTier).toBeGreaterThanOrEqual(0);
 
       const summaryHtml = arenaUi.renderRiftArenaHud();
-      expect(summaryHtml).toContain('TIER 4 / 10');
+      expect(summaryHtml).toContain('TIER 4 / 12');
       expect(summaryHtml).toContain('/hud/rift_shard.webp');
       expect(summaryHtml).toContain('+4');
       expect(summaryHtml).toContain('BATTLE AGAIN');
