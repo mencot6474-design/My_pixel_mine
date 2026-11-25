@@ -6,7 +6,14 @@ import {
   enableShadows,
 } from './MeshHelpers3D';
 import { paintCachedTexture } from './ProceduralTextures3D';
-import type { ProceduralChestHandle } from './ProceduralTreasureChest3D';
+
+export interface ProceduralChestHandle {
+  group: THREE.Group;
+  lidPivot: THREE.Group;
+  setAccentColor: (color: number | string) => void;
+  setInteraction: (hovered: boolean, bounce: number, elapsed: number) => void;
+  dispose: () => void;
+}
 
 export interface CyberCargoPodOptions {
   scale?: number;

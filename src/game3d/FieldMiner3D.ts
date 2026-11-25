@@ -4,7 +4,7 @@ import { type WeatherId } from '../game/WeatherData';
 import { type PitEventKind } from '../game/PitEventsDomain';
 import { ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
-import { disposeObject3D } from './ChestVaultStation3D';
+import { disposeObject3D } from './MeshHelpers3D';
 import { OreVariantKey, STAGE_PEDESTAL_COUNT } from './MineWorldPalette';
 import { OrePit3D, PIT_FLOOR_Y } from './OrePit3D';
 import {

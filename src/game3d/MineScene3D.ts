@@ -3,7 +3,7 @@ import type { EffectComposer } from 'three/examples/jsm/postprocessing/EffectCom
 import type { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { ChibiDef, getChibiById } from './ChibiCatalog';
-import { ProceduralChestHandle } from './ChestVaultStation3D';
+import { type ProceduralChestHandle } from './CyberCargoPod3D';
 import { type RiftGateHandle } from './RiftGate3D';
 import { PlotAttackController3D } from './PlotAttackController3D';
 import { type TierVfxHooks } from './TierAttackVfx3D';
@@ -61,8 +61,7 @@ import {
   type MineInputCtx,
   type MineInputState,
 } from './MineSceneInput';
-import { configureSceneTextureSharpness } from './MeshHelpers3D';
-import { disposeObject3D } from './ChestVaultStation3D';
+import { configureSceneTextureSharpness, disposeObject3D } from './MeshHelpers3D';
 
 export {
   applyCameraOrbitDrag,

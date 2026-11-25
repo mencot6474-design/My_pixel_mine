@@ -3,8 +3,7 @@ import { getEnchantById } from '../game/GameData';
 import { type OverclockTier } from '../game/OverclockDomain';
 import { ChibiAnimState, ChibiDef } from './ChibiCatalog';
 import { ChibiSprite3D } from './ChibiSprite3D';
-import { disposeObject3D } from './ChestVaultStation3D';
-import { createChamferSlabGeometry, mergeStaticMeshesByMaterial } from './MeshHelpers3D';
+import { createChamferSlabGeometry, disposeObject3D, mergeStaticMeshesByMaterial } from './MeshHelpers3D';
 import {
   createSlotPlaqueTexture,
   getCachedEnchantIconImage,

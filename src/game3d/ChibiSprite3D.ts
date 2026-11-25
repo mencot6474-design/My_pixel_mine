@@ -595,6 +595,26 @@ export class ChibiSprite3D {
   }
 
   public update(dtSec: number, elapsed: number, camera: THREE.Camera): void {
+    this.updateBillboardOrientation(camera);
+    this.stepShowcaseState(dtSec);
+
+    const k = this.computeAnimKinematics(dtSec, elapsed);
+    const ultOpenPulse = this.stepUltOpenPulse(dtSec, k);
+
+    this.animGroup.position.set(k.posX, k.posY, 0);
+    this.animGroup.rotation.z = k.rotZ;
+    this.animGroup.scale.set(k.scaleX, k.scaleY, 1);
+
+    const castPulseAmt = this.stepCastAndGlintFx(dtSec, k, ultOpenPulse);
+    this.stepBlitzGhostFades(dtSec);
+
+    if (this.stepActiveBlitzMotion(dtSec, elapsed, castPulseAmt)) {
+      return;
+    }
+    this.applyGroundedShadowAndHolo(elapsed, k.posX, k.posY, k.shadowScale);
+  }
+
+  private updateBillboardOrientation(camera: THREE.Camera): void {
     this.group.getWorldPosition(this.worldPos);
     const dx = camera.position.x - this.worldPos.x;
     const dy = camera.position.y - this.worldPos.y;
@@ -607,119 +627,138 @@ export class ChibiSprite3D {
     this.spritePivot.rotation.order = 'YXZ';
     this.spritePivot.rotation.y = Math.atan2(dx, dz);
     this.spritePivot.rotation.x = -Math.max(0, Math.min(0.66, camPitch * 0.72));
+  }
 
-    if (this.showcaseTimer > 0) {
-      this.showcaseTimer = Math.max(0, this.showcaseTimer - dtSec);
-      if (this.showcaseTimer > 0.7) {
-        if (this.animState !== 'attack') {
-          this.setAnimState('attack');
-          this.triggerAttack(0.45);
-        }
-      } else if (this.showcaseTimer > 0) {
-        this.setAnimState('aura');
+  private stepShowcaseState(dtSec: number): void {
+    if (this.showcaseTimer <= 0) return;
+    this.showcaseTimer = Math.max(0, this.showcaseTimer - dtSec);
+    if (this.showcaseTimer > 0.7) {
+      if (this.animState !== 'attack') {
+        this.setAnimState('attack');
+        this.triggerAttack(0.45);
       }
-      if (this.showcaseTimer === 0) {
-        this.setAnimState('idle');
-      }
+    } else if (this.showcaseTimer > 0) {
+      this.setAnimState('aura');
     }
+    if (this.showcaseTimer === 0) {
+      this.setAnimState('idle');
+    }
+  }
 
+  private computeAnimKinematics(dtSec: number, elapsed: number) {
     const t = elapsed * 2.8 + this.phaseOffset;
-    let posX = 0;
-    let posY = 0;
-    let rotZ = 0;
-    let scaleX = 1;
-    let scaleY = 1;
-    let shadowScale = 1;
-    let showGlint = false;
-    let glintProgress = 0;
-    let showGhosts = false;
-    let ghostAlpha = 0;
+    const out = {
+      posX: 0,
+      posY: 0,
+      rotZ: 0,
+      scaleX: 1,
+      scaleY: 1,
+      shadowScale: 1,
+      showGlint: false,
+      glintProgress: 0,
+      showGhosts: false,
+      ghostAlpha: 0,
+    };
 
     if (this.animState === 'aura') {
       const hover = Math.sin(t * 1.7) * 0.05;
-      posY = 0.14 + hover;
-      rotZ = Math.sin(t * 0.9) * 0.025;
-      scaleX = 1.02;
-      scaleY = 1.04;
-      shadowScale = 0.82 - hover * 0.4;
+      out.posY = 0.14 + hover;
+      out.rotZ = Math.sin(t * 0.9) * 0.025;
+      out.scaleX = 1.02;
+      out.scaleY = 1.04;
+      out.shadowScale = 0.82 - hover * 0.4;
     } else if (this.animState === 'attack') {
       if (this.attackSwingTimer > 0) {
         this.attackSwingTimer = Math.max(0, this.attackSwingTimer - dtSec);
         const p = 1 - this.attackSwingTimer / this.attackSwingDuration;
-
         if (p >= 0.02 && p <= 0.24) {
-          showGlint = true;
-          glintProgress = (p - 0.02) / 0.22;
+          out.showGlint = true;
+          out.glintProgress = (p - 0.02) / 0.22;
         }
         if (p >= 0.16 && p <= 0.64) {
-          showGhosts = true;
-          ghostAlpha = 1 - (p - 0.16) / 0.48;
+          out.showGhosts = true;
+          out.ghostAlpha = 1 - (p - 0.16) / 0.48;
         }
-
         const stepK = stepChibiAttackComboKinematics(p, this.attackComboStep, this.facing);
-        posX = stepK.posX;
-        posY = stepK.posY;
-        rotZ = stepK.rotZ;
-        scaleX = stepK.scaleX;
-        scaleY = stepK.scaleY;
-        shadowScale = stepK.shadowScale;
+        out.posX = stepK.posX;
+        out.posY = stepK.posY;
+        out.rotZ = stepK.rotZ;
+        out.scaleX = stepK.scaleX;
+        out.scaleY = stepK.scaleY;
+        out.shadowScale = stepK.shadowScale;
       } else {
-        // Alert upright combat-ready bounce between swings
         const ready = (Math.sin(t * 2.5) + 1) * 0.5;
-        posY = 0.02 + ready * 0.035;
-        rotZ = -this.facing * 0.035 + Math.sin(t * 2.5) * 0.025;
-        scaleY = 1.0 + ready * 0.03;
-        scaleX = 1.0 - ready * 0.015;
-        shadowScale = 1.02;
+        out.posY = 0.02 + ready * 0.035;
+        out.rotZ = -this.facing * 0.035 + Math.sin(t * 2.5) * 0.025;
+        out.scaleY = 1.0 + ready * 0.03;
+        out.scaleX = 1.0 - ready * 0.015;
+        out.shadowScale = 1.02;
       }
     } else if (this.animState === 'dash') {
-      // Crisp 2-beat chibi stride: alternating lean + hop + tall mid-stride stretch
       const stepPhase = elapsed * 10.5 + this.phaseOffset;
       const sinStep = Math.sin(stepPhase);
       const hop = Math.pow(Math.abs(sinStep), 0.78);
       const stretch = (hop - 0.3) * 0.055;
-      posY = hop * 0.14;
-      rotZ = sinStep * 0.075 - this.facing * 0.045;
-      scaleY = 1.0 + stretch;
-      scaleX = 1.0 - stretch * 0.5;
-      shadowScale = 1.0 - hop * 0.14;
+      out.posY = hop * 0.14;
+      out.rotZ = sinStep * 0.075 - this.facing * 0.045;
+      out.scaleY = 1.0 + stretch;
+      out.scaleX = 1.0 - stretch * 0.5;
+      out.shadowScale = 1.0 - hop * 0.14;
     } else {
-      // Upright breathing idle & gentle weight shift (never squashed flat)
       const breath = (Math.sin(elapsed * 2.5 + this.phaseOffset) + 1) * 0.5;
-      posY = breath * 0.026;
-      rotZ = Math.sin(elapsed * 1.25 + this.phaseOffset) * 0.022;
-      scaleY = 1.0 + breath * 0.032;
-      scaleX = 1.0 - breath * 0.014;
-      shadowScale = 1.0 - breath * 0.04;
+      out.posY = breath * 0.026;
+      out.rotZ = Math.sin(elapsed * 1.25 + this.phaseOffset) * 0.022;
+      out.scaleY = 1.0 + breath * 0.032;
+      out.scaleX = 1.0 - breath * 0.014;
+      out.shadowScale = 1.0 - breath * 0.04;
     }
+    return out;
+  }
 
-    let ultOpenPulse = 0;
-    if (this.ultOpenTimer > 0) {
-      this.ultOpenTimer = Math.max(0, this.ultOpenTimer - dtSec);
-      const up = 1 - this.ultOpenTimer / this.ultOpenDuration;
-      ultOpenPulse = Math.sin(up * Math.PI);
-      if (up < 0.34) {
-        const c = Math.sin((up / 0.34) * Math.PI * 0.5);
-        posY -= 0.08 * c;
-        posX += Math.sin(up * 85) * 0.032;
-        scaleX *= 1 + 0.14 * c;
-        scaleY *= 1 - 0.11 * c;
-      } else {
-        const r = (up - 0.34) / 0.66;
-        const arc = Math.sin(r * Math.PI);
-        posY += arc * 0.34;
-        scaleY *= 1 + arc * 0.16;
-        scaleX *= 1 - arc * 0.07;
-        rotZ += -this.facing * arc * 0.085;
-        shadowScale *= 1 - arc * 0.22;
-      }
+  private stepUltOpenPulse(
+    dtSec: number,
+    k: { posX: number; posY: number; rotZ: number; scaleX: number; scaleY: number; shadowScale: number }
+  ): number {
+    if (this.ultOpenTimer <= 0) return 0;
+    this.ultOpenTimer = Math.max(0, this.ultOpenTimer - dtSec);
+    const up = 1 - this.ultOpenTimer / this.ultOpenDuration;
+    const ultOpenPulse = Math.sin(up * Math.PI);
+    if (up < 0.34) {
+      const c = Math.sin((up / 0.34) * Math.PI * 0.5);
+      k.posY -= 0.08 * c;
+      k.posX += Math.sin(up * 85) * 0.032;
+      k.scaleX *= 1 + 0.14 * c;
+      k.scaleY *= 1 - 0.11 * c;
+    } else {
+      const r = (up - 0.34) / 0.66;
+      const arc = Math.sin(r * Math.PI);
+      k.posY += arc * 0.34;
+      k.scaleY *= 1 + arc * 0.16;
+      k.scaleX *= 1 - arc * 0.07;
+      k.rotZ += -this.facing * arc * 0.085;
+      k.shadowScale *= 1 - arc * 0.22;
     }
+    return ultOpenPulse;
+  }
 
-    this.animGroup.position.set(posX, posY, 0);
-    this.animGroup.rotation.z = rotZ;
-    this.animGroup.scale.set(scaleX, scaleY, 1);
-
+  private stepCastAndGlintFx(
+    dtSec: number,
+    k: {
+      posX: number;
+      posY: number;
+      rotZ: number;
+      scaleX: number;
+      scaleY: number;
+      showGlint: boolean;
+      glintProgress: number;
+      showGhosts: boolean;
+      ghostAlpha: number;
+    },
+    ultOpenPulse: number
+  ): number {
     let castPulseAmt = 0;
+    let showGlint = k.showGlint;
+    let glintProgress = k.glintProgress;
     if (this.castPulseTimer > 0) {
       this.castPulseTimer = Math.max(0, this.castPulseTimer - dtSec);
       const cp = 1 - this.castPulseTimer / this.castPulseDuration;
@@ -748,25 +787,26 @@ export class ChibiSprite3D {
     }
 
     const baseHeightOffset = this.mesh.position.y;
-    const renderGhosts = showGhosts;
     for (let i = 0; i < this.ghostMeshes.length; i++) {
       const gm = this.ghostMeshes[i];
       const gMat = this.ghostMats[i];
-      gm.visible = renderGhosts;
-      if (renderGhosts) {
+      gm.visible = k.showGhosts;
+      if (k.showGhosts) {
         const trailDist = 0.14 + i * 0.15;
         gm.position.set(
-          posX - this.facing * trailDist,
-          baseHeightOffset + posY * (0.72 - i * 0.2),
+          k.posX - this.facing * trailDist,
+          baseHeightOffset + k.posY * (0.72 - i * 0.2),
           -0.04 - i * 0.03
         );
-        gm.rotation.z = rotZ * (0.65 - i * 0.22);
-        gm.scale.set(this.mesh.scale.x * scaleX, scaleY, 1);
-        gMat.opacity = gMat.map ? Math.max(0, (0.78 - i * 0.24) * ghostAlpha) : 0;
+        gm.rotation.z = k.rotZ * (0.65 - i * 0.22);
+        gm.scale.set(this.mesh.scale.x * k.scaleX, k.scaleY, 1);
+        gMat.opacity = gMat.map ? Math.max(0, (0.78 - i * 0.24) * k.ghostAlpha) : 0;
       }
     }
+    return castPulseAmt;
+  }
 
-    // Fade world-anchored blitz afterimages
+  private stepBlitzGhostFades(dtSec: number): void {
     for (let i = 0; i < this.blitzGhosts.length; i++) {
       const bg = this.blitzGhosts[i];
       if (bg.life > 0) {
@@ -780,138 +820,10 @@ export class ChibiSprite3D {
         if (bg.life <= 0) bg.mesh.visible = false;
       }
     }
+  }
 
-    if (this.blitzActive && this.blitzTracks) {
-      this.blitzTimer += dtSec;
-      const bp = Math.min(1, this.blitzTimer / this.blitzDuration);
-      const cur = sampleTierMotionWaypoints(this.blitzTracks.hero, bp);
-      const invX = 1 / Math.max(0.01, this.blitzScaleWorld.x);
-      const invY = 1 / Math.max(0.01, this.blitzScaleWorld.y);
-      const invZ = 1 / Math.max(0.01, this.blitzScaleWorld.z);
-      const lx = (cur.x - this.blitzAnchorWorld.x) * invX;
-      const ly = (cur.y - this.blitzAnchorWorld.y) * invY;
-      const lz = (cur.z - this.blitzAnchorWorld.z) * invZ;
-
-      // Shrink chibi slightly as it moves forward (+Z) toward the camera into the pit
-      // to counter perspective bloat and make aerial/blitz leaps look sleek and agile.
-      const forwardDz = Math.max(0, cur.z - this.blitzAnchorWorld.z);
-      const combatScale = 1.0 - Math.min(1, forwardDz / 7.5) * 0.42;
-
-      this.blitzHeroPivot.position.set(lx, ly, lz);
-      this.blitzHeroPivot.scale.setScalar(combatScale);
-      this.blitzHeroPivot.quaternion.copy(this.spritePivot.quaternion);
-
-      if (this.blitzLastPoseApplied !== cur.pose) {
-        this.blitzLastPoseApplied = cur.pose;
-        this.syncBlitzShadowPose(cur.pose);
-      }
-
-      const heroFaceFlip = this.isPoseLeftFacing(cur.pose) ? (-cur.face as 1 | -1) : cur.face;
-      if (this.blitzShadowOnly) {
-        this.spritePivot.position.set(0, 0, 0);
-        this.spritePivot.scale.set(1, 1, 1);
-        this.blitzHeroPivot.visible = true;
-        this.blitzHeroMesh.visible = Boolean(this.blitzHeroMat.map);
-        this.blitzHeroMesh.rotation.z = cur.rz;
-        this.blitzHeroMesh.scale.set(heroFaceFlip, 1, 1);
-        this.blitzHeroMat.color.set(cur.col);
-        const fade = bp < 0.08 ? bp / 0.08 : bp > 0.86 ? Math.max(0, (1 - bp) / 0.14) : 1;
-        this.blitzHeroMat.opacity = fade * 0.96;
-      } else {
-        this.blitzHeroMesh.visible = false;
-        this.blitzHeroPivot.visible = Boolean(this.backAttachments.omegaHandPivot);
-        this.spritePivot.position.set(lx, ly, lz);
-        this.spritePivot.scale.setScalar(combatScale);
-        if (this.facing !== cur.face) this.setFacing(cur.face);
-        if (this.animState !== cur.pose) this.setAnimState(cur.pose);
-      }
-
-      if (bp > 0.08 && bp < 0.88) {
-        this.blitzGhostAccum += dtSec;
-        const spawnEvery = this.lowQuality ? 0.048 : cur.snapping ? 0.02 : 0.036;
-        if (this.blitzGhostAccum >= spawnEvery) {
-          this.blitzGhostAccum = 0;
-          const faceFlip = this.blitzShadowOnly
-            ? heroFaceFlip
-            : this.mesh.scale.x < 0
-              ? -1
-              : 1;
-          this.spawnBlitzGhost(
-            lx,
-            ly,
-            lz,
-            cur.rz,
-            faceFlip,
-            cur.col,
-            combatScale,
-            this.blitzHeroMat.map
-          );
-        }
-      }
-
-      if (this.blitzTracks.clone) {
-        const cCur = sampleTierMotionWaypoints(this.blitzTracks.clone, bp);
-        this.blitzCloneMesh.visible = cCur.opacity > 0.05 && Boolean(this.blitzCloneMat.map);
-        if (this.blitzCloneMesh.visible) {
-          const clx = (cCur.x - this.blitzAnchorWorld.x) * invX;
-          const cly = (cCur.y - this.blitzAnchorWorld.y) * invY;
-          const clz = (cCur.z - this.blitzAnchorWorld.z) * invZ;
-          const cForwardDz = Math.max(0, cCur.z - this.blitzAnchorWorld.z);
-          const cCombatScale = 1.0 - Math.min(1, cForwardDz / 7.5) * 0.42;
-          const cloneScale = cCombatScale * Math.min(1.06, cCur.scale);
-          this.blitzCloneMesh.position.set(clx, cly + this.currentSpriteHeight * 0.5 * cloneScale, clz);
-          this.blitzCloneMesh.quaternion.copy(this.spritePivot.quaternion);
-          this.blitzCloneMesh.rotateZ(cCur.rz);
-          this.blitzCloneMesh.scale.set(cCur.face * cloneScale, cloneScale, 1);
-          this.blitzCloneMat.opacity = cCur.opacity;
-        }
-      } else {
-        this.blitzCloneMesh.visible = false;
-      }
-
-      if (!this.blitzShadowOnly) {
-        this.shadowDisc.rotation.y = this.spritePivot.rotation.y;
-        this.shadowDisc.position.set(lx, 0.012, lz);
-        this.shadowDisc.scale.setScalar(combatScale * Math.max(0.45, 1 - Math.max(0, ly) * 0.25));
-        this.shadowMat.opacity = this.baseShadowOpacity * Math.max(0.25, 1 - Math.max(0, ly) * 0.35);
-      }
-
-      // Animate Omega & Twin unit-specific 3D back-shader attachments
-      if (this.backAttachments.omegaAuraGroup && this.backAttachments.omegaAuraMat) {
-        const showAura = this.shouldShowBackAttachment();
-        this.backAttachments.omegaAuraGroup.visible = showAura;
-        if (showAura) {
-          this.updateBackAttachmentGroup(elapsed, 0.96);
-        }
-      }
-
-      const handFace = this.blitzShadowOnly ? cur.face : this.facing;
-      updateOmegaHandBlitzWeapon(
-        this.backAttachments,
-        bp,
-        elapsed,
-        handFace,
-        this.currentSpriteHeight
-      );
-
-      if (bp >= 1) {
-        this.blitzActive = false;
-        this.blitzTracks = null;
-        this.blitzHeroPivot.visible = false;
-        this.blitzHeroMesh.visible = false;
-        this.blitzCloneMesh.visible = false;
-        if (this.backAttachments.omegaAuraGroup) {
-          this.backAttachments.omegaAuraGroup.visible = this.shouldShowBackAttachment();
-        }
-        if (this.backAttachments.omegaHandPivot) this.backAttachments.omegaHandPivot.visible = false;
-        this.spritePivot.position.set(0, 0, 0);
-        this.spritePivot.scale.set(1, 1, 1);
-        if (!this.blitzShadowOnly) {
-          this.setAnimState('attack');
-        }
-      }
-      if (!this.blitzShadowOnly) return;
-    } else {
+  private stepActiveBlitzMotion(dtSec: number, elapsed: number, castPulseAmt: number): boolean {
+    if (!this.blitzActive || !this.blitzTracks) {
       this.blitzHeroPivot.visible = false;
       this.blitzHeroMesh.visible = false;
       this.blitzCloneMesh.visible = false;
@@ -926,8 +838,119 @@ export class ChibiSprite3D {
           this.backAttachments.omegaAuraGroup.scale.setScalar(1);
         }
       }
+      return false;
     }
 
+    this.blitzTimer += dtSec;
+    const bp = Math.min(1, this.blitzTimer / this.blitzDuration);
+    const cur = sampleTierMotionWaypoints(this.blitzTracks.hero, bp);
+    const invX = 1 / Math.max(0.01, this.blitzScaleWorld.x);
+    const invY = 1 / Math.max(0.01, this.blitzScaleWorld.y);
+    const invZ = 1 / Math.max(0.01, this.blitzScaleWorld.z);
+    const lx = (cur.x - this.blitzAnchorWorld.x) * invX;
+    const ly = (cur.y - this.blitzAnchorWorld.y) * invY;
+    const lz = (cur.z - this.blitzAnchorWorld.z) * invZ;
+    const forwardDz = Math.max(0, cur.z - this.blitzAnchorWorld.z);
+    const combatScale = 1.0 - Math.min(1, forwardDz / 7.5) * 0.42;
+
+    this.blitzHeroPivot.position.set(lx, ly, lz);
+    this.blitzHeroPivot.scale.setScalar(combatScale);
+    this.blitzHeroPivot.quaternion.copy(this.spritePivot.quaternion);
+
+    if (this.blitzLastPoseApplied !== cur.pose) {
+      this.blitzLastPoseApplied = cur.pose;
+      this.syncBlitzShadowPose(cur.pose);
+    }
+
+    const heroFaceFlip = this.isPoseLeftFacing(cur.pose) ? (-cur.face as 1 | -1) : cur.face;
+    if (this.blitzShadowOnly) {
+      this.spritePivot.position.set(0, 0, 0);
+      this.spritePivot.scale.set(1, 1, 1);
+      this.blitzHeroPivot.visible = true;
+      this.blitzHeroMesh.visible = Boolean(this.blitzHeroMat.map);
+      this.blitzHeroMesh.rotation.z = cur.rz;
+      this.blitzHeroMesh.scale.set(heroFaceFlip, 1, 1);
+      this.blitzHeroMat.color.set(cur.col);
+      const fade = bp < 0.08 ? bp / 0.08 : bp > 0.86 ? Math.max(0, (1 - bp) / 0.14) : 1;
+      this.blitzHeroMat.opacity = fade * 0.96;
+    } else {
+      this.blitzHeroMesh.visible = false;
+      this.blitzHeroPivot.visible = Boolean(this.backAttachments.omegaHandPivot);
+      this.spritePivot.position.set(lx, ly, lz);
+      this.spritePivot.scale.setScalar(combatScale);
+      if (this.facing !== cur.face) this.setFacing(cur.face);
+      if (this.animState !== cur.pose) this.setAnimState(cur.pose);
+    }
+
+    if (bp > 0.08 && bp < 0.88) {
+      this.blitzGhostAccum += dtSec;
+      const spawnEvery = this.lowQuality ? 0.048 : cur.snapping ? 0.02 : 0.036;
+      if (this.blitzGhostAccum >= spawnEvery) {
+        this.blitzGhostAccum = 0;
+        const faceFlip = this.blitzShadowOnly ? heroFaceFlip : this.mesh.scale.x < 0 ? -1 : 1;
+        this.spawnBlitzGhost(lx, ly, lz, cur.rz, faceFlip, cur.col, combatScale, this.blitzHeroMat.map);
+      }
+    }
+
+    if (this.blitzTracks.clone) {
+      const cCur = sampleTierMotionWaypoints(this.blitzTracks.clone, bp);
+      this.blitzCloneMesh.visible = cCur.opacity > 0.05 && Boolean(this.blitzCloneMat.map);
+      if (this.blitzCloneMesh.visible) {
+        const clx = (cCur.x - this.blitzAnchorWorld.x) * invX;
+        const cly = (cCur.y - this.blitzAnchorWorld.y) * invY;
+        const clz = (cCur.z - this.blitzAnchorWorld.z) * invZ;
+        const cForwardDz = Math.max(0, cCur.z - this.blitzAnchorWorld.z);
+        const cCombatScale = 1.0 - Math.min(1, cForwardDz / 7.5) * 0.42;
+        const cloneScale = cCombatScale * Math.min(1.06, cCur.scale);
+        this.blitzCloneMesh.position.set(clx, cly + this.currentSpriteHeight * 0.5 * cloneScale, clz);
+        this.blitzCloneMesh.quaternion.copy(this.spritePivot.quaternion);
+        this.blitzCloneMesh.rotateZ(cCur.rz);
+        this.blitzCloneMesh.scale.set(cCur.face * cloneScale, cloneScale, 1);
+        this.blitzCloneMat.opacity = cCur.opacity;
+      }
+    } else {
+      this.blitzCloneMesh.visible = false;
+    }
+
+    if (!this.blitzShadowOnly) {
+      this.shadowDisc.rotation.y = this.spritePivot.rotation.y;
+      this.shadowDisc.position.set(lx, 0.012, lz);
+      this.shadowDisc.scale.setScalar(combatScale * Math.max(0.45, 1 - Math.max(0, ly) * 0.25));
+      this.shadowMat.opacity = this.baseShadowOpacity * Math.max(0.25, 1 - Math.max(0, ly) * 0.35);
+    }
+
+    if (this.backAttachments.omegaAuraGroup && this.backAttachments.omegaAuraMat) {
+      const showAura = this.shouldShowBackAttachment();
+      this.backAttachments.omegaAuraGroup.visible = showAura;
+      if (showAura) this.updateBackAttachmentGroup(elapsed, 0.96);
+    }
+
+    const handFace = this.blitzShadowOnly ? cur.face : this.facing;
+    updateOmegaHandBlitzWeapon(this.backAttachments, bp, elapsed, handFace, this.currentSpriteHeight);
+
+    if (bp >= 1) {
+      this.blitzActive = false;
+      this.blitzTracks = null;
+      this.blitzHeroPivot.visible = false;
+      this.blitzHeroMesh.visible = false;
+      this.blitzCloneMesh.visible = false;
+      if (this.backAttachments.omegaAuraGroup) {
+        this.backAttachments.omegaAuraGroup.visible = this.shouldShowBackAttachment();
+      }
+      if (this.backAttachments.omegaHandPivot) this.backAttachments.omegaHandPivot.visible = false;
+      this.spritePivot.position.set(0, 0, 0);
+      this.spritePivot.scale.set(1, 1, 1);
+      if (!this.blitzShadowOnly) this.setAnimState('attack');
+    }
+    return !this.blitzShadowOnly;
+  }
+
+  private applyGroundedShadowAndHolo(
+    elapsed: number,
+    posX: number,
+    posY: number,
+    shadowScale: number
+  ): void {
     const yaw = this.spritePivot.rotation.y;
     const heightFactor = Math.max(0.42, 1 - posY * 1.45);
     this.spritePivot.position.set(0, 0, 0);

@@ -6,7 +6,7 @@ import {
   createVaultCoreDais,
   type VaultCoreDaisHandle,
 } from './ArenaWings3D';
-import { disposeObject3D } from './ChestVaultStation3D';
+import { disposeObject3D } from './MeshHelpers3D';
 import { SkyMetropolis3D } from './SkyMetropolis3D';
 import { getMiningSkyDomeTexture, getPlazaSkyDomeTexture } from './WorldSkyTextures3D';
 

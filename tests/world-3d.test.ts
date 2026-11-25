@@ -25,7 +25,7 @@ import {
   STAGE_CRESCENT_SLOTS,
   stepMineSceneCamera,
 } from '../src/game3d/MineSceneStage3D';
-import { createNexusLeftGate, createVaultCoreDais } from '../src/game3d/ArenaWings3D';
+import { createVaultCoreDais } from '../src/game3d/ArenaWings3D';
 import { createColosseumBiomeHandle, WORLD_ARENA_BIOMES } from '../src/game3d/ColosseumBiome3D';
 import { createCyberCargoPod } from '../src/game3d/CyberCargoPod3D';
 import { AudioManager } from '../src/audio/AudioManager';
@@ -94,14 +94,6 @@ import {
   getChibiById,
   getChibiFrameUvOffset,
 } from '../src/game3d/ChibiCatalog';
-import {
-  createCaveRailway,
-  CaveRailwayHandle,
-} from '../src/game3d/CaveRailway3D';
-import {
-  createChestVaultStation,
-  createProceduralTreasureChest,
-} from '../src/game3d/ChestVaultStation3D';
 import { ChibiSprite3D } from '../src/game3d/ChibiSprite3D';
 import { ChibiFieldFxController, FieldMiner3D } from '../src/game3d/FieldMiner3D';
 import { FusionWorld3D } from '../src/game3d/FusionWorld3D';
@@ -263,7 +255,6 @@ import {
 } from '../src/game3d/skills/abyssalLeviathanSkillVfx3D';
 import { createTowerCityEnvironment } from '../src/game3d/TowerCityEnvironment3D';
 import { WeatherFx3D } from '../src/game3d/WeatherFx3D';
-import { createWeatherSkyMaterial } from '../src/game3d/WeatherSkyShader';
 import { enchantAuraIconHtml, enchantDiceIconHtml, gemPotionIconHtml, hudIconHtml, oreIconSvg, pickaxeIconHtml, towerIconHtml, weatherIconHtml } from '../src/ui/HudIcons';
 import {
   getGlobalGemGainBonus,
@@ -2441,68 +2432,6 @@ describe('Pure 3D Mine World', () => {
     }
   });
 
-  it('builds grounded multi-part procedural chest & connected escalator vault station with instanced cleats and dispose cleanup', () => {
-    const chest = createProceduralTreasureChest({ scale: 1.08, gemColor: '#38bdf8' });
-    chest.group.updateMatrixWorld(true);
-    const chestBox = new THREE.Box3().setFromObject(chest.group);
-    expect(chestBox.min.y).toBeGreaterThanOrEqual(-0.02);
-    expect(chestBox.min.y).toBeLessThanOrEqual(0.02);
-
-    let chestMeshCount = 0;
-    let chestInstancedCount = 0;
-    chest.group.traverse((obj) => {
-      if (obj instanceof THREE.InstancedMesh) chestInstancedCount += 1;
-      if (obj instanceof THREE.Mesh) chestMeshCount += 1;
-    });
-    expect(chestMeshCount).toBeGreaterThan(10);
-    expect(chestInstancedCount).toBe(1);
-
-    chest.setInteraction(true, 1.0, 0);
-    expect(chest.lidPivot.rotation.x).toBeLessThan(-0.2);
-
-    const station = createChestVaultStation({ crystalColor: '#38bdf8', cliffColor: '#78716c' });
-    station.group.updateMatrixWorld(true);
-    const stationCenter = new THREE.Box3().setFromObject(station.group).getCenter(new THREE.Vector3());
-    expect(stationCenter.z).toBeCloseTo(0.15, 1);
-    let stationInstancedCount = 0;
-    station.group.traverse((obj) => {
-      if (obj instanceof THREE.InstancedMesh) stationInstancedCount += 1;
-    });
-    expect(stationInstancedCount).toBe(1);
-
-    expect(() => {
-      station.setPalette('#f97316', '#292524');
-      station.update(0.016, 1.2, true, 0.5);
-      chest.setAccentColor('#f97316');
-      chest.dispose();
-      station.dispose();
-    }).not.toThrow();
-  });
-
-  it('builds grand procedural cave cliff, continuous railway, and animated 2-car minecart train with dispose cleanup', () => {
-    const cave: CaveRailwayHandle = createCaveRailway({
-      crystalColor: '#38bdf8',
-      cliffColor: '#78716c',
-      foliageColor: '#16a34a',
-    });
-    cave.group.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(cave.group);
-    expect(box.max.y).toBeGreaterThan(3.5);
-
-    let instancedCount = 0;
-    cave.group.traverse((obj) => {
-      if (obj instanceof THREE.InstancedMesh) instancedCount += 1;
-    });
-    expect(instancedCount).toBe(1);
-
-    expect(() => {
-      cave.setPalette('#c084fc', '#44403c', '#059669');
-      cave.update(0.05, 2.5);
-      cave.update(0.05, 6.0);
-      cave.dispose();
-    }).not.toThrow();
-  });
-
   it('builds ruined Cyber City highway, central meteor crater, instanced skyline & billboards for Battle Tower with full dispose cleanup', () => {
     const cityEnv = createTowerCityEnvironment();
     cityEnv.group.updateMatrixWorld(true);
@@ -3435,15 +3364,7 @@ describe('Pure 3D Mine World', () => {
     pit.dispose();
   });
 
-  it('toggles low-quality mode optimizations on WeatherSkyShader, MineEnvironment3D, PlotPedestal3D, and FieldMiner3D', () => {
-    const sky = createWeatherSkyMaterial('celestial');
-    expect(sky.material.uniforms.uLowQuality.value).toBe(0);
-    sky.setLowQuality(true);
-    expect(sky.material.uniforms.uLowQuality.value).toBe(1);
-    sky.setLowQuality(false);
-    expect(sky.material.uniforms.uLowQuality.value).toBe(0);
-    sky.material.dispose();
-
+  it('toggles low-quality mode optimizations on MineEnvironment3D, PlotPedestal3D, and FieldMiner3D', () => {
     const env = new MineEnvironment3D(DEFAULT_WORLD_PALETTE);
     env.setLowQuality(true);
     let pointsVis = true;
@@ -4457,10 +4378,6 @@ describe('Pure 3D Mine World', () => {
 
   it('builds sleek Vault Hover-Pad + Cyber Cargo Pod, clears left portal & floating pillars, and applies Cyber-Colosseum deck texture', () => {
     expect(getCyberColosseumDeckTexture('#38bdf8')).toBeInstanceOf(THREE.Texture);
-
-    // Keep createNexusLeftGate exported & valid if referenced directly
-    const leftGate = createNexusLeftGate({ crystalColor: '#38bdf8', cliffColor: '#1e293b' });
-    leftGate.dispose();
 
     const vaultDais = createVaultCoreDais({ crystalColor: '#38bdf8', cliffColor: '#1e293b' });
     vaultDais.group.updateMatrixWorld(true);

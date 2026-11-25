@@ -2,8 +2,23 @@ import * as THREE from 'three';
 import { GemPotionShape, ItemRarity } from '../game/GameData';
 import { WeatherId } from '../game/WeatherData';
 import { createEnchantAura3D } from './AuraModels3D';
-import { toonMat } from './HudIconOreModelsA3D';
 import { disposeObject3D } from './MeshHelpers3D';
+
+function toonMat(
+  color: THREE.ColorRepresentation,
+  roughness = 0.32,
+  metalness = 0.15,
+  emissive: THREE.ColorRepresentation = 0x000000,
+  emissiveIntensity = 0
+): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness,
+    metalness,
+    emissive,
+    emissiveIntensity,
+  });
+}
 
 export type Hud3dIconKey =
   | 'shops'

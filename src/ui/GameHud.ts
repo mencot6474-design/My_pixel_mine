@@ -11,7 +11,6 @@ import { gameSettings } from '../game/GameSettings';
 import { GameState } from '../game/GameState';
 import type { OverclockTier } from '../game/OverclockDomain';
 import { WeatherId } from '../game/WeatherData';
-import { fmtInt } from '../game/NumberFormat';
 import { TowerWaveOreState } from '../game/TowerData';
 import { AchievementsModalUi } from './AchievementsModalUi';
 import { AltarShopHudUi } from './AltarShopHudUi';
@@ -20,10 +19,9 @@ import { ChestModalUi } from './ChestModalUi';
 import { DailyLoginModalUi } from './DailyLoginModalUi';
 import { IndexModalUi } from './IndexModalUi';
 import { InventoryModalUi } from './InventoryModalUi';
-import { FusionRecipeDef } from '../game/FusionData';
 import { ForgeModalUi } from './ForgeModalUi';
 import { FusionHudUi } from './FusionHudUi';
-import { HotbarHudUi, canDropHotbarOnPlot } from './HotbarHudUi';
+import { HotbarHudUi } from './HotbarHudUi';
 import {
   applyHudViewportScale,
   type FeverEncoreHudInfo,
@@ -42,9 +40,6 @@ import { HudOmegaBridge, type OmegaSceneOps } from './HudOmegaBridge';
 import {
   bindHudRootEvents,
   renderActiveModalHtml,
-  stepHudFastTick,
-  stepHudSlowTick,
-  syncHudLiveSubView,
   updateHudCurrencyAndBadges,
 } from './HudActionRouter';
 import {
@@ -72,6 +67,11 @@ import { HudRiftBridge, type RiftSceneOps } from './HudRiftBridge';
 import { UpgradesWorldsUi } from './UpgradesWorldsUi';
 import { WeatherDpsHudUi } from './WeatherDpsHudUi';
 import { WorldOverlayHudUi } from './WorldOverlayHudUi';
+import {
+  createHudSubModules,
+  type HudFusionOps,
+  mountHudRuntimeListeners,
+} from './HudWiring';
 
 /** Returns true when at least one Sell Shop item card is currently selected after a Select All click. */
 export function shouldAdvanceTutorialOnSellSelectAll(root: ParentNode): boolean {
@@ -97,12 +97,6 @@ export class GameHud {
   private toasts: Array<{ id: number; text: string }> = [];
   private nextToastId = 1;
   private modalOpenedAtMs = 0;
-  private lastRegrowthActive = false;
-  private lastReturnRushActive = false;
-  private lastOverclockActive = false;
-  private lastOverclockTier: 0 | OverclockTier = 0;
-  private lastMineSubSyncMs = 0;
-  private mineSubSyncTimer: number | null = null;
 
   private readonly shopUi: ShopModalsUi;
   private readonly forgeUi: ForgeModalUi;
@@ -157,426 +151,98 @@ export class GameHud {
     private readonly onToggleAutoMeteor?: (enabled: boolean) => void,
     private readonly onTutorialComplete?: () => void,
     private readonly onOverclockChange?: (active: boolean, tier: 0 | OverclockTier) => void,
-    private readonly fusionOps?: {
-      syncFusionRecipe: (
-        recipe: FusionRecipeDef,
-        readyFlags: readonly boolean[],
-        oreReadyFlags?: readonly boolean[],
-        canFuse?: boolean
-      ) => void;
-      triggerFusionAnimation: (recipe: FusionRecipeDef, onComplete: () => void) => void;
-      setFusionRevealHold?: (active: boolean) => void;
-    },
+    private readonly fusionOps?: HudFusionOps,
     omegaOps?: OmegaSceneOps,
     riftOps?: RiftSceneOps,
     towerOps?: TowerSceneOps
   ) {
-    this.shopUi = new ShopModalsUi(
-      this.state,
-      (msg) => this.pushToast(msg),
-      () => this.render()
-    );
-    this.settingsUi = new SettingsModalUi(
-      undefined,
-      (msg) => this.pushToast(msg),
-      () => this.render()
-    );
-    this.offlineUi = new OfflineModalUi(
-      this.state,
-      (msg) => this.pushToast(msg),
-      () => this.openModal('none')
-    );
-    this.bountiesUi = new BountiesModalUi(
-      this.state,
-      (msg) => this.pushToast(msg),
-      () => this.render()
-    );
-    this.achievementsUi = new AchievementsModalUi(
-      this.state,
-      () => this.render(),
-      (msg) => this.pushToast(msg)
-    );
-    this.dailyLoginUi = new DailyLoginModalUi(
-      this.state,
-      (msg) => this.pushToast(msg),
-      () => this.render()
-    );
-    this.forgeUi = new ForgeModalUi(
-      this.state,
-      (msg) => this.pushToast(msg),
-      () => this.render()
-    );
-    this.indexUi = new IndexModalUi(this.state, () => this.render(), (msg) => this.pushToast(msg));
-    this.inventoryUi = new InventoryModalUi(this.state, (msg) => this.pushToast(msg));
-    this.chestUi = new ChestModalUi(
-      this.state,
-      (msg) => this.pushToast(msg),
-      () => this.render()
-    );
-    this.upgradesUi = new UpgradesWorldsUi(
-      this.state,
-      (msg) => this.pushToast(msg),
-      (kind) => this.openModal(kind),
-      () => this.render()
-    );
-    this.plotInspectUi = new PlotInspectUi(
-      this.state,
-      (msg) => this.pushToast(msg),
-      (slot) => this.openPlotInspector(slot),
-      () => this.render(),
-      () => this.renderToastStack(),
-      () => this.renderToasts()
-    );
-    this.towerUi = new TowerUi(
-      this.state,
-      (msg) => this.pushToast(msg),
-      (kind) => this.openModal(kind),
-      () => this.setSceneMode('tower'),
-      () => this.setSceneMode('shop'),
-      () => this.render()
-    );
-    this.towerBridge = new HudTowerBridge(
-      this.root,
-      this.state,
-      this.towerUi,
-      () => this.sceneMode,
-      (mode) => this.setSceneMode(mode),
-      (kind) => this.openModal(kind),
-      (msg) => this.pushToast(msg),
-      () => this.render(),
-      this.onSyncTowerVisual,
-      towerOps
-    );
-    this.omegaBossUi = new OmegaBossModalUi(
-      this.state,
-      () => this.render(),
-      (bossId, tier) => this.omegaBridge.startOmegaBattle(bossId, tier),
-      () => this.openModal('none'),
-      (msg) => this.pushToast(msg)
-    );
-    this.riftUi = new RiftModalUi(
-      this.state,
-      () => this.render(),
-      (msg) => this.pushToast(msg),
-      () => this.riftBridge.startRiftBattle()
-    );
-    this.riftArenaUi = new RiftArenaHudUi(
-      this.state,
-      () => this.riftBridge.retreatRiftBattle(),
-      () => this.riftBridge.startRiftBattle(),
-      () => this.riftBridge.returnToHub()
-    );
-    this.riftBridge = new HudRiftBridge(
-      this.root,
-      this.state,
-      this.riftArenaUi,
-      () => this.sceneMode,
-      (mode) => this.setSceneMode(mode),
-      (kind) => this.openModal(kind),
-      (msg) => this.pushToast(msg),
-      () => this.render(),
-      riftOps
-    );
-    this.omegaArenaUi = new OmegaArenaHudUi(
-      this.state,
-      () => {
-        this.state.abandonOmegaBoss();
-        this.setSceneMode('shop');
-        this.openModal('omega-boss');
+    const mods = createHudSubModules({
+      root: this.root,
+      state: this.state,
+      getSceneMode: () => this.sceneMode,
+      setSceneMode: (mode) => this.setSceneMode(mode),
+      getActiveModal: () => this.activeModal,
+      setActiveModal: (kind) => {
+        this.activeModal = kind;
       },
-      () => this.omegaBridge.handleOmegaParryClick(),
-      () => {
-        const summary = this.state.omegaLastSummary;
-        if (summary) this.omegaBossUi.openForBoss(summary.bossId);
-        this.setSceneMode('shop');
-        this.openModal('omega-boss');
-      },
-      (bossId, tier) => this.omegaBridge.startOmegaBattle(bossId, tier),
-      (targetIdx) => this.omegaBridge.handleOmegaTapInvulShield(targetIdx)
-    );
-    this.omegaBridge = new HudOmegaBridge(
-      this.root,
-      this.state,
-      this.omegaArenaUi,
-      () => this.sceneMode,
-      (mode) => this.setSceneMode(mode),
-      (kind) => this.openModal(kind),
-      (msg) => this.pushToast(msg),
-      () => this.render(),
-      omegaOps
-    );
-    this.tutorialUi = new TutorialUi(
-      (zoomed) => this.onSetTutorialPitZoom?.(zoomed),
-      (zoomed) => this.onSetTutorialChestZoom?.(zoomed),
-      (zoomed) => this.onSetTutorialSellShopZoom?.(zoomed),
-      () => {
-        this.state.unlockTwinTrial();
-        this.onTutorialComplete?.();
-        this.render();
-      },
-      () => {
-        const reward = this.state.grantTutorialStarterReward();
-        audio.playSfx('rare-fanfare', { volume: 0.7 });
-        this.pushToast(`Starter Bonus: +${fmtInt(reward.gems)} Gems • +${fmtInt(reward.dice)} Enchant Dice!`);
-      },
-      {
-        onClosePlotInspect: () => {
-          if (this.inspectedSlot !== null) {
-            this.openPlotInspector(null);
-          }
-        },
-        onCloseModal: () => {
-          if (this.activeModal !== 'none') {
-            this.openModal('none');
-          }
-        },
-      }
-    );
-    if (!this.tutorialUi.isActive() && TutorialUi.isStoredDone()) {
-      this.state.unlockTwinTrial();
-    }
-    this.twinTrialUi = new TwinTrialModalUi(
-      this.state,
-      (msg) => this.pushToast(msg),
-      () => {
-        this.activeModal = 'none';
-        this.render();
-      },
-      () => this.render()
-    );
-    this.weatherDpsUi = new WeatherDpsHudUi(
-      this.state,
-      (slot) => this.openPlotInspector(slot),
-      this.onToggleAutoMeteor
-    );
-    this.hotbarUi = new HotbarHudUi(
-      this.state,
-      (msg) => this.pushToast(msg),
-      () => this.toggleModal('inventory'),
-      () =>
-        canDropHotbarOnPlot({
-          sceneMode: this.sceneMode,
-          activeModal: this.activeModal,
-          inspectedSlot: this.inspectedSlot,
-        }),
-      () => this.activeModal,
-      this.plotDropOps
-    );
-    this.altarShopUi = new AltarShopHudUi(
-      this.state,
-      (msg) => this.pushToast(msg),
-      (mode) => this.setSceneMode(mode),
-      (station) => this.openShopStation(station),
-      () => this.sceneMode,
-      this.onTriggerEnchantSpin
-    );
-    this.fusionUi = new FusionHudUi(
-      this.state,
-      (msg) => this.pushToast(msg),
-      () => this.render(),
-      (mode) => this.setSceneMode(mode),
-      () => this.openModal('none'),
-      this.fusionOps?.syncFusionRecipe,
-      this.fusionOps?.triggerFusionAnimation,
-      this.fusionOps?.setFusionRevealHold
-    );
-    this.worldOverlayUi = new WorldOverlayHudUi(
-      this.state,
-      () => ({
-        sceneMode: this.sceneMode,
-        activeModal: this.activeModal,
-        inspectedSlot: this.inspectedSlot,
-      }),
-      (station) => this.openShopStation(station),
-      this.plotDropOps?.syncPlotLabel,
-      (x, y, visible) => this.tutorialUi.updatePlotAnchor(x, y, visible),
-      () => {
-        if (this.tutorialUi.isActive()) {
-          this.tutorialUi.syncDomArrow();
-        }
-      }
-    );
-    this.tutorialUi.mount();
-    this.root.addEventListener(
-      'click',
-      (e) => {
-        if (!this.tutorialUi.isActive()) return;
-        const target = e.target as HTMLElement | null;
-        if (!target) return;
-        if (target.closest('[data-inspect-action="up-dmg"]')) {
-          window.setTimeout(() => this.tutorialUi.notifyUpgraded(), 20);
-        } else if (target.closest('[data-action="chest-take-all"]')) {
-          window.setTimeout(() => this.tutorialUi.notifyChestTaken(), 20);
-        } else if (target.closest('[data-sell-key]')) {
-          window.setTimeout(() => this.tutorialUi.notifySellOreSelected(), 20);
-        } else if (target.closest('[data-action="sell-select-all"]')) {
-          window.setTimeout(() => {
-            if (shouldAdvanceTutorialOnSellSelectAll(this.root)) {
-              this.tutorialUi.notifySellOreSelected();
-            }
-          }, 20);
-        } else if (target.closest('[data-action="sell-selected"]')) {
-          window.setTimeout(() => this.tutorialUi.notifySellCompleted(), 20);
-        }
-      },
-      true
-    );
-
-    this.worldOverlayUi.mountLayers();
-
-    const flushMineSubSync = (): void => {
-      this.lastMineSubSyncMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      this.onSyncPlots(this.state.getEquippedPlotMinerIds());
-      this.weatherDpsUi.syncActivePotionsHud(this.root);
-      this.upgradesUi.updateUpgradesBadgeLive(this.root);
-    };
-
-    this.state.subscribe(() => {
-      const hotbarChanged = this.hotbarUi.checkHotbarChanged();
-
-      if (this.inspectedSlot !== null) {
-        this.onSyncPlots(this.state.getEquippedPlotMinerIds());
-        this.plotInspectUi.updateLiveValues(this.root);
-        return;
-      }
-
-      this.updateCurrencyLiveValues();
-      if (hotbarChanged) this.hotbarUi.updateHotbarLive(this.root);
-
-      if (this.sceneMode === 'mine' && this.activeModal === 'none') {
-        const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
-        if (nowMs - this.lastMineSubSyncMs >= 250) {
-          if (this.mineSubSyncTimer !== null) {
-            window.clearTimeout(this.mineSubSyncTimer);
-            this.mineSubSyncTimer = null;
-          }
-          flushMineSubSync();
-        } else if (this.mineSubSyncTimer === null) {
-          this.mineSubSyncTimer = window.setTimeout(() => {
-            this.mineSubSyncTimer = null;
-            flushMineSubSync();
-          }, 250);
-        }
-        return;
-      }
-
-      if (this.mineSubSyncTimer !== null) {
-        window.clearTimeout(this.mineSubSyncTimer);
-        this.mineSubSyncTimer = null;
-      }
-      this.onSyncPlots(this.state.getEquippedPlotMinerIds());
-      this.weatherDpsUi.syncActivePotionsHud(this.root);
-      syncHudLiveSubView({
-        root: this.root,
-        sceneMode: this.sceneMode,
-        activeModal: this.activeModal,
-        altarShopUi: this.altarShopUi,
-        fusionUi: this.fusionUi,
-        towerUi: this.towerUi,
-        chestUi: this.chestUi,
-        shopUi: this.shopUi,
-        indexUi: this.indexUi,
-        inventoryUi: this.inventoryUi,
-        upgradesUi: this.upgradesUi,
-      });
+      openModal: (kind) => this.openModal(kind),
+      toggleModal: (kind) => this.toggleModal(kind),
+      getInspectedSlot: () => this.inspectedSlot,
+      openPlotInspector: (slot) => this.openPlotInspector(slot),
+      openShopStation: (station) => this.openShopStation(station),
+      pushToast: (msg) => this.pushToast(msg),
+      render: () => this.render(),
+      renderToastStack: () => this.renderToastStack(),
+      renderToasts: () => this.renderToasts(),
+      onTriggerEnchantSpin: this.onTriggerEnchantSpin,
+      onSyncTowerVisual: this.onSyncTowerVisual,
+      plotDropOps: this.plotDropOps,
+      onSetTutorialPitZoom: this.onSetTutorialPitZoom,
+      onSetTutorialChestZoom: this.onSetTutorialChestZoom,
+      onSetTutorialSellShopZoom: this.onSetTutorialSellShopZoom,
+      onToggleAutoMeteor: this.onToggleAutoMeteor,
+      onTutorialComplete: this.onTutorialComplete,
+      fusionOps: this.fusionOps,
+      omegaOps,
+      riftOps,
+      towerOps,
     });
+    this.shopUi = mods.shopUi;
+    this.forgeUi = mods.forgeUi;
+    this.indexUi = mods.indexUi;
+    this.inventoryUi = mods.inventoryUi;
+    this.chestUi = mods.chestUi;
+    this.upgradesUi = mods.upgradesUi;
+    this.plotInspectUi = mods.plotInspectUi;
+    this.towerUi = mods.towerUi;
+    this.tutorialUi = mods.tutorialUi;
+    this.weatherDpsUi = mods.weatherDpsUi;
+    this.hotbarUi = mods.hotbarUi;
+    this.altarShopUi = mods.altarShopUi;
+    this.fusionUi = mods.fusionUi;
+    this.worldOverlayUi = mods.worldOverlayUi;
+    this.settingsUi = mods.settingsUi;
+    this.offlineUi = mods.offlineUi;
+    this.bountiesUi = mods.bountiesUi;
+    this.achievementsUi = mods.achievementsUi;
+    this.dailyLoginUi = mods.dailyLoginUi;
+    this.towerBridge = mods.towerBridge;
+    this.omegaBridge = mods.omegaBridge;
+    this.omegaBossUi = mods.omegaBossUi;
+    this.omegaArenaUi = mods.omegaArenaUi;
+    this.twinTrialUi = mods.twinTrialUi;
+    this.riftUi = mods.riftUi;
+    this.riftArenaUi = mods.riftArenaUi;
+    this.riftBridge = mods.riftBridge;
 
-    window.addEventListener('keydown', (e) => {
-      if (e.target instanceof HTMLInputElement) return;
-      if (shouldIgnoreHudShortcutDuringTutorial(this.tutorialUi.isActive(), e.key)) {
-        if (e.key === 'Escape' || e.key === '`' || e.key === '~') e.preventDefault();
-        this.tutorialUi.nudgeBlockedAction();
-        return;
-      }
-      if (e.key === '`' || e.key === '~') {
-        e.preventDefault();
-        if (this.inspectedSlot === null) this.toggleModal('inventory');
-      } else if (e.key === 'Escape') {
-        if (this.inspectedSlot !== null) this.openPlotInspector(null);
-        else if (this.sceneMode === 'omega' && !this.state.omegaBattle && this.state.omegaLastSummary) {
-          this.omegaBossUi.openForBoss(this.state.omegaLastSummary.bossId);
-          this.setSceneMode('shop');
-          this.openModal('omega-boss');
-        } else if (this.sceneMode === 'rift' && !this.state.riftBattle && this.state.riftLastSummary) {
-          this.riftBridge.returnToHub();
-        } else if (this.activeModal !== 'none') this.openModal('none');
-      } else if (e.key >= '1' && e.key <= '9' && this.inspectedSlot === null) {
-        this.state.selectHotbarSlot(Number(e.key) - 1);
-      }
+    mountHudRuntimeListeners({
+      root: this.root,
+      state: this.state,
+      mods,
+      shouldAdvanceTutorialOnSellSelectAll,
+      shouldIgnoreHudShortcutDuringTutorial,
+      getSceneMode: () => this.sceneMode,
+      setSceneMode: (mode) => this.setSceneMode(mode),
+      getActiveModal: () => this.activeModal,
+      setActiveModal: (kind) => {
+        this.activeModal = kind;
+      },
+      openModal: (kind) => this.openModal(kind),
+      toggleModal: (kind) => this.toggleModal(kind),
+      getInspectedSlot: () => this.inspectedSlot,
+      openPlotInspector: (slot) => this.openPlotInspector(slot),
+      isAdPaused: () => this.adPaused,
+      onSyncPlots: this.onSyncPlots,
+      onWeatherChange: this.onWeatherChange,
+      onOverclockChange: this.onOverclockChange,
+      updateCurrencyLiveValues: () => this.updateCurrencyLiveValues(),
+      updateViewportScale: () => this.updateViewportScale(),
+      syncFeverScreenFx: (active, burst, tier, encore) =>
+        this.syncFeverScreenFx(active, burst, tier, encore),
+      syncTowerSceneVisual: () => this.syncTowerSceneVisual(),
+      pushToast: (msg) => this.pushToast(msg),
+      render: () => this.render(),
     });
-
-    this.hotbarUi.mountGlobalListeners();
-
-    this.updateViewportScale();
-    window.addEventListener('resize', () => this.updateViewportScale());
-    window.visualViewport?.addEventListener('resize', () => this.updateViewportScale());
-
-    this.onSyncPlots(this.state.getEquippedPlotMinerIds());
-    this.worldOverlayUi.syncAllPlotLabelsToScene();
-    this.render();
-
-    window.setInterval(() => {
-      if (this.adPaused) return;
-      stepHudSlowTick({
-        root: this.root,
-        state: this.state,
-        activeModal: this.activeModal,
-        weatherDpsUi: this.weatherDpsUi,
-        lastRegrowthActive: this.lastRegrowthActive,
-        setLastRegrowthActive: (active) => {
-          this.lastRegrowthActive = active;
-        },
-        lastReturnRushActive: this.lastReturnRushActive,
-        setLastReturnRushActive: (active) => {
-          this.lastReturnRushActive = active;
-        },
-        onSyncPlots: this.onSyncPlots,
-        onWeatherChange: this.onWeatherChange,
-        onTwinTrialExpired: () => {
-          if (this.activeModal === 'twin-trial') {
-            this.activeModal = 'none';
-          }
-          if (this.inspectedSlot !== null && !this.state.getPlotUnit(this.inspectedSlot)) {
-            this.openPlotInspector(null);
-          }
-        },
-        pushToast: (msg) => this.pushToast(msg),
-        render: () => this.render(),
-      });
-    }, 1000);
-
-    window.setInterval(() => {
-      if (this.adPaused) return;
-      stepHudFastTick({
-        root: this.root,
-        state: this.state,
-        sceneMode: this.sceneMode,
-        weatherDpsUi: this.weatherDpsUi,
-        towerUi: this.towerUi,
-        lastOverclockActive: this.lastOverclockActive,
-        setLastOverclockActive: (active) => {
-          this.lastOverclockActive = active;
-        },
-        lastOverclockTier: this.lastOverclockTier,
-        setLastOverclockTier: (tier) => {
-          this.lastOverclockTier = tier;
-        },
-        onOverclockChange: this.onOverclockChange,
-        syncFeverScreenFx: (active, burst, tier, encore) =>
-          this.syncFeverScreenFx(active, burst, tier, encore),
-        syncTowerSceneVisual: () => this.syncTowerSceneVisual(),
-        omegaArenaUi: this.omegaArenaUi,
-        riftBridge: this.riftBridge,
-        syncOmegaSceneVisual: () => this.omegaBridge.syncOmegaSceneVisual(),
-        setSceneMode: (mode) => this.setSceneMode(mode),
-        openModal: (kind) => this.openModal(kind),
-        pushToast: (msg) => this.pushToast(msg),
-        render: () => this.render(),
-      });
-      if (this.activeModal === 'rift') {
-        this.riftUi.stepTick(0.1, this.root);
-      }
-    }, 100);
   }
 
   public updateOreBars(bars: OreHpScreen[]): void {

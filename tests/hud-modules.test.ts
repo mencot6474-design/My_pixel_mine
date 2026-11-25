@@ -2301,7 +2301,7 @@ describe('Tahap B HUD Modules', () => {
           syncActivePotionsHud: () => {},
           syncWeatherWidget: () => {},
           syncDpsMeterWidget: () => {},
-        } as unknown as any,
+        } as unknown as Parameters<typeof stepHudSlowTick>[0]['weatherDpsUi'],
         lastRegrowthActive: false,
         setLastRegrowthActive: () => {},
         onSyncPlots,

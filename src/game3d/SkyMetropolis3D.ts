@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { OverclockTier } from '../game/OverclockDomain';
-import { disposeObject3D } from './ChestVaultStation3D';
+import { disposeObject3D } from './MeshHelpers3D';
 import type { MineWorldPalette } from './MineWorldPalette';
 import { getBroadcastBannerTexture, getSkyscraperFacadeTexture } from './ProceduralTextures3D';
 import {
