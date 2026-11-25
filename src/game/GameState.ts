@@ -34,7 +34,7 @@ import type { DailyLoginRewardDef } from './DailyLoginData';
 import { type ActivePremiumPassives, buyPremiumShopChibiDomain, getActivePremiumPassiveBonuses } from './PremiumShopData';
 import { type ActiveOmegaPassives, getActiveOmegaPassiveBonuses, OMEGA_MAX_KEYS, type OmegaBossId } from './OmegaData';
 import * as OmegaDom from './OmegaBossDomain';
-import type { OmegaBattleState, OmegaBattleSummary, OmegaStrikeResult, OmegaTargetObject } from './OmegaBossDomain';
+import type { OmegaBattleState, OmegaBattleSummary, OmegaStrikeResult } from './OmegaBossDomain';
 import * as TwinTrialDom from './TwinTrialDomain';
 import type { TwinTrialState } from './TwinTrialDomain';
 import { type ActiveAnomalyPassives, getActiveAnomalyPassiveBonuses } from './AnomalyData';
@@ -57,7 +57,6 @@ export type {
   OmegaBattleState,
   OmegaBattleSummary,
   OmegaStrikeResult,
-  OmegaTargetObject,
 };
 export const getChibiUpgradeCostMult = PlotUnits.getChibiUpgradeCostMult;
 
@@ -114,8 +113,9 @@ export class GameState {
   public readonly towerRunMeta: TowerRunMeta = { startFloor: 1, newRecord: false };
   public omegaKeys = OMEGA_MAX_KEYS;
   public omegaLastKeyRegenAt = Date.now();
-  public omegaCores: Record<string, number> = {};
+  public omegaCoreTokens = 0;
   public omegaBestTier: Record<string, number> = {};
+  public omegaBestDamage: Record<string, number> = {};
   public omegaKills: Record<string, number> = {};
   public omegaClaimedFirstClears: string[] = [];
   public omegaBattle: OmegaBattleState | null = null;
@@ -947,17 +947,15 @@ export class GameState {
   // === OMEGA BOSS SANCTUM ===
   public syncOmegaKeys(now = Date.now()): void { OmegaDom.syncOmegaKeysDomain(this, now, () => this.save()); }
   public getOmegaNextKeyRegenSec(now = Date.now()): number { return OmegaDom.getOmegaNextKeyRegenSecDomain(this, now, () => this.save()); }
-  public getOmegaUnlockedMaxTier(bossId: OmegaBossId): 1 | 2 | 3 | 4 | 5 { return OmegaDom.getOmegaUnlockedMaxTierDomain(this, bossId); }
   public getOmegaSquadEffectiveDps(): number { return OmegaDom.getOmegaSquadEffectiveDpsDomain(this); }
   public buyOmegaKeyWithGems(): 'bought' | 'full' | 'no_gems' { return OmegaDom.buyOmegaKeyWithGemsDomain(this, this.saveHooks); }
   public grantFreeOmegaKey(): boolean { return OmegaDom.grantFreeOmegaKeyDomain(this, this.saveHooks); }
-  public startOmegaBoss(bossId: OmegaBossId, tier: number, now = Date.now()): boolean { return OmegaDom.startOmegaBossDomain(this, bossId, tier, now, this.saveHooks); }
-  public stepOmegaBossTick(dtSec: number, rng: () => number = Math.random) { return OmegaDom.stepOmegaBossTickDomain(this, dtSec, rng, () => this.emit()); }
-  public tapOmegaInvulShield() { return OmegaDom.tapOmegaInvulShieldDomain(this, () => this.emit()); }
-  public applyOmegaSquadStrike(slotIndex: number, attackIntervalSec = 0.85, rng: () => number = Math.random): OmegaStrikeResult { return OmegaDom.applyOmegaSquadStrikeDomain(this, slotIndex, attackIntervalSec, rng, () => this.emit()); }
-  public triggerOmegaParry(rng: () => number = Math.random) { return OmegaDom.triggerOmegaParryDomain(this, rng, () => this.emit()); }
-  public hitOmegaTargetObject(targetId: string, rng: () => number = Math.random) { return OmegaDom.hitOmegaTargetObjectDomain(this, targetId, rng, () => this.emit()); }
-  public abandonOmegaBoss(): OmegaBattleSummary | null { return OmegaDom.finishOmegaBossDomain(this, 'retreat', Math.random, () => this.emit()); }
+  public startOmegaBoss(bossId: OmegaBossId, now = Date.now()): boolean { return OmegaDom.startOmegaBossDomain(this, bossId, now, this.saveHooks); }
+  public stepOmegaBossTick(dtSec: number) { return OmegaDom.stepOmegaBossTickDomain(this, dtSec, () => this.emit()); }
+  public applyOmegaSquadStrike(slotIndex: number, attackIntervalSec = 0.85, rng: () => number = Math.random): OmegaStrikeResult { return OmegaDom.applyOmegaSquadStrikeDomain(this, slotIndex, attackIntervalSec, rng); }
+  public applyOmegaTapDamage(baseTapDmg: number, baseCritChance = 0.15, baseCritMult = 2.5, rng: () => number = Math.random): OmegaStrikeResult { return OmegaDom.applyOmegaTapDamageDomain(this, baseTapDmg, baseCritChance, baseCritMult, rng); }
+  public retreatOmegaBoss(): OmegaBattleSummary | null { return OmegaDom.retreatOmegaBossDomain(this, () => this.emit()); }
+  public clearOmegaSummary(): void { this.omegaLastSummary = null; this.emit(); }
   public unlockOmegaChibi(bossId: OmegaBossId) { return OmegaDom.unlockOmegaChibiDomain(this, bossId, this.saveHooks); }
   public awakenOmegaChibi(bossId: OmegaBossId) { return OmegaDom.awakenOmegaChibiDomain(this, bossId, this.saveHooks); }
 

@@ -87,7 +87,7 @@ export class IndexInspectorUi {
       if (boss && chibi) {
         const owned = this.state.miners[chibi.id] || 0;
         const onPlot = this.state.plotMiners.filter((id) => id === chibi.id).length;
-        const cores = this.state.omegaCores[boss.id] || 0;
+        const cores = this.state.omegaCoreTokens || 0;
         return renderInspectorPanel({
           rarity: chibi.rarity,
           title: chibi.name,
@@ -97,7 +97,7 @@ export class IndexInspectorUi {
           stats: [
             ['Base DPS', `${fmtShort(this.state.getEffectiveChibiDps(chibi.id))}/s`, 'text-[#b45309]'],
             ['Triple Passive', boss.passiveSummary, 'text-[#dc2626]'],
-            ['Unlock Cost', `${boss.unlockCoreCost} ${boss.coreName}s (Have ${cores})`, 'text-[#0369a1]'],
+            ['Unlock Cost', `${boss.unlockCoreCost} Omega Cores (Have ${cores})`, 'text-[#0369a1]'],
             ['Owned', `${fmtInt(owned)} (${onPlot}/5)`, 'text-[#14111d]'],
           ],
           actionHtml: this.renderReviewActionButton(chibi.id, 'Review 4 Poses', 'special'),

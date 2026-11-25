@@ -91,8 +91,10 @@ export interface PlotUnitState {
 export interface OmegaSaveData {
   keys: number;
   lastKeyRegenAt: number;
-  cores: Record<string, number>;
+  coreTokens?: number;
+  cores?: Record<string, number>;
   bestTier: Record<string, number>;
+  bestDamage?: Record<string, number>;
   kills: Record<string, number>;
   claimedFirstClears: string[];
 }
@@ -189,8 +191,9 @@ export interface SaveableGameState {
   towerCoins: number;
   omegaKeys: number;
   omegaLastKeyRegenAt: number;
-  omegaCores: Record<string, number>;
+  omegaCoreTokens: number;
   omegaBestTier: Record<string, number>;
+  omegaBestDamage: Record<string, number>;
   omegaKills: Record<string, number>;
   omegaClaimedFirstClears: string[];
   weatherId: WeatherId;
@@ -322,8 +325,9 @@ export function serializeSavePayload(state: SaveableGameState): SavePayload {
     omega: {
       keys: state.omegaKeys,
       lastKeyRegenAt: state.omegaLastKeyRegenAt,
-      cores: state.omegaCores,
+      coreTokens: state.omegaCoreTokens,
       bestTier: state.omegaBestTier,
+      bestDamage: state.omegaBestDamage,
       kills: state.omegaKills,
       claimedFirstClears: state.omegaClaimedFirstClears,
     },
@@ -623,14 +627,16 @@ export function deserializeSaveJson(
       if (typeof data.omega.lastKeyRegenAt === 'number' && Number.isFinite(data.omega.lastKeyRegenAt)) {
         state.omegaLastKeyRegenAt = data.omega.lastKeyRegenAt;
       }
-      if (data.omega.cores && typeof data.omega.cores === 'object') {
-        const clean: Record<string, number> = {};
+      if (typeof data.omega.coreTokens === 'number' && Number.isFinite(data.omega.coreTokens) && data.omega.coreTokens >= 0) {
+        state.omegaCoreTokens = Math.floor(data.omega.coreTokens);
+      } else if (data.omega.cores && typeof data.omega.cores === 'object') {
+        let migratedSum = 0;
         for (const [id, qty] of Object.entries(data.omega.cores)) {
           if (getOmegaBossById(id) && typeof qty === 'number' && Number.isFinite(qty) && qty > 0) {
-            clean[id] = Math.floor(qty);
+            migratedSum += Math.floor(qty);
           }
         }
-        state.omegaCores = clean;
+        state.omegaCoreTokens = migratedSum;
       }
       if (data.omega.bestTier && typeof data.omega.bestTier === 'object') {
         const clean: Record<string, number> = {};
@@ -640,6 +646,15 @@ export function deserializeSaveJson(
           }
         }
         state.omegaBestTier = clean;
+      }
+      if (data.omega.bestDamage && typeof data.omega.bestDamage === 'object') {
+        const clean: Record<string, number> = {};
+        for (const [id, d] of Object.entries(data.omega.bestDamage)) {
+          if (getOmegaBossById(id) && typeof d === 'number' && Number.isFinite(d) && d > 0) {
+            clean[id] = d;
+          }
+        }
+        state.omegaBestDamage = clean;
       }
       if (data.omega.kills && typeof data.omega.kills === 'object') {
         const clean: Record<string, number> = {};

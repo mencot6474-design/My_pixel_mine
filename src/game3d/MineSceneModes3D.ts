@@ -237,6 +237,7 @@ export function stepMineActiveWorldEntities(ctx: {
   onOmegaFighterStrike?: (
     slotIndex: number,
     attackInterval: number,
+    isUltimate: boolean,
     beatIndex?: number,
     isFinisher?: boolean
   ) => { dmg: number; isCrit?: boolean } | void;
@@ -247,7 +248,6 @@ export function stepMineActiveWorldEntities(ctx: {
     beatIndex: number,
     isFinisher: boolean
   ) => { dmg: number; isCrit?: boolean } | void;
-  onOmegaEntranceSlam: () => void;
   onOreBroken?: (
     variantKey: OreVariantKey,
     meteorWeatherId?: WeatherId,
@@ -305,25 +305,32 @@ export function stepMineActiveWorldEntities(ctx: {
     });
   } else if (mode === 'omega' && ctx.omegaArena) {
     const omegaArena = ctx.omegaArena;
-    omegaArena.update(
-      dtSec,
-      elapsed,
-      ctx.camera,
-      (strike) => {
-        const res = ctx.onOmegaFighterStrike?.(
-          strike.slotIndex,
-          strike.attackInterval,
+    omegaArena.update(dtSec, elapsed, ctx.camera, (strike) => {
+      const res = ctx.onOmegaFighterStrike?.(
+        strike.slotIndex,
+        strike.attackInterval,
+        strike.isUltimate,
+        strike.beatIndex,
+        strike.isFinisher
+      );
+      const shownDmg = res ? res.dmg : strike.dmg;
+      if (shownDmg > 0) {
+        omegaArena.triggerBossHitEffect(strike.accentColor, Boolean(res?.isCrit));
+        ctx.emitDamageScreen(
+          shownDmg,
+          strike.wx,
+          strike.wy,
+          strike.wz,
+          false,
+          Boolean(res?.isCrit),
+          undefined,
+          false,
+          false,
           strike.beatIndex,
           strike.isFinisher
         );
-        const shownDmg = res ? res.dmg : strike.dmg;
-        if (shownDmg > 0) {
-          omegaArena.triggerBossHitEffect(strike.accentColor, Boolean(res?.isCrit));
-          ctx.emitDamageScreen(shownDmg, strike.wx, strike.wy, strike.wz, false, Boolean(res?.isCrit));
-        }
-      },
-      ctx.onOmegaEntranceSlam
-    );
+      }
+    });
   } else if (mode === 'rift' && ctx.riftArena) {
     const riftArena = ctx.riftArena;
     riftArena.update(dtSec, elapsed, ctx.camera, (strike) => {

@@ -165,7 +165,7 @@ export function createHudSubModules(opts: {
   const omegaBossUi = new OmegaBossModalUi(
     state,
     render,
-    (bossId, tier) => omegaBridge.startOmegaBattle(bossId, tier),
+    (bossId) => omegaBridge.startOmegaBattle(bossId),
     () => opts.openModal('none'),
     pushToast
   );
@@ -189,20 +189,9 @@ export function createHudSubModules(opts: {
   );
   const omegaArenaUi = new OmegaArenaHudUi(
     state,
-    () => {
-      state.abandonOmegaBoss();
-      opts.setSceneMode('shop');
-      opts.openModal('omega-boss');
-    },
-    () => omegaBridge.handleOmegaParryClick(),
-    () => {
-      const summary = state.omegaLastSummary;
-      if (summary) omegaBossUi.openForBoss(summary.bossId);
-      opts.setSceneMode('shop');
-      opts.openModal('omega-boss');
-    },
-    (bossId, tier) => omegaBridge.startOmegaBattle(bossId, tier),
-    (targetIdx) => omegaBridge.handleOmegaTapInvulShield(targetIdx)
+    () => omegaBridge.retreatOmegaBattle(),
+    (bossId) => omegaBridge.startOmegaBattle(bossId),
+    () => omegaBridge.returnToHub()
   );
   omegaBridge = new HudOmegaBridge(
     opts.root,
@@ -213,7 +202,8 @@ export function createHudSubModules(opts: {
     opts.openModal,
     pushToast,
     render,
-    opts.omegaOps
+    opts.omegaOps,
+    (bossId) => omegaBossUi.openForBoss(bossId)
   );
   const tutorialUi = new TutorialUi(
     (zoomed) => opts.onSetTutorialPitZoom?.(zoomed),
@@ -468,9 +458,7 @@ export function mountHudRuntimeListeners(opts: {
     } else if (e.key === 'Escape') {
       if (inspectedSlot !== null) opts.openPlotInspector(null);
       else if (sceneMode === 'omega' && !state.omegaBattle && state.omegaLastSummary) {
-        mods.omegaBossUi.openForBoss(state.omegaLastSummary.bossId);
-        opts.setSceneMode('shop');
-        opts.openModal('omega-boss');
+        mods.omegaBridge.returnToHub();
       } else if (sceneMode === 'rift' && !state.riftBattle && state.riftLastSummary) {
         mods.riftBridge.returnToHub();
       } else if (opts.getActiveModal() !== 'none') opts.openModal('none');
@@ -539,8 +527,8 @@ export function mountHudRuntimeListeners(opts: {
       syncFeverScreenFx: opts.syncFeverScreenFx,
       syncTowerSceneVisual: opts.syncTowerSceneVisual,
       omegaArenaUi: mods.omegaArenaUi,
+      omegaBridge: mods.omegaBridge,
       riftBridge: mods.riftBridge,
-      syncOmegaSceneVisual: () => mods.omegaBridge.syncOmegaSceneVisual(),
       setSceneMode: opts.setSceneMode,
       openModal: opts.openModal,
       pushToast: opts.pushToast,

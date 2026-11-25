@@ -4,7 +4,6 @@ import { OreHpScreen, PlotAnchorScreen, SceneMode, SweetSpotScreen } from '../ga
 import type { PlotUltFiredInfo } from '../game3d/PlotAttackController3D';
 import { type LootVacuumBreakKind, spawnLootVacuumParticles } from './LootVacuumFx';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
-import type { OmegaTargetScreenAnchor } from '../game3d/OmegaArena3D';
 import { AltarPedestalAnchor, ShopChibiBubbleAnchor, ShopStationAnchor, ShopStationId } from '../game3d/ShopWorld3D';
 import { getWorldById, getWorldIndex } from '../game/GameData';
 import { gameSettings } from '../game/GameSettings';
@@ -361,7 +360,7 @@ export class GameHud {
       this.state.abandonTowerRun();
     }
     if (this.sceneMode === 'omega' && mode !== 'omega' && this.state.omegaBattle) {
-      this.state.abandonOmegaBoss();
+      this.state.retreatOmegaBoss();
     }
     if (this.sceneMode === 'rift' && mode !== 'rift' && this.state.riftBattle) {
       this.state.retreatRiftBattle();
@@ -705,21 +704,18 @@ export class GameHud {
     });
   }
 
+  public handleOmegaBossTap(sx: number, sy: number) {
+    return this.omegaBridge.handleOmegaBossTap(sx, sy);
+  }
+
   public handleOmegaFighterStrike(
     slotIndex: number,
     attackInterval: number,
+    isUltimate: boolean,
     beatIndex?: number,
     isFinisher?: boolean
   ) {
-    return this.omegaBridge.handleOmegaFighterStrike(slotIndex, attackInterval, beatIndex, isFinisher);
-  }
-
-  public handleOmegaTargetClick(targetId: string): void {
-    this.omegaBridge.handleOmegaTargetClick(targetId);
-  }
-
-  public handleOmegaBossClick(): void {
-    this.omegaBridge.handleOmegaBossClick();
+    return this.omegaBridge.handleOmegaFighterStrike(slotIndex, attackInterval, isUltimate, beatIndex, isFinisher);
   }
 
   public handleRiftBossTap(sx: number, sy: number) {
@@ -742,16 +738,7 @@ export class GameHud {
     this.renderToasts();
   }
 
-  public updateOmegaArenaOverlay(data: { bossHead: { x: number; y: number } | null; targets: OmegaTargetScreenAnchor[] } | null): void {
-    this.worldOverlayUi.updateOmegaArenaOverlay(
-      data,
-      () => this.omegaBridge.handleOmegaParryClick(),
-      (id) => this.omegaBridge.handleOmegaTargetClick(id)
-    );
-  }
-
   private renderOmegaArenaHud(): void {
-    this.omegaBridge.syncOmegaSceneVisual();
     this.root.innerHTML = this.omegaArenaUi.renderOmegaArenaHud() + this.renderToastStack();
     this.bindEvents();
     this.renderToasts();

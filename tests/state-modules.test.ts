@@ -38,7 +38,14 @@ import {
   PREMIUM_SHOP_ITEMS,
 } from '../src/game/PremiumShopData';
 import { FUSION_RECIPES } from '../src/game/FusionData';
-import { OMEGA_BOSS_DEFS, OMEGA_KEY_GEM_COST, OMEGA_KEY_REGEN_MS, OMEGA_MAX_KEYS } from '../src/game/OmegaData';
+import {
+  getOmegaTierProgress,
+  OMEGA_BATTLE_DURATION_SEC,
+  OMEGA_BOSS_DEFS,
+  OMEGA_KEY_GEM_COST,
+  OMEGA_KEY_REGEN_MS,
+  OMEGA_MAX_KEYS,
+} from '../src/game/OmegaData';
 import { CHIBI_CATALOG, getChibiById } from '../src/game3d/ChibiCatalog';
 import { GameState, getChibiUpgradeCostMult } from '../src/game/GameState';
 import {
@@ -1629,8 +1636,9 @@ describe('Tahap C GameState Domain Modules', () => {
   });
 
   describe('OmegaBossDomain & Omega Tier', () => {
-    it('runs 5-tier Boss Battle with Parry, Obsidian Pillars, OMEGA BREAK!, escalating Core drop %, 0-key-loss on retreat, Unlock & Awaken, and Save/Load', () => {
+    it('runs 30s Rift-style Omega DPS check from W6 targets (1x/10x/20x), shared Omega Core tokens (1x/2x/3x), buffed 100/250/500 unlock, and legacy save migration', () => {
       const state = new GameState();
+      expect(OMEGA_BATTLE_DURATION_SEC).toBe(30);
       expect(state.omegaKeys).toBe(OMEGA_MAX_KEYS);
       expect(OMEGA_KEY_GEM_COST).toBe(50_000);
       expect(OMEGA_KEY_REGEN_MS).toBe(60 * 60 * 1000);
@@ -1647,103 +1655,68 @@ describe('Tahap C GameState Domain Modules', () => {
       state.syncOmegaKeys(oRegenStart + OMEGA_KEY_REGEN_MS);
       expect(state.omegaKeys).toBe(2);
       state.omegaKeys = OMEGA_MAX_KEYS;
-      expect(OMEGA_BOSS_DEFS.map((b) => b.tiers.map((t) => t.bossHp))).toEqual([
-        [2e25, 2e26, 2e27, 2e28, 2e29],
-        [3e25, 3e26, 3e27, 3e28, 3e29],
-        [4.5e25, 4.5e26, 4.5e27, 4.5e28, 4.5e29],
+
+      expect(OMEGA_BOSS_DEFS.map((b) => b.tiers.map((t) => t.damageTarget))).toEqual([
+        [5e19, 5e22, 5e25, 5e28, 5e31],
+        [5e20, 5e23, 5e26, 5e29, 5e32],
+        [1e21, 1e24, 1e27, 1e30, 1e33],
       ]);
-      expect(OMEGA_BOSS_DEFS.map((b) => b.tiers.map((t) => t.coreDropChance))).toEqual([
-        [0.1, 0.2, 0.325, 0.425, 0.5],
-        [0.1, 0.2, 0.325, 0.425, 0.5],
-        [0.1, 0.2, 0.325, 0.425, 0.5],
+      expect(OMEGA_BOSS_DEFS.map((b) => b.tiers.map((t) => t.cores))).toEqual([
+        [1, 2, 3, 4, 5],
+        [2, 4, 6, 8, 10],
+        [3, 6, 9, 12, 15],
       ]);
+      expect(OMEGA_BOSS_DEFS.map((b) => b.unlockCoreCost)).toEqual([100, 250, 500]);
 
-      // Retreat / Timeout never spends a Boss Key
-      expect(state.startOmegaBoss('crimson-ronin', 1)).toBe(true);
-      expect(state.omegaBattle?.tier).toBe(1);
-      const retreatSummary = state.abandonOmegaBoss();
-      expect(retreatSummary?.victory).toBe(false);
-      expect(state.omegaKeys).toBe(OMEGA_MAX_KEYS);
-
-      // Entrance cutscene -> 30s Invul Shield (12 random screen taps to break) -> Active Duel
-      expect(state.startOmegaBoss('crimson-ronin', 1)).toBe(true);
-      expect(state.omegaBattle!.phase).toBe('entrance');
-      expect(state.applyOmegaSquadStrike(0, 1.0, () => 0.5).dmgDealt).toBe(0);
-      expect(state.triggerOmegaParry(() => 0.1).ok).toBe(false);
-
-      for (let i = 0; i < 8; i++) state.stepOmegaBossTick(0.25, () => 0.5);
-      expect(state.omegaBattle!.phase).toBe('invul_shield');
-      expect(state.applyOmegaSquadStrike(0, 1.0, () => 0.5).dmgDealt).toBe(0);
-
-      const tapsNeeded = state.omegaBattle!.invulMaxTaps;
-      for (let i = 0; i < tapsNeeded - 1; i++) {
-        const tapRes = state.tapOmegaInvulShield();
-        expect(tapRes.ok).toBe(true);
-        expect(tapRes.shattered).toBe(false);
-      }
-      const shatterRes = state.tapOmegaInvulShield();
-      expect(shatterRes.ok).toBe(true);
-      expect(shatterRes.shattered).toBe(true);
-      expect(state.omegaBattle!.phase).toBe('active');
-
-      // Invul shield timeout causes defeat with shieldFailed summary
-      const shieldFailState = new GameState();
-      shieldFailState.omegaKeys = 1;
-      expect(shieldFailState.startOmegaBoss('crimson-ronin', 1)).toBe(true);
-      for (let i = 0; i < 8; i++) shieldFailState.stepOmegaBossTick(0.25, () => 0.5);
-      expect(shieldFailState.omegaBattle!.phase).toBe('invul_shield');
-      for (let i = 0; i < 125; i++) shieldFailState.stepOmegaBossTick(0.25, () => 0.5);
-      expect(shieldFailState.omegaBattle).toBeNull();
-      expect(shieldFailState.omegaLastSummary?.victory).toBe(false);
-      expect(shieldFailState.omegaLastSummary?.shieldFailed).toBe(true);
-
-      // Parry deals 8% Max HP + +25% Stagger & 4 parries trigger OMEGA BREAK! (2.5x DMG)
-      state.omegaBattle!.parryWindow.active = true;
-      const parryRes = state.triggerOmegaParry(() => 0.1);
-      expect(parryRes.ok).toBe(true);
-      expect(parryRes.counterDmg).toBe(Math.round(state.omegaBattle!.maxHp * 0.08));
-      expect(state.omegaBattle!.staggerPct).toBe(25);
-
-      // Fill Stagger to 100% -> triggers OMEGA BREAK!
-      state.omegaBattle!.staggerPct = 85;
-      state.omegaBattle!.parryWindow = { active: true, remainingSec: 2, durationSec: 2.3, consumed: false };
-      const breakParry = state.triggerOmegaParry(() => 0.1);
-      expect(breakParry.breakTriggered).toBe(true);
-      expect(state.omegaBattle!.breakRemainingSec).toBeGreaterThan(0);
-
-      // Victory consumes 1 key, drops Core on low roll (rng < 0.2), unlocks Tier 2
-      state.omegaBattle!.hp = 10;
-      const killStrike = state.applyOmegaSquadStrike(0, 1.0, () => 0.05);
-      expect(killStrike.bossDefeated).toBe(true);
+      // Start battle consumes 1 Boss Key immediately; Retreat settles reached tiers
+      expect(state.startOmegaBoss('crimson-ronin')).toBe(true);
       expect(state.omegaKeys).toBe(OMEGA_MAX_KEYS - 1);
-      expect(state.omegaBestTier['crimson-ronin']).toBe(1);
-      expect(state.getOmegaUnlockedMaxTier('crimson-ronin')).toBe(2);
-      expect(state.omegaCores['crimson-ronin']).toBe(1);
-      expect(state.omegaLastSummary?.firstClear).toBe(true);
+      expect(state.omegaBattle?.timeRemainingSec).toBe(30);
+      const tapNoTier = state.applyOmegaTapDamage(1e10, 0, 1);
+      expect(tapNoTier.newTier).toBe(0);
+      const retreatTier0 = state.retreatOmegaBoss();
+      expect(retreatTier0?.tierReached).toBe(0);
+      expect(retreatTier0?.coresAwarded).toBe(0);
+      expect(retreatTier0?.retreated).toBe(true);
 
-      // Obsidian Pillars reduce damage by 60% until shattered
-      expect(state.startOmegaBoss('obsidian-sovereign', 1)).toBe(true);
-      state.omegaBattle!.phase = 'active';
-      state.omegaBattle!.targets.push({
-        id: 'pillar-test',
-        kind: 'obsidian_pillar',
-        hp: 1,
-        maxHp: 1,
-        xOffset: -3.2,
-        zOffset: -0.2,
-      });
-      const armoredHit = state.applyOmegaSquadStrike(0, 1.0, () => 0.99);
-      const hitTarget = state.hitOmegaTargetObject('pillar-test', () => 0.5);
-      expect(hitTarget.ok).toBe(true);
-      const unarmoredHit = state.applyOmegaSquadStrike(0, 1.0, () => 0.99);
-      expect(unarmoredHit.dmgDealt).toBeGreaterThan(armoredHit.dmgDealt);
-      state.abandonOmegaBoss();
+      // Climbing to Tier 3 on Crimson Ronin grants 3 shared Omega Cores + unclaimed 1st Clear Gems/Dice for Tiers 1..3
+      expect(state.startOmegaBoss('crimson-ronin')).toBe(true);
+      const tier3Tap = state.applyOmegaTapDamage(5e25, 0, 1);
+      expect(tier3Tap.newTier).toBe(3);
+      expect(tier3Tap.tierUp).toBe(true);
+      const prog = getOmegaTierProgress('crimson-ronin', 5e25);
+      expect(prog.tier).toBe(3);
+      expect(prog.cores).toBe(3);
 
-      // 25 Cores -> Forge & Unlock Crimson Ronin -> all-3 passives active + non-sellable + Awaken 1★ -> 2★ (10 Cores)
-      state.omegaCores['crimson-ronin'] = 24;
+      // Tick down 30s to settle automatically
+      const tickRes = state.stepOmegaBossTick(30);
+      expect(tickRes.finished).toBe(true);
+      expect(tickRes.summary?.tierReached).toBe(3);
+      expect(tickRes.summary?.coresAwarded).toBe(3);
+      expect(tickRes.summary?.firstClear).toBe(true);
+      expect(tickRes.summary?.gemsAwarded).toBe(400 + 900 + 1800);
+      expect(tickRes.summary?.diceAwarded).toBe(1 + 1 + 2);
+      expect(state.omegaCoreTokens).toBe(3);
+      expect(state.omegaBestTier['crimson-ronin']).toBe(3);
+      expect(state.omegaBestDamage['crimson-ronin']).toBeGreaterThanOrEqual(5e25);
+
+      // Obsidian (2x Cores) & Leviathan (3x Cores) feed the same shared omegaCoreTokens pool
+      expect(state.startOmegaBoss('obsidian-sovereign')).toBe(true);
+      expect(state.applyOmegaTapDamage(5e23, 0, 1).newTier).toBe(2); // 4 Cores
+      state.stepOmegaBossTick(30);
+      expect(state.omegaCoreTokens).toBe(3 + 4);
+
+      expect(state.startOmegaBoss('abyssal-leviathan')).toBe(true);
+      expect(state.applyOmegaTapDamage(1e24, 0, 1).newTier).toBe(2); // 6 Cores
+      state.stepOmegaBossTick(30);
+      expect(state.omegaCoreTokens).toBe(3 + 4 + 6);
+
+      // Buffed unlock costs (100 / 250 / 500) & Awaken from shared pool
+      state.omegaCoreTokens = 99;
       expect(state.unlockOmegaChibi('crimson-ronin')).toBe('no_cores');
-      state.omegaCores['crimson-ronin'] = 35;
+      state.omegaCoreTokens = 140; // 100 unlock + 40 awaken 1★->2★
       expect(state.unlockOmegaChibi('crimson-ronin')).toBe('unlocked');
+      expect(state.omegaCoreTokens).toBe(40);
       expect(state.starUpChibi('crimson-ronin')).toEqual({ ok: false, reason: 'max' });
       expect(isNonSellableChibi('crimson-ronin')).toBe(true);
       expect(state.sellMiner('crimson-ronin', true)).toBe(0);
@@ -1755,27 +1728,38 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(baseOmegaPassives.oreDropPct).toBeCloseTo(1.2, 5);
       expect(baseOmegaPassives.oreSellPct).toBeCloseTo(0.8, 5);
 
-      expect(state.awakenOmegaChibi('crimson-ronin')).toBe('awakened'); // spends 10 cores -> 2★ (+20%)
+      expect(state.awakenOmegaChibi('crimson-ronin')).toBe('awakened'); // spends 40 -> 2★ (+20%)
+      expect(state.omegaCoreTokens).toBe(0);
       const star2Passives = state.getActiveOmegaPassives();
       expect(star2Passives.teamDmgPct).toBeCloseTo(2.4, 5);
       expect(star2Passives.oreDropPct).toBeCloseTo(1.44, 5);
       expect(star2Passives.oreSellPct).toBeCloseTo(0.96, 5);
 
-      // Save / Load persistence
+      // Save / Load persistence + legacy per-boss cores migration
+      state.omegaCoreTokens = 77;
       const json = JSON.stringify(serializeSavePayload(state));
       const reloaded = new GameState();
       deserializeSaveJson(reloaded, json);
-      expect(reloaded.omegaBestTier['crimson-ronin']).toBe(1);
-      expect(reloaded.omegaCores['crimson-ronin'] ?? 0).toBe(0);
+      expect(reloaded.omegaBestTier['crimson-ronin']).toBe(3);
+      expect(reloaded.omegaCoreTokens).toBe(77);
       expect(reloaded.chibiStars['crimson-ronin']).toBe(2);
 
-      // Obsidian Sovereign (35 Cores) & Abyssal Leviathan (45 Cores) -> Forge & Unlock -> +240% Team DMG, +140% Drop Ore, +160% Sell Ore
-      state.omegaCores['obsidian-sovereign'] = 34;
+      const legacyPayload = serializeSavePayload(state);
+      expect(legacyPayload.omega).toBeDefined();
+      delete legacyPayload.omega!.coreTokens;
+      legacyPayload.omega!.cores = { 'crimson-ronin': 12, 'obsidian-sovereign': 18, 'abyssal-leviathan': 5 };
+      const migrated = new GameState();
+      deserializeSaveJson(migrated, JSON.stringify(legacyPayload));
+      expect(migrated.omegaCoreTokens).toBe(35);
+
+      // Obsidian (250 Cores) & Abyssal (500 Cores)
+      state.omegaCoreTokens = 249;
       expect(state.unlockOmegaChibi('obsidian-sovereign')).toBe('no_cores');
-      state.omegaCores['abyssal-leviathan'] = 44;
+      state.omegaCoreTokens = 499;
       expect(state.unlockOmegaChibi('abyssal-leviathan')).toBe('no_cores');
-      state.omegaCores['abyssal-leviathan'] = 45;
+      state.omegaCoreTokens = 500;
       expect(state.unlockOmegaChibi('abyssal-leviathan')).toBe('unlocked');
+      expect(state.omegaCoreTokens).toBe(0);
       expect(isNonSellableChibi('abyssal-leviathan')).toBe(true);
       state.plotMiners[1] = 'abyssal-leviathan';
       const combinedOmegaPassives = state.getActiveOmegaPassives();

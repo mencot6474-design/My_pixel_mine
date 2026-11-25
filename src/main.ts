@@ -452,17 +452,9 @@ async function bootstrap(): Promise<void> {
     onTowerOreBars: (bars) => {
       hud?.updateTowerOreBars(bars);
     },
-    onOmegaTargetClick: (targetId) => hud?.handleOmegaTargetClick(targetId),
-    onOmegaBossClick: () => hud?.handleOmegaBossClick(),
-    onOmegaEntranceSlam: () => {
-      audio.playOreBreak('geode');
-      audio.playCrystalChord('meteor');
-    },
-    onOmegaFighterStrike: (slotIndex, attackInterval, beatIndex, isFinisher) =>
-      hud?.handleOmegaFighterStrike(slotIndex, attackInterval, beatIndex, isFinisher),
-    onOmegaArenaOverlay: (data) => {
-      hud?.updateOmegaArenaOverlay(data);
-    },
+    onOmegaBossTap: (sx, sy) => hud?.handleOmegaBossTap(sx, sy),
+    onOmegaFighterStrike: (slotIndex, attackInterval, isUltimate, beatIndex, isFinisher) =>
+      hud?.handleOmegaFighterStrike(slotIndex, attackInterval, isUltimate, beatIndex, isFinisher),
     onRiftBossTap: (sx, sy) => hud?.handleRiftBossTap(sx, sy),
     onRiftFighterStrike: (slotIndex, attackInterval, isUltimate, beatIndex, isFinisher) =>
       hud?.handleRiftFighterStrike(slotIndex, attackInterval, isUltimate, beatIndex, isFinisher),
@@ -585,13 +577,10 @@ async function bootstrap(): Promise<void> {
     },
     {
       setBossConfig: (bossId) => scene.setOmegaBossConfig(bossId),
-      startEntrance: () => scene.startOmegaEntrance(),
-      setBattlePhase: (phase) => scene.setOmegaBattlePhase(phase),
-      pulseInvulShield: () => scene.pulseOmegaInvulShield(),
-      syncBattleVisuals: (targets, breakActive, parryActive) =>
-        scene.syncOmegaBattleVisuals(targets, breakActive, parryActive),
+      setBattleActive: (active) => scene.setOmegaBattleActive(active),
       triggerBossHit: (color, isCrit) => scene.triggerOmegaBossHit(color, isCrit),
-      triggerTargetShatter: (wx, wz, color) => scene.triggerOmegaTargetShatter(wx, wz, color),
+      triggerTierShockwave: (tier) => scene.triggerOmegaTierShockwave(tier),
+      recordTapCharge: () => scene.recordOmegaPlayerTapCharge(),
       grantSquadUltCharge: (fillFull) => scene.grantOmegaSquadUltCharge(fillFull),
     },
     {

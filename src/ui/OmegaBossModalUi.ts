@@ -5,6 +5,7 @@ import { fmtInt, fmtShort } from '../game/NumberFormat';
 import {
   getOmegaBossById,
   getOmegaPassiveStarScale,
+  OMEGA_BATTLE_DURATION_SEC,
   OMEGA_BOSS_DEFS,
   OMEGA_KEY_GEM_COST,
   OMEGA_MAX_KEYS,
@@ -32,20 +33,18 @@ export type { OmegaForgeCutsceneState };
 
 export class OmegaBossModalUi {
   private selectedBossId: OmegaBossId = 'crimson-ronin';
-  private selectedTier = 1;
   private readonly forgeCutscene = new OmegaForgeCutsceneController();
 
   constructor(
     private readonly state: GameState,
     private readonly onRequestRender: () => void,
-    private readonly onStartOmegaBattle: (bossId: OmegaBossId, tier: number) => void,
+    private readonly onStartOmegaBattle: (bossId: OmegaBossId) => void,
     private readonly onCloseModal: () => void,
     private readonly onToast?: (msg: string) => void
   ) {}
 
   public openForBoss(bossId: OmegaBossId): void {
     this.selectedBossId = bossId;
-    this.selectedTier = this.state.getOmegaUnlockedMaxTier(bossId);
   }
 
   public getSelectedBossId(): OmegaBossId {
@@ -137,15 +136,13 @@ export class OmegaBossModalUi {
     this.state.syncOmegaKeys();
     const boss = getOmegaBossById(this.selectedBossId) ?? OMEGA_BOSS_DEFS[0];
     const chibi = getChibiById(boss.chibiId);
-    const maxTier = this.state.getOmegaUnlockedMaxTier(boss.id);
-    if (this.selectedTier > maxTier) this.selectedTier = maxTier;
-    if (this.selectedTier < 1) this.selectedTier = 1;
 
     const regenSec = this.state.getOmegaNextKeyRegenSec();
     const squadDps = this.state.getOmegaSquadEffectiveDps();
-    const coresOwned = this.state.omegaCores[boss.id] || 0;
-    const totalKills = this.state.omegaKills[boss.id] || 0;
+    const coresOwned = Math.max(0, Math.floor(this.state.omegaCoreTokens || 0));
+    const totalClears = this.state.omegaKills[boss.id] || 0;
     const bestTier = this.state.omegaBestTier[boss.id] || 0;
+    const bestDmg = this.state.omegaBestDamage[boss.id] || 0;
     const isUnlocked = (this.state.miners[boss.chibiId] || 0) > 0;
     const currentStars = Math.max(1, this.state.chibiStars[boss.chibiId] || 1);
     const awakenCost =
@@ -156,7 +153,7 @@ export class OmegaBossModalUi {
 
     const bossTabsHtml = OMEGA_BOSS_DEFS.map((b) => {
       const active = b.id === boss.id;
-      const bCores = this.state.omegaCores[b.id] || 0;
+      const bBestTier = this.state.omegaBestTier[b.id] || 0;
       return `
         <button
           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border-[2.5px] border-[#14111d] font-black text-[12px] cursor-pointer transition-transform duration-150 ease-out hover:scale-[0.98] ${
@@ -166,7 +163,7 @@ export class OmegaBossModalUi {
         >
           <span class="w-2.5 h-2.5 rounded-full border border-[#14111d]" style="background:${b.accentColor}"></span>
           <span>${b.name}</span>
-          <span class="mam-pill-xs bg-white text-[#14111d]">${fmtInt(bCores)} Core</span>
+          <span class="mam-pill-xs bg-white text-[#14111d]">${b.coreMult}× Cores${bBestTier > 0 ? ` • T${bBestTier}` : ''}</span>
         </button>
       `;
     }).join('');
@@ -175,67 +172,58 @@ export class OmegaBossModalUi {
     const summaryHtml =
       summary && summary.bossId === boss.id
         ? `<div class="shrink-0 px-3 py-2 rounded-2xl border-[2.5px] border-[#14111d] flex items-center justify-between gap-2.5 flex-wrap ${
-            summary.victory ? 'bg-[#dcfce7]' : 'bg-[#fee2e2]'
+            summary.tierReached > 0 ? 'bg-[#dcfce7]' : 'bg-[#fee2e2]'
           }">
             <div class="flex flex-col gap-0.5 min-w-0">
               <div class="text-[12px] font-black text-[#14111d]">
                 ${
-                  summary.victory
-                    ? `VICTORY! Tier ${summary.tier} Cleared in ${summary.timeUsedSec}s`
-                    : `TIME UP / RETREAT (Tier ${summary.tier}) — 0 Keys Lost`
+                  summary.tierReached > 0
+                    ? `LAST RUN: TIER ${summary.tierReached}/5 REACHED (${summary.timeUsedSec}s)`
+                    : `LAST RUN: TIER 0 (${summary.timeUsedSec}s)`
                 }
               </div>
               <div class="text-[10.5px] font-bold text-[#334155] tabular-nums">
-                DMG: ${fmtShort(summary.damageDealt)} • Parries: ${summary.parriesLanded} • Shattered: ${summary.targetsShattered}${
-                  summary.victory
-                    ? ` • +${fmtInt(summary.gemsAwarded)} Gems${summary.diceAwarded > 0 ? ` +${summary.diceAwarded} Dice` : ''}${
-                        summary.coresAwarded > 0 ? ` • +${summary.coresAwarded} ${boss.coreName}!` : ' • No Core Drop'
-                      }`
-                    : ''
-                }
+                DMG: ${fmtShort(summary.damageDealt)} • +${fmtInt(summary.coresAwarded)} Omega Cores${
+                  summary.gemsAwarded > 0 ? ` • +${fmtInt(summary.gemsAwarded)} Gems` : ''
+                }${summary.diceAwarded > 0 ? ` +${summary.diceAwarded} Dice` : ''}
               </div>
             </div>
             <button
-              class="px-3 py-1 rounded-xl border-2 border-[#14111d] bg-[#fb923c] hover:bg-[#fdba74] text-[#14111d] text-[11px] font-black cursor-pointer shrink-0"
-              data-omega-retry="${summary.tier}"
-            >Retry Tier ${summary.tier}</button>
+              class="px-3 py-1 rounded-xl border-2 border-[#14111d] bg-[#fb923c] hover:bg-[#fdba74] text-[#14111d] text-[11px] font-black cursor-pointer shrink-0 ${
+                this.state.omegaKeys > 0 && squadDps > 0 ? '' : 'opacity-50 cursor-not-allowed'
+              }"
+              data-omega-retry="true"
+              ${this.state.omegaKeys > 0 && squadDps > 0 ? '' : 'disabled'}
+            >Battle Again</button>
           </div>`
         : '';
 
     const tiersHtml = boss.tiers
       .map((t) => {
-        const unlocked = t.tier <= maxTier;
-        const selected = t.tier === this.selectedTier;
-        const cleared = this.state.omegaClaimedFirstClears.includes(`${boss.id}:${t.tier}`);
-        const dropPct = Number((t.coreDropChance * 100).toFixed(1));
-        const coreRange = t.minCores === t.maxCores ? `${t.minCores} Core` : `${t.minCores}–${t.maxCores} Cores`;
+        const beaten = bestTier >= t.tier;
+        const firstCleared = this.state.omegaClaimedFirstClears.includes(`${boss.id}:${t.tier}`);
         return `
-          <button
-            class="w-full text-left px-3 py-2 rounded-xl border-[2.5px] border-[#14111d] flex items-center justify-between gap-2 transition-transform duration-150 ease-out ${
-              !unlocked
-                ? 'bg-[#e2e8f0] opacity-60 cursor-not-allowed'
-                : selected
-                  ? 'bg-[#fef9c3] ring-[2.5px] ring-inset ring-[#ef4444] cursor-pointer'
-                  : 'bg-white hover:bg-[#fff8e7] cursor-pointer hover:scale-[0.99]'
+          <div
+            class="w-full px-2.5 py-1.5 rounded-xl border-2 border-[#14111d] flex items-center justify-between gap-2 ${
+              beaten ? 'bg-[#fef9c3] ring-1 ring-inset ring-[#f59e0b]' : 'bg-white'
             }"
-            data-omega-tier="${t.tier}"
-            ${unlocked ? '' : 'disabled'}
+            data-omega-tier-row="${t.tier}"
           >
-            <div class="flex flex-col gap-0.5 min-w-0">
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <span class="text-[12px] font-black text-[#14111d]">${t.label}</span>
-                ${
-                  cleared
-                    ? `<span class="mam-pill-xs bg-[#86efac] text-[#14111d]">Cleared</span>`
-                    : unlocked
-                      ? `<span class="mam-pill-xs bg-[#fde047] text-[#14111d] inline-flex items-center gap-1">1st: +${fmtInt(t.firstClearGems)}${hudIconHtml('gem', 12, 'Gems')}</span>`
-                      : `<span class="mam-pill-xs bg-[#cbd5e1] text-[#475569]">Locked</span>`
-                }
-              </div>
-              <span class="text-[11px] font-black text-[#dc2626] tabular-nums">HP ${fmtShort(t.bossHp)}</span>
+            <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
+              <span class="text-[11.5px] font-black ${beaten ? 'text-[#b45309]' : 'text-[#14111d]'} inline-flex items-center gap-1">${
+                beaten ? '<span class="text-[#059669]">✓</span>' : ''
+              }${t.label}</span>
+              ${
+                firstCleared
+                  ? `<span class="mam-pill-xs bg-[#86efac] text-[#14111d]">1st Cleared</span>`
+                  : `<span class="mam-pill-xs bg-[#fde047] text-[#14111d] inline-flex items-center gap-0.5">1st: +${fmtInt(t.firstClearGems)}${hudIconHtml('gem', 11, 'Gems')}</span>`
+              }
             </div>
-            <span class="mam-pill-xs bg-[#ffe4e6] text-[#9f1239] border-[1.5px] border-[#14111d] shrink-0">${dropPct}% • ${coreRange}</span>
-          </button>
+            <div class="flex items-center gap-2 shrink-0 tabular-nums">
+              <span class="text-[11px] font-black text-[#dc2626]">${fmtShort(t.damageTarget)} DMG</span>
+              <span class="mam-pill-xs bg-[#ffe4e6] text-[#9f1239] border-[1.5px] border-[#14111d]">+${fmtInt(t.cores)} Cores</span>
+            </div>
+          </div>
         `;
       })
       .join('');
@@ -273,7 +261,7 @@ export class OmegaBossModalUi {
                   }"
                   data-omega-awaken="${boss.id}"
                   ${coresOwned >= awakenCost ? '' : 'disabled'}
-                >Awaken ★${currentStars} → ★${currentStars + 1} (${awakenCost} ${boss.coreName}s)</button>`
+                >Awaken ★${currentStars} → ★${currentStars + 1} (${fmtInt(awakenCost)} Omega Cores)</button>`
           }
         </div>
       `
@@ -281,7 +269,7 @@ export class OmegaBossModalUi {
         <div class="flex flex-col gap-1.5 shrink-0">
           <div class="flex items-center justify-between text-[11px] font-black text-[#14111d]">
             <span>Unlock Progress</span>
-            <span class="tabular-nums">${fmtInt(coresOwned)} / ${boss.unlockCoreCost} ${boss.coreName}s</span>
+            <span class="tabular-nums">${fmtInt(coresOwned)} / ${fmtInt(boss.unlockCoreCost)} Omega Cores</span>
           </div>
           <div class="w-full h-3 rounded-full border-2 border-[#14111d] bg-white overflow-hidden">
             <div class="h-full bg-[#ef4444]" style="width:${Math.min(100, Math.round((coresOwned / boss.unlockCoreCost) * 100))}%"></div>
@@ -294,7 +282,7 @@ export class OmegaBossModalUi {
             }"
             data-omega-unlock="${boss.id}"
             ${coresOwned >= boss.unlockCoreCost ? '' : 'disabled'}
-          >Forge & Unlock ${boss.name} (${boss.unlockCoreCost} Cores)</button>
+          >Forge & Unlock ${boss.name} (${fmtInt(boss.unlockCoreCost)} Cores)</button>
         </div>
       `;
 
@@ -310,6 +298,10 @@ export class OmegaBossModalUi {
             class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border-2 border-[#14111d] bg-[#bae6fd] hover:bg-[#7dd3fc] text-[#14111d] text-[11px] font-black cursor-pointer"
             data-omega-buy-key="true"
           ><span>+1 Key</span>${hudIconHtml('gem', 13, 'Gems')}<span>${fmtShort(OMEGA_KEY_GEM_COST)}</span></button>
+          <span class="mam-pill bg-[#ffe4e6] text-[#9f1239] inline-flex items-center gap-1" data-omega-cores-pill>
+            ${omegaCrestIconHtml(14)}
+            <span>${fmtInt(coresOwned)} Omega Cores</span>
+          </span>
           <span class="mam-pill bg-[#fce7f3] text-[#14111d] inline-flex items-center gap-1" data-omega-gems-pill>
             ${hudIconHtml('gem', 13, 'Gems')}
             <span>${fmtShort(this.state.gems)}</span>
@@ -340,11 +332,17 @@ export class OmegaBossModalUi {
                 <div class="flex items-center gap-2 flex-wrap">
                   <span class="text-[16px] font-black text-[#14111d] leading-tight">${boss.name}</span>
                   ${renderRarityBadgeHtml('omega', 'is-compact !ml-0')}
+                  <span class="mam-pill-xs bg-[#14111d] text-[#fde047]">${boss.targetMult}× Target • ${boss.coreMult}× Cores</span>
                 </div>
                 <div class="text-[11px] font-black text-[#b91c1c]">${boss.mechanicTitle}</div>
                 <div class="text-[10.5px] font-bold text-[#475569] leading-snug">${boss.mechanicSummary}</div>
                 <div class="text-[10.5px] font-black text-[#0369a1] tabular-nums mt-0.5">Your Squad Team DPS: ${fmtShort(squadDps)}/s</div>
               </div>
+            </div>
+
+            <div class="shrink-0 flex items-center justify-between text-[10.5px] font-black text-[#14111d] px-0.5">
+              <span>TIER 1–5 DAMAGE TARGETS (SHARED OMEGA CORES)</span>
+              <span class="text-[#0369a1] tabular-nums">Best: Tier ${bestTier} (${fmtShort(bestDmg)})</span>
             </div>
 
             <div class="flex-1 min-h-0 overflow-y-auto mam-no-scrollbar flex flex-col gap-1.5 pr-0.5 @max-[860px]:flex-none @max-[860px]:max-h-[250px]">
@@ -365,7 +363,7 @@ export class OmegaBossModalUi {
                   ? 'Deploy at least 1 Chibi to Challenge'
                   : this.state.omegaKeys <= 0
                     ? 'No Boss Keys (Wait or Buy Key)'
-                    : `CHALLENGE ${boss.name.toUpperCase()} — TIER ${this.selectedTier} (Win uses 1 Key)`
+                    : `ENTER ${boss.name.toUpperCase()} (${OMEGA_BATTLE_DURATION_SEC}s) • ${this.state.omegaKeys}/${OMEGA_MAX_KEYS} KEYS →`
               }
             </button>
           </div>
@@ -384,7 +382,7 @@ export class OmegaBossModalUi {
                       >▶ Cutscene</button>`
                     : ''
                 }
-                <span class="mam-pill-xs bg-[#14111d] text-[#fde047]">${fmtInt(coresOwned)} ${boss.coreName}s</span>
+                <span class="mam-pill-xs bg-[#14111d] text-[#fde047]">${fmtInt(coresOwned)} Omega Cores</span>
               </div>
             </div>
 
@@ -410,11 +408,11 @@ export class OmegaBossModalUi {
             <div class="grid grid-cols-2 gap-1.5 shrink-0">
               <div class="px-2.5 py-1 rounded-xl border-2 border-[#14111d] bg-white flex items-center justify-between text-[10.5px] font-black">
                 <span class="text-[#64748b]">Best Tier</span>
-                <span class="text-[#14111d]">${bestTier > 0 ? `Tier ${bestTier}` : '—'}</span>
+                <span class="text-[#14111d]">${bestTier > 0 ? `Tier ${bestTier}/5` : '—'}</span>
               </div>
               <div class="px-2.5 py-1 rounded-xl border-2 border-[#14111d] bg-white flex items-center justify-between text-[10.5px] font-black">
-                <span class="text-[#64748b]">Boss Kills</span>
-                <span class="text-[#14111d] tabular-nums">${fmtInt(totalKills)}</span>
+                <span class="text-[#64748b]">Clears</span>
+                <span class="text-[#14111d] tabular-nums">${fmtInt(totalClears)}</span>
               </div>
             </div>
 
@@ -443,17 +441,6 @@ export class OmegaBossModalUi {
         this.clearForgeCutscene();
         this.openForBoss(id);
         this.onRequestRender();
-      });
-    });
-
-    root.querySelectorAll<HTMLElement>('[data-omega-tier]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const t = Number(btn.dataset.omegaTier || 0);
-        if (t >= 1 && t <= 5) {
-          audio.playSfx('ui-click');
-          this.selectedTier = t;
-          this.onRequestRender();
-        }
       });
     });
 
@@ -486,14 +473,13 @@ export class OmegaBossModalUi {
     root.querySelector<HTMLElement>('[data-omega-fight]')?.addEventListener('click', () => {
       audio.playSfx('ui-click');
       this.onCloseModal();
-      this.onStartOmegaBattle(this.selectedBossId, this.selectedTier);
+      this.onStartOmegaBattle(this.selectedBossId);
     });
 
-    root.querySelector<HTMLElement>('[data-omega-retry]')?.addEventListener('click', (e) => {
-      const tier = Number((e.currentTarget as HTMLElement).dataset.omegaRetry || this.selectedTier);
+    root.querySelector<HTMLElement>('[data-omega-retry]')?.addEventListener('click', () => {
       audio.playSfx('ui-click');
       this.onCloseModal();
-      this.onStartOmegaBattle(this.selectedBossId, tier);
+      this.onStartOmegaBattle(this.selectedBossId);
     });
 
     root.querySelector<HTMLElement>('[data-omega-unlock]')?.addEventListener('click', (e) => {

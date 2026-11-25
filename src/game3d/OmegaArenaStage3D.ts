@@ -1,6 +1,14 @@
 import * as THREE from 'three';
-import type { OmegaTargetObject } from '../game/OmegaBossDomain';
 import { ChibiDef } from './ChibiCatalog';
+
+export interface OmegaTargetObject {
+  id: string;
+  kind: 'phantom_blade' | 'obsidian_pillar' | 'rune_seal';
+  hp: number;
+  maxHp: number;
+  xOffset: number;
+  zOffset: number;
+}
 import { ChibiSprite3D } from './ChibiSprite3D';
 import { ChibiFieldFxController } from './FieldMiner3D';
 import {
@@ -28,6 +36,7 @@ export const OMEGA_PLAYER_PAD_POSITIONS: ReadonlyArray<[number, number]> = [
 export interface OmegaStrikeEvent {
   slotIndex: number;
   attackInterval: number;
+  isUltimate: boolean;
   dmg: number;
   wx: number;
   wy: number;

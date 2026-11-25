@@ -1737,7 +1737,7 @@ describe('Tahap B HUD Modules', () => {
   });
 
   describe('OmegaBossModalUi, OmegaArenaHudUi & Omega Index Tab', () => {
-    it('renders Omega Index tab, crest badge, Boss Hub Tier I–V drop percentages, and Omega Arena HUD', () => {
+    it('renders Omega Index tab, crest badge, shared Omega Core Sanctum Hub with W6-scaled Tier 1-5 targets, and 30s Omega Arena HUD', () => {
       const state = new GameState();
       expect(getIndexTabEntryIds('omega')).toEqual([
         'crimson-ronin',
@@ -1759,12 +1759,11 @@ describe('Tahap B HUD Modules', () => {
       expect(hubHtml).toContain('Crimson Ronin');
       expect(hubHtml).toContain('Obsidian Sovereign');
       expect(hubHtml).toContain('Abyssal Leviathan');
-      expect(hubHtml).toContain('HP 20Sp');
-      expect(hubHtml).toContain('HP 2Oc');
-      expect(hubHtml).toContain('HP 200Oc');
-      expect(hubHtml).toContain('10% • 1 Core');
-      expect(hubHtml).toContain('32.5% • 1–2 Cores');
-      expect(hubHtml).toContain('50% • 2–3 Cores');
+      expect(hubHtml).toContain('50Qi DMG');
+      expect(hubHtml).toContain('50Sp DMG');
+      expect(hubHtml).toContain('50No DMG');
+      expect(hubHtml).toContain('+1 Cores');
+      expect(hubHtml).toContain('+5 Cores');
       expect(hubHtml).toContain('/hud/gem.webp');
       expect(hubHtml).toContain('50K');
       expect(hubHtml).not.toContain('💎');
@@ -1775,25 +1774,28 @@ describe('Tahap B HUD Modules', () => {
       expect(hubHtml).toContain('+120%');
       expect(hubHtml).toContain('Sell Ore');
       expect(hubHtml).toContain('+80%');
-      expect(hubHtml).toContain('25 Cores');
+      expect(hubHtml).toContain('100 Cores');
 
       hubUi.openForBoss('obsidian-sovereign');
-      expect(hubUi.renderOmegaModal()).toContain('35 Cores');
+      const obsHtml = hubUi.renderOmegaModal();
+      expect(obsHtml).toContain('250 Cores');
+      expect(obsHtml).toContain('500Qi DMG');
+      expect(obsHtml).toContain('+10 Cores');
 
       hubUi.openForBoss('abyssal-leviathan');
       const levHubHtml = hubUi.renderOmegaModal();
-      expect(levHubHtml).toContain('0 Leviathan Cores');
-      expect(levHubHtml).toContain('45 Cores');
-      expect(levHubHtml).toContain('HP 45Sp');
-      expect(levHubHtml).toContain('HP 4.5Oc');
-      expect(levHubHtml).toContain('HP 450Oc');
+      expect(levHubHtml).toContain('0 Omega Cores');
+      expect(levHubHtml).toContain('500 Cores');
+      expect(levHubHtml).toContain('1Sx DMG');
+      expect(levHubHtml).toContain('1Dc DMG');
+      expect(levHubHtml).toContain('+15 Cores');
       expect(levHubHtml).toContain('+240%');
       expect(levHubHtml).toContain('+140%');
       expect(levHubHtml).toContain('+160%');
       hubUi.openForBoss('crimson-ronin');
 
       // Verify Fullscreen Omega Forge Cutscene -> Post-Cutscene Confirmation Popup flow
-      state.omegaCores['crimson-ronin'] = 25;
+      state.omegaCoreTokens = 100;
       expect(hubUi.triggerForgeUnlock('crimson-ronin')).toBe(true);
       expect(hubUi.getForgeCutsceneState()?.phase).toBe('animating');
       const cutsceneHtml = hubUi.renderFullscreenCutsceneHtml();
@@ -1814,114 +1816,67 @@ describe('Tahap B HUD Modules', () => {
       expect(hubUi.getForgeCutsceneState()?.phase).toBe('animating');
       hubUi.confirmForgeOverlay();
 
-      state.startOmegaBoss('crimson-ronin', 1);
+      state.startOmegaBoss('crimson-ronin');
       const arenaHud = new OmegaArenaHudUi(
         state,
+        () => {},
         () => {},
         () => {}
       );
       const hudHtml = arenaHud.renderOmegaArenaHud();
       expect(hudHtml).toContain('Crimson Ronin');
-      expect(hudHtml).toContain('OMEGA RAID');
-      expect(hudHtml).toContain('mam-battle-hp-ticks');
-      expect(hudHtml).toContain('data-omega-parries-count');
-      expect(hudHtml).toContain('data-omega-shatter-count');
-      expect(hudHtml).toContain('STAGGER 0%');
-      expect(hudHtml).toContain('Retreat (0 Key Lost)');
-      expect(hudHtml).toContain('data-omega-icon="skyDrop"');
-      expect(hudHtml).toContain('data-omega-icon="bossCrown"');
-      expect(hudHtml).toContain('data-omega-icon="squadPower"');
+      expect(hudHtml).toContain('OMEGA DPS CHECK');
+      expect(hudHtml).toContain('data-omega-pip="1"');
+      expect(hudHtml).toContain('data-omega-pip="5"');
+      expect(hudHtml).toContain('30.0s');
+      expect(hudHtml).toContain('← Retreat');
+      expect(hudHtml).toContain('TAP OMEGA BOSS TO ADD DAMAGE');
       expect(hudHtml).not.toContain('⚠');
     });
 
-    it('renders Sticker-Pop TAP pointer above Omega target props without legacy target icons', () => {
-      const state = new GameState();
-      state.omegaKeys = 1;
-      state.startOmegaBoss('crimson-ronin', 1);
-      const overlay = new WorldOverlayHudUi(
-        state,
-        () => ({ sceneMode: 'omega', activeModal: 'none', inspectedSlot: null }),
-        vi.fn()
-      );
-      const fakeOmegaLayer = {
-        dataset: {} as Record<string, string>,
-        innerHTML: '',
-        querySelector: () => null,
-        querySelectorAll: () => [],
-      };
-      (overlay as unknown as { omegaLayerEl: unknown }).omegaLayerEl = fakeOmegaLayer;
-
-      overlay.updateOmegaArenaOverlay(
-        {
-          bossHead: { x: 400, y: 120 },
-          targets: [{ id: 'blade-1', kind: 'phantom_blade', x: 320, y: 180 }],
-        },
-        vi.fn(),
-        vi.fn()
-      );
-
-      expect(fakeOmegaLayer.innerHTML).toContain('data-omega-hit-target="blade-1"');
-      expect(fakeOmegaLayer.innerHTML).toContain('-translate-y-full');
-      expect(fakeOmegaLayer.innerHTML).toContain('TAP!');
-      expect(fakeOmegaLayer.innerHTML).toContain('SHATTER BLADE');
-      expect(fakeOmegaLayer.innerHTML).toContain('M2.5 1.5L10 10.5L17.5 1.5Z');
-      expect(fakeOmegaLayer.innerHTML).not.toContain('M14.5 2.5L6 11');
-    });
-
-    it('renders Omega Victory popup on battle win showing item drop status instead of jumping straight back to Sanctum', () => {
+    it('renders Omega 30s Summary popup and bridges tap damage + tier shockwaves without leaving Omega arena', () => {
       const state = new GameState();
       state.omegaKeys = 2;
-      state.omegaCores['crimson-ronin'] = 2;
+      state.omegaCoreTokens = 12;
       state.omegaLastSummary = {
-        victory: true,
         bossId: 'crimson-ronin',
-        tier: 2,
-        reason: 'victory',
-        damageDealt: 150000,
-        timeUsedSec: 18,
+        tierReached: 2,
+        damageDealt: 1.5e23,
+        timeUsedSec: 30,
         coresAwarded: 2,
-        gemsAwarded: 1200,
-        diceAwarded: 3,
+        gemsAwarded: 1300,
+        diceAwarded: 2,
         firstClear: true,
-        parriesLanded: 2,
-        targetsShattered: 1,
-        breaksTriggered: 1,
+        isNewBest: true,
+        retreated: false,
       };
-      const arenaHud = new OmegaArenaHudUi(state, vi.fn(), vi.fn());
+      const arenaHud = new OmegaArenaHudUi(state, vi.fn(), vi.fn(), vi.fn());
       const dropHtml = arenaHud.renderOmegaArenaHud();
-      expect(dropHtml).toContain('data-omega-victory-popup="true"');
-      expect(dropHtml).toContain('data-omega-drop-status="dropped"');
-      expect(dropHtml).toContain('ITEM DROPPED!');
-      expect(dropHtml).toContain('+2 Ronin Core');
-      expect(dropHtml).toContain('+1,200');
+      expect(dropHtml).toContain('data-omega-summary-popup="true"');
+      expect(dropHtml).toContain('TIER 2 / 5');
+      expect(dropHtml).toContain('1ST CLEAR!');
+      expect(dropHtml).toContain('NEW BEST!');
+      expect(dropHtml).toContain('+2');
+      expect(dropHtml).toContain('+1,300');
+      expect(dropHtml).toContain('12 / 100 Omega Cores');
       expect(dropHtml).toContain('Back to Sanctum');
-      expect(dropHtml).toContain('Fight Again (2/5)');
-
-      state.omegaLastSummary = {
-        ...state.omegaLastSummary,
-        coresAwarded: 0,
-        diceAwarded: 0,
-        firstClear: false,
-      };
-      const noDropHtml = arenaHud.renderOmegaArenaHud();
-      expect(noDropHtml).toContain('data-omega-drop-status="none"');
-      expect(noDropHtml).toContain('NO ITEM DROP');
-      expect(noDropHtml).toContain('0 Ronin Core Dropped');
+      expect(dropHtml).toContain('Battle Again (2/5)');
 
       const state2 = new GameState();
-      state2.omegaKeys = 1;
-      state2.startOmegaBoss('crimson-ronin', 1);
-      state2.omegaBattle!.phase = 'active';
-      state2.omegaBattle!.hp = 5;
-      state2.omegaBattle!.parryWindow = { active: true, remainingSec: 2, durationSec: 2.3, consumed: false };
+      state2.omegaKeys = 2;
+      state2.miners['astral-recruit'] = 1;
+      state2.equipBestMiners();
       let sceneMode: 'omega' | 'shop' = 'omega';
       const openModal = vi.fn();
       const render = vi.fn();
-      const syncBattleVisuals = vi.fn();
+      const triggerShockwave = vi.fn();
+      const recordTapCharge = vi.fn(() => true);
+      const setBattleActive = vi.fn();
+      const fakeRoot = { querySelector: () => null, querySelectorAll: () => [] } as unknown as HTMLElement;
       const bridge = new HudOmegaBridge(
-        {} as HTMLElement,
+        fakeRoot,
         state2,
-        new OmegaArenaHudUi(state2, vi.fn(), vi.fn()),
+        new OmegaArenaHudUi(state2, vi.fn(), vi.fn(), vi.fn()),
         () => sceneMode,
         (m) => {
           sceneMode = m === 'shop' ? 'shop' : 'omega';
@@ -1931,67 +1886,32 @@ describe('Tahap B HUD Modules', () => {
         render,
         {
           setBossConfig: vi.fn(),
-          syncBattleVisuals,
+          setBattleActive,
           triggerBossHit: vi.fn(),
-          triggerTargetShatter: vi.fn(),
+          triggerTierShockwave: triggerShockwave,
+          recordTapCharge,
         }
       );
-      bridge.handleOmegaParryClick();
-      expect(state2.omegaLastSummary?.victory).toBe(true);
+
+      bridge.startOmegaBattle('obsidian-sovereign');
+      expect(state2.omegaBattle?.bossId).toBe('obsidian-sovereign');
+      expect(setBattleActive).toHaveBeenCalledWith(true);
+
+      const tapSpy = vi.spyOn(state2, 'getTapDamage').mockReturnValue(5e20);
+      const tapRes = bridge.handleOmegaBossTap(100, 100);
+      tapSpy.mockRestore();
+      expect(tapRes?.dmg).toBeGreaterThanOrEqual(5e20);
+      expect(recordTapCharge).toHaveBeenCalledTimes(1);
+      expect(triggerShockwave).toHaveBeenCalledWith(1);
+
+      bridge.stepTick(30);
+      expect(state2.omegaBattle).toBeNull();
+      expect(state2.omegaLastSummary?.tierReached).toBe(1);
+      expect(state2.omegaCoreTokens).toBe(2); // Obsidian Tier 1 = 2 Omega Cores
+      expect(setBattleActive).toHaveBeenCalledWith(false);
       expect(sceneMode).toBe('omega');
       expect(openModal).not.toHaveBeenCalled();
       expect(render).toHaveBeenCalled();
-      expect(syncBattleVisuals).toHaveBeenCalledWith([], false, false);
-
-      // Entrance, 30s Invul Shield screen taps, and Defeat popup in omega scene
-      const state3 = new GameState();
-      state3.omegaKeys = 2;
-      state3.startOmegaBoss('crimson-ronin', 1);
-      const hud3 = new OmegaArenaHudUi(state3, vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn());
-      expect(hud3.renderOmegaArenaHud()).toContain('DROP');
-
-      for (let i = 0; i < 8; i++) state3.stepOmegaBossTick(0.25, () => 0.5);
-      expect(state3.omegaBattle!.phase).toBe('invul_shield');
-      const invulHtml = hud3.renderOmegaArenaHud();
-      expect(invulHtml).toContain('data-omega-shield-tap="0"');
-      expect(invulHtml).toContain('SHIELD');
-      expect(invulHtml).toContain('data-omega-icon="invulAegis"');
-      expect(invulHtml).toContain('data-omega-icon="crackShield"');
-      expect(invulHtml).not.toContain('🛡️');
-
-      let scene3: 'omega' | 'shop' = 'omega';
-      const setBattlePhase3 = vi.fn();
-      const pulseInvulShield3 = vi.fn();
-      const bridge3 = new HudOmegaBridge(
-        { querySelector: () => null } as unknown as HTMLElement,
-        state3,
-        hud3,
-        () => scene3,
-        (m) => {
-          scene3 = m === 'shop' ? 'shop' : 'omega';
-        },
-        vi.fn(),
-        vi.fn(),
-        vi.fn(),
-        {
-          setBossConfig: vi.fn(),
-          syncBattleVisuals: vi.fn(),
-          triggerBossHit: vi.fn(),
-          triggerTargetShatter: vi.fn(),
-          setBattlePhase: setBattlePhase3,
-          pulseInvulShield: pulseInvulShield3,
-        }
-      );
-      bridge3.handleOmegaTapInvulShield(0);
-      expect(pulseInvulShield3).toHaveBeenCalledTimes(1);
-      expect(state3.omegaBattle!.invulTapsRemaining).toBe(state3.omegaBattle!.invulMaxTaps - 1);
-
-      for (let i = 0; i < 125; i++) state3.stepOmegaBossTick(0.25, () => 0.5);
-      expect(state3.omegaLastSummary?.victory).toBe(false);
-      bridge3.syncOmegaSceneVisual();
-      expect(setBattlePhase3).toHaveBeenCalledWith('ended');
-      expect(hud3.renderOmegaArenaHud()).toContain('data-omega-defeat-popup="true"');
-      expect(scene3).toBe('omega');
     });
   });
 
@@ -2543,19 +2463,17 @@ describe('Tahap B HUD Modules', () => {
       tapSpy.mockRestore();
       barrageSpy.mockRestore();
 
-      // Omega Parry & Tower Shield-Break Sweet-Spot grant arena Ult charge via bridge ops
-      const grantOmegaUlt = vi.fn();
+      // Omega bridge tap charges Ult & Tower Shield-Break Sweet-Spot grants arena Ult charge
+      const recordOmegaTapCharge = vi.fn(() => true);
       const omegaState = new GameState();
       omegaState.miners['astral-recruit'] = 1;
       omegaState.equipBestMiners();
       omegaState.omegaKeys = 2;
-      omegaState.startOmegaBoss('crimson-ronin', 1);
-      omegaState.omegaBattle!.phase = 'active';
-      omegaState.omegaBattle!.parryWindow = { active: true, remainingSec: 2, durationSec: 2.3, consumed: false };
+      omegaState.startOmegaBoss('crimson-ronin');
       const omegaBridge = new HudOmegaBridge(
         fakeRoot,
         omegaState,
-        new OmegaArenaHudUi(omegaState, vi.fn(), vi.fn()),
+        new OmegaArenaHudUi(omegaState, vi.fn(), vi.fn(), vi.fn()),
         () => 'omega',
         vi.fn(),
         vi.fn(),
@@ -2563,14 +2481,12 @@ describe('Tahap B HUD Modules', () => {
         vi.fn(),
         {
           setBossConfig: vi.fn(),
-          syncBattleVisuals: vi.fn(),
           triggerBossHit: vi.fn(),
-          triggerTargetShatter: vi.fn(),
-          grantSquadUltCharge: grantOmegaUlt,
+          recordTapCharge: recordOmegaTapCharge,
         }
       );
-      omegaBridge.handleOmegaParryClick();
-      expect(grantOmegaUlt).toHaveBeenCalledWith(true);
+      omegaBridge.handleOmegaBossTap(100, 100);
+      expect(recordOmegaTapCharge).toHaveBeenCalledTimes(1);
 
       // RiftModalUi.stepTick should trigger onRender when pass closes mid-modal
       let renders = 0;

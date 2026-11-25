@@ -244,9 +244,6 @@ export class MineSceneProjector {
       if (mode !== 'tower') {
         this.ctx.callbacks.onTowerOreBars?.([]);
       }
-      if (mode !== 'omega') {
-        this.ctx.callbacks.onOmegaArenaOverlay?.(null);
-      }
     }
 
     if (mode === 'mine') {
@@ -273,12 +270,6 @@ export class MineSceneProjector {
       if (omegaArena) {
         const { width: w, height: h } = this.getViewportSize();
         this.ctx.callbacks.onPlotAnchors?.(omegaArena.getFighterPlotAnchors(this.ctx.camera, w, h));
-        if (this.ctx.callbacks.onOmegaArenaOverlay) {
-          this.ctx.callbacks.onOmegaArenaOverlay({
-            bossHead: omegaArena.getBossHeadScreenAnchor(this.ctx.camera, w, h),
-            targets: omegaArena.getTargetScreenAnchors(this.ctx.camera, w, h),
-          });
-        }
       }
     } else if (mode === 'rift') {
       const riftArena = this.ctx.getRiftArena?.();

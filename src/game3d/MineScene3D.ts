@@ -20,7 +20,6 @@ import { OmegaArena3D } from './OmegaArena3D';
 import { RiftArena3D } from './RiftArena3D';
 import type { AnomalyChibiId } from '../game/AnomalyData';
 import type { OmegaBossId } from '../game/OmegaData';
-import type { OmegaBattlePhase, OmegaTargetObject } from '../game/OmegaBossDomain';
 import { TowerWaveOreState } from '../game/TowerData';
 import { GRAPHICS_PRESETS, GraphicsQuality } from '../game/GameSettings';
 import { type OverclockTier } from '../game/OverclockDomain';
@@ -530,10 +529,6 @@ export class MineScene3D {
       onTowerFighterStrike: this.callbacks.onTowerFighterStrike,
       onOmegaFighterStrike: this.callbacks.onOmegaFighterStrike,
       onRiftFighterStrike: this.callbacks.onRiftFighterStrike,
-      onOmegaEntranceSlam: () => {
-        this.tapShakeIntensity = Math.max(this.tapShakeIntensity, 0.34);
-        this.callbacks.onOmegaEntranceSlam?.();
-      },
       onOreBroken: this.callbacks.onOreBroken,
       emitDamageScreen: (dmg, wx, wy, wz, isClick, isCrit, pitEventKind, isMeteor, isPerfect, beatIndex, isFinisher) =>
         this.emitDamageScreen(dmg, wx, wy, wz, isClick, isCrit, pitEventKind, isMeteor, isPerfect, beatIndex, isFinisher),
@@ -815,17 +810,10 @@ export class MineScene3D {
   }
 
   public setOmegaBossConfig(bossId: OmegaBossId): void { this.ensureOmegaArena().setBossId(bossId); }
-  public startOmegaEntrance(): void { this.ensureOmegaArena().startEntranceCutscene(); }
-  public setOmegaBattlePhase(phase: OmegaBattlePhase | 'ended'): void { this.omegaArena?.setBattlePhase(phase); }
-  public pulseOmegaInvulShield(): void { this.omegaArena?.pulseInvulShield(); }
-  public syncOmegaBattleVisuals(targets: readonly OmegaTargetObject[], breakActive: boolean, parryActive: boolean): void {
-    const oa = this.omegaArena;
-    if (!oa) return;
-    oa.syncBattleTargets(targets);
-    oa.setBattleStatus(breakActive, parryActive);
-  }
+  public setOmegaBattleActive(active: boolean): void { this.ensureOmegaArena().setBattleActive(active); }
   public triggerOmegaBossHit(color?: string, isCrit = false): void { this.omegaArena?.triggerBossHitEffect(color, isCrit); }
-  public triggerOmegaTargetShatter(wx: number, wz: number, color: string): void { this.omegaArena?.triggerTargetShatterFx(wx, wz, color); }
+  public triggerOmegaTierShockwave(tier: number): void { this.omegaArena?.triggerTierShockwave(tier); }
+  public recordOmegaPlayerTapCharge(): boolean { return this.omegaArena?.recordPlayerTapCharge() ?? false; }
   public grantOmegaSquadUltCharge(fillFull = true): void { this.omegaArena?.grantSquadUltCharge(fillFull); }
 
   public setRiftBossConfig(bossId: AnomalyChibiId, surgeActive = false): void {

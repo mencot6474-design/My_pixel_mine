@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import type { OmegaBossId } from '../game/OmegaData';
-import type { OmegaBattlePhase } from '../game/OmegaBossDomain';
 import type { AttackImpactFxController } from './AttackImpactFx3D';
 import type { OmegaFighterEntry, OmegaStrikeEvent } from './OmegaArenaStage3D';
 import type {
@@ -44,7 +43,7 @@ export interface OmegaCombatStepContext {
   bossId: OmegaBossId;
   bossStageY: number;
   bossPosZ: number;
-  getBattlePhase: () => OmegaBattlePhase | 'ended';
+  getBattleActive: () => boolean;
   fighters: Map<number, OmegaFighterEntry>;
   projectiles: SignatureProjectilePool3D;
   pendingBarrages: OmegaPendingBarrage[];
@@ -63,7 +62,7 @@ export function stepOmegaCombatAndBarrages(ctx: OmegaCombatStepContext): void {
     camera,
     bossStageY,
     bossPosZ,
-    getBattlePhase,
+    getBattleActive,
     fighters,
     projectiles,
     pendingBarrages,
@@ -74,7 +73,7 @@ export function stepOmegaCombatAndBarrages(ctx: OmegaCombatStepContext): void {
     onStrike,
   } = ctx;
 
-  const canAttack = getBattlePhase() === 'active';
+  const canAttack = getBattleActive();
   if (!canAttack) {
     projectiles.clear();
     pendingBarrages.length = 0;
@@ -146,6 +145,7 @@ export function stepOmegaCombatAndBarrages(ctx: OmegaCombatStepContext): void {
     onStrike?.({
       slotIndex: a.slotIndex,
       attackInterval: isUlt ? a.attackInterval * BARRAGE_BEAT_WEIGHTS[0] : a.attackInterval,
+      isUltimate: isUlt,
       dmg: isUlt ? Math.max(1, Math.round(a.dmg * BARRAGE_BEAT_WEIGHTS[0])) : a.dmg,
       wx: a.ex,
       wy: a.ey,
@@ -260,7 +260,7 @@ export function stepOmegaCombatAndBarrages(ctx: OmegaCombatStepContext): void {
 
     projectiles.step(safeDt, camera, handleOmegaArrival);
     for (let i = pendingBarrages.length - 1; i >= 0; i--) {
-      if (getBattlePhase() !== 'active' || pendingBarrages.length === 0) break;
+      if (!getBattleActive() || pendingBarrages.length === 0) break;
       if (i >= pendingBarrages.length) {
         i = pendingBarrages.length - 1;
       }
@@ -294,6 +294,7 @@ export function stepOmegaCombatAndBarrages(ctx: OmegaCombatStepContext): void {
         onStrike?.({
           slotIndex: b.slotIndex,
           attackInterval: b.beatInterval,
+          isUltimate: true,
           dmg: b.dmg,
           wx: b.ex,
           wy: b.ey,

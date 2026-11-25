@@ -572,37 +572,6 @@ export function createColosseumBiomeHandle(initialWorld: WorldId = 'underground'
   let lowQuality = false;
   let overclockTier: 0 | OverclockTier = 0;
 
-  // 8. Lightweight Additive Stadium Spotlight Sweeps (active on Overclock Fever across Low & High)
-  const spotlightGeo = new THREE.ConeGeometry(1.15, 11.5, 10, 1, true);
-  spotlightGeo.translate(0, -5.75, 0);
-  const spotlightMat = new THREE.MeshBasicMaterial({
-    color: 0xfde047,
-    transparent: true,
-    opacity: 0,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-  ownedGeos.push(spotlightGeo);
-  ownedMats.push(spotlightMat);
-  const spotlightMounts: ReadonlyArray<{ x: number; y: number; z: number; baseRx: number; baseRz: number; phase: number }> = [
-    { x: -9.6, y: 0.75, z: -4.3, baseRx: 0.92, baseRz: -0.78, phase: 0 },
-    { x: 9.6, y: 0.75, z: -4.3, baseRx: 0.92, baseRz: 0.78, phase: 1.55 },
-    { x: -6.4, y: 0.65, z: -8.8, baseRx: 1.08, baseRz: -0.42, phase: 0.85 },
-    { x: 6.4, y: 0.65, z: -8.8, baseRx: 1.08, baseRz: 0.42, phase: 2.35 },
-  ];
-  const spotlights: Array<{ mesh: THREE.Mesh; baseRx: number; baseRz: number; phase: number }> = [];
-  for (let i = 0; i < spotlightMounts.length; i++) {
-    const m = spotlightMounts[i];
-    const beam = new THREE.Mesh(spotlightGeo, spotlightMat);
-    beam.position.set(m.x, m.y, m.z);
-    beam.rotation.set(m.baseRx, 0, m.baseRz);
-    beam.visible = false;
-    beam.raycast = () => {};
-    group.add(beam);
-    spotlights.push({ mesh: beam, baseRx: m.baseRx, baseRz: m.baseRz, phase: m.phase });
-  }
-
   const updateEqualizer = (elapsed: number, pulseBoost: number): void => {
     const active = lowQuality ? 0 : eqSeeds.length;
     eqInst.count = active;
@@ -640,14 +609,6 @@ export function createColosseumBiomeHandle(initialWorld: WorldId = 'underground'
     },
     setOverclockTier(tier: 0 | OverclockTier): void {
       overclockTier = tier;
-      const active = tier > 0;
-      if (tier === 3) spotlightMat.color.setHex(0x22d3ee);
-      else if (tier === 2) spotlightMat.color.setHex(0xfb7185);
-      else spotlightMat.color.setHex(0xfde047);
-      spotlightMat.opacity = active ? 0.08 + tier * 0.03 : 0;
-      for (let i = 0; i < spotlights.length; i++) {
-        spotlights[i].mesh.visible = active;
-      }
     },
     setLowQuality(low: boolean): void {
       lowQuality = low;
@@ -668,18 +629,6 @@ export function createColosseumBiomeHandle(initialWorld: WorldId = 'underground'
         const b = eqBlades[i];
         const s = 0.65 + 0.45 * Math.sin(elapsed * (3.8 + overclockTier * 1.1) + i * 1.1);
         b.scale.y = s + totalBoost * 0.45;
-      }
-      if (overclockTier > 0) {
-        const sweepSpeed = 1.35 + overclockTier * 0.45;
-        spotlightMat.opacity = Math.min(
-          0.32,
-          0.08 + overclockTier * 0.03 + pulseBoost * 0.12 + Math.sin(elapsed * 5.0) * 0.015
-        );
-        for (let i = 0; i < spotlights.length; i++) {
-          const sp = spotlights[i];
-          sp.mesh.rotation.x = sp.baseRx + Math.sin(elapsed * sweepSpeed + sp.phase) * 0.16;
-          sp.mesh.rotation.z = sp.baseRz + Math.cos(elapsed * sweepSpeed * 0.85 + sp.phase) * 0.24;
-        }
       }
       if (!lowQuality) {
         sealRingMesh.rotation.z = elapsed * (0.14 + overclockTier * 0.08);

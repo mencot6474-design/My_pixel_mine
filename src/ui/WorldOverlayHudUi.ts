@@ -9,7 +9,6 @@ import {
   ShopStationId,
 } from '../game3d/ShopWorld3D';
 import { TowerOreBarScreen } from '../game3d/TowerArena3D';
-import type { OmegaTargetScreenAnchor } from '../game3d/OmegaArena3D';
 import { getEnchantById, getMinerRarity, getMutationById, RARITY_BORDER, type ItemRarity } from '../game/GameData';
 import { GameSettings, gameSettings } from '../game/GameSettings';
 import { GameState } from '../game/GameState';
@@ -17,7 +16,6 @@ import { fmtShort } from '../game/NumberFormat';
 import { getWeatherById } from '../game/WeatherData';
 import { PIT_EVENT_DEFS } from '../game/PitEventsDomain';
 import { enchantAuraIconHtml, meteorIconHtml } from './HudIcons';
-import { omegaBattleIconHtml } from './OmegaBattleIcons';
 import { ModalKind, renderRarityBadgeHtml, TW_SHOP_SIGN_BASE } from './HudShared';
 
 export interface PlotLabelPayload {
@@ -836,98 +834,5 @@ export class WorldOverlayHudUi {
       el.style.top = `${a.y}px`;
     }
     this.onTutorialDomArrowSync?.();
-  }
-
-  public updateOmegaArenaOverlay(
-    data: { bossHead: { x: number; y: number } | null; targets: OmegaTargetScreenAnchor[] } | null,
-    onParry: () => void,
-    onHitTarget: (targetId: string) => void
-  ): void {
-    if (!this.omegaLayerEl) return;
-    const battle = this.state.omegaBattle;
-    if (!data || !battle || this.getUiContext().sceneMode !== 'omega') {
-      if (this.omegaLayerEl.innerHTML !== '') {
-        this.omegaLayerEl.innerHTML = '';
-        this.omegaLayerEl.dataset.key = '';
-      }
-      return;
-    }
-
-    const parryActive = battle.parryWindow.active && !battle.parryWindow.consumed;
-    const key = `${parryActive ? 1 : 0}:${data.targets.map((t) => t.id).join(',')}`;
-    if (this.omegaLayerEl.dataset.key !== key) {
-      this.omegaLayerEl.dataset.key = key;
-      const parryHtml =
-        parryActive && data.bossHead
-          ? `<button class="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 w-[108px] h-[108px] flex items-center justify-center cursor-pointer group" data-omega-ring-parry style="left:${Math.round(data.bossHead.x)}px;top:${Math.round(data.bossHead.y)}px" aria-label="Parry Boss Attack">
-              <span class="mam-omega-parry-ring-shrink absolute inset-0 rounded-full border-[3.5px] border-[#fde047] pointer-events-none"></span>
-              <span class="relative w-[76px] h-[76px] rounded-full border-[3px] border-[#14111d] bg-[#ef4444]/90 group-hover:bg-[#fde047] group-hover:text-[#14111d] text-white flex flex-col items-center justify-center gap-0.5 transition-transform group-hover:scale-105 active:scale-95">
-                ${omegaBattleIconHtml('parryClash', 30)}
-                <span class="text-[11px] font-black tracking-wider leading-none uppercase">PARRY!</span>
-              </span>
-            </button>`
-          : '';
-      const targetsHtml = data.targets
-        .map((t) => {
-          const cfg =
-            t.kind === 'phantom_blade'
-              ? {
-                  label: 'SHATTER BLADE',
-                  bg: 'bg-[#fff1f2] text-[#9f1239] group-hover:bg-[#ffe4e6]',
-                  arrowFill: '#fb7185',
-                  dotBg: 'bg-[#fb7185]',
-                }
-              : t.kind === 'obsidian_pillar'
-                ? {
-                    label: 'BREAK PILLAR',
-                    bg: 'bg-[#fae8ff] text-[#701a75] group-hover:bg-[#f5d0fe]',
-                    arrowFill: '#e879f9',
-                    dotBg: 'bg-[#e879f9]',
-                  }
-                : {
-                    label: 'DETONATE SEAL',
-                    bg: 'bg-[#e0f2fe] text-[#0369a1] group-hover:bg-[#bae6fd]',
-                    arrowFill: '#38bdf8',
-                    dotBg: 'bg-[#38bdf8]',
-                  };
-          return `<button class="pointer-events-auto absolute -translate-x-1/2 -translate-y-full flex flex-col items-center cursor-pointer group active:scale-90 transition-transform" data-omega-hit-target="${t.id}" style="left:${Math.round(t.x)}px;top:${Math.round(t.y)}px" aria-label="Tap ${cfg.label}">
-            <span class="mam-omega-tap-bounce flex flex-col items-center">
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border-[2.5px] border-[#14111d] ${cfg.bg} text-[10.5px] font-black tracking-wide leading-none uppercase whitespace-nowrap">
-                <span class="px-1.5 py-0.5 rounded-full bg-[#fde047] text-[#14111d] border-[1.5px] border-[#14111d] text-[9px] font-black tracking-wider leading-none">TAP!</span>
-                <span>${cfg.label}</span>
-              </span>
-              <svg viewBox="0 0 20 13" width="18" height="12" fill="none" class="-mt-[2px]" aria-hidden="true">
-                <path d="M2.5 1.5L10 10.5L17.5 1.5Z" fill="${cfg.arrowFill}" stroke="#14111d" stroke-width="2.4" stroke-linejoin="round"/>
-              </svg>
-            </span>
-            <span class="relative mt-0.5 flex items-center justify-center w-4 h-4 pointer-events-none">
-              <span class="mam-omega-tap-pulse absolute inset-0 rounded-full border-[2px] border-[#fde047]"></span>
-              <span class="w-2.5 h-2.5 rounded-full ${cfg.dotBg} border-[1.5px] border-[#14111d]"></span>
-            </span>
-          </button>`;
-        })
-        .join('');
-      this.omegaLayerEl.innerHTML = `${parryHtml}${targetsHtml}`;
-      this.omegaLayerEl.querySelector<HTMLElement>('[data-omega-ring-parry]')?.addEventListener('click', onParry);
-      this.omegaLayerEl.querySelectorAll<HTMLElement>('[data-omega-hit-target]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const id = btn.dataset.omegaHitTarget;
-          if (id) onHitTarget(id);
-        });
-      });
-    } else {
-      const ringEl = this.omegaLayerEl.querySelector<HTMLElement>('[data-omega-ring-parry]');
-      if (ringEl && data.bossHead) {
-        ringEl.style.left = `${Math.round(data.bossHead.x)}px`;
-        ringEl.style.top = `${Math.round(data.bossHead.y)}px`;
-      }
-      for (const t of data.targets) {
-        const el = this.omegaLayerEl.querySelector<HTMLElement>(`[data-omega-hit-target="${t.id}"]`);
-        if (el) {
-          el.style.left = `${Math.round(t.x)}px`;
-          el.style.top = `${Math.round(t.y)}px`;
-        }
-      }
-    }
   }
 }

@@ -246,19 +246,6 @@ export function getZeppelinHoloTickerTexture(
   });
 }
 
-/** Soft vertical fade texture for searchlight beams so cones dissolve cleanly into the sky. */
-export function getSearchlightBeamTexture(): THREE.Texture {
-  return paintCachedTexture('sky-searchlight-grad-v1', 32, 128, 1, 1, [255, 255, 255, 180], (ctx) => {
-    const grad = ctx.createLinearGradient(0, 128, 0, 0);
-    grad.addColorStop(0.0, 'rgba(255, 255, 255, 0.95)');
-    grad.addColorStop(0.35, 'rgba(255, 255, 255, 0.45)');
-    grad.addColorStop(0.75, 'rgba(255, 255, 255, 0.12)');
-    grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 32, 128);
-  });
-}
-
 /** Lightweight radial haze ring texture separating foreground sky arena from deep city canyons. */
 export function getCityMistTexture(accentHex: string): THREE.Texture {
   return paintCachedTexture(`sky-city-mist-v1|${accentHex}`, 256, 256, 1, 1, [20, 40, 80, 90], (ctx) => {
@@ -512,4 +499,293 @@ export function buildCyberZeppelin(opts: {
   }
 
   return { fanRotors, escortDrones, holoBeamMat };
+}
+
+export const GRID_BUILDING_CHAMFER = 0.36;
+export const GRID_BUILDING_BEVEL = 0.04;
+
+export interface GridBuildingSpec {
+  readonly x: number;
+  readonly z: number;
+  readonly w: number;
+  readonly d: number;
+  readonly topY: number;
+  readonly baseY: number;
+  readonly matIdx: number;
+  readonly penthouse: boolean;
+  readonly tiers: 1 | 2;
+  readonly mast: boolean;
+  readonly beacon: boolean;
+  readonly hvac: boolean;
+  readonly billboard?: HoloBillboardLabel;
+  readonly billboardRotY?: number;
+  readonly winSeed: number;
+}
+
+export interface GridWindowCollectors {
+  readonly frameMatrices: THREE.Matrix4[];
+  readonly warmMatrices: THREE.Matrix4[];
+  readonly accentMatrices: THREE.Matrix4[];
+  readonly reflectMatrices: THREE.Matrix4[];
+}
+
+/**
+ * Generates deterministic non-overlapping Option A grid skyscrapers (rotY = 0)
+ * arranged in Left/Right Inner & Outer avenues, Rear Horizon Canyon, and Abyss Canyon tiers.
+ * Strictly keeps Stage Safe Zone (|x| < 15.5, z in [-15.5, 22], y > -7.5) and
+ * Cyber Zeppelin Airway (z in [-25.5, -17.5], y >= 3.0) unobstructed.
+ */
+export function createGridDistrictSpecs(): GridBuildingSpec[] {
+  const specs: GridBuildingSpec[] = [];
+  const baseY = -28;
+  const rng = (seed: number): number => {
+    const s = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+    return s - Math.floor(s);
+  };
+
+  // 1 & 2. Left & Right Inner Avenues (|x| ~ 21.0) and Outer Skylines (|x| ~ 31.8)
+  const zLanes = [13.5, 4.0, -5.5, -13.8, -21.5, -29.8, -39.2, -49.0];
+  const innerTopOffsets = [-0.4, 2.2, 5.2, 6.8, -2.8, 7.8, 10.6, 12.8];
+  const outerTopOffsets = [3.4, 6.2, 8.8, 10.8, -2.6, 12.6, 15.2, 16.8];
+  const labels: readonly HoloBillboardLabel[] = ['MINE', 'CYBER', 'NEXUS'];
+
+  let idx = 0;
+  for (const side of [-1, 1] as const) {
+    for (let i = 0; i < zLanes.length; i++) {
+      const z = zLanes[i];
+      const inBlimpCorridor = z >= -25.5 && z <= -17.5;
+
+      // Inner avenue tower
+      {
+        const s = idx++ + (side > 0 ? 100 : 0);
+        const r0 = rng(s * 3 + 1);
+        const r1 = rng(s * 3 + 2);
+        const r2 = rng(s * 3 + 3);
+        const w = 5.4 + r0 * 1.4;
+        const d = inBlimpCorridor ? 4.4 : 5.4 + r1 * 1.7;
+        const rawTop = innerTopOffsets[i] + (side > 0 ? 0.8 : 0) + (r2 - 0.5) * 1.6;
+        // Keep the Cyber Zeppelin Airway (z in [-25.5, -17.5], y bottom ~ -1.3) 100% unobstructed
+        const topY = inBlimpCorridor ? Math.min(-2.8, rawTop) : rawTop;
+        const hasSign = !inBlimpCorridor && (i === 1 || i === 2 || i === 5 || (side > 0 && i === 3));
+        specs.push({
+          x: side * (21.2 + (r1 - 0.5) * 0.9),
+          z,
+          w,
+          d,
+          topY,
+          baseY,
+          matIdx: s % 4,
+          penthouse: !inBlimpCorridor && r0 > 0.25,
+          tiers: i >= 4 ? 2 : 1,
+          mast: !inBlimpCorridor && (r1 > 0.45 || i >= 4),
+          beacon: !inBlimpCorridor && i >= 3,
+          hvac: !inBlimpCorridor && r2 > 0.3,
+          billboard: hasSign ? labels[(i + (side > 0 ? 1 : 0)) % 3] : undefined,
+          billboardRotY: side < 0 ? Math.PI * 0.24 : -Math.PI * 0.24,
+          winSeed: s * 97 + 13,
+        });
+      }
+
+      // Outer skyline tower
+      {
+        const s = idx++ + 200 + (side > 0 ? 100 : 0);
+        const r0 = rng(s * 5 + 1);
+        const r1 = rng(s * 5 + 2);
+        const r2 = rng(s * 5 + 3);
+        const w = 6.2 + r0 * 2.0;
+        const d = inBlimpCorridor ? 4.8 : 6.0 + r1 * 1.9;
+        const rawTop = outerTopOffsets[i] + (side < 0 ? 0.6 : -0.3) + (r2 - 0.5) * 1.8;
+        // Keep the Cyber Zeppelin Airway (z in [-25.5, -17.5], y bottom ~ -1.3) 100% unobstructed
+        const topY = inBlimpCorridor ? Math.min(-2.6, rawTop) : rawTop;
+        const hasSign = !inBlimpCorridor && (i === 1 || i === 6);
+        specs.push({
+          x: side * (31.8 + (r0 - 0.5) * 1.4),
+          z: z + (r1 - 0.5) * 1.1,
+          w,
+          d,
+          topY,
+          baseY,
+          matIdx: s % 4,
+          penthouse: !inBlimpCorridor && r0 > 0.2,
+          tiers: i >= 3 ? 2 : 1,
+          mast: !inBlimpCorridor && i >= 2,
+          beacon: !inBlimpCorridor && i >= 2,
+          hvac: !inBlimpCorridor && r2 > 0.35,
+          billboard: hasSign ? labels[(i + (side > 0 ? 2 : 0)) % 3] : undefined,
+          billboardRotY: side < 0 ? Math.PI * 0.14 : -Math.PI * 0.14,
+          winSeed: s * 131 + 29,
+        });
+      }
+    }
+  }
+
+  // 3. Rear Horizon Canyon:
+  // - Central Vista Valley (|x| < 15.5): rich low-mid horizon towers (topY <= 2.9, total < 4.0) so Void/Bloodmoon sky stays open!
+  // - Lateral Rear Spires (|x| >= 18.0, z = -58): soar up to +13m to frame the night skyline cleanly behind inner/outer avenues.
+  const rearRow: ReadonlyArray<{
+    x: number;
+    z: number;
+    w: number;
+    d: number;
+    topY: number;
+    sign?: HoloBillboardLabel;
+    tiers?: 1 | 2;
+  }> = [
+    { x: -11.4, z: -34.5, w: 5.4, d: 5.2, topY: 2.8 },
+    { x: -4.2, z: -35.8, w: 5.2, d: 5.0, topY: 1.9 },
+    { x: 4.4, z: -35.5, w: 5.2, d: 5.0, topY: 2.1 },
+    { x: 11.4, z: -34.2, w: 5.4, d: 5.2, topY: 2.9 },
+    { x: -11.8, z: -47.5, w: 6.2, d: 5.8, topY: 3.1 },
+    { x: -4.0, z: -49.2, w: 5.8, d: 5.6, topY: 2.4 },
+    { x: 4.2, z: -48.8, w: 5.8, d: 5.6, topY: 2.5 },
+    { x: 11.8, z: -47.2, w: 6.2, d: 5.8, topY: 3.0 },
+    { x: -20.5, z: -58.5, w: 6.8, d: 6.4, topY: 11.8, sign: 'CYBER', tiers: 2 },
+    { x: 20.5, z: -58.2, w: 6.8, d: 6.4, topY: 12.2, sign: 'NEXUS', tiers: 2 },
+    { x: -30.5, z: -57.5, w: 6.8, d: 6.2, topY: 13.6, sign: 'MINE', tiers: 2 },
+    { x: 30.8, z: -57.2, w: 6.8, d: 6.2, topY: 13.0, tiers: 2 },
+  ];
+  for (let i = 0; i < rearRow.length; i++) {
+    const r = rearRow[i];
+    const s = idx++ + 400;
+    const isCenterValley = Math.abs(r.x) < 15.5;
+    specs.push({
+      x: r.x,
+      z: r.z,
+      w: r.w,
+      d: r.d,
+      topY: r.topY,
+      baseY,
+      matIdx: (s + i) % 4,
+      penthouse: !isCenterValley && r.topY > 2.2,
+      tiers: r.tiers ?? 1,
+      mast: !isCenterValley && r.topY > 3.0,
+      beacon: !isCenterValley && r.topY > 4.0,
+      hvac: true,
+      billboard: isCenterValley ? undefined : r.sign,
+      billboardRotY: r.x < 0 ? Math.PI * 0.12 : -Math.PI * 0.12,
+      winSeed: s * 173 + 7,
+    });
+  }
+
+  // 4. Lower Abyss Canyon Towers (visible looking down below arena rim, strictly topY <= -5.8)
+  const abyssSpecs: ReadonlyArray<{ x: number; z: number; w: number; d: number; topY: number }> = [
+    { x: -18.8, z: 12.0, w: 4.8, d: 4.6, topY: -6.8 },
+    { x: 18.8, z: 11.5, w: 4.8, d: 4.6, topY: -6.5 },
+    { x: -18.5, z: -2.5, w: 4.6, d: 4.6, topY: -7.2 },
+    { x: 18.5, z: -3.0, w: 4.6, d: 4.6, topY: -7.0 },
+    { x: -18.6, z: -17.0, w: 4.8, d: 4.8, topY: -6.6 },
+    { x: 18.6, z: -17.5, w: 4.8, d: 4.8, topY: -6.9 },
+    { x: -9.5, z: -23.5, w: 5.2, d: 4.8, topY: -7.4 },
+    { x: 9.5, z: -24.0, w: 5.2, d: 4.8, topY: -7.2 },
+  ];
+  for (let i = 0; i < abyssSpecs.length; i++) {
+    const a = abyssSpecs[i];
+    const s = idx++ + 600;
+    specs.push({
+      x: a.x,
+      z: a.z,
+      w: a.w,
+      d: a.d,
+      topY: a.topY,
+      baseY,
+      matIdx: s % 4,
+      penthouse: false,
+      tiers: 1,
+      mast: false,
+      beacon: false,
+      hvac: true,
+      winSeed: s * 199 + 3,
+    });
+  }
+
+  return specs;
+}
+
+/** Populates crisp 3D InstancedMesh window bays across all 4 faces of a grid chamfered tower. */
+export function appendGridBuildingWindows(
+  spec: GridBuildingSpec,
+  collectors: GridWindowCollectors,
+  tmpObj: THREE.Object3D
+): void {
+  const { x: bx, z: bz, w, d, topY, baseY, winSeed } = spec;
+  const yFloorEnd = topY - 1.05;
+  const yFloorStart = Math.max(baseY + 2.0, -16.5);
+  const floorStep = 1.55;
+  const colStep = 1.12;
+  const halfW = w * 0.5;
+  const halfD = d * 0.5;
+  const insetCorner = GRID_BUILDING_CHAMFER + 0.58;
+  // Use flat PlaneGeometry offsets cleanly proud of outer bevel (no Box occlusion!)
+  const frameOut = GRID_BUILDING_BEVEL + 0.035;
+  const paneOut = GRID_BUILDING_BEVEL + 0.06;
+
+  const pickType = (seed: number): 'warm' | 'accent' | 'reflect' => {
+    const h = Math.abs(Math.sin(seed * 12.9898 + 78.233) * 43758.5453) % 1;
+    if (h < 0.42) return 'warm';
+    if (h < 0.72) return 'accent';
+    return 'reflect';
+  };
+
+  let rowIdx = 0;
+  for (let wy = yFloorEnd; wy >= yFloorStart; wy -= floorStep) {
+    rowIdx++;
+
+    // Front (+Z) & Back (-Z) faces
+    for (let lx = -halfW + insetCorner; lx <= halfW - insetCorner; lx += colStep) {
+      const sF = winSeed + rowIdx * 31 + Math.round(lx * 13);
+      const tF = pickType(sF);
+      tmpObj.position.set(bx + lx, wy, bz + halfD + frameOut);
+      tmpObj.rotation.set(0, 0, 0);
+      tmpObj.scale.set(1, 1, 1);
+      tmpObj.updateMatrix();
+      collectors.frameMatrices.push(tmpObj.matrix.clone());
+
+      tmpObj.position.z = bz + halfD + paneOut;
+      tmpObj.updateMatrix();
+      if (tF === 'warm') collectors.warmMatrices.push(tmpObj.matrix.clone());
+      else if (tF === 'accent') collectors.accentMatrices.push(tmpObj.matrix.clone());
+      else collectors.reflectMatrices.push(tmpObj.matrix.clone());
+
+      const tB = pickType(sF + 17);
+      tmpObj.position.set(bx + lx, wy, bz - halfD - frameOut);
+      tmpObj.rotation.set(0, Math.PI, 0);
+      tmpObj.updateMatrix();
+      collectors.frameMatrices.push(tmpObj.matrix.clone());
+
+      tmpObj.position.z = bz - halfD - paneOut;
+      tmpObj.updateMatrix();
+      if (tB === 'warm') collectors.warmMatrices.push(tmpObj.matrix.clone());
+      else if (tB === 'accent') collectors.accentMatrices.push(tmpObj.matrix.clone());
+      else collectors.reflectMatrices.push(tmpObj.matrix.clone());
+    }
+
+    // Left (-X) & Right (+X) faces
+    for (let lz = -halfD + insetCorner; lz <= halfD - insetCorner; lz += colStep) {
+      const sR = winSeed + rowIdx * 43 + Math.round(lz * 19);
+      const tR = pickType(sR);
+      tmpObj.position.set(bx + halfW + frameOut, wy, bz + lz);
+      tmpObj.rotation.set(0, Math.PI * 0.5, 0);
+      tmpObj.scale.set(1, 1, 1);
+      tmpObj.updateMatrix();
+      collectors.frameMatrices.push(tmpObj.matrix.clone());
+
+      tmpObj.position.x = bx + halfW + paneOut;
+      tmpObj.updateMatrix();
+      if (tR === 'warm') collectors.warmMatrices.push(tmpObj.matrix.clone());
+      else if (tR === 'accent') collectors.accentMatrices.push(tmpObj.matrix.clone());
+      else collectors.reflectMatrices.push(tmpObj.matrix.clone());
+
+      const tL = pickType(sR + 23);
+      tmpObj.position.set(bx - halfW - frameOut, wy, bz + lz);
+      tmpObj.rotation.set(0, -Math.PI * 0.5, 0);
+      tmpObj.updateMatrix();
+      collectors.frameMatrices.push(tmpObj.matrix.clone());
+
+      tmpObj.position.x = bx - halfW - paneOut;
+      tmpObj.updateMatrix();
+      if (tL === 'warm') collectors.warmMatrices.push(tmpObj.matrix.clone());
+      else if (tL === 'accent') collectors.accentMatrices.push(tmpObj.matrix.clone());
+      else collectors.reflectMatrices.push(tmpObj.matrix.clone());
+    }
+  }
 }

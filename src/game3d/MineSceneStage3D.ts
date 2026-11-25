@@ -23,7 +23,7 @@ import { type PitEventKind } from '../game/PitEventsDomain';
 import { getWeatherById, type WeatherId } from '../game/WeatherData';
 import type { FusionWorld3D } from './FusionWorld3D';
 import type { MineInputState } from './MineSceneInput';
-import type { OmegaArena3D, OmegaTargetScreenAnchor } from './OmegaArena3D';
+import type { OmegaArena3D } from './OmegaArena3D';
 import type { RiftArena3D } from './RiftArena3D';
 import type { OrePit3D } from './OrePit3D';
 import type { PlotAttackController3D, PlotUltFiredInfo } from './PlotAttackController3D';
@@ -130,16 +130,14 @@ export interface MineSceneCallbacks {
     isFinisher?: boolean
   ) => { dmg: number; broken?: boolean; isCrit?: boolean } | void;
   onTowerOreBars?: (bars: TowerOreBarScreen[]) => void;
-  onOmegaTargetClick?: (targetId: string) => void;
-  onOmegaBossClick?: () => void;
-  onOmegaEntranceSlam?: () => void;
+  onOmegaBossTap?: (screenX: number, screenY: number) => { dmg: number; isCrit?: boolean } | void;
   onOmegaFighterStrike?: (
     slotIndex: number,
     attackInterval: number,
+    isUltimate: boolean,
     beatIndex?: number,
     isFinisher?: boolean
   ) => { dmg: number; isCrit?: boolean } | void;
-  onOmegaArenaOverlay?: (data: { bossHead: { x: number; y: number } | null; targets: OmegaTargetScreenAnchor[] } | null) => void;
   onRiftBossTap?: (screenX: number, screenY: number) => { dmg: number; isCrit?: boolean } | void;
   onRiftFighterStrike?: (
     slotIndex: number,

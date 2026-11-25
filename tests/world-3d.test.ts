@@ -147,7 +147,6 @@ import {
   BLIMP_HOLO_LABELS,
   getCityMistTexture,
   getRooftopHoloSignTexture,
-  getSearchlightBeamTexture,
   getSkyscraperVariantTexture,
   getZeppelinHoloTickerTexture,
 } from '../src/game3d/SkyMetropolisAssets3D';
@@ -891,6 +890,7 @@ describe('Pure 3D Mine World', () => {
     expect(getResearchNodesForTree('core').filter((n) => n.effectType === 'tapDamageFlat')).toHaveLength(6);
 
     const gs = new GameState();
+    gs.forceWeather('light_rain');
     expect(gs.activeWorldId).toBe('underground');
     expect(gs.setActiveWorld('crystal')).toBe(false);
     expect(gs.canUnlockWorld('crystal')).toBe('locked-prereq');
@@ -2668,7 +2668,7 @@ describe('Pure 3D Mine World', () => {
     env.group.updateMatrixWorld(true);
 
     let meshCount = 0;
-    let rearSkyOccluderCount = 0;
+    const rearSkyOccluders: string[] = [];
     const box = new THREE.Box3();
     env.group.traverse((obj) => {
       if (obj === env.skyDome) return;
@@ -2687,12 +2687,13 @@ describe('Pure 3D Mine World', () => {
         box.setFromObject(obj);
         // Distant lateral city support pillars must never intrude into central upper-sky Void/Bloodmoon band
         if (box.min.z < -7.5 && box.max.y > 4.2 && Math.abs(box.getCenter(new THREE.Vector3()).x) < 14.0) {
-          rearSkyOccluderCount += 1;
+          const c = box.getCenter(new THREE.Vector3());
+          rearSkyOccluders.push(`${obj.constructor.name}(min=[${box.min.x.toFixed(1)},${box.min.y.toFixed(1)},${box.min.z.toFixed(1)}],max=[${box.max.x.toFixed(1)},${box.max.y.toFixed(1)},${box.max.z.toFixed(1)}],cx=${c.x.toFixed(1)})`);
         }
       }
     });
     expect(meshCount).toBeGreaterThanOrEqual(15);
-    expect(rearSkyOccluderCount).toBe(0);
+    expect(rearSkyOccluders).toEqual([]);
 
     expect(() => {
       env.setWeatherSky('void', '#d8b4fe');
@@ -3249,7 +3250,7 @@ describe('Pure 3D Mine World', () => {
     pit.dispose();
   });
 
-  it('builds OmegaArena3D Duel Sanctum, swaps Crimson/Obsidian/Abyssal Bosses, syncs fighters & clickable targets, and disposes cleanly', () => {
+  it('builds OmegaArena3D Duel Sanctum, swaps Crimson/Obsidian/Abyssal Bosses, syncs fighters & tap charges, and disposes cleanly', () => {
     for (const id of ['crimson-ronin', 'obsidian-sovereign', 'abyssal-leviathan']) {
       for (const pose of ['idle', 'walk', 'attack', 'pose']) {
         expect(existsSync(resolve(process.cwd(), 'public', 'chibi', id, `${pose}.webp`))).toBe(true);
@@ -3264,11 +3265,8 @@ describe('Pure 3D Mine World', () => {
     arena.syncFighters([
       { slotIndex: 0, def: roninDef, enchantId: null, dmg: 1000, speed: 10, miningMult: 1 },
     ]);
-    arena.syncBattleTargets([
-      { id: 'phantom-1', kind: 'phantom_blade', hp: 1, maxHp: 1, xOffset: -2.9, zOffset: -0.6 },
-    ]);
+    arena.setBattleActive(true);
     expect(arena.clickables.some((c) => c.userData?.kind === 'omega-boss')).toBe(true);
-    expect(arena.clickables.some((c) => c.userData?.targetId === 'phantom-1')).toBe(true);
 
     const cam = new THREE.PerspectiveCamera(45, 16 / 9, 0.1, 100);
     cam.position.set(0, 9, 14);
@@ -3283,6 +3281,7 @@ describe('Pure 3D Mine World', () => {
     expect(bossHead).not.toBeNull();
     expect(bossHead!.y).toBeGreaterThan(0);
     expect(bossHead!.y).toBeLessThan(720);
+    expect(arena.getBossWorldPos().z).toBeLessThan(0);
 
     let torusCollars = 0;
     let instancedMeshes = 0;
@@ -3296,39 +3295,20 @@ describe('Pure 3D Mine World', () => {
     expect(instancedMeshes).toBeGreaterThanOrEqual(3); // Rooftop & Skyline InstancedMesh windows
 
     arena.setBossId('obsidian-sovereign');
-    arena.syncBattleTargets([
-      { id: 'pillar-1', kind: 'obsidian_pillar', hp: 1, maxHp: 1, xOffset: -3.2, zOffset: -0.2 },
-    ]);
-    expect(arena.clickables.some((c) => c.userData?.targetId === 'pillar-1')).toBe(true);
-
     arena.setBossId('abyssal-leviathan');
-    arena.syncBattleTargets([
-      { id: 'tidal-pillar-1', kind: 'obsidian_pillar', hp: 1, maxHp: 1, xOffset: -3.2, zOffset: -0.2 },
-    ]);
-    expect(arena.clickables.some((c) => c.userData?.targetId === 'tidal-pillar-1')).toBe(true);
+    arena.triggerTierShockwave(3);
 
-    // Entrance cutscene triggers slam callback once & blocks fighter attacks until active
-    arena.startEntranceCutscene();
-    const entranceStrikes: number[] = [];
-    let slamCount = 0;
-    for (let f = 0; f < 16; f++) {
-      arena.update(0.1, 2.0 + f * 0.1, cam, (ev) => entranceStrikes.push(ev.slotIndex), () => {
-        slamCount++;
-      });
+    // 8 taps charge 1 Ult pip (reset from active/precharged state first so fighter needs 1 pip)
+    arena.setBattleActive(false);
+    arena.setBattleActive(true);
+    let charged = false;
+    for (let t = 0; t < 8; t++) {
+      if (arena.recordPlayerTapCharge()) charged = true;
     }
-    expect(entranceStrikes.length).toBe(0);
-    expect(slamCount).toBe(1);
+    expect(charged).toBe(true);
 
-    // Invul shield and ended phase keep fighters idle on podiums (0 strikes)
-    arena.setBattlePhase('invul_shield');
-    arena.pulseInvulShield();
-    const invulStrikes: number[] = [];
-    for (let f = 0; f < 4; f++) {
-      arena.update(0.1, 4.0 + f * 0.1, cam, (ev) => invulStrikes.push(ev.slotIndex));
-    }
-    expect(invulStrikes.length).toBe(0);
-
-    arena.setBattlePhase('ended');
+    // Inactive battle keeps fighters idle on podiums (0 strikes)
+    arena.setBattleActive(false);
     const endedStrikes: number[] = [];
     for (let f = 0; f < 4; f++) {
       arena.update(0.1, 5.0 + f * 0.1, cam, (ev) => endedStrikes.push(ev.slotIndex));
@@ -4584,7 +4564,6 @@ describe('Pure 3D Mine World', () => {
     expect(getSkyscraperVariantTexture('megacorp', '#38bdf8')).toBeInstanceOf(THREE.Texture);
     expect(getRooftopHoloSignTexture('MINE', '#38bdf8')).toBeInstanceOf(THREE.Texture);
     expect(getCityMistTexture('#38bdf8')).toBeInstanceOf(THREE.Texture);
-    expect(getSearchlightBeamTexture()).toBeInstanceOf(THREE.Texture);
     expect(getBroadcastBannerTexture('#38bdf8', false)).toBeInstanceOf(THREE.Texture);
     expect(getBroadcastBannerTexture('#fbbf24', true)).toBeInstanceOf(THREE.Texture);
     expect(getZeppelinHoloTickerTexture('HAPPY TIME!', '#38bdf8', false)).toBeInstanceOf(THREE.Texture);
@@ -4592,6 +4571,20 @@ describe('Pure 3D Mine World', () => {
     const city = new SkyMetropolis3D(DEFAULT_WORLD_PALETTE);
     expect(city.getBuildingCount()).toBeGreaterThanOrEqual(45);
     expect(city.isScreenFogDisabled()).toBe(true);
+
+    // Option A Grid Neo-Tokyo Sky-District: ensure zero building overlap with Stage Safe Zone & Blimp Airway
+    for (const b of city.getBuildingSpecs()) {
+      const inStageFootprint =
+        Math.abs(b.x) - b.w * 0.5 < 15.5 && b.z + b.d * 0.5 > -15.5 && b.z - b.d * 0.5 < 22.0;
+      if (inStageFootprint) {
+        expect(b.topY).toBeLessThanOrEqual(-5.8);
+      }
+      const inBlimpAirway = b.z + b.d * 0.5 > -25.0 && b.z - b.d * 0.5 < -18.0;
+      if (inBlimpAirway) {
+        expect(b.topY).toBeLessThanOrEqual(-2.5);
+      }
+    }
+
     const initialHoloLabel = city.getCurrentBlimpHoloLabel();
     expect(BLIMP_HOLO_LABELS).toContain(initialHoloLabel);
 
@@ -5336,7 +5329,7 @@ describe('Pure 3D Mine World', () => {
       completedCount: 0,
     });
 
-    // 3. ColosseumBiome3D spotlights turn on during Overclock Tier 1-3 and off on Tier 0
+    // 3. ColosseumBiome3D has zero sweeping spotlight cones even during Overclock Fever Tier 1-3
     const biome = createColosseumBiomeHandle('underground');
     const countVisibleCones = (): number => {
       let n = 0;
@@ -5349,7 +5342,7 @@ describe('Pure 3D Mine World', () => {
     };
     expect(countVisibleCones()).toBe(0);
     biome.setOverclockTier(2);
-    expect(countVisibleCones()).toBe(4);
+    expect(countVisibleCones()).toBe(0);
     biome.update(0.5, 0.4);
     biome.setOverclockTier(0);
     expect(countVisibleCones()).toBe(0);

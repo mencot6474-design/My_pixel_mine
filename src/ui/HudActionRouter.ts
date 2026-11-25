@@ -27,6 +27,7 @@ import type { InventoryModalUi } from './InventoryModalUi';
 import type { OfflineModalUi } from './OfflineModalUi';
 import type { OmegaArenaHudUi } from './OmegaArenaHudUi';
 import type { OmegaBossModalUi } from './OmegaBossModalUi';
+import type { HudOmegaBridge } from './HudOmegaBridge';
 import type { RiftModalUi } from './RiftModalUi';
 import type { RiftArenaHudUi } from './RiftArenaHudUi';
 import type { HudRiftBridge } from './HudRiftBridge';
@@ -94,6 +95,7 @@ export interface HudFastTickContext {
   weatherDpsUi: WeatherDpsHudUi;
   towerUi: TowerUi;
   omegaArenaUi?: OmegaArenaHudUi;
+  omegaBridge?: HudOmegaBridge;
   riftBridge?: HudRiftBridge;
   lastOverclockActive: boolean;
   setLastOverclockActive: (active: boolean) => void;
@@ -107,7 +109,6 @@ export interface HudFastTickContext {
     encore?: FeverEncoreHudInfo
   ) => void;
   syncTowerSceneVisual: () => void;
-  syncOmegaSceneVisual?: () => void;
   setSceneMode: (mode: SceneMode) => void;
   openModal: (kind: ModalKind) => void;
   pushToast: (text: string) => void;
@@ -383,37 +384,9 @@ export function stepHudFastTick(ctx: HudFastTickContext): void {
     ctx.weatherDpsUi.syncOverclockWidget(ctx.root);
   }
 
-  if (ctx.sceneMode === 'omega' && ctx.state.omegaBattle) {
-    const prevPhase = ctx.state.omegaBattle.phase;
-    const prevParry = ctx.state.omegaBattle.parryWindow.active;
-    const prevBreak = ctx.state.omegaBattle.breakRemainingSec > 0;
-    const prevTargetCount = ctx.state.omegaBattle.targets.length;
-    const summary = ctx.state.stepOmegaBossTick(0.1);
-    if (summary) {
-      if (summary.victory) {
-        audio.playSfx('rare-fanfare', { volume: 0.78 });
-      } else {
-        ctx.pushToast(summary.shieldFailed ? 'Shield held! 0 Boss Keys lost.' : 'Time up! 0 Boss Keys lost.');
-      }
-      ctx.syncOmegaSceneVisual?.();
-      ctx.render();
-      return;
-    }
-    ctx.syncOmegaSceneVisual?.();
-    const b = ctx.state.omegaBattle;
-    if (b && prevPhase === 'entrance' && b.phase === 'invul_shield') {
-      ctx.pushToast('🛡️ BOSS INVULNERABLE (30s)! Tap random targets to shatter!');
-    }
-    if (
-      b &&
-      (b.phase !== prevPhase ||
-        b.parryWindow.active !== prevParry ||
-        (b.breakRemainingSec > 0) !== prevBreak ||
-        b.targets.length !== prevTargetCount)
-    ) {
-      ctx.render();
-    } else {
-      ctx.omegaArenaUi?.updateLiveValues(ctx.root);
+  if (ctx.sceneMode === 'omega') {
+    if (ctx.state.omegaBattle) {
+      ctx.omegaBridge?.stepTick(0.1);
     }
     return;
   }

@@ -366,6 +366,16 @@ export function bindMineSceneEvents(ctx: MineInputCtx): ResizeObserver | null {
         ctx.performMineTapAt(e.clientX, e.clientY, null);
         return;
       }
+      if (!hit && ctx.getMode() === 'omega') {
+        const res = ctx.callbacks.onOmegaBossTap?.(e.clientX, e.clientY);
+        const oa = ctx.getOmegaArena();
+        if (res && res.dmg > 0 && oa) {
+          oa.triggerBossHitEffect('#fde047', Boolean(res.isCrit));
+          const wp = oa.getBossWorldPos();
+          ctx.emitDamageScreen(res.dmg, wp.x, wp.y, wp.z, true, Boolean(res.isCrit));
+        }
+        return;
+      }
       if (!hit && ctx.getMode() === 'rift') {
         const res = ctx.callbacks.onRiftBossTap?.(e.clientX, e.clientY);
         const ra = ctx.getRiftArena?.();
@@ -404,11 +414,14 @@ export function bindMineSceneEvents(ctx: MineInputCtx): ResizeObserver | null {
         ctx.callbacks.onShopStationClick?.('omega-left');
       } else if (hit.userData.kind === 'shop-omega-right') {
         ctx.callbacks.onShopStationClick?.('omega-right');
-      } else if (hit.userData.kind === 'omega-target') {
-        const targetId = String(hit.userData.targetId ?? '');
-        if (targetId) ctx.callbacks.onOmegaTargetClick?.(targetId);
       } else if (hit.userData.kind === 'omega-boss') {
-        ctx.callbacks.onOmegaBossClick?.();
+        const res = ctx.callbacks.onOmegaBossTap?.(e.clientX, e.clientY);
+        const oa = ctx.getOmegaArena();
+        if (res && res.dmg > 0 && oa) {
+          oa.triggerBossHitEffect('#fde047', Boolean(res.isCrit));
+          const wp = oa.getBossWorldPos();
+          ctx.emitDamageScreen(res.dmg, wp.x, wp.y, wp.z, true, Boolean(res.isCrit));
+        }
       } else if (hit.userData.kind === 'rift-boss') {
         const res = ctx.callbacks.onRiftBossTap?.(e.clientX, e.clientY);
         const ra = ctx.getRiftArena?.();
