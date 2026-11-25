@@ -117,6 +117,7 @@ import {
   STAGE_PEDESTAL_COUNT,
   WORLD_PALETTES,
 } from '../src/game3d/MineWorldPalette';
+import { OMEGA_PLAYER_PAD_POSITIONS } from '../src/game3d/OmegaArenaStage3D';
 import {
   applyNodeDamagePure,
   BASE_ORE_RESPAWN_SEC,
@@ -239,10 +240,15 @@ import {
   createYukikageWagasaUmbrellaGeometry,
 } from '../src/game3d/MeshFx3D';
 import {
+  ARENA_RIFT_SURGE_ULT_CHARGE,
+  ARENA_ULT_CHARGE_BASIC_ATTACKS,
+  ARENA_ULT_OPENING_PRECHARGE,
+  ARENA_ULT_SPOTLIGHT_LOCK_SEC,
   BARRAGE_FOLLOWUP_DELAYS,
   buildTierMotionWaypoints,
   CHIBI_ATTACK_ANIM_SEC,
   isWideAoeRarity,
+  RIFT_TAP_CHARGE_STEP,
   splitBarrageDamage,
   SpotlightAttackQueue,
   TierAttackVfxPool3D,
@@ -4932,6 +4938,16 @@ describe('Pure 3D Mine World', () => {
     expect(slot0Ult).not.toBeNull();
     expect(slot0Ult?.maxCharge).toBe(5);
     expect(() => peds[0].triggerChibiUltOpening(0.52)).not.toThrow();
+    const burstPool = new TierAttackVfxPool3D();
+    burstPool.fireUltOpeningBurst({ x: 0, y: 1, z: 0, colorHex: '#ef4444' });
+    let visibleSkyBeam = false;
+    burstPool.group.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.visible && obj.scale.y > 5) {
+        visibleSkyBeam = true;
+      }
+    });
+    expect(visibleSkyBeam).toBe(false);
+    burstPool.dispose();
     ctrl.dispose();
     peds.forEach((p) => p.dispose());
     pit.dispose();
@@ -4972,10 +4988,16 @@ describe('Pure 3D Mine World', () => {
     expect(towerUltSlots.size).toBe(5);
     const towerAnchors = tower.getFighterPlotAnchors(cam, 1280, 720, new THREE.Vector3());
     expect(towerAnchors).toHaveLength(5);
-    expect(towerAnchors[0].ultMaxCharge).toBe(5);
+    expect(towerAnchors[0].ultMaxCharge).toBe(ARENA_ULT_CHARGE_BASIC_ATTACKS);
+    expect(ARENA_ULT_CHARGE_BASIC_ATTACKS).toBe(3);
+    expect(ARENA_ULT_SPOTLIGHT_LOCK_SEC).toBe(1.25);
+    tower.resetFloorCharge();
+    expect(tower.getFighterPlotAnchors(cam, 1280, 720, new THREE.Vector3())[0].ultCharge).toBe(0);
+    tower.grantSquadUltCharge(1);
+    expect(tower.getFighterPlotAnchors(cam, 1280, 720, new THREE.Vector3())[0].ultCharge).toBe(1);
     tower.dispose();
 
-    // OmegaArena3D: within first 2.0s all 5 parallel fighters strike, and across 14s all 5 fire Ult finishers
+    // OmegaArena3D: opens with 2/3 pre-charge, all 5 strike within 2.0s, fire Ults across 14s, and fill to 3/3 on grantSquadUltCharge
     const omega = new OmegaArena3D();
     omega.group.visible = true;
     omega.syncFighters(
@@ -4988,6 +5010,10 @@ describe('Pure 3D Mine World', () => {
         miningMult: 2,
       }))
     );
+    const omegaPrecharge = omega.getFighterPlotAnchors(cam, 1280, 720);
+    expect(omegaPrecharge[0].ultCharge).toBe(ARENA_ULT_OPENING_PRECHARGE);
+    expect(omegaPrecharge[0].ultMaxCharge).toBe(ARENA_ULT_CHARGE_BASIC_ATTACKS);
+
     const omegaSlotsEarly = new Set<number>();
     const omegaUltSlots = new Set<number>();
     for (let i = 0; i < 40; i++) {
@@ -5000,9 +5026,11 @@ describe('Pure 3D Mine World', () => {
       });
     }
     expect(omegaUltSlots.size).toBe(5);
+    omega.grantSquadUltCharge(true);
     const omegaAnchors = omega.getFighterPlotAnchors(cam, 1280, 720);
     expect(omegaAnchors).toHaveLength(5);
-    expect(omegaAnchors[0].ultMaxCharge).toBe(5);
+    expect(omegaAnchors[0].ultMaxCharge).toBe(ARENA_ULT_CHARGE_BASIC_ATTACKS);
+    expect(omegaAnchors.every((a) => a.ulting || (a.ultCharge === ARENA_ULT_CHARGE_BASIC_ATTACKS && a.ultArmed))).toBe(true);
     omega.dispose();
   });
 
@@ -5373,7 +5401,7 @@ describe('Pure 3D Mine World', () => {
     arena.group.visible = true;
     arena.setBattleActive(true);
     arena.setBossConfig('null-singularity');
-    arena.setSurgeActive(true);
+    arena.setSurgeActive(false);
     arena.syncFighters([
       {
         slotIndex: 0,
@@ -5389,6 +5417,23 @@ describe('Pure 3D Mine World', () => {
     cam.position.set(0, 10, 20);
     cam.lookAt(0, 1.5, -1.5);
     cam.updateMatrixWorld();
+
+    // Base Rift charge is 3 with 2/3 opening precharge
+    const initialAnchors = arena.getFighterPlotAnchors(cam, 1280, 720);
+    expect(initialAnchors).toHaveLength(1);
+    expect(initialAnchors[0].ultMaxCharge).toBe(ARENA_ULT_CHARGE_BASIC_ATTACKS);
+    expect(initialAnchors[0].ultCharge).toBe(ARENA_ULT_OPENING_PRECHARGE);
+
+    // Every RIFT_TAP_CHARGE_STEP (8) player taps grants +1 charge to the lowest-charge Chibi
+    for (let t = 0; t < RIFT_TAP_CHARGE_STEP - 1; t++) {
+      expect(arena.recordPlayerTapCharge()).toBe(false);
+    }
+    expect(arena.recordPlayerTapCharge()).toBe(true);
+    expect(arena.getFighterPlotAnchors(cam, 1280, 720)[0].ultArmed).toBe(true);
+
+    // Overclock Surge lowers Rift Ult charge requirement to 2
+    arena.setSurgeActive(true);
+    expect(arena.getFighterPlotAnchors(cam, 1280, 720)[0].ultMaxCharge).toBe(ARENA_RIFT_SURGE_ULT_CHARGE);
 
     const strikes: number[] = [];
     for (let i = 0; i < 40; i++) {
@@ -5412,7 +5457,7 @@ describe('Pure 3D Mine World', () => {
     arena.triggerTierShockwave(4);
     const anchors = arena.getFighterPlotAnchors(cam, 1280, 720);
     expect(anchors).toHaveLength(1);
-    expect(anchors[0].ultMaxCharge).toBe(3);
+    expect(anchors[0].ultMaxCharge).toBe(2);
 
     arena.setLowQuality(true);
     arena.setLowQuality(false);
@@ -5420,5 +5465,46 @@ describe('Pure 3D Mine World', () => {
 
     expect(getDefaultOrbitPitchForMode('rift')).toBeCloseTo(-0.24, 5);
     expect(clampCameraZoomRadius(NaN, 'rift')).toBeCloseTo(21.0, 5);
+  });
+
+  it('keeps larger Tower, Omega, and Rift podiums well separated with zero prop or inter-podium collisions', () => {
+    // 1. Omega/Rift 1.35x podiums (width 2.62m) maintain clean horizontal & 3D clearance
+    const podiumHalfW = 0.97 * 1.35;
+    const podiumHalfD = 0.89 * 1.35;
+    for (let i = 0; i < OMEGA_PLAYER_PAD_POSITIONS.length; i++) {
+      const [ax, az] = OMEGA_PLAYER_PAD_POSITIONS[i];
+      // Strictly inside Rift 20.8x16.4 deck (z <= 7.2, |x| <= 10.4) and clear of Rift side parapets (|x| <= 9.58)
+      expect(Math.abs(ax) + podiumHalfW).toBeLessThan(8.2);
+      expect(az + podiumHalfD).toBeLessThan(6.4);
+      for (let j = i + 1; j < OMEGA_PLAYER_PAD_POSITIONS.length; j++) {
+        const [bx, bz] = OMEGA_PLAYER_PAD_POSITIONS[j];
+        const xOverlap = Math.abs(ax - bx) < podiumHalfW * 2;
+        const zOverlap = Math.abs(az - bz) < podiumHalfD * 2;
+        expect(xOverlap && zOverlap).toBe(false);
+      }
+      // Clear of Omega rooftop flank runway pucks (x = ±4.55, z <= 0.2) and bulkheads (x = ±9.05, z = 6.75)
+      expect(az - podiumHalfD).toBeGreaterThan(1.0);
+    }
+
+    // 2. Tower 1.42x podiums sit pushed back at TOWER_SUMMON_RADIUS = 8.55, inside PLAZA_FLOOR_R = 10.2, clear of wave ores
+    expect(TOWER_SUMMON_RADIUS).toBeCloseTo(8.55, 5);
+    const towerHalfW = 0.97 * 1.42;
+    const towerHalfD = 0.89 * 1.42;
+    const towerSpots = [0, 1, 2, 3, 4].map((slot) => {
+      const ang = (0.19 + (slot / 4) * 0.62) * Math.PI;
+      return [Math.cos(ang) * TOWER_SUMMON_RADIUS, TOWER_ARENA_CENTER_Z + Math.sin(ang) * TOWER_SUMMON_RADIUS] as const;
+    });
+    for (let i = 0; i < towerSpots.length; i++) {
+      const [ax, az] = towerSpots[i];
+      const radial = Math.hypot(ax, az - TOWER_ARENA_CENTER_Z);
+      expect(radial + towerHalfD).toBeLessThan(10.2);
+      for (let j = i + 1; j < towerSpots.length; j++) {
+        const [bx, bz] = towerSpots[j];
+        expect(Math.hypot(ax - bx, az - bz)).toBeGreaterThan(towerHalfW * 2 + 1.0);
+      }
+      for (const [ox, oz] of TOWER_WAVE_ORE_POSITIONS) {
+        expect(Math.hypot(ax - ox, az - oz)).toBeGreaterThan(3.8);
+      }
+    }
   });
 });

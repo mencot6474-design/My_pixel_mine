@@ -74,8 +74,14 @@ export function lerpNum(a: number, b: number, t: number): number {
 
 export const CHIBI_ATTACK_ANIM_SEC = 2.5;
 export const ULT_SPOTLIGHT_LOCK_SEC = 1.5;
+export const ARENA_ULT_SPOTLIGHT_LOCK_SEC = 1.25;
+export const ARENA_ULT_SELF_COOLDOWN_SEC = 1.55;
 export const HYPER_ENCORE_RELAY_LOCK_SEC = 1.35;
 export const ULT_CHARGE_BASIC_ATTACKS = 5;
+export const ARENA_ULT_CHARGE_BASIC_ATTACKS = 3;
+export const ARENA_RIFT_SURGE_ULT_CHARGE = 2;
+export const ARENA_ULT_OPENING_PRECHARGE = 2;
+export const RIFT_TAP_CHARGE_STEP = 8;
 export const CHIBI_BLITZ_SHADOW_SEC = 0.88;
 export const BARRAGE_BEAT_WEIGHTS = [0.08, 0.1, 0.11, 0.13, 0.15, 0.18, 0.25] as const;
 export const BARRAGE_FOLLOWUP_DELAYS = [0.14, 0.29, 0.46, 0.65, 0.88, 1.22] as const;

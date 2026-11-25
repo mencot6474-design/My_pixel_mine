@@ -259,8 +259,7 @@ export function buildTowerArenaStage(ctx: TowerArenaStageCtx): TowerArenaStagePa
 
     for (let i = 0; i < 5; i++) {
       const sp = getSpawnPos(i);
-      // 50% larger podium scale (0.78 -> 1.17) for commanding Chibi presence
-      const podium = createCyberShowcasePodium(podiumCtx, `0${i + 1}`, 1.17, false);
+      const podium = createCyberShowcasePodium(podiumCtx, `0${i + 1}`, 1.42, false);
       podium.group.position.set(sp.x, 0.08, sp.z);
       podium.group.rotation.y = Math.atan2(-sp.x, BOSS_CENTER_Z - sp.z);
       podium.auraGroup.visible = false;
@@ -268,7 +267,7 @@ export function buildTowerArenaStage(ctx: TowerArenaStageCtx): TowerArenaStagePa
       spawnPodiums.push(podium);
 
       const pad = new THREE.Mesh(
-        summonHoloTex ? new THREE.PlaneGeometry(2.625, 2.625) : new THREE.RingGeometry(0.87, 1.23, 24),
+        summonHoloTex ? new THREE.PlaneGeometry(2.76, 2.76) : new THREE.RingGeometry(0.96, 1.35, 24),
         new THREE.MeshBasicMaterial({
           ...(summonHoloTex ? { map: summonHoloTex } : {}),
           color: 0x38bdf8,
@@ -288,13 +287,13 @@ export function buildTowerArenaStage(ctx: TowerArenaStageCtx): TowerArenaStagePa
       const toCenterX = arenaCenterVec.x - sp.x;
       const toCenterZ = arenaCenterVec.z - sp.z;
       const totalDist = Math.hypot(toCenterX, toCenterZ);
-      const conduitLen = Math.max(0.5, totalDist - 2.35);
+      const conduitLen = Math.max(0.5, totalDist - 2.45);
       const conduitGeo = new THREE.PlaneGeometry(0.14, conduitLen);
       ctx.ownedGeos.push(conduitGeo);
       const conduitMesh = new THREE.Mesh(conduitGeo, conduitMat);
       conduitMesh.rotation.x = -Math.PI / 2;
       conduitMesh.rotation.z = Math.atan2(-toCenterX, -toCenterZ);
-      const midDist = 1.45 + conduitLen * 0.5;
+      const midDist = 1.3 + conduitLen * 0.5;
       conduitMesh.position.set(
         sp.x + (toCenterX / Math.max(0.01, totalDist)) * midDist,
         0.088,

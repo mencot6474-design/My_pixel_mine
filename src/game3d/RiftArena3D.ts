@@ -21,15 +21,19 @@ import {
 } from './RiftCityEnvironment3D';
 import { type SignatureProjectileArrival, SignatureProjectilePool3D } from './SignatureProjectilePool3D';
 import {
+  ARENA_RIFT_SURGE_ULT_CHARGE,
+  ARENA_ULT_CHARGE_BASIC_ATTACKS,
+  ARENA_ULT_OPENING_PRECHARGE,
+  ARENA_ULT_SELF_COOLDOWN_SEC,
+  ARENA_ULT_SPOTLIGHT_LOCK_SEC,
   BARRAGE_BEAT_WEIGHTS,
   BARRAGE_FOLLOWUP_DELAYS,
   computeAttackVfxSpeedScale,
   computeSpotlightMaxChargeSec,
+  RIFT_TAP_CHARGE_STEP,
   SpotlightAttackQueue,
   TierAttackVfxPool3D,
   type TierVfxHooks,
-  ULT_CHARGE_BASIC_ATTACKS,
-  ULT_SPOTLIGHT_LOCK_SEC,
   type WorldPoint3,
 } from './TierAttackVfx3D';
 import type { TowerFighterConfig } from './TowerArena3D';
@@ -88,6 +92,8 @@ export class RiftArena3D {
   private readonly spotlight = new SpotlightAttackQueue();
   private readonly tierVfx = new TierAttackVfxPool3D();
   private readonly projVec = new THREE.Vector3();
+  private readonly prechargedSlots = new Set<number>();
+  private tapChargeCounter = 0;
   private readonly pendingBarrages: Array<{
     slotIndex: number;
     beatIndex: number;
@@ -206,7 +212,7 @@ export class RiftArena3D {
 
     for (let i = 0; i < OMEGA_PLAYER_PAD_POSITIONS.length; i++) {
       const [sx, sz] = OMEGA_PLAYER_PAD_POSITIONS[i];
-      const podium = createCyberShowcasePodium(podiumCtx, `0${i + 1}`, 0.92, false);
+      const podium = createCyberShowcasePodium(podiumCtx, `0${i + 1}`, 1.35, false);
       podium.group.position.set(sx, 0, sz);
       applyOmegaPodiumColors(podium, '#22d3ee', '#a855f7', false, 0.72);
       this.group.add(podium.group);
@@ -216,7 +222,7 @@ export class RiftArena3D {
       const dx = -sx;
       const dz = RIFT_BOSS_POS_Z - sz;
       const totalDist = Math.hypot(dx, dz);
-      const startOff = 0.92;
+      const startOff = 1.35;
       const endOff = 3.25;
       const segLen = totalDist - startOff - endOff;
       if (segLen > 0.4) {
@@ -312,6 +318,42 @@ export class RiftArena3D {
     }
   }
 
+  private getUltReq(): number {
+    return this.surgeActive ? ARENA_RIFT_SURGE_ULT_CHARGE : ARENA_ULT_CHARGE_BASIC_ATTACKS;
+  }
+
+  private applyOpeningPrecharge(): void {
+    const ultReq = this.getUltReq();
+    const precharge = Math.min(Math.max(1, ultReq - 1), ARENA_ULT_OPENING_PRECHARGE);
+    for (const f of this.fighters.values()) {
+      if (this.prechargedSlots.has(f.slotIndex)) continue;
+      this.prechargedSlots.add(f.slotIndex);
+      f.ultCharge = Math.max(f.ultCharge, precharge);
+    }
+  }
+
+  public recordPlayerTapCharge(): boolean {
+    if (!this.battleActive || this.fighters.size === 0) return false;
+    this.tapChargeCounter += 1;
+    if (this.tapChargeCounter < RIFT_TAP_CHARGE_STEP) return false;
+    this.tapChargeCounter = 0;
+
+    const ultReq = this.getUltReq();
+    let target: OmegaFighterEntry | null = null;
+    for (const f of this.fighters.values()) {
+      if (f.ultActiveTimer > 0 || f.ultArmed || f.ultCharge >= ultReq) continue;
+      if (!target || f.ultCharge < target.ultCharge) {
+        target = f;
+      }
+    }
+    if (!target) return false;
+    target.ultCharge = Math.min(ultReq, target.ultCharge + 1);
+    if (target.ultCharge >= ultReq) {
+      target.ultArmed = true;
+    }
+    return true;
+  }
+
   public setSurgeActive(active: boolean): void {
     this.surgeActive = active;
   }
@@ -320,6 +362,8 @@ export class RiftArena3D {
     this.battleActive = active;
     if (!active) {
       this.resetCombatState();
+    } else {
+      this.applyOpeningPrecharge();
     }
   }
 
@@ -350,6 +394,8 @@ export class RiftArena3D {
     this.spotlight.reset();
     this.tierShockwaveTimer = 0;
     this.shockwaveMat.opacity = 0;
+    this.prechargedSlots.clear();
+    this.tapChargeCounter = 0;
     for (const f of this.fighters.values()) {
       f.sprite.setAnimState('idle');
       f.sprite.group.position.copy(f.spawnPos);
@@ -371,6 +417,9 @@ export class RiftArena3D {
       conduitFlows: this.conduitFlows,
       lowQuality: this.lowQuality,
     });
+    if (this.battleActive) {
+      this.applyOpeningPrecharge();
+    }
   }
 
   public triggerBossHit(accentColor?: string, isCrit = false): void {
@@ -410,7 +459,7 @@ export class RiftArena3D {
   ): PlotAnchorScreen[] {
     const out: PlotAnchorScreen[] = [];
     if (!this.group.visible) return out;
-    const ultReq = this.surgeActive ? 3 : ULT_CHARGE_BASIC_ATTACKS;
+    const ultReq = this.getUltReq();
     for (const f of this.fighters.values()) {
       f.sprite.getLabelAnchorWorldPosition(this.projVec, 0.14, true).project(camera);
       const visible = this.projVec.z > -1 && this.projVec.z < 1;
@@ -441,7 +490,7 @@ export class RiftArena3D {
   ): void {
     if (!this.group.visible) return;
     const safeDt = Math.min(Math.max(0, dt), 0.1);
-    const ultReq = this.surgeActive ? 3 : ULT_CHARGE_BASIC_ATTACKS;
+    const ultReq = this.getUltReq();
     const cadenceMult = this.surgeActive ? 1.3 : 1;
 
     if (this.bossHitBounce > 0) this.bossHitBounce = Math.max(0, this.bossHitBounce - safeDt);
@@ -650,7 +699,7 @@ export class RiftArena3D {
           comboStep: step,
           accentColor: f.colorHex,
           sx: f.spawnPos.x,
-          sy: f.spawnPos.y + 1.25,
+          sy: f.spawnPos.y + 1.85,
           sz: f.spawnPos.z,
           ex: (Math.random() - 0.5) * 0.9,
           ey: this.bossStageY + 1.85,
@@ -658,6 +707,7 @@ export class RiftArena3D {
           attackInterval: effectiveSec,
           isBoss: true,
           isUltimate,
+          hideVisual: true,
         },
         handleRiftArrival
       );
@@ -667,13 +717,13 @@ export class RiftArena3D {
     if (activeUltFighter) {
       const ultSec = Math.max(0.01, activeUltFighter.ultBankSec + activeUltFighter.chargeSec);
       const effInterval = activeUltFighter.attackInterval / cadenceMult;
-      activeUltFighter.attackCooldown = Math.max(effInterval, ULT_SPOTLIGHT_LOCK_SEC);
+      activeUltFighter.attackCooldown = Math.max(effInterval, ARENA_ULT_SELF_COOLDOWN_SEC);
       activeUltFighter.chargeSec = 0;
       activeUltFighter.ultBankSec = 0;
       activeUltFighter.ultCharge = 0;
       activeUltFighter.ultArmed = false;
-      activeUltFighter.ultActiveTimer = ULT_SPOTLIGHT_LOCK_SEC;
-      this.spotlight.claim(activeUltFighter.slotIndex, ULT_SPOTLIGHT_LOCK_SEC);
+      activeUltFighter.ultActiveTimer = ARENA_ULT_SELF_COOLDOWN_SEC;
+      this.spotlight.claim(activeUltFighter.slotIndex, ARENA_ULT_SPOTLIGHT_LOCK_SEC);
       launchRiftAttack(activeUltFighter, true, ultSec);
     }
 

@@ -12,6 +12,7 @@ export interface RiftSceneOps {
   setBattleActive?: (active: boolean) => void;
   triggerBossHit: (color?: string, isCrit?: boolean) => void;
   triggerTierShockwave: (tier: number) => void;
+  recordTapCharge?: () => boolean;
 }
 
 /** Coordinates 30s Rift Boss Battle combat, Tier 1-10 shockwaves, and summary transitions. */
@@ -49,6 +50,7 @@ export class HudRiftBridge {
     if (this.getSceneMode() !== 'rift' || !this.state.riftBattle) return undefined;
     const tapBase = this.state.getTapDamage(Date.now(), false);
     const res = this.state.applyRiftTapDamage(tapBase, 0.15, 2.5);
+    this.riftOps?.recordTapCharge?.();
     if (res.tierUp) {
       this.onTierReached(res.newTier);
     }

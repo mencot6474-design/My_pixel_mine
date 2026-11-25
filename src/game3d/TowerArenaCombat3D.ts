@@ -11,14 +11,15 @@ import {
   type SignatureProjectilePool3D,
 } from './SignatureProjectilePool3D';
 import {
+  ARENA_ULT_CHARGE_BASIC_ATTACKS,
+  ARENA_ULT_SELF_COOLDOWN_SEC,
+  ARENA_ULT_SPOTLIGHT_LOCK_SEC,
   BARRAGE_BEAT_WEIGHTS,
   BARRAGE_FOLLOWUP_DELAYS,
   CHIBI_ATTACK_ANIM_SEC,
   computeAttackVfxSpeedScale,
   computeSpotlightMaxChargeSec,
   SpotlightAttackQueue,
-  ULT_CHARGE_BASIC_ATTACKS,
-  ULT_SPOTLIGHT_LOCK_SEC,
   type TierAttackVfxPool3D,
   type WorldPoint3,
 } from './TierAttackVfx3D';
@@ -124,7 +125,7 @@ export interface TowerPendingBarrage {
 
 export const TOWER_ARENA_CENTER_Z = -1.6;
 export const TOWER_BOSS_CENTER_Z = TOWER_ARENA_CENTER_Z - 4.35;
-export const TOWER_SUMMON_RADIUS = 7.45;
+export const TOWER_SUMMON_RADIUS = 8.55;
 
 export const TOWER_WAVE_ORE_POSITIONS: ReadonlyArray<[number, number]> = [
   [-4.6, TOWER_ARENA_CENTER_Z + 1.15],
@@ -559,7 +560,7 @@ export function stepTowerFightersAndBarrages(ctx: {
       if (hasTargets) {
         f.chargeSec = Math.min(maxChargeSec, f.chargeSec + ctx.safeDt);
       }
-      if (f.ultCharge >= ULT_CHARGE_BASIC_ATTACKS && !f.ultArmed && f.attackCooldown <= f.attackInterval * 0.55) {
+      if (f.ultCharge >= ARENA_ULT_CHARGE_BASIC_ATTACKS && !f.ultArmed && f.attackCooldown <= f.attackInterval * 0.55) {
         f.ultArmed = true;
       }
     }
@@ -620,7 +621,7 @@ export function stepTowerFightersAndBarrages(ctx: {
           comboStep: step,
           accentColor: f.colorHex,
           sx: pos.x,
-          sy: pos.y + 1.85,
+          sy: pos.y + 2.05,
           sz: pos.z,
           ex: targetRock.x,
           ey: 1.05,
@@ -628,6 +629,7 @@ export function stepTowerFightersAndBarrages(ctx: {
           attackInterval: effectiveSec,
           isBoss: false,
           isUltimate,
+          hideVisual: true,
         },
         handleProjectileArrival
       );
@@ -663,7 +665,7 @@ export function stepTowerFightersAndBarrages(ctx: {
           comboStep: step,
           accentColor: f.colorHex,
           sx: pos.x,
-          sy: pos.y + 1.85,
+          sy: pos.y + 2.05,
           sz: pos.z,
           ex: bossTargetX,
           ey: bossTargetY,
@@ -671,6 +673,7 @@ export function stepTowerFightersAndBarrages(ctx: {
           attackInterval: effectiveSec,
           isBoss: true,
           isUltimate,
+          hideVisual: true,
         },
         handleProjectileArrival
       );
@@ -678,17 +681,17 @@ export function stepTowerFightersAndBarrages(ctx: {
   };
 
   if (!ctx.paused && hasTargets) {
-    // 1) Ult relay queue: armed Chibis (5/5 basic charge) fire 2.5s Sakuga Ult spaced 1.5s apart
+    // 1) Ult relay queue: armed Chibis (3/3 basic charge) fire 2.5s Sakuga Ult spaced 1.25s apart
     const activeUltFighter = ctx.spotlight.pickNextReady(ctx.fighters.values(), (f) => (f.ultArmed ? 0 : 1));
     if (activeUltFighter) {
       const ultSec = Math.max(0.01, activeUltFighter.ultBankSec + activeUltFighter.chargeSec);
-      activeUltFighter.attackCooldown = Math.max(activeUltFighter.attackInterval, ULT_SPOTLIGHT_LOCK_SEC);
+      activeUltFighter.attackCooldown = Math.max(activeUltFighter.attackInterval, ARENA_ULT_SELF_COOLDOWN_SEC);
       activeUltFighter.chargeSec = 0;
       activeUltFighter.ultBankSec = 0;
       activeUltFighter.ultCharge = 0;
       activeUltFighter.ultArmed = false;
-      activeUltFighter.ultActiveTimer = ULT_SPOTLIGHT_LOCK_SEC;
-      ctx.spotlight.claim(activeUltFighter.slotIndex, ULT_SPOTLIGHT_LOCK_SEC);
+      activeUltFighter.ultActiveTimer = ARENA_ULT_SELF_COOLDOWN_SEC;
+      ctx.spotlight.claim(activeUltFighter.slotIndex, ARENA_ULT_SPOTLIGHT_LOCK_SEC);
       launchTowerAttack(activeUltFighter, true, ultSec);
     }
 
@@ -700,7 +703,7 @@ export function stepTowerFightersAndBarrages(ctx: {
       f.ultBankSec = Math.min(maxChargeSec, f.ultBankSec + elapsedSec * (1 - BASIC_ATTACK_DPS_SHARE));
       f.chargeSec = 0;
       f.attackCooldown = f.attackInterval;
-      f.ultCharge = Math.min(ULT_CHARGE_BASIC_ATTACKS, f.ultCharge + 1);
+      f.ultCharge = Math.min(ARENA_ULT_CHARGE_BASIC_ATTACKS, f.ultCharge + 1);
       launchTowerAttack(f, false, basicSec);
     }
   }

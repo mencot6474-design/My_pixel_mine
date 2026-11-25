@@ -201,7 +201,7 @@ export function clampCameraZoomRadius(radius: number, mode: SceneMode): number {
         : mode === 'tower'
           ? 23.6
           : mode === 'omega'
-            ? 16.4
+            ? 18.4
             : mode === 'rift'
               ? 21.0
               : 20.4;
@@ -648,7 +648,7 @@ export function applyMineSceneModeTransition(ctx: {
     ctx.applyWeatherAtmosphere();
     ctx.inputState.targetOrbitYaw = 0;
     ctx.inputState.targetOrbitPitch = getDefaultOrbitPitchForMode('omega');
-    ctx.inputState.targetCamRadius = 16.4;
+    ctx.inputState.targetCamRadius = 18.4;
     ctx.lookAtPos.set(0, 2.1, -1.5);
     ctx.syncTowerFighters();
   } else if (mode === 'rift') {

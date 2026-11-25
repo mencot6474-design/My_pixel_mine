@@ -33,14 +33,16 @@ import {
   SignatureProjectilePool3D,
 } from './SignatureProjectilePool3D';
 import {
+  ARENA_ULT_CHARGE_BASIC_ATTACKS,
+  ARENA_ULT_OPENING_PRECHARGE,
+  ARENA_ULT_SELF_COOLDOWN_SEC,
+  ARENA_ULT_SPOTLIGHT_LOCK_SEC,
   BARRAGE_BEAT_WEIGHTS,
   BARRAGE_FOLLOWUP_DELAYS,
   computeAttackVfxSpeedScale,
   computeSpotlightMaxChargeSec,
   SpotlightAttackQueue,
   TierAttackVfxPool3D,
-  ULT_CHARGE_BASIC_ATTACKS,
-  ULT_SPOTLIGHT_LOCK_SEC,
   type TierVfxHooks,
   type WorldPoint3,
 } from './TierAttackVfx3D';
@@ -112,6 +114,7 @@ export class OmegaArena3D {
   }> = [];
   private readonly tierVfx = new TierAttackVfxPool3D();
   private readonly projVec = new THREE.Vector3();
+  private readonly prechargedSlots = new Set<number>();
   private lowQuality = false;
 
   private battlePhase: OmegaBattlePhase | 'ended' = 'active';
@@ -383,6 +386,7 @@ export class OmegaArena3D {
     }
     this.projectiles.clear();
     this.spotlight.reset();
+    this.prechargedSlots.clear();
     for (const f of this.fighters.values()) {
       f.sprite.setAnimState('idle');
       f.sprite.group.position.copy(f.spawnPos);
@@ -415,6 +419,7 @@ export class OmegaArena3D {
     if (phase !== 'active') {
       this.projectiles.clear();
       this.spotlight.reset();
+      this.prechargedSlots.clear();
       for (const f of this.fighters.values()) {
         f.sprite.setAnimState('idle');
         f.attackCooldown = 0.08 + f.slotIndex * 0.16;
@@ -426,6 +431,30 @@ export class OmegaArena3D {
         if (phase === 'ended') {
           f.sprite.group.position.copy(f.spawnPos);
         }
+      }
+    } else {
+      this.applyOpeningPrecharge();
+    }
+  }
+
+  private applyOpeningPrecharge(): void {
+    const precharge = Math.min(Math.max(1, ARENA_ULT_CHARGE_BASIC_ATTACKS - 1), ARENA_ULT_OPENING_PRECHARGE);
+    for (const f of this.fighters.values()) {
+      if (this.prechargedSlots.has(f.slotIndex)) continue;
+      this.prechargedSlots.add(f.slotIndex);
+      f.ultCharge = Math.max(f.ultCharge, precharge);
+    }
+  }
+
+  public grantSquadUltCharge(fillFull = true, amount = 1): void {
+    const safeAmt = Math.max(1, Math.round(amount));
+    for (const f of this.fighters.values()) {
+      if (f.ultActiveTimer > 0) continue;
+      f.ultCharge = fillFull
+        ? ARENA_ULT_CHARGE_BASIC_ATTACKS
+        : Math.min(ARENA_ULT_CHARGE_BASIC_ATTACKS, f.ultCharge + safeAmt);
+      if (f.ultCharge >= ARENA_ULT_CHARGE_BASIC_ATTACKS) {
+        f.ultArmed = true;
       }
     }
   }
@@ -459,6 +488,9 @@ export class OmegaArena3D {
       conduitFlows: this.conduitFlows,
       lowQuality: this.lowQuality,
     });
+    if (this.battlePhase === 'active') {
+      this.applyOpeningPrecharge();
+    }
   }
 
   public syncBattleTargets(targets: readonly OmegaTargetObject[]): void {
@@ -524,7 +556,7 @@ export class OmegaArena3D {
         visible,
         rarity: f.rarity,
         ultCharge: f.ultCharge,
-        ultMaxCharge: ULT_CHARGE_BASIC_ATTACKS,
+        ultMaxCharge: ARENA_ULT_CHARGE_BASIC_ATTACKS,
         ultArmed: f.ultArmed,
         ulting: f.ultActiveTimer > 0,
       });
@@ -799,7 +831,7 @@ export class OmegaArena3D {
           f.ultActiveTimer = Math.max(0, f.ultActiveTimer - safeDt);
         }
         f.chargeSec = Math.min(maxChargeSec, f.chargeSec + safeDt);
-        if (f.ultCharge >= ULT_CHARGE_BASIC_ATTACKS && !f.ultArmed && f.attackCooldown <= f.attackInterval * 0.55) {
+        if (f.ultCharge >= ARENA_ULT_CHARGE_BASIC_ATTACKS && !f.ultArmed && f.attackCooldown <= f.attackInterval * 0.55) {
           f.ultArmed = true;
         }
       }
@@ -843,7 +875,7 @@ export class OmegaArena3D {
           comboStep: step,
           accentColor: f.colorHex,
           sx: f.spawnPos.x,
-          sy: f.spawnPos.y + 1.25,
+          sy: f.spawnPos.y + 1.85,
           sz: f.spawnPos.z,
           ex: (Math.random() - 0.5) * 0.9,
           ey: this.bossStageY + 1.85,
@@ -851,23 +883,24 @@ export class OmegaArena3D {
           attackInterval: effectiveSec,
           isBoss: true,
           isUltimate,
+          hideVisual: true,
         },
         handleOmegaArrival
       );
     };
 
     if (canAttack) {
-      // 1) Ult relay queue: armed Chibis (5/5 basic charge) fire 2.5s Sakuga Ult spaced 1.5s apart
+      // 1) Ult relay queue: armed Chibis (3/3 basic charge) fire 2.5s Sakuga Ult spaced 1.25s apart
       const activeUltFighter = this.spotlight.pickNextReady(this.fighters.values(), (f) => (f.ultArmed ? 0 : 1));
       if (activeUltFighter) {
         const ultSec = Math.max(0.01, activeUltFighter.ultBankSec + activeUltFighter.chargeSec);
-        activeUltFighter.attackCooldown = Math.max(activeUltFighter.attackInterval, ULT_SPOTLIGHT_LOCK_SEC);
+        activeUltFighter.attackCooldown = Math.max(activeUltFighter.attackInterval, ARENA_ULT_SELF_COOLDOWN_SEC);
         activeUltFighter.chargeSec = 0;
         activeUltFighter.ultBankSec = 0;
         activeUltFighter.ultCharge = 0;
         activeUltFighter.ultArmed = false;
-        activeUltFighter.ultActiveTimer = ULT_SPOTLIGHT_LOCK_SEC;
-        this.spotlight.claim(activeUltFighter.slotIndex, ULT_SPOTLIGHT_LOCK_SEC);
+        activeUltFighter.ultActiveTimer = ARENA_ULT_SELF_COOLDOWN_SEC;
+        this.spotlight.claim(activeUltFighter.slotIndex, ARENA_ULT_SPOTLIGHT_LOCK_SEC);
         launchOmegaAttack(activeUltFighter, true, ultSec);
       }
 
@@ -879,7 +912,7 @@ export class OmegaArena3D {
         f.ultBankSec = Math.min(maxChargeSec, f.ultBankSec + elapsedSec * (1 - BASIC_ATTACK_DPS_SHARE));
         f.chargeSec = 0;
         f.attackCooldown = f.attackInterval;
-        f.ultCharge = Math.min(ULT_CHARGE_BASIC_ATTACKS, f.ultCharge + 1);
+        f.ultCharge = Math.min(ARENA_ULT_CHARGE_BASIC_ATTACKS, f.ultCharge + 1);
         launchOmegaAttack(f, false, basicSec);
       }
     }

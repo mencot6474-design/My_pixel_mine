@@ -12,10 +12,10 @@ import {
   SignatureProjectilePool3D,
 } from './SignatureProjectilePool3D';
 import {
+  ARENA_ULT_CHARGE_BASIC_ATTACKS,
   getBasicAttackIntervalSec,
   SpotlightAttackQueue,
   TierAttackVfxPool3D,
-  ULT_CHARGE_BASIC_ATTACKS,
   type TierVfxHooks,
   type WorldPoint3,
 } from './TierAttackVfx3D';
@@ -202,7 +202,7 @@ export class TowerArena3D {
 
   private getSpawnPos(slotIndex: number): THREE.Vector3 {
     const ang = (0.19 + (slotIndex / 4) * 0.62) * Math.PI;
-    const topY = this.spawnPodiums[slotIndex]?.topY ?? 0.22;
+    const topY = this.spawnPodiums[slotIndex]?.topY ?? 0.4;
     return new THREE.Vector3(
       Math.cos(ang) * SUMMON_RADIUS,
       0.08 + topY,
@@ -234,8 +234,8 @@ export class TowerArena3D {
       }
 
       if (!existing) {
-        // 50% larger Chibi sprite height (1.92 -> 2.88) matching scaled podiums
-        const sprite = new ChibiSprite3D(cfg.def, 2.88, cfg.slotIndex * 0.9);
+        // Larger Chibi sprite height (3.45) matching 1.42x podiums and pushed-back arena arc
+        const sprite = new ChibiSprite3D(cfg.def, 3.45, cfg.slotIndex * 0.9);
         sprite.group.userData = { chibiId: cfg.def.id };
         const spawnPos = this.getSpawnPos(cfg.slotIndex);
         sprite.group.position.copy(spawnPos);
@@ -244,7 +244,7 @@ export class TowerArena3D {
         sprite.setAccentColor(cfg.def.accentColor);
         sprite.setLowQuality(this.lowQuality);
         this.fightersGroup.add(sprite.group);
-        const fx = new ChibiFieldFxController(sprite.group, cfg.def.accentColor, cfg.slotIndex);
+        const fx = new ChibiFieldFxController(sprite.group, cfg.def.accentColor, cfg.slotIndex, 3.45);
         fx.setLowQuality(this.lowQuality);
 
         existing = {
@@ -308,6 +308,17 @@ export class TowerArena3D {
     }
     f.colorHex = f.fx.getAccentColor();
     f.sprite.setAccentColor(f.colorHex);
+  }
+
+  public grantSquadUltCharge(amount = 1): void {
+    const safeAmt = Math.max(1, Math.round(amount));
+    for (const f of this.fighters.values()) {
+      if (f.ultActiveTimer > 0) continue;
+      f.ultCharge = Math.min(ARENA_ULT_CHARGE_BASIC_ATTACKS, f.ultCharge + safeAmt);
+      if (f.ultCharge >= ARENA_ULT_CHARGE_BASIC_ATTACKS) {
+        f.ultArmed = true;
+      }
+    }
   }
 
   public resetFloorCharge(): void {
@@ -786,7 +797,7 @@ export class TowerArena3D {
         visible,
         rarity: f.def.rarity,
         ultCharge: f.ultCharge,
-        ultMaxCharge: ULT_CHARGE_BASIC_ATTACKS,
+        ultMaxCharge: ARENA_ULT_CHARGE_BASIC_ATTACKS,
         ultArmed: f.ultArmed,
         ulting: f.ultActiveTimer > 0,
       });

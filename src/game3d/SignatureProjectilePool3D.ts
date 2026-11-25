@@ -25,6 +25,7 @@ export interface SignatureProjectileLaunchOpts {
   attackInterval?: number;
   isBoss?: boolean;
   isUltimate?: boolean;
+  hideVisual?: boolean;
 }
 
 export interface SignatureProjectileArrival {
@@ -350,7 +351,7 @@ export class SignatureProjectilePool3D {
     }
 
     p.group.position.set(sx, sy, opts.sz);
-    p.group.visible = true;
+    p.group.visible = !opts.hideVisual;
   }
 
   public launch(
@@ -383,7 +384,7 @@ export class SignatureProjectilePool3D {
     const comboOffset = (opts.comboStep - 1) * 0.9;
     this.configure(p1, opts, opts.dmg, opts.comboStep, opts.sx, opts.sy, comboOffset, false);
 
-    if (opts.style === 'twin' && !this.lowQuality) {
+    if (opts.style === 'twin' && !this.lowQuality && !opts.hideVisual) {
       const p2 = this.acquire();
       if (p2) {
         this.configure(

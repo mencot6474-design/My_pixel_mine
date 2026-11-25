@@ -21,6 +21,10 @@ export type TowerVisualSyncCallback = (opts: {
   bossChibiId?: string;
 }) => void;
 
+export interface TowerSceneOps {
+  grantSquadUltCharge?: (amount?: number) => void;
+}
+
 export class HudTowerBridge {
   constructor(
     private readonly root: HTMLElement,
@@ -31,7 +35,8 @@ export class HudTowerBridge {
     private readonly openModal: (kind: ModalKind) => void,
     private readonly pushToast: (text: string) => void,
     private readonly render: () => void,
-    private readonly onSyncTowerVisual?: TowerVisualSyncCallback
+    private readonly onSyncTowerVisual?: TowerVisualSyncCallback,
+    private readonly towerOps?: TowerSceneOps
   ) {}
 
   public syncTowerSceneVisual(): void {
@@ -155,10 +160,11 @@ export class HudTowerBridge {
       if (shieldRes.hit) {
         audio.playCrystalChord('perfect');
         triggerPerfectStrikeFlash();
+        this.towerOps?.grantSquadUltCharge?.(1);
         if (shieldRes.shieldBroken) {
           this.pushToast('⚡ SHIELD SHATTERED! Boss EXPOSED (+50% DMG for 4s)!');
         } else {
-          this.pushToast('⚡ SHIELD CRACKED! -2.5s Boss Shield!');
+          this.pushToast('⚡ SHIELD CRACKED! -2.5s Boss Shield & +1 Squad Ult!');
         }
         this.syncTowerSceneVisual();
         this.towerUi.updateLiveValues(this.root);

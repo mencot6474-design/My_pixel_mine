@@ -592,12 +592,17 @@ async function bootstrap(): Promise<void> {
         scene.syncOmegaBattleVisuals(targets, breakActive, parryActive),
       triggerBossHit: (color, isCrit) => scene.triggerOmegaBossHit(color, isCrit),
       triggerTargetShatter: (wx, wz, color) => scene.triggerOmegaTargetShatter(wx, wz, color),
+      grantSquadUltCharge: (fillFull) => scene.grantOmegaSquadUltCharge(fillFull),
     },
     {
       setBossConfig: (bossId, surgeActive) => scene.setRiftBossConfig(bossId, surgeActive),
       setBattleActive: (active) => scene.setRiftBattleActive(active),
       triggerBossHit: (color, isCrit) => scene.triggerRiftBossHit(color, isCrit),
       triggerTierShockwave: (tier) => scene.triggerRiftTierShockwave(tier),
+      recordTapCharge: () => scene.recordRiftPlayerTapCharge(),
+    },
+    {
+      grantSquadUltCharge: (amount) => scene.grantTowerSquadUltCharge(amount),
     }
   );
   hud.setOnModalVisibilityChange((open) => scene.setModalBackdropThrottled(open));

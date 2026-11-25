@@ -419,14 +419,18 @@ export class WorldOverlayHudUi {
             ulting: Boolean(a.ulting),
           });
         }
-        const key = items.map((item) => `${item.slotIndex}:${item.rarity}`).join(',');
+        const key = items.map((item) => `${item.slotIndex}:${item.rarity}:${item.ultMaxCharge}`).join(',');
         if (this.plotLayerEl.dataset.keys !== key) {
           this.plotLayerEl.dataset.keys = key;
           this.plotLayerEl.innerHTML = items
-            .map(
-              (item) =>
-                `<div class="absolute top-0 left-0 flex flex-col items-center gap-[3px] leading-none pointer-events-none select-none will-change-transform origin-bottom" data-label-slot="${item.slotIndex}"><div class="mam-ult-badge-wrap" data-ult-badge-wrap="true">${renderRarityBadgeHtml(item.rarity, '!ml-0')}</div><div class="mam-ult-charge-bar" data-ult-bar="true" data-ult-state="charging" data-charge="0"><span class="mam-ult-seg" data-ult-seg="0"></span><span class="mam-ult-seg" data-ult-seg="1"></span><span class="mam-ult-seg" data-ult-seg="2"></span><span class="mam-ult-seg" data-ult-seg="3"></span><span class="mam-ult-seg" data-ult-seg="4"></span></div></div>`
-            )
+            .map((item) => {
+              const segCount = Math.max(1, Math.min(5, Math.round(item.ultMaxCharge)));
+              const segsHtml = Array.from(
+                { length: segCount },
+                (_, si) => `<span class="mam-ult-seg" data-ult-seg="${si}"></span>`
+              ).join('');
+              return `<div class="absolute top-0 left-0 flex flex-col items-center gap-[3px] leading-none pointer-events-none select-none will-change-transform origin-bottom" data-label-slot="${item.slotIndex}"><div class="mam-ult-badge-wrap" data-ult-badge-wrap="true">${renderRarityBadgeHtml(item.rarity, '!ml-0')}</div><div class="mam-ult-charge-bar" data-ult-bar="true" data-ult-state="charging" data-charge="0" style="grid-template-columns: repeat(${segCount}, minmax(0, 1fr));">${segsHtml}</div></div>`;
+            })
             .join('');
           this.plotLabelCache.clear();
         }
@@ -451,10 +455,11 @@ export class WorldOverlayHudUi {
             : item.ultArmed || item.ultCharge >= item.ultMaxCharge
               ? 'ready'
               : 'charging';
+          const maxSegs = Math.max(1, cached.segs.length || item.ultMaxCharge);
           const displayCharge =
             nextState === 'active' || nextState === 'ready'
-              ? 5
-              : Math.max(0, Math.min(5, Math.round((item.ultCharge / item.ultMaxCharge) * 5)));
+              ? maxSegs
+              : Math.max(0, Math.min(maxSegs, item.ultCharge));
           if (cached.charge !== displayCharge || cached.state !== nextState) {
             const prevState = cached.state;
             cached.charge = displayCharge;

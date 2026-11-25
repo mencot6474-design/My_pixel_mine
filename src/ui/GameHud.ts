@@ -37,7 +37,7 @@ import {
   triggerFeverUltCutInDom,
   updateFpsBadgeDom,
 } from './HudChromeRenderer';
-import { HudTowerBridge } from './HudTowerBridge';
+import { HudTowerBridge, type TowerSceneOps } from './HudTowerBridge';
 import { HudOmegaBridge, type OmegaSceneOps } from './HudOmegaBridge';
 import {
   bindHudRootEvents,
@@ -168,7 +168,8 @@ export class GameHud {
       setFusionRevealHold?: (active: boolean) => void;
     },
     omegaOps?: OmegaSceneOps,
-    riftOps?: RiftSceneOps
+    riftOps?: RiftSceneOps,
+    towerOps?: TowerSceneOps
   ) {
     this.shopUi = new ShopModalsUi(
       this.state,
@@ -243,7 +244,8 @@ export class GameHud {
       (kind) => this.openModal(kind),
       (msg) => this.pushToast(msg),
       () => this.render(),
-      this.onSyncTowerVisual
+      this.onSyncTowerVisual,
+      towerOps
     );
     this.omegaBossUi = new OmegaBossModalUi(
       this.state,

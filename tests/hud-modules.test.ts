@@ -2466,6 +2466,9 @@ describe('Tahap B HUD Modules', () => {
       const fakeRoot = { querySelector: () => null, querySelectorAll: () => [] } as unknown as HTMLElement;
       let curMode: 'mine' | 'rift' = 'mine';
       const arenaUi = new RiftArenaHudUi(state, () => {}, () => {}, () => {});
+      const tapSpy = vi.spyOn(AudioManager.prototype, 'playOreHit');
+      const barrageSpy = vi.spyOn(AudioManager.prototype, 'playBarrageHitSfx');
+      const recordTapCharge = vi.fn(() => true);
       const bridge = new HudRiftBridge(
         fakeRoot,
         state,
@@ -2480,18 +2483,46 @@ describe('Tahap B HUD Modules', () => {
           setBattleActive: () => {},
           triggerBossHit: () => {},
           triggerTierShockwave: () => {},
+          recordTapCharge,
         }
       );
-
-      const tapSpy = vi.spyOn(AudioManager.prototype, 'playOreHit');
-      const barrageSpy = vi.spyOn(AudioManager.prototype, 'playBarrageHitSfx');
       bridge.startRiftBattle();
       bridge.handleRiftBossTap(100, 100);
       bridge.handleRiftFighterStrike(0, 1, false, 0, false);
+      expect(recordTapCharge).toHaveBeenCalledTimes(1);
       expect(tapSpy).not.toHaveBeenCalled();
       expect(barrageSpy).not.toHaveBeenCalled();
       tapSpy.mockRestore();
       barrageSpy.mockRestore();
+
+      // Omega Parry & Tower Shield-Break Sweet-Spot grant arena Ult charge via bridge ops
+      const grantOmegaUlt = vi.fn();
+      const omegaState = new GameState();
+      omegaState.miners['astral-recruit'] = 1;
+      omegaState.equipBestMiners();
+      omegaState.omegaKeys = 2;
+      omegaState.startOmegaBoss('crimson-ronin', 1);
+      omegaState.omegaBattle!.phase = 'active';
+      omegaState.omegaBattle!.parryWindow = { active: true, remainingSec: 2, durationSec: 2.3, consumed: false };
+      const omegaBridge = new HudOmegaBridge(
+        fakeRoot,
+        omegaState,
+        new OmegaArenaHudUi(omegaState, vi.fn(), vi.fn()),
+        () => 'omega',
+        vi.fn(),
+        vi.fn(),
+        vi.fn(),
+        vi.fn(),
+        {
+          setBossConfig: vi.fn(),
+          syncBattleVisuals: vi.fn(),
+          triggerBossHit: vi.fn(),
+          triggerTargetShatter: vi.fn(),
+          grantSquadUltCharge: grantOmegaUlt,
+        }
+      );
+      omegaBridge.handleOmegaParryClick();
+      expect(grantOmegaUlt).toHaveBeenCalledWith(true);
 
       // RiftModalUi.stepTick should trigger onRender when pass closes mid-modal
       let renders = 0;

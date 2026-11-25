@@ -14,6 +14,7 @@ export interface OmegaSceneOps {
   syncBattleVisuals: (targets: readonly OmegaTargetObject[], breakActive: boolean, parryActive: boolean) => void;
   triggerBossHit: (color?: string, isCrit?: boolean) => void;
   triggerTargetShatter: (wx: number, wz: number, color: string) => void;
+  grantSquadUltCharge?: (fillFull?: boolean) => void;
 }
 
 /** Coordinates Omega Boss duel combat events between GameState, OmegaArena3D, and GameHud. */
@@ -87,6 +88,7 @@ export class HudOmegaBridge {
     }
     if (res.breakTriggered) {
       audio.playCrystalChord('fever');
+      this.omegaOps?.grantSquadUltCharge?.(true);
       this.pushToast('⚡ OMEGA BREAK! 2.5× Team DMG!');
     }
     if (res.bossDefeated) {
@@ -108,6 +110,7 @@ export class HudOmegaBridge {
     }
     if (res.breakTriggered) {
       audio.playCrystalChord('fever');
+      this.omegaOps?.grantSquadUltCharge?.(true);
       this.pushToast('⚡ OMEGA BREAK! 2.5× Team DMG!');
     }
     if (res.bossDefeated) {
@@ -130,9 +133,11 @@ export class HudOmegaBridge {
     if (!res.ok) return;
     audio.playCrystalChord('meteor');
     this.omegaOps?.triggerBossHit('#fde047', true);
-    this.pushToast(`⚡ PERFECT PARRY! -${res.counterDmg.toLocaleString('en-US')} • +25% Stagger!`);
+    this.omegaOps?.grantSquadUltCharge?.(true);
+    this.pushToast(`⚡ PERFECT PARRY! -${res.counterDmg.toLocaleString('en-US')} • +25% Stagger & Full Ult!`);
     if (res.breakTriggered) {
       audio.playCrystalChord('fever');
+      this.omegaOps?.grantSquadUltCharge?.(true);
       this.pushToast('⚡ OMEGA BREAK! 2.5× Team DMG!');
     }
     if (res.bossDefeated) {

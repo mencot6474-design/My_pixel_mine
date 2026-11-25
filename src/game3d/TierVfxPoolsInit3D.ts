@@ -96,16 +96,6 @@ export function fireUltOpeningBurstChoreography(
   opts: UltOpeningBurstOpts
 ): void {
   const sec = opts.secondaryHex ?? '#fef08a';
-  ctx.spawnBeam({
-    x: opts.x,
-    y: opts.y + 0.1,
-    z: opts.z,
-    color: opts.colorHex,
-    coreColor: sec,
-    radius: 0.95,
-    height: 7.4,
-    life: 0.38,
-  });
   ctx.spawnQuad({
     tex: ctx.ringTex,
     x: opts.x,

@@ -9,6 +9,11 @@ import {
   getSparkStreakTexture,
 } from './ProceduralTextures3D';
 import {
+  ARENA_RIFT_SURGE_ULT_CHARGE,
+  ARENA_ULT_CHARGE_BASIC_ATTACKS,
+  ARENA_ULT_OPENING_PRECHARGE,
+  ARENA_ULT_SELF_COOLDOWN_SEC,
+  ARENA_ULT_SPOTLIGHT_LOCK_SEC,
   BARRAGE_BEAT_WEIGHTS,
   BARRAGE_FOLLOWUP_DELAYS,
   buildTierMotionWaypoints,
@@ -21,6 +26,7 @@ import {
   HYPER_ENCORE_RELAY_LOCK_SEC,
   isWideAoeRarity,
   resolvePitBounds,
+  RIFT_TAP_CHARGE_STEP,
   sampleTierMotionWaypoints,
   splitBarrageDamage,
   SpotlightAttackQueue,
@@ -86,6 +92,11 @@ import {
 } from './TierVfxUpdate3D';
 
 export {
+  ARENA_RIFT_SURGE_ULT_CHARGE,
+  ARENA_ULT_CHARGE_BASIC_ATTACKS,
+  ARENA_ULT_OPENING_PRECHARGE,
+  ARENA_ULT_SELF_COOLDOWN_SEC,
+  ARENA_ULT_SPOTLIGHT_LOCK_SEC,
   BARRAGE_BEAT_WEIGHTS,
   BARRAGE_FOLLOWUP_DELAYS,
   buildTierMotionWaypoints,
@@ -97,6 +108,7 @@ export {
   getRaritySecondaryColor,
   HYPER_ENCORE_RELAY_LOCK_SEC,
   isWideAoeRarity,
+  RIFT_TAP_CHARGE_STEP,
   sampleTierMotionWaypoints,
   splitBarrageDamage,
   SpotlightAttackQueue,

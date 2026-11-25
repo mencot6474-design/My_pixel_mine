@@ -142,7 +142,7 @@ export const RIFT_ANOMALIES: readonly RiftAnomalyDef[] = [
     id: 'overclock-surge',
     name: 'Overclock Surge Rift',
     accentColor: '#22d3ee',
-    summary: '+30% Squad Attack Speed & DMG; Ults trigger every 3 hits.',
+    summary: '+30% Squad Attack Speed & DMG; Ults trigger every 2 hits.',
   },
   {
     id: 'mirror-echo',

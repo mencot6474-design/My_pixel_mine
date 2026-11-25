@@ -790,6 +790,9 @@ export class MineScene3D {
   public setTowerBossShieldActive(active: boolean): void {
     this.towerArena?.setBossShieldActive(active);
   }
+  public grantTowerSquadUltCharge(amount = 1): void {
+    this.towerArena?.grantSquadUltCharge(amount);
+  }
 
   private syncTowerFighters(): void {
     if (!this.towerArena && !this.omegaArena && !this.riftArena) return;
@@ -824,6 +827,7 @@ export class MineScene3D {
   }
   public triggerOmegaBossHit(color?: string, isCrit = false): void { this.omegaArena?.triggerBossHitEffect(color, isCrit); }
   public triggerOmegaTargetShatter(wx: number, wz: number, color: string): void { this.omegaArena?.triggerTargetShatterFx(wx, wz, color); }
+  public grantOmegaSquadUltCharge(fillFull = true): void { this.omegaArena?.grantSquadUltCharge(fillFull); }
 
   public setRiftBossConfig(bossId: AnomalyChibiId, surgeActive = false): void {
     const ra = this.ensureRiftArena();
@@ -835,6 +839,7 @@ export class MineScene3D {
   }
   public triggerRiftBossHit(color?: string, isCrit = false): void { this.riftArena?.triggerBossHit(color, isCrit); }
   public triggerRiftTierShockwave(tier: number): void { this.riftArena?.triggerTierShockwave(tier); }
+  public recordRiftPlayerTapCharge(): boolean { return this.riftArena?.recordPlayerTapCharge() ?? false; }
 
   public triggerEnchantSpin(targetEnchantId: string, onComplete?: () => void): void {
     this.ensureShopWorld().triggerSpin(targetEnchantId, onComplete);

@@ -18,11 +18,11 @@ export const OMEGA_BOSS_POS_Z = -3.4;
 export const OMEGA_BOSS_DAIS_Y = 0.52;
 export const OMEGA_EMBER_COUNT = 54;
 export const OMEGA_PLAYER_PAD_POSITIONS: ReadonlyArray<[number, number]> = [
-  [-3.8, 2.7],
-  [-1.95, 3.65],
-  [0, 4.05],
-  [1.95, 3.65],
-  [3.8, 2.7],
+  [-5.8, 2.9],
+  [-2.9, 4.15],
+  [0, 4.75],
+  [2.9, 4.15],
+  [5.8, 2.9],
 ];
 
 export interface OmegaStrikeEvent {
@@ -311,7 +311,7 @@ export function buildOmegaArenaStage(ctx: {
 
   for (let i = 0; i < OMEGA_PLAYER_PAD_POSITIONS.length; i++) {
     const [sx, sz] = OMEGA_PLAYER_PAD_POSITIONS[i];
-    const podium = createCyberShowcasePodium(podiumCtx, `0${i + 1}`, 0.92, false);
+    const podium = createCyberShowcasePodium(podiumCtx, `0${i + 1}`, 1.35, false);
     podium.group.position.set(sx, 0, sz);
     applyOmegaPodiumColors(podium, '#38bdf8', '#a855f7', false, 0.65);
     ctx.group.add(podium.group);
@@ -320,7 +320,7 @@ export function buildOmegaArenaStage(ctx: {
     const dx = -sx;
     const dz = OMEGA_BOSS_POS_Z - sz;
     const totalDist = Math.hypot(dx, dz);
-    const startOff = 0.92;
+    const startOff = 1.35;
     const endOff = 3.42;
     const segLen = totalDist - startOff - endOff;
     if (segLen > 0.4) {
@@ -430,13 +430,13 @@ export function syncOmegaFighterEntries(ctx: {
       ctx.fighters.delete(cfg.slotIndex);
     }
     const [sx, sz] = OMEGA_PLAYER_PAD_POSITIONS[cfg.slotIndex % OMEGA_PLAYER_PAD_POSITIONS.length];
-    const standY = playerPod ? playerPod.topY : 0.26;
-    const sprite = new ChibiSprite3D(cfg.def);
+    const standY = playerPod ? playerPod.topY : 0.38;
+    const sprite = new ChibiSprite3D(cfg.def, 2.85, cfg.slotIndex * 0.9);
     sprite.group.position.set(sx, standY, sz);
     sprite.setAnimState('idle');
     sprite.setFacing(sx <= 0 ? 1 : -1);
     sprite.setLowQuality(ctx.lowQuality);
-    const fx = new ChibiFieldFxController(sprite.group, cfg.def.accentColor, cfg.slotIndex);
+    const fx = new ChibiFieldFxController(sprite.group, cfg.def.accentColor, cfg.slotIndex, 2.85);
     fx.setEnchant(cfg.enchantId);
     fx.setLowQuality(ctx.lowQuality);
     ctx.group.add(sprite.group);

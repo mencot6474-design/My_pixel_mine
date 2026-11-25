@@ -331,12 +331,12 @@ export function createOmegaRooftopEnvironment(): OmegaRooftopEnvironmentHandle {
     pipeRun.position.set(sx * 9.85, 0.06, -1.4);
     group.add(pipeRun);
 
-    // 4 Low-Profile Helipad Runway Approach Light Pucks along each arena flank
-    for (const pz of [-4.2, -1.8, 0.6, 3.0]) {
+    // 4 Low-Profile Helipad Runway Approach Light Pucks flanking the central Boss approach
+    for (const pz of [-4.2, -2.0, 0.2]) {
       const puckBase = new THREE.Mesh(puckBaseGeo, steelMat);
-      puckBase.position.set(sx * 6.25, 0, pz);
+      puckBase.position.set(sx * 4.55, 0, pz);
       const puckLens = new THREE.Mesh(puckLensGeo, runwayPuckMat);
-      puckLens.position.set(sx * 6.25, 0.06, pz);
+      puckLens.position.set(sx * 4.55, 0.06, pz);
       group.add(puckBase, puckLens);
     }
   }
@@ -371,9 +371,9 @@ export function createOmegaRooftopEnvironment(): OmegaRooftopEnvironmentHandle {
     fanBlades.push(hvac.blade);
     group.add(hvac.group);
 
-    // 2. Penthouse Stairwell Bulkhead (z = 3.4)
+    // 2. Penthouse Stairwell Bulkhead (clear of side parapets and outer player podiums)
     const bulkhead = buildRooftopBulkhead(assetsCtx);
-    bulkhead.position.set(sx * 8.95, 0, 3.4);
+    bulkhead.position.set(sx * 9.05, 0, 6.75);
     bulkhead.rotation.y = -sx * Math.PI * 0.5;
     group.add(bulkhead);
 
