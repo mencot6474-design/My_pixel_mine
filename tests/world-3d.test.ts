@@ -1867,15 +1867,17 @@ describe('Pure 3D Mine World', () => {
     fm.dispose();
   });
 
-  it('scales all 14 Shop Pickaxes monotonically in cost, DMG multiplier, and stock without exploits', () => {
-    expect(PICKAXES.length).toBe(14);
+  it('scales all 16 Shop Pickaxes monotonically in cost, DMG multiplier, and stock without exploits', () => {
+    expect(PICKAXES.length).toBe(16);
     expect(PICKAXES.map((p) => p.id).slice(-5)).toEqual([
-      'voidcleaver',
-      'astralsiphon',
       'starwellcrown',
       'leviathanfang',
       'chronoeternity',
+      'solarisflare',
+      'elysiumcrest',
     ]);
+    // Intentionally cap pickaxes at W10 (no W11 nightmare / W12 singularity pickaxes) to keep endgame progression steep
+    expect(PICKAXES.some((p) => p.worldId === 'nightmare' || p.worldId === 'singularity')).toBe(false);
 
     let prevCostPerDmg = 0;
     for (let i = 0; i < PICKAXES.length; i++) {
@@ -1904,11 +1906,13 @@ describe('Pure 3D Mine World', () => {
     }
 
     const gs = new GameState();
-    gs.cash = 1e30;
+    gs.cash = 1e40;
     // Pickaxes for locked Worlds cannot be bought even with huge cash
     expect(gs.buyPickaxe('rhodolite')).toBe('locked');
     expect(gs.buyPickaxe('starwellcrown')).toBe('locked');
     expect(gs.buyPickaxe('chronoeternity')).toBe('locked');
+    expect(gs.buyPickaxe('solarisflare')).toBe('locked');
+    expect(gs.buyPickaxe('elysiumcrest')).toBe('locked');
     expect(gs.ownedPickaxes.rhodolite).toBeUndefined();
 
     // Unlocking Crystal Caves unlocks Crystal pickaxes while Magma+ stay locked
@@ -1917,13 +1921,19 @@ describe('Pure 3D Mine World', () => {
     expect(gs.ownedPickaxes.rhodolite).toBe(1);
     expect(gs.buyPickaxe('anvilheart')).toBe('locked');
 
-    // Unlocking all Worlds allows buying Starwell Crown & Chrono Eternity
+    // Unlocking all Worlds allows buying Starwell Crown, Chrono Eternity, Solaris Flare & Elysium Crest
     gs.unlockedWorlds = WORLDS.map((w) => w.id);
     expect(gs.buyPickaxe('starwellcrown')).toBe('bought');
     expect(gs.ownedPickaxes.starwellcrown).toBe(1);
     expect(gs.buyPickaxe('starwellcrown')).toBe('sold_out');
     expect(gs.buyPickaxe('chronoeternity')).toBe('bought');
     expect(gs.ownedPickaxes.chronoeternity).toBe(1);
+    expect(gs.buyPickaxe('solarisflare')).toBe('bought');
+    expect(gs.ownedPickaxes.solarisflare).toBe(1);
+    expect(gs.buyPickaxe('solarisflare')).toBe('sold_out');
+    expect(gs.buyPickaxe('elysiumcrest')).toBe('bought');
+    expect(gs.ownedPickaxes.elysiumcrest).toBe(1);
+    expect(gs.buyPickaxe('elysiumcrest')).toBe('sold_out');
   });
 
   it('serves 2D fantasy PNG art for all 16 HUD & Modal icons', () => {
@@ -2290,7 +2300,11 @@ describe('Pure 3D Mine World', () => {
   });
 
   it('supports Relic Forge recipes, bag+chest consumption, 3-slot equip cap, and stat bonuses', () => {
-    expect(RELICS.length).toBe(14);
+    expect(RELICS.length).toBe(16);
+    const solarisElysium = RELICS.find((r) => r.id === 'solaris_elysium_halo');
+    const eclipseNightmare = RELICS.find((r) => r.id === 'eclipse_nightmare_core');
+    expect(solarisElysium?.ingredients.map((i) => i.oreId)).toEqual(['coronite', 'solarcrown', 'seraphite', 'genesisheart']);
+    expect(eclipseNightmare?.ingredients.map((i) => i.oreId)).toEqual(['mawfang', 'vortexspire', 'duallance', 'sovereigneclipse']);
     for (const relic of RELICS) {
       expect(existsSync(resolve(process.cwd(), 'public', relic.iconPath.replace(/^\//, '')))).toBe(true);
       for (const ing of relic.ingredients) {

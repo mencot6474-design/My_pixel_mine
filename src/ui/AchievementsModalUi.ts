@@ -9,6 +9,7 @@ import {
 import { assetUrl } from '../game/AssetUrl';
 import { GameState } from '../game/GameState';
 import { fmtInt, fmtShort } from '../game/NumberFormat';
+import { RELICS } from '../game/RelicData';
 import { enchantDiceIconHtml, hudIconHtml, pickaxeIconHtml } from './HudIcons';
 import { renderModalShell, TW_TAB_BTN } from './HudShared';
 
@@ -159,7 +160,7 @@ export class AchievementsModalUi {
       { label: 'Highest Critical Hit', value: fmtShort(stats.highestCrit), accent: 'text-[#ea580c]' },
       { label: 'Overclock Fever Triggers', value: fmtInt(stats.overclockTriggers), accent: 'text-[#d97706]' },
       { label: 'Best Gem Tower Floor', value: `Floor ${fmtInt(this.state.towerBestFloor)}`, accent: 'text-[#9333ea]' },
-      { label: 'Relics Forged', value: `${this.state.craftedRelics.size}/12`, accent: 'text-[#16a34a]' },
+      { label: 'Relics Forged', value: `${this.state.craftedRelics.size}/${RELICS.length}`, accent: 'text-[#16a34a]' },
       { label: 'Bounties Completed', value: fmtInt(this.state.bountiesCompleted), accent: 'text-[#0369a1]' },
       { label: 'Chibi Fusions Completed', value: fmtInt(stats.fusionsCompleted), accent: 'text-[#db2777]' },
       { label: 'Index Discovered', value: `${this.state.getDiscoveredCount()}/${this.state.getTotalIndexCount()}`, accent: 'text-[#14111d]' },

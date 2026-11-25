@@ -2123,7 +2123,7 @@ describe('Tahap B HUD Modules', () => {
       expect(sorted[1].id).toBe('thundercoil');
       expect(sorted[2].id).toBe('sunwheel');
       expect(sorted[3].id).toBe('starter');
-      expect(sorted[sorted.length - 1].id).toBe('chronoeternity');
+      expect(sorted[sorted.length - 1].id).toBe('elysiumcrest');
 
       const state = new GameState();
       state.unlockedWorlds = ['underground', 'crystal'];
@@ -2159,10 +2159,12 @@ describe('Tahap B HUD Modules', () => {
       const idxThunder = fakeRoot.innerHTML.indexOf('data-pickaxe-id="thundercoil"');
       const idxSunwheel = fakeRoot.innerHTML.indexOf('data-pickaxe-id="sunwheel"');
       const idxChrono = fakeRoot.innerHTML.indexOf('data-pickaxe-id="chronoeternity"');
+      const idxElysium = fakeRoot.innerHTML.indexOf('data-pickaxe-id="elysiumcrest"');
       expect(idxRhodolite).toBeGreaterThan(-1);
       expect(idxRhodolite).toBeLessThan(idxThunder);
       expect(idxThunder).toBeLessThan(idxSunwheel);
       expect(idxSunwheel).toBeLessThan(idxChrono);
+      expect(idxChrono).toBeLessThan(idxElysium);
     });
   });
 

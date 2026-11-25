@@ -642,6 +642,8 @@ export const PICKAXES: readonly PickaxeDef[] = [
   { id: 'starwellcrown', name: 'Starwell Crown', worldId: 'starwell', dmgMult: 3_800.0, cost: 14_000_000_000_000_000_000_000, rarity: 'secret', color: '#fde047' },
   { id: 'leviathanfang', name: 'Leviathan Fang', worldId: 'abyssal', dmgMult: 8_800.0, cost: 1_800_000_000_000_000_000_000_000, rarity: 'exotic', color: '#14b8a6' },
   { id: 'chronoeternity', name: 'Chrono Eternity', worldId: 'chrono', dmgMult: 20_000.0, cost: 4_500_000_000_000_000_000_000_000_000, rarity: 'secret', color: '#fbbf24' },
+  { id: 'solarisflare', name: 'Solaris Flare', worldId: 'solaris', dmgMult: 45_000.0, cost: 12_000_000_000_000_000_000_000_000_000_000, rarity: 'exotic', color: '#fb7185' },
+  { id: 'elysiumcrest', name: 'Elysium Crest', worldId: 'elysium', dmgMult: 100_000.0, cost: 28_000_000_000_000_000_000_000_000_000_000_000, rarity: 'secret', color: '#c084fc' },
 ] as const;
 
 export const MUTATIONS: readonly MutationDef[] = [
@@ -698,6 +700,8 @@ export const DEFAULT_PICKAXE_STOCK: Record<string, number> = {
   starwellcrown: 1,
   leviathanfang: 1,
   chronoeternity: 1,
+  solarisflare: 1,
+  elysiumcrest: 1,
 };
 
 export function getPickaxeSellValue(pickaxeId: string): number {

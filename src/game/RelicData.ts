@@ -24,7 +24,7 @@ export interface RelicDef {
 }
 
 export const RELICS: readonly RelicDef[] = [
-  // === 8 WORLD RELICS (W1-W8) ===
+  // === 10 WORLD RELICS (W1-W12) ===
   {
     id: 'miner_lantern',
     name: "Miner's Iron Lantern",
@@ -171,6 +171,46 @@ export const RELICS: readonly RelicDef[] = [
       { oreId: 'chronocrown', amount: 2 },
     ],
     gemCost: 1250000,
+  },
+  {
+    id: 'solaris_elysium_halo',
+    name: 'Solaris-Elysian Halo',
+    category: 'world',
+    rarity: 'fusion',
+    iconPath: '/relics/solaris_elysium_halo.webp',
+    tagline: 'W9–W10 Solaris & Elysium — Fuses solar sanctuary fire with celestial aurora to surge team DMG, ore worth, and haul yields.',
+    effects: {
+      minerDmgPct: 1.5,
+      oreValuePct: 1.4,
+      oreDropPct: 1.0,
+    },
+    ingredients: [
+      { oreId: 'coronite', amount: 18 },
+      { oreId: 'solarcrown', amount: 2 },
+      { oreId: 'seraphite', amount: 18 },
+      { oreId: 'genesisheart', amount: 2 },
+    ],
+    gemCost: 2200000,
+  },
+  {
+    id: 'eclipse_nightmare_core',
+    name: 'Eclipse Nightmare Core',
+    category: 'world',
+    rarity: 'omega',
+    iconPath: '/relics/eclipse_nightmare_core.webp',
+    tagline: 'W11–W12 Nightmare & Singularity — Binds bloodmoon thorns around a dual-horizon black hole for apex endgame power and drops.',
+    effects: {
+      minerDmgPct: 2.0,
+      oreValuePct: 1.85,
+      oreDropPct: 1.35,
+    },
+    ingredients: [
+      { oreId: 'mawfang', amount: 16 },
+      { oreId: 'vortexspire', amount: 2 },
+      { oreId: 'duallance', amount: 16 },
+      { oreId: 'sovereigneclipse', amount: 2 },
+    ],
+    gemCost: 3600000,
   },
 
   // === 3 WEATHER & MUTATION RELICS ===
