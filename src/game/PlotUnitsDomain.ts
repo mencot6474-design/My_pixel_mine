@@ -334,6 +334,21 @@ export function getActiveEnchantBonuses(
   return { oreDropPct, sellValuePct };
 }
 
+/** Sums multiplicative Ore Sell Value bonuses from Pickaxes equipped on active plot Chibis. */
+export function getActivePickaxeSellBonusPct(
+  ctx: Pick<PlotUnitsContext, 'plotUnits'>
+): number {
+  let sellBonusPct = 0;
+  for (const unit of ctx.plotUnits) {
+    if (!unit?.pickaxeId) continue;
+    const pick = getPickaxeById(unit.pickaxeId);
+    if (pick?.sellBonusPct && pick.sellBonusPct > 0) {
+      sellBonusPct += pick.sellBonusPct;
+    }
+  }
+  return Math.round(sellBonusPct * 1e6) / 1e6;
+}
+
 /** Computes pre-weather, pre-overclock effective base damage for a placed slot unit. */
 function computeUnitBaseDmgParts(
   ctx: PlotUnitsContext,

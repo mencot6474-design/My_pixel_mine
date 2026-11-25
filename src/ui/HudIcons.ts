@@ -322,6 +322,7 @@ const RESEARCH_ART_FILE_MAP: Record<ResearchIconKind, string> = {
   oreDeposit: 'ore_deposit',
   crystalVein: 'ore_output',
   oreValue: 'ore_value',
+  gemGain: 'find_chance',
   crack: 'crack',
   speedPlay: 'respawn_speed',
   toughness: 'dense_ore',
@@ -335,6 +336,9 @@ const RESEARCH_ART_FILE_MAP: Record<ResearchIconKind, string> = {
 };
 
 export function researchIconHtml(kind: ResearchIconKind, sizePx: number, _accent = '#38bdf8'): string {
+  if (kind === 'gemGain') {
+    return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.65)]" src="${assetUrl('/hud/gem.webp')}" width="${sizePx}" height="${sizePx}" alt="${kind}" draggable="false" />`;
+  }
   const file = RESEARCH_ART_FILE_MAP[kind] ?? 'ore_deposit';
   const artUrl = assetUrl(`/research/${file}.webp`);
   return `<img class="mam-3d-icon drop-shadow-[0_3px_8px_rgba(0,0,0,0.65)]" src="${artUrl}" width="${sizePx}" height="${sizePx}" alt="${kind}" draggable="false" />`;

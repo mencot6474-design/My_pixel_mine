@@ -732,12 +732,24 @@ export class GameState {
     return Multipliers.getOreHpScaleDomain(this);
   }
 
+  public getActivePickaxeSellBonusPct(): number {
+    return PlotUnits.getActivePickaxeSellBonusPct(this);
+  }
+
   public getOreValueMult(): number {
     return Multipliers.getOreValueMultDomain(this);
   }
 
+  public getPermanentOreValueMult(): number {
+    return Multipliers.getOreValueMultDomain(this, false);
+  }
+
   public getEffectiveOreSellValue(oreId: string): number {
     return Multipliers.getEffectiveOreSellValueDomain(this, oreId);
+  }
+
+  public getPermanentEffectiveOreSellValue(oreId: string): number {
+    return Multipliers.getEffectiveOreSellValueDomain(this, oreId, false);
   }
 
   public getOreOutputMult(): number {

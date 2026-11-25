@@ -46,6 +46,7 @@ export interface GameMultipliersContext {
   getOverclockTier?: (nowMs?: number) => 0 | OverclockTier;
   getActiveStarDropAndGemBonus: () => { oreDropBonusPct: number; sellBonusPct: number; gemBonusPct: number };
   getActiveEnchantBonuses: () => { oreDropPct: number; sellValuePct: number };
+  getActivePickaxeSellBonusPct?: () => number;
 }
 
 export function getTotalIndexCountDomain(): number {
@@ -123,18 +124,17 @@ export function getActiveOreNodeCountDomain(ctx: GameMultipliersContext): number
 
 export function getOreHpScaleDomain(ctx: GameMultipliersContext): number {
   const worldDef = getWorldById(ctx.activeWorldId);
-  const fragility = Math.min(0.75, Math.max(0, ctx.getActiveResearchBonus('oreFragilityPct')));
   const denseStacks = Math.max(0, Math.round(ctx.getActiveResearchBonus('denseOreScale')));
   const denseHpMult = denseStacks > 0 ? Math.pow(DENSE_ORE_HP_MULT, denseStacks) : 1;
-  return Math.max(0.25, worldDef.oreHpMult * (1 - fragility) * denseHpMult);
+  return Math.max(0.25, worldDef.oreHpMult * denseHpMult);
 }
 
-export function getOreValueMultDomain(ctx: GameMultipliersContext): number {
+export function getOreValueMultDomain(ctx: GameMultipliersContext, includeBoosts = true): number {
   const { sellBonusPct } = ctx.getActiveStarDropAndGemBonus();
   const premSell = ctx.getActivePremiumPassives?.().oreSellPct ?? 0;
   const omegaSell = ctx.getActiveOmegaPassives?.().oreSellPct ?? 0;
   const anomalySell = ctx.getActiveAnomalyPassives?.().oreSellPct ?? 0;
-  return (
+  const baseMult =
     1 +
     ctx.getActiveResearchBonus('oreValuePct') +
     sellBonusPct +
@@ -144,14 +144,25 @@ export function getOreValueMultDomain(ctx: GameMultipliersContext): number {
     omegaSell +
     anomalySell +
     ctx.getActiveEnchantBonuses().sellValuePct +
-    ctx.getActiveIndexPassiveBonuses().oreSellPct
-  );
+    ctx.getActiveIndexPassiveBonuses().oreSellPct;
+  const pickaxeMult = 1 + (ctx.getActivePickaxeSellBonusPct?.() ?? 0);
+  let potionMult = 1;
+  if (includeBoosts) {
+    if (isBoostActiveDomain(ctx, 'midas-elixir-1')) potionMult *= 1.5;
+    if (isBoostActiveDomain(ctx, 'midas-elixir-2')) potionMult *= 2.0;
+    if (isBoostActiveDomain(ctx, 'midas-elixir-3')) potionMult *= 3.0;
+  }
+  return baseMult * pickaxeMult * potionMult;
 }
 
-export function getEffectiveOreSellValueDomain(ctx: GameMultipliersContext, oreId: string): number {
+export function getEffectiveOreSellValueDomain(
+  ctx: GameMultipliersContext,
+  oreId: string,
+  includeBoosts = true
+): number {
   const def = getOreById(oreId);
   if (!def) return 0;
-  return Math.round(def.sellValue * getOreValueMultDomain(ctx));
+  return Math.round(def.sellValue * getOreValueMultDomain(ctx, includeBoosts));
 }
 
 export function getOreOutputMultDomain(ctx: GameMultipliersContext, includeBoosts = true): number {

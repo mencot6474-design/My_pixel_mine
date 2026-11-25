@@ -43,6 +43,7 @@ export interface LootChestContext {
   getFindChanceBonus(): number;
   getEffectiveOreSellValue(oreId: string): number;
   getActiveStarDropAndGemBonus(): { oreDropBonusPct: number; gemBonusPct: number };
+  getActiveResearchBonus?: (effectType: 'gemGainPct') => number;
   getWeatherGemDropMult(): number;
 }
 
@@ -270,7 +271,10 @@ export function onOreBrokenDomain(
   if (variantKey === 'geode' || variantKey === 'vein' || rng() < 0.28 + findBonus * 0.5) {
     const baseGem = variantKey === 'geode' ? 4 : variantKey === 'vein' ? 2 : 1;
     const { gemBonusPct } = ctx.getActiveStarDropAndGemBonus();
-    const mult = (1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct) * ctx.getWeatherGemDropMult();
+    const researchGemPct = ctx.getActiveResearchBonus?.('gemGainPct') ?? 0;
+    const mult =
+      (1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct + researchGemPct) *
+      ctx.getWeatherGemDropMult();
     ctx.gems += Math.max(baseGem, Math.round(baseGem * mult));
   }
 
@@ -344,7 +348,10 @@ export function onMeteorBrokenDomain(
   const worldIdx = Math.max(0, getWorldIndex(ctx.activeWorldId));
   const baseGems = 20 + worldIdx * 12;
   const { gemBonusPct } = ctx.getActiveStarDropAndGemBonus();
-  const gemMult = (1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct) * weatherDef.gemDropMult;
+  const researchGemPct = ctx.getActiveResearchBonus?.('gemGainPct') ?? 0;
+  const gemMult =
+    (1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct + researchGemPct) *
+    weatherDef.gemDropMult;
   const gemsAwarded = Math.max(10, Math.round(baseGems * gemMult));
   ctx.gems += gemsAwarded;
 

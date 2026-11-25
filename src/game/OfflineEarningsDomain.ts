@@ -50,12 +50,13 @@ export interface OfflineEarningsContext {
   getTotalPlotDps: () => number;
   getPermanentPlotDps?: () => number;
   getEffectiveOreSellValue: (oreId: string) => number;
+  getPermanentEffectiveOreSellValue?: (oreId: string) => number;
   getTotalOreDropMult: () => number;
   getPermanentOreDropMult?: () => number;
   getOreLuckMult: () => number;
   getPermanentOreLuckMult?: () => number;
   getOreHpScale?: () => number;
-  getActiveResearchBonus: (key: 'denseOreScale') => number;
+  getActiveResearchBonus: (key: 'denseOreScale' | 'gemGainPct') => number;
   getActiveStarDropAndGemBonus: () => { oreDropBonusPct: number; gemBonusPct: number };
   getChestItemCount: () => number;
   getMaxChestCapacity: () => number;
@@ -104,7 +105,10 @@ export function computeOfflineEarningsDomain(
   let totalWeight = 0;
   for (const ore of worldOres) {
     const w = Math.max(0, ore.chancePct);
-    weightedSell += ctx.getEffectiveOreSellValue(ore.id) * w;
+    const unitSell = ctx.getPermanentEffectiveOreSellValue
+      ? ctx.getPermanentEffectiveOreSellValue(ore.id)
+      : ctx.getEffectiveOreSellValue(ore.id);
+    weightedSell += unitSell * w;
     totalWeight += w;
   }
   const avgOreSellValue = totalWeight > 0 ? weightedSell / totalWeight : 5;
@@ -115,7 +119,11 @@ export function computeOfflineEarningsDomain(
   const cash = Math.max(1, Math.round(oresBroken * dropMult * avgOreSellValue));
 
   const { gemBonusPct } = ctx.getActiveStarDropAndGemBonus();
-  const gemMult = 1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct;
+  const gemMult =
+    1 +
+    getGlobalGemGainBonus(ctx.towerBestFloor) +
+    gemBonusPct +
+    ctx.getActiveResearchBonus('gemGainPct');
   const gems = Math.min(MAX_OFFLINE_GEMS, Math.max(0, Math.round(oresBroken * 0.06 * gemMult)));
 
   const capLeft = Math.max(0, ctx.getMaxChestCapacity() - ctx.getChestItemCount());

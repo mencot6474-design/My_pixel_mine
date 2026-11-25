@@ -580,7 +580,7 @@ describe('Pure 3D Mine World', () => {
   });
 
   it('buys Gem Shop potions into Backpack, activates via useGemPotion, and applies gameplay multipliers', () => {
-    expect(GEM_SHOP_ITEMS.length).toBe(8);
+    expect(GEM_SHOP_ITEMS.length).toBe(11);
     for (const pot of GEM_SHOP_ITEMS) {
       expect(existsSync(resolve(process.cwd(), 'public', 'potions', `${pot.id}.webp`))).toBe(true);
       expect(gemPotionIconHtml(pot.id, 64, pot.name, pot.color)).toContain(`potions/${pot.id}.webp`);
@@ -622,6 +622,19 @@ describe('Pure 3D Mine World', () => {
     expect(gs.getMutationLuckMult()).toBe(6.0);
     expect(gs.getBoostRemainingSec('ore-elixir-1')).toBeGreaterThan(50);
     expect(gs.buyGemShopItem('ore-elixir-3')).toBe('no_gems');
+
+    // Midas Elixirs I / II / III apply 1.5x / 2x / 3x multiplicative Ore Sell Cash
+    gs.gems = 8000;
+    expect(gs.getOreValueMult()).toBeCloseTo(1);
+    expect(gs.buyGemShopItem('midas-elixir-1')).toBe('bought');
+    expect(gs.buyGemShopItem('midas-elixir-2')).toBe('bought');
+    expect(gs.buyGemShopItem('midas-elixir-3')).toBe('bought');
+    expect(gs.useGemPotion('midas-elixir-1')).toBe(true);
+    expect(gs.getOreValueMult()).toBeCloseTo(1.5);
+    expect(gs.useGemPotion('midas-elixir-2')).toBe(true);
+    expect(gs.getOreValueMult()).toBeCloseTo(3.0);
+    expect(gs.useGemPotion('midas-elixir-3')).toBe(true);
+    expect(gs.getOreValueMult()).toBeCloseTo(9.0);
   });
 
   it('builds unique non-empty 3D Aura models for all 10 enchants and the Enchanted Dice', () => {
@@ -857,18 +870,22 @@ describe('Pure 3D Mine World', () => {
       expect(existsSync(resolve(process.cwd(), 'public', 'worlds', `${wid}.webp`))).toBe(true);
     }
 
-    // Tap damage must live strictly in Core; Worlds 1-12 replace tap nodes with standardized denseOreScale (HP x10, Drops x3)
+    // Tap damage must live strictly in Core; Worlds 1-12 replace rock toughness with Gem Gain and scale denseOreScale up to 5 stacks
     for (const wid of allWorldIds) {
       expect(getResearchNodesForTree(wid)).toHaveLength(12);
-      expect(getResearchTreeMaxPoints(wid)).toBe(58);
+      expect(getResearchTreeMaxPoints(wid)).toBe(62);
       const treeNodes = getResearchNodesForTree(wid);
       expect(treeNodes.some((n) => n.effectType === 'tapDamageFlat')).toBe(false);
+      expect(treeNodes.filter((n) => n.effectType === 'oreValuePct')).toHaveLength(1);
+      expect(treeNodes.filter((n) => n.effectType === 'gemGainPct')).toHaveLength(1);
       const denseNodes = treeNodes.filter((n) => n.effectType === 'denseOreScale');
       expect(denseNodes).toHaveLength(1);
-      expect(denseNodes[0].maxLevel).toBe(1);
+      expect(denseNodes[0].maxLevel).toBe(5);
       expect(denseNodes[0].perLevel).toBe(1);
       expect(formatNodeEffectLine(denseNodes[0], 1)).toContain('Ore HP ×10');
       expect(formatNodeEffectLine(denseNodes[0], 1)).toContain('Ore Drops ×3');
+      expect(formatNodeEffectLine(denseNodes[0], 5)).toContain('Ore HP ×100K');
+      expect(formatNodeEffectLine(denseNodes[0], 5)).toContain('Ore Drops ×243');
     }
     expect(RESEARCH_NODES.some((n) => n.treeId === 'core' && n.effectType === 'tapDamageFlat')).toBe(true);
     expect(getResearchNodesForTree('core').filter((n) => n.effectType === 'tapDamageFlat')).toHaveLength(6);
@@ -890,25 +907,44 @@ describe('Pure 3D Mine World', () => {
     expect(gs.upgradeResearch('ug-deposits-1')).toBe(true);
     expect(gs.getActiveOreNodeCount()).toBe(6);
 
+    // Replacing rock toughness with Gem Seams boosts gemGainPct without reducing rock HP or duplicating oreValuePct
+    const hpBeforeGemNode = gs.getOreHpScale();
+    const sellBeforeGemNode = gs.getOreValueMult();
+    gs.forceWeather('light_rain');
+    gs.gems = 0;
+    gs.onOreBroken('geode', () => 0.5);
+    const gemsBeforeGemNode = gs.gems;
+    expect(gemsBeforeGemNode).toBe(5); // 4 base * 1.25 weather = 5
+    expect(gs.upgradeResearch('ug-crack')).toBe(true);
+    expect(gs.getOreHpScale()).toBe(hpBeforeGemNode);
+    expect(gs.getOreValueMult()).toBe(sellBeforeGemNode);
+    expect(gs.getActiveResearchBonus('gemGainPct')).toBeCloseTo(0.15, 6);
+    gs.gems = 0;
+    gs.onOreBroken('geode', () => 0.5);
+    expect(gs.gems).toBe(6); // 4 base * (1 + 0.15) * 1.25 weather = 5.75 -> 6 gems
+
     // Partial World 1 tree still blocks Crystal Caves unlock
     expect(gs.isTreeComplete('underground')).toBe(false);
     expect(gs.canUnlockWorld('crystal')).toBe('locked-prereq');
 
-    // Upgrade World 1 prerequisite path to Dense Seam and verify HP x10 + Ore Drops x3
+    // Upgrade World 1 prerequisite path to Dense Seam and verify 5-stack scaling (HP x10^5, Ore Drops x3^5)
     expect(gs.upgradeResearch('ug-dmg')).toBe(true);
     const hpScaleBeforeDense = gs.getOreHpScale();
     const dropMultBeforeDense = gs.getTotalOreDropMult();
-    expect(gs.upgradeResearch('ug-rich-seam')).toBe(true);
-    expect(gs.getOreHpScale()).toBeCloseTo(hpScaleBeforeDense * 10, 6);
-    expect(gs.getTotalOreDropMult()).toBeCloseTo(dropMultBeforeDense * 3, 6);
+    for (let stack = 1; stack <= 5; stack++) {
+      expect(gs.upgradeResearch('ug-rich-seam')).toBe(true);
+      expect(gs.getOreHpScale()).toBeCloseTo(hpScaleBeforeDense * Math.pow(10, stack), 6);
+      expect(gs.getTotalOreDropMult()).toBeCloseTo(dropMultBeforeDense * Math.pow(3, stack), 6);
+    }
+    expect(gs.upgradeResearch('ug-rich-seam')).toBe(false);
 
-    // Max every node in The Underground (58/58)
+    // Max every node in The Underground (62/62)
     for (const node of getResearchNodesForTree('underground')) {
       while (gs.getResearchLevel(node.id) < node.maxLevel) {
         expect(gs.upgradeResearch(node.id)).toBe(true);
       }
     }
-    expect(gs.getTreeSpentPoints('underground')).toBe(58);
+    expect(gs.getTreeSpentPoints('underground')).toBe(62);
     expect(gs.isTreeComplete('underground')).toBe(true);
     expect(gs.canUnlockWorld('crystal')).toBe('ok');
 
@@ -1934,6 +1970,13 @@ describe('Pure 3D Mine World', () => {
     expect(gs.buyPickaxe('elysiumcrest')).toBe('bought');
     expect(gs.ownedPickaxes.elysiumcrest).toBe(1);
     expect(gs.buyPickaxe('elysiumcrest')).toBe('sold_out');
+
+    // Equipping W7+ pickaxe multiplies Ore Sell Value
+    const baseSell = gs.getOreValueMult();
+    expect(gs.buyPickaxe('leviathanfang')).toBe('bought');
+    expect(gs.buyOrEquipPickaxe(0, 'leviathanfang')).toBe('equipped');
+    expect(gs.getActivePickaxeSellBonusPct()).toBeCloseTo(0.6);
+    expect(gs.getOreValueMult()).toBeCloseTo(baseSell * 1.6);
   });
 
   it('serves 2D fantasy PNG art for all 16 HUD & Modal icons', () => {

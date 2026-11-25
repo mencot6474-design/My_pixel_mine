@@ -26,7 +26,7 @@ export type ResearchEffectType =
   | 'oreLuckPct'
   | 'charLuckPct'
   | 'oreValuePct'
-  | 'oreFragilityPct'
+  | 'gemGainPct'
   | 'extraOreNodes'
   | 'chestCapacityFlat';
 
@@ -46,6 +46,7 @@ export type ResearchIconKind =
   | 'toughness'
   | 'pickaxePower'
   | 'oreValue'
+  | 'gemGain'
   | 'chestCap'
   | 'luckAura'
   | 'worldMastery';
@@ -218,8 +219,8 @@ export function formatNodeEffectLine(node: ResearchNodeDef, level: number): stri
       return `+${pctStr}% luck for rare miners`;
     case 'oreValuePct':
       return `+${pctStr}% ore sell value`;
-    case 'oreFragilityPct':
-      return `-${Math.min(75, pct)}% rock toughness`;
+    case 'gemGainPct':
+      return `+${pctStr}% gems from rocks`;
     case 'extraOreNodes':
       return `+${Math.round(total)} ore nodes`;
     case 'chestCapacityFlat':

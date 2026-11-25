@@ -2,7 +2,7 @@ import type { WorldId } from './GameData';
 import type { ResearchNodeDef } from './ResearchData';
 
 // ============================================================================
-// STANDARDIZED 12-NODE WORLD TREE BUILDER (5x4 symmetric, 58 points/world)
+// STANDARDIZED 12-NODE WORLD TREE BUILDER (5x4 symmetric, 62 points/world)
 // ============================================================================
 interface WorldTreeSpec {
   treeId: WorldId;
@@ -18,7 +18,7 @@ interface WorldTreeSpec {
     oreLuck: string;
     respawn: string;
     value: string;
-    fragility: string;
+    gemGain: string;
     dense: string;
     output: string;
     charLuck: string;
@@ -31,7 +31,7 @@ interface WorldTreeSpec {
     oreLuckPerLv: number;
     respawnPerLv: number;
     valuePerLv: number;
-    fragilityPerLv: number;
+    gemGainPerLv: number;
     outputPerLv: number;
     charLuckPerLv: number;
     findPerLv: number;
@@ -143,24 +143,24 @@ function buildStandardWorldTree(spec: WorldTreeSpec): readonly ResearchNodeDef[]
     {
       id: fragilityId,
       treeId,
-      name: names.fragility,
+      name: names.gemGain,
       maxLevel: 5,
       row: 1,
       col: 4,
       requires: [rootId],
-      icon: 'crack',
-      effectType: 'oreFragilityPct',
-      perLevel: stats.fragilityPerLv,
+      icon: 'gemGain',
+      effectType: 'gemGainPct',
+      perLevel: stats.gemGainPerLv,
       baseCost: Math.round(costs.tier1 * 1.05),
       costMult: 1.9,
-      descTemplate: `Reduces rock toughness in ${worldLabel} for faster breaks.`,
+      descTemplate: `Increases Gems dropped from rocks in ${worldLabel}.`,
     },
     // Row 2 (Tier 2): 5 specialized follow-up nodes directly beneath each pillar
     {
       id: denseId,
       treeId,
       name: names.dense,
-      maxLevel: 1,
+      maxLevel: 5,
       row: 2,
       col: 0,
       requires: [dmgId],
@@ -168,8 +168,8 @@ function buildStandardWorldTree(spec: WorldTreeSpec): readonly ResearchNodeDef[]
       effectType: 'denseOreScale',
       perLevel: 1,
       baseCost: costs.dense,
-      costMult: 1,
-      descTemplate: `Compresses ${worldLabel} rocks into Dense Ores (Ore HP ×10, Ore Drops ×3).`,
+      costMult: 2.1,
+      descTemplate: `Compresses ${worldLabel} rocks into Dense Ores up to 5 stacks (Ore HP ×10, Ore Drops ×3 per stack).`,
     },
     {
       id: outputId,
@@ -267,7 +267,7 @@ export const UNDERGROUND_NODES = buildStandardWorldTree({
     oreLuck: 'Coalite Luck',
     respawn: 'Swift Respawn',
     value: 'Refined Smelt',
-    fragility: 'Fault Lines',
+    gemGain: 'Gem Seams',
     dense: 'Dense Seam',
     output: 'Abundant Ore',
     charLuck: 'Subterranean Call',
@@ -280,7 +280,7 @@ export const UNDERGROUND_NODES = buildStandardWorldTree({
     oreLuckPerLv: 0.2,
     respawnPerLv: 0.2,
     valuePerLv: 0.2,
-    fragilityPerLv: 0.08,
+    gemGainPerLv: 0.15,
     outputPerLv: 0.15,
     charLuckPerLv: 0.2,
     findPerLv: 0.04,
@@ -306,7 +306,7 @@ export const CRYSTAL_NODES = buildStandardWorldTree({
     oreLuck: 'Prismatic Luck',
     respawn: 'Crystal Pulse',
     value: 'Facet Cut',
-    fragility: 'Shatter Seam',
+    gemGain: 'Crystal Geodes',
     dense: 'Dense Crystal',
     output: 'Rich Clusters',
     charLuck: 'Prism Beacon',
@@ -319,7 +319,7 @@ export const CRYSTAL_NODES = buildStandardWorldTree({
     oreLuckPerLv: 0.3,
     respawnPerLv: 0.25,
     valuePerLv: 0.22,
-    fragilityPerLv: 0.09,
+    gemGainPerLv: 0.18,
     outputPerLv: 0.17,
     charLuckPerLv: 0.3,
     findPerLv: 0.05,
@@ -345,7 +345,7 @@ export const MAGMA_NODES = buildStandardWorldTree({
     oreLuck: 'Ash Sifter',
     respawn: 'Magma Surge',
     value: 'Molten Gold',
-    fragility: 'Thermal Shock',
+    gemGain: 'Ember Gems',
     dense: 'Dense Basalt',
     output: 'Lava Clusters',
     charLuck: 'Inferno Call',
@@ -358,7 +358,7 @@ export const MAGMA_NODES = buildStandardWorldTree({
     oreLuckPerLv: 0.45,
     respawnPerLv: 0.3,
     valuePerLv: 0.24,
-    fragilityPerLv: 0.1,
+    gemGainPerLv: 0.21,
     outputPerLv: 0.19,
     charLuckPerLv: 0.4,
     findPerLv: 0.06,
@@ -384,7 +384,7 @@ export const RUINS_NODES = buildStandardWorldTree({
     oreLuck: 'Relic Luck',
     respawn: 'Chrono Haste',
     value: 'Aether Appraisal',
-    fragility: 'Shattered Seal',
+    gemGain: 'Runic Gems',
     dense: 'Dense Monolith',
     output: 'Gildium Cache',
     charLuck: 'Seraph Beacon',
@@ -397,7 +397,7 @@ export const RUINS_NODES = buildStandardWorldTree({
     oreLuckPerLv: 0.65,
     respawnPerLv: 0.35,
     valuePerLv: 0.26,
-    fragilityPerLv: 0.11,
+    gemGainPerLv: 0.24,
     outputPerLv: 0.21,
     charLuckPerLv: 0.55,
     findPerLv: 0.07,
@@ -423,7 +423,7 @@ export const VOIDREACH_NODES = buildStandardWorldTree({
     oreLuck: 'Duskcrown Luck',
     respawn: 'Warp Cycle',
     value: 'Eclipse Worth',
-    fragility: 'Gravity Crush',
+    gemGain: 'Void Gems',
     dense: 'Dense Singularity',
     output: 'Cosmite Swarm',
     charLuck: 'Archon Signal',
@@ -436,7 +436,7 @@ export const VOIDREACH_NODES = buildStandardWorldTree({
     oreLuckPerLv: 0.9,
     respawnPerLv: 0.4,
     valuePerLv: 0.28,
-    fragilityPerLv: 0.12,
+    gemGainPerLv: 0.27,
     outputPerLv: 0.23,
     charLuckPerLv: 0.7,
     findPerLv: 0.08,
@@ -462,7 +462,7 @@ export const STARWELL_NODES = buildStandardWorldTree({
     oreLuck: 'Dawncrown Luck',
     respawn: 'Aurora Cycle',
     value: 'Caelite Worth',
-    fragility: 'Starlight Shear',
+    gemGain: 'Starlight Gems',
     dense: 'Dense Starcore',
     output: 'Aurorine Cascade',
     charLuck: 'Prism Beacon',
@@ -475,7 +475,7 @@ export const STARWELL_NODES = buildStandardWorldTree({
     oreLuckPerLv: 1.2,
     respawnPerLv: 0.45,
     valuePerLv: 0.3,
-    fragilityPerLv: 0.13,
+    gemGainPerLv: 0.3,
     outputPerLv: 0.25,
     charLuckPerLv: 0.9,
     findPerLv: 0.09,
@@ -501,7 +501,7 @@ export const ABYSSAL_NODES = buildStandardWorldTree({
     oreLuck: 'Pearl Fortune',
     respawn: 'Tidal Surge',
     value: 'Abyssal Worth',
-    fragility: 'Pressure Fracture',
+    gemGain: 'Abyssal Gems',
     dense: 'Dense Trench Core',
     output: 'Prismarine Flow',
     charLuck: 'Biolume Lure',
@@ -514,7 +514,7 @@ export const ABYSSAL_NODES = buildStandardWorldTree({
     oreLuckPerLv: 1.5,
     respawnPerLv: 0.5,
     valuePerLv: 0.32,
-    fragilityPerLv: 0.14,
+    gemGainPerLv: 0.33,
     outputPerLv: 0.27,
     charLuckPerLv: 1.1,
     findPerLv: 0.1,
@@ -540,7 +540,7 @@ export const CHRONO_NODES = buildStandardWorldTree({
     oreLuck: 'Aether Fortune',
     respawn: 'Clockwork Loop',
     value: 'Nexus Appraisal',
-    fragility: 'Paradox Shear',
+    gemGain: 'Chrono Gems',
     dense: 'Dense Hourglass Core',
     output: 'Aether Cascade',
     charLuck: 'Timeless Beacon',
@@ -553,7 +553,7 @@ export const CHRONO_NODES = buildStandardWorldTree({
     oreLuckPerLv: 1.9,
     respawnPerLv: 0.55,
     valuePerLv: 0.35,
-    fragilityPerLv: 0.15,
+    gemGainPerLv: 0.36,
     outputPerLv: 0.3,
     charLuckPerLv: 1.35,
     findPerLv: 0.12,
@@ -579,7 +579,7 @@ export const SOLARIS_NODES = buildStandardWorldTree({
     oreLuck: 'Sunburst Fortune',
     respawn: 'Plasma Cycle',
     value: 'Solaris Appraisal',
-    fragility: 'Flare Fracture',
+    gemGain: 'Solar Gems',
     dense: 'Dense Sun Core',
     output: 'Prism Surge',
     charLuck: 'Helios Beacon',
@@ -592,7 +592,7 @@ export const SOLARIS_NODES = buildStandardWorldTree({
     oreLuckPerLv: 2.3,
     respawnPerLv: 0.6,
     valuePerLv: 0.38,
-    fragilityPerLv: 0.16,
+    gemGainPerLv: 0.39,
     outputPerLv: 0.33,
     charLuckPerLv: 1.6,
     findPerLv: 0.14,
@@ -618,7 +618,7 @@ export const ELYSIUM_NODES = buildStandardWorldTree({
     oreLuck: 'Elysian Fortune',
     respawn: 'Aurora Revival',
     value: 'Genesis Appraisal',
-    fragility: 'Prism Cleave',
+    gemGain: 'Elysian Gems',
     dense: 'Dense Origin Core',
     output: 'Seraphic Cascade',
     charLuck: 'Elysium Halo',
@@ -631,7 +631,7 @@ export const ELYSIUM_NODES = buildStandardWorldTree({
     oreLuckPerLv: 2.75,
     respawnPerLv: 0.65,
     valuePerLv: 0.42,
-    fragilityPerLv: 0.17,
+    gemGainPerLv: 0.42,
     outputPerLv: 0.36,
     charLuckPerLv: 1.9,
     findPerLv: 0.16,
@@ -657,7 +657,7 @@ export const NIGHTMARE_NODES = buildStandardWorldTree({
     oreLuck: 'Bloodmoon Luck',
     respawn: 'Maw Revival',
     value: 'Nightmare Appraisal',
-    fragility: 'Thorny Fracture',
+    gemGain: 'Dread Gems',
     dense: 'Dense Dread Core',
     output: 'Oculite Surge',
     charLuck: 'Shadow Whisper',
@@ -670,7 +670,7 @@ export const NIGHTMARE_NODES = buildStandardWorldTree({
     oreLuckPerLv: 3.1,
     respawnPerLv: 0.7,
     valuePerLv: 0.45,
-    fragilityPerLv: 0.18,
+    gemGainPerLv: 0.45,
     outputPerLv: 0.39,
     charLuckPerLv: 2.15,
     findPerLv: 0.18,
@@ -696,7 +696,7 @@ export const SINGULARITY_NODES = buildStandardWorldTree({
     oreLuck: 'Spiral Fortune',
     respawn: 'Eclipse Cycle',
     value: 'Sovereign Appraisal',
-    fragility: 'Gravity Shatter',
+    gemGain: 'Horizon Gems',
     dense: 'Dense Horizon Core',
     output: 'Dual-Lance Surge',
     charLuck: 'Monarch Call',
@@ -709,7 +709,7 @@ export const SINGULARITY_NODES = buildStandardWorldTree({
     oreLuckPerLv: 3.5,
     respawnPerLv: 0.75,
     valuePerLv: 0.48,
-    fragilityPerLv: 0.19,
+    gemGainPerLv: 0.48,
     outputPerLv: 0.42,
     charLuckPerLv: 2.4,
     findPerLv: 0.2,

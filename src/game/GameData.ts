@@ -60,6 +60,7 @@ export interface PickaxeDef {
   name: string;
   worldId: WorldId;
   dmgMult: number;
+  sellBonusPct?: number;
   cost: number;
   rarity: ItemRarity;
   color: string;
@@ -637,13 +638,13 @@ export const PICKAXES: readonly PickaxeDef[] = [
   { id: 'anvilheart', name: 'Anvilheart', worldId: 'magma', dmgMult: 65.0, cost: 45_000_000_000, rarity: 'rainbow', color: '#f97316' },
   { id: 'cinderforge', name: 'Cinderforge', worldId: 'magma', dmgMult: 140.0, cost: 850_000_000_000, rarity: 'legendary', color: '#fb7185' },
   { id: 'runebreaker', name: 'Runebreaker', worldId: 'ruins', dmgMult: 310.0, cost: 120_000_000_000_000, rarity: 'epic', color: '#2dd4bf' },
-  { id: 'voidcleaver', name: 'Voidcleaver', worldId: 'astral', dmgMult: 700.0, cost: 300_000_000_000_000_000, rarity: 'exotic', color: '#c084fc' },
-  { id: 'astralsiphon', name: 'Astralsiphon', worldId: 'starwell', dmgMult: 1_600.0, cost: 650_000_000_000_000_000_000, rarity: 'mythic', color: '#38bdf8' },
-  { id: 'starwellcrown', name: 'Starwell Crown', worldId: 'starwell', dmgMult: 3_800.0, cost: 14_000_000_000_000_000_000_000, rarity: 'secret', color: '#fde047' },
-  { id: 'leviathanfang', name: 'Leviathan Fang', worldId: 'abyssal', dmgMult: 8_800.0, cost: 1_800_000_000_000_000_000_000_000, rarity: 'exotic', color: '#14b8a6' },
-  { id: 'chronoeternity', name: 'Chrono Eternity', worldId: 'chrono', dmgMult: 20_000.0, cost: 4_500_000_000_000_000_000_000_000_000, rarity: 'secret', color: '#fbbf24' },
-  { id: 'solarisflare', name: 'Solaris Flare', worldId: 'solaris', dmgMult: 45_000.0, cost: 12_000_000_000_000_000_000_000_000_000_000, rarity: 'exotic', color: '#fb7185' },
-  { id: 'elysiumcrest', name: 'Elysium Crest', worldId: 'elysium', dmgMult: 100_000.0, cost: 28_000_000_000_000_000_000_000_000_000_000_000, rarity: 'secret', color: '#c084fc' },
+  { id: 'voidcleaver', name: 'Voidcleaver', worldId: 'astral', dmgMult: 700.0, sellBonusPct: 0.15, cost: 300_000_000_000_000_000, rarity: 'exotic', color: '#c084fc' },
+  { id: 'astralsiphon', name: 'Astralsiphon', worldId: 'starwell', dmgMult: 1_600.0, sellBonusPct: 0.25, cost: 650_000_000_000_000_000_000, rarity: 'mythic', color: '#38bdf8' },
+  { id: 'starwellcrown', name: 'Starwell Crown', worldId: 'starwell', dmgMult: 3_800.0, sellBonusPct: 0.35, cost: 14_000_000_000_000_000_000_000, rarity: 'secret', color: '#fde047' },
+  { id: 'leviathanfang', name: 'Leviathan Fang', worldId: 'abyssal', dmgMult: 8_800.0, sellBonusPct: 0.6, cost: 1_800_000_000_000_000_000_000_000, rarity: 'exotic', color: '#14b8a6' },
+  { id: 'chronoeternity', name: 'Chrono Eternity', worldId: 'chrono', dmgMult: 20_000.0, sellBonusPct: 1.1, cost: 4_500_000_000_000_000_000_000_000_000, rarity: 'secret', color: '#fbbf24' },
+  { id: 'solarisflare', name: 'Solaris Flare', worldId: 'solaris', dmgMult: 45_000.0, sellBonusPct: 1.8, cost: 12_000_000_000_000_000_000_000_000_000_000, rarity: 'exotic', color: '#fb7185' },
+  { id: 'elysiumcrest', name: 'Elysium Crest', worldId: 'elysium', dmgMult: 100_000.0, sellBonusPct: 2.8, cost: 28_000_000_000_000_000_000_000_000_000_000_000, rarity: 'secret', color: '#c084fc' },
 ] as const;
 
 export const MUTATIONS: readonly MutationDef[] = [
@@ -824,6 +825,39 @@ export const GEM_SHOP_ITEMS: readonly GemShopItemDef[] = [
     rarity: 'mythic',
     color: '#ec4899',
     shape: 'round',
+  },
+  {
+    id: 'midas-elixir-1',
+    name: 'Midas Elixir I',
+    effectText: '1.5x Ore Sell Cash',
+    durationLabel: '(1 min)',
+    durationSec: 60,
+    gemCost: 1000,
+    rarity: 'rare',
+    color: '#f59e0b',
+    shape: 'round',
+  },
+  {
+    id: 'midas-elixir-2',
+    name: 'Midas Elixir II',
+    effectText: '2x Ore Sell Cash',
+    durationLabel: '(1 min)',
+    durationSec: 60,
+    gemCost: 2500,
+    rarity: 'epic',
+    color: '#10b981',
+    shape: 'jar',
+  },
+  {
+    id: 'midas-elixir-3',
+    name: 'Midas Elixir III',
+    effectText: '3x Ore Sell Cash',
+    durationLabel: '(1 min)',
+    durationSec: 60,
+    gemCost: 4500,
+    rarity: 'secret',
+    color: '#facc15',
+    shape: 'crystal',
   },
 ] as const;
 

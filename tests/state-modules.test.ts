@@ -773,6 +773,7 @@ describe('Tahap C GameState Domain Modules', () => {
       state.chargeOverclock(100, testNow);
       state.activeBoosts['ore-elixir-3'] = testNow + 60_000;
       state.activeBoosts['ore-luck-potion'] = testNow + 60_000;
+      state.activeBoosts['midas-elixir-3'] = testNow + 60_000;
       state.lastSavedAt = testNow;
       const boosted8h = computeOfflineEarningsDomain(state, testNow + 8 * 3600 * 1000, () => 0.5)!;
       expect(boosted8h.cash).toBe(baseline8h.cash);

@@ -114,6 +114,7 @@ export class ShopModalsUi {
       artHtml: pickaxeIconHtml(p.id, 84, p.name),
       stats: [
         ['Power', `${p.dmgMult}x DMG`, 'text-[#0284c7]'],
+        ...(p.sellBonusPct ? [['Sell Ore', `+${Math.round(p.sellBonusPct * 100)}%`, 'text-[#059669]'] as [string, string, string]] : []),
         ['Cost', p.cost === 0 ? 'Free' : fmtMoney(p.cost), 'text-[#b45309]'],
         ['Owned', `x${fmtInt(ownedBag)} (+${fmtInt(equippedCount)} eq)`, 'text-[#14111d]'],
         ['Resell', fmtMoney(getPickaxeSellValue(p.id)), 'text-[#059669]'],
@@ -213,7 +214,7 @@ export class ShopModalsUi {
           <div class="mam-card-art !relative !inset-auto w-full h-[70px] shrink-0 flex items-center justify-center ${locked ? 'grayscale-[65%] opacity-75' : ''}">${pickaxeIconHtml(p.id, 66, p.name)}</div>
           <div class="w-full flex flex-col items-center gap-0.5 min-w-0">
             <div class="w-full px-0.5 text-center text-[14px] font-black leading-[1.18] text-[#14111d] whitespace-nowrap overflow-hidden text-ellipsis" title="${p.name}">${p.name}</div>
-            <div class="text-[11px] font-black leading-[1.15] text-[#0284c7] text-center">${p.dmgMult}x DMG</div>
+            <div class="text-[11px] font-black leading-[1.15] text-[#0284c7] text-center">${p.dmgMult}x DMG${p.sellBonusPct ? ` • <span class="text-[#059669]">+${Math.round(p.sellBonusPct * 100)}% Sell</span>` : ''}</div>
             <div class="text-[11px] font-extrabold leading-[1.15] text-center truncate max-w-full ${locked ? 'text-[#b45309]' : soldOut ? 'text-[#dc2626]' : 'text-[#5b526e]'}" data-shop-meta="true">
               ${locked ? `Unlock ${reqWorld.name}` : soldOut ? 'Sold out' : `${fmtInt(stock)} in stock`}
             </div>

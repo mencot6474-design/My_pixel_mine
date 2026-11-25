@@ -7,6 +7,7 @@ import {
   getMinerRarity,
   getMinerWorldId,
   getMutationById,
+  getPickaxeById,
   getWorldById,
   isHighTierMutation,
   MUTATIONS,
@@ -175,6 +176,7 @@ export class PlotInspectUi {
     const premiumDef = getPremiumShopItemByChibiId(chibi.id);
     const omegaDef = getOmegaBossByChibiId(chibi.id);
     const eqEnchant = getEnchantById(unit.enchantId);
+    const eqPick = unit.pickaxeId ? getPickaxeById(unit.pickaxeId) : null;
     const isTrial = Boolean(unit.isTrial);
     const trialRem = isTrial ? formatCountdownTimer(this.state.getTwinTrialRemainingSec()) : '';
 
@@ -261,6 +263,7 @@ export class PlotInspectUi {
               })()
             : ''
         }
+        ${eqPick?.sellBonusPct ? `<div class="mt-0.5 w-full rounded-xl bg-[#ecfdf5] border-2 border-[#14111d] px-2.5 py-1 text-[10.5px] font-black leading-snug tabular-nums text-[#065f46] break-words">⛏ ${eqPick.name}: +${Math.round(eqPick.sellBonusPct * 100)}% Ore Sell</div>` : ''}
         ${eqEnchant ? `<div class="mt-0.5 w-full rounded-xl bg-white border-2 border-[#14111d] px-2.5 py-1 text-[10.5px] font-black leading-snug tabular-nums text-[#14111d] break-words">✦ ${eqEnchant.name}: ${eqEnchant.dmgMult}x DMG • +${Math.round(eqEnchant.oreDropPct * 100)}% Ore • +${Math.round(eqEnchant.sellValuePct * 100)}% Sell</div>` : ''}
         <div class="text-[12.5px] font-bold tabular-nums text-[#475569] mt-0.5">
           Lv. ${unit.damageLevel} • DMG ×${stats.dmgMult.toFixed(2)} • Crit ${Math.round(stats.critChance * 100)}%
@@ -431,11 +434,12 @@ export class PlotInspectUi {
           const owned = this.state.ownedPickaxes[p.id] || 0;
           const eq = unit.pickaxeId === p.id;
           const available = eq || owned > 0;
+          const sellTag = p.sellBonusPct ? ` • +${Math.round(p.sellBonusPct * 100)}% Sell` : '';
           const hint = eq
-            ? `${p.name} (${p.dmgMult}x DMG) — Click to Unequip (returns to bag)`
+            ? `${p.name} (${p.dmgMult}x DMG${sellTag}) — Click to Unequip (returns to bag)`
             : owned > 0
-              ? `${p.name} (${p.dmgMult}x DMG) — Click to Equip (1 per Chibi)`
-              : `${p.name} (${p.dmgMult}x DMG) — Locked, buy in Pickaxe Shop`;
+              ? `${p.name} (${p.dmgMult}x DMG${sellTag}) — Click to Equip (1 per Chibi)`
+              : `${p.name} (${p.dmgMult}x DMG${sellTag}) — Locked, buy in Pickaxe Shop`;
           return `
           <div class="${TW_STRIP_CARD} ${eq ? 'equipped' : ''} ${available ? '' : 'locked'}" style="${rarityVars(p.rarity)}" data-pickaxe-id="${p.id}" title="${hint}">
             ${eq ? equippedCheckHtml : ''}
