@@ -3,7 +3,7 @@ import { getChibiById } from '../game3d/ChibiCatalog';
 export const RIFT_PASS_GEM_COST = 500_000;
 export const RIFT_WINDOW_DURATION_MIN = 15;
 export const RIFT_PASS_DURATION_MS = 15 * 60 * 1000;
-export const RIFT_SHARD_PITY_COST = 100;
+export const RIFT_SHARD_PITY_COST = 250;
 export const RIFT_INSTANT_DROP_CHANCE = 0.08;
 export const RIFT_BATTLE_DURATION_SEC = 30;
 export const RIFT_MAX_ATTEMPTS_PER_WINDOW = 3;
@@ -81,6 +81,7 @@ export interface AnomalyChibiDef {
   name: string;
   title: string;
   accentColor: string;
+  shardCost: number;
   dpsMult: number;
   upgradeCostMult: number;
   passiveTeamDmgPct: number;
@@ -95,6 +96,7 @@ export const ANOMALY_CHIBI_DEFS: readonly AnomalyChibiDef[] = [
     name: 'Void Asura',
     title: 'Six-Armed Rift Sovereign',
     accentColor: '#ef4444',
+    shardCost: 500,
     dpsMult: 4.8,
     upgradeCostMult: 32,
     passiveTeamDmgPct: 1.6,
@@ -107,6 +109,7 @@ export const ANOMALY_CHIBI_DEFS: readonly AnomalyChibiDef[] = [
     name: 'Null Singularity',
     title: 'Star-Core Dimensional Exile',
     accentColor: '#a855f7',
+    shardCost: 250,
     dpsMult: 5.2,
     upgradeCostMult: 35,
     passiveTeamDmgPct: 1.8,
@@ -154,6 +157,10 @@ export const RIFT_ANOMALIES: readonly RiftAnomalyDef[] = [
 
 export function getAnomalyChibiById(chibiId: string): AnomalyChibiDef | undefined {
   return ANOMALY_CHIBI_DEFS.find((c) => c.chibiId === chibiId);
+}
+
+export function getAnomalyShardCost(chibiId: string): number {
+  return getAnomalyChibiById(chibiId)?.shardCost ?? RIFT_SHARD_PITY_COST;
 }
 
 export function isAnomalyChibi(chibiId: string): boolean {

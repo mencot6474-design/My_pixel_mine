@@ -5,8 +5,8 @@ import {
   type AnomalyChibiId,
   getAnomalyChibiById,
   getAnomalyPassiveStarScale,
+  getAnomalyShardCost,
   RIFT_PASS_GEM_COST,
-  RIFT_SHARD_PITY_COST,
   RIFT_TIER_DEFS,
 } from '../game/AnomalyData';
 import { GameState } from '../game/GameState';
@@ -108,7 +108,7 @@ export class RiftModalUi {
               ${isActiveBoss ? `<span class="mam-pill-xs bg-[#14111d] text-[#22d3ee]">ACTIVE BOSS</span>` : ''}
             </div>
             <div class="text-[10.5px] font-bold text-[#14111d]/80 leading-tight truncate">${anom.title}</div>
-            <div class="text-[11px] font-black text-[#14111d] tabular-nums leading-tight">Base DPS: ${fmtShort(this.state.getEffectiveChibiDps(anom.chibiId))}/s • Owned: ${fmtInt(owned)}</div>
+            <div class="text-[11px] font-black text-[#14111d] tabular-nums leading-tight">Base DPS: ${fmtShort(this.state.getEffectiveChibiDps(anom.chibiId))}/s • Owned: ${fmtInt(owned)} • ${anom.shardCost} Shards</div>
           </div>
         </button>
       `;
@@ -133,7 +133,8 @@ export class RiftModalUi {
     const teamPct = Math.round(selectedDef.passiveTeamDmgPct * starScale * 100);
     const dropPct = Math.round(selectedDef.passiveOreDropPct * starScale * 100);
     const sellPct = Math.round(selectedDef.passiveOreSellPct * starScale * 100);
-    const canRedeem = this.state.riftShards >= RIFT_SHARD_PITY_COST;
+    const shardCost = selectedDef.shardCost;
+    const canRedeem = this.state.riftShards >= shardCost;
 
     const passiveCards = [
       ['Team DMG', `+${teamPct}%`, 'text-[#b91c1c]'],
@@ -181,7 +182,7 @@ export class RiftModalUi {
           <div class="mam-inspector-well mam-no-scrollbar rounded-2xl p-3 flex flex-col justify-between gap-2.5 min-h-0 overflow-y-auto @max-[860px]:overflow-visible">
             <div class="flex items-center justify-between gap-2 shrink-0 flex-wrap">
               <span class="text-[12.5px] font-black tracking-wide text-[#14111d]">ANOMALY RIFT VAULT</span>
-              <span class="mam-pill-xs bg-[#14111d] text-[#67e8f9] inline-flex items-center gap-1">${riftShardIconHtml(14, 'Shards')}<span>${fmtInt(this.state.riftShards)} / ${RIFT_SHARD_PITY_COST} Shards</span></span>
+              <span class="mam-pill-xs bg-[#14111d] text-[#67e8f9] inline-flex items-center gap-1">${riftShardIconHtml(14, 'Shards')}<span>${fmtInt(this.state.riftShards)} / ${shardCost} Shards</span></span>
             </div>
 
             ${
@@ -221,7 +222,7 @@ export class RiftModalUi {
               class="shrink-0 w-full h-10 rounded-xl border-[2.5px] border-[#14111d] inline-flex items-center justify-center gap-1.5 ${canRedeem ? 'bg-[#2ee59d] hover:brightness-105 text-[#14111d] cursor-pointer active:scale-95' : 'bg-[#e2e8f0] text-[#64748b] cursor-not-allowed'} text-[13px] font-black"
             >
               ${riftShardIconHtml(18, 'Shard')}
-              <span>PITY CLAIM (${RIFT_SHARD_PITY_COST} Shards)</span>
+              <span>PITY CLAIM (${shardCost} Shards)</span>
             </button>
           </div>
         </div>
@@ -270,7 +271,7 @@ export class RiftModalUi {
           this.onRender();
         } else {
           audio.playSfx('ui-error');
-          this.onToast(`Need ${RIFT_SHARD_PITY_COST} Rift Shards!`);
+          this.onToast(`Need ${getAnomalyShardCost(chibiId)} Rift Shards!`);
         }
       });
     });

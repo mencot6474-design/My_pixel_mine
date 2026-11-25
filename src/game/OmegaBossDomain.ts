@@ -552,7 +552,7 @@ export function finishOmegaBossDomain(
   return summary;
 }
 
-/** Unlocks an OMEGA Chibi using 5 Boss Cores (places in bag/hotbar & Index). */
+/** Unlocks an OMEGA Chibi using Boss Cores (places in bag/hotbar & Index). */
 export function unlockOmegaChibiDomain(
   ctx: Pick<OmegaBossContext, 'omegaCores' | 'miners' | 'hotbar' | 'discovered' | 'chibiStars'>,
   bossId: OmegaBossId,

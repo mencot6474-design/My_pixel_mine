@@ -6,7 +6,6 @@ import {
   RIFT_BATTLE_DURATION_SEC,
   RIFT_MAX_ATTEMPTS_PER_WINDOW,
   RIFT_PASS_GEM_COST,
-  RIFT_SHARD_PITY_COST,
   RIFT_TIER_DEFS,
 } from '../src/game/AnomalyData';
 import { getRiftWindowSnapshot } from '../src/game/RiftDomain';
@@ -336,6 +335,19 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(autoStarUpAllUnits(state)).toBeGreaterThanOrEqual(1);
 
       state.miners['solar-striker'] = 1;
+      // Rarity-balanced Star-Up costs: Exotic/Secret cost 12 dupes total (1+1+2+3+5), Fusion/Twin/Anomaly cost 8 dupes total (1+1+1+2+3)
+      state.miners['cyber-ki-brawler'] = 13; // 1 base + 12 spares -> full 5★
+      expect(autoStarUpAllUnits(state)).toBe(5);
+      expect(state.getChibiStar('cyber-ki-brawler')).toBe(5);
+      expect(state.miners['cyber-ki-brawler']).toBe(1);
+      state.miners['paradox-twins'] = 9; // 1 base + 8 spares -> full 5★
+      expect(autoStarUpAllUnits(state)).toBe(5);
+      expect(state.getChibiStar('paradox-twins')).toBe(5);
+      expect(state.miners['paradox-twins']).toBe(1);
+      delete state.miners['cyber-ki-brawler'];
+      delete state.chibiStars['cyber-ki-brawler'];
+      delete state.miners['paradox-twins'];
+      delete state.chibiStars['paradox-twins'];
       state.cash = 1_000_000;
       state.upgradePlotDamage(0);
       if (state.plotUnits[0]) state.plotUnits[0].enchantId = 'blazing';
@@ -745,6 +757,21 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(cappedSummary).not.toBeNull();
       expect(cappedSummary!.oresBroken).toBe(Math.floor(MAX_OFFLINE_ORES_PER_SEC * 406));
       expect(cappedSummary!.gems).toBeLessThanOrEqual(MAX_OFFLINE_GEMS);
+
+      // Temporary Weather (Celestial 5x DMG / 10x Ore), Overclock, and 1-min Potions must NOT inflate 8h offline rewards
+      const testNow = Date.now();
+      state.forceWeather('light_rain', testNow);
+      state.lastSavedAt = testNow;
+      const baseline8h = computeOfflineEarningsDomain(state, testNow + 8 * 3600 * 1000, () => 0.5)!;
+      state.forceWeather('celestial', testNow);
+      state.chargeOverclock(100, testNow);
+      state.activeBoosts['ore-elixir-3'] = testNow + 60_000;
+      state.activeBoosts['ore-luck-potion'] = testNow + 60_000;
+      state.lastSavedAt = testNow;
+      const boosted8h = computeOfflineEarningsDomain(state, testNow + 8 * 3600 * 1000, () => 0.5)!;
+      expect(boosted8h.cash).toBe(baseline8h.cash);
+      expect(boosted8h.gems).toBe(baseline8h.gems);
+      expect(boosted8h.totalBonusOres).toBe(baseline8h.totalBonusOres);
     });
   });
 
@@ -1705,9 +1732,12 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(unarmoredHit.dmgDealt).toBeGreaterThan(armoredHit.dmgDealt);
       state.abandonOmegaBoss();
 
-      // 5 Cores -> Forge & Unlock Crimson Ronin -> all-3 passives active + non-sellable + Awaken 1★ -> 2★
-      state.omegaCores['crimson-ronin'] = 8;
+      // 25 Cores -> Forge & Unlock Crimson Ronin -> all-3 passives active + non-sellable + Awaken 1★ -> 2★ (10 Cores)
+      state.omegaCores['crimson-ronin'] = 24;
+      expect(state.unlockOmegaChibi('crimson-ronin')).toBe('no_cores');
+      state.omegaCores['crimson-ronin'] = 35;
       expect(state.unlockOmegaChibi('crimson-ronin')).toBe('unlocked');
+      expect(state.starUpChibi('crimson-ronin')).toEqual({ ok: false, reason: 'max' });
       expect(isNonSellableChibi('crimson-ronin')).toBe(true);
       expect(state.sellMiner('crimson-ronin', true)).toBe(0);
       expect(state.discovered.has('crimson-ronin')).toBe(true);
@@ -1718,7 +1748,7 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(baseOmegaPassives.oreDropPct).toBeCloseTo(1.2, 5);
       expect(baseOmegaPassives.oreSellPct).toBeCloseTo(0.8, 5);
 
-      expect(state.awakenOmegaChibi('crimson-ronin')).toBe('awakened'); // spends 3 cores -> 2★ (+20%)
+      expect(state.awakenOmegaChibi('crimson-ronin')).toBe('awakened'); // spends 10 cores -> 2★ (+20%)
       const star2Passives = state.getActiveOmegaPassives();
       expect(star2Passives.teamDmgPct).toBeCloseTo(2.4, 5);
       expect(star2Passives.oreDropPct).toBeCloseTo(1.44, 5);
@@ -1732,8 +1762,12 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(reloaded.omegaCores['crimson-ronin'] ?? 0).toBe(0);
       expect(reloaded.chibiStars['crimson-ronin']).toBe(2);
 
-      // Abyssal Leviathan (3rd Omega Boss & Chibi): 5 Cores -> Forge & Unlock -> +240% Team DMG, +140% Drop Ore, +160% Sell Ore
-      state.omegaCores['abyssal-leviathan'] = 5;
+      // Obsidian Sovereign (35 Cores) & Abyssal Leviathan (45 Cores) -> Forge & Unlock -> +240% Team DMG, +140% Drop Ore, +160% Sell Ore
+      state.omegaCores['obsidian-sovereign'] = 34;
+      expect(state.unlockOmegaChibi('obsidian-sovereign')).toBe('no_cores');
+      state.omegaCores['abyssal-leviathan'] = 44;
+      expect(state.unlockOmegaChibi('abyssal-leviathan')).toBe('no_cores');
+      state.omegaCores['abyssal-leviathan'] = 45;
       expect(state.unlockOmegaChibi('abyssal-leviathan')).toBe('unlocked');
       expect(isNonSellableChibi('abyssal-leviathan')).toBe(true);
       state.plotMiners[1] = 'abyssal-leviathan';
@@ -2161,12 +2195,20 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(claimRes.droppedChibiId).toBeTruthy();
       expect(state.riftShards).toBe(claimRes.shardsEarned);
 
+      state.riftShards = 499;
       expect(state.redeemAnomalyChibi('void-asura')).toBe('no_shards');
-      state.riftShards = RIFT_SHARD_PITY_COST;
+      state.riftShards = 500;
       expect(state.redeemAnomalyChibi('void-asura')).toBe('redeemed');
       expect(state.riftShards).toBe(0);
       expect(state.discovered.has('void-asura')).toBe(true);
       expect(isNonSellableChibi('void-asura')).toBe(true);
+
+      state.riftShards = 249;
+      expect(state.redeemAnomalyChibi('null-singularity')).toBe('no_shards');
+      state.riftShards = 250;
+      expect(state.redeemAnomalyChibi('null-singularity')).toBe('redeemed');
+      expect(state.riftShards).toBe(0);
+      expect(state.discovered.has('null-singularity')).toBe(true);
     });
 
     it('defines Tier 1-10 damage thresholds (1 Shard per Tier), tier progress math, and hourly boss rotation', () => {

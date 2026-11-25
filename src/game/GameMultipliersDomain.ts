@@ -154,7 +154,7 @@ export function getEffectiveOreSellValueDomain(ctx: GameMultipliersContext, oreI
   return Math.round(def.sellValue * getOreValueMultDomain(ctx));
 }
 
-export function getOreOutputMultDomain(ctx: GameMultipliersContext): number {
+export function getOreOutputMultDomain(ctx: GameMultipliersContext, includeBoosts = true): number {
   const { oreDropBonusPct } = ctx.getActiveStarDropAndGemBonus();
   const premDrop = ctx.getActivePremiumPassives?.().oreDropPct ?? 0;
   const omegaDrop = ctx.getActiveOmegaPassives?.().oreDropPct ?? 0;
@@ -170,9 +170,11 @@ export function getOreOutputMultDomain(ctx: GameMultipliersContext): number {
     anomalyDrop +
     ctx.getActiveEnchantBonuses().oreDropPct +
     ctx.getActiveIndexPassiveBonuses().oreDropPct;
-  if (isBoostActiveDomain(ctx, 'ore-elixir-1')) mult += 0.5;
-  if (isBoostActiveDomain(ctx, 'ore-elixir-2')) mult += 1.25;
-  if (isBoostActiveDomain(ctx, 'ore-elixir-3')) mult += 2.5;
+  if (includeBoosts) {
+    if (isBoostActiveDomain(ctx, 'ore-elixir-1')) mult += 0.5;
+    if (isBoostActiveDomain(ctx, 'ore-elixir-2')) mult += 1.25;
+    if (isBoostActiveDomain(ctx, 'ore-elixir-3')) mult += 2.5;
+  }
   const denseStacks = Math.max(0, Math.round(ctx.getActiveResearchBonus('denseOreScale')));
   if (denseStacks > 0) mult *= Math.pow(DENSE_ORE_DROP_MULT, denseStacks);
   return mult;
@@ -202,8 +204,8 @@ export function getCharacterLuckMultDomain(ctx: GameMultipliersContext): number 
   return base + ctx.getActiveResearchBonus('charLuckPct');
 }
 
-export function getOreLuckMultDomain(ctx: GameMultipliersContext): number {
-  const base = isBoostActiveDomain(ctx, 'ore-luck-potion') ? 6.0 : 1.0;
+export function getOreLuckMultDomain(ctx: GameMultipliersContext, includeBoosts = true): number {
+  const base = includeBoosts && isBoostActiveDomain(ctx, 'ore-luck-potion') ? 6.0 : 1.0;
   return base + ctx.getActiveResearchBonus('oreLuckPct');
 }
 

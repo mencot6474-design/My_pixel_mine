@@ -5,16 +5,17 @@ import { getGlobalGemGainBonus } from './TowerData';
 export const OFFLINE_MIN_SEC = 120; // 2 minutes
 export const OFFLINE_MAX_SEC = 8 * 3600; // 8 hours
 export const OFFLINE_EFFICIENCY = 0.5;
-/** Physical rock-break ceiling per second (1 swing breaks at most 1 rock, bounded by walk + pit respawn intervals). */
-export const MAX_OFFLINE_ORES_PER_SEC = 3.5;
-export const MAX_OFFLINE_GEMS = 15_000;
+/** Physical rock-break ceiling per second (passive Chibi mining without manual tapping/Overclock). */
+export const MAX_OFFLINE_ORES_PER_SEC = 2.0;
+export const MAX_OFFLINE_GEMS = 3_500;
 export const RETURN_RUSH_BOOST_ID = 'return-rush';
 export const RETURN_RUSH_MIN_OFFLINE_SEC = 3600; // 1 hour
 export const RETURN_RUSH_DURATION_SEC = 600; // 10 minutes
 export const RETURN_RUSH_FEVER_CHARGE_BONUS = 0.5; // +50% Fever Charge
 export const RETURN_RUSH_SPEED_BONUS = 0.25; // +25% Speed
-const BASE_AVG_ROCK_HP = 1_000 * 1.25;
-const MAX_OFFLINE_CHEST_ORES = 200;
+/** Matches OrePit3D BASE_ORE_HP (2,500) * weighted ORE_VARIANTS hpMult (0.9825). */
+const BASE_AVG_ROCK_HP = 2_500 * 0.9825;
+const MAX_OFFLINE_CHEST_ORES = 80;
 
 export interface OfflineEarningsSummary {
   elapsedSec: number;
@@ -47,9 +48,13 @@ export interface OfflineEarningsContext {
   discovered: Set<string>;
   towerBestFloor: number;
   getTotalPlotDps: () => number;
+  getPermanentPlotDps?: () => number;
   getEffectiveOreSellValue: (oreId: string) => number;
   getTotalOreDropMult: () => number;
+  getPermanentOreDropMult?: () => number;
   getOreLuckMult: () => number;
+  getPermanentOreLuckMult?: () => number;
+  getOreHpScale?: () => number;
   getActiveResearchBonus: (key: 'denseOreScale') => number;
   getActiveStarDropAndGemBonus: () => { oreDropBonusPct: number; gemBonusPct: number };
   getChestItemCount: () => number;
@@ -76,7 +81,7 @@ export function computeOfflineEarningsDomain(
   const rawElapsedSec = Math.floor((nowMs - ctx.lastSavedAt) / 1000);
   if (rawElapsedSec < OFFLINE_MIN_SEC) return null;
 
-  const totalDps = ctx.getTotalPlotDps();
+  const totalDps = ctx.getPermanentPlotDps ? ctx.getPermanentPlotDps() : ctx.getTotalPlotDps();
   if (!Number.isFinite(totalDps) || totalDps <= 0) return null;
 
   const capped = rawElapsedSec > OFFLINE_MAX_SEC;
@@ -84,11 +89,11 @@ export function computeOfflineEarningsDomain(
   const returnRushEligible = elapsedSec >= RETURN_RUSH_MIN_OFFLINE_SEC;
 
   const world = getWorldById(ctx.activeWorldId);
-  const denseActive = ctx.getActiveResearchBonus('denseOreScale') > 0;
-  const avgRockHp = Math.max(
-    10,
-    Math.round(BASE_AVG_ROCK_HP * world.oreHpMult * (denseActive ? DENSE_ORE_HP_MULT : 1))
-  );
+  const denseStacks = Math.max(0, Math.round(ctx.getActiveResearchBonus('denseOreScale')));
+  const oreHpScale = ctx.getOreHpScale
+    ? ctx.getOreHpScale()
+    : world.oreHpMult * (denseStacks > 0 ? Math.pow(DENSE_ORE_HP_MULT, denseStacks) : 1);
+  const avgRockHp = Math.max(10, Math.round(BASE_AVG_ROCK_HP * oreHpScale));
 
   const rawOresPerSec = (totalDps * OFFLINE_EFFICIENCY) / avgRockHp;
   const effectiveOresPerSec = Math.min(MAX_OFFLINE_ORES_PER_SEC, rawOresPerSec);
@@ -98,22 +103,25 @@ export function computeOfflineEarningsDomain(
   let weightedSell = 0;
   let totalWeight = 0;
   for (const ore of worldOres) {
-    const w = Math.max(0.01, ore.chancePct);
+    const w = Math.max(0, ore.chancePct);
     weightedSell += ctx.getEffectiveOreSellValue(ore.id) * w;
     totalWeight += w;
   }
   const avgOreSellValue = totalWeight > 0 ? weightedSell / totalWeight : 5;
-  const dropMult = Math.max(1, ctx.getTotalOreDropMult());
+  const dropMult = Math.max(
+    1,
+    ctx.getPermanentOreDropMult ? ctx.getPermanentOreDropMult() : ctx.getTotalOreDropMult()
+  );
   const cash = Math.max(1, Math.round(oresBroken * dropMult * avgOreSellValue));
 
   const { gemBonusPct } = ctx.getActiveStarDropAndGemBonus();
   const gemMult = 1 + getGlobalGemGainBonus(ctx.towerBestFloor) + gemBonusPct;
-  const gems = Math.min(MAX_OFFLINE_GEMS, Math.max(0, Math.round(oresBroken * 0.18 * gemMult)));
+  const gems = Math.min(MAX_OFFLINE_GEMS, Math.max(0, Math.round(oresBroken * 0.06 * gemMult)));
 
   const capLeft = Math.max(0, ctx.getMaxChestCapacity() - ctx.getChestItemCount());
-  const oreTarget = Math.min(capLeft, MAX_OFFLINE_CHEST_ORES, Math.max(1, Math.floor(oresBroken * 0.25)));
+  const oreTarget = Math.min(capLeft, MAX_OFFLINE_CHEST_ORES, Math.max(1, Math.floor(oresBroken * 0.1)));
   const bonusOres: Record<string, number> = {};
-  const oreLuck = ctx.getOreLuckMult();
+  const oreLuck = ctx.getPermanentOreLuckMult ? ctx.getPermanentOreLuckMult() : ctx.getOreLuckMult();
 
   // Sample up to 24 rolls and scale cleanly so large offline durations stay O(1)
   if (oreTarget > 0) {

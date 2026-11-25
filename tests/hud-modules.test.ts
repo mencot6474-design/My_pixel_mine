@@ -1746,10 +1746,15 @@ describe('Tahap B HUD Modules', () => {
       expect(hubHtml).toContain('+120%');
       expect(hubHtml).toContain('Sell Ore');
       expect(hubHtml).toContain('+80%');
+      expect(hubHtml).toContain('25 Cores');
+
+      hubUi.openForBoss('obsidian-sovereign');
+      expect(hubUi.renderOmegaModal()).toContain('35 Cores');
 
       hubUi.openForBoss('abyssal-leviathan');
       const levHubHtml = hubUi.renderOmegaModal();
       expect(levHubHtml).toContain('0 Leviathan Cores');
+      expect(levHubHtml).toContain('45 Cores');
       expect(levHubHtml).toContain('HP 45Sp');
       expect(levHubHtml).toContain('HP 4.5Oc');
       expect(levHubHtml).toContain('HP 450Oc');
@@ -1759,7 +1764,7 @@ describe('Tahap B HUD Modules', () => {
       hubUi.openForBoss('crimson-ronin');
 
       // Verify Fullscreen Omega Forge Cutscene -> Post-Cutscene Confirmation Popup flow
-      state.omegaCores['crimson-ronin'] = 5;
+      state.omegaCores['crimson-ronin'] = 25;
       expect(hubUi.triggerForgeUnlock('crimson-ronin')).toBe(true);
       expect(hubUi.getForgeCutsceneState()?.phase).toBe('animating');
       const cutsceneHtml = hubUi.renderFullscreenCutsceneHtml();
@@ -2385,7 +2390,8 @@ describe('Tahap B HUD Modules', () => {
       expect(html).toContain('/badges/anomaly.svg');
       expect(html).toContain('/hud/rift_shard.webp');
       expect(html).toContain('!flex-row');
-      expect(html).toContain('100 Shards');
+      expect(html).toContain('500 Shards');
+      expect(html).toContain('250 Shards');
       expect(html).toContain('Attempts');
       expect(html).toContain('Tier 1');
       expect(html).toContain('Tier 10');
@@ -2393,7 +2399,10 @@ describe('Tahap B HUD Modules', () => {
     });
 
     it('renders RiftArenaHudUi 30s Tier 1-10 Damage Meter and HudRiftBridge battle summary flow', () => {
-      const state = new GameState();
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 10, 25, 14, 25, 0));
+      try {
+        const state = new GameState();
       state.miners['astral-recruit'] = 1;
       state.equipBestMiners();
       const fakeRoot = { querySelector: () => null, querySelectorAll: () => [] } as unknown as HTMLElement;
@@ -2454,10 +2463,16 @@ describe('Tahap B HUD Modules', () => {
       state.riftPassExpiresAt = Date.now() - 1000;
       const closedSummaryHtml = arenaUi.renderRiftArenaHud();
       expect(closedSummaryHtml).toContain('RIFT CLOSED');
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('does not steal tap/barrage audio cooldowns in HudRiftBridge and re-renders RiftModalUi on window state transition', () => {
-      const state = new GameState();
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 10, 25, 14, 25, 0));
+      try {
+        const state = new GameState();
       state.miners['astral-recruit'] = 1;
       state.equipBestMiners();
       state.gems = 500_000;
@@ -2531,6 +2546,9 @@ describe('Tahap B HUD Modules', () => {
       state.riftPassExpiresAt = Date.now() - 1000;
       modalUi.stepTick(0.1, fakeRoot);
       expect(renders).toBe(1);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

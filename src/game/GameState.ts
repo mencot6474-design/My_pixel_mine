@@ -284,6 +284,10 @@ export class GameState {
     return PlotUnits.computeTotalPlotDps(this);
   }
 
+  public getPermanentPlotDps(): number {
+    return PlotUnits.computeTotalPlotDps(this, false);
+  }
+
   public getDpsBreakdown() {
     return PlotUnits.computeDpsBreakdown(this);
   }
@@ -740,6 +744,10 @@ export class GameState {
     return Multipliers.getOreOutputMultDomain(this);
   }
 
+  public getPermanentOreDropMult(): number {
+    return Multipliers.getOreOutputMultDomain(this, false);
+  }
+
   public getTotalOreDropMult(nowMs = Date.now()): number {
     return Multipliers.getTotalOreDropMultDomain(this, nowMs);
   }
@@ -758,6 +766,10 @@ export class GameState {
 
   public getOreLuckMult(): number {
     return Multipliers.getOreLuckMultDomain(this);
+  }
+
+  public getPermanentOreLuckMult(): number {
+    return Multipliers.getOreLuckMultDomain(this, false);
   }
 
   public getMutationLuckMult(): number {

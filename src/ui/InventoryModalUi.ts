@@ -6,7 +6,7 @@ import {
   getGemShopItemById,
   getMinerRarity,
   getMinerWorldId,
-  getNextChibiStarTier,
+  getNextChibiStarTierFor,
   getOreById,
   getWorldById,
   RARITY_BORDER,
@@ -127,7 +127,7 @@ export class InventoryModalUi {
       const onPlot = this.state.plotMiners.filter((id) => id === def.id).length;
       const star = this.state.getChibiStar(def.id);
       const starTier = getChibiStarTier(star);
-      const nextTier = getNextChibiStarTier(star);
+      const nextTier = getNextChibiStarTierFor(def.id, star);
       const spare = this.state.getSpareChibiDuplicates(def.id);
       const worldId = getMinerWorldId(def.id);
       const worldName = worldId ? getWorldById(worldId).name : 'Unknown';
@@ -167,19 +167,21 @@ export class InventoryModalUi {
             ${
               isTrialOnly
                 ? `<div class="w-full rounded-xl border-2 border-[#14111d] bg-[#fef9c3] px-2 py-1.5 text-[11px] font-black text-[#78350f]">Trial Unit • Read-Only (Not in Index)</div>`
-                : `<button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border-2 border-[#14111d] transition-[transform,filter] duration-150 ease-out ${
-                    !nextTier
-                      ? 'disabled bg-[#fef08a] text-[#b45309] cursor-default'
-                      : canStarUp
-                        ? 'bg-[#fde047] text-[#14111d] cursor-pointer hover:brightness-105 active:scale-[0.96]'
-                        : 'disabled bg-[#e2e8f0] text-[#64748b] border-[#94a3b8] cursor-not-allowed opacity-75'
-                  } text-[12.5px] font-black" data-insp-inv-action="star-up-miner" data-insp-id="${def.id}" ${!nextTier || !canStarUp ? 'disabled' : ''}>
-                    ${
-                      nextTier
-                        ? `★ Star Up → ★${nextTier.star} (${fmtInt(spare)}/${nextTier.dupCost} dupes)`
-                        : '★ MAX STAR (★5) ★'
-                    }
-                  </button>`
+                : rarity === 'omega'
+                  ? `<div class="w-full rounded-xl border-2 border-[#14111d] bg-[#fee2e2] px-2 py-1.5 text-center text-[11px] font-black text-[#991b1b]">Awaken in Omega Sanctum (★${Math.max(1, star)}/5)</div>`
+                  : `<button class="mam-sheen-hover relative overflow-hidden w-full h-9 rounded-xl border-2 border-[#14111d] transition-[transform,filter] duration-150 ease-out ${
+                      !nextTier
+                        ? 'disabled bg-[#fef08a] text-[#b45309] cursor-default'
+                        : canStarUp
+                          ? 'bg-[#fde047] text-[#14111d] cursor-pointer hover:brightness-105 active:scale-[0.96]'
+                          : 'disabled bg-[#e2e8f0] text-[#64748b] border-[#94a3b8] cursor-not-allowed opacity-75'
+                    } text-[12.5px] font-black" data-insp-inv-action="star-up-miner" data-insp-id="${def.id}" ${!nextTier || !canStarUp ? 'disabled' : ''}>
+                      ${
+                        nextTier
+                          ? `★ Star Up → ★${nextTier.star} (${fmtInt(spare)}/${nextTier.dupCost} dupes)`
+                          : '★ MAX STAR (★5) ★'
+                      }
+                    </button>`
             }
           </div>
         `,

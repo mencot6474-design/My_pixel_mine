@@ -11,7 +11,6 @@ import {
   RIFT_MAX_ATTEMPTS_PER_WINDOW,
   RIFT_PASS_DURATION_MS,
   RIFT_PASS_GEM_COST,
-  RIFT_SHARD_PITY_COST,
   RIFT_WINDOW_DURATION_MIN,
   type RiftAnomalyDef,
   type RiftAnomalyId,
@@ -73,6 +72,7 @@ export interface RiftDomainContext {
   riftLastSummary: RiftBattleSummary | null;
   plotMiners: (string | null)[];
   miners: Record<string, number>;
+  chibiStars?: Record<string, number>;
   discovered: Set<string>;
   getPlotUnitStats(
     slotIndex: number,
@@ -347,6 +347,9 @@ export function finishRiftBattleDomain(
     if (picked) {
       droppedChibiId = picked.chibiId;
       ctx.miners[droppedChibiId] = (ctx.miners[droppedChibiId] || 0) + 1;
+      if (ctx.chibiStars) {
+        ctx.chibiStars[droppedChibiId] = Math.max(1, ctx.chibiStars[droppedChibiId] || 1);
+      }
       ctx.discovered.add(droppedChibiId);
     }
   }
@@ -431,7 +434,7 @@ export function retreatRiftBattleDomain(
 export function claimRiftBreachRewardDomain(
   ctx: Pick<
     RiftDomainContext,
-    'riftPassExpiresAt' | 'riftShards' | 'riftBreachesCompleted' | 'miners' | 'discovered'
+    'riftPassExpiresAt' | 'riftShards' | 'riftBreachesCompleted' | 'miners' | 'chibiStars' | 'discovered'
   >,
   nowMs = Date.now(),
   rng: () => number = Math.random,
@@ -452,6 +455,9 @@ export function claimRiftBreachRewardDomain(
     if (picked) {
       droppedChibiId = picked.chibiId;
       ctx.miners[droppedChibiId] = (ctx.miners[droppedChibiId] || 0) + 1;
+      if (ctx.chibiStars) {
+        ctx.chibiStars[droppedChibiId] = Math.max(1, ctx.chibiStars[droppedChibiId] || 1);
+      }
       ctx.discovered.add(droppedChibiId);
     }
   }
@@ -460,17 +466,20 @@ export function claimRiftBreachRewardDomain(
   return { shardsEarned, droppedChibiId };
 }
 
-/** Redeems 100 Rift Shards for a guaranteed ANOMALY Chibi unlock or star-up duplicate. */
+/** Redeems per-Chibi Rift Shards for a guaranteed ANOMALY Chibi unlock or star-up duplicate. */
 export function redeemAnomalyChibiDomain(
-  ctx: Pick<RiftDomainContext, 'riftShards' | 'miners' | 'discovered'>,
+  ctx: Pick<RiftDomainContext, 'riftShards' | 'miners' | 'chibiStars' | 'discovered'>,
   chibiId: string,
   onSave?: () => void
 ): 'redeemed' | 'no_shards' | 'invalid' {
   const def = getAnomalyChibiById(chibiId);
   if (!def) return 'invalid';
-  if (ctx.riftShards < RIFT_SHARD_PITY_COST) return 'no_shards';
-  ctx.riftShards -= RIFT_SHARD_PITY_COST;
+  if (ctx.riftShards < def.shardCost) return 'no_shards';
+  ctx.riftShards -= def.shardCost;
   ctx.miners[def.chibiId] = (ctx.miners[def.chibiId] || 0) + 1;
+  if (ctx.chibiStars) {
+    ctx.chibiStars[def.chibiId] = Math.max(1, ctx.chibiStars[def.chibiId] || 1);
+  }
   ctx.discovered.add(def.chibiId);
   onSave?.();
   return 'redeemed';

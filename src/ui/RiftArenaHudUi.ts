@@ -222,7 +222,7 @@ export class RiftArenaHudUi {
               <span class="shrink-0">${hudIconHtml('chest', 26, 'Vault')}</span>
               <div class="flex flex-col min-w-0">
                 <span class="text-[9.5px] font-black uppercase text-[#64748b]">Vault Total</span>
-                <span class="text-[15px] font-black text-[#14111d] tabular-nums">${fmtInt(this.state.riftShards)} / 100</span>
+                <span class="text-[15px] font-black text-[#14111d] tabular-nums">${fmtInt(this.state.riftShards)} / ${bossDef?.shardCost ?? 250}</span>
               </div>
             </div>
           </div>

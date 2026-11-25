@@ -3,6 +3,7 @@ import {
   getOreById,
   getWeatherOreByWeatherId,
   getWorldIndex,
+  getWorldMinerDropScale,
   ItemRarity,
   OreDef,
   rollWorldMiner,
@@ -252,9 +253,11 @@ export function onOreBrokenDomain(
     }
   }
 
-  // Balanced chance to drop a Miner from Rock / Vein / Geode
+  // Nerfed Index pacing: lower base trigger + per-world scale so higher Worlds are genuinely rare
   const minerChance =
-    (variantKey === 'geode' ? 0.18 : variantKey === 'vein' ? 0.07 : 0.025) * (1 + findBonus);
+    (variantKey === 'geode' ? 0.068 : variantKey === 'vein' ? 0.028 : 0.011) *
+    getWorldMinerDropScale(ctx.activeWorldId) *
+    (1 + findBonus);
   if (rng() < minerChance && added < capLeft) {
     const miner = rollWorldMiner(ctx.activeWorldId, rng, charLuck);
     if (miner) {
@@ -324,8 +327,8 @@ export function onMeteorBrokenDomain(
       }
     }
   }
-  if (!droppedChibiId && rng() < 0.65) {
-    const miner = rollWorldMiner(ctx.activeWorldId, rng, ctx.getCharacterLuckMult() * 2.5);
+  if (!droppedChibiId && rng() < 0.28 * getWorldMinerDropScale(ctx.activeWorldId)) {
+    const miner = rollWorldMiner(ctx.activeWorldId, rng, ctx.getCharacterLuckMult() * 1.8);
     if (miner) droppedChibiId = miner.id;
   }
   if (droppedChibiId) {

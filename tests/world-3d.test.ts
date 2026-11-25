@@ -1561,9 +1561,15 @@ describe('Pure 3D Mine World', () => {
 
   it('buffs chibi drop trigger rate and scales Core Vault Expansion up to +300K capacity', () => {
     const gs = new GameState();
-    // Buffed common rock drop trigger (1.4%): rng=0.01 must drop a miner
+    // Nerfed Index pacing: common rock triggers in W1 (1.1%): rng=0.01 drops a miner,
+    // while in W10 (1.1% * 0.16 = 0.176%) rng=0.01 does NOT drop a miner
     gs.onOreBroken('common', () => 0.01);
     expect(Object.values(gs.chestMiners).reduce((a, b) => a + b, 0)).toBe(1);
+    gs.activeWorldId = 'elysium';
+    gs.chestMiners = {};
+    gs.onOreBroken('common', () => 0.01);
+    expect(Object.values(gs.chestMiners).reduce((a, b) => a + b, 0)).toBe(0);
+    gs.activeWorldId = 'underground';
 
     // Core Vault Expansion I (+20K) + Vault Expansion II (+280K) = +300K upgrade (+5K base = 305K)
     const coreNodes = getResearchNodesForTree('core');
@@ -2146,7 +2152,7 @@ describe('Pure 3D Mine World', () => {
     const gs = new GameState();
     const gemsBefore = gs.gems;
     expect(gs.getOverclockSnapshot().chargePct).toBe(0);
-    const reward = gs.onMeteorBroken('celestial', () => 0.1);
+    const reward = gs.onMeteorBroken('celestial', () => 0.01);
     expect(gs.getOverclockSnapshot().chargePct).toBe(40);
     expect(reward.weatherOre.id).toBe('astral-nova-fragment');
     expect(reward.chibiId).toBe('eclipse-seraph');
@@ -2157,7 +2163,7 @@ describe('Pure 3D Mine World', () => {
     expect(gs.gems).toBeGreaterThan(gemsBefore);
     expect(gs.enchantDice).toBeGreaterThanOrEqual(2);
 
-    const voidReward = gs.onMeteorBroken('void', () => 0.05);
+    const voidReward = gs.onMeteorBroken('void', () => 0.01);
     expect(gs.getOverclockSnapshot().chargePct).toBe(80);
     expect(voidReward.chibiId).toBe('singularity');
     expect(gs.discovered.has('singularity')).toBe(true);

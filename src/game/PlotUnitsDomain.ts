@@ -11,7 +11,7 @@ import {
   getMinersByWorld,
   getMinerWorldId,
   getMutationById,
-  getNextChibiStarTier,
+  getNextChibiStarTierFor,
   getPickaxeById,
   getUnlockedWorldScaleAnchor,
   getWorldUpgradeCostScale,
@@ -238,7 +238,7 @@ export function getSpareChibiDuplicateCount(
 
 export function canStarUpUnit(ctx: PlotUnitsContext, chibiId: string): boolean {
   if (!getChibiById(chibiId)) return false;
-  const next = getNextChibiStarTier(getChibiStarCount(ctx, chibiId));
+  const next = getNextChibiStarTierFor(chibiId, getChibiStarCount(ctx, chibiId));
   if (!next) return false;
   return getSpareChibiDuplicateCount(ctx, chibiId) >= next.dupCost;
 }
@@ -252,7 +252,7 @@ export function starUpUnit(
     return { ok: false, reason: 'invalid' };
   }
   const current = getChibiStarCount(ctx, chibiId);
-  const next = getNextChibiStarTier(current);
+  const next = getNextChibiStarTierFor(chibiId, current);
   if (!next) return { ok: false, reason: 'max' };
   if (getSpareChibiDuplicateCount(ctx, chibiId) < next.dupCost) {
     return { ok: false, reason: 'insufficient' };
@@ -269,12 +269,12 @@ export function autoStarUpAllUnits(ctx: PlotUnitsContext, emit: () => void = () 
   for (const chibiId of Object.keys(ctx.miners)) {
     if (!getChibiById(chibiId) || (ctx.miners[chibiId] || 0) <= 1) continue;
     const trialCount = ctx.twinTrial ? getTrialOwnedCount(ctx.twinTrial, chibiId) : 0;
-    let next = getNextChibiStarTier(getChibiStarCount(ctx, chibiId));
+    let next = getNextChibiStarTierFor(chibiId, getChibiStarCount(ctx, chibiId));
     while (next && getSpareChibiDuplicateCount(ctx, chibiId) >= next.dupCost) {
       ctx.miners[chibiId] = Math.max(1 + trialCount, (ctx.miners[chibiId] || 0) - next.dupCost);
       ctx.chibiStars[chibiId] = next.star;
       upgrades++;
-      next = getNextChibiStarTier(next.star);
+      next = getNextChibiStarTierFor(chibiId, next.star);
     }
   }
   if (upgrades > 0) emit();
@@ -391,7 +391,8 @@ export function computePlotUnitStats(
   ctx: PlotUnitsContext,
   slotIndex: number,
   nowMs = Date.now(),
-  includeOverclock = true
+  includeOverclock = true,
+  includeWeather = true
 ): PlotUnitStatsResult | null {
   const unit = ctx.plotUnits[slotIndex];
   if (!unit) return null;
@@ -402,7 +403,7 @@ export function computePlotUnitStats(
   const { effBaseDps, baseDmg, nextBaseDmg, dmgMult, nextDmgMult } = parts;
 
   const enc = getEnchantById(unit.enchantId);
-  const weatherDmgMult = ctx.getWeatherDamageMult();
+  const weatherDmgMult = includeWeather ? ctx.getWeatherDamageMult() : 1;
   const starTier = getChibiStarTier(getChibiStarCount(ctx, chibi.id));
   const ocActive = includeOverclock && ctx.isOverclockActive ? ctx.isOverclockActive(nowMs) : false;
   const ocTier = ocActive ? (ctx.getOverclockTier ? ctx.getOverclockTier(nowMs) : 1) : 0;
@@ -476,10 +477,10 @@ export function computeBasePlotDps(ctx: PlotUnitsContext): number {
   return total;
 }
 
-export function computeTotalPlotDps(ctx: PlotUnitsContext): number {
+export function computeTotalPlotDps(ctx: PlotUnitsContext, includeTemporaryBuffs = true): number {
   let total = 0;
   for (let i = 0; i < STAGE_PEDESTAL_COUNT; i++) {
-    const st = computePlotUnitStats(ctx, i);
+    const st = computePlotUnitStats(ctx, i, Date.now(), includeTemporaryBuffs, includeTemporaryBuffs);
     if (st) total += st.dmg;
   }
   return total;

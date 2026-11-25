@@ -260,7 +260,7 @@ export class OmegaBossModalUi {
         <div class="flex flex-col gap-1.5 shrink-0">
           <div class="flex items-center justify-between text-[11px] font-black text-[#14111d]">
             <span>Awakening ★${currentStars}/5</span>
-            <span class="mam-pill-xs bg-[#fde047] text-[#14111d]">+${(currentStars - 1) * 15}% Passives</span>
+            <span class="mam-pill-xs bg-[#fde047] text-[#14111d]">+${Math.round((getOmegaPassiveStarScale(currentStars) - 1) * 100)}% Passives</span>
           </div>
           ${
             currentStars >= 5
