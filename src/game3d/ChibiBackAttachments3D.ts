@@ -132,6 +132,9 @@ export function updateChibiBackAttachmentGroup(
       } else if (defId === 'yukikage-twins') {
         handle.omegaHaloMesh.position.y = 0.26 + Math.sin(elapsed * 2.2) * 0.024;
         handle.omegaHaloMesh.rotation.set(0, 0, elapsed * 0.55);
+      } else if (defId === 'crimson-clock-marshal') {
+        handle.omegaHaloMesh.position.y = 0.06 + Math.sin(elapsed * 2.0) * 0.022;
+        handle.omegaHaloMesh.rotation.z = Math.sin(elapsed * 1.2) * 0.028;
       } else if (handle.tierRarity === 'limited') {
         handle.omegaHaloMesh.position.y = 0.44 + Math.sin(elapsed * 2.0) * 0.026;
         handle.omegaHaloMesh.rotation.z = Math.sin(elapsed * 1.4) * 0.028;

@@ -21,6 +21,201 @@ export interface ChronosImperatorFireOpts {
   onImpact?: () => void;
 }
 
+/**
+ * Back-attachment Halo Disc for Chronos Imperator (`crimson-clock-marshal`):
+ * 24-FPS quantized shutter ticks, thin film-sprocket bezel, & upright viewfinder brackets
+ * with an open center so the Chibi and its 3 sprite clock rings stay crisp.
+ */
+export function createChronosBackHaloShaderMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uOpacity: { value: 1 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uTime;
+      uniform float uOpacity;
+      varying vec2 vUv;
+
+      void main() {
+        vec2 p = (vUv - 0.5) * 2.0;
+        float r = length(p);
+        if (r > 0.99 || r < 0.42) discard;
+
+        float ang = atan(p.y, p.x);
+        float cycle = fract(uTime * 0.4);
+        float sakugaPulse = smoothstep(0.08, 0.34, cycle) * (1.0 - smoothstep(0.68, 0.96, cycle));
+        float steppedTick = floor(uTime * 12.0) * 0.261799;
+
+        // Outer & inner razor ring tracks + 24 stepped shutter ticks
+        float outerRing = exp(-pow((r - 0.88) * 62.0, 2.0));
+        float innerRing = exp(-pow((r - 0.72) * 68.0, 2.0));
+        float ticks24 = smoothstep(0.55, 0.92, cos(ang * 24.0 - steppedTick))
+          * smoothstep(0.73, 0.75, r) * smoothstep(0.87, 0.85, r);
+
+        // 4 diagonal viewfinder corner brackets framing the silhouette
+        float diagCorners = pow(max(0.0, abs(cos(ang * 2.0 - 1.5708))), 12.0);
+        float cornerArc = diagCorners * exp(-pow((r - 0.93) * 44.0, 2.0));
+
+        // Sweeping crimson-gold shutter gleam
+        float sweepDiff = fract((ang - uTime * 1.8) / 6.2831853);
+        float shutterFlash = exp(-sweepDiff * 7.5) * smoothstep(0.70, 0.74, r) * smoothstep(0.90, 0.86, r);
+
+        vec3 neonViolet = vec3(0.70, 0.32, 1.0) * (1.25 + sakugaPulse * 0.35);
+        vec3 crimsonFlame = vec3(1.0, 0.14, 0.40) * (1.45 + sakugaPulse * 0.45);
+        vec3 champGold = vec3(1.0, 0.86, 0.50) * 1.55;
+        vec3 whiteHot = vec3(1.0, 0.97, 1.0) * 1.85;
+
+        vec3 col = mix(neonViolet, champGold, clamp(ticks24 * 0.8 + cornerArc * 0.95, 0.0, 1.0));
+        col = mix(col, crimsonFlame, clamp(shutterFlash * 1.15, 0.0, 1.0));
+        col = mix(col, whiteHot, clamp(outerRing * 0.55 + shutterFlash * 0.45, 0.0, 1.0));
+
+        float alpha = clamp((outerRing * 0.95 + innerRing * 0.75 + ticks24 * 0.85 + cornerArc * 1.1 + shutterFlash * 0.8) * uOpacity, 0.0, 0.92);
+        if (alpha < 0.02) discard;
+        gl_FragColor = vec4(col, alpha);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}
+
+/** Flat sharp polygonal glass splinter pane for Chronos Imperator's back wings. */
+export function createChronosBackGlassShardGeometry(): THREE.BufferGeometry {
+  const positions = new Float32Array([
+    -0.18, -0.34, 0.0,
+     0.22, -0.10, 0.0,
+     0.06,  0.52, 0.0,
+    -0.18, -0.34, 0.0,
+     0.06,  0.52, 0.0,
+    -0.14,  0.24, 0.0,
+  ]);
+  const uvs = new Float32Array([
+    0.0, 0.0,
+    1.0, 0.25,
+    0.6, 1.0,
+    0.0, 0.0,
+    0.6, 1.0,
+    0.15, 0.78,
+  ]);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/** Reflective translucent violet-crimson glass pane shader for Chronos Imperator's back wings. */
+export function createChronosBackGlassMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uOpacity: { value: 1 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uTime;
+      uniform float uOpacity;
+      varying vec2 vUv;
+
+      void main() {
+        float edgeX = min(vUv.x, 1.0 - vUv.x);
+        float edgeY = min(vUv.y, 1.0 - vUv.y);
+        float rim = 1.0 - smoothstep(0.02, 0.16, min(edgeX, edgeY));
+        float glint = exp(-abs((vUv.x - vUv.y) - sin(uTime * 2.6) * 0.35) * 8.0) * 0.85;
+
+        vec3 glassTint = mix(vec3(0.46, 0.22, 0.86), vec3(0.94, 0.22, 0.50), vUv.y);
+        vec3 col = mix(glassTint, vec3(1.0, 0.94, 0.78) * 1.5, clamp(rim * 0.85 + glint, 0.0, 1.0));
+        float alpha = clamp((0.46 + rim * 0.48 + glint * 0.32) * uOpacity, 0.0, 0.92);
+        if (alpha < 0.02) discard;
+        gl_FragColor = vec4(col, alpha);
+      }
+    `,
+    transparent: true,
+    blending: THREE.NormalBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}
+
+/** Straight slender katana-blade geometry for Chronos Imperator's upper shoulder pair. */
+export function createChronosBackRazorBladeGeometry(): THREE.BufferGeometry {
+  const positions = new Float32Array([
+    -0.055, -0.35, 0.0,
+     0.055, -0.35, 0.0,
+     0.028,  0.58, 0.0,
+    -0.055, -0.35, 0.0,
+     0.028,  0.58, 0.0,
+    -0.028,  0.68, 0.0,
+  ]);
+  const uvs = new Float32Array([
+    0.0, 0.0,
+    1.0, 0.0,
+    0.85, 0.92,
+    0.0, 0.0,
+    0.85, 0.92,
+    0.15, 1.0,
+  ]);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/** Crimson-flame + white-gold razor edge shader for Chronos Imperator's flanking back blades. */
+export function createChronosBackBladeShaderMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uOpacity: { value: 1 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uTime;
+      uniform float uOpacity;
+      varying vec2 vUv;
+
+      void main() {
+        float center = 1.0 - abs(vUv.x * 2.0 - 1.0);
+        float tip = smoothstep(0.0, 0.14, vUv.y);
+        float pulse = 0.85 + 0.15 * sin(vUv.y * 10.0 - uTime * 6.0);
+        vec3 crimson = vec3(1.0, 0.14, 0.38) * 1.55;
+        vec3 goldWhite = vec3(1.0, 0.94, 0.82) * 1.95;
+        vec3 col = mix(crimson, goldWhite, clamp(pow(center, 1.8) * 1.1, 0.0, 1.0)) * pulse;
+        float alpha = clamp((0.55 + center * 0.45) * tip * uOpacity, 0.0, 0.96);
+        if (alpha < 0.02) discard;
+        gl_FragColor = vec4(col, alpha);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}
+
 const CHRONOS_NOISE_GLSL = `
   float ciHash21(vec2 p) {
     p = fract(p * vec2(127.1, 311.7));

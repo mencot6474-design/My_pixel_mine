@@ -58,6 +58,13 @@ import {
   createNullMirrorCardShaderMaterial,
   createNullSingularityHaloShaderMaterial,
 } from './skills/nullSingularitySkillVfx3D';
+import {
+  createChronosBackBladeShaderMaterial,
+  createChronosBackGlassMaterial,
+  createChronosBackGlassShardGeometry,
+  createChronosBackHaloShaderMaterial,
+  createChronosBackRazorBladeGeometry,
+} from './skills/chronosImperatorSkillVfx3D';
 
 /** Builds Omega, Anomaly, and Twin bespoke 3D Sakuga back-attachments. */
 export function buildApexBackAttachment(
@@ -67,6 +74,80 @@ export function buildApexBackAttachment(
   spritePivot: THREE.Group,
   blitzHeroPivot: THREE.Group
 ): boolean {
+  if (defId === 'crimson-clock-marshal') {
+    handle.omegaAuraGroup = new THREE.Group();
+    handle.omegaAuraGroup.name = 'chibiBackAttachmentGroup';
+    handle.omegaAuraGroup.position.set(0, spriteHeight * 0.54, -0.15);
+
+    const haloMat = createChronosBackHaloShaderMaterial();
+    const glassMat = createChronosBackGlassMaterial();
+    const bladeMat = createChronosBackBladeShaderMaterial();
+    handle.omegaAuraMat = haloMat;
+    handle.twinCustomMats.push(glassMat, bladeMat);
+
+    const haloGeo = new THREE.PlaneGeometry(2.65, 2.65);
+    const shardGeo = createChronosBackGlassShardGeometry();
+    const bladeGeo = createChronosBackRazorBladeGeometry();
+    handle.omegaAuraGeo = haloGeo;
+    handle.twinCustomGeos.push(shardGeo, bladeGeo);
+
+    handle.omegaHaloMesh = new THREE.Mesh(haloGeo, haloMat);
+    handle.omegaHaloMesh.position.set(0, 0.06, -0.11);
+    handle.omegaAuraGroup.add(handle.omegaHaloMesh);
+
+    const shardSpecs: ReadonlyArray<{ x: number; y: number; z: number; rz: number; sc: number; phase: number }> = [
+      { x: -0.92, y: 0.34, z: -0.05, rz: 0.36, sc: 0.92, phase: 0.0 },
+      { x: -0.84, y: -0.26, z: -0.04, rz: 0.72, sc: 0.82, phase: 0.9 },
+      { x: 0.92, y: 0.34, z: -0.05, rz: -0.36, sc: 0.92, phase: 0.45 },
+      { x: 0.84, y: -0.26, z: -0.04, rz: -0.72, sc: 0.82, phase: 1.35 },
+    ];
+    for (let i = 0; i < shardSpecs.length; i++) {
+      const ss = shardSpecs[i];
+      const sm = new THREE.Mesh(shardGeo, glassMat);
+      sm.position.set(ss.x, ss.y, ss.z);
+      sm.rotation.set(0.05, ss.x < 0 ? 0.14 : -0.14, ss.rz);
+      sm.scale.set(ss.x < 0 ? ss.sc : -ss.sc, ss.sc, ss.sc);
+      handle.omegaAuraGroup.add(sm);
+      handle.roninFanKatanas.push({
+        mesh: sm,
+        baseX: ss.x,
+        baseY: ss.y,
+        baseZ: ss.z,
+        baseRotZ: ss.rz,
+        outX: Math.sign(ss.x) * 0.48,
+        outY: ss.y * 0.36,
+        phase: ss.phase,
+      });
+    }
+
+    const bladeSpecs: ReadonlyArray<{ x: number; y: number; z: number; rz: number; phase: number }> = [
+      { x: -0.64, y: 0.52, z: -0.04, rz: 0.28, phase: 0.25 },
+      { x: 0.64, y: 0.52, z: -0.04, rz: -0.28, phase: 1.15 },
+    ];
+    for (let i = 0; i < bladeSpecs.length; i++) {
+      const bs = bladeSpecs[i];
+      const bm = new THREE.Mesh(bladeGeo, bladeMat);
+      bm.position.set(bs.x, bs.y, bs.z);
+      bm.rotation.set(0.04, bs.x < 0 ? 0.10 : -0.10, bs.rz);
+      bm.scale.setScalar(0.95);
+      handle.omegaAuraGroup.add(bm);
+      handle.roninFanKatanas.push({
+        mesh: bm,
+        baseX: bs.x,
+        baseY: bs.y,
+        baseZ: bs.z,
+        baseRotZ: bs.rz,
+        outX: Math.sign(bs.x) * 0.25,
+        outY: 0.55,
+        phase: bs.phase,
+      });
+    }
+
+    handle.omegaAuraGroup.visible = true;
+    spritePivot.add(handle.omegaAuraGroup);
+    return true;
+  }
+
   if (defId === 'crimson-ronin') {
     handle.omegaAuraGroup = new THREE.Group();
     handle.omegaAuraGroup.name = 'chibiBackAttachmentGroup';

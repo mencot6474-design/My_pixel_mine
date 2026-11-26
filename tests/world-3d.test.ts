@@ -5730,7 +5730,14 @@ describe('Pure 3D Mine World', () => {
     const spritePivot = new THREE.Group();
     const blitzHeroPivot = new THREE.Group();
     const back = createChibiBackAttachments(marshal.id, 1.8, spritePivot, blitzHeroPivot, 'novel', marshal.accentColor);
-    expect(back.omegaAuraGroup).toBeNull();
+    expect(back.omegaAuraGroup).not.toBeNull();
+    expect(back.omegaHaloMesh).not.toBeNull();
+    expect(back.roninFanKatanas.length).toBe(6);
+    expect(back.twinCustomMats.length).toBeGreaterThanOrEqual(2);
+    const marshalSprite = new ChibiSprite3D(marshal);
+    expect(marshalSprite.group.getObjectByName('chibiBackAttachmentGroup')).toBeDefined();
+    marshalSprite.update(0.05, 0.1, new THREE.PerspectiveCamera(45, 1, 0.1, 100));
+    marshalSprite.dispose();
 
     let impactCalls = 0;
     const pool = new TierAttackVfxPool3D({
