@@ -82,7 +82,6 @@ function createChronoFilmFloorMaterial(): THREE.ShaderMaterial {
       uTime: { value: 0 },
       uProgress: { value: 0 },
       uRevealHead: { value: 0 },
-      uCutGlow: { value: 0 },
       uOpacity: { value: 1 },
     },
     vertexShader: `
@@ -96,7 +95,6 @@ function createChronoFilmFloorMaterial(): THREE.ShaderMaterial {
       uniform float uTime;
       uniform float uProgress;
       uniform float uRevealHead;
-      uniform float uCutGlow;
       uniform float uOpacity;
       varying vec2 vUv;
       ${CHRONOS_NOISE_GLSL}
@@ -107,7 +105,7 @@ function createChronoFilmFloorMaterial(): THREE.ShaderMaterial {
         float circleMask = 1.0 - smoothstep(0.86, 0.99, r);
         if (circleMask < 0.01) discard;
 
-        // 35mm film-strip track carved open directly behind sweeping slash cuts
+        // 35mm film-strip track carved open directly behind sweeping slash cuts (zero big floor lines)
         float ang = ${FILM_REVEAL_ANG.toFixed(2)};
         mat2 rot = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
         vec2 fp = rot * p;
@@ -117,42 +115,30 @@ function createChronoFilmFloorMaterial(): THREE.ShaderMaterial {
         float carvedReveal = 1.0 - smoothstep(revealX - 0.16 + slashNoise, revealX + 0.02 + slashNoise, fp.x);
         if (carvedReveal < 0.01) discard;
 
-        float leadingCut = exp(-abs(fp.x - revealX - slashNoise) * 24.0)
-          * smoothstep(0.01, 0.08, uRevealHead)
-          * (1.0 - smoothstep(0.90, 1.0, uRevealHead));
-
         float stripBand = smoothstep(0.68, 0.56, abs(fp.y));
-        float railTop = smoothstep(0.042, 0.010, abs(abs(fp.y) - 0.54));
-        float railInner = smoothstep(0.028, 0.008, abs(abs(fp.y) - 0.36));
+        float railTop = smoothstep(0.036, 0.008, abs(abs(fp.y) - 0.54));
+        float railInner = smoothstep(0.024, 0.006, abs(abs(fp.y) - 0.36));
 
         float sprocketCell = fract(fp.x * 9.0 - uProgress * 2.2);
         float sprocketHole = step(0.22, sprocketCell) * step(sprocketCell, 0.78);
         float sprocketBand = smoothstep(0.085, 0.028, abs(abs(fp.y) - 0.45)) * sprocketHole;
 
-        float frameBar = smoothstep(0.055, 0.015, abs(fract(fp.x * 4.5 - uProgress * 1.1) - 0.5)) * smoothstep(0.36, 0.30, abs(fp.y));
-        float shutterTicks = smoothstep(0.06, 0.02, abs(fract(fp.x * 18.0) - 0.5)) * smoothstep(0.34, 0.28, abs(fp.y)) * 0.65;
-
-        float sevDist = abs(fp.y - fp.x * 0.14);
-        float sevCrack = exp(-sevDist * 14.0) * uCutGlow;
-        float sevCore = exp(-sevDist * 38.0) * uCutGlow;
+        float frameBar = smoothstep(0.048, 0.012, abs(fract(fp.x * 4.5 - uProgress * 1.1) - 0.5)) * smoothstep(0.36, 0.30, abs(fp.y));
+        float shutterTicks = smoothstep(0.055, 0.018, abs(fract(fp.x * 18.0) - 0.5)) * smoothstep(0.34, 0.28, abs(fp.y)) * 0.65;
         float noiseDetail = ciFbm(fp * 4.5 + vec2(uTime * 0.8, 0.0));
 
         float envFade = 1.0 - smoothstep(0.76, 1.0, uProgress);
         vec3 obsidianBase = vec3(0.03, 0.015, 0.07);
-        vec3 neonViolet = vec3(0.74, 0.34, 1.0) * 1.5;
-        vec3 champGold = vec3(1.0, 0.86, 0.48) * 1.6;
-        vec3 crimsonHot = vec3(1.0, 0.14, 0.38) * 1.9;
+        vec3 neonViolet = vec3(0.74, 0.34, 1.0) * 1.45;
+        vec3 champGold = vec3(1.0, 0.86, 0.48) * 1.55;
 
         float detailMask = clamp(
-          railTop * 1.1 + railInner * 0.8 + sprocketBand * 1.15 + frameBar * 0.95 + shutterTicks + leadingCut * 1.35 + sevCrack * 1.3,
+          railTop * 1.05 + railInner * 0.75 + sprocketBand * 1.15 + frameBar * 0.90 + shutterTicks,
           0.0,
-          1.4
+          1.3
         );
 
         vec3 lineCol = mix(neonViolet, champGold, clamp(sprocketBand * 0.9 + frameBar * 0.65, 0.0, 1.0));
-        lineCol = mix(lineCol, crimsonHot, clamp(sevCrack * 1.25 + leadingCut * 1.1, 0.0, 1.0));
-        lineCol += vec3(1.0, 0.96, 0.98) * (sevCore * 1.4 + leadingCut * 0.75);
-
         vec3 col = mix(obsidianBase + neonViolet * noiseDetail * 0.14, lineCol, clamp(detailMask, 0.0, 1.0));
         float basePlateAlpha = max(stripBand * 0.82, smoothstep(0.95, 0.65, r) * 0.42);
         float alpha = clamp(max(basePlateAlpha, detailMask * 0.95) * carvedReveal * circleMask * envFade * uOpacity, 0.0, 0.94);
@@ -935,7 +921,6 @@ export class ChronosImperatorSkillVfxPool {
     inst.floorMesh.scale.setScalar(FILM_FLOOR_SIZE * opts.areaScale);
     inst.floorMat.uniforms.uProgress.value = 0;
     inst.floorMat.uniforms.uRevealHead.value = 0;
-    inst.floorMat.uniforms.uCutGlow.value = 0;
     inst.floorMat.uniforms.uOpacity.value = 1;
 
     for (let s = 0; s < FILM_CARVE_SLASH_COUNT; s++) inst.carveSlashes[s].mesh.visible = false;
@@ -997,11 +982,9 @@ export class ChronosImperatorSkillVfxPool {
 
       // Phase 1 (0.00s -> 0.48s): Crimson-style razor slash lines carve the 35mm film floor open behind them
       const revealHead = Math.min(1, inst.elapsed / 0.48);
-      const cutWindow = Math.max(0, 1 - Math.abs(inst.elapsed - SEVERANCE_TIME_SEC) / 0.5);
       inst.floorMat.uniforms.uTime.value = timeSec;
       inst.floorMat.uniforms.uProgress.value = uProgress;
       inst.floorMat.uniforms.uRevealHead.value = revealHead;
-      inst.floorMat.uniforms.uCutGlow.value = cutWindow;
       inst.floorMat.uniforms.uOpacity.value = 1;
 
       const carveCap = this.lowQuality ? 7 : FILM_CARVE_SLASH_COUNT;
