@@ -4,6 +4,8 @@ import {
   CHIBI_MAX_STARS,
   getOreById,
   ItemRarity,
+  MAX_CHIBI_STACK,
+  MAX_ENCHANT_STACK,
   WorldId,
   WORLDS,
 } from './GameData';
@@ -118,6 +120,7 @@ export interface SavePayload {
   chestCapacity: number;
   autoSell: boolean;
   autoSellRarities?: ItemRarity[];
+  autoSalvageMaxedChibis?: boolean;
   lockedOreIds?: string[];
   autoMeteor?: boolean;
   discovered: string[];
@@ -179,6 +182,7 @@ export interface SaveableGameState {
   chestCapacity: number;
   autoSell: boolean;
   autoSellRarities: Set<ItemRarity>;
+  autoSalvageMaxedChibis: boolean;
   lockedOreIds: Set<string>;
   autoMeteor: boolean;
   discovered: Set<string>;
@@ -305,6 +309,7 @@ export function serializeSavePayload(state: SaveableGameState): SavePayload {
     chestCapacity: state.chestCapacity,
     autoSell: state.autoSell,
     autoSellRarities: Array.from(state.autoSellRarities),
+    autoSalvageMaxedChibis: state.autoSalvageMaxedChibis,
     lockedOreIds: Array.from(state.lockedOreIds),
     autoMeteor: state.autoMeteor,
     discovered: Array.from(state.discovered),
@@ -403,7 +408,15 @@ export function deserializeSaveJson(
     } else {
       state.activeWorldId = 'underground';
     }
-    if (data.miners) state.miners = data.miners;
+    if (data.miners) {
+      const cappedMiners: Record<string, number> = {};
+      for (const [id, qty] of Object.entries(data.miners)) {
+        if (typeof qty === 'number' && Number.isFinite(qty) && qty > 0) {
+          cappedMiners[id] = Math.min(MAX_CHIBI_STACK, Math.floor(qty));
+        }
+      }
+      state.miners = cappedMiners;
+    }
     if (data.chibiStars && typeof data.chibiStars === 'object') {
       const nextStars: Record<string, number> = {};
       for (const [id, star] of Object.entries(data.chibiStars)) {
@@ -427,7 +440,15 @@ export function deserializeSaveJson(
       compactHotbar();
     }
     if (data.ownedPickaxes) state.ownedPickaxes = data.ownedPickaxes;
-    if (data.ownedEnchants) state.ownedEnchants = data.ownedEnchants;
+    if (data.ownedEnchants) {
+      const cappedEnchants: Record<string, number> = {};
+      for (const [id, qty] of Object.entries(data.ownedEnchants)) {
+        if (typeof qty === 'number' && Number.isFinite(qty) && qty > 0) {
+          cappedEnchants[id] = Math.min(MAX_ENCHANT_STACK, Math.floor(qty));
+        }
+      }
+      state.ownedEnchants = cappedEnchants;
+    }
     if (Array.isArray(data.plotMiners)) {
       state.plotMiners = Array.from(
         { length: STAGE_PEDESTAL_COUNT },
@@ -498,7 +519,17 @@ export function deserializeSaveJson(
     if (typeof data.selectedHotbarSlot === 'number') {
       state.selectedHotbarSlot = data.selectedHotbarSlot;
     }
-    if (data.chestMiners) state.chestMiners = data.chestMiners;
+    if (data.chestMiners) {
+      const cappedChestMiners: Record<string, number> = {};
+      for (const [id, qty] of Object.entries(data.chestMiners)) {
+        if (typeof qty === 'number' && Number.isFinite(qty) && qty > 0) {
+          const room = Math.max(0, MAX_CHIBI_STACK - (state.miners[id] || 0));
+          const capped = Math.min(room, Math.floor(qty));
+          if (capped > 0) cappedChestMiners[id] = capped;
+        }
+      }
+      state.chestMiners = cappedChestMiners;
+    }
     if (data.chestOres) {
       state.chestOres = migrateOreCounts(data.chestOres);
     }
@@ -506,6 +537,9 @@ export function deserializeSaveJson(
     if (typeof data.autoSell === 'boolean') state.autoSell = data.autoSell;
     if (Array.isArray(data.autoSellRarities)) {
       state.autoSellRarities = new Set(data.autoSellRarities);
+    }
+    if (typeof data.autoSalvageMaxedChibis === 'boolean') {
+      state.autoSalvageMaxedChibis = data.autoSalvageMaxedChibis;
     }
     if (Array.isArray(data.lockedOreIds)) {
       state.lockedOreIds = new Set(

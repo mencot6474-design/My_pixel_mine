@@ -124,6 +124,7 @@ export interface OreAttackFxOptions {
   isPerfect?: boolean;
   preventBreak?: boolean;
   beatIndex?: number;
+  skipVisualFx?: boolean;
 }
 
 export interface SweetSpotPitState {

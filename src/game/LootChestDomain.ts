@@ -1,10 +1,13 @@
 import { OreVariantKey } from '../game3d/MineWorldPalette';
 import {
+  CHIBI_MAX_STARS,
+  getChibiSalvageGemValue,
   getOreById,
   getWeatherOreByWeatherId,
   getWorldIndex,
   getWorldMinerDropScale,
   ItemRarity,
+  MAX_CHIBI_STACK,
   OreDef,
   rollWorldMiner,
   rollWorldOre,
@@ -24,6 +27,7 @@ export interface LootChestContext {
   enchantDice: number;
   activeWorldId: WorldId;
   miners: Record<string, number>;
+  chibiStars: Record<string, number>;
   ores: Record<string, number>;
   hotbar: (string | null)[];
   selectedHotbarSlot: number;
@@ -31,6 +35,7 @@ export interface LootChestContext {
   chestOres: Record<string, number>;
   autoSell: boolean;
   autoSellRarities: Set<ItemRarity>;
+  autoSalvageMaxedChibis: boolean;
   lockedOreIds: Set<string>;
   autoMeteor: boolean;
   discovered: Set<string>;
@@ -192,6 +197,44 @@ export function shouldAutoSellOreDomain(
   return ore ? ctx.autoSellRarities.has(ore.rarity) : false;
 }
 
+export function shouldAutoSalvageMaxedChibiDomain(
+  ctx: Pick<LootChestContext, 'autoSalvageMaxedChibis' | 'chibiStars' | 'miners'>,
+  chibiId: string
+): boolean {
+  if (!ctx.autoSalvageMaxedChibis) return false;
+  return (ctx.chibiStars[chibiId] || 0) >= CHIBI_MAX_STARS && (ctx.miners[chibiId] || 0) >= 1;
+}
+
+export function getRemainingChibiStackRoomDomain(
+  ctx: Pick<LootChestContext, 'miners' | 'chestMiners'>,
+  chibiId: string
+): number {
+  const total = (ctx.miners[chibiId] || 0) + (ctx.chestMiners[chibiId] || 0);
+  return Math.max(0, MAX_CHIBI_STACK - total);
+}
+
+function sweepMaxedChestChibis(
+  ctx: Pick<LootChestContext, 'chestMiners' | 'autoSalvageMaxedChibis' | 'chibiStars' | 'miners' | 'discovered'>
+): { gemsEarned: number; salvagedCount: number } {
+  const remaining: Record<string, number> = {};
+  let gemsEarned = 0;
+  let salvagedCount = 0;
+  for (const [id, qty] of Object.entries(ctx.chestMiners)) {
+    if (qty <= 0) continue;
+    if (shouldAutoSalvageMaxedChibiDomain(ctx, id)) {
+      gemsEarned += getChibiSalvageGemValue(id) * qty;
+      salvagedCount += qty;
+      ctx.discovered.add(id);
+    } else {
+      remaining[id] = qty;
+    }
+  }
+  if (salvagedCount > 0) {
+    ctx.chestMiners = remaining;
+  }
+  return { gemsEarned, salvagedCount };
+}
+
 function sweepMatchingChestOres(
   ctx: Pick<
     LootChestContext,
@@ -259,12 +302,16 @@ export function onOreBrokenDomain(
     (variantKey === 'geode' ? 0.068 : variantKey === 'vein' ? 0.028 : 0.011) *
     getWorldMinerDropScale(ctx.activeWorldId) *
     (1 + findBonus);
-  if (rng() < minerChance && added < capLeft) {
+  if (rng() < minerChance) {
     const miner = rollWorldMiner(ctx.activeWorldId, rng, charLuck);
     if (miner) {
       ctx.discovered.add(miner.id);
-      ctx.chestMiners[miner.id] = (ctx.chestMiners[miner.id] || 0) + 1;
-      added++;
+      if (shouldAutoSalvageMaxedChibiDomain(ctx, miner.id)) {
+        ctx.gems += getChibiSalvageGemValue(miner.id);
+      } else if (added < capLeft && getRemainingChibiStackRoomDomain(ctx, miner.id) > 0) {
+        ctx.chestMiners[miner.id] = (ctx.chestMiners[miner.id] || 0) + 1;
+        added++;
+      }
     }
   }
 
@@ -337,11 +384,15 @@ export function onMeteorBrokenDomain(
   }
   if (droppedChibiId) {
     ctx.discovered.add(droppedChibiId);
-    if (added < capLeft) {
-      ctx.chestMiners[droppedChibiId] = (ctx.chestMiners[droppedChibiId] || 0) + 1;
-    } else {
-      ctx.miners[droppedChibiId] = (ctx.miners[droppedChibiId] || 0) + 1;
-      addItemToHotbarIfSpaceDomain(ctx, droppedChibiId);
+    if (shouldAutoSalvageMaxedChibiDomain(ctx, droppedChibiId)) {
+      ctx.gems += getChibiSalvageGemValue(droppedChibiId);
+    } else if (getRemainingChibiStackRoomDomain(ctx, droppedChibiId) > 0) {
+      if (added < capLeft) {
+        ctx.chestMiners[droppedChibiId] = (ctx.chestMiners[droppedChibiId] || 0) + 1;
+      } else {
+        ctx.miners[droppedChibiId] = Math.min(MAX_CHIBI_STACK, (ctx.miners[droppedChibiId] || 0) + 1);
+        addItemToHotbarIfSpaceDomain(ctx, droppedChibiId);
+      }
     }
   }
 
@@ -375,15 +426,24 @@ export function onMeteorBrokenDomain(
 export function takeAllFromChestDomain(
   ctx: Pick<
     LootChestContext,
-    'chestMiners' | 'chestOres' | 'miners' | 'ores' | 'discovered' | 'hotbar'
+    'chestMiners' | 'chestOres' | 'miners' | 'ores' | 'discovered' | 'hotbar' | 'gems' | 'autoSalvageMaxedChibis' | 'chibiStars'
   >,
   emit: () => void = () => {}
 ): number {
   let taken = 0;
   for (const [id, qty] of Object.entries(ctx.chestMiners)) {
     if (qty <= 0) continue;
-    ctx.miners[id] = (ctx.miners[id] || 0) + qty;
     ctx.discovered.add(id);
+    if (shouldAutoSalvageMaxedChibiDomain(ctx, id)) {
+      ctx.gems += getChibiSalvageGemValue(id) * qty;
+      taken += qty;
+      continue;
+    }
+    const cur = ctx.miners[id] || 0;
+    const next = Math.min(MAX_CHIBI_STACK, cur + qty);
+    if (next > cur) {
+      ctx.miners[id] = next;
+    }
     addItemToHotbarIfSpaceDomain(ctx, id);
     taken += qty;
   }
@@ -454,4 +514,21 @@ export function toggleAutoSellDomain(
   }
   emit();
   return earned;
+}
+
+export function toggleAutoSalvageMaxedChibisDomain(
+  ctx: LootChestContext,
+  emit: () => void = () => {}
+): { active: boolean; gemsEarned: number; salvagedCount: number } {
+  ctx.autoSalvageMaxedChibis = !ctx.autoSalvageMaxedChibis;
+  let gemsEarned = 0;
+  let salvagedCount = 0;
+  if (ctx.autoSalvageMaxedChibis) {
+    const swept = sweepMaxedChestChibis(ctx);
+    gemsEarned = swept.gemsEarned;
+    salvagedCount = swept.salvagedCount;
+    ctx.gems += gemsEarned;
+  }
+  emit();
+  return { active: ctx.autoSalvageMaxedChibis, gemsEarned, salvagedCount };
 }

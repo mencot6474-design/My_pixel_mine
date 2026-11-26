@@ -847,7 +847,9 @@ export function equipBestUnitsToPlots(
     const def = getChibiById(id) ?? CHIBI_CATALOG[0];
     const pool = poolByChibi.get(id) ?? [];
     const permCount = ctx.twinTrial ? getPermanentMinerCount(ctx.miners, ctx.twinTrial, id) : qty;
-    for (let q = 0; q < qty; q++) {
+    // At most STAGE_PEDESTAL_COUNT copies of a single Chibi can ever sit on plots; preserve existing upgraded pool units without materializing huge fresh duplicate counts.
+    const maxCandidates = Math.min(qty, Math.max(STAGE_PEDESTAL_COUNT, pool.length));
+    for (let q = 0; q < maxCandidates; q++) {
       const unit = pool.shift() ?? createFreshPlotUnit(def.id);
       if (ctx.twinTrial) {
         if (q < permCount) delete unit.isTrial;

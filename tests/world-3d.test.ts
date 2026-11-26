@@ -22,6 +22,7 @@ import {
 import {
   applyMineSceneModeTransition,
   buildMineStageAndChest,
+  computeEffectivePixelRatio,
   STAGE_CRESCENT_SLOTS,
   stepMineSceneCamera,
 } from '../src/game3d/MineSceneStage3D';
@@ -5540,5 +5541,15 @@ describe('Pure 3D Mine World', () => {
         expect(Math.hypot(ax - ox, az - oz)).toBeGreaterThan(3.8);
       }
     }
+  });
+
+  it('caps effective WebGL pixel ratio consistently for low preset and mobile touch devices', () => {
+    expect(computeEffectivePixelRatio('low', 2, false)).toBe(1);
+    expect(computeEffectivePixelRatio('low', 1.5, true)).toBe(1);
+    expect(computeEffectivePixelRatio('medium', 2, false)).toBe(1.75);
+    expect(computeEffectivePixelRatio('medium', 2, true)).toBe(1.25);
+    expect(computeEffectivePixelRatio('high', 2.5, false)).toBe(2);
+    expect(computeEffectivePixelRatio('high', 2.5, true)).toBe(1.25);
+    expect(computeEffectivePixelRatio('high', 1, false)).toBe(1);
   });
 });

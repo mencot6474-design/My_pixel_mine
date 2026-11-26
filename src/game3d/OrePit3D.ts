@@ -589,7 +589,7 @@ export class OrePit3D {
     node.recoilAmt = isPerfect ? 0.28 : heavy ? 0.24 : 0.16;
     node.flashTimer = isPerfect ? 0.14 : 0.09;
     const pitEventKind = node.pitEventKind;
-    if (this.group.visible) {
+    if (this.group.visible && !attackFx?.skipVisualFx) {
       const eventColor = pitEventKind ? PIT_EVENT_DEFS[pitEventKind].colorHex : undefined;
       const fxAccent = isPerfect
         ? '#fde047'

@@ -88,6 +88,7 @@ export class ChestModalUi {
       { id: 'epic', label: 'Epic' },
     ];
     const allOn = this.state.autoSell;
+    const salvageOn = this.state.autoSalvageMaxedChibis;
     const pills = rarities
       .map((r) => {
         const active = allOn || this.state.isAutoSellRarity(r.id);
@@ -109,8 +110,13 @@ export class ChestModalUi {
               ? 'bg-[#2ee59d] text-[#14111d]'
               : 'bg-[#fcecc8] text-[#5b526e] hover:bg-[#fde047] hover:text-[#14111d]'
           }" data-action="chest-toggle-autosell-all">${allOn ? '✓ All Ores' : 'All Ores'}</button>
+          <button type="button" class="mam-pill cursor-pointer transition-all ${
+            salvageOn
+              ? 'bg-[#38bdf8] text-[#14111d]'
+              : 'bg-[#fcecc8] text-[#5b526e] hover:bg-[#7dd3fc] hover:text-[#14111d]'
+          }" data-action="chest-toggle-autosalvage-chibis" title="Auto-convert incoming 5★ Chibi dupes into Gems (stack cap 100/Chibi)">${salvageOn ? '✓ 5★ Chibis → Gems' : '5★ Chibis → Gems'}</button>
         </div>
-        <span class="text-[10px] font-bold text-[#5b526e]">🔒 Locked ores are never sold</span>
+        <span class="text-[10px] font-bold text-[#5b526e]">🔒 Locked ores safe • Max 100/Chibi</span>
       </div>
     `;
   }
@@ -186,6 +192,21 @@ export class ChestModalUi {
           this.pushToast(`Auto-Sell All ON (+${fmtMoney(earned)})`);
         } else {
           this.pushToast(`Auto-Sell All ${this.state.autoSell ? 'ON' : 'OFF'}`);
+        }
+        this.onRequestRender();
+      });
+    }
+    const salvageBtn = root.querySelector('[data-action="chest-toggle-autosalvage-chibis"]');
+    if (salvageBtn) {
+      salvageBtn.addEventListener('click', () => {
+        const res = this.state.toggleAutoSalvageMaxedChibis();
+        audio.playSfx(res.gemsEarned > 0 ? 'coin' : 'ui-tab');
+        if (res.active && res.gemsEarned > 0) {
+          this.pushToast(
+            `Auto-Salvage 5★ Chibis ON (+${fmtInt(res.gemsEarned)} Gems from ${fmtInt(res.salvagedCount)} dupes)`
+          );
+        } else {
+          this.pushToast(`Auto-Salvage 5★ Chibis ${res.active ? 'ON' : 'OFF'}`);
         }
         this.onRequestRender();
       });

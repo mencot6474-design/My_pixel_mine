@@ -725,9 +725,10 @@ export class WorldOverlayHudUi {
     const settings = this.settings.get();
     if (!settings.showDamagePopups) return;
     if (!this.dmgLayerEl || this.getUiContext().inspectedSlot !== null) return;
-    if (settings.graphicsQuality === 'low' && !isClick && !isCrit && !isPerfect) {
+    if (!isClick && !isPerfect) {
       const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      if (nowMs - this.lastAutoDmgPopupAtMs < 85) return;
+      const minIntervalMs = settings.graphicsQuality === 'low' ? 90 : 45;
+      if (nowMs - this.lastAutoDmgPopupAtMs < minIntervalMs) return;
       this.lastAutoDmgPopupAtMs = nowMs;
     }
     const maxPopups = settings.graphicsQuality === 'low' ? 12 : 24;

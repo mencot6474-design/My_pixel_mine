@@ -5,7 +5,7 @@ import * as IndexRewards from './IndexRewardsDomain';
 import type { IndexMilestoneDef, IndexPassiveBonuses, IndexRewardClaimResult, IndexTabId, IndexTabProgress } from './IndexRewardsDomain';
 import * as TeamPresets from './TeamPresetsDomain';
 import type { ApplyTeamPresetResult, TeamPresetSlots } from './TeamPresetsDomain';
-import { DEFAULT_PICKAXE_STOCK, ENCHANT_DICE_GEM_COST, EnchantDef, getEffectiveChibiBaseDps, ItemRarity, PICKAXE_RESTOCK_MS, rollEnchantDef, WorldId, WorldResonanceStatus } from './GameData';
+import { DEFAULT_PICKAXE_STOCK, ENCHANT_DICE_GEM_COST, EnchantDef, getEffectiveChibiBaseDps, ItemRarity, MAX_ENCHANT_STACK, PICKAXE_RESTOCK_MS, rollEnchantDef, WorldId, WorldResonanceStatus } from './GameData';
 import * as Multipliers from './GameMultipliersDomain';
 import { getResearchTreeMaxPoints, ResearchEffectType, ResearchTreeId } from './ResearchData';
 import { RelicEffectStat } from './RelicData';
@@ -98,6 +98,7 @@ export class GameState {
   public chestCapacity = 5000;
   public autoSell = false;
   public autoSellRarities = new Set<ItemRarity>();
+  public autoSalvageMaxedChibis = false;
   public lockedOreIds = new Set<string>();
   public autoMeteor = false;
   public discovered = new Set<string>(['astral-recruit']);
@@ -148,6 +149,8 @@ export class GameState {
 
   private readonly listeners = new Set<StateListener>();
   private readonly saveHooks = { save: () => this.save(), emit: () => this.emit() };
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private saveDirty = false;
 
   constructor() {
     this.load();
@@ -522,6 +525,10 @@ export class GameState {
     return LootChest.toggleAutoSellDomain(this, () => this.emit());
   }
 
+  public toggleAutoSalvageMaxedChibis(): { active: boolean; gemsEarned: number; salvagedCount: number } {
+    return LootChest.toggleAutoSalvageMaxedChibisDomain(this, () => this.emit());
+  }
+
   public toggleEquipMiner(chibiId: string): void {
     if ((this.miners[chibiId] || 0) <= 0) return;
     LootChest.toggleHotbarItemDomain(this, chibiId, () => this.emit());
@@ -830,7 +837,7 @@ export class GameState {
     if (this.enchantDice <= 0) return null;
     this.enchantDice -= 1;
     const rolled = rollEnchantDef(rng);
-    this.ownedEnchants[rolled.id] = (this.ownedEnchants[rolled.id] || 0) + 1;
+    this.ownedEnchants[rolled.id] = Math.min(MAX_ENCHANT_STACK, (this.ownedEnchants[rolled.id] || 0) + 1);
     BountiesDom.recordBountyProgressDomain(this, 'roll_enchant_or_mut', 1);
     this.emit();
     return rolled;
@@ -1143,12 +1150,34 @@ export class GameState {
   }
 
   public touchSaveTimestamp(): void {
-    this.save();
+    this.flushSave();
+  }
+
+  public flushSave(): void {
+    if (this.saveTimer !== null) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+    this.saveDirty = false;
+    this.lastSavedAt = Date.now();
+    saveToLocalStorage(this);
   }
 
   private save(): void {
     this.lastSavedAt = Date.now();
-    saveToLocalStorage(this);
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      saveToLocalStorage(this);
+      return;
+    }
+    this.saveDirty = true;
+    if (this.saveTimer !== null) return;
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      if (!this.saveDirty) return;
+      this.saveDirty = false;
+      this.lastSavedAt = Date.now();
+      saveToLocalStorage(this);
+    }, 600);
   }
 
   private load(): void {

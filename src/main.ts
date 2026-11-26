@@ -1,7 +1,6 @@
 import './styles/global.css';
 import './styles/hud.css';
 import { audio } from './audio/AudioManager';
-import { assetUrl } from './game/AssetUrl';
 import { gameSettings, type GameSettingsData } from './game/GameSettings';
 import { GameState } from './game/GameState';
 import {
@@ -51,103 +50,28 @@ async function bootstrap(): Promise<void> {
   cgLoadingStart();
   init3dHudIcons();
 
-  const pickaxeCursorEl = document.createElement('div');
-  pickaxeCursorEl.id = 'mamPickaxeCursor';
-  pickaxeCursorEl.style.display = 'none';
-  pickaxeCursorEl.innerHTML = `
-    <div class="mam-cursor-pointer" aria-hidden="true">
-      <svg viewBox="0 0 44 44" width="44" height="44" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="mamCursorBladeGrad" x1="5" y1="5" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#ffffff"/>
-            <stop offset="48%" stop-color="#38bdf8"/>
-            <stop offset="100%" stop-color="#fde047"/>
-          </linearGradient>
-        </defs>
-        <g class="mam-cursor-reticle-ring" style="transform-origin: 9px 9px;">
-          <circle cx="9" cy="9" r="7.2" stroke="#14111d" stroke-width="2.8" stroke-dasharray="5 3.5" opacity="0.9"/>
-          <circle cx="9" cy="9" r="7.2" stroke="#fde047" stroke-width="1.3" stroke-dasharray="5 3.5"/>
-        </g>
-        <path d="M5 5 L35 17.5 L23 22 L33 32 L28.5 36.5 L18.5 26.5 L14.5 38 Z"
-          fill="url(#mamCursorBladeGrad)" stroke="#14111d" stroke-width="3.2" stroke-linejoin="round"/>
-        <path d="M5 5 L22.5 21.5 L18.5 26.5 Z" fill="#ffffff" fill-opacity="0.55"/>
-        <circle cx="5" cy="5" r="2.2" fill="#ffffff" stroke="#14111d" stroke-width="1.2"/>
-      </svg>
-    </div>
-    <div class="mam-cursor-mine" aria-hidden="true">
-      <div class="mam-cursor-target-beacon">
-        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="18" cy="18" r="12" stroke="#14111d" stroke-width="4" stroke-dasharray="7 5"/>
-          <circle cx="18" cy="18" r="12" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="7 5"/>
-          <path d="M18 2 V8 M18 28 V34 M2 18 H8 M28 18 H34" stroke="#14111d" stroke-width="4" stroke-linecap="round"/>
-          <path d="M18 2 V8 M18 28 V34 M2 18 H8 M28 18 H34" stroke="#fde047" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <img src="${assetUrl('/pickaxes/sunwheel.webp')}" alt="" />
-    </div>
-  `;
   const pickaxeComboEl = document.createElement('div');
   pickaxeComboEl.id = 'mamPickaxeCombo';
   pickaxeComboEl.className = 'mam-pickaxe-combo tier-cool';
   pickaxeComboEl.style.display = 'none';
   pickaxeComboEl.style.setProperty('--combo-ms', `${TAP_COMBO_WINDOW_MS}ms`);
-  pickaxeCursorEl.appendChild(pickaxeComboEl);
-  document.body.appendChild(pickaxeCursorEl);
+  document.body.appendChild(pickaxeComboEl);
 
   const threeRoot = document.getElementById('threeRoot');
   const hudRoot = document.getElementById('hudRoot');
   if (!threeRoot || !hudRoot) return;
 
-  let lastPointerType = 'mouse';
   let tapComboState: TapComboState = { count: 0, lastTapAtMs: 0 };
   let tapComboExpireTimer: number | null = null;
-  let touchCursorHideTimer: number | null = null;
   const resetTapCombo = (): void => {
     tapComboState = { count: 0, lastTapAtMs: 0 };
     if (tapComboExpireTimer !== null) {
       window.clearTimeout(tapComboExpireTimer);
       tapComboExpireTimer = null;
     }
-    if (touchCursorHideTimer !== null) {
-      window.clearTimeout(touchCursorHideTimer);
-      touchCursorHideTimer = null;
-    }
     pickaxeComboEl.style.display = 'none';
     pickaxeComboEl.classList.remove('is-pop', 'is-draining', 'is-crit');
-    if (lastPointerType === 'touch') {
-      pickaxeCursorEl.style.display = 'none';
-    }
   };
-
-  const syncComboEdgeFlip = (x: number, y: number): void => {
-    pickaxeComboEl.classList.toggle('is-flip-left', x > window.innerWidth - 150);
-    pickaxeComboEl.classList.toggle('is-flip-down', y < 64);
-  };
-
-  const triggerPickaxeSwing = (): void => {
-    pickaxeCursorEl.classList.remove('is-swinging');
-    requestAnimationFrame(() => {
-      pickaxeCursorEl.classList.add('is-swinging');
-    });
-  };
-
-  const setCursorPosition = (x: number, y: number): void => {
-    pickaxeCursorEl.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
-  };
-
-  const spawnCursorClickPulse = (x: number, y: number): void => {
-    const pulse = document.createElement('div');
-    pulse.className = 'mam-cursor-click-pulse';
-    pulse.style.left = `${Math.round(x)}px`;
-    pulse.style.top = `${Math.round(y)}px`;
-    document.body.appendChild(pulse);
-    const cleanup = (): void => pulse.remove();
-    pulse.addEventListener('animationend', cleanup, { once: true });
-    window.setTimeout(cleanup, 320);
-  };
-
-  const INTERACTIVE_CURSOR_SELECTOR =
-    'button, a, [role="button"], [data-action], [data-teleport-world], [data-teleport-unlock], [data-equip-slot], [data-index-id], [data-inv-uid], [data-omega-ring-parry], [data-omega-hit-target], input, select, label, .cursor-pointer';
 
   const triggerTapCombo = (isCrit: boolean, sx: number, sy: number): void => {
     const now = performance.now();
@@ -155,37 +79,21 @@ async function bootstrap(): Promise<void> {
     if (tapComboExpireTimer !== null) {
       window.clearTimeout(tapComboExpireTimer);
     }
-    if (touchCursorHideTimer !== null) {
-      window.clearTimeout(touchCursorHideTimer);
-      touchCursorHideTimer = null;
-    }
     tapComboExpireTimer = window.setTimeout(resetTapCombo, TAP_COMBO_WINDOW_MS + 30);
-
-    if (lastPointerType === 'touch' || pickaxeCursorEl.style.display !== 'block') {
-      pickaxeCursorEl.style.display = 'block';
-      pickaxeCursorEl.classList.add('is-mining-mode');
-      setCursorPosition(sx, sy);
-      syncComboEdgeFlip(sx, sy);
-      triggerPickaxeSwing();
-    }
 
     if (tapComboState.count < 2) {
       pickaxeComboEl.style.display = 'none';
-      if (lastPointerType === 'touch') {
-        touchCursorHideTimer = window.setTimeout(() => {
-          touchCursorHideTimer = null;
-          if (lastPointerType === 'touch' && tapComboState.count < 2) {
-            pickaxeCursorEl.style.display = 'none';
-          }
-        }, 260);
-      }
       return;
     }
 
+    const flipLeft = sx > window.innerWidth - 150;
+    const flipDown = sy < 64;
+    const tx = Math.round(sx + (flipLeft ? -120 : 22));
+    const ty = Math.round(sy + (flipDown ? 14 : -46));
     const tier = getTapComboTier(tapComboState.count);
-    pickaxeComboEl.className = `mam-pickaxe-combo tier-${tier.id}${isCrit ? ' is-crit' : ''}${
-      pickaxeComboEl.classList.contains('is-flip-left') ? ' is-flip-left' : ''
-    }${pickaxeComboEl.classList.contains('is-flip-down') ? ' is-flip-down' : ''}`;
+    pickaxeComboEl.className = `mam-pickaxe-combo tier-${tier.id}${isCrit ? ' is-crit' : ''}`;
+    pickaxeComboEl.style.left = `${tx}px`;
+    pickaxeComboEl.style.top = `${ty}px`;
     pickaxeComboEl.innerHTML = `
       <span class="mam-pickaxe-combo-row">
         <span class="mam-pickaxe-combo-num">${tapComboState.count}x</span>
@@ -199,82 +107,6 @@ async function bootstrap(): Promise<void> {
       pickaxeComboEl.classList.add('is-pop', 'is-draining');
     });
   };
-
-  let clickFeedbackTimer: number | null = null;
-  let cachedCursorCanvas: HTMLCanvasElement | null = null;
-  let lastCursorTarget: EventTarget | null = null;
-  let lastCursorHoverUi = false;
-  let cursorBodyActive = false;
-  const syncPickaxeCursor = (e: PointerEvent): void => {
-    lastPointerType = e.pointerType || 'mouse';
-    if (isAdPlaying()) {
-      if (cursorBodyActive) {
-        cursorBodyActive = false;
-        document.body.classList.remove('mam-custom-cursor-active');
-      }
-      pickaxeCursorEl.style.display = 'none';
-      return;
-    }
-    if (lastPointerType === 'touch') {
-      if (cursorBodyActive) {
-        cursorBodyActive = false;
-        document.body.classList.remove('mam-custom-cursor-active');
-      }
-      return;
-    }
-    if (!cursorBodyActive) {
-      cursorBodyActive = true;
-      document.body.classList.add('mam-custom-cursor-active');
-    }
-    if (!cachedCursorCanvas || !cachedCursorCanvas.isConnected) {
-      cachedCursorCanvas = threeRoot.querySelector('canvas');
-    }
-    const isMining = Boolean(
-      cachedCursorCanvas && e.target === cachedCursorCanvas && cachedCursorCanvas.classList.contains('mam-mining-cursor')
-    );
-    if (e.target !== lastCursorTarget) {
-      lastCursorTarget = e.target;
-      const targetEl = e.target instanceof Element ? e.target : null;
-      lastCursorHoverUi = !isMining && Boolean(targetEl?.closest(INTERACTIVE_CURSOR_SELECTOR));
-    } else if (isMining) {
-      lastCursorHoverUi = false;
-    }
-    pickaxeCursorEl.classList.toggle('is-mining-mode', isMining);
-    pickaxeCursorEl.classList.toggle('is-hovering', lastCursorHoverUi);
-    if (pickaxeCursorEl.style.display !== 'block') {
-      pickaxeCursorEl.style.display = 'block';
-    }
-    setCursorPosition(e.clientX, e.clientY);
-    syncComboEdgeFlip(e.clientX, e.clientY);
-  };
-  window.addEventListener('pointermove', syncPickaxeCursor, true);
-  window.addEventListener(
-    'pointerdown',
-    (e) => {
-      syncPickaxeCursor(e);
-      if (lastPointerType === 'touch' || pickaxeCursorEl.style.display !== 'block') return;
-      if (pickaxeCursorEl.classList.contains('is-mining-mode')) {
-        triggerPickaxeSwing();
-      } else {
-        pickaxeCursorEl.classList.add('is-clicking');
-        if (clickFeedbackTimer !== null) window.clearTimeout(clickFeedbackTimer);
-        clickFeedbackTimer = window.setTimeout(() => {
-          clickFeedbackTimer = null;
-          pickaxeCursorEl.classList.remove('is-clicking');
-        }, 115);
-        spawnCursorClickPulse(e.clientX, e.clientY);
-      }
-    },
-    true
-  );
-  document.addEventListener('pointerleave', () => {
-    if (lastPointerType !== 'touch') {
-      pickaxeCursorEl.style.display = 'none';
-    }
-  });
-  window.addEventListener('blur', () => {
-    pickaxeCursorEl.style.display = 'none';
-  });
 
   const gameState = new GameState();
   let hud: GameHud | null = null;
@@ -418,7 +250,6 @@ async function bootstrap(): Promise<void> {
     },
     onHoldMineChange: (active) => {
       holdMiningVisualActive = active;
-      pickaxeCursorEl.classList.toggle('is-hold-mining', active);
     },
     onChestClick: () => {
       if (hud && !hud.canTutorialInteract('chest')) return;
@@ -698,8 +529,6 @@ async function bootstrap(): Promise<void> {
       scene.setAdPaused(paused);
       hud?.setAdPaused(paused);
       if (paused) {
-        document.body.classList.remove('mam-custom-cursor-active');
-        pickaxeCursorEl.style.display = 'none';
         resetTapCombo();
       }
     },

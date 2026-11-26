@@ -428,6 +428,25 @@ export function stepMineSceneCamera(ctx: {
 
 }
 
+export function isMobileTouchDevice(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    Boolean(window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent))
+  );
+}
+
+/** Computes the effective WebGL pixel ratio capped for Low preset and mobile touch devices. */
+export function computeEffectivePixelRatio(
+  quality: GraphicsQuality,
+  devicePixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
+  mobileTouch = isMobileTouchDevice()
+): number {
+  const preset = GRAPHICS_PRESETS[quality];
+  const cap = quality === 'low' ? 1 : mobileTouch ? Math.min(1.25, preset.maxPixelRatio) : preset.maxPixelRatio;
+  const safeDpr = Number.isFinite(devicePixelRatio) && devicePixelRatio > 0 ? devicePixelRatio : 1;
+  return Math.min(safeDpr, cap);
+}
+
 /** Initializes WebGLRenderer, EffectComposer passes, and primary scene lights. */
 export function createMineRendererAndLights(opts: {
   mountEl: HTMLElement;
@@ -457,18 +476,10 @@ export function createMineRendererAndLights(opts: {
   camera.position.copy(opts.baseCamPos);
   camera.lookAt(opts.lookAtPos);
 
-  const isMobileTouch =
-    typeof window !== 'undefined' &&
-    (window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+  const isMobileTouch = isMobileTouchDevice();
   const renderer = new THREE.WebGLRenderer({ antialias: !isMobileTouch, powerPreference: 'high-performance' });
   const initialPreset = GRAPHICS_PRESETS[opts.graphicsQuality];
-  const initialPrCap =
-    opts.graphicsQuality === 'low'
-      ? 1
-      : isMobileTouch
-        ? Math.min(1.25, initialPreset.maxPixelRatio)
-        : initialPreset.maxPixelRatio;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, initialPrCap));
+  renderer.setPixelRatio(computeEffectivePixelRatio(opts.graphicsQuality, window.devicePixelRatio || 1, isMobileTouch));
   renderer.setSize(w, h);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -636,11 +647,7 @@ export function applyMineGraphicsQuality(ctx: {
 }): void {
   const low = ctx.quality === 'low';
   const preset = GRAPHICS_PRESETS[ctx.quality];
-  const isMobileTouch =
-    typeof window !== 'undefined' &&
-    (window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
-  const pixelRatioCap = low ? 1 : isMobileTouch ? Math.min(1.25, preset.maxPixelRatio) : preset.maxPixelRatio;
-  ctx.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, pixelRatioCap));
+  ctx.renderer.setPixelRatio(computeEffectivePixelRatio(ctx.quality));
   ctx.renderer.shadowMap.enabled = preset.shadowsEnabled;
   ctx.renderer.shadowMap.autoUpdate = false;
   ctx.renderer.shadowMap.type = ctx.quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;

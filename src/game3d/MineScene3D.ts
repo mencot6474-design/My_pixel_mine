@@ -21,7 +21,7 @@ import { RiftArena3D } from './RiftArena3D';
 import type { AnomalyChibiId } from '../game/AnomalyData';
 import type { OmegaBossId } from '../game/OmegaData';
 import { TowerWaveOreState } from '../game/TowerData';
-import { GRAPHICS_PRESETS, GraphicsQuality } from '../game/GameSettings';
+import { GraphicsQuality } from '../game/GameSettings';
 import { type OverclockTier } from '../game/OverclockDomain';
 import { WeatherId } from '../game/WeatherData';
 import { type PitEventKind } from '../game/PitEventsDomain';
@@ -34,6 +34,7 @@ import {
   applyMineWeatherAtmosphere,
   buildMineStageAndChest,
   clampCameraZoomRadius,
+  computeEffectivePixelRatio,
   createMineRendererAndLights,
   getDefaultOrbitPitchForMode,
   type MineSceneCallbacks,
@@ -189,10 +190,9 @@ export class MineScene3D {
     const h = Math.max(1, this.mountEl.clientHeight);
     this.viewportWidth = w;
     this.viewportHeight = h;
-    const preset = GRAPHICS_PRESETS[this.graphicsQuality];
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.maxPixelRatio));
+    this.renderer.setPixelRatio(computeEffectivePixelRatio(this.graphicsQuality));
     this.renderer.setSize(w, h);
     this.composer.setSize(w, h);
     this.bloomPass.setSize(Math.max(1, Math.round(w * 0.5)), Math.max(1, Math.round(h * 0.5)));

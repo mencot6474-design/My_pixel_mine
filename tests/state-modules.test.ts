@@ -2410,5 +2410,54 @@ describe('Tahap C GameState Domain Modules', () => {
       const unboostedUnitDmg = state.getPlotUnitStats(0, Date.now(), false)!.dmg;
       expect(strike.dmgDealt).toBe(unboostedUnitDmg);
     });
+
+    it('enforces MAX_CHIBI_STACK (100) across drops, chest claims, and saves, and auto-salvages 5-star Chibis to Gems', () => {
+      const state = new GameState();
+      state.miners['astral-recruit'] = 100;
+      state.chestMiners['astral-recruit'] = 25;
+      state.chestMiners['volt-blade'] = 4;
+      state.miners['volt-blade'] = 1;
+      state.chibiStars['volt-blade'] = 5;
+
+      // Turning on Auto-Salvage 5★ Chibis immediately sweeps maxed chest dupes into Gems
+      const gemsBefore = state.gems;
+      const toggleOn = state.toggleAutoSalvageMaxedChibis();
+      expect(toggleOn.active).toBe(true);
+      expect(toggleOn.salvagedCount).toBe(4);
+      expect(toggleOn.gemsEarned).toBeGreaterThan(0);
+      expect(state.gems).toBe(gemsBefore + toggleOn.gemsEarned);
+      expect(state.chestMiners['volt-blade']).toBeUndefined();
+      // Non-maxed Chibi stays in chest until taken, and takeAll clamps stack at 100
+      expect(state.chestMiners['astral-recruit']).toBe(25);
+      state.takeAllFromChest();
+      expect(state.miners['astral-recruit']).toBe(100);
+
+      // Incoming maxed Chibi drops convert straight to Gems instead of entering chest
+      const gemsBeforeDrop = state.gems;
+      state.activeWorldId = 'underground';
+      state.chibiStars['astral-recruit'] = 5;
+      state.onOreBroken('geode', () => 0.0001);
+      expect(state.chestMiners['astral-recruit']).toBeUndefined();
+      expect(state.miners['astral-recruit']).toBe(100);
+      expect(state.gems).toBeGreaterThan(gemsBeforeDrop);
+
+      // Save & reload persists autoSalvageMaxedChibis and clamps bloated legacy stacks to 100 (Chibis) & 50 (Enchants)
+      state.enchantDice = 5;
+      state.ownedEnchants['blazing'] = 50;
+      const rolledEnchant = state.rollEnchant(() => 0.0001);
+      expect(rolledEnchant?.id).toBe('blazing');
+      expect(state.ownedEnchants['blazing']).toBe(50);
+
+      const payload = serializeSavePayload(state);
+      payload.miners['astral-recruit'] = 9999;
+      payload.chestMiners['astral-recruit'] = 500;
+      payload.ownedEnchants['blazing'] = 999;
+      const reloaded = new GameState();
+      deserializeSaveJson(reloaded, JSON.stringify(payload));
+      expect(reloaded.autoSalvageMaxedChibis).toBe(true);
+      expect(reloaded.miners['astral-recruit']).toBe(100);
+      expect(reloaded.chestMiners['astral-recruit']).toBeUndefined();
+      expect(reloaded.ownedEnchants['blazing']).toBe(50);
+    });
   });
 });

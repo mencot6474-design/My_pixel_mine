@@ -316,10 +316,18 @@ export function applyPlotOreImpact(p: PlotImpactParams): void {
   const finalDmg = isCrit ? Math.max(1, Math.round(strikeDamage * critMult)) : strikeDamage;
   const splashMult = getAoeSplashDamageMult(rarity);
   const preventBreak = !isBasic && !heavy && beatIndex !== undefined;
+  const secondaryCount = Math.max(0, aoeTargetsScratch.length - 1);
+  const secondaryFxLimit = 3;
+  const secondaryFxOffset = secondaryCount > secondaryFxLimit ? ((beatIndex ?? 0) * secondaryFxLimit) % secondaryCount : 0;
 
   for (let ti = 0; ti < aoeTargetsScratch.length; ti++) {
     const hitNodeTarget = aoeTargetsScratch[ti];
     const dmgForNode = ti === 0 ? finalDmg : Math.max(1, Math.round(finalDmg * splashMult));
+    const emitTargetVisualFx =
+      renderVisuals &&
+      (ti === 0 ||
+        secondaryCount <= secondaryFxLimit ||
+        ((ti - 1 - secondaryFxOffset + secondaryCount) % secondaryCount) < secondaryFxLimit);
 
     const hitRes = pit.hitNode(
       hitNodeTarget.id,
@@ -334,9 +342,10 @@ export function applyPlotOreImpact(p: PlotImpactParams): void {
             comboStep,
             preventBreak,
             beatIndex,
+            skipVisualFx: !emitTargetVisualFx,
           }
         : preventBreak
-          ? { preventBreak: true, beatIndex }
+          ? { preventBreak: true, beatIndex, skipVisualFx: true }
           : undefined
     );
     if (!hitRes) continue;
@@ -346,16 +355,18 @@ export function applyPlotOreImpact(p: PlotImpactParams): void {
 
     const hitY = hitNodeTarget.worldY + 0.7;
     if (renderVisuals) {
-      tierVfx.fireBarrageHitSlash({
-        x: hitNodeTarget.worldX,
-        y: hitNodeTarget.worldY + 0.72,
-        z: hitNodeTarget.worldZ,
-        colorHex: accentColor,
-        beatIndex: beatIndex ?? 0,
-        isFinisher: heavy,
-        scale: hitNodeTarget.isMeteor ? (isBasic ? 1.05 : 1.35) : isBasic ? 0.74 : 0.96,
-      });
-      if (hitRes.dmgDealt > 0 || heavy) {
+      if (emitTargetVisualFx) {
+        tierVfx.fireBarrageHitSlash({
+          x: hitNodeTarget.worldX,
+          y: hitNodeTarget.worldY + 0.72,
+          z: hitNodeTarget.worldZ,
+          colorHex: accentColor,
+          beatIndex: beatIndex ?? 0,
+          isFinisher: heavy,
+          scale: hitNodeTarget.isMeteor ? (isBasic ? 1.05 : 1.35) : isBasic ? 0.74 : 0.96,
+        });
+      }
+      if ((ti === 0 || (heavy && ti === 1)) && (hitRes.dmgDealt > 0 || heavy)) {
         onOreHit?.(
           hitRes.dmgDealt,
           hitNodeTarget.worldX,
@@ -376,7 +387,7 @@ export function applyPlotOreImpact(p: PlotImpactParams): void {
         hitRes.variantKey,
         hitRes.meteorWeatherId,
         hitRes.pitEventKind,
-        renderVisuals ? tmpWorldPos : undefined
+        renderVisuals && emitTargetVisualFx ? tmpWorldPos : undefined
       );
     }
   }

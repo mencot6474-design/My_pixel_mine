@@ -962,6 +962,30 @@ export function getMinerWorldId(chibiId: string): WorldId | null {
 }
 
 export const CHIBI_MAX_STARS = 5;
+export const MAX_CHIBI_STACK = 100;
+export const MAX_ENCHANT_STACK = 50;
+
+export const CHIBI_SALVAGE_GEMS_BY_RARITY: Readonly<Record<ItemRarity, number>> = {
+  common: 1,
+  uncommon: 2,
+  rare: 4,
+  epic: 8,
+  legendary: 15,
+  rainbow: 20,
+  mythic: 30,
+  exotic: 45,
+  secret: 60,
+  fusion: 50,
+  limited: 50,
+  twin: 60,
+  omega: 80,
+  anomaly: 80,
+};
+
+export function getChibiSalvageGemValue(chibiId: string): number {
+  const rarity = getMinerRarity(chibiId);
+  return CHIBI_SALVAGE_GEMS_BY_RARITY[rarity] ?? 1;
+}
 
 export interface ChibiStarTierDef {
   star: number;
