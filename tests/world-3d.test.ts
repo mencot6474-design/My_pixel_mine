@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { RiftArena3D } from '../src/game3d/RiftArena3D';
+import { createChibiBackAttachments } from '../src/game3d/ChibiBackAttachments3D';
 import {
   PIT_EVENT_COOLDOWN_MAX_SEC,
   PIT_EVENT_COOLDOWN_MIN_SEC,
@@ -317,8 +318,8 @@ describe('Pure 3D Mine World', () => {
     expect(finisherNode.alive).toBe(false);
   });
 
-  it('registers all 89 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
-    expect(CHIBI_CATALOG.length).toBe(89);
+  it('registers all 92 chibi spritesheets and slices 4-frame UV offsets cleanly', () => {
+    expect(CHIBI_CATALOG.length).toBe(92);
     for (const c of CHIBI_CATALOG) {
       for (const pose of ['idle', 'walk', 'attack', 'pose'] as const) {
         expect(existsSync(resolve(process.cwd(), 'public', 'chibi', c.id, `${pose}.webp`))).toBe(true);
@@ -513,7 +514,7 @@ describe('Pure 3D Mine World', () => {
     expect(getMinersByWorld('singularity').length).toBe(5);
 
     const gs = new GameState();
-    expect(gs.getTotalIndexCount()).toBe(172);
+    expect(gs.getTotalIndexCount()).toBe(175);
     gs.discovered.add('stormwater-opal');
     gs.discovered.add('glitch-cheshire');
     gs.discovered.add('cosmic-monarch');
@@ -5551,5 +5552,56 @@ describe('Pure 3D Mine World', () => {
     expect(computeEffectivePixelRatio('high', 2.5, false)).toBe(2);
     expect(computeEffectivePixelRatio('high', 2.5, true)).toBe(1.25);
     expect(computeEffectivePixelRatio('high', 1, false)).toBe(1);
+  });
+
+  it('gives novel tier Twin-equivalent 3D AoE/blitz parity without creating custom back-attachments', () => {
+    expect(isWideAoeRarity('novel')).toBe(true);
+    expect(getAoeTargetCount('novel')).toBe(20);
+    expect(getAoeCleaveRadius('novel')).toBe(AOE_CLEAVE_RADIUS);
+
+    const witch = getChibiById('crimson-tarot-witch')!;
+    expect(witch).toBeDefined();
+    expect(getChibiAttackStyle(witch)).toBe('star');
+
+    const motion = buildTierMotionWaypoints(
+      'novel',
+      { x: -4, y: 1.5, z: -6 },
+      { x: 0, y: -0.4, z: 1.65 },
+      [
+        { x: -1, y: -0.4, z: 1.5 },
+        { x: 1, y: -0.4, z: 1.8 },
+      ],
+      witch.accentColor,
+      '#f5d08a',
+      undefined,
+      1.0,
+      witch.id
+    );
+    expect(motion.hero.length).toBeGreaterThanOrEqual(4);
+
+    // No 3D back-attachment yet (deferred per spec)
+    const spritePivot = new THREE.Group();
+    const blitzHeroPivot = new THREE.Group();
+    const back = createChibiBackAttachments(witch.id, 1.8, spritePivot, blitzHeroPivot, 'novel', witch.accentColor);
+    expect(back.omegaAuraGroup).toBeNull();
+
+    // Pooled choreography runs cleanly without custom shader modules
+    const pool = new TierAttackVfxPool3D();
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 1, 200);
+    pool.fireTierAttack({
+      rarity: 'novel',
+      chibiId: witch.id,
+      colorHex: witch.accentColor,
+      target: { x: 0, y: -0.4, z: 1.65 },
+      allTargets: [
+        { x: -1, y: -0.4, z: 1.5 },
+        { x: 1, y: -0.4, z: 1.8 },
+      ],
+      comboStep: 2,
+      speedScale: 1,
+      areaScale: 1,
+    });
+    pool.update(0.05, cam);
+    pool.dispose();
   });
 });

@@ -82,18 +82,18 @@ export const MINE_PIT_VFX_SCALE = 0.56;
 export const AOE_CLEAVE_RADIUS = 3.8;
 export const MAX_AOE_TARGETS = 20;
 
-/** Single-target (1 ore) for tiers common..limited; radius-wide AoE cleave for fusion, twin, omega & anomaly. */
+/** Single-target (1 ore) for tiers common..limited; radius-wide AoE cleave for fusion, twin, novel, omega & anomaly. */
 export function getAoeTargetCount(rarity?: string): number {
-  return rarity === 'fusion' || rarity === 'twin' || rarity === 'omega' || rarity === 'anomaly' ? MAX_AOE_TARGETS : 1;
+  return rarity === 'fusion' || rarity === 'twin' || rarity === 'novel' || rarity === 'omega' || rarity === 'anomaly' ? MAX_AOE_TARGETS : 1;
 }
 
 /** Returns AoE cleave radius around the target ore (0 for single-target tiers). */
 export function getAoeCleaveRadius(rarity?: string): number {
-  return rarity === 'fusion' || rarity === 'twin' || rarity === 'omega' || rarity === 'anomaly' ? AOE_CLEAVE_RADIUS : 0;
+  return rarity === 'fusion' || rarity === 'twin' || rarity === 'novel' || rarity === 'omega' || rarity === 'anomaly' ? AOE_CLEAVE_RADIUS : 0;
 }
 
 function getAoeSplashDamageMult(rarity: string): number {
-  return rarity === 'fusion' || rarity === 'limited' || rarity === 'twin' || rarity === 'omega' || rarity === 'anomaly' ? 1.0 : 0.8;
+  return rarity === 'fusion' || rarity === 'limited' || rarity === 'twin' || rarity === 'novel' || rarity === 'omega' || rarity === 'anomaly' ? 1.0 : 0.8;
 }
 
 /** Centers the Ult AoE circle on the target ore, clamped slightly inside the pit wall so the 3.8m zone stays clean. */

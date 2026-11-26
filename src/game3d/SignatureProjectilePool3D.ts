@@ -99,6 +99,7 @@ export function getChibiAttackStyle(def: ChibiDef): PlotAttackStyle {
     return 'beam';
   }
   if (
+    def.rarity === 'novel' ||
     def.rarity === 'rainbow' ||
     def.rarity === 'secret' ||
     def.rarity === 'limited' ||

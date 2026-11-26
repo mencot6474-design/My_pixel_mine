@@ -441,6 +441,41 @@ export function fireTierAttackChoreography(
       break;
     }
 
+    case 'novel': {
+      const burstPts = ctx.lowQuality ? pts.slice(0, 3) : pts.slice(0, 6);
+      ctx.hooks.onArenaDim?.(0.6, '#140f1f', 0.62);
+      for (let i = 0; i < 3; i++) {
+        ctx.after(i * 0.08 * sc, () => {
+          const c = i % 2 === 0 ? color : secondary;
+          ctx.spawnSlash({
+            x: cx,
+            y: cy + 0.95 + i * 0.2,
+            z: cz,
+            color: c,
+            coreColor: '#ffffff',
+            rx: (i - 1) * 0.38,
+            ry: i * 1.9,
+            rz: 0.35,
+            s0: 1.7 * as,
+            s1: 4.1 * as,
+            life: 0.34 * sc,
+            spinSpeed: i % 2 === 0 ? 4.2 : -4.2,
+          });
+        });
+      }
+      ctx.after(0.28 * sc, () => {
+        ctx.hooks.onImpactFrame?.(1.0, 0.0, color, 0.05);
+        ctx.spawnRift({ x: cx, y: cy + 1.15, z: cz, color, coreColor: '#ffffff', rz: 0.36, len: 6.2 * as, height: 1.15 * as, life: 0.54 * sc });
+        ctx.spawnBeam({ x: cx, y: cy, z: cz, color: secondary, coreColor: '#ffffff', radius: 0.85 * as, height: 1.0, life: 0.52 * sc });
+        ctx.spawnDome({ x: cx, y: cy + 0.04, z: cz, color, coreColor: '#ffffff', s0: 0.6 * as, s1: 4.6 * as, yScale: 0.78, life: 0.48 * sc });
+        burstPts.forEach((n) => {
+          ctx.spawnDebrisBurst(n.x, n.y + 0.8, n.z, color, secondary, 5);
+          ctx.spawnSparks(n.x, n.y + 0.9, n.z, '#fef3c7', color, 6, 6.8);
+        });
+      });
+      break;
+    }
+
     case 'omega': {
       const burstPts = ctx.lowQuality ? pts.slice(0, 3) : pts.slice(0, 6);
       if (opts.chibiId === 'abyssal-leviathan') {

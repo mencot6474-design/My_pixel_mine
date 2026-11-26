@@ -388,8 +388,8 @@ export class PlotAttackController3D {
           wideCenter,
         });
         const r = unit.def.rarity;
-        if (r === 'secret' || r === 'fusion' || r === 'limited' || r === 'twin' || r === 'omega') {
-          this.skillPulseHook?.(a.accentColor, r === 'twin' || r === 'omega' ? 1.1 : 0.85);
+        if (r === 'secret' || r === 'fusion' || r === 'limited' || r === 'twin' || r === 'novel' || r === 'omega') {
+          this.skillPulseHook?.(a.accentColor, r === 'twin' || r === 'novel' || r === 'omega' ? 1.1 : 0.85);
         }
       }
     }

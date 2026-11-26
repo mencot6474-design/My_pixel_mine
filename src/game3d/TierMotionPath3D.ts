@@ -204,6 +204,8 @@ export function getRaritySecondaryColor(rarity: string): string {
       return '#e11d48';
     case 'twin':
       return '#f43f5e';
+    case 'novel':
+      return '#f5d08a';
     case 'omega':
       return '#fbbf24';
     default:
@@ -212,7 +214,7 @@ export function getRaritySecondaryColor(rarity: string): string {
 }
 
 export function isWideAoeRarity(rarity: string): boolean {
-  return rarity === 'fusion' || rarity === 'twin' || rarity === 'omega' || rarity === 'anomaly';
+  return rarity === 'fusion' || rarity === 'twin' || rarity === 'novel' || rarity === 'omega' || rarity === 'anomaly';
 }
 
 export function resolvePitBounds(
@@ -623,6 +625,18 @@ export function buildTierMotionWaypoints(
             ],
           };
       }
+
+    case 'novel':
+      return {
+        hero: [
+          restStart,
+          { t: 0.12, x: cx - 3.1 * ms, y: cy + 0.95, z: cz + 0.8 * ms, face: 1, rz: -0.3, pose: 'attack', snap: true, col: color, scale: 1.18 },
+          { t: 0.28, x: cx + 3.0 * ms, y: cy + 1.1, z: cz - 0.8 * ms, face: -1, rz: 0.32, pose: 'attack', snap: true, col: secondary, scale: 1.2 },
+          { t: 0.48, x: cx, y: cy + 2.35, z: cz - 0.2, face: 1, rz: -0.14, pose: 'aura', snap: true, col: '#ffffff', scale: 1.26 },
+          { t: 0.72, x: cx, y: cy + 0.85, z: cz + 0.2, face: 1, rz: 0.16, pose: 'attack', snap: true, col: color, scale: 1.22 },
+          restEnd,
+        ],
+      };
 
     case 'omega':
       if (chibiId === 'abyssal-leviathan') {
