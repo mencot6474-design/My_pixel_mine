@@ -5662,9 +5662,10 @@ describe('Pure 3D Mine World', () => {
     for (let i = 4; i < 8; i++) pool.update(0.05, i * 0.05);
     expect(instRoot.children.filter((c) => c.name === 'celFrame' && c.visible).length).toBeLessThanOrEqual(3);
 
-    for (let i = 0; i < 14; i++) pool.update(0.05, (8 + i) * 0.05);
+    for (let i = 0; i < 16; i++) pool.update(0.05, (8 + i) * 0.05);
     expect(instRoot.children.filter((c) => c.name === 'chronoShard' && c.visible).length).toBeLessThanOrEqual(10);
     expect(instRoot.children.filter((c) => c.name === 'chronoSpark' && c.visible).length).toBeLessThanOrEqual(14);
+    expect(instRoot.children.some((c) => c.name === 'razorLattice' && c.visible)).toBe(false);
 
     // Pool overwrite (>2 fires) & huge dtSec clamp safety
     pool.fire({ cx: 0, cy: -0.42, cz: 1.65, areaScale: 0.8 });

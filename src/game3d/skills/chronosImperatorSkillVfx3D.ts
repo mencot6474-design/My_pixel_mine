@@ -529,8 +529,8 @@ function createChronoSparkMaterial(): THREE.ShaderMaterial {
 }
 
 /**
- * Climax straight diagonal razor slash line (zero dark void rift, zero crack overlay):
- * sweeps cleanly across the pit then breaks out as flying 3D glass shards.
+ * Climax straight diagonal slash line that slices cleanly across space, briefly splits a razor-straight
+ * spatial seam, and vanishes as 24 flat glass shards burst from the cut (zero crack overlay).
  */
 function createDimensionalTearSlashMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
@@ -551,41 +551,50 @@ function createDimensionalTearSlashMaterial(): THREE.ShaderMaterial {
       uniform float uProgress;
       uniform float uOpacity;
       varying vec2 vUv;
-      ${CHRONOS_NOISE_GLSL}
 
       void main() {
         vec2 p = vUv * 2.0 - 1.0;
         float absX = abs(p.x);
-        if (absX > 0.98) discard;
+        if (absX > 0.99) discard;
 
-        // Straight diagonal slash sweep from -1 -> +1 (0.0 -> 0.25)
-        float sweepX = mix(-1.05, 1.08, smoothstep(0.0, 0.25, uProgress));
-        float cutReveal = 1.0 - smoothstep(sweepX - 0.08, sweepX + 0.02, p.x);
+        // Straight diagonal cut sweeping across -1 -> +1 (0.0 -> 0.22)
+        float sweepX = mix(-1.05, 1.08, smoothstep(0.0, 0.22, uProgress));
+        float cutReveal = 1.0 - smoothstep(sweepX - 0.06, sweepX + 0.02, p.x);
         if (cutReveal < 0.01) discard;
 
-        float taperX = pow(max(0.0, 1.0 - absX * absX), 0.55);
+        float taperX = pow(max(0.0, 1.0 - absX * absX), 0.5);
+        // Opens straight spatial seam (0.16 -> 0.60) then snaps away cleanly as glass shards fly out
+        float splitOpen = smoothstep(0.16, 0.42, uProgress) * (1.0 - smoothstep(0.68, 1.0, uProgress));
+        float halfSeam = mix(0.010, 0.16, splitOpen) * taperX;
+
         float distY = abs(p.y);
-        float needle = (0.0055 / (distY + 0.0022)) * taperX;
-        float aura = (0.030 / (distY + 0.014)) * taperX;
+        float insideSpace = (1.0 - smoothstep(halfSeam - 0.015, halfSeam + 0.008, distY)) * step(0.16, uProgress);
+        float rimDist = abs(distY - halfSeam);
 
-        // Snaps away smoothly right as the 3D glass shards burst outward (0.35 -> 0.95)
-        float fadeOut = 1.0 - smoothstep(0.32, 0.95, uProgress);
-        float jag = 0.85 + 0.15 * sin(p.x * 24.0 - uTime * 18.0);
+        float needle = (0.0065 / (rimDist + 0.0022)) * taperX;
+        float aura = (0.032 / (rimDist + 0.014)) * taperX;
+        float initialFlash = (0.0085 / (distY + 0.0025)) * taperX * (1.0 - smoothstep(0.18, 0.36, uProgress));
 
-        vec3 crimson = vec3(1.0, 0.12, 0.38) * 1.85;
+        float fadeOut = 1.0 - smoothstep(0.68, 1.0, uProgress);
+        float pulse = 0.92 + 0.08 * sin(p.x * 16.0 - uTime * 22.0);
+
+        vec3 spaceAbyss = vec3(0.03, 0.01, 0.09);
+        vec3 crimson = vec3(1.0, 0.12, 0.38) * 1.9;
         vec3 violet = vec3(0.74, 0.34, 1.0) * 1.65;
-        vec3 whiteHot = vec3(1.0, 0.98, 0.98) * 2.25;
+        vec3 whiteHot = vec3(1.0, 0.98, 0.98) * 2.3;
 
-        vec3 col = mix(violet, crimson, clamp(aura * 0.8, 0.0, 1.0));
-        col = mix(col, whiteHot, clamp(needle * 0.75, 0.0, 1.0));
+        vec3 rimCol = mix(violet, crimson, clamp(aura * 0.85, 0.0, 1.0));
+        rimCol = mix(rimCol, whiteHot, clamp(needle * 0.75 + initialFlash * 0.9, 0.0, 1.0));
 
-        float alpha = clamp((needle + aura * 0.72) * jag * cutReveal * fadeOut * uOpacity, 0.0, 1.0);
+        float rimMask = clamp((needle + aura * 0.72 + initialFlash) * pulse, 0.0, 1.0);
+        vec3 col = mix(spaceAbyss, rimCol, rimMask);
+        float alpha = clamp(max(insideSpace * 0.92, rimMask) * cutReveal * fadeOut * uOpacity, 0.0, 0.98);
         if (alpha < 0.015) discard;
-        gl_FragColor = vec4(col * alpha, alpha);
+        gl_FragColor = vec4(col, alpha);
       }
     `,
     transparent: true,
-    blending: THREE.AdditiveBlending,
+    blending: THREE.NormalBlending,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
@@ -692,7 +701,7 @@ export class ChronosImperatorSkillVfxPool {
     const celGeo = new THREE.PlaneGeometry(2.75, 3.25);
     const latticeGeo = new THREE.PlaneGeometry(1, 1);
     const smearGeo = createThinRazorSmearGeometry(0.84, 1.0, Math.PI * 1.15, 32);
-    const tearGeo = new THREE.PlaneGeometry(14.5, 1.35);
+    const tearGeo = new THREE.PlaneGeometry(18.0, 2.4);
     const shardGeo = createChronoShardGeometry();
     const sparkGeo = new THREE.PlaneGeometry(0.36, 1.05);
     this.sharedGeos.push(floorGeo, carveGeo, celGeo, latticeGeo, smearGeo, tearGeo, shardGeo, sparkGeo);
@@ -945,8 +954,8 @@ export class ChronosImperatorSkillVfxPool {
       sm.mat.uniforms.uLocalT.value = 0;
     }
 
-    inst.dimensionTearMesh.position.set(opts.cx, opts.cy + 1.65 * opts.areaScale, opts.cz);
-    inst.dimensionTearMesh.rotation.set(0.18, 0.22, 0.44);
+    inst.dimensionTearMesh.position.set(opts.cx, opts.cy + 1.85 * opts.areaScale, opts.cz);
+    inst.dimensionTearMesh.rotation.set(-0.18, 0.0, 0.56);
     inst.dimensionTearMesh.scale.setScalar(opts.areaScale);
     inst.dimensionTearMesh.visible = false;
 
@@ -1028,13 +1037,14 @@ export class ChronosImperatorSkillVfxPool {
         cf.mat.uniforms.uOpacity.value = 1 - shatter * 0.82;
       }
 
-      // Phase 2 -> 3: Crimson-style crisscrossing needle-core razor lattice + thin high-speed smear arcs
-      if (inst.elapsed >= 0.42 && inst.elapsed < 1.95) {
-        const latProg = (inst.elapsed - 0.42) / 1.53;
+      // Phase 2 (0.42s -> 0.90s): Crimson-style crisscrossing needle-core razor lattice + thin high-speed smear arcs
+      // Ends cleanly BEFORE 0.92s so no messy random slashes linger at the climax!
+      if (inst.elapsed >= 0.42 && inst.elapsed < SEVERANCE_TIME_SEC) {
+        const latProg = (inst.elapsed - 0.42) / (SEVERANCE_TIME_SEC - 0.42);
         inst.latticeFloorMesh.visible = true;
         inst.latticeTiltMesh.visible = !this.lowQuality;
         for (let m = 0; m < inst.latticeMats.length; m++) {
-          inst.latticeMats[m].uniforms.uProgress.value = latProg;
+          inst.latticeMats[m].uniforms.uProgress.value = latProg * 0.48;
           inst.latticeMats[m].uniforms.uTime.value = timeSec;
         }
       } else {
@@ -1045,19 +1055,19 @@ export class ChronosImperatorSkillVfxPool {
       const smearLimit = this.lowQuality ? 3 : RAZOR_SMEAR_COUNT;
       for (let k = 0; k < RAZOR_SMEAR_COUNT; k++) {
         const sm = inst.smears[k];
-        if (k >= smearLimit || inst.elapsed < sm.delay || inst.elapsed > 1.38) {
+        if (k >= smearLimit || inst.elapsed < sm.delay || inst.elapsed >= SEVERANCE_TIME_SEC) {
           sm.mesh.visible = false;
           continue;
         }
         sm.mesh.visible = true;
-        const localT = Math.min(1, (inst.elapsed - sm.delay) / 0.34);
+        const localT = Math.min(1, (inst.elapsed - sm.delay) / 0.30);
         sm.mesh.rotation.y += sm.spinSpeed * dt;
         sm.mat.uniforms.uProgress.value = uProgress;
         sm.mat.uniforms.uTime.value = timeSec;
         sm.mat.uniforms.uLocalT.value = localT;
       }
 
-      // Phase 3 Trigger: Hit-Stop & Voronoi Shatter (0.92s)
+      // Phase 3 Trigger: Straight Diagonal Spatial Cut + Hit-Stop (0.92s)
       if (!inst.impactFired && inst.elapsed >= SEVERANCE_TIME_SEC) {
         inst.impactFired = true;
         inst.hitStopTimer = HIT_STOP_DURATION_SEC;
@@ -1067,9 +1077,9 @@ export class ChronosImperatorSkillVfxPool {
         inst.onImpactCallback?.();
       }
 
-      // Climax: straight diagonal slash line (0.92s -> 1.38s) -> shatters directly into 3D glass shards
-      if (inst.elapsed >= SEVERANCE_TIME_SEC && inst.elapsed < 1.38) {
-        const dtTear = (inst.elapsed - SEVERANCE_TIME_SEC) / 0.46;
+      // Climax: straight diagonal slash opening space along the cut (0.92s -> 1.42s), then shattering into 24 glass shards
+      if (inst.elapsed >= SEVERANCE_TIME_SEC && inst.elapsed < 1.42) {
+        const dtTear = (inst.elapsed - SEVERANCE_TIME_SEC) / 0.50;
         inst.dimensionTearMesh.visible = true;
         inst.dimensionTearMat.uniforms.uTime.value = timeSec;
         inst.dimensionTearMat.uniforms.uProgress.value = dtTear;
@@ -1078,25 +1088,26 @@ export class ChronosImperatorSkillVfxPool {
         inst.dimensionTearMesh.visible = false;
       }
 
-      // Crisp 3D glass shards bursting along the diagonal slash line + horizontal shutter rings & sparks (>= 0.92s)
+      // Crisp 3D glass shards bursting along the straight diagonal cut line + sparks (>= 1.12s)
       if (inst.elapsed >= SEVERANCE_TIME_SEC) {
         const dtBoom = inst.elapsed - SEVERANCE_TIME_SEC;
         const boomFade = Math.max(0, 1 - dtBoom / 1.18);
 
         const shardCap = this.lowQuality ? 10 : SHARD_COUNT;
-        const dtGlass = Math.max(0, inst.elapsed - (SEVERANCE_TIME_SEC + 0.08));
+        const shatterStart = SEVERANCE_TIME_SEC + 0.20;
+        const dtGlass = Math.max(0, inst.elapsed - shatterStart);
         const glassFade = Math.max(0, 1 - dtGlass / 1.12);
         for (let s = 0; s < shardCap; s++) {
           const sh = inst.shards[s];
-          if (inst.elapsed < SEVERANCE_TIME_SEC + 0.08 || glassFade <= 0.02) {
+          if (inst.elapsed < shatterStart || glassFade <= 0.02) {
             sh.mesh.visible = false;
             continue;
           }
           sh.mesh.visible = true;
-          const lineFrac = ((s / Math.max(1, shardCap - 1)) - 0.5) * 9.5;
-          const baseX = lineFrac * 0.88;
-          const baseY = 1.65 + lineFrac * 0.40;
-          const baseZ = -lineFrac * 0.20;
+          const lineFrac = ((s / Math.max(1, shardCap - 1)) - 0.5) * 11.5;
+          const baseX = lineFrac * 0.85;
+          const baseY = 1.85 + lineFrac * 0.52;
+          const baseZ = -lineFrac * 0.10;
           const r = dtGlass * sh.speed;
           const x = inst.cx + (baseX + Math.cos(sh.angle) * r) * as;
           const y = Math.max(inst.cy + 0.16, inst.cy + (baseY + dtGlass * sh.ySpeed - 2.4 * dtGlass * dtGlass) * as);
