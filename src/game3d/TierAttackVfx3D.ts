@@ -59,6 +59,7 @@ import { YukikageTwinsSkillVfxPool } from './skills/yukikageTwinsSkillVfx3D';
 import { ParadoxTwinsSkillVfxPool } from './skills/paradoxTwinsSkillVfx3D';
 import { VoidAsuraSkillVfxPool } from './skills/voidAsuraSkillVfx3D';
 import { NullSingularitySkillVfxPool } from './skills/nullSingularitySkillVfx3D';
+import { ChronosImperatorSkillVfxPool } from './skills/chronosImperatorSkillVfx3D';
 import {
   createTierVfxPoolCollections,
   firePodiumWeaponCastChoreography,
@@ -208,6 +209,7 @@ export class TierAttackVfxPool3D {
   private readonly paradoxTwinsSkillPool: ParadoxTwinsSkillVfxPool;
   private readonly voidAsuraSkillPool: VoidAsuraSkillVfxPool;
   private readonly nullSingularitySkillPool: NullSingularitySkillVfxPool;
+  private readonly chronosImperatorSkillPool: ChronosImperatorSkillVfxPool;
   private readonly updateState: TierVfxPoolUpdateState;
 
   constructor(hooks: TierVfxHooks = {}) {
@@ -296,6 +298,7 @@ export class TierAttackVfxPool3D {
     this.paradoxTwinsSkillPool = new ParadoxTwinsSkillVfxPool(this.safeHooks);
     this.voidAsuraSkillPool = new VoidAsuraSkillVfxPool(this.safeHooks);
     this.nullSingularitySkillPool = new NullSingularitySkillVfxPool(this.safeHooks);
+    this.chronosImperatorSkillPool = new ChronosImperatorSkillVfxPool(this.safeHooks);
     this.group.add(
       this.crimsonRoninSkillPool.group,
       this.obsidianSovereignSkillPool.group,
@@ -307,7 +310,8 @@ export class TierAttackVfxPool3D {
       this.yukikageTwinsSkillPool.group,
       this.paradoxTwinsSkillPool.group,
       this.voidAsuraSkillPool.group,
-      this.nullSingularitySkillPool.group
+      this.nullSingularitySkillPool.group,
+      this.chronosImperatorSkillPool.group
     );
     for (const mat of this.crimsonRoninSkillPool.getMaterials()) {
       patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
@@ -340,6 +344,9 @@ export class TierAttackVfxPool3D {
       patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
     }
     for (const mat of this.nullSingularitySkillPool.getMaterials()) {
+      patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
+    }
+    for (const mat of this.chronosImperatorSkillPool.getMaterials()) {
       patchShaderMaterialWithPitClip(mat, this.pitClipUniforms);
     }
   }
@@ -400,6 +407,7 @@ export class TierAttackVfxPool3D {
       fireParadoxTwinsSakuga: (o) => this.paradoxTwinsSkillPool.fire(o),
       fireVoidAsuraSakuga: (o) => this.voidAsuraSkillPool.fire(o),
       fireNullSingularitySakuga: (o) => this.nullSingularitySkillPool.fire(o),
+      fireChronosImperatorSakuga: (o) => this.chronosImperatorSkillPool.fire(o),
     };
   }
 
@@ -416,6 +424,7 @@ export class TierAttackVfxPool3D {
     this.paradoxTwinsSkillPool.setHooks(this.safeHooks);
     this.voidAsuraSkillPool.setHooks(this.safeHooks);
     this.nullSingularitySkillPool.setHooks(this.safeHooks);
+    this.chronosImperatorSkillPool.setHooks(this.safeHooks);
   }
 
   public setLowQuality(low: boolean): void {
@@ -431,6 +440,7 @@ export class TierAttackVfxPool3D {
     this.paradoxTwinsSkillPool.setLowQuality(low);
     this.voidAsuraSkillPool.setLowQuality(low);
     this.nullSingularitySkillPool.setLowQuality(low);
+    this.chronosImperatorSkillPool.setLowQuality(low);
   }
 
   public clear(): void {
@@ -476,6 +486,7 @@ export class TierAttackVfxPool3D {
     this.paradoxTwinsSkillPool.clear();
     this.voidAsuraSkillPool.clear();
     this.nullSingularitySkillPool.clear();
+    this.chronosImperatorSkillPool.clear();
   }
 
   private after(delay: number, fn: () => void): void {
@@ -1232,6 +1243,7 @@ export class TierAttackVfxPool3D {
     const ffSteps = this.lowQuality ? 14 : 11;
     this.suppressHooks = true;
     try {
+      this.chronosImperatorSkillPool.fastForwardToDissolve();
       for (let step = 0; step < ffSteps; step++) {
         this.crimsonRoninSkillPool.update(0.11, this.time);
         this.obsidianSovereignSkillPool.update(0.11, this.time);
@@ -1244,6 +1256,7 @@ export class TierAttackVfxPool3D {
         this.paradoxTwinsSkillPool.update(0.11, this.time);
         this.voidAsuraSkillPool.update(0.11, this.time);
         this.nullSingularitySkillPool.update(0.11, this.time);
+        this.chronosImperatorSkillPool.update(0.11, this.time);
       }
     } finally {
       this.suppressHooks = false;
@@ -1322,6 +1335,7 @@ export class TierAttackVfxPool3D {
         'paradox-twins': this.paradoxTwinsSkillPool.group,
         'void-asura': this.voidAsuraSkillPool.group,
         'null-singularity': this.nullSingularitySkillPool.group,
+        'crimson-clock-marshal': this.chronosImperatorSkillPool.group,
       };
       for (const chibiId of activeChibiIds) {
         if (this.warmedSkillIds.has(chibiId)) continue;
@@ -1375,6 +1389,7 @@ export class TierAttackVfxPool3D {
     this.paradoxTwinsSkillPool.update(dtSec, this.time);
     this.voidAsuraSkillPool.update(dtSec, this.time);
     this.nullSingularitySkillPool.update(dtSec, this.time);
+    this.chronosImperatorSkillPool.update(dtSec, this.time);
   }
 
   public dispose(): void {
@@ -1392,6 +1407,7 @@ export class TierAttackVfxPool3D {
     this.paradoxTwinsSkillPool.dispose();
     this.voidAsuraSkillPool.dispose();
     this.nullSingularitySkillPool.dispose();
+    this.chronosImperatorSkillPool.dispose();
     const mats = new Set<THREE.Material>();
     for (const s of this.slashes) mats.add(s.mat);
     for (const b of this.barrageLines) mats.add(b.mat);

@@ -1043,6 +1043,18 @@ export class ChronosImperatorSkillVfxPool {
     }
   }
 
+  /** Pushes any active instance straight into its post-severance dissolve tail when superseded by a new Ult. */
+  public fastForwardToDissolve(): void {
+    for (let i = 0; i < this.instances.length; i++) {
+      const inst = this.instances[i];
+      if (!inst.active) continue;
+      inst.hitStopTimer = 0;
+      inst.impactFired = true;
+      inst.onImpactCallback = null;
+      inst.elapsed = Math.max(inst.elapsed, 1.48);
+    }
+  }
+
   public dispose(): void {
     this.clear();
     for (let i = 0; i < this.allMats.length; i++) this.allMats[i].dispose();

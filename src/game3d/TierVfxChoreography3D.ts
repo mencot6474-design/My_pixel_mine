@@ -146,6 +146,9 @@ export interface TierVfxChoreoContext {
   fireNullSingularitySakuga: (opts: {
     cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
   }) => void;
+  fireChronosImperatorSakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
+  }) => void;
   fireClockworkTwinsSakuga: (opts: {
     cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[];
     onSlashBeat?: (beatIdx: number, pt: WorldPoint3) => void;
@@ -443,6 +446,22 @@ export function fireTierAttackChoreography(
 
     case 'novel': {
       const burstPts = ctx.lowQuality ? pts.slice(0, 3) : pts.slice(0, 6);
+      if (opts.chibiId === 'crimson-clock-marshal') {
+        ctx.fireChronosImperatorSakuga({
+          cx,
+          cy,
+          cz,
+          areaScale: as,
+          pts,
+          onImpact: () => {
+            burstPts.forEach((n) => {
+              ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#a855f7', '#e11d48', 6);
+              ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#fde68a', '#e11d48', 7, 7.2);
+            });
+          },
+        });
+        break;
+      }
       ctx.hooks.onArenaDim?.(0.6, '#140f1f', 0.62);
       for (let i = 0; i < 3; i++) {
         ctx.after(i * 0.08 * sc, () => {

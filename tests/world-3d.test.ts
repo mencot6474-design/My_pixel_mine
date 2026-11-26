@@ -5665,4 +5665,104 @@ describe('Pure 3D Mine World', () => {
     pool.update(10, 5.0);
     pool.dispose();
   });
+
+  it('wires Chronos Imperator 2.5s Sakuga shader, pit clip, and stroboscopic blitz without affecting other novel chibis', () => {
+    const marshal = getChibiById('crimson-clock-marshal')!;
+    const witch = getChibiById('crimson-tarot-witch')!;
+    expect(marshal).toBeDefined();
+    expect(witch).toBeDefined();
+
+    const marshalMotion = buildTierMotionWaypoints(
+      'novel',
+      { x: 0, y: 1.5, z: -6 },
+      { x: 0, y: -0.42, z: 1.65 },
+      [
+        { x: -1.6, y: -0.42, z: 1.3 },
+        { x: 1.6, y: -0.42, z: 2.0 },
+      ],
+      marshal.accentColor,
+      '#f5d08a',
+      undefined,
+      1.0,
+      marshal.id
+    );
+    const witchMotion = buildTierMotionWaypoints(
+      'novel',
+      { x: 0, y: 1.5, z: -6 },
+      { x: 0, y: -0.42, z: 1.65 },
+      [
+        { x: -1.6, y: -0.42, z: 1.3 },
+        { x: 1.6, y: -0.42, z: 2.0 },
+      ],
+      witch.accentColor,
+      '#f5d08a',
+      undefined,
+      1.0,
+      witch.id
+    );
+    expect(marshalMotion.hero.length).toBeGreaterThan(witchMotion.hero.length);
+    expect(marshalMotion.hero.filter((w) => w.snap).length).toBeGreaterThanOrEqual(5);
+
+    const spritePivot = new THREE.Group();
+    const blitzHeroPivot = new THREE.Group();
+    const back = createChibiBackAttachments(marshal.id, 1.8, spritePivot, blitzHeroPivot, 'novel', marshal.accentColor);
+    expect(back.omegaAuraGroup).toBeNull();
+
+    let impactCalls = 0;
+    const pool = new TierAttackVfxPool3D({
+      onImpactFrame: () => {
+        impactCalls += 1;
+      },
+    });
+    pool.setPitBounds({ centerX: 0, floorY: -0.42, centerZ: 1.65, radius: 6.4 });
+    const cam = new THREE.PerspectiveCamera(45, 1.6, 0.1, 100);
+    cam.position.set(0, 10, 18);
+    const target = { x: 0, y: -0.42, z: 1.65 };
+    const allTargets = [
+      { x: -1.5, y: -0.42, z: 1.3 },
+      { x: 1.5, y: -0.42, z: 2.0 },
+    ];
+
+    pool.fireTierAttack({
+      rarity: 'novel',
+      chibiId: marshal.id,
+      colorHex: marshal.accentColor,
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
+    pool.update(0.08, cam);
+    const chronosGroup = pool.group.children.find((g) => g.children.some((inst) => inst.visible && inst.getObjectByName('filmFloor')));
+    expect(chronosGroup).toBeDefined();
+
+    // Consecutive Ult fast-forwards old tail without double-firing impact hooks from the cancelled tail
+    pool.fireTierAttack({
+      rarity: 'novel',
+      chibiId: marshal.id,
+      colorHex: marshal.accentColor,
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
+    for (let i = 0; i < 30; i++) pool.update(0.05, cam);
+    expect(impactCalls).toBe(1);
+
+    // Other novel units still route through generic pooled VFX
+    pool.clear();
+    pool.fireTierAttack({
+      rarity: 'novel',
+      chibiId: witch.id,
+      colorHex: witch.accentColor,
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
+    pool.update(0.08, cam);
+    const chronosActiveForWitch = pool.group.children.some((g) => g.children.some((inst) => inst.visible && inst.getObjectByName('filmFloor')));
+    expect(chronosActiveForWitch).toBe(false);
+    pool.dispose();
+  });
 });

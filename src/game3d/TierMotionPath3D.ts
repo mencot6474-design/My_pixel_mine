@@ -627,6 +627,19 @@ export function buildTierMotionWaypoints(
       }
 
     case 'novel':
+      if (chibiId === 'crimson-clock-marshal') {
+        return {
+          hero: [
+            restStart,
+            { t: 0.10, x: cx - 3.35 * ms, y: cy + 0.95, z: cz + 0.9 * ms, face: 1, rz: -0.34, pose: 'attack', snap: true, col: '#a855f7', scale: 1.18 },
+            { t: 0.21, x: cx + 3.25 * ms, y: cy + 1.15, z: cz - 0.85 * ms, face: -1, rz: 0.34, pose: 'attack', snap: true, col: '#e11d48', scale: 1.2 },
+            { t: 0.31, x: cx - 1.65 * ms, y: cy + 1.55, z: cz - 1.35 * ms, face: 1, rz: -0.24, pose: 'attack', snap: true, col: '#f5d08a', scale: 1.22 },
+            { t: 0.42, x: cx + 1.45 * ms, y: cy + 2.55, z: cz - 0.35 * ms, face: -1, rz: 0.18, pose: 'aura', snap: true, col: '#ffffff', scale: 1.28 },
+            { t: 0.66, x: cx, y: cy + 0.72, z: cz + 0.25, face: 1, rz: 0.22, pose: 'attack', snap: true, col: '#e11d48', scale: 1.28 },
+            restEnd,
+          ],
+        };
+      }
       return {
         hero: [
           restStart,
