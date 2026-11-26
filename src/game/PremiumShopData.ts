@@ -1,11 +1,16 @@
 import { getChibiById } from '../game3d/ChibiCatalog';
 import { getStarPassiveScale } from './FusionDomain';
 
+export type PremiumShopRarity = 'twin' | 'novel';
+export type PremiumShopCurrency = 'coins' | 'gems';
+
 export interface PremiumShopItemDef {
   id: string;
   chibiId: string;
-  rarity: 'twin';
-  coinCost: number;
+  rarity: PremiumShopRarity;
+  currency: PremiumShopCurrency;
+  coinCost?: number;
+  gemCost?: number;
   dpsMult: number;
   upgradeCostMult: number;
   titleTag: string;
@@ -20,6 +25,7 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     id: 'premium-yukikage-twins',
     chibiId: 'yukikage-twins',
     rarity: 'twin',
+    currency: 'coins',
     coinCost: 50,
     dpsMult: 2.3,
     upgradeCostMult: 11,
@@ -33,6 +39,7 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     id: 'premium-halcyon-twins',
     chibiId: 'halcyon-twins',
     rarity: 'twin',
+    currency: 'coins',
     coinCost: 65,
     dpsMult: 2.75,
     upgradeCostMult: 14,
@@ -46,6 +53,7 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     id: 'premium-nocturne-twins',
     chibiId: 'nocturne-twins',
     rarity: 'twin',
+    currency: 'coins',
     coinCost: 80,
     dpsMult: 3.2,
     upgradeCostMult: 17.5,
@@ -59,6 +67,7 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     id: 'premium-lullaby-twins',
     chibiId: 'lullaby-twins',
     rarity: 'twin',
+    currency: 'coins',
     coinCost: 100,
     dpsMult: 3.65,
     upgradeCostMult: 21,
@@ -72,6 +81,7 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     id: 'premium-clockwork-twins',
     chibiId: 'clockwork-twins',
     rarity: 'twin',
+    currency: 'coins',
     coinCost: 120,
     dpsMult: 4.1,
     upgradeCostMult: 25,
@@ -85,6 +95,7 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     id: 'premium-paradox-twins',
     chibiId: 'paradox-twins',
     rarity: 'twin',
+    currency: 'coins',
     coinCost: 145,
     dpsMult: 4.55,
     upgradeCostMult: 29,
@@ -95,6 +106,60 @@ export const PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
     oreSellPct: 0,
   },
 ] as const;
+
+export const NOVEL_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
+  {
+    id: 'premium-crimson-tarot-witch',
+    chibiId: 'crimson-tarot-witch',
+    rarity: 'novel',
+    currency: 'gems',
+    gemCost: 2_500_000,
+    dpsMult: 2.3,
+    upgradeCostMult: 11,
+    titleTag: 'Scarlet Arcana Witch',
+    passiveSummary: '+100% Team DMG • +40% Ore Sell',
+    teamDmgPct: 1.0,
+    oreDropPct: 0,
+    oreSellPct: 0.4,
+  },
+  {
+    id: 'premium-gilded-chain-noble',
+    chibiId: 'gilded-chain-noble',
+    rarity: 'novel',
+    currency: 'gems',
+    gemCost: 3_000_000,
+    dpsMult: 3.2,
+    upgradeCostMult: 17.5,
+    titleTag: 'Gilded Blindfold Arbiter',
+    passiveSummary: '+125% Team DMG • +75% Ore Drop',
+    teamDmgPct: 1.25,
+    oreDropPct: 0.75,
+    oreSellPct: 0,
+  },
+  {
+    id: 'premium-crimson-clock-marshal',
+    chibiId: 'crimson-clock-marshal',
+    rarity: 'novel',
+    currency: 'gems',
+    gemCost: 3_500_000,
+    dpsMult: 4.1,
+    upgradeCostMult: 25,
+    titleTag: 'Crimson Chrono Marshal',
+    passiveSummary: '+160% Team DMG • +110% Ore Sell',
+    teamDmgPct: 1.6,
+    oreDropPct: 0,
+    oreSellPct: 1.1,
+  },
+] as const;
+
+export const ALL_PREMIUM_SHOP_ITEMS: readonly PremiumShopItemDef[] = [
+  ...PREMIUM_SHOP_ITEMS,
+  ...NOVEL_SHOP_ITEMS,
+];
+
+export function getPremiumShopItemsByRarity(rarity: PremiumShopRarity): readonly PremiumShopItemDef[] {
+  return rarity === 'novel' ? NOVEL_SHOP_ITEMS : PREMIUM_SHOP_ITEMS;
+}
 
 /** Scales a TWIN Chibi base DPS from the latest World's Secret DPS with 2-sig-fig nice rounding. */
 export function computeTwinScaledBaseDps(secretBaseDps: number, dpsMult: number): number {
@@ -113,7 +178,7 @@ export function computeTwinUpgradeCostScale(worldCostScale: number, upgradeCostM
 }
 
 export function getPremiumShopItemByChibiId(chibiId: string): PremiumShopItemDef | undefined {
-  return PREMIUM_SHOP_ITEMS.find((item) => item.chibiId === chibiId);
+  return ALL_PREMIUM_SHOP_ITEMS.find((item) => item.chibiId === chibiId);
 }
 
 export function isPremiumShopChibi(chibiId: string): boolean {
@@ -152,6 +217,7 @@ export function getActivePremiumPassiveBonuses(
 
 export interface PremiumShopBuyContext {
   towerCoins: number;
+  gems: number;
   miners: Record<string, number>;
   hotbar: (string | null)[];
   discovered: Set<string>;
@@ -159,16 +225,24 @@ export interface PremiumShopBuyContext {
   emit?: () => void;
 }
 
-/** Purchases a TWIN Chibi from the Premium Shop using Spire Coins. */
+/** Purchases a Twin (Spire Coins) or Novel (Gems) Chibi from the Premium Shop. */
 export function buyPremiumShopChibiDomain(
   ctx: PremiumShopBuyContext,
   chibiId: string
-): 'bought' | 'no_coins' | 'invalid' {
+): 'bought' | 'no_coins' | 'no_gems' | 'invalid' {
   const def = getPremiumShopItemByChibiId(chibiId);
   if (!def || !getChibiById(def.chibiId)) return 'invalid';
-  if ((ctx.towerCoins ?? 0) < def.coinCost) return 'no_coins';
 
-  ctx.towerCoins -= def.coinCost;
+  if (def.currency === 'gems') {
+    const cost = def.gemCost ?? 0;
+    if ((ctx.gems ?? 0) < cost) return 'no_gems';
+    ctx.gems -= cost;
+  } else {
+    const cost = def.coinCost ?? 0;
+    if ((ctx.towerCoins ?? 0) < cost) return 'no_coins';
+    ctx.towerCoins -= cost;
+  }
+
   ctx.miners[def.chibiId] = (ctx.miners[def.chibiId] || 0) + 1;
   ctx.discovered.add(def.chibiId);
   if (!ctx.hotbar.includes(def.chibiId)) {

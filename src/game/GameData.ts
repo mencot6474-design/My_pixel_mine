@@ -2,7 +2,7 @@ import { CHIBI_CATALOG, ChibiDef, ChibiRarity, getChibiById } from '../game3d/Ch
 import { ANOMALY_CHIBI_DEFS, computeAnomalyScaledBaseDps } from './AnomalyData';
 import { getDailyLoginRewardByChibiId } from './DailyLoginData';
 import { computeOmegaScaledBaseDps, OMEGA_BOSS_DEFS } from './OmegaData';
-import { computeTwinScaledBaseDps, PREMIUM_SHOP_ITEMS } from './PremiumShopData';
+import { ALL_PREMIUM_SHOP_ITEMS, computeTwinScaledBaseDps } from './PremiumShopData';
 import { WeatherId } from './WeatherData';
 
 export type WorldId =
@@ -114,6 +114,7 @@ export const RARITY_BORDER: Record<ItemRarity, string> = {
   fusion: '#e879f9',
   limited: '#fbbf24',
   twin: '#38bdf8',
+  novel: '#e2b866',
   omega: '#ef4444',
   anomaly: '#22d3ee',
 };
@@ -270,7 +271,7 @@ export function getEffectiveChibiBaseDps(
   if (!chibi) return 0;
   if (!unlockedWorlds || unlockedWorlds.length === 0) return chibi.baseDps;
 
-  const premium = PREMIUM_SHOP_ITEMS.find((p) => p.chibiId === chibiId);
+  const premium = ALL_PREMIUM_SHOP_ITEMS.find((p) => p.chibiId === chibiId);
   if (premium) {
     const anchor = getUnlockedWorldScaleAnchor(unlockedWorlds, discovered);
     return Math.min(chibi.baseDps, computeTwinScaledBaseDps(anchor.secretBaseDps, premium.dpsMult));
@@ -302,7 +303,7 @@ export function getEffectiveChibiBaseDps(
 export function syncTwinCatalogDpsFromAnchor(
   anchor: Pick<LatestWorldScaleAnchor, 'secretBaseDps'> = getLatestWorldScaleAnchor()
 ): void {
-  for (const item of PREMIUM_SHOP_ITEMS) {
+  for (const item of ALL_PREMIUM_SHOP_ITEMS) {
     const chibi = getChibiById(item.chibiId);
     if (!chibi) continue;
     chibi.baseDps = computeTwinScaledBaseDps(anchor.secretBaseDps, item.dpsMult);
@@ -978,6 +979,7 @@ export const CHIBI_SALVAGE_GEMS_BY_RARITY: Readonly<Record<ItemRarity, number>> 
   fusion: 50,
   limited: 50,
   twin: 60,
+  novel: 60,
   omega: 80,
   anomaly: 80,
 };
@@ -1016,6 +1018,7 @@ export const STAR_DUP_COSTS_BY_RARITY: Readonly<Record<ItemRarity, readonly numb
   secret: [0, 1, 1, 2, 3, 5],
   fusion: [0, 1, 1, 1, 2, 3],
   twin: [0, 1, 1, 1, 2, 3],
+  novel: [0, 1, 1, 1, 2, 3],
   anomaly: [0, 1, 1, 1, 2, 3],
   limited: [0, 1, 1, 1, 2, 3],
   omega: [0, 0, 0, 0, 0, 0],

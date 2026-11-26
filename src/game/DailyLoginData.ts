@@ -92,6 +92,7 @@ export function isNonSellableChibi(chibiId: string): boolean {
     isPremiumShopChibi(chibiId) ||
     isOmegaBossChibi(chibiId) ||
     rarity === 'twin' ||
+    rarity === 'novel' ||
     rarity === 'omega' ||
     rarity === 'anomaly'
   );

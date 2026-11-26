@@ -708,12 +708,14 @@ export class GameState {
     return RiftDom.redeemAnomalyChibiDomain(this, chibiId, () => this.emit());
   }
 
-  public buyPremiumShopItem(chibiId: string): 'bought' | 'no_coins' | 'invalid' {
+  public buyPremiumShopItem(chibiId: string): 'bought' | 'no_coins' | 'no_gems' | 'invalid' {
     const self = this;
     return buyPremiumShopChibiDomain(
       {
         get towerCoins() { return self.towerCoins; },
         set towerCoins(v: number) { self.towerCoins = v; },
+        get gems() { return self.gems; },
+        set gems(v: number) { self.gems = v; },
         miners: this.miners,
         hotbar: this.hotbar,
         discovered: this.discovered,

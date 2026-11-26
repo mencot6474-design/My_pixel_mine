@@ -13,6 +13,7 @@ export type ChibiRarity =
   | 'fusion'
   | 'limited'
   | 'twin'
+  | 'novel'
   | 'omega'
   | 'anomaly';
 
@@ -1016,6 +1017,42 @@ export const CHIBI_CATALOG: readonly ChibiDef[] = [
     accentColor: '#f59e0b',
     baseDps: 20_000_000,
     poseScale: 1.26,
+    smoothFilter: true,
+  },
+  {
+    id: 'crimson-tarot-witch',
+    name: 'Scarlet Arcana',
+    spriteUrl: '/chibi/crimson-tarot-witch/idle.webp',
+    poses: makePoses('crimson-tarot-witch'),
+    frames: 4,
+    rarity: 'novel',
+    accentColor: '#e11d48',
+    baseDps: 10_000_000,
+    poseScale: 1.24,
+    smoothFilter: true,
+  },
+  {
+    id: 'gilded-chain-noble',
+    name: 'Aurelia Noctis',
+    spriteUrl: '/chibi/gilded-chain-noble/idle.webp',
+    poses: makePoses('gilded-chain-noble'),
+    frames: 4,
+    rarity: 'novel',
+    accentColor: '#eab308',
+    baseDps: 14_000_000,
+    poseScale: 1.24,
+    smoothFilter: true,
+  },
+  {
+    id: 'crimson-clock-marshal',
+    name: 'Chronos Imperator',
+    spriteUrl: '/chibi/crimson-clock-marshal/idle.webp',
+    poses: makePoses('crimson-clock-marshal'),
+    frames: 4,
+    rarity: 'novel',
+    accentColor: '#a855f7',
+    baseDps: 18_000_000,
+    poseScale: 1.24,
     smoothFilter: true,
   },
   {

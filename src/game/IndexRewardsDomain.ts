@@ -8,11 +8,11 @@ import {
   WorldId,
   WORLDS,
 } from './GameData';
-import { PREMIUM_SHOP_ITEMS } from './PremiumShopData';
+import { NOVEL_SHOP_ITEMS, PREMIUM_SHOP_ITEMS } from './PremiumShopData';
 import { OMEGA_BOSS_DEFS } from './OmegaData';
 import { ANOMALY_CHIBI_DEFS } from './AnomalyData';
 
-export type IndexTabId = WorldId | 'weather' | 'fusion' | 'limited' | 'twin' | 'omega' | 'anomaly';
+export type IndexTabId = WorldId | 'weather' | 'fusion' | 'limited' | 'twin' | 'novel' | 'omega' | 'anomaly';
 
 export type IndexPassiveKind = 'oreSellPct' | 'oreDropPct' | 'allDmgPct';
 
@@ -62,6 +62,7 @@ export const ALL_INDEX_TABS: readonly IndexTabId[] = [
   'fusion',
   'limited',
   'twin',
+  'novel',
   'omega',
   'anomaly',
 ];
@@ -201,6 +202,14 @@ const TAB_MILESTONE_CONFIG: Record<
       passive: { kind: 'oreSellPct', value: 0.05, label: '+5% Ore Sell' },
     },
   },
+  novel: {
+    half: { gems: 8000, enchantDice: 1 },
+    full: {
+      gems: 25000,
+      enchantDice: 3,
+      passive: { kind: 'allDmgPct', value: 0.05, label: '+5% All DMG' },
+    },
+  },
   omega: {
     half: { gems: 10000, enchantDice: 2 },
     full: {
@@ -265,6 +274,9 @@ export function getIndexTabEntryIds(tabId: IndexTabId): string[] {
   }
   if (tabId === 'twin') {
     return PREMIUM_SHOP_ITEMS.map((item) => item.chibiId);
+  }
+  if (tabId === 'novel') {
+    return NOVEL_SHOP_ITEMS.map((item) => item.chibiId);
   }
   if (tabId === 'limited') {
     return getDailyLoginLimitedChibiIds();

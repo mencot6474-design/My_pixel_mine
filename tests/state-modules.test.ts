@@ -33,10 +33,14 @@ import {
   WORLD_MINERS,
 } from '../src/game/GameData';
 import {
+  ALL_PREMIUM_SHOP_ITEMS,
   computeTwinScaledBaseDps,
   computeTwinUpgradeCostScale,
+  getPremiumShopItemsByRarity,
+  NOVEL_SHOP_ITEMS,
   PREMIUM_SHOP_ITEMS,
 } from '../src/game/PremiumShopData';
+import { pickRandomTowerBossChibiId } from '../src/game/TowerData';
 import { FUSION_RECIPES } from '../src/game/FusionData';
 import {
   getOmegaTierProgress,
@@ -189,7 +193,7 @@ describe('Tahap C GameState Domain Modules', () => {
         'underground',
       ]);
       const idxState = new GameState();
-      expect(idxState.getTotalIndexCount()).toBe(172);
+      expect(idxState.getTotalIndexCount()).toBe(175);
       expect(ALL_INDEX_TABS).toContain('nightmare');
       expect(ALL_INDEX_TABS).toContain('singularity');
     });
@@ -2458,6 +2462,100 @@ describe('Tahap C GameState Domain Modules', () => {
       expect(reloaded.miners['astral-recruit']).toBe(100);
       expect(reloaded.chestMiners['astral-recruit']).toBeUndefined();
       expect(reloaded.ownedEnchants['blazing']).toBe(50);
+    });
+  });
+
+  describe('Novel Tier & Multi-Currency Premium Shop', () => {
+    it('defines 3 Novel Shop items priced 2.5M/3M/3.5M Gems with 2 passives and Twin-equivalent scaling', () => {
+      expect(NOVEL_SHOP_ITEMS).toHaveLength(3);
+      expect(ALL_PREMIUM_SHOP_ITEMS.length).toBe(PREMIUM_SHOP_ITEMS.length + NOVEL_SHOP_ITEMS.length);
+      expect(getPremiumShopItemsByRarity('twin')).toEqual(PREMIUM_SHOP_ITEMS);
+      expect(getPremiumShopItemsByRarity('novel')).toEqual(NOVEL_SHOP_ITEMS);
+
+      expect(NOVEL_SHOP_ITEMS.map((item) => item.gemCost)).toEqual([2_500_000, 3_000_000, 3_500_000]);
+      for (const item of NOVEL_SHOP_ITEMS) {
+        expect(item.rarity).toBe('novel');
+        expect(item.currency).toBe('gems');
+        const def = getChibiById(item.chibiId);
+        expect(def?.rarity).toBe('novel');
+        const activePassives = [item.teamDmgPct, item.oreDropPct, item.oreSellPct].filter((v) => v > 0);
+        expect(activePassives).toHaveLength(2);
+      }
+    });
+
+    it('buys Novel items with Gems (returning no_gems when short) and keeps Twin Coins purchases intact', () => {
+      const state = new GameState();
+      state.gems = 2_499_999;
+      state.towerCoins = 50;
+
+      expect(state.buyPremiumShopItem('crimson-tarot-witch')).toBe('no_gems');
+      expect(state.gems).toBe(2_499_999);
+      expect(state.towerCoins).toBe(50);
+      expect(state.miners['crimson-tarot-witch'] ?? 0).toBe(0);
+
+      state.gems = 3_000_000;
+      expect(state.buyPremiumShopItem('crimson-tarot-witch')).toBe('bought');
+      expect(state.gems).toBe(500_000);
+      expect(state.miners['crimson-tarot-witch']).toBe(1);
+      expect(state.discovered.has('crimson-tarot-witch')).toBe(true);
+      expect(state.hotbar).toContain('crimson-tarot-witch');
+
+      state.towerCoins = 49;
+      expect(state.buyPremiumShopItem('yukikage-twins')).toBe('no_coins');
+      expect(state.towerCoins).toBe(49);
+    });
+
+    it('stacks unique Twin + Novel passives (+20%/star) while deduping identical Chibi IDs', () => {
+      const state = new GameState();
+      state.miners['yukikage-twins'] = 1;
+      state.miners['crimson-tarot-witch'] = 2;
+      state.chibiStars['crimson-tarot-witch'] = 5; // +100% passive scale (2.0x)
+      state.plotMiners = ['yukikage-twins', 'crimson-tarot-witch', 'crimson-tarot-witch', null, null];
+
+      const passives = state.getActivePremiumPassives();
+      // yukikage: +1.0 teamDmg, +0.4 oreDrop | crimson-tarot-witch (5★ = 2x): +2.0 teamDmg, +0.8 oreSell
+      expect(passives.teamDmgPct).toBeCloseTo(3.0, 5);
+      expect(passives.oreDropPct).toBeCloseTo(0.4, 5);
+      expect(passives.oreSellPct).toBeCloseTo(0.8, 5);
+    });
+
+    it('applies non-sellable protection, anti-carry world cap, Index tab, save/load, and excludes Novel from Tower boss pool', () => {
+      const state = new GameState();
+      state.miners['gilded-chain-noble'] = 1;
+      state.chibiStars['gilded-chain-noble'] = 2;
+      state.discovered.add('gilded-chain-noble');
+      state.plotMiners = ['gilded-chain-noble', null, null, null, null];
+      state.hotbar[0] = 'gilded-chain-noble';
+
+      expect(isNonSellableChibi('gilded-chain-noble')).toBe(true);
+      expect(ALL_INDEX_TABS).toContain('novel');
+      expect(getIndexTabEntryIds('novel')).toEqual([
+        'crimson-tarot-witch',
+        'gilded-chain-noble',
+        'crimson-clock-marshal',
+      ]);
+
+      // Anti-carry cap in World 1
+      const w1Anchor = getUnlockedWorldScaleAnchor(['underground'], new Set(['astral-recruit']));
+      expect(getEffectiveChibiBaseDps('gilded-chain-noble', ['underground'], new Set(['astral-recruit']))).toBe(
+        computeTwinScaledBaseDps(w1Anchor.secretBaseDps, 3.2)
+      );
+
+      // Save/load round-trip preserves Novel unit & stars
+      const saved = serializeSavePayload(state);
+      const reloaded = new GameState();
+      deserializeSaveJson(reloaded, JSON.stringify(saved));
+      expect(reloaded.miners['gilded-chain-noble']).toBe(1);
+      expect(reloaded.chibiStars['gilded-chain-noble']).toBe(2);
+      expect(reloaded.plotMiners[0]).toBe('gilded-chain-noble');
+      expect(reloaded.hotbar[0]).toBe('gilded-chain-noble');
+      expect(reloaded.discovered.has('gilded-chain-noble')).toBe(true);
+
+      // Tower Boss pool stays strictly 'twin'
+      for (let i = 0; i < 12; i++) {
+        const bossId = pickRandomTowerBossChibiId(() => i / 12);
+        expect(getChibiById(bossId)?.rarity).toBe('twin');
+      }
     });
   });
 });
