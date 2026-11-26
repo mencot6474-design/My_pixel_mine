@@ -9,7 +9,6 @@ const FILM_CARVE_SLASH_COUNT = 14;
 const CEL_FRAME_MAX = 6;
 const RAZOR_SMEAR_COUNT = 6;
 const SHARD_COUNT = 24;
-const SHUTTER_RING_COUNT = 2;
 const SPARK_COUNT = 30;
 const SEVERANCE_TIME_SEC = 0.92;
 const HIT_STOP_DURATION_SEC = 0.085;
@@ -498,43 +497,6 @@ function createChronoShardMaterial(): THREE.ShaderMaterial {
   });
 }
 
-function createShutterRingMaterial(): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    uniforms: {
-      uProgress: { value: 0 },
-      uOpacity: { value: 1 },
-    },
-    vertexShader: `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform float uProgress;
-      uniform float uOpacity;
-      varying vec2 vUv;
-      void main() {
-        vec2 p = vUv * 2.0 - 1.0;
-        float r = length(p);
-        float ang = atan(p.y, p.x);
-        float ring = smoothstep(0.10, 0.018, abs(r - 0.84));
-        float shutterGaps = 0.62 + 0.38 * step(0.24, fract(ang * 3.8197));
-        vec3 col = mix(vec3(0.72, 0.34, 1.0) * 1.6, vec3(1.0, 0.16, 0.44) * 1.95, uProgress);
-        col += vec3(1.0, 0.96, 0.86) * ring * 0.85;
-        float alpha = clamp(ring * shutterGaps * (1.0 - uProgress) * uOpacity, 0.0, 1.0);
-        if (alpha < 0.015) discard;
-        gl_FragColor = vec4(col, alpha);
-      }
-    `,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-}
-
 function createChronoSparkMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -704,7 +666,6 @@ interface ChronosImperatorInstance {
   dimensionTearMesh: THREE.Mesh;
   dimensionTearMat: THREE.ShaderMaterial;
   shards: ChronoShardSlot[];
-  rings: Array<{ mesh: THREE.Mesh; mat: THREE.ShaderMaterial; delay: number }>;
   sparks: ChronoSparkSlot[];
 }
 
@@ -733,10 +694,8 @@ export class ChronosImperatorSkillVfxPool {
     const smearGeo = createThinRazorSmearGeometry(0.84, 1.0, Math.PI * 1.15, 32);
     const tearGeo = new THREE.PlaneGeometry(14.5, 1.35);
     const shardGeo = createChronoShardGeometry();
-    const ringGeo = new THREE.PlaneGeometry(1, 1);
-    ringGeo.rotateX(-Math.PI / 2);
     const sparkGeo = new THREE.PlaneGeometry(0.36, 1.05);
-    this.sharedGeos.push(floorGeo, carveGeo, celGeo, latticeGeo, smearGeo, tearGeo, shardGeo, ringGeo, sparkGeo);
+    this.sharedGeos.push(floorGeo, carveGeo, celGeo, latticeGeo, smearGeo, tearGeo, shardGeo, sparkGeo);
 
     for (let i = 0; i < POOL_SIZE; i++) {
       const root = new THREE.Group();
@@ -851,17 +810,6 @@ export class ChronosImperatorSkillVfxPool {
         });
       }
 
-      const rings: Array<{ mesh: THREE.Mesh; mat: THREE.ShaderMaterial; delay: number }> = [];
-      for (let r = 0; r < SHUTTER_RING_COUNT; r++) {
-        const mat = createShutterRingMaterial();
-        const mesh = new THREE.Mesh(ringGeo, mat);
-        mesh.name = 'shutterRing';
-        mesh.visible = false;
-        root.add(mesh);
-        this.allMats.push(mat);
-        rings.push({ mesh, mat, delay: SEVERANCE_TIME_SEC + r * 0.16 });
-      }
-
       const sparks: ChronoSparkSlot[] = [];
       for (let p = 0; p < SPARK_COUNT; p++) {
         const mat = createChronoSparkMaterial();
@@ -902,7 +850,6 @@ export class ChronosImperatorSkillVfxPool {
         dimensionTearMesh,
         dimensionTearMat,
         shards,
-        rings,
         sparks,
       });
     }
@@ -1004,7 +951,6 @@ export class ChronosImperatorSkillVfxPool {
     inst.dimensionTearMesh.visible = false;
 
     for (let s = 0; s < SHARD_COUNT; s++) inst.shards[s].mesh.visible = false;
-    for (let r = 0; r < SHUTTER_RING_COUNT; r++) inst.rings[r].mesh.visible = false;
     for (let p = 0; p < SPARK_COUNT; p++) inst.sparks[p].mesh.visible = false;
 
     this.hooks.onArenaDim?.(0.78, '#120826', 0.95);
@@ -1160,20 +1106,6 @@ export class ChronosImperatorSkillVfxPool {
           sh.mesh.scale.setScalar((0.88 + 0.42 * (s % 3) * 0.35) * glassFade * as);
           sh.mat.uniforms.uTime.value = timeSec;
           sh.mat.uniforms.uOpacity.value = glassFade;
-        }
-
-        for (let r = 0; r < SHUTTER_RING_COUNT; r++) {
-          const rg = inst.rings[r];
-          const rt = (inst.elapsed - rg.delay) / 0.78;
-          if (rt < 0 || rt > 1) {
-            rg.mesh.visible = false;
-            continue;
-          }
-          rg.mesh.visible = true;
-          rg.mesh.position.set(inst.cx, inst.cy + 0.1 + r * 0.05, inst.cz);
-          rg.mesh.scale.setScalar((3.4 + 12.2 * rt) * as);
-          rg.mat.uniforms.uProgress.value = rt;
-          rg.mat.uniforms.uOpacity.value = 1 - rt;
         }
 
         const sparkCap = this.lowQuality ? 14 : SPARK_COUNT;

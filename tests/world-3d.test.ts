@@ -5655,6 +5655,7 @@ describe('Pure 3D Mine World', () => {
     expect(instRoot).toBeDefined();
     expect(instRoot.getObjectByName('chronoSpire')).toBeUndefined();
     expect(instRoot.getObjectByName('severanceSlash')).toBeUndefined();
+    expect(instRoot.getObjectByName('shutterRing')).toBeUndefined();
     expect(instRoot.getObjectByName('razorLattice')).toBeDefined();
     expect(instRoot.getObjectByName('dimensionTear')).toBeDefined();
     expect(instRoot.children.some((c) => c.name === 'carveSlash' && c.visible)).toBe(true);
