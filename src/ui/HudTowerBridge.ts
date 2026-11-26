@@ -130,7 +130,11 @@ export class HudTowerBridge {
         this.pushToast(`🪙 RARE DROP! +${fmtInt(coins)} Spire Coin${coins > 1 ? 's' : ''}!`);
       }
       this.syncTowerSceneVisual();
-      this.render();
+      if (this.state.towerRun?.isBossWave || twins.length > 0) {
+        this.render();
+      } else {
+        this.towerUi.updateLiveValues(this.root);
+      }
     } else {
       if (res.rockBroken) {
         audio.playOreBreak('tower');

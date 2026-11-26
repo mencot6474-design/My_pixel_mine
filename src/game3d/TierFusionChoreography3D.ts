@@ -15,7 +15,8 @@ export function fireFusionChibiChoreography(
 ): void {
   const color = opts.colorHex;
   const secondary = opts.secondaryHex ?? getRaritySecondaryColor(opts.rarity);
-  const { cx, cy, cz, pts } = resolvePitBounds(opts.allTargets ?? [], opts.target, opts.wideCenter);
+  const { cx, cy, cz, pts: rawPts } = resolvePitBounds(opts.allTargets ?? [], opts.target, opts.wideCenter);
+  const pts = ctx.lowQuality ? rawPts.slice(0, 3) : rawPts.slice(0, 6);
   const sc = Math.max(0.55, Math.min(1.15, opts.speedScale ?? 1.0));
   const as = Math.max(0.45, Math.min(1.2, opts.areaScale ?? 1.0));
 

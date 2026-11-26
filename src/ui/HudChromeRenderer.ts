@@ -336,11 +336,26 @@ export function syncFeverScreenFxDom(
   if (triggerBurst && active && inMine) {
     const burst = fx.querySelector<HTMLElement>('[data-fever-burst="true"]');
     if (burst) {
-      burst.classList.remove('is-bursting');
-      void burst.offsetWidth;
-      burst.classList.add('is-bursting');
+      restartCssAnimClass(burst, 'is-bursting');
     }
   }
+}
+
+function restartCssAnimClass(el: HTMLElement, cls: string): void {
+  if (!el.classList.contains(cls)) {
+    el.classList.add(cls);
+    return;
+  }
+  const anims = typeof el.getAnimations === 'function' ? el.getAnimations({ subtree: true }) : [];
+  if (anims.length > 0) {
+    for (let i = 0; i < anims.length; i++) {
+      anims[i].cancel();
+      anims[i].play();
+    }
+    return;
+  }
+  el.classList.remove(cls);
+  el.classList.add(cls);
 }
 
 function escapeCutInText(raw: string): string {
@@ -369,6 +384,19 @@ function normalizeCutInRarity(raw: string): ItemRarity {
   return VALID_CUTIN_RARITIES.has(lower) ? lower : 'common';
 }
 
+const preloadedCutInPortraits = new Set<string>();
+
+function preloadCutInPortrait(src: string): void {
+  if (typeof Image === 'undefined' || preloadedCutInPortraits.has(src)) return;
+  preloadedCutInPortraits.add(src);
+  const img = new Image();
+  img.decoding = 'async';
+  img.src = src;
+  if (typeof img.decode === 'function') {
+    void img.decode().catch(() => {});
+  }
+}
+
 /** Triggers a widescreen cyber-anime slash cut-in banner with real rarity badge when a Chibi fires an Ult during Fever Lv.2/Lv.3. */
 export function triggerFeverUltCutInDom(
   root: HTMLElement,
@@ -390,40 +418,62 @@ export function triggerFeverUltCutInDom(
     : info.tier === 3
       ? 'HYPER ULT!'
       : 'FEVER ULT!';
-  const safeName = escapeCutInText(info.name);
   const safeRarity = normalizeCutInRarity(info.rarity);
-  const rarityBadgeHtml = renderRarityBadgeHtml(safeRarity, '!ml-0 mam-cutin-rarity');
   const safeAccent = /^#[0-9a-fA-F]{3,8}$/.test(info.accentColor) ? info.accentColor : '#38bdf8';
   const portraitSrc = assetUrl(`chibi/${encodeURIComponent(info.chibiId)}/attack.webp`);
+  preloadCutInPortrait(portraitSrc);
   const mode = info.isEncore ? 'encore' : info.tier === 3 ? 'hyper' : 'super';
 
   cutinEl.style.setProperty('--cutin-accent', safeAccent);
   cutinEl.dataset.cutinMode = mode;
-  cutinEl.innerHTML = `
-    <div class="mam-fever-cutin-plate" aria-hidden="true">
-      <div class="mam-fever-cutin-bg"></div>
-      <div class="mam-fever-cutin-halftone"></div>
-      <div class="mam-fever-cutin-speedlines"></div>
-      <div class="mam-fever-cutin-watermark">${tagText}</div>
-      <div class="mam-fever-cutin-glint"></div>
-      <div class="mam-fever-cutin-chevrons">&gt;&gt;&gt;</div>
-    </div>
-    <div class="mam-fever-cutin-portrait-wrap" aria-hidden="true">
-      <div class="mam-fever-cutin-aura"></div>
-      <img class="mam-fever-cutin-img" src="${portraitSrc}" alt="" draggable="false" />
-    </div>
-    <div class="mam-fever-cutin-body">
-      <div class="mam-fever-cutin-meta">
-        <span class="mam-fever-cutin-tag ${info.isEncore ? 'is-encore' : ''}">${tagText}</span>
-        ${rarityBadgeHtml}
+
+  const hasQuery = typeof cutinEl.querySelector === 'function';
+  let wmEl = hasQuery ? cutinEl.querySelector<HTMLElement>('[data-cutin-watermark="true"]') : null;
+  let imgEl = hasQuery ? cutinEl.querySelector<HTMLImageElement>('[data-cutin-img="true"]') : null;
+  let tagEl = hasQuery ? cutinEl.querySelector<HTMLElement>('[data-cutin-tag="true"]') : null;
+  let rarityEl = hasQuery ? cutinEl.querySelector<HTMLElement>('[data-cutin-rarity-slot="true"]') : null;
+  let nameEl = hasQuery ? cutinEl.querySelector<HTMLElement>('[data-cutin-name="true"]') : null;
+
+  if (!wmEl || !imgEl || !tagEl || !rarityEl || !nameEl) {
+    const safeName = escapeCutInText(info.name);
+    const rarityBadgeHtml = renderRarityBadgeHtml(safeRarity, '!ml-0 mam-cutin-rarity');
+    cutinEl.dataset.cutinRarity = safeRarity;
+    cutinEl.innerHTML = `
+      <div class="mam-fever-cutin-plate" aria-hidden="true">
+        <div class="mam-fever-cutin-bg"></div>
+        <div class="mam-fever-cutin-halftone"></div>
+        <div class="mam-fever-cutin-speedlines"></div>
+        <div class="mam-fever-cutin-watermark" data-cutin-watermark="true">${tagText}</div>
+        <div class="mam-fever-cutin-glint"></div>
+        <div class="mam-fever-cutin-chevrons">&gt;&gt;&gt;</div>
       </div>
-      <div class="mam-fever-cutin-name">${safeName}</div>
-      <div class="mam-fever-cutin-bar" aria-hidden="true"><span class="mam-fever-cutin-bar-fill"></span></div>
-    </div>
-  `;
-  cutinEl.classList.remove('is-showing');
-  void cutinEl.offsetWidth;
-  cutinEl.classList.add('is-showing');
+      <div class="mam-fever-cutin-portrait-wrap" aria-hidden="true">
+        <div class="mam-fever-cutin-aura"></div>
+        <img class="mam-fever-cutin-img" data-cutin-img="true" src="${portraitSrc}" alt="" decoding="async" draggable="false" />
+      </div>
+      <div class="mam-fever-cutin-body">
+        <div class="mam-fever-cutin-meta">
+          <span class="mam-fever-cutin-tag ${info.isEncore ? 'is-encore' : ''}" data-cutin-tag="true">${tagText}</span>
+          <span class="contents" data-cutin-rarity-slot="true">${rarityBadgeHtml}</span>
+        </div>
+        <div class="mam-fever-cutin-name" data-cutin-name="true">${safeName}</div>
+        <div class="mam-fever-cutin-bar" aria-hidden="true"><span class="mam-fever-cutin-bar-fill"></span></div>
+      </div>
+    `;
+  } else {
+    wmEl.textContent = tagText;
+    tagEl.textContent = tagText;
+    tagEl.classList.toggle('is-encore', info.isEncore);
+    nameEl.textContent = info.name;
+    if (imgEl.getAttribute('src') !== portraitSrc) {
+      imgEl.setAttribute('src', portraitSrc);
+    }
+    if (cutinEl.dataset.cutinRarity !== safeRarity) {
+      cutinEl.dataset.cutinRarity = safeRarity;
+      rarityEl.innerHTML = renderRarityBadgeHtml(safeRarity, '!ml-0 mam-cutin-rarity');
+    }
+  }
+  restartCssAnimClass(cutinEl, 'is-showing');
 }
 
 export function renderMineQuickButtonsHtml(opts: {

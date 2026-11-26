@@ -291,8 +291,8 @@ export class TowerArena3D {
         pod.ringMat.emissiveIntensity = active ? 1.15 : 0.55;
         pod.holoDiscMat.color.set(accent);
         pod.sigilMat.color.set(accent);
-        pod.auraGroup.visible = active;
-        if (active) {
+        pod.auraGroup.visible = active && !this.lowQuality;
+        if (active && !this.lowQuality) {
           pod.auraVeilMat.uniforms.uColorA.value.set(accent);
           pod.auraOuterVeilMat.uniforms.uColorB.value.set(accent);
           pod.particleMat.uniforms.uColorA.value.set(accent);
@@ -500,12 +500,15 @@ export class TowerArena3D {
 
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
+    this.cityEnv.setLowQuality?.(low);
     this.impactFx.setLowQuality(low);
     this.projectiles.setLowQuality(low);
     this.tierVfx.setLowQuality(low);
     this.bossSprite?.setLowQuality(low);
     for (let i = 0; i < this.spawnPodiums.length; i++) {
-      this.spawnPodiums[i].setLowQuality(low);
+      const pod = this.spawnPodiums[i];
+      pod.setLowQuality(low);
+      pod.auraGroup.visible = !low && this.fighters.has(i);
     }
     for (const f of this.fighters.values()) {
       f.sprite.setLowQuality(low);
@@ -784,7 +787,7 @@ export class TowerArena3D {
     const out: PlotAnchorScreen[] = [];
     if (!this.group.visible) return out;
     for (const f of this.fighters.values()) {
-      f.sprite.getLabelAnchorWorldPosition(projVec, 0.14, true).project(camera);
+      f.sprite.getLabelAnchorWorldPosition(projVec, 0.14, false).project(camera);
       const visible = projVec.z > -1 && projVec.z < 1;
       const labelX = (projVec.x * 0.5 + 0.5) * width;
       const labelY = (-projVec.y * 0.5 + 0.5) * height;
@@ -803,6 +806,11 @@ export class TowerArena3D {
       });
     }
     return out;
+  }
+
+  public warmupShaders(renderer: THREE.WebGLRenderer, camera: THREE.Camera, scene: THREE.Scene): void {
+    const activeIds = this.fighterConfigs.map((f) => f.def.id);
+    this.tierVfx.warmupShaders(renderer, camera, scene, activeIds);
   }
 
   public dispose(): void {

@@ -397,8 +397,9 @@ export function stepMineActiveWorldEntities(ctx: {
   };
   ctx.plotAttackController.update(dtSec, ctx.camera, ctx.pit, ctx.pedestals, inMine, minerBreakCb, hitCb);
 
-  if (rawDt > 0.12 && ctx.plotAttackController.getUnitCount() > 0) {
-    let rem = Math.min(180, rawDt - dtSec);
+  if (rawDt >= 1.5 && ctx.plotAttackController.getUnitCount() > 0) {
+    // Only catch up after real background tab suspension, capped per frame to avoid a hitch death spiral.
+    let rem = Math.min(4.0, rawDt - dtSec);
     const step = 0.25;
     while (rem > 0) {
       const s = Math.min(step, rem);

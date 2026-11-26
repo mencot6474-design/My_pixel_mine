@@ -559,8 +559,6 @@ export class GameHud {
       ? 'true'
       : 'false';
 
-    this.worldOverlayUi.resetPlotLayerKeysIfMineIdle();
-
     try {
       if (this.inspectedSlot !== null) {
         this.plotInspectUi.render(this.root, this.inspectedSlot);

@@ -788,6 +788,14 @@ export class RiftArena3D {
     this.impactFx.update(safeDt, camera);
   }
 
+  public warmupShaders(renderer: THREE.WebGLRenderer, camera: THREE.Camera, scene: THREE.Scene): void {
+    const activeIds: string[] = [];
+    for (const f of this.fighters.values()) {
+      activeIds.push(f.chibiId);
+    }
+    this.tierVfx.warmupShaders(renderer, camera, scene, activeIds);
+  }
+
   public dispose(): void {
     this.cityEnv.dispose();
     this.projectiles.dispose();

@@ -39,7 +39,7 @@ const NOCTURNE_GLSL = `
     float v = 0.0;
     float a = 0.5;
     mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       v += a * ncVnoise(p);
       p = rot * p * 2.05 + vec2(1.7, 9.2);
       a *= 0.5;
@@ -51,7 +51,7 @@ const NOCTURNE_GLSL = `
     float v = 0.0;
     float a = 0.55;
     float freq = 1.0;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       float n = 1.0 - abs(ncVnoise(p * freq) * 2.0 - 1.0);
       v += (n * n * n) * a;
       freq *= 2.15;
@@ -1363,7 +1363,7 @@ export class NocturneTwinsSkillVfxPool {
         inst.impactFired = true;
         inst.hitStopTimer = 0.068;
         this.tmpTargetPos.set(inst.cx, inst.cy + 1.45, inst.cz);
-        this.launchParticleBurst(inst, this.tmpTargetPos, 12, this.lowQuality ? 10 : 18, 1.46);
+        this.launchParticleBurst(inst, this.tmpTargetPos, 12, this.lowQuality ? 8 : 12, 1.46);
         this.hooks.onImpactFrame?.(1.0, 1.0, '#f8fafc', 0.085);
         this.hooks.onSpeedLines?.(1.0, 0.62);
         this.hooks.onCameraPush?.(0.42, 0.062);

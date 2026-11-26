@@ -603,6 +603,7 @@
   }
 
   body.mam-quality-low .mam-fever-speedlines,
+  body.mam-quality-low .mam-fever-vignette,
   body.mam-quality-low .mam-fever-rain {
     display: none;
   }
@@ -610,6 +611,14 @@
   body.mam-quality-low .mam-fever-frame-spin,
   body.mam-quality-low .mam-notif-badge {
     animation: none;
+  }
+
+  body.mam-quality-low .mam-fever-cutin-img {
+    filter: none !important;
+  }
+
+  body.mam-quality-low .mam-fever-burst-title {
+    text-shadow: 0 3px 0 #14111d !important;
   }
 
   body.mam-quality-low .mam-fever-fill {

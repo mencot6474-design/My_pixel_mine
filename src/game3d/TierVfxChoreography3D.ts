@@ -442,6 +442,7 @@ export function fireTierAttackChoreography(
     }
 
     case 'omega': {
+      const burstPts = ctx.lowQuality ? pts.slice(0, 3) : pts.slice(0, 6);
       if (opts.chibiId === 'abyssal-leviathan') {
         ctx.fireAbyssalLeviathanSakuga({
           cx,
@@ -450,7 +451,7 @@ export function fireTierAttackChoreography(
           areaScale: as,
           pts,
           onImpact: () => {
-            pts.forEach((n) => {
+            burstPts.forEach((n) => {
               ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#083344', '#67e8f9', 6);
               ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#ecfeff', '#22d3ee', 8, 7.2);
             });
@@ -467,7 +468,7 @@ export function fireTierAttackChoreography(
           areaScale: as,
           pts,
           onImpact: () => {
-            pts.forEach((n) => {
+            burstPts.forEach((n) => {
               ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#09090b', '#e879f9', 6);
               ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#f8fafc', '#e879f9', 8, 7.2);
             });
@@ -483,7 +484,7 @@ export function fireTierAttackChoreography(
         areaScale: as,
         pts,
         onImpact: () => {
-          pts.forEach((n) => {
+          burstPts.forEach((n) => {
             ctx.spawnDebrisBurst(n.x, n.y + 0.8, n.z, '#ef4444', '#fbbf24', 6);
             ctx.spawnSparks(n.x, n.y + 0.9, n.z, '#fef08a', '#ffffff', 8, 7.0);
           });
@@ -493,6 +494,7 @@ export function fireTierAttackChoreography(
     }
 
     case 'anomaly': {
+      const burstPts = ctx.lowQuality ? pts.slice(0, 3) : pts.slice(0, 6);
       if (opts.chibiId === 'null-singularity') {
         ctx.fireNullSingularitySakuga({
           cx,
@@ -501,7 +503,7 @@ export function fireTierAttackChoreography(
           areaScale: as,
           pts,
           onImpact: () => {
-            pts.forEach((n) => {
+            burstPts.forEach((n) => {
               ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#4c1d95', '#22d3ee', 6);
               ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#fde047', '#e879f9', 8, 7.4);
             });
@@ -517,7 +519,7 @@ export function fireTierAttackChoreography(
         areaScale: as,
         pts,
         onImpact: () => {
-          pts.forEach((n) => {
+          burstPts.forEach((n) => {
             ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#18181b', '#ef4444', 6);
             ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#ffffff', '#ef4444', 8, 7.4);
           });

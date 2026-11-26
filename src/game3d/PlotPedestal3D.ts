@@ -667,7 +667,9 @@ export class PlotPedestal3D {
       (this.hovered ? 0.86 : 0.68) + this.castRingPulse * 0.22 + feverScale * 0.05
     );
     const pulseWave = Math.sin(elapsed * 4.2 + this.index) * 0.05;
-    this.syncUnderHoloColors();
+    if (this.enchantIsRainbow) {
+      this.syncUnderHoloColors();
+    }
     const beamBoost = feverScale * 0.08;
     this.thrusterBeamOuterMat.uniforms.uTime.value = elapsed + this.index * 0.7;
     this.thrusterBeamOuterMat.uniforms.uOpacity.value =

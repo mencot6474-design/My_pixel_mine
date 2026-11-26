@@ -29,7 +29,7 @@ const NULL_SINGULARITY_GLSL = `
     float v = 0.0;
     float a = 0.5;
     mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       v += nsVnoise(p) * a;
       p = rot * p * 2.07 + vec2(2.3, 5.1);
       a *= 0.5;
@@ -788,7 +788,7 @@ export class NullSingularitySkillVfxPool {
 
         const dtBoom = Math.max(0, inst.elapsed - 0.82);
 
-        const sparkLimit = this.lowQuality ? 16 : STAR_SPARK_COUNT;
+        const sparkLimit = this.lowQuality ? 10 : 18;
         for (let k = 0; k < sparkLimit; k++) {
           const sp = inst.sparks[k];
           if (fade <= 0.02) {

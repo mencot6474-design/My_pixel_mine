@@ -201,25 +201,49 @@ async function bootstrap(): Promise<void> {
   };
 
   let clickFeedbackTimer: number | null = null;
+  let cachedCursorCanvas: HTMLCanvasElement | null = null;
+  let lastCursorTarget: EventTarget | null = null;
+  let lastCursorHoverUi = false;
+  let cursorBodyActive = false;
   const syncPickaxeCursor = (e: PointerEvent): void => {
     lastPointerType = e.pointerType || 'mouse';
     if (isAdPlaying()) {
-      document.body.classList.remove('mam-custom-cursor-active');
+      if (cursorBodyActive) {
+        cursorBodyActive = false;
+        document.body.classList.remove('mam-custom-cursor-active');
+      }
       pickaxeCursorEl.style.display = 'none';
       return;
     }
     if (lastPointerType === 'touch') {
-      document.body.classList.remove('mam-custom-cursor-active');
+      if (cursorBodyActive) {
+        cursorBodyActive = false;
+        document.body.classList.remove('mam-custom-cursor-active');
+      }
       return;
     }
-    document.body.classList.add('mam-custom-cursor-active');
-    const canvas = threeRoot.querySelector('canvas');
-    const isMining = Boolean(canvas && e.target === canvas && canvas.classList.contains('mam-mining-cursor'));
-    const targetEl = e.target instanceof Element ? e.target : null;
-    const isHoveringUi = !isMining && Boolean(targetEl?.closest(INTERACTIVE_CURSOR_SELECTOR));
+    if (!cursorBodyActive) {
+      cursorBodyActive = true;
+      document.body.classList.add('mam-custom-cursor-active');
+    }
+    if (!cachedCursorCanvas || !cachedCursorCanvas.isConnected) {
+      cachedCursorCanvas = threeRoot.querySelector('canvas');
+    }
+    const isMining = Boolean(
+      cachedCursorCanvas && e.target === cachedCursorCanvas && cachedCursorCanvas.classList.contains('mam-mining-cursor')
+    );
+    if (e.target !== lastCursorTarget) {
+      lastCursorTarget = e.target;
+      const targetEl = e.target instanceof Element ? e.target : null;
+      lastCursorHoverUi = !isMining && Boolean(targetEl?.closest(INTERACTIVE_CURSOR_SELECTOR));
+    } else if (isMining) {
+      lastCursorHoverUi = false;
+    }
     pickaxeCursorEl.classList.toggle('is-mining-mode', isMining);
-    pickaxeCursorEl.classList.toggle('is-hovering', isHoveringUi);
-    pickaxeCursorEl.style.display = 'block';
+    pickaxeCursorEl.classList.toggle('is-hovering', lastCursorHoverUi);
+    if (pickaxeCursorEl.style.display !== 'block') {
+      pickaxeCursorEl.style.display = 'block';
+    }
     setCursorPosition(e.clientX, e.clientY);
     syncComboEdgeFlip(e.clientX, e.clientY);
   };

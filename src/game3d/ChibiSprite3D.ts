@@ -58,6 +58,7 @@ export class ChibiSprite3D {
   private readonly defaultBlitzHeroGeo: THREE.PlaneGeometry;
   private readonly blitzPoseMetas: Partial<Record<ChibiAnimState, LoadedPoseMeta>> = {};
   private readonly blitzPoseGeos: Partial<Record<ChibiAnimState, THREE.PlaneGeometry>> = {};
+  private readonly poseGeos: Partial<Record<ChibiAnimState, THREE.PlaneGeometry>> = {};
   private readonly glintMesh: THREE.Mesh;
   private readonly glintMat: THREE.MeshBasicMaterial;
   private readonly backAttachments: ChibiBackAttachmentHandle;
@@ -292,44 +293,71 @@ export class ChibiSprite3D {
       if (this.disposed || this.animState !== state) return;
       this.blitzPoseMetas[state] = meta;
 
-      const h = this.computeNormalizedHeight(meta, state);
-      const width = h * (meta.pixelWidth / Math.max(1, meta.pixelHeight));
+      let nextGeo = this.poseGeos[state];
+      let h: number;
+      if (!nextGeo) {
+        h = this.computeNormalizedHeight(meta, state);
+        const width = h * (meta.pixelWidth / Math.max(1, meta.pixelHeight));
+        nextGeo = new THREE.PlaneGeometry(width, h);
+        this.poseGeos[state] = nextGeo;
+      } else {
+        h = (nextGeo.parameters as { height?: number }).height ?? this.computeNormalizedHeight(meta, state);
+      }
       this.currentSpriteHeight = h;
       this.topTrimRatio = meta.topTrimRatio;
 
-      const nextGeo = new THREE.PlaneGeometry(width, h);
-      this.sharedSpriteGeo.dispose();
-      this.sharedSpriteGeo = nextGeo;
-      this.mesh.geometry = nextGeo;
+      if (this.mesh.geometry !== nextGeo) {
+        this.mesh.geometry = nextGeo;
+      }
       this.mesh.position.y = h * 0.5;
       this.glintMesh.position.y = h * 0.56;
 
       for (let i = 0; i < this.ghostMeshes.length; i++) {
         const gm = this.ghostMeshes[i];
-        gm.geometry = nextGeo;
+        if (gm.geometry !== nextGeo) gm.geometry = nextGeo;
         gm.position.y = h * 0.5;
-        this.ghostMats[i].map = meta.texture;
-        this.ghostMats[i].needsUpdate = true;
+        const gMat = this.ghostMats[i];
+        if (gMat.map !== meta.texture) {
+          const hadMap = gMat.map !== null;
+          gMat.map = meta.texture;
+          if (!hadMap) gMat.needsUpdate = true;
+        }
       }
 
       for (let i = 0; i < this.blitzGhosts.length; i++) {
         const bg = this.blitzGhosts[i];
-        bg.mesh.geometry = nextGeo;
-        bg.mat.map = meta.texture;
-        bg.mat.needsUpdate = true;
+        if (bg.mesh.geometry !== nextGeo) bg.mesh.geometry = nextGeo;
+        if (bg.mat.map !== meta.texture) {
+          const hadMap = bg.mat.map !== null;
+          bg.mat.map = meta.texture;
+          if (!hadMap) bg.mat.needsUpdate = true;
+        }
       }
-      this.blitzCloneMesh.geometry = nextGeo;
-      this.blitzCloneMat.map = meta.texture;
-      this.blitzCloneMat.needsUpdate = true;
+      if (this.blitzCloneMesh.geometry !== nextGeo) {
+        this.blitzCloneMesh.geometry = nextGeo;
+      }
+      if (this.blitzCloneMat.map !== meta.texture) {
+        const hadCloneMap = this.blitzCloneMat.map !== null;
+        this.blitzCloneMat.map = meta.texture;
+        if (!hadCloneMap) this.blitzCloneMat.needsUpdate = true;
+      }
 
-      this.material.map = meta.texture;
+      const hadMainMap = this.material.map !== null;
+      if (this.material.map !== meta.texture) {
+        this.material.map = meta.texture;
+      }
       this.material.color.set(this.hologramMode ? this.hologramTintHex : '#ffffff');
       this.material.opacity = this.hologramMode ? 0.52 : 1;
       this.material.depthWrite = !this.hologramMode;
-      this.material.needsUpdate = true;
+      if (!hadMainMap) {
+        this.material.needsUpdate = true;
+      }
 
-      this.depthMaterial.map = meta.texture;
-      this.depthMaterial.needsUpdate = true;
+      if (this.depthMaterial.map !== meta.texture) {
+        const hadDepthMap = this.depthMaterial.map !== null;
+        this.depthMaterial.map = meta.texture;
+        if (!hadDepthMap) this.depthMaterial.needsUpdate = true;
+      }
       this.mesh.castShadow = !this.hologramMode;
     } catch {
       // Keep previous texture if asset fails to load
@@ -407,12 +435,14 @@ export class ChibiSprite3D {
       this.blitzHeroMesh.position.y = h * 0.5;
     }
     if (this.blitzHeroMat.map !== meta.texture) {
+      const hadHeroMap = this.blitzHeroMat.map !== null;
       this.blitzHeroMat.map = meta.texture;
-      this.blitzHeroMat.needsUpdate = true;
+      if (!hadHeroMap) this.blitzHeroMat.needsUpdate = true;
     }
     if (this.blitzCloneMat.map !== meta.texture) {
+      const hadCloneMap = this.blitzCloneMat.map !== null;
       this.blitzCloneMat.map = meta.texture;
-      this.blitzCloneMat.needsUpdate = true;
+      if (!hadCloneMap) this.blitzCloneMat.needsUpdate = true;
     }
   }
 
@@ -972,6 +1002,9 @@ export class ChibiSprite3D {
   public dispose(): void {
     this.disposed = true;
     this.sharedSpriteGeo.dispose();
+    for (const geo of Object.values(this.poseGeos)) {
+      geo?.dispose();
+    }
     this.material.dispose();
     this.depthMaterial.dispose();
     this.glintMesh.geometry.dispose();

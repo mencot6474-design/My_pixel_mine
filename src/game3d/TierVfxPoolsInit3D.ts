@@ -806,6 +806,7 @@ export function createTierVfxPoolCollections(
 
   for (let i = 0; i < 140; i++) {
     const mat = new THREE.MeshBasicMaterial({
+      map: streakTex,
       transparent: true,
       depthWrite: false,
       blending: THREE.NormalBlending,

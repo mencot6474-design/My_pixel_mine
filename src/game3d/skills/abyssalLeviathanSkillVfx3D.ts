@@ -31,7 +31,7 @@ const LEVIATHAN_NOISE_GLSL = `
     float v = 0.0;
     float a = 0.5;
     mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       v += lvVnoise(p) * a;
       p = rot * p * 2.07 + vec2(1.7, 5.3);
       a *= 0.5;
@@ -42,7 +42,7 @@ const LEVIATHAN_NOISE_GLSL = `
   float lvRidged(vec2 p) {
     float v = 0.0;
     float a = 0.55;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       float n = 1.0 - abs(lvVnoise(p) * 2.0 - 1.0);
       v += (n * n * n) * a;
       p *= 2.15;

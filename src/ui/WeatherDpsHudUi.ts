@@ -646,7 +646,7 @@ export class WeatherDpsHudUi {
     shell.classList.toggle('is-tier-3', tier === 3);
     shell.dataset.overclockState = snap.active ? 'active' : 'charging';
     shell.dataset.overclockTier = String(tier);
-    fillEl.style.width = `${pct}%`;
+    fillEl.style.transform = `scaleX(${(pct / 100).toFixed(3)})`;
 
     titleEl.textContent = snap.active ? buffs.label : 'OVERCLOCK FEVER';
     titleEl.className = OVERCLOCK_TITLE_CLASS;
@@ -725,7 +725,7 @@ export function buildOverclockGaugeInnerHtml(
           <span class="${getOverclockValueClass(snap.active, tier)}" data-oc-value="true">${valText}</span>
         </div>
         <div class="mam-fever-track">
-          <div class="mam-fever-fill" style="width:${pct}%"></div>
+          <div class="mam-fever-fill" style="transform:scaleX(${(pct / 100).toFixed(3)})"></div>
           ${OVERCLOCK_TICKS_HTML}
         </div>
         <div class="${getOverclockBadgesClass(snap.active)}" data-oc-badges="true" data-oc-tier="${tier}">

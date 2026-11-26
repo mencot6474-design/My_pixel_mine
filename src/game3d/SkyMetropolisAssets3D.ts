@@ -165,11 +165,14 @@ export function getRooftopHoloSignTexture(label: HoloBillboardLabel, accentHex: 
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
     ctx.font = '900 44px "Fredoka", "Rubik", "Segoe UI", sans-serif';
-    ctx.shadowColor = accentHex;
-    ctx.shadowBlur = 14;
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = accentHex;
+    ctx.globalAlpha = 0.3;
+    ctx.strokeText(label, 72, H * 0.52);
+    ctx.globalAlpha = 1;
     ctx.fillStyle = '#ffffff';
     ctx.fillText(label, 72, H * 0.52);
-    ctx.shadowBlur = 0;
   });
 }
 
@@ -203,12 +206,9 @@ export function getZeppelinHoloTickerTexture(
 
     // Glowing top/bottom holo rails + corner brackets
     ctx.fillStyle = primary;
-    ctx.shadowColor = primary;
-    ctx.shadowBlur = 10;
     ctx.fillRect(12, 8, W - 24, 4);
     ctx.fillStyle = secondary;
     ctx.fillRect(12, H - 12, W - 24, 3);
-    ctx.shadowBlur = 0;
 
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(12, 8, 22, 4);
@@ -238,11 +238,14 @@ export function getZeppelinHoloTickerTexture(
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
     ctx.font = '900 42px "Fredoka", "Rubik", "Segoe UI", sans-serif';
-    ctx.shadowColor = primary;
-    ctx.shadowBlur = 16;
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = primary;
+    ctx.globalAlpha = 0.28;
+    ctx.strokeText(label, W * 0.5, H * 0.52, W - 128);
+    ctx.globalAlpha = 1;
     ctx.fillStyle = '#ffffff';
     ctx.fillText(label, W * 0.5, H * 0.52, W - 128);
-    ctx.shadowBlur = 0;
   });
 }
 

@@ -13,6 +13,7 @@ import { buildTowerRuinedSkyscrapers } from './TowerCitySkyscrapers3D';
 export interface TowerCityEnvironmentHandle {
   group: THREE.Group;
   setBossState: (isBossWave: boolean, isBossMode: boolean, anomalyColorHex: string) => void;
+  setLowQuality?: (low: boolean) => void;
   update: (dtSec: number, elapsed: number) => void;
   dispose: () => void;
 }
@@ -721,6 +722,19 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
     arenaAccentMat.emissiveIntensity = isBossWave ? 1.65 : 1.3;
   };
 
+  let lowQuality = false;
+
+  const setLowQuality = (low: boolean): void => {
+    lowQuality = low;
+    emberInst.visible = !low;
+    ashInst.visible = !low;
+    if (low) {
+      for (let i = 0; i < electricSparks.length; i++) {
+        electricSparks[i].group.visible = false;
+      }
+    }
+  };
+
   const update = (dtSec: number, elapsed: number): void => {
     const safeDt = Math.min(Math.max(0, dtSec), 0.1);
     const t = elapsed + safeDt * 0.001;
@@ -731,6 +745,8 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
     }
 
     emberSeamMat.emissiveIntensity = 0.32 + bossEmberBoost + Math.sin(t * 1.9) * 0.08;
+
+    if (lowQuality) return;
 
     // Update rising orange-red crater fire embers (rise -> taper/dim smoothly)
     for (let i = 0; i < EMBER_COUNT; i++) {
@@ -809,6 +825,7 @@ export function createTowerCityEnvironment(): TowerCityEnvironmentHandle {
   return {
     group,
     setBossState,
+    setLowQuality,
     update,
     dispose,
   };

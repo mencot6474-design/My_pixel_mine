@@ -190,11 +190,24 @@ export class ShopWorld3D {
     { id: 'omega-right', title: 'Obsidian Sovereign', subtitle: 'Omega Boss • Right Pad', pos: new THREE.Vector3(17.6, 13.0, -9.6) },
   ];
 
+  private lowQuality = false;
+
   constructor() {
     this.shopGroup.visible = false;
     this.altarGroup.visible = false;
     this.buildShopPlaza();
     this.buildEnchantAltar();
+  }
+
+  public setLowQuality(low: boolean): void {
+    this.lowQuality = low;
+    this.cyberPlaza?.setLowQuality?.(low);
+    for (let i = 0; i < this.omegaPadBosses.length; i++) {
+      this.omegaPadBosses[i].setLowQuality(low);
+    }
+    for (const w of this.plazaWalkers.values()) {
+      w.sprite.setLowQuality(low);
+    }
   }
 
   private buildShopPlaza(): void {
@@ -576,6 +589,7 @@ export class ShopWorld3D {
 
       if (!this.plazaWalkers.has(key)) {
         const sprite = new ChibiSprite3D(def, 1.55);
+        sprite.setLowQuality(this.lowQuality);
         const startWp = PLAZA_WAYPOINTS[i % PLAZA_WAYPOINTS.length];
         const nextWp = PLAZA_WAYPOINTS[(i + 2) % PLAZA_WAYPOINTS.length];
         const startX = startWp.x + ((i % 3) - 1) * 0.7;

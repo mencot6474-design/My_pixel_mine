@@ -37,7 +37,7 @@ const HALCYON_GLSL = `
     float v = 0.0;
     float a = 0.5;
     mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       v += a * hcVnoise(p);
       p = rot * p * 2.04 + vec2(1.9, 6.3);
       a *= 0.5;
@@ -49,7 +49,7 @@ const HALCYON_GLSL = `
     float v = 0.0;
     float a = 0.56;
     float freq = 1.0;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       float n = 1.0 - abs(hcVnoise(p * freq) * 2.0 - 1.0);
       v += (n * n * n) * a;
       freq *= 2.18;
@@ -1663,7 +1663,7 @@ export class HalcyonTwinsSkillVfxPool {
         inst.guillotineImpactFired = true;
         inst.hitStopTimer = 0.088;
         this.tmpTargetPos.set(inst.cx, inst.cy + 1.05, inst.cz);
-        this.launchShardBurst(inst, this.tmpTargetPos, 12, this.lowQuality ? 8 : 16, 1.55);
+        this.launchShardBurst(inst, this.tmpTargetPos, 12, this.lowQuality ? 6 : 10, 1.55);
         this.hooks.onImpactFrame?.(1.0, 1.0, '#ffffff', 0.092);
         this.hooks.onSpeedLines?.(1.0, 0.65);
         this.hooks.onCameraPush?.(0.46, 0.068);

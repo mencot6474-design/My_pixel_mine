@@ -462,13 +462,19 @@ export function createMineRendererAndLights(opts: {
     (window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
   const renderer = new THREE.WebGLRenderer({ antialias: !isMobileTouch, powerPreference: 'high-performance' });
   const initialPreset = GRAPHICS_PRESETS[opts.graphicsQuality];
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, initialPreset.maxPixelRatio));
+  const initialPrCap =
+    opts.graphicsQuality === 'low'
+      ? 1
+      : isMobileTouch
+        ? Math.min(1.25, initialPreset.maxPixelRatio)
+        : initialPreset.maxPixelRatio;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, initialPrCap));
   renderer.setSize(w, h);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.06;
   renderer.shadowMap.enabled = initialPreset.shadowsEnabled;
-  renderer.shadowMap.autoUpdate = opts.graphicsQuality === 'high';
+  renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = initialPreset.shadowsEnabled;
   renderer.shadowMap.type = opts.graphicsQuality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   opts.mountEl.appendChild(renderer.domElement);
@@ -481,6 +487,7 @@ export function createMineRendererAndLights(opts: {
   bloomPass.enabled = opts.graphicsQuality === 'high';
   composer.addPass(bloomPass);
   const impactPass = new ShaderPass(ImpactFrameShader);
+  impactPass.enabled = false;
   composer.addPass(impactPass);
   composer.addPass(new OutputPass());
 
@@ -564,6 +571,9 @@ export function stepMinePostFxAndDim(opts: {
     opts.sunLight.intensity = 1.85 * k;
   }
   opts.bloomPass.strength += (0.12 - opts.bloomPass.strength) * Math.min(1, dtSec * 7);
+  opts.impactPass.enabled =
+    opts.impactPass.uniforms.uImpactStrength.value > 0.01 ||
+    opts.impactPass.uniforms.uSpeedLines.value > 0.01;
 }
 
 /** Updates Overclock Fever emissive/rim visuals on the mine stage. */
@@ -617,6 +627,7 @@ export function applyMineGraphicsQuality(ctx: {
   weatherFx: WeatherFx3D;
   env: MineEnvironment3D;
   pit: OrePit3D;
+  shopWorld?: import('./ShopWorld3D').ShopWorld3D | null;
   towerArena: TowerArena3D | null;
   omegaArena: OmegaArena3D | null;
   riftArena?: RiftArena3D | null;
@@ -625,9 +636,13 @@ export function applyMineGraphicsQuality(ctx: {
 }): void {
   const low = ctx.quality === 'low';
   const preset = GRAPHICS_PRESETS[ctx.quality];
-  ctx.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.maxPixelRatio));
+  const isMobileTouch =
+    typeof window !== 'undefined' &&
+    (window.matchMedia?.('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+  const pixelRatioCap = low ? 1 : isMobileTouch ? Math.min(1.25, preset.maxPixelRatio) : preset.maxPixelRatio;
+  ctx.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, pixelRatioCap));
   ctx.renderer.shadowMap.enabled = preset.shadowsEnabled;
-  ctx.renderer.shadowMap.autoUpdate = ctx.quality === 'high';
+  ctx.renderer.shadowMap.autoUpdate = false;
   ctx.renderer.shadowMap.type = ctx.quality === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   ctx.sunLight.castShadow = preset.shadowsEnabled;
   ctx.renderer.shadowMap.needsUpdate = preset.shadowsEnabled;
@@ -638,6 +653,7 @@ export function applyMineGraphicsQuality(ctx: {
   ctx.weatherFx.setQualityScale(0);
   ctx.env.setLowQuality(low);
   ctx.pit.setLowQuality(low);
+  ctx.shopWorld?.setLowQuality(low);
   ctx.towerArena?.setLowQuality(low);
   ctx.omegaArena?.setLowQuality(low);
   ctx.riftArena?.setLowQuality(low);

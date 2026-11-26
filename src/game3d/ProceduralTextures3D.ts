@@ -679,11 +679,12 @@ export function getBroadcastBannerTexture(accentHex: string, feverActive = false
 
     // Thick top & bottom glowing banner rails + inner tech rules
     ctx.fillStyle = barColor;
-    ctx.shadowColor = barColor;
-    ctx.shadowBlur = 14;
     ctx.fillRect(0, 10, W, 12);
     ctx.fillRect(0, H - 22, W, 12);
-    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 0.25;
+    ctx.fillRect(0, 6, W, 20);
+    ctx.fillRect(0, H - 26, W, 20);
+    ctx.globalAlpha = 1;
 
     ctx.fillStyle = secondaryColor;
     ctx.globalAlpha = 0.78;
@@ -712,14 +713,16 @@ export function getBroadcastBannerTexture(accentHex: string, feverActive = false
     ctx.textAlign = 'center';
     ctx.font = '900 72px "Fredoka", "Rubik", "Segoe UI", sans-serif';
     ctx.lineJoin = 'round';
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = barColor;
+    ctx.globalAlpha = 0.28;
+    ctx.strokeText('MyChibiMine', W * 0.45, H * 0.52);
+    ctx.globalAlpha = 1;
     ctx.lineWidth = 8;
     ctx.strokeStyle = '#030712';
-    ctx.shadowColor = barColor;
-    ctx.shadowBlur = 20;
     ctx.strokeText('MyChibiMine', W * 0.45, H * 0.52);
     ctx.fillStyle = '#ffffff';
     ctx.fillText('MyChibiMine', W * 0.45, H * 0.52);
-    ctx.shadowBlur = 0;
 
     // Trailing diamond emblem + LIVE / FEVER broadcast pill
     const tagX = W * 0.855;

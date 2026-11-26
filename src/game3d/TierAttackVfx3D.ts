@@ -190,6 +190,8 @@ export class TierAttackVfxPool3D {
   private activeTargetFloorY = 0;
   private disposed = false;
   private lastCamera?: THREE.Camera;
+  private baseShadersWarmed = false;
+  private readonly warmedSkillIds = new Set<string>();
 
   private readonly tmpDir = new THREE.Vector3();
   private readonly tmpUp = new THREE.Vector3(0, 1, 0);
@@ -1052,10 +1054,15 @@ export class TierAttackVfxPool3D {
     slot.mesh.scale.setScalar(slot.s0);
     if (slot.flatFloor) slot.mesh.rotation.set(-Math.PI / 2, 0, slot.baseRotZ);
     else slot.mesh.rotation.set(0, 0, slot.baseRotZ);
-    slot.mat.map = opts.tex;
+    if (slot.mat.map !== opts.tex) {
+      const hadMap = slot.mat.map !== null;
+      slot.mat.map = opts.tex;
+      if (!hadMap) {
+        slot.mat.needsUpdate = true;
+      }
+    }
     slot.mat.color.set(opts.color ?? '#ffffff');
     slot.mat.opacity = slot.baseAlpha;
-    slot.mat.needsUpdate = true;
     slot.mesh.visible = true;
   }
 
@@ -1220,25 +1227,128 @@ export class TierAttackVfxPool3D {
       pushTail(sealList);
     }
 
-    // Fast-forward already-running 2.5s Sakuga shader tails (+0.54s) cleanly into their dissolve phase
-    // so consecutive 1.5s Ults never stack additive whiteout on stage.
+    // Fast-forward already-running 2.5s Sakuga shader tails cleanly into their dissolve phase
+    // so consecutive Ults never stack overlapping multi-layer shaders or additive whiteout on stage.
+    const ffSteps = this.lowQuality ? 14 : 11;
     this.suppressHooks = true;
     try {
-      for (let step = 0; step < 6; step++) {
-        this.crimsonRoninSkillPool.update(0.09, this.time);
-        this.obsidianSovereignSkillPool.update(0.09, this.time);
-        this.abyssalLeviathanSkillPool.update(0.09, this.time);
-        this.clockworkTwinsSkillPool.update(0.09, this.time);
-        this.lullabyTwinsSkillPool.update(0.09, this.time);
-        this.nocturneTwinsSkillPool.update(0.09, this.time);
-        this.halcyonTwinsSkillPool.update(0.09, this.time);
-        this.yukikageTwinsSkillPool.update(0.09, this.time);
-        this.paradoxTwinsSkillPool.update(0.09, this.time);
-        this.voidAsuraSkillPool.update(0.09, this.time);
-        this.nullSingularitySkillPool.update(0.09, this.time);
+      for (let step = 0; step < ffSteps; step++) {
+        this.crimsonRoninSkillPool.update(0.11, this.time);
+        this.obsidianSovereignSkillPool.update(0.11, this.time);
+        this.abyssalLeviathanSkillPool.update(0.11, this.time);
+        this.clockworkTwinsSkillPool.update(0.11, this.time);
+        this.lullabyTwinsSkillPool.update(0.11, this.time);
+        this.nocturneTwinsSkillPool.update(0.11, this.time);
+        this.halcyonTwinsSkillPool.update(0.11, this.time);
+        this.yukikageTwinsSkillPool.update(0.11, this.time);
+        this.paradoxTwinsSkillPool.update(0.11, this.time);
+        this.voidAsuraSkillPool.update(0.11, this.time);
+        this.nullSingularitySkillPool.update(0.11, this.time);
       }
     } finally {
       this.suppressHooks = false;
+    }
+  }
+
+  /** Pre-compiles GLSL shader programs for base VFX pools and equipped Chibi skill pools before first Ult. */
+  public warmupShaders(
+    renderer: THREE.WebGLRenderer,
+    camera: THREE.Camera,
+    scene: THREE.Scene,
+    activeChibiIds: readonly string[] = []
+  ): void {
+    if (this.disposed) return;
+    const restored: Array<{ obj: THREE.Object3D; prev: boolean }> = [];
+    const showTemp = (obj: THREE.Object3D | undefined): void => {
+      if (!obj) return;
+      if (!obj.visible) {
+        restored.push({ obj, prev: false });
+        obj.visible = true;
+      }
+    };
+
+    try {
+      if (!this.baseShadersWarmed) {
+        this.baseShadersWarmed = true;
+        showTemp(this.slashes[0]?.mesh);
+        showTemp(this.barrageLines[0]?.mesh);
+        showTemp(this.domes[0]?.mesh);
+        showTemp(this.beams[0]?.mesh);
+        showTemp(this.vortices[0]?.mesh);
+        showTemp(this.rifts[0]?.mesh);
+        showTemp(this.orbs[0]?.mesh);
+        showTemp(this.clockDials[0]?.mesh);
+        showTemp(this.frostSeals[0]?.mesh);
+        showTemp(this.lullabySeals[0]?.mesh);
+        showTemp(this.halcyonSeals[0]?.mesh);
+        for (const list of Object.values(this.fusionSeals)) {
+          showTemp(list[0]?.mesh);
+        }
+        const seenWeaponKinds = new Set<string>();
+        for (const w of this.weapons) {
+          if (!seenWeaponKinds.has(w.kind)) {
+            seenWeaponKinds.add(w.kind);
+            showTemp(w.mesh);
+          }
+        }
+        const seenFusionVariants = new Set<string>();
+        for (const fp of this.fusionProps) {
+          if (!seenFusionVariants.has(fp.variant)) {
+            seenFusionVariants.add(fp.variant);
+            showTemp(fp.mesh);
+          }
+        }
+        showTemp(this.halcyonPillars[0]?.mesh);
+        showTemp(this.halcyonRain[0]?.mesh);
+        showTemp(this.nocturneEclipses[0]?.mesh);
+        showTemp(this.nocturneCraters[0]?.mesh);
+        showTemp(this.lullabyMirrorCages[0]?.mesh);
+        showTemp(this.lullabyCrescentMoons[0]?.mesh);
+        showTemp(this.clocktowers[0]?.mesh);
+        showTemp(this.boltSegs[0]?.mesh);
+        showTemp(this.debris[0]?.mesh);
+        showTemp(this.quads[0]?.mesh);
+      }
+
+      const skillPoolById: Record<string, THREE.Group> = {
+        'crimson-ronin': this.crimsonRoninSkillPool.group,
+        'obsidian-sovereign': this.obsidianSovereignSkillPool.group,
+        'abyssal-leviathan': this.abyssalLeviathanSkillPool.group,
+        'clockwork-twins': this.clockworkTwinsSkillPool.group,
+        'lullaby-twins': this.lullabyTwinsSkillPool.group,
+        'nocturne-twins': this.nocturneTwinsSkillPool.group,
+        'halcyon-twins': this.halcyonTwinsSkillPool.group,
+        'yukikage-twins': this.yukikageTwinsSkillPool.group,
+        'paradox-twins': this.paradoxTwinsSkillPool.group,
+        'void-asura': this.voidAsuraSkillPool.group,
+        'null-singularity': this.nullSingularitySkillPool.group,
+      };
+      for (const chibiId of activeChibiIds) {
+        if (this.warmedSkillIds.has(chibiId)) continue;
+        const skillGroup = skillPoolById[chibiId];
+        if (!skillGroup) continue;
+        this.warmedSkillIds.add(chibiId);
+        const firstInstance = skillGroup.children[0];
+        if (firstInstance) {
+          firstInstance.traverse((obj) => showTemp(obj));
+        }
+      }
+
+      if (restored.length > 0) {
+        showTemp(this.group);
+        let curParent = this.group.parent;
+        while (curParent) {
+          showTemp(curParent);
+          curParent = curParent.parent;
+        }
+        renderer.compile(this.group, camera, scene);
+      }
+    } catch {
+      // Ignore compile errors in headless/mock environments
+    } finally {
+      for (let i = restored.length - 1; i >= 0; i--) {
+        restored[i].obj.visible = restored[i].prev;
+      }
     }
   }
 

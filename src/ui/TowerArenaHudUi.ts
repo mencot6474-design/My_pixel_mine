@@ -258,7 +258,7 @@ export class TowerArenaHudUi {
                 })
                 .join('')}
             </div>
-            <div class="flex items-center justify-center pt-0.5 relative z-[2]">
+            <div class="flex items-center justify-center gap-2.5 flex-wrap pt-0.5 relative z-[2]">
               <button
                 class="px-4 py-1.5 rounded-xl border-2 border-[#14111d] text-[12px] font-black transition-transform ${
                   canReroll
@@ -269,6 +269,12 @@ export class TowerArenaHudUi {
                 ${!canReroll ? 'disabled' : ''}
               >
                 🎲 Reroll Blessings (${freeRerolls > 0 ? `FREE • ${freeRerolls}` : `${TOWER_BLESSING_REROLL_GEM_COST} Gems`})
+              </button>
+              <button
+                class="px-4 py-1.5 rounded-xl border-2 border-[#14111d] bg-[#fecdd3] hover:bg-[#fda4af] text-[#881337] text-[12px] font-black cursor-pointer transition-transform hover:scale-[0.97] active:scale-95"
+                data-action="tower-exit"
+              >
+                Exit Tower
               </button>
             </div>
           </div>
@@ -321,7 +327,7 @@ export class TowerArenaHudUi {
       .join(' ');
 
     return `
-      <div class="absolute top-3 left-3 z-20 pointer-events-auto">
+      <div class="absolute top-3 left-3 z-[45] pointer-events-auto">
         <button class="mam-battle-exit-btn" data-action="tower-exit">
           ${towerIconHtml(20)}
           <span>Exit Tower</span>
@@ -341,7 +347,7 @@ export class TowerArenaHudUi {
                     <span class="w-2 h-2 rounded-full border border-[#14111d] shrink-0" style="background:${floorDef.world.iconColor}"></span>
                     <span>W${floorDef.worldIndex + 1} ${floorDef.world.name.toUpperCase()}</span>
                   </span>
-                  <span class="mam-tower-pill bg-[#bae6fd] text-[#14111d]">
+                  <span class="mam-tower-pill bg-[#bae6fd] text-[#14111d]" data-tower-floor-wave="true">
                     FL ${run.floor}/${TOWER_MAX_FLOOR} • W${run.wave}/${run.maxWaves}
                   </span>
                   <span class="mam-tower-pill bg-white text-[#7c3aed]">
@@ -356,7 +362,7 @@ export class TowerArenaHudUi {
                   }"></span>
                   <span class="text-[13px] font-black uppercase tracking-wider truncate ${
                     run.isBossWave ? 'text-[#b45309]' : 'text-[#14111d]'
-                  }">${
+                  }" data-tower-wave-title="true">${
                     run.isBossWave
                       ? floorDef.isFinalBoss
                         ? `FINAL BOSS • ${(bossDef?.name ?? 'Twin Overlord').toUpperCase()}`
@@ -438,6 +444,15 @@ export class TowerArenaHudUi {
   public updateLiveValues(root: HTMLElement): void {
     const run = this.state.towerRun;
     if (!run) return;
+    const floorWaveEl = root.querySelector<HTMLElement>('[data-tower-floor-wave="true"]');
+    if (floorWaveEl) {
+      floorWaveEl.textContent = `FL ${run.floor}/${TOWER_MAX_FLOOR} • W${run.wave}/${run.maxWaves}`;
+    }
+    const waveTitleEl = root.querySelector<HTMLElement>('[data-tower-wave-title="true"]');
+    if (waveTitleEl && !run.isBossWave) {
+      const floorDef = getTowerFloorDef(run.floor);
+      waveTitleEl.textContent = `WAVE ${run.wave}/9 • ${floorDef.world.name.toUpperCase()} ORES`;
+    }
     const hpPct = run.maxHp > 0 ? Math.max(0, Math.min(100, (run.hp / run.maxHp) * 100)) : 0;
     const aliveOres = run.waveOres.filter((o) => o.alive).length;
     const fill = root.querySelector<HTMLElement>('[data-tower-hp-fill="true"]');
@@ -549,12 +564,14 @@ export class TowerArenaHudUi {
   }
 
   public bindArenaEvents(root: HTMLElement): void {
-    root.querySelector('[data-action="tower-exit"]')?.addEventListener('click', () => {
-      audio.playSfx('ui-close');
-      this.blessingsPopoverOpen = false;
-      this.state.abandonTowerRun();
-      this.onExitTowerArena();
-      this.onOpenModal('tower');
+    root.querySelectorAll('[data-action="tower-exit"]').forEach((el) => {
+      el.addEventListener('click', () => {
+        audio.playSfx('ui-close');
+        this.blessingsPopoverOpen = false;
+        this.state.abandonTowerRun();
+        this.onExitTowerArena();
+        this.onOpenModal('tower');
+      });
     });
 
     root.querySelectorAll('[data-action="tower-toggle-blessings"]').forEach((el) => {

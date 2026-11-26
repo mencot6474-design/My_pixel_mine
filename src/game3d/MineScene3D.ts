@@ -174,6 +174,7 @@ export class MineScene3D {
   private lastOverlayEmitMs = 0;
   private fpsFrames = 0;
   private fpsSampleStartMs = performance.now();
+  private shaderWarmupDirty = true;
   private focusedPlotIndex: number | null = null;
   private tutorialFocusChest = false;
   private tutorialFocusSellShop = false;
@@ -319,6 +320,7 @@ export class MineScene3D {
   private ensureShopWorld(): ShopWorld3D {
     if (!this.shopWorld) {
       const sw = new ShopWorld3D();
+      sw.setLowQuality(this.graphicsQuality === 'low');
       this.shopWorld = sw;
       this.scene.add(sw.shopGroup);
       this.scene.add(sw.altarGroup);
@@ -568,6 +570,10 @@ export class MineScene3D {
       !fullscreenCutsceneActive &&
       (!this.modalBackdropThrottled || now - this.lastThrottledRenderMs >= 33);
     if (shouldRenderFrame) {
+      if (this.shaderWarmupDirty) {
+        this.shaderWarmupDirty = false;
+        this.warmupActiveShaders();
+      }
       this.lastThrottledRenderMs = now;
       const postFxActive = this.graphicsQuality === 'high';
       if (!postFxActive) {
@@ -575,7 +581,8 @@ export class MineScene3D {
       } else {
         this.composer.render();
       }
-      if (this.graphicsQuality !== 'low' || now - this.lastOverlayEmitMs >= 32) {
+      const overlayIntervalMs = this.graphicsQuality === 'low' ? 32 : 20;
+      if (now - this.lastOverlayEmitMs >= overlayIntervalMs) {
         this.lastOverlayEmitMs = now;
         this.projector.emitModeOverlays(this.mode, this.shopWorld, this.fusionWorld);
       }
@@ -624,6 +631,9 @@ export class MineScene3D {
   public setMode(mode: SceneMode): void {
     const modeChanged = this.mode !== mode;
     this.mode = mode;
+    if (modeChanged && mode !== 'shop' && mode !== 'altar' && mode !== 'fusion') {
+      this.shaderWarmupDirty = true;
+    }
     this.lastOverlayEmitMs = 0;
     this.tapShakeIntensity = 0;
     if (modeChanged) {
@@ -807,6 +817,19 @@ export class MineScene3D {
     this.towerArena?.syncFighters(configs);
     this.omegaArena?.syncFighters(configs);
     this.riftArena?.syncFighters(configs);
+    this.shaderWarmupDirty = true;
+  }
+
+  private warmupActiveShaders(): void {
+    if (this.mode === 'mine') {
+      this.plotAttackController.warmupShaders(this.renderer, this.camera, this.scene);
+    } else if (this.mode === 'tower') {
+      this.towerArena?.warmupShaders(this.renderer, this.camera, this.scene);
+    } else if (this.mode === 'omega') {
+      this.omegaArena?.warmupShaders(this.renderer, this.camera, this.scene);
+    } else if (this.mode === 'rift') {
+      this.riftArena?.warmupShaders(this.renderer, this.camera, this.scene);
+    }
   }
 
   public setOmegaBossConfig(bossId: OmegaBossId): void { this.ensureOmegaArena().setBossId(bossId); }
@@ -948,6 +971,7 @@ export class MineScene3D {
       this.plotAttackController.setSlotUnit(slotIndex, null);
       this.slotCombatStats.delete(slotIndex);
     }
+    this.shaderWarmupDirty = true;
     this.syncTowerFighters();
   }
 
@@ -994,6 +1018,7 @@ export class MineScene3D {
       weatherFx: this.weatherFx,
       env: this.env,
       pit: this.pit,
+      shopWorld: this.shopWorld,
       towerArena: this.towerArena,
       omegaArena: this.omegaArena,
       riftArena: this.riftArena,

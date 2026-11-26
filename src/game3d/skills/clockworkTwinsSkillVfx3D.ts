@@ -36,7 +36,7 @@ const CLOCKWORK_NOISE_GLSL = `
     float v = 0.0;
     float a = 0.55;
     float freq = 1.0;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       float n = 1.0 - abs(cwVnoise(p * freq) * 2.0 - 1.0);
       v += (n * n * n) * a;
       freq *= 2.15;
@@ -990,7 +990,7 @@ export class ClockworkTwinsSkillVfxPool {
         inst.impactFired = true;
         inst.hitStopTimer = 0.056;
         this.tmpTargetPos.set(inst.cx, inst.cy + 0.95, inst.cz);
-        this.launchSparkBurst(inst, this.tmpTargetPos, 12, this.lowQuality ? 10 : 18, 1.45);
+        this.launchSparkBurst(inst, this.tmpTargetPos, 12, this.lowQuality ? 8 : 12, 1.45);
         this.hooks.onImpactFrame?.(1.0, 1.0, '#2dd4bf', 0.075);
         this.hooks.onSpeedLines?.(1.0, 0.58);
         this.hooks.onCameraPush?.(0.38, 0.055);

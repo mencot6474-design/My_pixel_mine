@@ -160,6 +160,14 @@ export class PlotAttackController3D {
     this.tierVfx.setLowQuality(low);
   }
 
+  public warmupShaders(renderer: THREE.WebGLRenderer, camera: THREE.Camera, scene: THREE.Scene): void {
+    const activeIds: string[] = [];
+    for (const unit of this.units.values()) {
+      activeIds.push(unit.def.id);
+    }
+    this.tierVfx.warmupShaders(renderer, camera, scene, activeIds);
+  }
+
   public setSlotUnit(
     slotIndex: number,
     def: ChibiDef | null,

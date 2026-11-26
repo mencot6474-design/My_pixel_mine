@@ -32,7 +32,7 @@ const PARADOX_MATH_GLSL = `
   float pxLightning(vec2 p) {
     float v = 0.0;
     float a = 0.55;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       float n = 1.0 - abs(pxNoise(p) * 2.0 - 1.0);
       v += (n * n * n * n) * a;
       p *= 2.25;
@@ -1429,7 +1429,7 @@ export class ParadoxTwinsSkillVfxPool {
     inst.chaosCubeCoreMat.uniforms.uOpacity.value = 1;
 
     // 3. 24 Unknown-God Red-Black Spatial Cubes (with 4 Hero Monoliths!) swarming inward -> Zero-G Hangtime Burst
-    const cubeLimit = this.lowQuality ? 12 : SPATIAL_CUBE_COUNT;
+    const cubeLimit = this.lowQuality ? 10 : 16;
     for (let i = 0; i < inst.cubes.length; i++) {
       const cb = inst.cubes[i];
       cb.mesh.visible = i < cubeLimit;
@@ -1598,7 +1598,7 @@ export class ParadoxTwinsSkillVfxPool {
 
       // 4. 24 Unknown-God Red-Black Spatial Cubes:
       // Act 1-2: Swarm & snap at 90 deg -> Freeze tight at 0.56s -> Act 3: Detonate outward into Zero-G Hangtime!
-      const cubeLimit = this.lowQuality ? 12 : SPATIAL_CUBE_COUNT;
+      const cubeLimit = this.lowQuality ? 10 : 16;
       for (let i = 0; i < cubeLimit; i++) {
         const cb = inst.cubes[i];
         if (inst.elapsed < 0.78) {
@@ -1662,7 +1662,7 @@ export class ParadoxTwinsSkillVfxPool {
         inst.impactFired = true;
         inst.hitStopTimer = 0.095;
         this.tmpTargetPos.set(inst.cx, inst.cy + 1.15, inst.cz);
-        this.launchSparkBurst(inst, this.tmpTargetPos, 12, this.lowQuality ? 10 : 18, 1.75);
+        this.launchSparkBurst(inst, this.tmpTargetPos, 12, this.lowQuality ? 8 : 12, 1.75);
         this.hooks.onImpactFrame?.(1.0, 1.0, '#ff1e38', 0.095);
         this.hooks.onSpeedLines?.(1.0, 0.66);
         this.hooks.onCameraPush?.(0.42, 0.06);

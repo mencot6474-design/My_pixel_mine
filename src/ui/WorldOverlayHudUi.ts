@@ -278,6 +278,8 @@ export class WorldOverlayHudUi {
     }
   >();
   private readonly mineOreBarNodes = new Map<number, { key: string; el: HTMLElement }>();
+  private readonly shopNodeCache = new Map<string, { el: HTMLElement; x: number; y: number }>();
+  private readonly shopBubbleCache = new Map<string, { el: HTMLElement; x: number; y: number }>();
   private lastAutoDmgPopupAtMs = 0;
 
   constructor(
@@ -471,9 +473,14 @@ export class WorldOverlayHudUi {
             if (cached.badgeWrap) {
               cached.badgeWrap.classList.toggle('is-ult-active', nextState === 'active');
               if (nextState === 'active' && prevState !== 'active') {
-                cached.badgeWrap.classList.remove('is-ult-pop');
-                void cached.badgeWrap.offsetWidth;
-                cached.badgeWrap.classList.add('is-ult-pop');
+                if (!cached.badgeWrap.classList.contains('is-ult-pop')) {
+                  cached.badgeWrap.classList.add('is-ult-pop');
+                } else if (typeof cached.badgeWrap.getAnimations === 'function') {
+                  for (const anim of cached.badgeWrap.getAnimations()) {
+                    anim.cancel();
+                    anim.play();
+                  }
+                }
               } else if (nextState !== 'active') {
                 cached.badgeWrap.classList.remove('is-ult-pop');
               }
@@ -763,6 +770,7 @@ export class WorldOverlayHudUi {
       if (this.shopLayerEl.innerHTML !== '') {
         this.shopLayerEl.innerHTML = '';
         this.shopLayerEl.dataset.keys = '';
+        this.shopNodeCache.clear();
       }
       return;
     }
@@ -771,18 +779,26 @@ export class WorldOverlayHudUi {
     if (this.shopLayerEl.dataset.keys !== key) {
       this.shopLayerEl.dataset.keys = key;
       this.shopLayerEl.innerHTML = buildShopAnchorsHtml(visible);
-      this.shopLayerEl.querySelectorAll('[data-shop-station]').forEach((btn) => {
+      this.shopNodeCache.clear();
+      this.shopLayerEl.querySelectorAll<HTMLElement>('[data-shop-station]').forEach((btn) => {
+        const id = btn.dataset.shopStation as ShopStationId;
+        this.shopNodeCache.set(id, { el: btn, x: NaN, y: NaN });
         btn.addEventListener('click', () => {
-          const id = (btn as HTMLElement).dataset.shopStation as ShopStationId;
           this.onOpenShopStation(id);
         });
       });
     }
     for (const a of visible) {
-      const el = this.shopLayerEl.querySelector<HTMLElement>(`[data-shop-station="${a.id}"]`);
-      if (!el) continue;
-      el.style.left = `${a.x}px`;
-      el.style.top = `${a.y}px`;
+      const entry = this.shopNodeCache.get(a.id);
+      if (!entry) continue;
+      const rx = Math.round(a.x);
+      const ry = Math.round(a.y);
+      if (entry.x !== rx || entry.y !== ry) {
+        entry.x = rx;
+        entry.y = ry;
+        entry.el.style.left = `${rx}px`;
+        entry.el.style.top = `${ry}px`;
+      }
     }
     this.onTutorialDomArrowSync?.();
   }
@@ -794,6 +810,7 @@ export class WorldOverlayHudUi {
       if (this.shopBubbleLayerEl.innerHTML !== '') {
         this.shopBubbleLayerEl.innerHTML = '';
         this.shopBubbleLayerEl.dataset.keys = '';
+        this.shopBubbleCache.clear();
       }
       return;
     }
@@ -802,13 +819,24 @@ export class WorldOverlayHudUi {
     if (this.shopBubbleLayerEl.dataset.keys !== key) {
       this.shopBubbleLayerEl.dataset.keys = key;
       this.shopBubbleLayerEl.innerHTML = buildShopChibiBubblesHtml(bubbles);
+      this.shopBubbleCache.clear();
+      this.shopBubbleLayerEl.querySelectorAll<HTMLElement>('[data-chibi-bubble]').forEach((el) => {
+        const id = el.dataset.chibiBubble;
+        if (id) this.shopBubbleCache.set(id, { el, x: NaN, y: NaN });
+      });
     }
 
     for (const b of bubbles) {
-      const el = this.shopBubbleLayerEl.querySelector<HTMLElement>(`[data-chibi-bubble="${b.id}"]`);
-      if (!el) continue;
-      el.style.left = `${Math.round(b.x)}px`;
-      el.style.top = `${Math.round(b.y)}px`;
+      const entry = this.shopBubbleCache.get(b.id);
+      if (!entry) continue;
+      const rx = Math.round(b.x);
+      const ry = Math.round(b.y);
+      if (entry.x !== rx || entry.y !== ry) {
+        entry.x = rx;
+        entry.y = ry;
+        entry.el.style.left = `${rx}px`;
+        entry.el.style.top = `${ry}px`;
+      }
     }
   }
 

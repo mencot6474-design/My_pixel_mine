@@ -7,6 +7,7 @@
     z-index: 14;
     opacity: 0;
     visibility: hidden;
+    contain: layout style;
     transition:
       opacity 240ms ease-out,
       visibility 0s linear 240ms;
@@ -23,34 +24,29 @@
 
   .mam-fever-speedlines {
     position: absolute;
-    left: -35%;
-    top: -35%;
-    width: 170%;
-    height: 170%;
+    left: -10%;
+    top: -10%;
+    width: 120%;
+    height: 120%;
     pointer-events: none;
     background: repeating-conic-gradient(
       from 0deg at 50% 50%,
       transparent 0deg 4.2deg,
-      rgba(253, 224, 71, 0.38) 4.2deg 5.2deg,
+      rgba(253, 224, 71, 0.28) 4.2deg 5.2deg,
       transparent 5.2deg 9.5deg,
-      rgba(251, 146, 60, 0.28) 9.5deg 10.3deg,
+      rgba(251, 146, 60, 0.22) 9.5deg 10.3deg,
       transparent 10.3deg 15deg
     );
-    -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 48%, rgba(0, 0, 0, 0.85) 74%);
-    mask-image: radial-gradient(circle at 50% 50%, transparent 48%, rgba(0, 0, 0, 0.85) 74%);
-    opacity: 0.42;
-    will-change: transform;
-    animation: mamFeverRotateSlow 22s linear infinite;
-    animation-play-state: paused;
+    opacity: 0.24;
   }
 
   .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-speedlines {
     background: repeating-conic-gradient(
       from 0deg at 50% 50%,
       transparent 0deg 3.8deg,
-      rgba(251, 113, 133, 0.44) 3.8deg 4.9deg,
+      rgba(251, 113, 133, 0.36) 3.8deg 4.9deg,
       transparent 4.9deg 8.8deg,
-      rgba(253, 224, 71, 0.34) 8.8deg 9.7deg,
+      rgba(253, 224, 71, 0.28) 8.8deg 9.7deg,
       transparent 9.7deg 13.5deg
     );
   }
@@ -59,9 +55,9 @@
     background: repeating-conic-gradient(
       from 0deg at 50% 50%,
       transparent 0deg 3.5deg,
-      rgba(34, 211, 238, 0.46) 3.5deg 4.6deg,
+      rgba(34, 211, 238, 0.38) 3.5deg 4.6deg,
       transparent 4.6deg 8.2deg,
-      rgba(253, 224, 71, 0.38) 8.2deg 9.1deg,
+      rgba(253, 224, 71, 0.32) 8.2deg 9.1deg,
       transparent 9.1deg 12.5deg
     );
   }
@@ -69,101 +65,56 @@
   .mam-fever-vignette {
     position: absolute;
     inset: 0;
-    background:
-      radial-gradient(rgba(253, 224, 71, 0.42) 2.2px, transparent 2.4px),
-      radial-gradient(
-        ellipse at center,
-        transparent 56%,
-        rgba(245, 158, 11, 0.24) 84%,
-        rgba(234, 88, 12, 0.42) 100%
-      );
-    background-size: 12px 12px, 100% 100%;
-    -webkit-mask-image: radial-gradient(ellipse at center, transparent 54%, rgba(0, 0, 0, 0.92) 90%);
-    mask-image: radial-gradient(ellipse at center, transparent 54%, rgba(0, 0, 0, 0.92) 90%);
+    background: radial-gradient(
+      ellipse at center,
+      transparent 60%,
+      rgba(245, 158, 11, 0.2) 86%,
+      rgba(234, 88, 12, 0.38) 100%
+    );
     opacity: 0.72;
   }
 
   .mam-fever-frame {
+    --fever-frame-col: #fbbf24;
     position: absolute;
     inset: 0;
-    padding: 6px;
-    overflow: hidden;
+    border: 5px solid var(--fever-frame-col);
+    outline: 2px solid #14111d;
+    outline-offset: -5px;
     pointer-events: none;
-    -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-frame {
+    --fever-frame-col: #ff3b5c;
+  }
+
+  .mam-fever-screen-fx[data-fever-tier='3'] .mam-fever-frame {
+    --fever-frame-col: #22d3ee;
   }
 
   .mam-fever-frame-spin {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 165vmax;
-    height: 165vmax;
-    background: conic-gradient(
-      from 0deg at 50% 50%,
-      #fde047 0deg,
-      #fb923c 90deg,
-      #fff8e7 180deg,
-      #f59e0b 270deg,
-      #fde047 360deg
-    );
-    will-change: transform;
-    transform: translate3d(-50%, -50%, 0) rotate(0deg);
-    animation: mamFeverFrameSpin 3.2s linear infinite;
-    animation-play-state: paused;
-  }
-
-  .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-frame-spin {
-    background: conic-gradient(
-      from 0deg at 50% 50%,
-      #ff3b5c 0deg,
-      #fde047 90deg,
-      #fda4af 180deg,
-      #e11d48 270deg,
-      #ff3b5c 360deg
-    );
-  }
-
-  .mam-fever-screen-fx[data-fever-tier='3'] .mam-fever-frame-spin {
-    background: conic-gradient(
-      from 0deg at 50% 50%,
-      #22d3ee 0deg,
-      #fde047 90deg,
-      #f472b6 180deg,
-      #38bdf8 270deg,
-      #22d3ee 360deg
-    );
+    display: none;
   }
 
   .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-vignette {
-    background:
-      radial-gradient(rgba(251, 113, 133, 0.46) 2.2px, transparent 2.4px),
-      radial-gradient(
-        ellipse at center,
-        transparent 54%,
-        rgba(244, 63, 94, 0.28) 84%,
-        rgba(225, 29, 72, 0.46) 100%
-      );
-    background-size: 12px 12px, 100% 100%;
+    background: radial-gradient(
+      ellipse at center,
+      transparent 58%,
+      rgba(244, 63, 94, 0.22) 86%,
+      rgba(225, 29, 72, 0.42) 100%
+    );
   }
 
   .mam-fever-screen-fx[data-fever-tier='3'] .mam-fever-vignette {
-    background:
-      radial-gradient(rgba(34, 211, 238, 0.48) 2.2px, transparent 2.4px),
-      radial-gradient(
-        ellipse at center,
-        transparent 52%,
-        rgba(34, 211, 238, 0.28) 84%,
-        rgba(250, 204, 21, 0.44) 100%
-      );
-    background-size: 12px 12px, 100% 100%;
+    background: radial-gradient(
+      ellipse at center,
+      transparent 58%,
+      rgba(34, 211, 238, 0.24) 86%,
+      rgba(250, 204, 21, 0.38) 100%
+    );
   }
 
-  .mam-fever-screen-fx.is-active .mam-fever-speedlines,
-  .mam-fever-screen-fx.is-active .mam-fever-frame-spin {
+  .mam-fever-screen-fx.is-active .mam-fever-speedlines {
     animation-play-state: running;
   }
 
@@ -238,9 +189,10 @@
   .mam-fever-cutin-plate {
     position: absolute;
     inset: 0;
-    clip-path: polygon(0 0, 100% 0, calc(100% - 30px) 100%, 0 100%);
+    border-radius: 4px 18px 4px 4px;
     border-top: 3px solid #14111d;
     border-bottom: 3px solid #14111d;
+    border-right: 3px solid #14111d;
     border-left: 6px solid var(--cutin-accent, #38bdf8);
     background: #14111d;
     overflow: hidden;
@@ -270,17 +222,11 @@
   .mam-fever-cutin-bg {
     position: absolute;
     inset: 0;
-    background:
-      linear-gradient(112deg, #1b1729 0%, #241d38 46%, color-mix(in srgb, var(--cutin-accent, #38bdf8) 42%, #14111d) 100%);
+    background: linear-gradient(112deg, #1b1729 0%, #241d38 58%, var(--cutin-accent, #38bdf8) 175%);
   }
 
   .mam-fever-cutin-halftone {
-    position: absolute;
-    inset: 0;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.4px, transparent 1.5px);
-    background-size: 9px 9px;
-    -webkit-mask-image: linear-gradient(90deg, transparent 25%, rgba(0, 0, 0, 0.9) 100%);
-    mask-image: linear-gradient(90deg, transparent 25%, rgba(0, 0, 0, 0.9) 100%);
+    display: none;
   }
 
   .mam-fever-cutin-speedlines {
@@ -288,10 +234,9 @@
     inset: 0;
     background: repeating-linear-gradient(
       -20deg,
-      transparent 0 10px,
-      rgba(255, 255, 255, 0.08) 10px 13px,
-      transparent 13px 24px,
-      color-mix(in srgb, var(--cutin-accent, #38bdf8) 26%, transparent) 24px 27px
+      transparent 0 12px,
+      rgba(255, 255, 255, 0.06) 12px 15px,
+      transparent 15px 30px
     );
   }
 
@@ -367,11 +312,11 @@
     border-radius: 9999px;
     background: radial-gradient(
       circle at 50% 56%,
-      color-mix(in srgb, var(--cutin-accent, #38bdf8) 72%, #ffffff) 0%,
-      color-mix(in srgb, var(--cutin-accent, #38bdf8) 32%, transparent) 55%,
+      rgba(255, 255, 255, 0.65) 0%,
+      rgba(56, 189, 248, 0.28) 55%,
       transparent 75%
     );
-    opacity: 0.92;
+    opacity: 0.9;
   }
 
   .mam-fever-cutin-img {
@@ -380,11 +325,6 @@
     height: 100%;
     object-fit: contain;
     pointer-events: none;
-    filter:
-      drop-shadow(1.5px 0 0 #14111d)
-      drop-shadow(-1.5px 0 0 #14111d)
-      drop-shadow(0 -1.5px 0 #14111d)
-      drop-shadow(0 1.5px 0 #14111d);
   }
 
   .mam-fever-cutin.is-showing .mam-fever-cutin-portrait-wrap {
@@ -587,19 +527,14 @@
     position: absolute;
     top: 33%;
     left: 50%;
-    width: 116vw;
+    width: 104%;
     padding: 24px 24px 22px;
-    background-color: var(--fever-paper-bg);
-    background-image:
-      radial-gradient(rgba(20, 17, 29, 0.085) 1.3px, transparent 1.3px),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(252, 236, 200, 0.35) 100%);
-    background-size: 10px 10px, 100% 100%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, var(--fever-paper-bg) 100%);
     border-top: 3.5px solid #14111d;
     border-bottom: 3.5px solid #14111d;
     box-shadow: none;
     transform-origin: 50% 50%;
-    backface-visibility: visible;
-    transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(-86deg) scaleY(0.16);
+    transform: translate3d(-50%, -50%, 0) rotate(-2.2deg) scaleY(0.16);
     opacity: 0;
     overflow: hidden;
     display: flex;
@@ -610,25 +545,11 @@
   }
 
   .mam-fever-fold-crease {
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-    pointer-events: none;
-    opacity: 0;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(20, 17, 29, 0.24) 0%,
-        rgba(20, 17, 29, 0.05) 47%,
-        rgba(255, 255, 255, 0.55) 49.5%,
-        rgba(20, 17, 29, 0.32) 50.5%,
-        rgba(20, 17, 29, 0.08) 54%,
-        rgba(20, 17, 29, 0.28) 100%
-      );
+    display: none;
   }
 
   .mam-fever-burst.is-bursting .mam-fever-fold-crease {
-    animation: mamFeverPaperCrease 1.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation: none;
   }
 
   .mam-fever-screen-fx[data-fever-tier='2'] .mam-fever-burst {
@@ -687,9 +608,11 @@
     inset: 0;
     display: flex;
     align-items: center;
+    justify-content: center;
     white-space: nowrap;
+    overflow: hidden;
     font-family: 'Rubik', sans-serif;
-    font-size: 58px;
+    font-size: 52px;
     font-weight: 900;
     font-style: italic;
     letter-spacing: 0.12em;
@@ -700,7 +623,7 @@
   }
 
   .mam-fever-burst.is-bursting .mam-fever-ticker {
-    animation: mamFeverTickerScroll 1.4s linear forwards;
+    animation: none;
   }
 
   .mam-fever-slash {
@@ -741,12 +664,9 @@
     font-style: italic;
     letter-spacing: -0.06em;
     color: var(--fever-chev);
-    text-shadow:
-      -2px -2px 0 #14111d,
-      2px -2px 0 #14111d,
-      -2px 2px 0 #14111d,
-      2px 2px 0 #14111d,
-      0 3px 0 #14111d;
+    -webkit-text-stroke: 2px #14111d;
+    paint-order: stroke fill;
+    text-shadow: 0 3px 0 #14111d;
   }
 
   .mam-fever-burst-title {
@@ -759,17 +679,9 @@
     padding: 2px 8px;
     text-transform: uppercase;
     color: #fde047;
-    text-shadow:
-      -2.5px -2.5px 0 #14111d,
-      2.5px -2.5px 0 #14111d,
-      -2.5px 2.5px 0 #14111d,
-      2.5px 2.5px 0 #14111d,
-      0 -2.5px 0 #14111d,
-      -2.5px 0 0 #14111d,
-      2.5px 0 0 #14111d,
-      0 5px 0 #14111d,
-      2px 5px 0 #14111d,
-      -2px 5px 0 #14111d;
+    -webkit-text-stroke: 2.5px #14111d;
+    paint-order: stroke fill;
+    text-shadow: 0 4px 0 #14111d;
     white-space: nowrap;
   }
 
@@ -782,47 +694,42 @@
   }
 
   @keyframes mamFeverRotateSlow {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-
-  @keyframes mamFeverFrameSpin {
-    0% { transform: translate3d(-50%, -50%, 0) rotate(0deg); }
-    100% { transform: translate3d(-50%, -50%, 0) rotate(360deg); }
+    0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+    100% { transform: translate3d(0, 0, 0) rotate(360deg); }
   }
 
   @keyframes mamFeverBannerCycle {
     0% {
       opacity: 0;
-      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(-88deg) scaleX(0.92) scaleY(0.14);
+      transform: translate3d(-50%, -50%, 0) rotate(-2.2deg) scaleX(0.92) scaleY(0.14);
     }
     7% {
       opacity: 1;
-      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(-24deg) scaleX(0.98) scaleY(0.76);
+      transform: translate3d(-50%, -50%, 0) rotate(-2.2deg) scaleX(0.98) scaleY(0.84);
     }
     14% {
       opacity: 1;
-      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(12deg) scaleX(1.01) scaleY(1.05);
+      transform: translate3d(-50%, -50%, 0) rotate(-2.2deg) scaleX(1.01) scaleY(1.05);
     }
     21% {
       opacity: 1;
-      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(-3deg) scaleX(1) scaleY(0.99);
+      transform: translate3d(-50%, -50%, 0) rotate(-2.2deg) scaleX(1) scaleY(0.99);
     }
     26%, 78% {
       opacity: 1;
-      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(0deg) scaleX(1) scaleY(1);
+      transform: translate3d(-50%, -50%, 0) rotate(-2.2deg) scaleX(1) scaleY(1);
     }
     85% {
       opacity: 1;
-      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(-12deg) scaleX(1.01) scaleY(1.03);
+      transform: translate3d(-50%, -50%, 0) rotate(-2.2deg) scaleX(1.01) scaleY(1.03);
     }
     93% {
       opacity: 0.96;
-      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(64deg) scaleX(0.96) scaleY(0.42);
+      transform: translate3d(-50%, -50%, 0) rotate(-2.2deg) scaleX(0.96) scaleY(0.42);
     }
     100% {
       opacity: 0;
-      transform: translate3d(-50%, -50%, 0) perspective(950px) rotate(-2.2deg) rotateX(88deg) scaleX(0.9) scaleY(0.12);
+      transform: translate3d(-50%, -50%, 0) rotate(-2.2deg) scaleX(0.9) scaleY(0.12);
     }
   }
 
@@ -837,23 +744,23 @@
   @keyframes mamFeverTitleSlam {
     0%, 6% {
       opacity: 0;
-      transform: perspective(700px) rotateX(-82deg) scale(0.84) translateY(10px);
+      transform: scale(0.84) translateY(10px);
     }
     16% {
       opacity: 1;
-      transform: perspective(700px) rotateX(12deg) scale(1.07) translateY(-2px);
+      transform: scale(1.07) translateY(-2px);
     }
     23%, 78% {
       opacity: 1;
-      transform: perspective(700px) rotateX(0deg) scale(1) translateY(0);
+      transform: scale(1) translateY(0);
     }
     86% {
       opacity: 0.92;
-      transform: perspective(700px) rotateX(36deg) scale(0.95) translateY(2px);
+      transform: scale(0.95) translateY(2px);
     }
     94%, 100% {
       opacity: 0;
-      transform: perspective(700px) rotateX(84deg) scale(0.8) translateY(8px);
+      transform: scale(0.8) translateY(8px);
     }
   }
 

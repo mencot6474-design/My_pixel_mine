@@ -26,6 +26,7 @@ export interface ShopCyberPlazaHandle {
   animatedCrystals: THREE.Object3D[];
   animatedRings: THREE.Object3D[];
   omegaPadTopY: number;
+  setLowQuality?: (low: boolean) => void;
   update: (dtSec: number, elapsed: number) => void;
   dispose: () => void;
 }
@@ -152,18 +153,22 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
   const amberNeonMat = makeNeonMat(0xf97316, 1.65, 0.24, 3.1, 0.4);
   const warmLampMat = makeNeonMat(0xe0f2fe, 1.6, 0.05, 1.2, 0);
 
-  // Safe-Zone Urban Night Fill & 3 Key Neon Pool Lights (trimmed from 8 to cut per-pixel PBR PointLight cost)
-  const plazaSafeHemi = new THREE.HemisphereLight(0xbae6fd, 0x26354d, 0.96);
+  // Safe-Zone Urban Night Fill & 3 Key Neon Pool Lights (keep 4 THREE.Light nodes in scene graph; toggle PointLights by quality)
+  const plazaSafeHemi = new THREE.HemisphereLight(0xbae6fd, 0x26354d, 1.12);
   group.add(plazaSafeHemi);
 
+  const plazaPointLights: THREE.PointLight[] = [];
   const zoneLights: Array<[number, number, number, number, number, number]> = [
-    [0, 5.2, -0.5, 0xd8b4fe, 2.5, 20],
+    [0, 5.2, -0.5, 0xd8b4fe, 2.5, 22],
     [0, 6.8, -9.2, 0x38bdf8, 2.9, 24],
     [0, 4.6, 5.5, 0xf472b6, 1.9, 20],
   ];
-  for (const [lx, ly, lz, col, intensity, dist] of zoneLights) {
+  for (let i = 0; i < zoneLights.length; i++) {
+    const [lx, ly, lz, col, intensity, dist] = zoneLights[i];
     const pt = new THREE.PointLight(col, intensity, dist, 1.35);
     pt.position.set(lx, ly, lz);
+    pt.visible = i === 0;
+    plazaPointLights.push(pt);
     group.add(pt);
   }
 
@@ -867,11 +872,18 @@ export function createShopCyberPlaza(): ShopCyberPlazaHandle {
     omegaPodiums.length = 0;
   };
 
+  const setLowQuality = (low: boolean): void => {
+    for (let i = 0; i < plazaPointLights.length; i++) {
+      plazaPointLights[i].visible = !low && i === 0;
+    }
+  };
+
   return {
     group,
     animatedCrystals,
     animatedRings,
     omegaPadTopY,
+    setLowQuality,
     update,
     dispose,
   };

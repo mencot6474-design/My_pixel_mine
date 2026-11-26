@@ -27,7 +27,7 @@ const VOID_ASURA_NOISE_GLSL = `
     float v = 0.0;
     float a = 0.5;
     mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       v += vaVnoise(p) * a;
       p = rot * p * 2.09 + vec2(1.9, 4.7);
       a *= 0.5;
@@ -37,7 +37,7 @@ const VOID_ASURA_NOISE_GLSL = `
   float vaRidged(vec2 p) {
     float v = 0.0;
     float a = 0.55;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       float n = 1.0 - abs(vaVnoise(p) * 2.0 - 1.0);
       v += (n * n * n) * a;
       p *= 2.18;
@@ -673,7 +673,7 @@ export class VoidAsuraSkillVfxPool {
         }
 
         const dtBoom = Math.max(0, inst.elapsed - 0.78);
-        const sparkLimit = this.lowQuality ? 16 : EMBER_SPARK_COUNT;
+        const sparkLimit = this.lowQuality ? 10 : 18;
         for (let e = 0; e < sparkLimit; e++) {
           const em = inst.embers[e];
           if (fade <= 0.02) {

@@ -38,7 +38,7 @@ const LULLABY_NOISE_GLSL = `
     float v = 0.0;
     float a = 0.5;
     mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       v += a * lbVnoise(p);
       p = rot * p * 2.04 + vec2(1.9, 6.7);
       a *= 0.5;
@@ -50,7 +50,7 @@ const LULLABY_NOISE_GLSL = `
     float v = 0.0;
     float a = 0.55;
     float freq = 1.0;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       float n = 1.0 - abs(lbVnoise(p * freq) * 2.0 - 1.0);
       v += (n * n * n) * a;
       freq *= 2.14;
@@ -1542,7 +1542,7 @@ export class LullabyTwinsSkillVfxPool {
         inst.angelMeteorGroup.visible = false;
         this.tmpTargetPos.set(inst.cx, inst.cy + 1.15, inst.cz);
         this.launchMeteorShards(inst, this.tmpTargetPos);
-        this.launchFeatherBurst(inst, this.tmpTargetPos, 12, this.lowQuality ? 10 : 18, 1.48);
+        this.launchFeatherBurst(inst, this.tmpTargetPos, 12, this.lowQuality ? 8 : 12, 1.48);
         this.hooks.onImpactFrame?.(0.95, 0.0, '#c084fc', 0.068);
         this.hooks.onSpeedLines?.(1.0, 0.65);
         this.hooks.onCameraPush?.(0.48, 0.070);

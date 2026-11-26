@@ -83,18 +83,20 @@ export class SkyMetropolis3D {
   private readonly concreteMats: THREE.MeshStandardMaterial[];
   private readonly penthouseMat: THREE.MeshStandardMaterial;
   private readonly trimMetalMat: THREE.MeshStandardMaterial;
-  private readonly windowFrameMat: THREE.MeshStandardMaterial;
-  private readonly windowWarmMat: THREE.MeshStandardMaterial;
-  private readonly windowAccentMat: THREE.MeshStandardMaterial;
-  private readonly windowReflectMat: THREE.MeshStandardMaterial;
+  private readonly windowFrameMat: THREE.MeshBasicMaterial;
+  private readonly windowWarmMat: THREE.MeshBasicMaterial;
+  private readonly windowAccentMat: THREE.MeshBasicMaterial;
+  private readonly windowReflectMat: THREE.MeshBasicMaterial;
   private readonly viaductNeonMat: THREE.MeshStandardMaterial;
   private readonly trainBodyMat: THREE.MeshStandardMaterial;
   private readonly trainGlowMat: THREE.MeshStandardMaterial;
   private readonly beaconMat: THREE.MeshBasicMaterial;
   private readonly mistMat: THREE.MeshBasicMaterial;
+  private readonly lowerMistMesh: THREE.Mesh;
   private readonly upperMistMesh: THREE.Mesh;
 
   private readonly instancedMeshes: THREE.InstancedMesh[] = [];
+  private readonly windowDetailInsts: THREE.InstancedMesh[] = [];
   private readonly beaconInsts: THREE.InstancedMesh[] = [];
   private readonly trainClusters: TrainCluster[] = [];
   private readonly trainDummy = new THREE.Object3D();
@@ -145,32 +147,20 @@ export class SkyMetropolis3D {
       flatShading: true,
     });
 
-    // 2. 3D Window Bay & Viaduct Materials (bright emissive + fog:false on lit windows so skyline sparkles)
-    this.windowFrameMat = new THREE.MeshStandardMaterial({
+    // 2. 3D Window Bay & Viaduct Materials (unlit MeshBasicMaterial avoids PBR per-pixel cost on distant windows)
+    this.windowFrameMat = new THREE.MeshBasicMaterial({
       color: 0x0f172a,
-      roughness: 0.48,
-      metalness: 0.6,
     });
-    this.windowWarmMat = new THREE.MeshStandardMaterial({
+    this.windowWarmMat = new THREE.MeshBasicMaterial({
       color: 0xfef08a,
-      emissive: 0xf59e0b,
-      emissiveIntensity: 1.55,
-      roughness: 0.2,
       fog: false,
     });
-    this.windowAccentMat = new THREE.MeshStandardMaterial({
+    this.windowAccentMat = new THREE.MeshBasicMaterial({
       color: palette.crystalColor,
-      emissive: palette.crystalColor,
-      emissiveIntensity: 1.75,
-      roughness: 0.18,
       fog: false,
     });
-    this.windowReflectMat = new THREE.MeshStandardMaterial({
-      color: 0x3b5984,
-      emissive: 0x1e3a5f,
-      emissiveIntensity: 0.35,
-      roughness: 0.18,
-      metalness: 0.78,
+    this.windowReflectMat = new THREE.MeshBasicMaterial({
+      color: 0x2b4469,
     });
     this.viaductNeonMat = new THREE.MeshStandardMaterial({
       color: palette.crystalColor,
@@ -387,7 +377,8 @@ export class SkyMetropolis3D {
     const buildWindowInst = (
       geo: THREE.BufferGeometry,
       mat: THREE.Material,
-      matrices: readonly THREE.Matrix4[]
+      matrices: readonly THREE.Matrix4[],
+      isDetail = false
     ): void => {
       if (matrices.length === 0) return;
       const inst = new THREE.InstancedMesh(geo, mat, matrices.length);
@@ -395,17 +386,20 @@ export class SkyMetropolis3D {
         inst.setMatrixAt(i, matrices[i]);
       }
       inst.instanceMatrix.needsUpdate = true;
-      inst.frustumCulled = false;
+      inst.computeBoundingSphere();
       this.cityGroup.add(inst);
       this.instancedMeshes.push(inst);
+      if (isDetail) {
+        this.windowDetailInsts.push(inst);
+      }
     };
 
     for (const zone of ['left', 'right', 'center'] as const) {
       const col = zoneCollectors[zone];
-      buildWindowInst(frameGeo, this.windowFrameMat, col.frameMatrices);
+      buildWindowInst(frameGeo, this.windowFrameMat, col.frameMatrices, true);
       buildWindowInst(paneGeo, this.windowWarmMat, col.warmMatrices);
       buildWindowInst(paneGeo, this.windowAccentMat, col.accentMatrices);
-      buildWindowInst(paneGeo, this.windowReflectMat, col.reflectMatrices);
+      buildWindowInst(paneGeo, this.windowReflectMat, col.reflectMatrices, true);
 
       const bPositions = zoneBeacons[zone];
       if (bPositions.length > 0) {
@@ -437,11 +431,11 @@ export class SkyMetropolis3D {
     const mistGeo = new THREE.RingGeometry(15.0, 56.0, 48);
     mistGeo.rotateX(-Math.PI / 2);
 
-    const lowerMist = new THREE.Mesh(mistGeo, this.mistMat);
-    lowerMist.position.set(0, -13.5, -14.0);
+    this.lowerMistMesh = new THREE.Mesh(mistGeo, this.mistMat);
+    this.lowerMistMesh.position.set(0, -13.5, -14.0);
     this.upperMistMesh = new THREE.Mesh(mistGeo, this.mistMat);
     this.upperMistMesh.position.set(0, -7.2, -16.0);
-    this.cityGroup.add(lowerMist, this.upperMistMesh);
+    this.cityGroup.add(this.lowerMistMesh, this.upperMistMesh);
 
     // 7. Broadcast Cyber Zeppelin ("MyChibiMine" curved LED banner + holographic ticker)
     const bannerTex = getBroadcastBannerTexture(palette.crystalColor, false);
@@ -594,26 +588,27 @@ export class SkyMetropolis3D {
   private refreshHoloTickerTexture(): void {
     const { accent, feverActive } = this.getActiveBlimpAccent();
     const label = this.getCurrentBlimpHoloLabel();
-    this.blimpHoloBeamMat.map = getZeppelinHoloTickerTexture(label, accent, feverActive);
-    this.blimpHoloBeamMat.needsUpdate = true;
+    const nextTex = getZeppelinHoloTickerTexture(label, accent, feverActive);
+    if (this.blimpHoloBeamMat.map !== nextTex) {
+      const hadMap = this.blimpHoloBeamMat.map !== null;
+      this.blimpHoloBeamMat.map = nextTex;
+      if (!hadMap) this.blimpHoloBeamMat.needsUpdate = true;
+    }
   }
 
   public setPalette(palette: MineWorldPalette): void {
     this.activeAccentHex = palette.crystalColor;
 
     this.windowAccentMat.color.set(palette.crystalColor);
-    this.windowAccentMat.emissive.set(palette.crystalColor);
     this.viaductNeonMat.color.set(palette.crystalColor);
     this.viaductNeonMat.emissive.set(palette.crystalColor);
     this.trainGlowMat.color.set(palette.crystalColor);
     this.trainGlowMat.emissive.set(palette.crystalColor);
 
     this.mistMat.map = getCityMistTexture(palette.crystalColor);
-    this.mistMat.needsUpdate = true;
 
     for (const label of HOLO_LABELS) {
       this.holoSignMats[label].map = getRooftopHoloSignTexture(label, palette.crystalColor);
-      this.holoSignMats[label].needsUpdate = true;
     }
 
     this.refreshBannerTexture();
@@ -629,8 +624,11 @@ export class SkyMetropolis3D {
     const { accent, feverActive } = this.getActiveBlimpAccent();
     const nextTex = getBroadcastBannerTexture(accent, feverActive);
     nextTex.offset.x = this.blimpScrollOffset;
-    this.blimpScreenMat.map = nextTex;
-    this.blimpScreenMat.needsUpdate = true;
+    if (this.blimpScreenMat.map !== nextTex) {
+      const hadMap = this.blimpScreenMat.map !== null;
+      this.blimpScreenMat.map = nextTex;
+      if (!hadMap) this.blimpScreenMat.needsUpdate = true;
+    }
 
     this.blimpTrimMat.color.set(accent);
     this.blimpTrimMat.emissive.set(accent);
@@ -638,8 +636,8 @@ export class SkyMetropolis3D {
     this.refreshHoloTickerTexture();
 
     const windowBoost = feverActive ? 0.45 : 0;
-    this.windowWarmMat.emissiveIntensity = 1.55 + windowBoost * 0.6;
-    this.windowAccentMat.emissiveIntensity = 1.75 + windowBoost;
+    this.windowWarmMat.color.setHex(feverActive ? 0xfffbeb : 0xfef08a);
+    this.windowAccentMat.color.set(this.activeAccentHex);
     this.viaductNeonMat.emissiveIntensity = 1.65 + windowBoost;
     this.trainGlowMat.emissiveIntensity = 1.65 + windowBoost;
   }
@@ -647,7 +645,11 @@ export class SkyMetropolis3D {
   public setLowQuality(low: boolean): void {
     this.lowQuality = low;
     this.mistMat.opacity = low ? 0.12 : 0.22;
+    this.lowerMistMesh.visible = !low;
     this.upperMistMesh.visible = !low;
+    for (const wInst of this.windowDetailInsts) {
+      wInst.visible = !low;
+    }
     for (const bInst of this.beaconInsts) {
       bInst.visible = !low;
     }

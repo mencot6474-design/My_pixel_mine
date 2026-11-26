@@ -304,15 +304,23 @@ export class OrePit3D {
 
     const cColor = new THREE.Color(palette.crystalColor);
     const biome = WORLD_ARENA_BIOMES[this.activeWorldId] ?? WORLD_ARENA_BIOMES.underground;
-    this.floorMat.map = getCircularNexusPoolTexture(
+    const nextFloorMap = getCircularNexusPoolTexture(
       palette.pitFloorColor,
       palette.crystalColor,
       this.activeWorldId
     );
-    this.floorMat.needsUpdate = true;
+    if (this.floorMat.map !== nextFloorMap) {
+      const hadFloorMap = this.floorMat.map !== null;
+      this.floorMat.map = nextFloorMap;
+      if (!hadFloorMap) this.floorMat.needsUpdate = true;
+    }
     this.wallMat.color.set(biome.rockHex).lerp(new THREE.Color('#334155'), 0.28);
-    this.trimMat.map = getCyberColosseumDeckTexture(palette.crystalColor, biome.deckHex);
-    this.trimMat.needsUpdate = true;
+    const nextTrimMap = getCyberColosseumDeckTexture(palette.crystalColor, biome.deckHex);
+    if (this.trimMat.map !== nextTrimMap) {
+      const hadTrimMap = this.trimMat.map !== null;
+      this.trimMat.map = nextTrimMap;
+      if (!hadTrimMap) this.trimMat.needsUpdate = true;
+    }
     this.biomeIsland.setBiome(this.activeWorldId, palette.crystalColor);
     this.pitNeonMat.color.copy(cColor);
     this.pitNeonMat.emissive.copy(cColor);

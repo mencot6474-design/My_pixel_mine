@@ -177,11 +177,17 @@ export class MineEnvironment3D {
   }
 
   private refreshSkyMap(): void {
-    this.skyMat.map =
+    const nextTex =
       this.skyMode === 'shop'
         ? getPlazaSkyDomeTexture()
         : getMiningSkyDomeTexture(this.currentPalette);
-    this.skyMat.needsUpdate = true;
+    if (this.skyMat.map !== nextTex) {
+      const hadMap = this.skyMat.map !== null;
+      this.skyMat.map = nextTex;
+      if (!hadMap) {
+        this.skyMat.needsUpdate = true;
+      }
+    }
   }
 
   public setSkyMode(mode: 'mine' | 'shop'): void {

@@ -80,6 +80,9 @@ const PRELOAD_SFX: readonly SfxKey[] = [
   'ui-error',
   'coin',
   'upgrade',
+  'rare-fanfare',
+  'chibi-swing',
+  'wave-clear',
 ];
 
 export const MUSICAL_SCALE_SEMITONES = [0, 2, 4, 5, 7, 9, 11, 12] as const;

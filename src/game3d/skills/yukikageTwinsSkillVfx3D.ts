@@ -37,7 +37,7 @@ const YUKIKAGE_GLSL = `
     float v = 0.0;
     float a = 0.56;
     float freq = 1.0;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       float n = 1.0 - abs(ykVnoise(p * freq) * 2.0 - 1.0);
       v += (n * n * n * n) * a;
       freq *= 2.24;
@@ -1177,7 +1177,7 @@ export class YukikageTwinsSkillVfxPool {
       if (!inst.primaryBlastFired && inst.elapsed >= 0.66) {
         inst.primaryBlastFired = true;
         this.tmpTargetPos.set(inst.cx, inst.cy + 1.15, inst.cz);
-        this.launchShardBurst(inst, this.tmpTargetPos, 0, this.lowQuality ? 12 : 24, 1.65);
+        this.launchShardBurst(inst, this.tmpTargetPos, 0, this.lowQuality ? 8 : 14, 1.65);
         for (let i = 0; i < Math.min(inst.pts.length, ORE_FLASH_COUNT); i++) {
           this.triggerOreFlash(inst, i, inst.pts[i], 4.4 * as, false);
         }
