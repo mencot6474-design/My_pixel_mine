@@ -7,7 +7,6 @@ const FILM_FLOOR_SIZE = 16.0;
 const FILM_REVEAL_ANG = 0.42;
 const FILM_CARVE_SLASH_COUNT = 14;
 const CEL_FRAME_MAX = 6;
-const RAZOR_SMEAR_COUNT = 6;
 const SHARD_COUNT = 24;
 const SPARK_COUNT = 30;
 const SEVERANCE_TIME_SEC = 0.92;
@@ -164,8 +163,7 @@ function createCrimsonCarveSlashMaterial(): THREE.ShaderMaterial {
         float segMask = smoothstep(tail, tail + 0.18, p.x) * (1.0 - smoothstep(head - 0.12, head, p.x));
         float lenFade = smoothstep(0.98, 0.45, abs(p.x));
 
-        float jag = (ciVnoise(vec2(p.x * 10.0, uTime * 9.0)) - 0.5) * 0.025;
-        float dist = abs(p.y + jag);
+        float dist = abs(p.y);
 
         float needle = 0.0035 / (dist + 0.0020);
         float aura = 0.026 / (dist + 0.014);
@@ -233,8 +231,7 @@ function createChronoRazorLatticeMaterial(): THREE.ShaderMaterial {
 
           mat2 rot = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
           vec2 rp = rot * p;
-          float jag = (ciVnoise(vec2(rp.x * 11.0, tick * 0.7 + fi)) - 0.5) * 0.014;
-          float d = abs(rp.y - off + jag);
+          float d = abs(rp.y - off);
           float lenMask = smoothstep(0.96, 0.35, abs(rp.x));
           float core = smoothstep(0.012, 0.001, d) * lenMask;
           float glow = (0.019 / (d + 0.013)) * lenMask;
@@ -256,108 +253,6 @@ function createChronoRazorLatticeMaterial(): THREE.ShaderMaterial {
         float radialFade = smoothstep(0.99, 0.80, r);
         float alpha = clamp((flurrySum * 0.45 + coreSum * 1.2) * radialFade * dissolve * uOpacity, 0.0, 1.0);
         if (alpha < 0.02) discard;
-        gl_FragColor = vec4(col * alpha, alpha);
-      }
-    `,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-}
-
-/**
- * Ultra-thin Crimson-style katana smear arc geometry (narrow razor edge, NOT a thick wide ribbon).
- */
-function createThinRazorSmearGeometry(innerR = 0.84, outerR = 1.0, sweepRad = Math.PI * 1.15, segments = 32): THREE.BufferGeometry {
-  const cols = segments + 1;
-  const rows = 3;
-  const positions = new Float32Array(cols * rows * 3);
-  const uvs = new Float32Array(cols * rows * 2);
-  const indices: number[] = [];
-
-  for (let i = 0; i < cols; i++) {
-    const u = i / segments;
-    const angle = (u - 0.5) * sweepRad;
-    const widthScale = Math.pow(Math.sin(u * Math.PI), 0.32);
-    const curInner = outerR - (outerR - innerR) * widthScale;
-    const cosA = Math.cos(angle);
-    const sinA = Math.sin(angle);
-
-    for (let j = 0; j < rows; j++) {
-      const v = j / (rows - 1);
-      const r = curInner + (outerR - curInner) * v;
-      const idx = i * rows + j;
-      positions[idx * 3] = cosA * r;
-      positions[idx * 3 + 1] = 0.0;
-      positions[idx * 3 + 2] = sinA * r;
-      uvs[idx * 2] = u;
-      uvs[idx * 2 + 1] = v;
-    }
-  }
-
-  for (let i = 0; i < segments; i++) {
-    for (let j = 0; j < rows - 1; j++) {
-      const a = i * rows + j;
-      const b = (i + 1) * rows + j;
-      const c = (i + 1) * rows + (j + 1);
-      const d = i * rows + (j + 1);
-      indices.push(a, b, c, a, c, d);
-    }
-  }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-  geo.setIndex(indices);
-  geo.computeVertexNormals();
-  return geo;
-}
-
-function createThinRazorSmearMaterial(): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    uniforms: {
-      uProgress: { value: 0 },
-      uTime: { value: 0 },
-      uLocalT: { value: 0 },
-      uSeed: { value: 1 },
-      uColor: { value: new THREE.Color('#e11d48') },
-      uCoreColor: { value: new THREE.Color('#ffffff') },
-    },
-    vertexShader: `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform float uProgress;
-      uniform float uTime;
-      uniform float uLocalT;
-      uniform float uSeed;
-      uniform vec3 uColor;
-      uniform vec3 uCoreColor;
-      varying vec2 vUv;
-      ${CHRONOS_NOISE_GLSL}
-
-      void main() {
-        float dissolveT = clamp((uProgress - 0.5) / 0.5, 0.0, 1.0);
-        float sweep = 1.0 - pow(1.0 - clamp(uLocalT * 3.4, 0.0, 1.0), 3.0);
-        float tail = max(0.0, (uLocalT - 0.25) * 1.35);
-
-        float headMask = smoothstep(sweep + 0.08, sweep - 0.02, vUv.x);
-        float tailMask = smoothstep(tail - 0.10, tail + 0.06, vUv.x);
-
-        float razorWhite = smoothstep(0.76, 0.96, vUv.y) * smoothstep(1.0, 0.93, vUv.y);
-        float crimsonTrail = smoothstep(0.08, 0.52, vUv.y) * smoothstep(1.0, 0.92, vUv.y);
-        float n = ciFbm(vec2(vUv.x * 20.0 - uTime * 6.0 + uSeed, vUv.y * 8.0));
-        float dissolve = smoothstep(dissolveT - 0.09, dissolveT + 0.09, n * (0.4 + 0.6 * vUv.y));
-
-        float alpha = headMask * tailMask * crimsonTrail * dissolve;
-        if (alpha < 0.02) discard;
-
-        vec3 col = mix(uColor * 1.55, uCoreColor * 1.85, clamp(razorWhite * 1.15, 0.0, 1.0));
         gl_FragColor = vec4(col * alpha, alpha);
       }
     `,
@@ -626,14 +521,6 @@ interface CelFrameSlot {
   lockDelay: number;
 }
 
-interface RazorSmearSlot {
-  mesh: THREE.Mesh;
-  mat: THREE.ShaderMaterial;
-  delay: number;
-  baseScale: number;
-  spinSpeed: number;
-}
-
 interface ChronoShardSlot {
   mesh: THREE.Mesh;
   mat: THREE.ShaderMaterial;
@@ -671,7 +558,6 @@ interface ChronosImperatorInstance {
   latticeFloorMesh: THREE.Mesh;
   latticeTiltMesh: THREE.Mesh;
   latticeMats: THREE.ShaderMaterial[];
-  smears: RazorSmearSlot[];
   dimensionTearMesh: THREE.Mesh;
   dimensionTearMat: THREE.ShaderMaterial;
   shards: ChronoShardSlot[];
@@ -700,11 +586,10 @@ export class ChronosImperatorSkillVfxPool {
     const carveGeo = new THREE.PlaneGeometry(4.4, 0.34);
     const celGeo = new THREE.PlaneGeometry(2.75, 3.25);
     const latticeGeo = new THREE.PlaneGeometry(1, 1);
-    const smearGeo = createThinRazorSmearGeometry(0.84, 1.0, Math.PI * 1.15, 32);
     const tearGeo = new THREE.PlaneGeometry(18.0, 2.4);
     const shardGeo = createChronoShardGeometry();
     const sparkGeo = new THREE.PlaneGeometry(0.36, 1.05);
-    this.sharedGeos.push(floorGeo, carveGeo, celGeo, latticeGeo, smearGeo, tearGeo, shardGeo, sparkGeo);
+    this.sharedGeos.push(floorGeo, carveGeo, celGeo, latticeGeo, tearGeo, shardGeo, sparkGeo);
 
     for (let i = 0; i < POOL_SIZE; i++) {
       const root = new THREE.Group();
@@ -781,18 +666,6 @@ export class ChronosImperatorSkillVfxPool {
       latticeTiltMesh.visible = false;
       root.add(latticeFloorMesh, latticeTiltMesh);
 
-      const smears: RazorSmearSlot[] = [];
-      for (let k = 0; k < RAZOR_SMEAR_COUNT; k++) {
-        const mat = createThinRazorSmearMaterial();
-        mat.uniforms.uSeed.value = (k + 1) * 2.13;
-        const mesh = new THREE.Mesh(smearGeo, mat);
-        mesh.name = 'razorSmear';
-        mesh.visible = false;
-        root.add(mesh);
-        this.allMats.push(mat);
-        smears.push({ mesh, mat, delay: 0.44 + k * 0.04, baseScale: 4.5, spinSpeed: 10.5 });
-      }
-
       const dimensionTearMat = createDimensionalTearSlashMaterial();
       const dimensionTearMesh = new THREE.Mesh(tearGeo, dimensionTearMat);
       dimensionTearMesh.name = 'dimensionTear';
@@ -855,7 +728,6 @@ export class ChronosImperatorSkillVfxPool {
         latticeFloorMesh,
         latticeTiltMesh,
         latticeMats: [latticeMatA, latticeMatB],
-        smears,
         dimensionTearMesh,
         dimensionTearMat,
         shards,
@@ -931,28 +803,6 @@ export class ChronosImperatorSkillVfxPool {
     inst.latticeTiltMesh.position.set(opts.cx, opts.cy + 1.05, opts.cz);
     inst.latticeTiltMesh.scale.setScalar(12.2 * opts.areaScale);
     inst.latticeTiltMesh.visible = false;
-
-    const smearLimit = this.lowQuality ? 3 : RAZOR_SMEAR_COUNT;
-    for (let k = 0; k < RAZOR_SMEAR_COUNT; k++) {
-      const sm = inst.smears[k];
-      sm.mesh.visible = false;
-      if (k >= smearLimit) continue;
-      const isLeft = k % 2 === 0;
-      const anchor = inst.celFrames[k % maxCells];
-      sm.delay = 0.44 + k * 0.055;
-      sm.baseScale = (3.8 + (k % 3) * 1.1) * opts.areaScale;
-      sm.spinSpeed = (isLeft ? 1 : -1) * (10.5 + k * 0.9);
-      sm.mesh.position.set(
-        k >= 4 ? opts.cx : anchor.x,
-        (k >= 4 ? opts.cy + 1.35 : anchor.y) + (k % 3) * 0.18,
-        k >= 4 ? opts.cz : anchor.z
-      );
-      sm.mesh.rotation.set((isLeft ? 1 : -1) * (0.16 + (k % 3) * 0.12), k * 0.9, (isLeft ? -1 : 1) * 0.18);
-      sm.mesh.scale.setScalar(sm.baseScale);
-      sm.mat.uniforms.uColor.value.set(k % 3 === 2 ? '#a855f7' : '#e11d48');
-      sm.mat.uniforms.uProgress.value = 0;
-      sm.mat.uniforms.uLocalT.value = 0;
-    }
 
     inst.dimensionTearMesh.position.set(opts.cx, opts.cy + 1.85 * opts.areaScale, opts.cz);
     inst.dimensionTearMesh.rotation.set(-0.18, 0.0, 0.56);
@@ -1050,21 +900,6 @@ export class ChronosImperatorSkillVfxPool {
       } else {
         inst.latticeFloorMesh.visible = false;
         inst.latticeTiltMesh.visible = false;
-      }
-
-      const smearLimit = this.lowQuality ? 3 : RAZOR_SMEAR_COUNT;
-      for (let k = 0; k < RAZOR_SMEAR_COUNT; k++) {
-        const sm = inst.smears[k];
-        if (k >= smearLimit || inst.elapsed < sm.delay || inst.elapsed >= SEVERANCE_TIME_SEC) {
-          sm.mesh.visible = false;
-          continue;
-        }
-        sm.mesh.visible = true;
-        const localT = Math.min(1, (inst.elapsed - sm.delay) / 0.30);
-        sm.mesh.rotation.y += sm.spinSpeed * dt;
-        sm.mat.uniforms.uProgress.value = uProgress;
-        sm.mat.uniforms.uTime.value = timeSec;
-        sm.mat.uniforms.uLocalT.value = localT;
       }
 
       // Phase 3 Trigger: Straight Diagonal Spatial Cut + Hit-Stop (0.92s)
