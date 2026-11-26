@@ -8,7 +8,7 @@ const FILM_REVEAL_ANG = 0.42;
 const FILM_CARVE_SLASH_COUNT = 14;
 const CEL_FRAME_MAX = 6;
 const RAZOR_SMEAR_COUNT = 6;
-const SHARD_COUNT = 18;
+const SHARD_COUNT = 24;
 const SHUTTER_RING_COUNT = 2;
 const SPARK_COUNT = 30;
 const SEVERANCE_TIME_SEC = 0.92;
@@ -51,28 +51,6 @@ const CHRONOS_NOISE_GLSL = `
       a *= 0.5;
     }
     return v;
-  }
-
-  float ciVoronoiEdge(vec2 p) {
-    vec2 n = floor(p);
-    vec2 f = fract(p);
-    float d1 = 8.0;
-    float d2 = 8.0;
-    for (int j = -1; j <= 1; j++) {
-      for (int i = -1; i <= 1; i++) {
-        vec2 g = vec2(float(i), float(j));
-        vec2 o = vec2(ciHash21(n + g), ciHash21(n + g + vec2(17.3, 43.1)));
-        vec2 r = g + (0.2 + 0.6 * o) - f;
-        float d = dot(r, r);
-        if (d < d1) {
-          d2 = d1;
-          d1 = d;
-        } else if (d < d2) {
-          d2 = d;
-        }
-      }
-    }
-    return sqrt(d2) - sqrt(d1);
   }
 `;
 
@@ -433,24 +411,19 @@ function createChronoCelFrameMaterial(): THREE.ShaderMaterial {
         float sheen = exp(-abs((p.x + p.y) - mix(-1.4, 1.4, uLock)) * 4.0) * 0.75;
         float ripple = smoothstep(0.06, 0.015, abs(length(p) - 0.45 - sin(uTime * 7.0 + uSeed) * 0.04)) * 0.65;
         float centerSigil = exp(-min(abs(p.x), abs(p.y)) * 18.0) * smoothstep(0.55, 0.15, edgeDist) * 0.45;
-
-        float vEdge = ciVoronoiEdge(vUv * 4.5 + vec2(uSeed, uSeed * 1.7));
-        float crackGlow = (1.0 - smoothstep(0.0, 0.12 + uShatter * 0.16, vEdge)) * step(0.01, uShatter);
         float cellDissolve = mix(1.0, smoothstep(uShatter * 0.92, uShatter * 0.92 + 0.18, ciVnoise(vUv * 5.5 + uSeed)), uShatter);
 
         vec3 darkGlass = vec3(0.08, 0.03, 0.18);
         vec3 glassViolet = vec3(0.66, 0.30, 1.0) * 1.45;
         vec3 frameGold = vec3(1.0, 0.86, 0.48) * 1.7;
-        vec3 shatterCrimson = vec3(1.0, 0.16, 0.44) * 2.1;
         vec3 hotWhite = vec3(1.0, 0.97, 1.0) * 1.85;
 
-        float lineEnergy = clamp(outerBorder * 1.2 + cornerCut + innerHairline * 0.6 + tickMask + sheen + ripple + centerSigil + crackGlow * 1.5, 0.0, 1.5);
+        float lineEnergy = clamp(outerBorder * 1.2 + cornerCut + innerHairline * 0.6 + tickMask + sheen + ripple + centerSigil, 0.0, 1.4);
         vec3 glowCol = mix(glassViolet, frameGold, clamp(cornerCut * 0.85 + tickMask * 0.9, 0.0, 1.0));
-        glowCol = mix(glowCol, hotWhite, clamp(outerBorder * 0.55 + sheen * 0.7, 0.0, 1.0));
-        glowCol = mix(glowCol, shatterCrimson, clamp(crackGlow * 1.35, 0.0, 1.0));
+        glowCol = mix(glowCol, hotWhite, clamp(outerBorder * 0.55 + sheen * 0.7 + uShatter * 0.6, 0.0, 1.0));
 
         vec3 col = mix(darkGlass, glowCol, clamp(lineEnergy, 0.0, 1.0));
-        float alpha = clamp(max(0.42 * (1.0 - uShatter * 0.45), lineEnergy * 0.95) * cellDissolve * uOpacity, 0.0, 0.96);
+        float alpha = clamp(max(0.42 * (1.0 - uShatter * 0.6), lineEnergy * 0.95) * cellDissolve * uOpacity, 0.0, 0.96);
         if (alpha < 0.015) discard;
         gl_FragColor = vec4(col, alpha);
       }
@@ -463,37 +436,26 @@ function createChronoCelFrameMaterial(): THREE.ShaderMaterial {
 }
 
 function createChronoShardGeometry(): THREE.BufferGeometry {
-  const r = 0.24;
-  const topY = 0.68;
-  const botY = -0.44;
-  const ring: Array<[number, number, number]> = [
-    [r, 0, 0],
-    [0, 0, r],
-    [-r, 0, 0],
-    [0, 0, -r],
-  ];
-  const positions: number[] = [];
-  const uvs: number[] = [];
-  const pushTri = (
-    a: [number, number, number],
-    b: [number, number, number],
-    c: [number, number, number],
-    uva: [number, number],
-    uvb: [number, number],
-    uvc: [number, number]
-  ): void => {
-    positions.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
-    uvs.push(uva[0], uva[1], uvb[0], uvb[1], uvc[0], uvc[1]);
-  };
-  for (let i = 0; i < 4; i++) {
-    const p0 = ring[i];
-    const p1 = ring[(i + 1) % 4];
-    pushTri(p0, p1, [0, topY, 0], [0, 0.4], [1, 0.4], [0.5, 1.0]);
-    pushTri(p1, p0, [0, botY, 0], [1, 0.4], [0, 0.4], [0.5, 0.0]);
-  }
+  // Flat sharp polygonal glass splinter pane (serpihan kaca), NOT a thick spike or cone
+  const positions = new Float32Array([
+    -0.36, -0.14, 0.0,
+     0.44, -0.05, 0.0,
+     0.12,  0.34, 0.0,
+    -0.36, -0.14, 0.0,
+     0.12,  0.34, 0.0,
+    -0.22,  0.22, 0.0,
+  ]);
+  const uvs = new Float32Array([
+    0.0, 0.0,
+    1.0, 0.2,
+    0.6, 1.0,
+    0.0, 0.0,
+    0.6, 1.0,
+    0.15, 0.8,
+  ]);
   const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   geo.computeVertexNormals();
   return geo;
 }
@@ -501,6 +463,7 @@ function createChronoShardGeometry(): THREE.BufferGeometry {
 function createChronoShardMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
+      uTime: { value: 0 },
       uOpacity: { value: 1 },
     },
     vertexShader: `
@@ -511,19 +474,25 @@ function createChronoShardMaterial(): THREE.ShaderMaterial {
       }
     `,
     fragmentShader: `
+      uniform float uTime;
       uniform float uOpacity;
       varying vec2 vUv;
       void main() {
-        float core = 1.0 - abs(vUv.x * 2.0 - 1.0);
-        vec3 col = mix(vec3(0.72, 0.34, 1.0) * 1.4, vec3(1.0, 0.20, 0.48) * 1.75, vUv.y);
-        col = mix(col, vec3(1.0, 0.94, 0.88) * 1.9, core * 0.65);
-        float alpha = clamp((0.72 + core * 0.45) * uOpacity, 0.0, 1.0);
+        // Crisp reflective glass-pane edge bevel + diagonal specular glint (no crack texture)
+        float edgeX = min(vUv.x, 1.0 - vUv.x);
+        float edgeY = min(vUv.y, 1.0 - vUv.y);
+        float rim = 1.0 - smoothstep(0.02, 0.16, min(edgeX, edgeY));
+        float spec = exp(-abs((vUv.x - vUv.y) - sin(uTime * 5.0) * 0.25) * 9.0) * 0.8;
+
+        vec3 glassTint = mix(vec3(0.42, 0.24, 0.78), vec3(0.92, 0.28, 0.56), vUv.y);
+        vec3 col = mix(glassTint, vec3(1.0, 0.97, 1.0) * 1.45, clamp(rim * 0.85 + spec, 0.0, 1.0));
+        float alpha = clamp((0.52 + rim * 0.45 + spec * 0.35) * uOpacity, 0.0, 0.96);
         if (alpha < 0.02) discard;
         gl_FragColor = vec4(col, alpha);
       }
     `,
     transparent: true,
-    blending: THREE.AdditiveBlending,
+    blending: THREE.NormalBlending,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
@@ -598,8 +567,8 @@ function createChronoSparkMaterial(): THREE.ShaderMaterial {
 }
 
 /**
- * Climax straight diagonal slash that slices cleanly across the arena, tears open a jagged
- * dark-void dimensional rift, and shatters via Voronoi fractures.
+ * Climax straight diagonal razor slash line (zero dark void rift, zero crack overlay):
+ * sweeps cleanly across the pit then breaks out as flying 3D glass shards.
  */
 function createDimensionalTearSlashMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
@@ -627,55 +596,34 @@ function createDimensionalTearSlashMaterial(): THREE.ShaderMaterial {
         float absX = abs(p.x);
         if (absX > 0.98) discard;
 
-        // Straight diagonal slash sweep from -1 -> +1 (0.0 -> 0.16)
-        float sweepX = mix(-1.05, 1.08, smoothstep(0.0, 0.16, uProgress));
-        float cutReveal = 1.0 - smoothstep(sweepX - 0.06, sweepX + 0.02, p.x);
+        // Straight diagonal slash sweep from -1 -> +1 (0.0 -> 0.25)
+        float sweepX = mix(-1.05, 1.08, smoothstep(0.0, 0.25, uProgress));
+        float cutReveal = 1.0 - smoothstep(sweepX - 0.08, sweepX + 0.02, p.x);
         if (cutReveal < 0.01) discard;
 
-        // Tapered straight razor profile (sharp tips at both ends)
-        float taperX = pow(max(0.0, 1.0 - absX * absX), 0.65);
-        float openAmt = smoothstep(0.10, 0.38, uProgress) * (1.0 - smoothstep(0.84, 1.0, uProgress) * 0.25);
-        float jag = (ciVnoise(vec2(p.x * 11.0, 3.7)) - 0.5) * 0.16 * openAmt;
-        float distFromCenter = abs(p.y - jag);
+        float taperX = pow(max(0.0, 1.0 - absX * absX), 0.55);
+        float distY = abs(p.y);
+        float needle = (0.0055 / (distY + 0.0022)) * taperX;
+        float aura = (0.030 / (distY + 0.014)) * taperX;
 
-        float halfTear = mix(0.014, 0.36, openAmt) * taperX;
-        float insideVoid = 1.0 - smoothstep(halfTear - 0.025, halfTear + 0.01, distFromCenter);
-        float rimDist = abs(distFromCenter - halfTear);
-        float rimNeedle = 0.0055 / (rimDist + 0.003);
-        float rimGlow = exp(-rimDist * 14.0) * taperX;
+        // Snaps away smoothly right as the 3D glass shards burst outward (0.35 -> 0.95)
+        float fadeOut = 1.0 - smoothstep(0.32, 0.95, uProgress);
+        float jag = 0.85 + 0.15 * sin(p.x * 24.0 - uTime * 18.0);
 
-        // Initial straight razor flash before tearing open
-        float initialSlash = (0.0045 / (abs(p.y) + 0.0022)) * taperX * (1.0 - smoothstep(0.14, 0.32, uProgress));
+        vec3 crimson = vec3(1.0, 0.12, 0.38) * 1.85;
+        vec3 violet = vec3(0.74, 0.34, 1.0) * 1.65;
+        vec3 whiteHot = vec3(1.0, 0.98, 0.98) * 2.25;
 
-        // Cosmic abyss veins inside torn dimension
-        float voidFbm = ciFbm(vec2(p.x * 6.5 - uTime * 0.9, p.y * 8.0 + uTime * 0.6));
-        float voidCrack = smoothstep(0.62, 0.84, voidFbm);
-        float voidSpecks = step(0.88, ciHash21(floor(vec2(p.x * 42.0, p.y * 18.0))));
+        vec3 col = mix(violet, crimson, clamp(aura * 0.8, 0.0, 1.0));
+        col = mix(col, whiteHot, clamp(needle * 0.75, 0.0, 1.0));
 
-        // Voronoi shatter phase (0.52 -> 1.0)
-        float shatterT = smoothstep(0.50, 1.0, uProgress);
-        float vEdge = ciVoronoiEdge(vUv * vec2(14.0, 5.5) + vec2(1.4, 2.9));
-        float shatterCrack = (1.0 - smoothstep(0.0, 0.09 + shatterT * 0.14, vEdge)) * step(0.48, uProgress) * taperX;
-        float shatterDissolve = mix(1.0, smoothstep(shatterT * 0.95, shatterT * 0.95 + 0.18, ciVnoise(vUv * vec2(16.0, 6.0))), shatterT);
-
-        vec3 abyssVoid = vec3(0.02, 0.008, 0.06) + vec3(0.56, 0.22, 0.94) * voidCrack * 0.85 + vec3(1.0, 0.86, 0.56) * voidSpecks * 0.9;
-        vec3 crimsonRim = vec3(1.0, 0.12, 0.38) * 1.95;
-        vec3 violetRim = vec3(0.74, 0.34, 1.0) * 1.6;
-        vec3 whiteHot = vec3(1.0, 0.98, 0.98) * 2.3;
-
-        vec3 rimCol = mix(violetRim, crimsonRim, clamp(rimGlow * 1.2, 0.0, 1.0));
-        rimCol = mix(rimCol, whiteHot, clamp(rimNeedle * 0.75 + initialSlash * 0.85 + shatterCrack * 1.1, 0.0, 1.0));
-
-        float rimStrength = clamp((rimGlow * 1.1 + rimNeedle * 0.5 + initialSlash * 0.9 + shatterCrack * 1.4) * taperX, 0.0, 1.0);
-        vec3 col = mix(abyssVoid, rimCol, rimStrength);
-
-        float alpha = clamp(max(insideVoid * 0.96, rimStrength) * cutReveal * shatterDissolve * uOpacity, 0.0, 0.98);
+        float alpha = clamp((needle + aura * 0.72) * jag * cutReveal * fadeOut * uOpacity, 0.0, 1.0);
         if (alpha < 0.015) discard;
-        gl_FragColor = vec4(col, alpha);
+        gl_FragColor = vec4(col * alpha, alpha);
       }
     `,
     transparent: true,
-    blending: THREE.NormalBlending,
+    blending: THREE.AdditiveBlending,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
@@ -783,7 +731,7 @@ export class ChronosImperatorSkillVfxPool {
     const celGeo = new THREE.PlaneGeometry(2.75, 3.25);
     const latticeGeo = new THREE.PlaneGeometry(1, 1);
     const smearGeo = createThinRazorSmearGeometry(0.84, 1.0, Math.PI * 1.15, 32);
-    const tearGeo = new THREE.PlaneGeometry(14.0, 3.0);
+    const tearGeo = new THREE.PlaneGeometry(14.5, 1.35);
     const shardGeo = createChronoShardGeometry();
     const ringGeo = new THREE.PlaneGeometry(1, 1);
     ringGeo.rotateX(-Math.PI / 2);
@@ -1173,9 +1121,9 @@ export class ChronosImperatorSkillVfxPool {
         inst.onImpactCallback?.();
       }
 
-      // Climax: straight diagonal slash tearing open dimension & shattering via Voronoi (0.92s -> 1.92s)
-      if (inst.elapsed >= SEVERANCE_TIME_SEC && inst.elapsed < 1.92) {
-        const dtTear = (inst.elapsed - SEVERANCE_TIME_SEC) / 1.00;
+      // Climax: straight diagonal slash line (0.92s -> 1.38s) -> shatters directly into 3D glass shards
+      if (inst.elapsed >= SEVERANCE_TIME_SEC && inst.elapsed < 1.38) {
+        const dtTear = (inst.elapsed - SEVERANCE_TIME_SEC) / 0.46;
         inst.dimensionTearMesh.visible = true;
         inst.dimensionTearMat.uniforms.uTime.value = timeSec;
         inst.dimensionTearMat.uniforms.uProgress.value = dtTear;
@@ -1184,25 +1132,34 @@ export class ChronosImperatorSkillVfxPool {
         inst.dimensionTearMesh.visible = false;
       }
 
-      // Low-arcing outward Voronoi shatter shards, horizontal shutter rings & sparks (>= 0.92s)
+      // Crisp 3D glass shards bursting along the diagonal slash line + horizontal shutter rings & sparks (>= 0.92s)
       if (inst.elapsed >= SEVERANCE_TIME_SEC) {
         const dtBoom = inst.elapsed - SEVERANCE_TIME_SEC;
-        const boomFade = Math.max(0, 1 - dtBoom / 1.15);
+        const boomFade = Math.max(0, 1 - dtBoom / 1.18);
 
         const shardCap = this.lowQuality ? 10 : SHARD_COUNT;
+        const dtGlass = Math.max(0, inst.elapsed - (SEVERANCE_TIME_SEC + 0.08));
+        const glassFade = Math.max(0, 1 - dtGlass / 1.12);
         for (let s = 0; s < shardCap; s++) {
           const sh = inst.shards[s];
-          if (boomFade <= 0.02) {
+          if (inst.elapsed < SEVERANCE_TIME_SEC + 0.08 || glassFade <= 0.02) {
             sh.mesh.visible = false;
             continue;
           }
           sh.mesh.visible = true;
-          const r = (0.45 + dtBoom * sh.speed) * as;
-          const y = Math.max(0.16, 0.95 + dtBoom * sh.ySpeed - 3.6 * dtBoom * dtBoom);
-          sh.mesh.position.set(inst.cx + Math.cos(sh.angle) * r, inst.cy + y, inst.cz + Math.sin(sh.angle) * r);
-          sh.mesh.rotation.set(dtBoom * sh.spinX, sh.angle, dtBoom * sh.spinZ);
-          sh.mesh.scale.setScalar((0.90 + 0.34 * boomFade) * as);
-          sh.mat.uniforms.uOpacity.value = boomFade;
+          const lineFrac = ((s / Math.max(1, shardCap - 1)) - 0.5) * 9.5;
+          const baseX = lineFrac * 0.88;
+          const baseY = 1.65 + lineFrac * 0.40;
+          const baseZ = -lineFrac * 0.20;
+          const r = dtGlass * sh.speed;
+          const x = inst.cx + (baseX + Math.cos(sh.angle) * r) * as;
+          const y = Math.max(inst.cy + 0.16, inst.cy + (baseY + dtGlass * sh.ySpeed - 2.4 * dtGlass * dtGlass) * as);
+          const z = inst.cz + (baseZ + Math.sin(sh.angle) * r) * as;
+          sh.mesh.position.set(x, y, z);
+          sh.mesh.rotation.set(dtGlass * sh.spinX, sh.angle + dtGlass * 3.0, dtGlass * sh.spinZ);
+          sh.mesh.scale.setScalar((0.88 + 0.42 * (s % 3) * 0.35) * glassFade * as);
+          sh.mat.uniforms.uTime.value = timeSec;
+          sh.mat.uniforms.uOpacity.value = glassFade;
         }
 
         for (let r = 0; r < SHUTTER_RING_COUNT; r++) {
