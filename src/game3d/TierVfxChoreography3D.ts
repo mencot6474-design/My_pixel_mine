@@ -149,6 +149,9 @@ export interface TierVfxChoreoContext {
   fireChronosImperatorSakuga: (opts: {
     cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
   }) => void;
+  fireAureliaNoctisSakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
+  }) => void;
   fireClockworkTwinsSakuga: (opts: {
     cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[];
     onSlashBeat?: (beatIdx: number, pt: WorldPoint3) => void;
@@ -457,6 +460,22 @@ export function fireTierAttackChoreography(
             burstPts.forEach((n) => {
               ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#a855f7', '#e11d48', 6);
               ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#fde68a', '#e11d48', 7, 7.2);
+            });
+          },
+        });
+        break;
+      }
+      if (opts.chibiId === 'gilded-chain-noble') {
+        ctx.fireAureliaNoctisSakuga({
+          cx,
+          cy,
+          cz,
+          areaScale: as,
+          pts,
+          onImpact: () => {
+            burstPts.forEach((n) => {
+              ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#eab308', '#09090d', 6);
+              ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#fef9c3', '#eab308', 7, 7.2);
             });
           },
         });

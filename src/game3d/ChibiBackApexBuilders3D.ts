@@ -65,6 +65,13 @@ import {
   createChronosBackHaloShaderMaterial,
   createChronosBackRazorBladeGeometry,
 } from './skills/chronosImperatorSkillVfx3D';
+import {
+  createAureliaBackChainShaderMaterial,
+  createAureliaBackChainSpurGeometry,
+  createAureliaBackCrescentHaloShaderMaterial,
+  createAureliaBackFeatherGeometry,
+  createAureliaBackFeatherShaderMaterial,
+} from './skills/aureliaNoctisSkillVfx3D';
 
 /** Builds Omega, Anomaly, and Twin bespoke 3D Sakuga back-attachments. */
 export function buildApexBackAttachment(
@@ -140,6 +147,80 @@ export function buildApexBackAttachment(
         outX: Math.sign(bs.x) * 0.25,
         outY: 0.55,
         phase: bs.phase,
+      });
+    }
+
+    handle.omegaAuraGroup.visible = true;
+    spritePivot.add(handle.omegaAuraGroup);
+    return true;
+  }
+
+  if (defId === 'gilded-chain-noble') {
+    handle.omegaAuraGroup = new THREE.Group();
+    handle.omegaAuraGroup.name = 'chibiBackAttachmentGroup';
+    handle.omegaAuraGroup.position.set(0, spriteHeight * 0.56, -0.15);
+
+    const haloMat = createAureliaBackCrescentHaloShaderMaterial();
+    const featherMat = createAureliaBackFeatherShaderMaterial();
+    const chainMat = createAureliaBackChainShaderMaterial();
+    handle.omegaAuraMat = haloMat;
+    handle.twinCustomMats.push(featherMat, chainMat);
+
+    const haloGeo = new THREE.PlaneGeometry(2.75, 2.75);
+    const featherGeo = createAureliaBackFeatherGeometry();
+    const chainGeo = createAureliaBackChainSpurGeometry();
+    handle.omegaAuraGeo = haloGeo;
+    handle.twinCustomGeos.push(featherGeo, chainGeo);
+
+    handle.omegaHaloMesh = new THREE.Mesh(haloGeo, haloMat);
+    handle.omegaHaloMesh.position.set(0, 0.08, -0.11);
+    handle.omegaAuraGroup.add(handle.omegaHaloMesh);
+
+    const featherSpecs: ReadonlyArray<{ x: number; y: number; z: number; rz: number; sc: number; phase: number }> = [
+      { x: -1.02, y: 0.48, z: -0.04, rz: 0.48, sc: 0.96, phase: 0.0 },
+      { x: -0.94, y: -0.22, z: -0.05, rz: 0.92, sc: 0.84, phase: 0.9 },
+      { x: 1.02, y: 0.48, z: -0.04, rz: -0.48, sc: 0.96, phase: 0.45 },
+      { x: 0.94, y: -0.22, z: -0.05, rz: -0.92, sc: 0.84, phase: 1.35 },
+    ];
+    for (let i = 0; i < featherSpecs.length; i++) {
+      const fs = featherSpecs[i];
+      const fm = new THREE.Mesh(featherGeo, featherMat);
+      fm.position.set(fs.x, fs.y, fs.z);
+      fm.rotation.set(0.06, fs.x < 0 ? 0.16 : -0.16, fs.rz);
+      fm.scale.set(fs.x < 0 ? fs.sc : -fs.sc, fs.sc, fs.sc);
+      handle.omegaAuraGroup.add(fm);
+      handle.roninFanKatanas.push({
+        mesh: fm,
+        baseX: fs.x,
+        baseY: fs.y,
+        baseZ: fs.z,
+        baseRotZ: fs.rz,
+        outX: Math.sign(fs.x) * 0.42,
+        outY: fs.y * 0.34,
+        phase: fs.phase,
+      });
+    }
+
+    const chainSpecs: ReadonlyArray<{ x: number; y: number; z: number; rz: number; phase: number }> = [
+      { x: -0.76, y: -0.14, z: -0.03, rz: 0.22, phase: 0.3 },
+      { x: 0.76, y: -0.14, z: -0.03, rz: -0.22, phase: 1.2 },
+    ];
+    for (let i = 0; i < chainSpecs.length; i++) {
+      const cs = chainSpecs[i];
+      const cm = new THREE.Mesh(chainGeo, chainMat);
+      cm.position.set(cs.x, cs.y, cs.z);
+      cm.rotation.set(0.04, cs.x < 0 ? 0.10 : -0.10, cs.rz);
+      cm.scale.setScalar(1.05);
+      handle.omegaAuraGroup.add(cm);
+      handle.roninFanKatanas.push({
+        mesh: cm,
+        baseX: cs.x,
+        baseY: cs.y,
+        baseZ: cs.z,
+        baseRotZ: cs.rz,
+        outX: Math.sign(cs.x) * 0.24,
+        outY: -0.32,
+        phase: cs.phase,
       });
     }
 

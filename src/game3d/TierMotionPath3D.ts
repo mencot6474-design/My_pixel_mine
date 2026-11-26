@@ -640,6 +640,19 @@ export function buildTierMotionWaypoints(
           ],
         };
       }
+      if (chibiId === 'gilded-chain-noble') {
+        return {
+          hero: [
+            restStart,
+            { t: 0.09, x: cx - 3.25 * ms, y: cy + 1.05, z: cz + 0.95 * ms, face: 1, rz: -0.30, pose: 'aura', snap: true, col: '#eab308', scale: 1.18 },
+            { t: 0.19, x: cx + 3.15 * ms, y: cy + 1.25, z: cz - 0.90 * ms, face: -1, rz: 0.32, pose: 'attack', snap: true, col: '#fef08a', scale: 1.2 },
+            { t: 0.29, x: cx - 1.85 * ms, y: cy + 1.95, z: cz - 1.25 * ms, face: 1, rz: -0.22, pose: 'aura', snap: true, col: '#eab308', scale: 1.24 },
+            { t: 0.37, x: cx + 0.45 * ms, y: cy + 1.15, z: cz + 0.30 * ms, face: -1, rz: 0.28, pose: 'attack', snap: true, col: '#fef9c3', scale: 1.30 },
+            { t: 0.64, x: cx - 0.35 * ms, y: cy + 1.45, z: cz + 0.15 * ms, face: 1, rz: -0.10, pose: 'aura', snap: true, col: '#eab308', scale: 1.24 },
+            restEnd,
+          ],
+        };
+      }
       return {
         hero: [
           restStart,

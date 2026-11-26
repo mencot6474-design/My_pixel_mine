@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { RiftArena3D } from '../src/game3d/RiftArena3D';
+import { AureliaNoctisSkillVfxPool } from '../src/game3d/skills/aureliaNoctisSkillVfx3D';
 import { ChronosImperatorSkillVfxPool } from '../src/game3d/skills/chronosImperatorSkillVfx3D';
 import { createChibiBackAttachments } from '../src/game3d/ChibiBackAttachments3D';
 import {
@@ -5794,6 +5795,193 @@ describe('Pure 3D Mine World', () => {
     pool.update(0.08, cam);
     const chronosActiveForWitch = pool.group.children.some((g) => g.children.some((inst) => inst.visible && inst.getObjectByName('filmFloor')));
     expect(chronosActiveForWitch).toBe(false);
+    pool.dispose();
+  });
+
+  it('fires Gilded Chain-Cage & Guillotine Crescent Pendulum shader pool cleanly for AureliaNoctisSkillVfxPool', () => {
+    let impactCalls = 0;
+    let impactCallbackCalls = 0;
+    const pool = new AureliaNoctisSkillVfxPool({
+      onImpactFrame: () => {
+        impactCalls += 1;
+      },
+    });
+    expect(pool.getMaterials().length).toBeGreaterThanOrEqual(8);
+
+    // Edge case: empty pts falls back cleanly around (cx, cy, cz) and finishes by 2.5s
+    pool.fire({
+      cx: 0,
+      cy: -0.42,
+      cz: 1.65,
+      areaScale: 0.72,
+      pts: [],
+      onImpact: () => {
+        impactCallbackCalls += 1;
+      },
+    });
+    for (let i = 0; i < 60; i++) {
+      pool.update(0.05, i * 0.05);
+    }
+    expect(impactCalls).toBe(1);
+    expect(impactCallbackCalls).toBe(1);
+    expect(pool.group.children.every((c) => !c.visible)).toBe(true);
+
+    // Low quality caps monoliths <= 3, feathers <= 8, sparks <= 10
+    pool.setLowQuality(true);
+    pool.fire({
+      cx: 0,
+      cy: -0.42,
+      cz: 1.65,
+      areaScale: 0.72,
+      pts: [
+        { x: -2, y: -0.42, z: 1.2 },
+        { x: 0, y: -0.42, z: 1.5 },
+        { x: 2, y: -0.42, z: 1.8 },
+        { x: -1.5, y: -0.42, z: 2.3 },
+        { x: 1.5, y: -0.42, z: 2.3 },
+        { x: 0, y: -0.42, z: 0.7 },
+      ],
+    });
+    for (let i = 0; i < 6; i++) pool.update(0.05, i * 0.05);
+    const instRoot = pool.group.children.find((c) => c.visible)!;
+    expect(instRoot).toBeDefined();
+    expect(instRoot.getObjectByName('arbiterSealFloor')).toBeDefined();
+    expect(instRoot.getObjectByName('fallingLunarHalo')).toBeDefined();
+    expect(instRoot.getObjectByName('goldStarFlare')).toBeDefined();
+    expect(instRoot.getObjectByName('cataclysmSpire')).toBeDefined();
+    expect(instRoot.children.filter((c) => c.name === 'gildedMonolith' && c.visible).length).toBeLessThanOrEqual(3);
+
+    for (let i = 0; i < 16; i++) pool.update(0.05, (6 + i) * 0.05);
+    expect(instRoot.children.filter((c) => c.name === 'ravenFeather' && c.visible).length).toBeLessThanOrEqual(8);
+    expect(instRoot.children.filter((c) => c.name === 'goldSpark' && c.visible).length).toBeLessThanOrEqual(10);
+
+    // Custom UV integrity check for sculpted feathers, falling lunar halo, & shards
+    for (const meshName of ['ravenFeather', 'fallingLunarHalo', 'aureliaShard']) {
+      const m = instRoot.getObjectByName(meshName);
+      expect(m).toBeInstanceOf(THREE.Mesh);
+      const uv = (m as THREE.Mesh).geometry.getAttribute('uv');
+      expect(uv).toBeDefined();
+      let maxU = 0;
+      let maxV = 0;
+      for (let i = 0; i < uv.count; i++) {
+        maxU = Math.max(maxU, uv.getX(i));
+        maxV = Math.max(maxV, uv.getY(i));
+      }
+      expect(maxU).toBeGreaterThan(0.5);
+      expect(maxV).toBeGreaterThan(0.5);
+    }
+
+    // Pool overwrite (>2 fires) & huge dtSec clamp safety
+    pool.fire({ cx: 0, cy: -0.42, cz: 1.65, areaScale: 0.8 });
+    pool.fire({ cx: 1, cy: -0.42, cz: 1.65, areaScale: 0.8 });
+    pool.update(10, 5.0);
+    pool.dispose();
+  });
+
+  it('wires Aurelia Noctis 2.5s Sakuga shader, pit clip, blitz motion, and 3D Crescent/Feather back-attachment', () => {
+    const aurelia = getChibiById('gilded-chain-noble')!;
+    const witch = getChibiById('crimson-tarot-witch')!;
+    expect(aurelia).toBeDefined();
+    expect(witch).toBeDefined();
+
+    const aureliaMotion = buildTierMotionWaypoints(
+      'novel',
+      { x: 0, y: 1.5, z: -6 },
+      { x: 0, y: -0.42, z: 1.65 },
+      [
+        { x: -1.6, y: -0.42, z: 1.3 },
+        { x: 1.6, y: -0.42, z: 2.0 },
+      ],
+      aurelia.accentColor,
+      '#f5d08a',
+      undefined,
+      1.0,
+      aurelia.id
+    );
+    const witchMotion = buildTierMotionWaypoints(
+      'novel',
+      { x: 0, y: 1.5, z: -6 },
+      { x: 0, y: -0.42, z: 1.65 },
+      [
+        { x: -1.6, y: -0.42, z: 1.3 },
+        { x: 1.6, y: -0.42, z: 2.0 },
+      ],
+      witch.accentColor,
+      '#f5d08a',
+      undefined,
+      1.0,
+      witch.id
+    );
+    expect(aureliaMotion.hero.length).toBeGreaterThan(witchMotion.hero.length);
+    expect(aureliaMotion.hero.filter((w) => w.snap).length).toBeGreaterThanOrEqual(5);
+
+    const spritePivot = new THREE.Group();
+    const blitzHeroPivot = new THREE.Group();
+    const back = createChibiBackAttachments(aurelia.id, 1.8, spritePivot, blitzHeroPivot, 'novel', aurelia.accentColor);
+    expect(back.omegaAuraGroup).not.toBeNull();
+    expect(back.omegaHaloMesh).not.toBeNull();
+    expect(back.roninFanKatanas.length).toBe(6);
+    expect(back.twinCustomMats.length).toBeGreaterThanOrEqual(2);
+    const aureliaSprite = new ChibiSprite3D(aurelia);
+    expect(aureliaSprite.group.getObjectByName('chibiBackAttachmentGroup')).toBeDefined();
+    aureliaSprite.update(0.05, 0.1, new THREE.PerspectiveCamera(45, 1, 0.1, 100));
+    aureliaSprite.dispose();
+
+    let impactCalls = 0;
+    const pool = new TierAttackVfxPool3D({
+      onImpactFrame: () => {
+        impactCalls += 1;
+      },
+    });
+    pool.setPitBounds({ centerX: 0, floorY: -0.42, centerZ: 1.65, radius: 6.4 });
+    const cam = new THREE.PerspectiveCamera(45, 1.6, 0.1, 100);
+    cam.position.set(0, 10, 18);
+    const target = { x: 0, y: -0.42, z: 1.65 };
+    const allTargets = [
+      { x: -1.5, y: -0.42, z: 1.3 },
+      { x: 1.5, y: -0.42, z: 2.0 },
+    ];
+
+    pool.fireTierAttack({
+      rarity: 'novel',
+      chibiId: aurelia.id,
+      colorHex: aurelia.accentColor,
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
+    pool.update(0.08, cam);
+    const aureliaGroup = pool.group.children.find((g) => g.children.some((inst) => inst.visible && inst.getObjectByName('arbiterSealFloor')));
+    expect(aureliaGroup).toBeDefined();
+
+    // Consecutive Ult fast-forwards old tail without double-firing impact hooks from the cancelled tail
+    pool.fireTierAttack({
+      rarity: 'novel',
+      chibiId: aurelia.id,
+      colorHex: aurelia.accentColor,
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
+    for (let i = 0; i < 30; i++) pool.update(0.05, cam);
+    expect(impactCalls).toBe(1);
+
+    // Other novel units (witch) still route through generic pooled VFX
+    pool.clear();
+    pool.fireTierAttack({
+      rarity: 'novel',
+      chibiId: witch.id,
+      colorHex: witch.accentColor,
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
+    pool.update(0.08, cam);
+    const aureliaActiveForWitch = pool.group.children.some((g) => g.children.some((inst) => inst.visible && inst.getObjectByName('arbiterSealFloor')));
+    expect(aureliaActiveForWitch).toBe(false);
     pool.dispose();
   });
 });

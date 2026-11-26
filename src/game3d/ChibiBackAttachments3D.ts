@@ -90,14 +90,15 @@ export function updateChibiBackAttachmentGroup(
     const isMonochrome = defId === 'monochrome-saint';
     const isObsidianMonolith = defId === 'obsidian-sovereign' || defId === 'void-asura';
     const isLeviathanTide = defId === 'abyssal-leviathan';
+    const isAureliaNoctis = defId === 'gilded-chain-noble';
     const isEpicTier = handle.tierRarity === 'epic';
     const isSecretTier = handle.tierRarity === 'secret';
     const isRareTier = handle.tierRarity === 'rare';
     const isCommonTier = handle.tierRarity === 'common';
     for (let k = 0; k < handle.roninFanKatanas.length; k++) {
       const slot = handle.roninFanKatanas[k];
-      const hover = Math.sin(elapsed * (isCommonTier ? 1.9 : isLeviathanTide ? 2.2 : 2.4) + slot.phase);
-      const expand = Math.sin(elapsed * 1.8 + slot.phase) * (isCommonTier ? 0.018 : isLeviathanTide ? 0.044 : 0.032);
+      const hover = Math.sin(elapsed * (isCommonTier ? 1.9 : isAureliaNoctis ? 3.2 : isLeviathanTide ? 2.2 : 2.4) + slot.phase);
+      const expand = Math.sin(elapsed * (isAureliaNoctis ? 2.6 : 1.8) + slot.phase) * (isCommonTier ? 0.018 : isAureliaNoctis ? 0.14 : isLeviathanTide ? 0.044 : 0.032);
       const glitchJump =
         isCheshire && Math.sin(elapsed * 19.0 + k * 2.7) > 0.86
           ? (k % 2 === 0 ? 1 : -1) * 0.042
@@ -112,14 +113,16 @@ export function updateChibiBackAttachmentGroup(
           : 0;
       slot.mesh.position.set(
         slot.baseX + slot.outX * expand + glitchJump + epicSnap + monolithTremor,
-        slot.baseY + hover * (isObsidianMonolith ? 0.068 : isLeviathanTide ? 0.056 : isCommonTier ? 0.024 : 0.044) + slot.outY * expand,
+        slot.baseY + hover * (isAureliaNoctis ? 0.12 : isObsidianMonolith ? 0.068 : isLeviathanTide ? 0.056 : isCommonTier ? 0.024 : 0.044) + slot.outY * expand,
         slot.baseZ
       );
       slot.mesh.rotation.z = isMonochrome
         ? Math.sin(elapsed * 1.4 + slot.phase) * 0.014
-        : slot.baseRotZ + Math.sin(elapsed * 1.6 + slot.phase) * (isCommonTier ? 0.018 : isLeviathanTide ? 0.048 : 0.034);
+        : slot.baseRotZ + Math.sin(elapsed * (isAureliaNoctis ? 2.8 : 1.6) + slot.phase) * (isCommonTier ? 0.018 : isAureliaNoctis ? 0.18 : isLeviathanTide ? 0.048 : 0.034);
       if (isRareTier) {
         slot.mesh.rotation.y = elapsed * (k % 2 === 0 ? 0.85 : -0.85);
+      } else if (isAureliaNoctis) {
+        slot.mesh.rotation.y = Math.sin(elapsed * 2.4 + slot.phase) * 0.28;
       }
     }
     if (handle.omegaHaloMesh) {
@@ -135,6 +138,9 @@ export function updateChibiBackAttachmentGroup(
       } else if (defId === 'crimson-clock-marshal') {
         handle.omegaHaloMesh.position.y = 0.06 + Math.sin(elapsed * 2.0) * 0.022;
         handle.omegaHaloMesh.rotation.z = Math.sin(elapsed * 1.2) * 0.028;
+      } else if (defId === 'gilded-chain-noble') {
+        handle.omegaHaloMesh.position.y = 0.08 + Math.sin(elapsed * 2.4) * 0.045;
+        handle.omegaHaloMesh.rotation.z = Math.sin(elapsed * 1.6) * 0.14;
       } else if (handle.tierRarity === 'limited') {
         handle.omegaHaloMesh.position.y = 0.44 + Math.sin(elapsed * 2.0) * 0.026;
         handle.omegaHaloMesh.rotation.z = Math.sin(elapsed * 1.4) * 0.028;
