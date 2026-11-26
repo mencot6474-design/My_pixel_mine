@@ -91,6 +91,7 @@ export function updateChibiBackAttachmentGroup(
     const isObsidianMonolith = defId === 'obsidian-sovereign' || defId === 'void-asura';
     const isLeviathanTide = defId === 'abyssal-leviathan';
     const isAureliaNoctis = defId === 'gilded-chain-noble';
+    const isScarletArcana = defId === 'crimson-tarot-witch';
     const isEpicTier = handle.tierRarity === 'epic';
     const isSecretTier = handle.tierRarity === 'secret';
     const isRareTier = handle.tierRarity === 'rare';
@@ -123,6 +124,8 @@ export function updateChibiBackAttachmentGroup(
         slot.mesh.rotation.y = elapsed * (k % 2 === 0 ? 0.85 : -0.85);
       } else if (isAureliaNoctis) {
         slot.mesh.rotation.y = Math.sin(elapsed * 2.4 + slot.phase) * 0.28;
+      } else if (isScarletArcana) {
+        slot.mesh.rotation.y = (slot.baseX < 0 ? 0.18 : -0.18) + Math.sin(elapsed * 2.1 + slot.phase) * 0.24;
       }
     }
     if (handle.omegaHaloMesh) {
@@ -141,6 +144,9 @@ export function updateChibiBackAttachmentGroup(
       } else if (defId === 'gilded-chain-noble') {
         handle.omegaHaloMesh.position.y = 0.08 + Math.sin(elapsed * 2.4) * 0.045;
         handle.omegaHaloMesh.rotation.z = Math.sin(elapsed * 1.6) * 0.14;
+      } else if (defId === 'crimson-tarot-witch') {
+        handle.omegaHaloMesh.position.y = 0.08 + Math.sin(elapsed * 2.1) * 0.035;
+        handle.omegaHaloMesh.rotation.z = Math.sin(elapsed * 1.3) * 0.08;
       } else if (handle.tierRarity === 'limited') {
         handle.omegaHaloMesh.position.y = 0.44 + Math.sin(elapsed * 2.0) * 0.026;
         handle.omegaHaloMesh.rotation.z = Math.sin(elapsed * 1.4) * 0.028;

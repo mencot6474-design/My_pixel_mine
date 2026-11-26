@@ -653,6 +653,19 @@ export function buildTierMotionWaypoints(
           ],
         };
       }
+      if (chibiId === 'crimson-tarot-witch') {
+        return {
+          hero: [
+            restStart,
+            { t: 0.08, x: cx - 3.30 * ms, y: cy + 1.15, z: cz + 0.85 * ms, face: 1, rz: -0.28, pose: 'aura', snap: true, col: '#e11d48', scale: 1.18 },
+            { t: 0.18, x: cx + 3.20 * ms, y: cy + 1.35, z: cz - 0.80 * ms, face: -1, rz: 0.30, pose: 'aura', snap: true, col: '#fda4af', scale: 1.20 },
+            { t: 0.28, x: cx - 0.45 * ms, y: cy + 2.65, z: cz - 0.85 * ms, face: 1, rz: -0.18, pose: 'aura', snap: true, col: '#fde68a', scale: 1.26 },
+            { t: 0.38, x: cx + 0.20 * ms, y: cy + 1.05, z: cz + 0.35 * ms, face: -1, rz: 0.34, pose: 'attack', snap: true, col: '#e11d48', scale: 1.32 },
+            { t: 0.66, x: cx - 0.25 * ms, y: cy + 1.40, z: cz + 0.15 * ms, face: 1, rz: -0.08, pose: 'aura', snap: true, col: '#fda4af', scale: 1.24 },
+            restEnd,
+          ],
+        };
+      }
       return {
         hero: [
           restStart,

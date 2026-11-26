@@ -245,6 +245,14 @@ const CHRONOS_NOISE_GLSL = `
     }
     return v;
   }
+
+  float ciStarfield(vec2 p) {
+    vec2 gv = fract(p) - 0.5;
+    vec2 id = floor(p);
+    float rnd = ciHash21(id);
+    float d = length(gv - (vec2(rnd, fract(rnd * 17.3)) - 0.5) * 0.55);
+    return smoothstep(0.16, 0.01, d) * step(0.48, rnd);
+  }
 `;
 
 function createChronoFilmFloorMaterial(): THREE.ShaderMaterial {
@@ -253,6 +261,7 @@ function createChronoFilmFloorMaterial(): THREE.ShaderMaterial {
       uTime: { value: 0 },
       uProgress: { value: 0 },
       uRevealHead: { value: 0 },
+      uImpact: { value: 0 },
       uOpacity: { value: 1 },
     },
     vertexShader: `
@@ -266,59 +275,81 @@ function createChronoFilmFloorMaterial(): THREE.ShaderMaterial {
       uniform float uTime;
       uniform float uProgress;
       uniform float uRevealHead;
+      uniform float uImpact;
       uniform float uOpacity;
       varying vec2 vUv;
       ${CHRONOS_NOISE_GLSL}
 
       void main() {
         vec2 p = vUv * 2.0 - 1.0;
-        float r = length(p);
-        float circleMask = 1.0 - smoothstep(0.86, 0.99, r);
-        if (circleMask < 0.01) discard;
 
-        // 35mm film-strip track carved open directly behind sweeping slash cuts (zero big floor lines)
+        // Pure bold 35mm cinema film-strip runway (NO circular seal ring!)
         float ang = ${FILM_REVEAL_ANG.toFixed(2)};
         mat2 rot = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
         vec2 fp = rot * p;
 
-        float revealX = mix(-1.12, 1.12, uRevealHead);
-        float slashNoise = (ciVnoise(vec2(fp.y * 6.0, uRevealHead * 4.0)) - 0.5) * 0.14;
-        float carvedReveal = 1.0 - smoothstep(revealX - 0.16 + slashNoise, revealX + 0.02 + slashNoise, fp.x);
+        // Soft lengthwise fade at far ends of the runway, crisp width edges for the film strip
+        float endFade = 1.0 - smoothstep(0.80, 0.99, abs(fp.x));
+        float stripMask = 1.0 - smoothstep(0.62, 0.68, abs(fp.y));
+        if (endFade < 0.01 || stripMask < 0.01) discard;
+
+        // Sweeping cinema projection reveal with bright leading playhead glow
+        float revealX = mix(-1.08, 1.10, uRevealHead);
+        float slashNoise = (ciVnoise(vec2(fp.y * 5.0, uRevealHead * 4.0)) - 0.5) * 0.08;
+        float carvedReveal = 1.0 - smoothstep(revealX - 0.14 + slashNoise, revealX + 0.02 + slashNoise, fp.x);
         if (carvedReveal < 0.01) discard;
+        float playheadGlow = exp(-abs(fp.x - revealX) * 18.0) * step(uRevealHead, 0.98) * stripMask;
 
-        float stripBand = smoothstep(0.68, 0.56, abs(fp.y));
-        float railTop = smoothstep(0.036, 0.008, abs(abs(fp.y) - 0.54));
-        float railInner = smoothstep(0.024, 0.006, abs(abs(fp.y) - 0.36));
+        // Thick, bold 35mm film rails (outer borders + inner frame tracks)
+        float railOuter = smoothstep(0.068, 0.018, abs(abs(fp.y) - 0.59));
+        float railInner = smoothstep(0.042, 0.012, abs(abs(fp.y) - 0.37));
 
-        float sprocketCell = fract(fp.x * 9.0 - uProgress * 2.2);
-        float sprocketHole = step(0.22, sprocketCell) * step(sprocketCell, 0.78);
-        float sprocketBand = smoothstep(0.085, 0.028, abs(abs(fp.y) - 0.45)) * sprocketHole;
+        // Large, unmistakable scrolling cinema sprocket holes along BOTH borders
+        float scrollX = fp.x * 7.2 - uProgress * 3.0;
+        float sprocketCell = fract(scrollX);
+        float sprocketHole = smoothstep(0.16, 0.24, sprocketCell) * (1.0 - smoothstep(0.76, 0.84, sprocketCell));
+        float sprocketBand = smoothstep(0.095, 0.042, abs(abs(fp.y) - 0.48)) * sprocketHole;
+        float sprocketBorder = smoothstep(0.115, 0.092, abs(abs(fp.y) - 0.48)) * (1.0 - sprocketBand * 0.65);
 
-        float frameBar = smoothstep(0.048, 0.012, abs(fract(fp.x * 4.5 - uProgress * 1.1) - 0.5)) * smoothstep(0.36, 0.30, abs(fp.y));
-        float shutterTicks = smoothstep(0.055, 0.018, abs(fract(fp.x * 18.0) - 0.5)) * smoothstep(0.34, 0.28, abs(fp.y)) * 0.65;
-        float noiseDetail = ciFbm(fp * 4.5 + vec2(uTime * 0.8, 0.0));
+        // Bold vertical film-frame divider bars + glowing cinema cell interior
+        float framePos = fract(fp.x * 3.6 - uProgress * 1.5);
+        float frameBar = smoothstep(0.062, 0.016, abs(framePos - 0.5)) * smoothstep(0.39, 0.33, abs(fp.y));
+        float cellInterior = smoothstep(0.37, 0.28, abs(fp.y)) * (1.0 - frameBar * 0.75);
+        float scanline = 0.82 + 0.18 * sin(fp.y * 64.0 - uTime * 16.0);
+        float mist = ciFbm(fp * 3.8 + vec2(uTime * 1.1, 0.0)) * cellInterior;
+        float stars = ciStarfield(fp * 10.0 + vec2(-uTime * 0.35, 0.0)) * cellInterior;
 
-        float envFade = 1.0 - smoothstep(0.76, 1.0, uProgress);
-        vec3 obsidianBase = vec3(0.03, 0.015, 0.07);
-        vec3 neonViolet = vec3(0.74, 0.34, 1.0) * 1.45;
-        vec3 champGold = vec3(1.0, 0.86, 0.48) * 1.55;
+        // Smooth FBM ember dissolve on exit (no abrupt pop-out)
+        float dissolveNoise = ciFbm(fp * 4.5 + vec2(uTime * 0.4, -uTime * 0.3));
+        float envFade = 1.0 - smoothstep(0.68, 0.99, uProgress + (dissolveNoise - 0.5) * 0.24);
 
-        float detailMask = clamp(
-          railTop * 1.05 + railInner * 0.75 + sprocketBand * 1.15 + frameBar * 0.90 + shutterTicks,
-          0.0,
-          1.3
-        );
+        vec3 neonViolet = vec3(0.68, 0.24, 1.0);
+        vec3 crimson = vec3(1.0, 0.12, 0.38);
+        vec3 champGold = vec3(1.0, 0.88, 0.46);
+        vec3 whiteHot = vec3(1.0, 0.98, 0.96);
 
-        vec3 lineCol = mix(neonViolet, champGold, clamp(sprocketBand * 0.9 + frameBar * 0.65, 0.0, 1.0));
-        vec3 col = mix(obsidianBase + neonViolet * noiseDetail * 0.14, lineCol, clamp(detailMask, 0.0, 1.0));
-        float basePlateAlpha = max(stripBand * 0.82, smoothstep(0.95, 0.65, r) * 0.42);
-        float alpha = clamp(max(basePlateAlpha, detailMask * 0.95) * carvedReveal * circleMask * envFade * uOpacity, 0.0, 0.94);
+        float impactBoost = 1.0 + uImpact * 1.25;
+        vec3 col = neonViolet * (cellInterior * (0.28 + mist * 0.65) + railInner * 1.15 + sprocketBorder * 0.45) * scanline;
+        col += crimson * (railOuter * 1.35 + frameBar * 1.25 + mist * 0.42);
+        col += champGold * (sprocketBand * 1.45 + pow(railOuter, 1.8) * 0.75 + stars * 1.3);
+        col += whiteHot * (playheadGlow * 1.5 + (railOuter + frameBar) * uImpact * 1.1);
+        col *= impactBoost;
+
+        float detailEnergy =
+          railOuter * 1.0 +
+          railInner * 0.82 +
+          sprocketBand * 0.95 +
+          frameBar * 0.92 +
+          cellInterior * (0.26 + mist * 0.45) +
+          stars * 0.7 +
+          playheadGlow;
+        float alpha = clamp(detailEnergy * carvedReveal * endFade * stripMask * envFade * uOpacity, 0.0, 1.0);
         if (alpha < 0.015) discard;
         gl_FragColor = vec4(col, alpha);
       }
     `,
     transparent: true,
-    blending: THREE.NormalBlending,
+    blending: THREE.AdditiveBlending,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
@@ -490,35 +521,37 @@ function createChronoCelFrameMaterial(): THREE.ShaderMaterial {
         float edgeDist = max(ax, ay);
         if (edgeDist > 1.0) discard;
 
-        float outerBorder = smoothstep(0.76, 0.85, edgeDist) * (1.0 - smoothstep(0.96, 1.0, edgeDist));
+        float outerBorder = smoothstep(0.78, 0.86, edgeDist) * (1.0 - smoothstep(0.96, 1.0, edgeDist));
         float cornerCut = step(0.46, ax) * step(0.46, ay) * smoothstep(0.68, 0.76, edgeDist);
-        float innerHairline = smoothstep(0.028, 0.008, abs(edgeDist - 0.68));
+        float innerHairline = exp(-abs(edgeDist - 0.68) * 34.0) * 0.85;
 
         float tickWave = smoothstep(0.14, 0.04, abs(fract(vUv.x * 10.0) - 0.5));
         float tickMask = tickWave * step(0.78, ay) * (1.0 - step(0.94, ay));
 
-        float sheen = exp(-abs((p.x + p.y) - mix(-1.4, 1.4, uLock)) * 4.0) * 0.75;
-        float ripple = smoothstep(0.06, 0.015, abs(length(p) - 0.45 - sin(uTime * 7.0 + uSeed) * 0.04)) * 0.65;
-        float centerSigil = exp(-min(abs(p.x), abs(p.y)) * 18.0) * smoothstep(0.55, 0.15, edgeDist) * 0.45;
-        float cellDissolve = mix(1.0, smoothstep(uShatter * 0.92, uShatter * 0.92 + 0.18, ciVnoise(vUv * 5.5 + uSeed)), uShatter);
+        float neb = ciFbm(vUv * 4.0 + vec2(uSeed, uTime * 0.55));
+        float stars = ciStarfield(vUv * 10.0 + vec2(uSeed, 0.0));
+        float sheen = exp(-abs((p.x + p.y) - mix(-1.4, 1.4, uLock)) * 4.0) * 0.95;
+        float centerSigil = (exp(-abs(p.x) * 22.0) * exp(-abs(p.y) * 4.0) + exp(-abs(p.y) * 22.0) * exp(-abs(p.x) * 4.0)) * 0.85;
+        float shatterFlash = uShatter * 1.35;
 
-        vec3 darkGlass = vec3(0.08, 0.03, 0.18);
-        vec3 glassViolet = vec3(0.66, 0.30, 1.0) * 1.45;
-        vec3 frameGold = vec3(1.0, 0.86, 0.48) * 1.7;
-        vec3 hotWhite = vec3(1.0, 0.97, 1.0) * 1.85;
+        vec3 glassViolet = vec3(0.56, 0.22, 0.98);
+        vec3 crimson = vec3(0.98, 0.14, 0.38);
+        vec3 frameGold = vec3(1.0, 0.88, 0.50);
+        vec3 hotWhite = vec3(1.0, 0.98, 1.0);
 
-        float lineEnergy = clamp(outerBorder * 1.2 + cornerCut + innerHairline * 0.6 + tickMask + sheen + ripple + centerSigil, 0.0, 1.4);
-        vec3 glowCol = mix(glassViolet, frameGold, clamp(cornerCut * 0.85 + tickMask * 0.9, 0.0, 1.0));
-        glowCol = mix(glowCol, hotWhite, clamp(outerBorder * 0.55 + sheen * 0.7 + uShatter * 0.6, 0.0, 1.0));
+        vec3 interior = mix(vec3(0.14, 0.04, 0.34), glassViolet, neb) * 0.68 + hotWhite * stars * 0.9;
+        float lineEnergy = clamp(outerBorder * 1.25 + cornerCut * 1.1 + innerHairline + tickMask + sheen + centerSigil, 0.0, 1.6);
+        vec3 glowCol = mix(crimson, frameGold, clamp(cornerCut * 0.85 + tickMask * 0.9, 0.0, 1.0));
+        glowCol = mix(glowCol, hotWhite, clamp(outerBorder * 0.5 + sheen * 0.75 + shatterFlash, 0.0, 1.0));
 
-        vec3 col = mix(darkGlass, glowCol, clamp(lineEnergy, 0.0, 1.0));
-        float alpha = clamp(max(0.42 * (1.0 - uShatter * 0.6), lineEnergy * 0.95) * cellDissolve * uOpacity, 0.0, 0.96);
-        if (alpha < 0.015) discard;
+        vec3 col = interior + glowCol * (lineEnergy + shatterFlash);
+        float alpha = clamp((0.46 + lineEnergy * 0.68 + shatterFlash * 0.5) * uOpacity, 0.0, 1.0);
+        if (alpha < 0.02) discard;
         gl_FragColor = vec4(col, alpha);
       }
     `,
     transparent: true,
-    blending: THREE.NormalBlending,
+    blending: THREE.AdditiveBlending,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
@@ -573,15 +606,15 @@ function createChronoShardMaterial(): THREE.ShaderMaterial {
         float rim = 1.0 - smoothstep(0.02, 0.16, min(edgeX, edgeY));
         float spec = exp(-abs((vUv.x - vUv.y) - sin(uTime * 5.0) * 0.25) * 9.0) * 0.8;
 
-        vec3 glassTint = mix(vec3(0.42, 0.24, 0.78), vec3(0.92, 0.28, 0.56), vUv.y);
-        vec3 col = mix(glassTint, vec3(1.0, 0.97, 1.0) * 1.45, clamp(rim * 0.85 + spec, 0.0, 1.0));
-        float alpha = clamp((0.52 + rim * 0.45 + spec * 0.35) * uOpacity, 0.0, 0.96);
+        vec3 glassTint = mix(vec3(0.58, 0.24, 1.0), vec3(0.98, 0.18, 0.46), vUv.y);
+        vec3 col = glassTint * 0.95 + vec3(1.0, 0.92, 0.68) * (rim * 1.35 + spec * 1.25);
+        float alpha = clamp((0.55 + rim * 0.45 + spec * 0.35) * uOpacity, 0.0, 1.0);
         if (alpha < 0.02) discard;
         gl_FragColor = vec4(col, alpha);
       }
     `,
     transparent: true,
-    blending: THREE.NormalBlending,
+    blending: THREE.AdditiveBlending,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
@@ -631,10 +664,21 @@ function createDimensionalTearSlashMaterial(): THREE.ShaderMaterial {
       uOpacity: { value: 1 },
     },
     vertexShader: `
+      uniform float uTime;
+      uniform float uProgress;
       varying vec2 vUv;
       void main() {
         vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        vec3 pos = position;
+        float nx = uv.x * 2.0 - 1.0;
+        float ny = uv.y * 2.0 - 1.0;
+        // Organic sakuga whip-arch & elastic rip ripple along the giant slash (zero stiffness!)
+        float openEnv = smoothstep(0.05, 0.24, uProgress) * (1.0 - smoothstep(0.62, 0.96, uProgress));
+        float arch = (1.0 - nx * nx) * 0.65 * openEnv;
+        float wave = sin(nx * 9.0 - uTime * 22.0) * 0.16 * openEnv * (1.0 - abs(nx));
+        pos.y += arch + wave;
+        pos.z += (1.0 - ny * ny) * (1.0 - nx * nx) * 0.45 * openEnv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
       }
     `,
     fragmentShader: `
@@ -649,46 +693,115 @@ function createDimensionalTearSlashMaterial(): THREE.ShaderMaterial {
         float absX = abs(p.x);
         if (absX > 0.99) discard;
 
-        // Straight horizontal razor cut sweeping left -> right (0.0 -> 0.20)
-        float sweepX = mix(-1.05, 1.08, smoothstep(0.0, 0.20, uProgress));
-        float cutReveal = 1.0 - smoothstep(sweepX - 0.07, sweepX + 0.02, p.x);
+        // Ultra-snappy eased left -> right katana whip-sweep (0.0 -> 0.16) with blazing comet head
+        float sweepT = clamp(uProgress / 0.16, 0.0, 1.0);
+        float sweepEase = 1.0 - pow(1.0 - sweepT, 3.0);
+        float sweepX = mix(-1.08, 1.12, sweepEase);
+        float cutReveal = 1.0 - smoothstep(sweepX - 0.10, sweepX + 0.02, p.x);
         if (cutReveal < 0.01) discard;
+        float leadComet = exp(-abs(p.x - sweepX) * 14.0) * exp(-abs(p.y) * 9.0) * (1.0 - smoothstep(0.14, 0.24, uProgress));
 
-        // Sleek tapered needle profile (razor-sharp tips at both ends)
-        float taperX = pow(max(0.0, 1.0 - absX * absX), 1.25);
-        float splitOpen = smoothstep(0.14, 0.40, uProgress) * (1.0 - smoothstep(0.68, 1.0, uProgress));
-        float halfSeam = mix(0.008, 0.115, splitOpen) * taperX;
+        // Fluid sakuga open -> sleek razor-thin dimensional slit -> graceful snap-shut pinch on exit
+        float taperX = pow(max(0.0, 1.0 - absX * absX), 1.05);
+        float openPhase = smoothstep(0.06, 0.22, uProgress);
+        float closePhase = 1.0 - smoothstep(0.56, 0.96, uProgress);
+        float splitOpen = openPhase * closePhase;
+        float halfSeam = mix(0.008, 0.145, splitOpen) * taperX;
 
+        // Razor-sharp dimensional cut edges (sleek & thin, zero bloated thickness!)
         float distY = abs(p.y);
-        float insideSlit = (1.0 - smoothstep(halfSeam - 0.015, halfSeam + 0.01, distY)) * splitOpen;
-        float rimDist = abs(distY - halfSeam);
+        float jag = (ciFbm(vec2(p.x * 7.2 - uTime * 3.0, p.y * 5.0)) - 0.5) * 0.045 * splitOpen;
+        float insideSlit = (1.0 - smoothstep(halfSeam - 0.018, halfSeam + 0.012, distY + jag)) * splitOpen;
+        float rimDist = abs(distY - halfSeam + jag);
 
-        float needle = (0.0075 / (rimDist + 0.0022)) * taperX;
-        float aura = (0.036 / (rimDist + 0.015)) * taperX;
-        float initialFlash = (0.011 / (distY + 0.0022)) * taperX * (1.0 - smoothstep(0.16, 0.34, uProgress));
+        float needle = (0.0095 / (rimDist + 0.0022)) * taperX;
+        float aura = (0.022 / (rimDist + 0.014)) * taperX;
+        float initialFlash = (0.011 / (distY + 0.0025)) * taperX * (1.0 - smoothstep(0.10, 0.22, uProgress));
 
-        // Astral shimmer inside the horizontal slit + crisp 4-point center lens flare
-        float astralFlow = ciFbm(vec2(p.x * 6.0 - uTime * 2.4, p.y * 8.0));
-        float starH = exp(-abs(p.x) * 4.5 - abs(p.y) * 26.0);
-        float starV = exp(-abs(p.x) * 26.0 - abs(p.y) * 5.5);
-        float centerStar = (starH + starV) * smoothstep(0.08, 0.26, uProgress);
+        // Deep astral galaxy nebula + twinkling stars inside the wide torn space + subtle crisp center accent
+        float astralFlow = ciFbm(vec2(p.x * 4.6 - uTime * 2.8, p.y * 5.2));
+        float astralStars = ciStarfield(vec2(p.x * 13.0 - uTime * 0.9, p.y * 6.5));
+        float starH = exp(-abs(p.x) * 3.8 - abs(p.y) * 20.0) * 0.55;
+        float starV = exp(-abs(p.x) * 20.0 - abs(p.y) * 4.2) * 0.55;
+        float centerCore = exp(-length(vec2(p.x * 1.6, p.y * 2.4)) * 6.2) * 0.35;
+        float centerStar = (starH + starV + centerCore) * openPhase * closePhase;
 
-        float fadeOut = 1.0 - smoothstep(0.66, 1.0, uProgress);
-        float pulse = 0.92 + 0.08 * sin(p.x * 16.0 - uTime * 24.0);
+        // Organic FBM ember-erosion exit dissolve (no stiff fade-out!)
+        float exitNoise = ciFbm(vec2(p.x * 6.0 + uTime * 0.8, p.y * 6.0 - uTime * 1.2));
+        float fadeOut = 1.0 - smoothstep(0.60, 0.99, uProgress + (exitNoise - 0.5) * 0.28);
+        float pulse = 0.92 + 0.08 * sin(p.x * 14.0 - uTime * 24.0);
 
-        vec3 violet = vec3(0.74, 0.34, 1.0) * 1.65;
-        vec3 crimson = vec3(1.0, 0.12, 0.38) * 1.95;
-        vec3 champGold = vec3(1.0, 0.88, 0.56) * 1.85;
-        vec3 whiteHot = vec3(1.0, 0.98, 0.98) * 2.35;
+        vec3 deepVoid = vec3(0.28, 0.06, 0.56);
+        vec3 violet = vec3(0.68, 0.24, 0.98) * 1.25;
+        vec3 crimson = vec3(0.98, 0.10, 0.34) * 1.45;
+        vec3 champGold = vec3(1.0, 0.84, 0.44) * 1.25;
+        vec3 whiteHot = vec3(1.0, 0.96, 0.96) * 1.45;
 
-        vec3 slitGlow = mix(violet, champGold, astralFlow * 0.85) * insideSlit * 1.15;
-        vec3 col = mix(violet, crimson, clamp(aura * 0.85, 0.0, 1.0));
-        col = mix(col, whiteHot, clamp(needle * 0.78 + initialFlash * 0.92 + centerStar * 0.9, 0.0, 1.0));
+        vec3 slitGlow = (mix(deepVoid, crimson * 0.72, astralFlow * 0.8) + champGold * astralStars * 1.25) * insideSlit * 1.05;
+        vec3 col = mix(violet, crimson, clamp(aura * 0.95, 0.0, 1.0));
+        col = mix(col, champGold, clamp(centerStar * 0.45, 0.0, 1.0));
+        col = mix(col, whiteHot, clamp(needle * 0.62 + initialFlash * 0.65 + leadComet * 0.65 + centerCore * 0.55, 0.0, 1.0));
         col += slitGlow;
 
-        float alpha = clamp((needle + aura * 0.72 + initialFlash + insideSlit * 0.75 + centerStar * 0.9) * pulse * cutReveal * fadeOut * uOpacity, 0.0, 1.0);
+        float alpha = clamp((needle * 0.95 + aura * 0.65 + initialFlash * 0.75 + leadComet * 0.75 + insideSlit * 0.86 + centerStar * 0.65) * pulse * cutReveal * fadeOut * uOpacity, 0.0, 0.96);
         if (alpha < 0.015) discard;
         gl_FragColor = vec4(col * alpha, alpha);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}
+
+/** Null-Singularity-style Twin Crossed 4-Point Chrono Star Flare at the Dimension-Tear core. */
+function createChronoStarFlareMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uProgress: { value: 0 },
+      uOpacity: { value: 1 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uTime;
+      uniform float uProgress;
+      uniform float uOpacity;
+      varying vec2 vUv;
+
+      void main() {
+        vec2 p = vUv * 2.0 - 1.0;
+        float r = length(p);
+        float edgeFade = 1.0 - smoothstep(0.65, 0.98, r);
+
+        float pulse = 0.92 + 0.12 * sin(uTime * 16.0);
+        // Long, piercing razor-sharp 8-point anime star explosion (crisp rays, tight jewel core)
+        float rayH = exp(-abs(p.y) * 24.0) * exp(-abs(p.x) * 1.45);
+        float rayV = exp(-abs(p.x) * 24.0) * exp(-abs(p.y) * 1.45);
+        float diagP = (p.x + p.y) * 0.7071;
+        float diagQ = (p.x - p.y) * 0.7071;
+        float rayDiag = (exp(-abs(diagP) * 28.0) * exp(-abs(diagQ) * 2.8) + exp(-abs(diagQ) * 28.0) * exp(-abs(diagP) * 2.8)) * 0.68;
+
+        float core = exp(-r * 8.5);
+        float haloV = exp(-abs(r - (0.22 + uProgress * 0.18)) * 22.0);
+        float haloC = exp(-abs(r - (0.30 + uProgress * 0.20)) * 20.0);
+
+        float starEnergy = (rayH + rayV + rayDiag) * pulse;
+        vec3 col = vec3(1.0, 0.86, 0.44) * starEnergy * 1.35;
+        col += vec3(1.0, 0.98, 0.96) * (core * 1.55 + pow(starEnergy, 2.0) * 0.85);
+        col += vec3(0.72, 0.28, 1.0) * haloV * 1.05;
+        col += vec3(1.0, 0.12, 0.38) * haloC * 1.05;
+
+        float alpha = clamp((starEnergy * 1.05 + core * 0.95 + haloV * 0.72 + haloC * 0.68) * edgeFade * uOpacity, 0.0, 1.0);
+        if (alpha < 0.02) discard;
+        gl_FragColor = vec4(col, alpha);
       }
     `,
     transparent: true,
@@ -763,6 +876,9 @@ interface ChronosImperatorInstance {
   latticeMats: THREE.ShaderMaterial[];
   dimensionTearMesh: THREE.Mesh;
   dimensionTearMat: THREE.ShaderMaterial;
+  starFlareA: THREE.Mesh;
+  starFlareB: THREE.Mesh;
+  starFlareMat: THREE.ShaderMaterial;
   shards: ChronoShardSlot[];
   sparks: ChronoSparkSlot[];
 }
@@ -786,13 +902,14 @@ export class ChronosImperatorSkillVfxPool {
     this.hooks = hooks;
     const floorGeo = new THREE.PlaneGeometry(1, 1);
     floorGeo.rotateX(-Math.PI / 2);
-    const carveGeo = new THREE.PlaneGeometry(4.4, 0.34);
-    const celGeo = new THREE.PlaneGeometry(2.75, 3.25);
+    const carveGeo = new THREE.PlaneGeometry(5.2, 0.42);
+    const celGeo = new THREE.PlaneGeometry(3.15, 3.85);
     const latticeGeo = new THREE.PlaneGeometry(1, 1);
-    const tearGeo = new THREE.PlaneGeometry(13.2, 2.2);
+    const tearGeo = new THREE.PlaneGeometry(22.4, 3.4, 20, 6);
+    const starFlareGeo = new THREE.PlaneGeometry(16.5, 16.5);
     const shardGeo = createChronoShardGeometry();
     const sparkGeo = new THREE.PlaneGeometry(0.36, 1.05);
-    this.sharedGeos.push(floorGeo, carveGeo, celGeo, latticeGeo, tearGeo, shardGeo, sparkGeo);
+    this.sharedGeos.push(floorGeo, carveGeo, celGeo, latticeGeo, tearGeo, starFlareGeo, shardGeo, sparkGeo);
 
     for (let i = 0; i < POOL_SIZE; i++) {
       const root = new THREE.Group();
@@ -876,6 +993,16 @@ export class ChronosImperatorSkillVfxPool {
       root.add(dimensionTearMesh);
       this.allMats.push(dimensionTearMat);
 
+      const starFlareMat = createChronoStarFlareMaterial();
+      const starFlareA = new THREE.Mesh(starFlareGeo, starFlareMat);
+      starFlareA.name = 'chronoStarFlare';
+      starFlareA.visible = false;
+      const starFlareB = new THREE.Mesh(starFlareGeo, starFlareMat);
+      starFlareB.name = 'chronoStarFlare';
+      starFlareB.visible = false;
+      root.add(starFlareA, starFlareB);
+      this.allMats.push(starFlareMat);
+
       const shards: ChronoShardSlot[] = [];
       for (let s = 0; s < SHARD_COUNT; s++) {
         const mat = createChronoShardMaterial();
@@ -933,6 +1060,9 @@ export class ChronosImperatorSkillVfxPool {
         latticeMats: [latticeMatA, latticeMatB],
         dimensionTearMesh,
         dimensionTearMat,
+        starFlareA,
+        starFlareB,
+        starFlareMat,
         shards,
         sparks,
       });
@@ -1007,10 +1137,12 @@ export class ChronosImperatorSkillVfxPool {
     inst.latticeTiltMesh.scale.setScalar(12.2 * opts.areaScale);
     inst.latticeTiltMesh.visible = false;
 
-    inst.dimensionTearMesh.position.set(opts.cx, opts.cy + 1.95 * opts.areaScale, opts.cz);
+    inst.dimensionTearMesh.position.set(opts.cx, opts.cy + 2.35 * opts.areaScale, opts.cz);
     inst.dimensionTearMesh.rotation.set(-0.18, 0.0, 0.0);
     inst.dimensionTearMesh.scale.setScalar(opts.areaScale);
     inst.dimensionTearMesh.visible = false;
+    inst.starFlareA.visible = false;
+    inst.starFlareB.visible = false;
 
     for (let s = 0; s < SHARD_COUNT; s++) inst.shards[s].mesh.visible = false;
     for (let p = 0; p < SPARK_COUNT; p++) inst.sparks[p].mesh.visible = false;
@@ -1037,11 +1169,16 @@ export class ChronosImperatorSkillVfxPool {
       const as = inst.areaScale;
       const halfFloor = FILM_FLOOR_SIZE * as * 0.5;
 
-      // Phase 1 (0.00s -> 0.48s): Crimson-style razor slash lines carve the 35mm film floor open behind them
+      // Phase 1 (0.00s -> 0.48s): Crimson-style razor slash lines carve the luminous 35mm film floor open behind them
       const revealHead = Math.min(1, inst.elapsed / 0.48);
+      const floorImpact =
+        inst.elapsed >= SEVERANCE_TIME_SEC
+          ? Math.max(0, 1 - (inst.elapsed - SEVERANCE_TIME_SEC) / 0.45)
+          : 0;
       inst.floorMat.uniforms.uTime.value = timeSec;
       inst.floorMat.uniforms.uProgress.value = uProgress;
       inst.floorMat.uniforms.uRevealHead.value = revealHead;
+      inst.floorMat.uniforms.uImpact.value = floorImpact;
       inst.floorMat.uniforms.uOpacity.value = 1;
 
       const carveCap = this.lowQuality ? 7 : FILM_CARVE_SLASH_COUNT;
@@ -1069,25 +1206,35 @@ export class ChronosImperatorSkillVfxPool {
         cs.mat.uniforms.uOpacity.value = 1;
       }
 
-      // Phase 1 -> 3: Staggered Cel-Frame Prisons
-      const shatterRaw = Math.max(0, (inst.elapsed - SEVERANCE_TIME_SEC) / 0.56);
-      const shatter = Math.min(1, shatterRaw);
+      // Phase 1 -> 2: Null-Singularity-style Sky-Dropping 24-FPS Cel-Frame Prisons that crack-shake & shatter on climax!
+      const celDropStep = this.lowQuality ? 0.07 : 0.042;
       for (let f = 0; f < inst.activeCelCount; f++) {
         const cf = inst.celFrames[f];
-        if (inst.elapsed < cf.lockDelay || shatter >= 1) {
+        const dropDelay = 0.04 + f * celDropStep;
+        const localDrop = inst.elapsed - dropDelay;
+        const shatterTime = SEVERANCE_TIME_SEC + 0.08 + f * 0.025;
+        if (localDrop < 0 || inst.elapsed >= shatterTime) {
           cf.mesh.visible = false;
           continue;
         }
-        const lockT = Math.min(1, (inst.elapsed - cf.lockDelay) / 0.14);
-        const snapScale = (1.30 - 0.30 * (1 - Math.pow(1 - lockT, 3))) * as;
+        const dropT = Math.min(1, localDrop / 0.16);
+        const dropEase = 1 - Math.pow(1 - dropT, 3);
+        const settle = dropT > 0.78 ? Math.sin(((dropT - 0.78) / 0.22) * Math.PI) : 0;
+
+        // Pre-shatter crack tremor right before severance
+        const crackT = Math.max(0, Math.min(1, (inst.elapsed - (shatterTime - 0.10)) / 0.10));
+        const shakeX = crackT > 0 ? Math.sin(inst.elapsed * 95.0 + f * 3.1) * 0.14 * crackT * as : 0;
+        const dropY = cf.y + (7.6 * (1 - dropEase)) * as;
+
         cf.mesh.visible = true;
-        cf.mesh.position.set(cf.x, cf.y + shatter * 0.26 * as, cf.z);
-        cf.mesh.rotation.set(0, cf.yaw, cf.tilt * (1 - lockT * 0.5));
-        cf.mesh.scale.setScalar(snapScale * (1 + shatter * 0.2));
+        cf.mesh.position.set(cf.x + shakeX, dropY, cf.z);
+        cf.mesh.lookAt(inst.cx, dropY, inst.cz);
+        cf.mesh.rotateZ(cf.tilt * (1 - dropEase * 0.5));
+        cf.mesh.scale.set((1 + 0.08 * settle + 0.10 * crackT) * as, (1 - 0.09 * settle + 0.10 * crackT) * as, as);
         cf.mat.uniforms.uTime.value = timeSec;
-        cf.mat.uniforms.uLock.value = lockT;
-        cf.mat.uniforms.uShatter.value = shatter;
-        cf.mat.uniforms.uOpacity.value = 1 - shatter * 0.82;
+        cf.mat.uniforms.uLock.value = dropT;
+        cf.mat.uniforms.uShatter.value = crackT;
+        cf.mat.uniforms.uOpacity.value = Math.min(1, dropT * 3.2);
       }
 
       // Phase 2 (0.42s -> 0.90s): Crimson-style crisscrossing needle-core razor lattice + thin high-speed smear arcs
@@ -1111,30 +1258,62 @@ export class ChronosImperatorSkillVfxPool {
         inst.hitStopTimer = HIT_STOP_DURATION_SEC;
         this.hooks.onImpactFrame?.(1.0, 1.0, '#e11d48', HIT_STOP_DURATION_SEC);
         this.hooks.onSpeedLines?.(1.0, 0.55);
-        this.hooks.onFlash?.('#f3e8ff', 0.72);
+        this.hooks.onFlash?.('#f3e8ff', 0.32);
         inst.onImpactCallback?.();
       }
 
-      // Climax: straight diagonal slash opening space along the cut (0.92s -> 1.42s), then shattering into 24 glass shards
-      if (inst.elapsed >= SEVERANCE_TIME_SEC && inst.elapsed < 1.42) {
-        const dtTear = (inst.elapsed - SEVERANCE_TIME_SEC) / 0.50;
+      // Climax: Colossal fluid horizontal dimension-tear with elastic pop-in & snap-shut exit + Twin 13.2m Star Flare (0.92s -> 1.84s)
+      if (inst.elapsed >= SEVERANCE_TIME_SEC && inst.elapsed < 1.84) {
+        const dtTear = (inst.elapsed - SEVERANCE_TIME_SEC) / 0.92;
+        const enterT = Math.min(1, dtTear / 0.18);
+        // Elastic easeOutBack pop-in on open, smooth pinch-shut on exit
+        const enterBack = 1 + 1.7 * Math.pow(enterT - 1, 3) + 0.7 * Math.pow(enterT - 1, 2);
+        const exitT = Math.max(0, (dtTear - 0.62) / 0.38);
+        const exitEase = exitT * exitT;
+        const tearScaleX = (0.78 + 0.30 * enterBack + 0.16 * exitEase) * as;
+        const tearScaleY = Math.max(0.08, (0.22 + 0.92 * enterBack) * (1 - 0.88 * exitEase)) * as;
+
         inst.dimensionTearMesh.visible = true;
+        inst.dimensionTearMesh.position.set(inst.cx, inst.cy + (2.55 + 0.28 * Math.sin(dtTear * Math.PI)) * as, inst.cz);
+        inst.dimensionTearMesh.rotation.set(-0.20, 0.0, 0.07 * (1 - enterT) - 0.04 * exitEase);
+        inst.dimensionTearMesh.scale.set(tearScaleX, tearScaleY, as);
         inst.dimensionTearMat.uniforms.uTime.value = timeSec;
         inst.dimensionTearMat.uniforms.uProgress.value = dtTear;
         inst.dimensionTearMat.uniforms.uOpacity.value = 1;
+
+        const flarePop = Math.min(1, dtTear / 0.16);
+        const flarePopEase = 1 + 1.5 * Math.pow(flarePop - 1, 3) + 0.5 * Math.pow(flarePop - 1, 2);
+        const flareExit = Math.max(0, (dtTear - 0.50) / 0.50);
+        const flareFade = 1 - flareExit * flareExit;
+        const flareScale = Math.max(0.05, (0.38 + 0.88 * flarePopEase) * (1 - 0.38 * flareExit)) * as;
+        const flareY = inst.cy + 2.55 * as;
+        const flareRotY = inst.elapsed * 1.55;
+        inst.starFlareA.visible = flareFade > 0.02;
+        inst.starFlareA.position.set(inst.cx, flareY, inst.cz);
+        inst.starFlareA.rotation.set(0, flareRotY, 0);
+        inst.starFlareA.scale.setScalar(flareScale);
+        inst.starFlareB.visible = flareFade > 0.02;
+        inst.starFlareB.position.set(inst.cx, flareY, inst.cz);
+        inst.starFlareB.rotation.set(0, flareRotY + Math.PI * 0.5, 0);
+        inst.starFlareB.scale.setScalar(flareScale);
+        inst.starFlareMat.uniforms.uTime.value = timeSec;
+        inst.starFlareMat.uniforms.uProgress.value = dtTear;
+        inst.starFlareMat.uniforms.uOpacity.value = flareFade * 0.96;
       } else {
         inst.dimensionTearMesh.visible = false;
+        inst.starFlareA.visible = false;
+        inst.starFlareB.visible = false;
       }
 
-      // Crisp 3D glass shards bursting along the straight diagonal cut line + sparks (>= 1.12s)
+      // Luminous 3D glass shards bursting along the horizontal dimension-cut & cel-frames + sparks (>= 0.92s)
       if (inst.elapsed >= SEVERANCE_TIME_SEC) {
         const dtBoom = inst.elapsed - SEVERANCE_TIME_SEC;
-        const boomFade = Math.max(0, 1 - dtBoom / 1.18);
+        const boomFade = Math.max(0, 1 - dtBoom / 1.28);
 
         const shardCap = this.lowQuality ? 10 : SHARD_COUNT;
-        const shatterStart = SEVERANCE_TIME_SEC + 0.20;
+        const shatterStart = SEVERANCE_TIME_SEC + 0.05;
         const dtGlass = Math.max(0, inst.elapsed - shatterStart);
-        const glassFade = Math.max(0, 1 - dtGlass / 1.12);
+        const glassFade = Math.max(0, 1 - dtGlass / 1.24);
         for (let s = 0; s < shardCap; s++) {
           const sh = inst.shards[s];
           if (inst.elapsed < shatterStart || glassFade <= 0.02) {
@@ -1142,17 +1321,17 @@ export class ChronosImperatorSkillVfxPool {
             continue;
           }
           sh.mesh.visible = true;
-          const lineFrac = ((s / Math.max(1, shardCap - 1)) - 0.5) * 9.8;
+          const lineFrac = ((s / Math.max(1, shardCap - 1)) - 0.5) * 11.4;
           const baseX = lineFrac;
-          const baseY = 1.95 + ((s % 3) - 1) * 0.16;
-          const baseZ = ((s % 2) - 0.5) * 0.25;
-          const r = dtGlass * sh.speed;
+          const baseY = 2.35 + ((s % 3) - 1) * 0.28;
+          const baseZ = ((s % 2) - 0.5) * 0.35;
+          const r = dtGlass * sh.speed * 1.15;
           const x = inst.cx + (baseX + Math.cos(sh.angle) * r) * as;
-          const y = Math.max(inst.cy + 0.16, inst.cy + (baseY + dtGlass * sh.ySpeed - 2.4 * dtGlass * dtGlass) * as);
+          const y = Math.max(inst.cy + 0.16, inst.cy + (baseY + dtGlass * (sh.ySpeed * 1.35) - 2.6 * dtGlass * dtGlass) * as);
           const z = inst.cz + (baseZ + Math.sin(sh.angle) * r) * as;
           sh.mesh.position.set(x, y, z);
-          sh.mesh.rotation.set(dtGlass * sh.spinX, sh.angle + dtGlass * 3.0, dtGlass * sh.spinZ);
-          sh.mesh.scale.setScalar((0.88 + 0.42 * (s % 3) * 0.35) * glassFade * as);
+          sh.mesh.rotation.set(dtGlass * sh.spinX, sh.angle + dtGlass * 3.4, dtGlass * sh.spinZ);
+          sh.mesh.scale.setScalar((1.18 + 0.45 * (s % 3) * 0.35) * glassFade * as);
           sh.mat.uniforms.uTime.value = timeSec;
           sh.mat.uniforms.uOpacity.value = glassFade;
         }

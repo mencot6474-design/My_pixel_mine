@@ -152,6 +152,9 @@ export interface TierVfxChoreoContext {
   fireAureliaNoctisSakuga: (opts: {
     cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
   }) => void;
+  fireScarletArcanaSakuga: (opts: {
+    cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[]; onImpact?: () => void;
+  }) => void;
   fireClockworkTwinsSakuga: (opts: {
     cx: number; cy: number; cz: number; areaScale: number; pts: readonly WorldPoint3[];
     onSlashBeat?: (beatIdx: number, pt: WorldPoint3) => void;
@@ -476,6 +479,22 @@ export function fireTierAttackChoreography(
             burstPts.forEach((n) => {
               ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#eab308', '#09090d', 6);
               ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#fef9c3', '#eab308', 7, 7.2);
+            });
+          },
+        });
+        break;
+      }
+      if (opts.chibiId === 'crimson-tarot-witch') {
+        ctx.fireScarletArcanaSakuga({
+          cx,
+          cy,
+          cz,
+          areaScale: as,
+          pts,
+          onImpact: () => {
+            burstPts.forEach((n) => {
+              ctx.spawnDebrisBurst(n.x, n.y + 0.85, n.z, '#e11d48', '#fda4af', 6);
+              ctx.spawnSparks(n.x, n.y + 0.95, n.z, '#fde68a', '#e11d48', 7, 7.2);
             });
           },
         });

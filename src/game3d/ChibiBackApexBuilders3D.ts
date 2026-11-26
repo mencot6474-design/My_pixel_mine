@@ -72,6 +72,13 @@ import {
   createAureliaBackFeatherGeometry,
   createAureliaBackFeatherShaderMaterial,
 } from './skills/aureliaNoctisSkillVfx3D';
+import {
+  createScarletArcanaHaloShaderMaterial,
+  createScarletBackStarPinShaderMaterial,
+  createScarletStarPinGeometry,
+  createScarletTarotCardBackShaderMaterial,
+  createScarletTarotCardGeometry,
+} from './skills/scarletArcanaSkillVfx3D';
 
 /** Builds Omega, Anomaly, and Twin bespoke 3D Sakuga back-attachments. */
 export function buildApexBackAttachment(
@@ -221,6 +228,82 @@ export function buildApexBackAttachment(
         outX: Math.sign(cs.x) * 0.24,
         outY: -0.32,
         phase: cs.phase,
+      });
+    }
+
+    handle.omegaAuraGroup.visible = true;
+    spritePivot.add(handle.omegaAuraGroup);
+    return true;
+  }
+
+  if (defId === 'crimson-tarot-witch') {
+    handle.omegaAuraGroup = new THREE.Group();
+    handle.omegaAuraGroup.name = 'chibiBackAttachmentGroup';
+    handle.omegaAuraGroup.position.set(0, spriteHeight * 0.56, -0.15);
+
+    const haloMat = createScarletArcanaHaloShaderMaterial();
+    const cardMat = createScarletTarotCardBackShaderMaterial();
+    const starMat = createScarletBackStarPinShaderMaterial();
+    handle.omegaAuraMat = haloMat;
+    handle.twinCustomMats.push(cardMat, starMat);
+
+    const haloGeo = new THREE.PlaneGeometry(2.75, 2.75);
+    const cardGeo = createScarletTarotCardGeometry();
+    const starGeo = createScarletStarPinGeometry();
+    handle.omegaAuraGeo = haloGeo;
+    handle.twinCustomGeos.push(cardGeo, starGeo);
+
+    handle.omegaHaloMesh = new THREE.Mesh(haloGeo, haloMat);
+    handle.omegaHaloMesh.position.set(0, 0.08, -0.11);
+    handle.omegaAuraGroup.add(handle.omegaHaloMesh);
+
+    // 6 Floating Crimson Tarot Cards in a symmetrical shoulder arc (mirrors pose.webp)
+    const cardSpecs: ReadonlyArray<{ x: number; y: number; z: number; rz: number; sc: number; phase: number }> = [
+      { x: -1.16, y: 0.14, z: -0.04, rz: 0.28, sc: 0.90, phase: 0.0 },
+      { x: -0.96, y: -0.34, z: -0.05, rz: 0.44, sc: 0.84, phase: 0.55 },
+      { x: -0.74, y: 0.56, z: -0.06, rz: 0.16, sc: 0.82, phase: 1.1 },
+      { x: 1.16, y: 0.14, z: -0.04, rz: -0.28, sc: 0.90, phase: 0.35 },
+      { x: 0.96, y: -0.34, z: -0.05, rz: -0.44, sc: 0.84, phase: 0.9 },
+      { x: 0.74, y: 0.56, z: -0.06, rz: -0.16, sc: 0.82, phase: 1.45 },
+    ];
+    for (let i = 0; i < cardSpecs.length; i++) {
+      const cs = cardSpecs[i];
+      const cm = new THREE.Mesh(cardGeo, cardMat);
+      cm.position.set(cs.x, cs.y, cs.z);
+      cm.rotation.set(0.04, cs.x < 0 ? 0.18 : -0.18, cs.rz);
+      cm.scale.setScalar(cs.sc);
+      handle.omegaAuraGroup.add(cm);
+      handle.roninFanKatanas.push({
+        mesh: cm,
+        baseX: cs.x,
+        baseY: cs.y,
+        baseZ: cs.z,
+        baseRotZ: cs.rz,
+        outX: Math.sign(cs.x) * 0.32,
+        outY: cs.y * 0.25,
+        phase: cs.phase,
+      });
+    }
+
+    // 2 Upper 4-point Scarlet Star-Pins
+    const pinSpecs: ReadonlyArray<{ x: number; y: number; z: number; phase: number }> = [
+      { x: -1.12, y: 0.76, z: -0.03, phase: 0.2 },
+      { x: 1.12, y: 0.76, z: -0.03, phase: 1.2 },
+    ];
+    for (let i = 0; i < pinSpecs.length; i++) {
+      const ps = pinSpecs[i];
+      const pm = new THREE.Mesh(starGeo, starMat);
+      pm.position.set(ps.x, ps.y, ps.z);
+      handle.omegaAuraGroup.add(pm);
+      handle.roninFanKatanas.push({
+        mesh: pm,
+        baseX: ps.x,
+        baseY: ps.y,
+        baseZ: ps.z,
+        baseRotZ: 0,
+        outX: Math.sign(ps.x) * 0.18,
+        outY: 0.28,
+        phase: ps.phase,
       });
     }
 

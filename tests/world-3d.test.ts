@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { RiftArena3D } from '../src/game3d/RiftArena3D';
 import { AureliaNoctisSkillVfxPool } from '../src/game3d/skills/aureliaNoctisSkillVfx3D';
 import { ChronosImperatorSkillVfxPool } from '../src/game3d/skills/chronosImperatorSkillVfx3D';
+import { ScarletArcanaSkillVfxPool } from '../src/game3d/skills/scarletArcanaSkillVfx3D';
 import { createChibiBackAttachments } from '../src/game3d/ChibiBackAttachments3D';
 import {
   PIT_EVENT_COOLDOWN_MAX_SEC,
@@ -5581,10 +5582,10 @@ describe('Pure 3D Mine World', () => {
     );
     expect(motion.hero.length).toBeGreaterThanOrEqual(4);
 
-    // No 3D back-attachment yet (deferred per spec)
+    // Generic novel unit without bespoke builder falls back cleanly without creating back-attachments
     const spritePivot = new THREE.Group();
     const blitzHeroPivot = new THREE.Group();
-    const back = createChibiBackAttachments(witch.id, 1.8, spritePivot, blitzHeroPivot, 'novel', witch.accentColor);
+    const back = createChibiBackAttachments('generic-novel-unit', 1.8, spritePivot, blitzHeroPivot, 'novel', witch.accentColor);
     expect(back.omegaAuraGroup).toBeNull();
 
     // Pooled choreography runs cleanly without custom shader modules
@@ -5711,7 +5712,7 @@ describe('Pure 3D Mine World', () => {
       1.0,
       marshal.id
     );
-    const witchMotion = buildTierMotionWaypoints(
+    const genericNovelMotion = buildTierMotionWaypoints(
       'novel',
       { x: 0, y: 1.5, z: -6 },
       { x: 0, y: -0.42, z: 1.65 },
@@ -5723,9 +5724,9 @@ describe('Pure 3D Mine World', () => {
       '#f5d08a',
       undefined,
       1.0,
-      witch.id
+      'generic-novel-unit'
     );
-    expect(marshalMotion.hero.length).toBeGreaterThan(witchMotion.hero.length);
+    expect(marshalMotion.hero.length).toBeGreaterThan(genericNovelMotion.hero.length);
     expect(marshalMotion.hero.filter((w) => w.snap).length).toBeGreaterThanOrEqual(5);
 
     const spritePivot = new THREE.Group();
@@ -5898,7 +5899,7 @@ describe('Pure 3D Mine World', () => {
       1.0,
       aurelia.id
     );
-    const witchMotion = buildTierMotionWaypoints(
+    const genericNovelMotion = buildTierMotionWaypoints(
       'novel',
       { x: 0, y: 1.5, z: -6 },
       { x: 0, y: -0.42, z: 1.65 },
@@ -5910,9 +5911,9 @@ describe('Pure 3D Mine World', () => {
       '#f5d08a',
       undefined,
       1.0,
-      witch.id
+      'generic-novel-unit'
     );
-    expect(aureliaMotion.hero.length).toBeGreaterThan(witchMotion.hero.length);
+    expect(aureliaMotion.hero.length).toBeGreaterThan(genericNovelMotion.hero.length);
     expect(aureliaMotion.hero.filter((w) => w.snap).length).toBeGreaterThanOrEqual(5);
 
     const spritePivot = new THREE.Group();
@@ -5982,6 +5983,147 @@ describe('Pure 3D Mine World', () => {
     pool.update(0.08, cam);
     const aureliaActiveForWitch = pool.group.children.some((g) => g.children.some((inst) => inst.visible && inst.getObjectByName('arbiterSealFloor')));
     expect(aureliaActiveForWitch).toBe(false);
+    pool.dispose();
+  });
+
+  it('fires Arcana XXII: Crimson Judgment Deal 2.5s shader pool cleanly for ScarletArcanaSkillVfxPool', () => {
+    let impactCalls = 0;
+    let impactCallbackCalls = 0;
+    const pool = new ScarletArcanaSkillVfxPool({
+      onImpactFrame: () => {
+        impactCalls += 1;
+      },
+    });
+    expect(pool.getMaterials().length).toBeGreaterThanOrEqual(8);
+
+    // Full 2.5s lifecycle with empty pts finishes cleanly and triggers impact once
+    pool.fire({
+      cx: 0,
+      cy: -0.42,
+      cz: 1.65,
+      areaScale: 0.72,
+      pts: [],
+      onImpact: () => {
+        impactCallbackCalls += 1;
+      },
+    });
+    for (let i = 0; i < 60; i++) {
+      pool.update(0.05, i * 0.05);
+    }
+    expect(impactCalls).toBe(1);
+    expect(impactCallbackCalls).toBe(1);
+    expect(pool.group.children.every((c) => !c.visible)).toBe(true);
+
+    // Low quality caps fanCards <= 5, cascadeCards <= 6, sparks <= 10
+    pool.setLowQuality(true);
+    pool.fire({ cx: 0, cy: -0.42, cz: 1.65, areaScale: 0.72 });
+    for (let i = 0; i < 6; i++) pool.update(0.05, i * 0.05);
+    const instRoot = pool.group.children.find((c) => c.visible)!;
+    expect(instRoot).toBeDefined();
+    expect(instRoot.getObjectByName('pentagramSealFloor')).toBeDefined();
+    expect(instRoot.getObjectByName('giantArcanaCard')).toBeDefined();
+    expect(instRoot.getObjectByName('crimsonStarburst')).toBeDefined();
+    expect(instRoot.children.filter((c) => c.name === 'tarotFanCard' && c.visible).length).toBeLessThanOrEqual(5);
+
+    for (let i = 0; i < 16; i++) pool.update(0.05, (6 + i) * 0.05);
+    expect(instRoot.children.filter((c) => c.name === 'cascadeCard' && c.visible).length).toBeLessThanOrEqual(6);
+    expect(instRoot.children.filter((c) => c.name === 'scarletSpark' && c.visible).length).toBeLessThanOrEqual(10);
+
+    // UV integrity check on giantArcanaCard, tarotFanCard, cascadeCard, & crimsonStarburst
+    for (const meshName of ['giantArcanaCard', 'tarotFanCard', 'cascadeCard', 'crimsonStarburst']) {
+      const m = instRoot.getObjectByName(meshName);
+      expect(m).toBeInstanceOf(THREE.Mesh);
+      const uv = (m as THREE.Mesh).geometry.getAttribute('uv');
+      expect(uv).toBeDefined();
+      let maxU = 0;
+      let maxV = 0;
+      for (let i = 0; i < uv.count; i++) {
+        maxU = Math.max(maxU, uv.getX(i));
+        maxV = Math.max(maxV, uv.getY(i));
+      }
+      expect(maxU).toBeGreaterThan(0.5);
+      expect(maxV).toBeGreaterThan(0.5);
+    }
+
+    // Pool overwrite (>2 fires) & huge dtSec clamp safety
+    pool.fire({ cx: 0, cy: -0.42, cz: 1.65, areaScale: 0.8 });
+    pool.fire({ cx: 1, cy: -0.42, cz: 1.65, areaScale: 0.8 });
+    pool.update(10, 5.0);
+    pool.dispose();
+  });
+
+  it('wires Scarlet Arcana 2.5s Sakuga shader, pit clip, blitz motion, and 3D Pentagram/Tarot back-attachment', () => {
+    const witch = getChibiById('crimson-tarot-witch')!;
+    expect(witch).toBeDefined();
+
+    const witchMotion = buildTierMotionWaypoints(
+      'novel',
+      { x: 0, y: 1.5, z: -6 },
+      { x: 0, y: -0.42, z: 1.65 },
+      [
+        { x: -1.6, y: -0.42, z: 1.3 },
+        { x: 1.6, y: -0.42, z: 2.0 },
+      ],
+      witch.accentColor,
+      '#fda4af',
+      undefined,
+      1.0,
+      witch.id
+    );
+    expect(witchMotion.hero.filter((w) => w.snap).length).toBeGreaterThanOrEqual(5);
+
+    const spritePivot = new THREE.Group();
+    const blitzHeroPivot = new THREE.Group();
+    const back = createChibiBackAttachments(witch.id, 1.8, spritePivot, blitzHeroPivot, 'novel', witch.accentColor);
+    expect(back.omegaAuraGroup).not.toBeNull();
+    expect(back.omegaHaloMesh).not.toBeNull();
+    expect(back.roninFanKatanas.length).toBe(8);
+    expect(back.twinCustomMats.length).toBeGreaterThanOrEqual(2);
+    const witchSprite = new ChibiSprite3D(witch);
+    expect(witchSprite.group.getObjectByName('chibiBackAttachmentGroup')).toBeDefined();
+    witchSprite.update(0.05, 0.1, new THREE.PerspectiveCamera(45, 1, 0.1, 100));
+    witchSprite.dispose();
+
+    let impactCalls = 0;
+    const pool = new TierAttackVfxPool3D({
+      onImpactFrame: () => {
+        impactCalls += 1;
+      },
+    });
+    pool.setPitBounds({ centerX: 0, floorY: -0.42, centerZ: 1.65, radius: 6.4 });
+    const cam = new THREE.PerspectiveCamera(45, 1.6, 0.1, 100);
+    cam.position.set(0, 10, 18);
+    const target = { x: 0, y: -0.42, z: 1.65 };
+    const allTargets = [
+      { x: -1.5, y: -0.42, z: 1.3 },
+      { x: 1.5, y: -0.42, z: 2.0 },
+    ];
+
+    pool.fireTierAttack({
+      rarity: 'novel',
+      chibiId: witch.id,
+      colorHex: witch.accentColor,
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
+    pool.update(0.08, cam);
+    const scarletGroup = pool.group.children.find((g) => g.children.some((inst) => inst.visible && inst.getObjectByName('pentagramSealFloor')));
+    expect(scarletGroup).toBeDefined();
+
+    // Consecutive Ult fast-forwards old tail without double-firing impact hooks
+    pool.fireTierAttack({
+      rarity: 'novel',
+      chibiId: witch.id,
+      colorHex: witch.accentColor,
+      target,
+      allTargets,
+      areaScale: 0.72,
+      wideCenter: target,
+    });
+    for (let i = 0; i < 30; i++) pool.update(0.05, cam);
+    expect(impactCalls).toBe(1);
     pool.dispose();
   });
 });
