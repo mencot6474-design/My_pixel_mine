@@ -30,6 +30,9 @@ const TWIN_CUTSCENE_PALETTES: Record<string, TwinCutscenePalette> = {
   'lullaby-twins': { colorA: '#f472b6', colorB: '#a855f7', ribbonClass: 'text-[#f472b6]' },
   'clockwork-twins': { colorA: '#f59e0b', colorB: '#2dd4bf', ribbonClass: 'text-[#fbbf24]' },
   'paradox-twins': { colorA: '#fbbf24', colorB: '#ef4444', ribbonClass: 'text-[#fbbf24]' },
+  'crimson-tarot-witch': { colorA: '#e11d48', colorB: '#f3d184', ribbonClass: 'text-[#fb7185]' },
+  'gilded-chain-noble': { colorA: '#eab308', colorB: '#fef3c7', ribbonClass: 'text-[#fde047]' },
+  'crimson-clock-marshal': { colorA: '#a855f7', colorB: '#f43f5e', ribbonClass: 'text-[#e879f9]' },
 };
 
 const DEFAULT_TWIN_PALETTE: TwinCutscenePalette = {
@@ -231,7 +234,12 @@ export function buildTwinFullscreenRevealDomHtml(
   const displayBaseDps = effectiveBaseDps ?? chibi?.baseDps ?? 0;
   const poseSrc = chibi ? assetUrl(chibi.poses.pose) : '';
   const chibiName = chibi?.name ?? item.chibiId;
-  const twinBadgeHtml = renderRarityBadgeHtml('twin', 'is-compact !ml-0');
+  const isNovel = item.rarity === 'novel';
+  const badgeHtml = renderRarityBadgeHtml(item.rarity, 'is-compact !ml-0');
+  const costLabel =
+    item.currency === 'gems'
+      ? `${fmtInt(item.gemCost ?? 0)} Gems`
+      : `${fmtInt(item.coinCost ?? 0)} Spire Coins`;
 
   const passiveTiles: { label: string; val: string; bg: string; text: string }[] = [];
   if (item.teamDmgPct > 0) {
@@ -283,7 +291,7 @@ export function buildTwinFullscreenRevealDomHtml(
       <div class="w-full flex items-center justify-between gap-2 relative z-30">
         <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border-2 border-[#38bdf8]/70 bg-[#0b1026]/85 text-[#7dd3fc] text-[11px] font-black tracking-[0.14em] uppercase">
           <span class="w-2 h-2 rounded-full bg-[#f472b6] animate-ping"></span>
-          <span>TWIN RESONANCE // PREMIUM SUMMON</span>
+          <span>${isNovel ? 'NOVEL EDITION // PREMIUM SUMMON' : 'TWIN RESONANCE // PREMIUM SUMMON'}</span>
         </div>
         <button
           type="button"
@@ -316,10 +324,10 @@ export function buildTwinFullscreenRevealDomHtml(
               : ''
           }
           <div class="hidden mam-omega-banner-sweep px-6 py-2 rounded-2xl border-[3px] border-[#14111d] bg-[#f0f9ff] items-center gap-3 flex-wrap justify-center" data-twin-fs-banner="true">
-            ${twinBadgeHtml}
+            ${badgeHtml}
             <span class="text-[22px] sm:text-[28px] font-black italic tracking-tight uppercase text-[#14111d] leading-none">${chibiName}</span>
             <span class="px-2.5 py-0.5 rounded-lg border-2 border-[#14111d] bg-gradient-to-r from-[#38bdf8] to-[#f472b6] text-white text-[12px] font-black tracking-wider">
-              ${cs.ownedCount <= 1 ? 'NEW DUO!' : `OWNED ×${fmtInt(cs.ownedCount)}`}
+              ${cs.ownedCount <= 1 ? (isNovel ? 'NEW EDITION!' : 'NEW DUO!') : `OWNED ×${fmtInt(cs.ownedCount)}`}
             </span>
           </div>
         </div>
@@ -356,7 +364,7 @@ export function buildTwinFullscreenRevealDomHtml(
         ${
           cs.phase === 'confirm'
             ? `${chibiName} Ready for Deployment`
-            : `Synchronizing ${item.coinCost} Spire Coins Resonance...`
+            : `Synchronizing ${costLabel} Resonance...`
         }
       </div>
     </div>

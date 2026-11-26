@@ -417,6 +417,23 @@
     color: #14111d;
   }
 
+  .mam-card.rarity-novel,
+  .mam-strip-card.rarity-novel,
+  .mam-altar-card.rarity-novel {
+    border: 3px solid #14111d;
+    background:
+      linear-gradient(125deg, rgba(255, 255, 255, 0.55) 0%, transparent 42%, rgba(255, 248, 220, 0.45) 100%),
+      radial-gradient(circle at 50% 42%, rgba(254, 243, 199, 0.72) 0%, transparent 66%),
+      linear-gradient(135deg, #fffaf0 0%, #f7e4b6 32%, #e6c278 68%, #f3e0b5 100%);
+    color: #14111d;
+    box-shadow: none;
+    animation: none;
+  }
+
+  .mam-card.rarity-novel .mam-card-name {
+    color: #14111d;
+  }
+
   .mam-card.rarity-omega,
   .mam-strip-card.rarity-omega,
   .mam-altar-card.rarity-omega {

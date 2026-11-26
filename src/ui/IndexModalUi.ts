@@ -16,7 +16,7 @@ import { IndexTabId, isIndexMilestoneUnlocked } from '../game/IndexRewardsDomain
 import { fmtMoney, fmtPct, fmtShort } from '../game/NumberFormat';
 import { OMEGA_BOSS_DEFS } from '../game/OmegaData';
 import { ANOMALY_CHIBI_DEFS } from '../game/AnomalyData';
-import { PREMIUM_SHOP_ITEMS } from '../game/PremiumShopData';
+import { NOVEL_SHOP_ITEMS, PREMIUM_SHOP_ITEMS } from '../game/PremiumShopData';
 import { getWeatherById } from '../game/WeatherData';
 import { enchantDiceIconHtml, hudIconHtml, meteorIconHtml, oreIconSvg } from './HudIcons';
 import {
@@ -53,6 +53,8 @@ export class IndexModalUi {
       allIds = OMEGA_BOSS_DEFS.map((b) => b.chibiId);
     } else if (this.indexWorldId === 'twin') {
       allIds = PREMIUM_SHOP_ITEMS.map((item) => item.chibiId);
+    } else if (this.indexWorldId === 'novel') {
+      allIds = NOVEL_SHOP_ITEMS.map((item) => item.chibiId);
     } else if (this.indexWorldId === 'limited') {
       allIds = getDailyLoginLimitedChibiIds();
     } else if (this.indexWorldId === 'fusion') {
@@ -73,7 +75,7 @@ export class IndexModalUi {
 
   private isHoloChibiCard(id: string, rarity: ItemRarity, unlocked: boolean): boolean {
     if (!unlocked || !getChibiById(id)) return false;
-    return rarity === 'fusion' || rarity === 'limited' || rarity === 'twin' || rarity === 'omega' || rarity === 'anomaly' || this.state.getChibiStar(id) >= 5;
+    return rarity === 'fusion' || rarity === 'limited' || rarity === 'twin' || rarity === 'novel' || rarity === 'omega' || rarity === 'anomaly' || this.state.getChibiStar(id) >= 5;
   }
 
   private renderIndexCard(opts: {
@@ -153,8 +155,9 @@ export class IndexModalUi {
       }).join('');
     }
 
-    if (this.indexWorldId === 'twin') {
-      return PREMIUM_SHOP_ITEMS.map((item) => {
+    if (this.indexWorldId === 'twin' || this.indexWorldId === 'novel') {
+      const items = this.indexWorldId === 'novel' ? NOVEL_SHOP_ITEMS : PREMIUM_SHOP_ITEMS;
+      return items.map((item) => {
         const chibi = getChibiById(item.chibiId);
         if (!chibi) return '';
         return this.renderIndexCard({
@@ -448,7 +451,7 @@ export class IndexModalUi {
     }).join('');
 
     const specialSpecs: Array<{
-      tabId: Extract<IndexTabId, 'weather' | 'fusion' | 'limited' | 'twin' | 'omega' | 'anomaly'>;
+      tabId: Extract<IndexTabId, 'weather' | 'fusion' | 'limited' | 'twin' | 'novel' | 'omega' | 'anomaly'>;
       labelHtml: string;
       accentColor: string;
     }> = [
@@ -471,6 +474,11 @@ export class IndexModalUi {
         tabId: 'twin',
         labelHtml: `<img class="w-4 h-4 object-contain shrink-0" src="${assetUrl('/badges/twin.svg')}" alt="" aria-hidden="true" /><span>Twin</span>`,
         accentColor: '#ec4899',
+      },
+      {
+        tabId: 'novel',
+        labelHtml: `<img class="w-4 h-4 object-contain shrink-0" src="${assetUrl('/badges/novel.svg')}" alt="" aria-hidden="true" /><span>Novel</span>`,
+        accentColor: '#e2b866',
       },
       {
         tabId: 'omega',
@@ -635,7 +643,7 @@ export class IndexModalUi {
         wBar.style.width = `${wp.total > 0 ? Math.min(100, Math.round((wp.found / wp.total) * 100)) : 0}%`;
       }
     }
-    for (const tabId of ['weather', 'fusion', 'limited', 'twin', 'omega', 'anomaly'] as const) {
+    for (const tabId of ['weather', 'fusion', 'limited', 'twin', 'novel', 'omega', 'anomaly'] as const) {
       const tp = this.state.getIndexTabProgress(tabId);
       const badge = root.querySelector<HTMLElement>(`[data-index-tab-count="${tabId}"]`);
       if (badge) badge.textContent = `(${tp.found}/${tp.total})`;

@@ -277,6 +277,7 @@ export class InventoryModalUi {
           rarity === 'fusion' ||
           rarity === 'limited' ||
           rarity === 'twin' ||
+          rarity === 'novel' ||
           rarity === 'omega' ||
           rarity === 'anomaly';
         const extraCls = [

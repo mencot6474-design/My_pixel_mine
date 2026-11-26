@@ -107,29 +107,38 @@ export class IndexInspectorUi {
       return renderEmptyInspectorPanel('Select any Omega Boss Chibi to inspect details.');
     }
 
-    if (indexWorldId === 'twin') {
+    if (indexWorldId === 'twin' || indexWorldId === 'novel') {
       const item = getPremiumShopItemByChibiId(targetId);
       const chibi = item ? getChibiById(item.chibiId) : undefined;
       if (item && chibi) {
         const owned = this.state.miners[chibi.id] || 0;
         const onPlot = this.state.plotMiners.filter((id) => id === chibi.id).length;
+        const costText =
+          item.currency === 'gems'
+            ? `${fmtInt(item.gemCost ?? 0)} Gems`
+            : `${fmtInt(item.coinCost ?? 0)} Coins`;
+        const shopTag = item.rarity === 'novel' ? 'Novel Gem Shop' : 'Spire Shop Duo';
         return renderInspectorPanel({
           rarity: chibi.rarity,
           title: chibi.name,
-          subtitle: `${item.titleTag} • Spire Shop Duo`,
+          subtitle: `${item.titleTag} • ${shopTag}`,
           badgesHtml: statusBadge,
           artHtml: chibiPortraitHtml(chibi, { usePose: true }),
           stats: [
             ['Base DPS', `${fmtShort(this.state.getEffectiveChibiDps(chibi.id))}/s`, 'text-[#b45309]'],
             ['Passive', item.passiveSummary, 'text-[#0369a1]'],
-            ['Shop Cost', `${fmtInt(item.coinCost)} Coins`, 'text-[#be123c]'],
+            ['Shop Cost', costText, 'text-[#be123c]'],
             ['Owned', `${fmtInt(owned)} (${onPlot}/5)`, 'text-[#14111d]'],
           ],
           actionHtml: this.renderReviewActionButton(chibi.id, 'Review 4 Poses', 'special'),
           dimmed: !unlocked,
         });
       }
-      return renderEmptyInspectorPanel('Select any Twin Duo Chibi to inspect details.');
+      return renderEmptyInspectorPanel(
+        indexWorldId === 'novel'
+          ? 'Select any Novel Chibi to inspect details.'
+          : 'Select any Twin Duo Chibi to inspect details.'
+      );
     }
 
     if (indexWorldId === 'limited') {
@@ -300,6 +309,7 @@ export class IndexInspectorUi {
         indexWorldId === 'fusion' ||
         indexWorldId === 'limited' ||
         indexWorldId === 'twin' ||
+        indexWorldId === 'novel' ||
         indexWorldId === 'omega' ||
         indexWorldId === 'anomaly'
           ? 'underground'

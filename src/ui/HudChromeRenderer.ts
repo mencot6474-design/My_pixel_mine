@@ -375,6 +375,7 @@ const VALID_CUTIN_RARITIES = new Set<ItemRarity>([
   'fusion',
   'limited',
   'twin',
+  'novel',
   'omega',
   'anomaly',
 ]);

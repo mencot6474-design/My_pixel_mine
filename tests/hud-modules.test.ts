@@ -2500,4 +2500,118 @@ describe('Tahap B HUD Modules', () => {
       }
     });
   });
+
+  describe('Novel Tier Badge, Shop Tab & Index UI', () => {
+    it('renders minimalist novel crest badge and rarity-novel card class', () => {
+      const badgeHtml = renderRarityBadgeHtml('novel');
+      expect(badgeHtml).toContain('mam-rarity-novel');
+      expect(badgeHtml).toContain('is-crest');
+      expect(badgeHtml).toContain('/badges/novel.svg');
+      expect(rarityCardClasses('novel')).toContain('rarity-novel');
+
+      const svg = readFileSync(resolve(process.cwd(), 'public/badges/novel.svg'), 'utf8');
+      expect(svg).toContain('NOVEL');
+      expect(svg).not.toContain('<feGaussianBlur');
+      expect(svg).not.toContain('<animate');
+    });
+
+    it('switches between Twin (Coins) and Novel (Gems) tabs in ShopModalsUi and triggers Novel summon cutscene', () => {
+      const state = new GameState();
+      state.towerCoins = 50;
+      state.gems = 2_499_999;
+      const toasts: string[] = [];
+      const onRender = vi.fn();
+      const shopUi = new ShopModalsUi(state, (msg) => toasts.push(msg), onRender);
+
+      const defaultHtml = shopUi.renderPremiumShopModal();
+      expect(defaultHtml).toContain('data-premium-tab="twin"');
+      expect(defaultHtml).toContain('data-premium-tab="novel"');
+      expect(defaultHtml).toContain('Yukikage Twins');
+      expect(defaultHtml).not.toContain('Scarlet Arcana');
+
+      // Switch to Novel tab via click handler
+      let novelTabClick: (() => void) | null = null;
+      const novelTabBtn = {
+        dataset: { premiumTab: 'novel' },
+        addEventListener: (_evt: string, fn: () => void) => {
+          novelTabClick = fn;
+        },
+      };
+      const fakeTabRoot = {
+        querySelector: () => null,
+        querySelectorAll: (sel: string) => (sel === '[data-premium-tab]' ? [novelTabBtn] : []),
+      } as unknown as HTMLElement;
+      shopUi.bindEvents(fakeTabRoot);
+      expect(novelTabClick).not.toBeNull();
+      novelTabClick!();
+      expect(onRender).toHaveBeenCalledTimes(1);
+
+      const novelHtml = shopUi.renderPremiumShopModal();
+      expect(novelHtml).toContain('Scarlet Arcana');
+      expect(novelHtml).toContain('Aurelia Noctis');
+      expect(novelHtml).toContain('Chronos Imperator');
+      expect(novelHtml).toContain('2,500,000');
+      expect(novelHtml).toContain('3,000,000');
+      expect(novelHtml).toContain('3,500,000');
+      expect(novelHtml).toContain('/badges/novel.svg');
+      expect(novelHtml).toContain('data-premium-shop-gems="true"');
+      expect(novelHtml).not.toContain('Yukikage Twins');
+
+      // Short on Gems -> error toast, no cutscene
+      let buyClick: ((e: { stopPropagation: () => void }) => void) | null = null;
+      const buyBtn = {
+        dataset: { buyPremiumItem: 'crimson-tarot-witch' },
+        addEventListener: (_evt: string, fn: (e: { stopPropagation: () => void }) => void) => {
+          buyClick = fn;
+        },
+        classList: { toggle: vi.fn() },
+      };
+      const fakeBuyRoot = {
+        querySelector: () => null,
+        querySelectorAll: (sel: string) => (sel === '[data-buy-premium-item]' ? [buyBtn] : []),
+      } as unknown as HTMLElement;
+      shopUi.bindEvents(fakeBuyRoot);
+      buyClick!({ stopPropagation: vi.fn() });
+      expect(toasts.at(-1)).toBe('Not enough Gems!');
+      expect(shopUi.getPremiumCutsceneState()).toBeNull();
+
+      // Enough Gems -> buys & launches Novel cutscene with novel.svg badge
+      state.gems = 3_000_000;
+      buyClick!({ stopPropagation: vi.fn() });
+      expect(state.gems).toBe(500_000);
+      expect(state.miners['crimson-tarot-witch']).toBe(1);
+      const cutsceneHtml = shopUi.renderFullscreenCutsceneHtml();
+      expect(cutsceneHtml).toContain('/badges/novel.svg');
+      expect(cutsceneHtml).toContain('Scarlet Arcana');
+      expect(cutsceneHtml).toContain('NOVEL EDITION // PREMIUM SUMMON');
+      expect(cutsceneHtml).toContain('2,500,000 Gems');
+      shopUi.clearPremiumCutscene();
+    });
+
+    it('renders Novel special tab in IndexModalUi with 3 entries and Gems inspect details', () => {
+      const state = new GameState();
+      const indexUi = new IndexModalUi(state, () => {}, () => {});
+      const html = indexUi.renderModal();
+      expect(html).toContain('data-index-world="novel"');
+      expect(html).toContain('Novel');
+      expect(getIndexTabEntryIds('novel')).toHaveLength(3);
+
+      let novelSidebarClick: (() => void) | null = null;
+      const novelSidebarBtn = {
+        dataset: { indexWorld: 'novel' },
+        addEventListener: (_evt: string, fn: () => void) => {
+          novelSidebarClick = fn;
+        },
+      };
+      indexUi.bindEvents({
+        querySelector: () => null,
+        querySelectorAll: (sel: string) => (sel === '[data-index-world]' ? [novelSidebarBtn] : []),
+      } as unknown as HTMLElement);
+      novelSidebarClick!();
+
+      const novelIndexHtml = indexUi.renderModal();
+      expect(novelIndexHtml).toContain('Scarlet Arcana');
+      expect(novelIndexHtml).toContain('2,500,000 Gems');
+    });
+  });
 });

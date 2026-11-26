@@ -16,8 +16,12 @@ import {
 import { GameState } from '../game/GameState';
 import { fmtInt, fmtMoney, fmtShort } from '../game/NumberFormat';
 import {
+  ALL_PREMIUM_SHOP_ITEMS,
   getPremiumShopItemByChibiId,
+  getPremiumShopItemsByRarity,
   PREMIUM_SHOP_ITEMS,
+  type PremiumShopItemDef,
+  type PremiumShopRarity,
 } from '../game/PremiumShopData';
 import {
   buildTwinFullscreenRevealDomHtml,
@@ -38,6 +42,7 @@ import {
   TW_MODAL_GRID_BASE,
   TW_SHOP_BUY_BTN,
   TW_SHOP_MODAL_RESP,
+  TW_TAB_BTN,
 } from './HudShared';
 
 export interface SellableEntry {
@@ -56,6 +61,7 @@ export class ShopModalsUi {
   private shopInspectPickaxeId: string = PICKAXES[0].id;
   private shopInspectGemId: string = GEM_SHOP_ITEMS[0].id;
   private shopInspectPremiumId: string = PREMIUM_SHOP_ITEMS[0]?.chibiId ?? '';
+  private premiumShopTab: PremiumShopRarity = 'twin';
   private sellInspectKey: string | null = null;
   private lastSellCardsHtml = '';
   private lastShopInspectorHtml = '';
@@ -248,9 +254,23 @@ export class ShopModalsUi {
     });
   }
 
+  private getPremiumItemCost(item: PremiumShopItemDef): number {
+    return item.currency === 'gems' ? (item.gemCost ?? 0) : (item.coinCost ?? 0);
+  }
+
+  private canAffordPremiumItem(item: PremiumShopItemDef): boolean {
+    const cost = this.getPremiumItemCost(item);
+    return item.currency === 'gems' ? this.state.gems >= cost : this.state.towerCoins >= cost;
+  }
+
+  private renderPremiumCurrencyIcon(item: PremiumShopItemDef, size = 16): string {
+    return item.currency === 'gems' ? hudIconHtml('gem', size, 'Gem') : spireCoinIconHtml(size);
+  }
+
   private buildPremiumShopInspectorHtml(): string {
-    const def =
-      getPremiumShopItemByChibiId(this.shopInspectPremiumId) ?? PREMIUM_SHOP_ITEMS[0];
+    const tabItems = getPremiumShopItemsByRarity(this.premiumShopTab);
+    const inspected = getPremiumShopItemByChibiId(this.shopInspectPremiumId);
+    const def = (inspected && inspected.rarity === this.premiumShopTab ? inspected : tabItems[0]) ?? tabItems[0];
     if (!def) {
       return renderEmptyInspectorPanel('Select any Premium Chibi to inspect its stats.');
     }
@@ -260,7 +280,10 @@ export class ShopModalsUi {
       return renderEmptyInspectorPanel('Chibi data not found.');
     }
     const owned = this.state.miners[def.chibiId] || 0;
-    const canBuy = this.state.towerCoins >= def.coinCost;
+    const cost = this.getPremiumItemCost(def);
+    const canBuy = this.canAffordPremiumItem(def);
+    const costLabel = def.currency === 'gems' ? `${fmtInt(cost)} Gems` : `${fmtInt(cost)} Coins`;
+    const sourceLabel = def.currency === 'gems' ? 'Premium Gems' : 'Battle Tower';
     return renderInspectorPanel({
       rarity: def.rarity,
       title: chibi.name,
@@ -269,29 +292,32 @@ export class ShopModalsUi {
       artHtml: chibiPortraitHtml(chibi, { usePose: true }),
       stats: [
         ['Base DPS', `${fmtShort(this.state.getEffectiveChibiDps(chibi.id))}/s`, 'text-[#dc2626]'],
-        ['Cost', `${fmtInt(def.coinCost)} Coins`, 'text-[#b45309]'],
+        ['Cost', costLabel, 'text-[#b45309]'],
         ['Owned', `x${fmtInt(owned)}`, 'text-[#14111d]'],
-        ['Source', 'Battle Tower', 'text-[#0284c7]'],
+        ['Source', sourceLabel, 'text-[#0284c7]'],
       ],
       actionHtml: `
         <button class="${TW_SHOP_BUY_BTN} !h-10 !text-[14px] inline-flex items-center justify-center gap-1.5 ${canBuy ? '' : 'disabled'}" data-buy-premium-item="${def.chibiId}">
-          ${spireCoinIconHtml(17)}
-          <span>Buy • ${fmtInt(def.coinCost)}</span>
+          ${this.renderPremiumCurrencyIcon(def, 17)}
+          <span>Buy • ${fmtInt(cost)}</span>
         </button>
       `,
     });
   }
 
   public renderPremiumShopModal(): string {
-    if (!getPremiumShopItemByChibiId(this.shopInspectPremiumId) && PREMIUM_SHOP_ITEMS[0]) {
-      this.shopInspectPremiumId = PREMIUM_SHOP_ITEMS[0].chibiId;
+    const tabItems = getPremiumShopItemsByRarity(this.premiumShopTab);
+    const inspected = getPremiumShopItemByChibiId(this.shopInspectPremiumId);
+    if ((!inspected || inspected.rarity !== this.premiumShopTab) && tabItems[0]) {
+      this.shopInspectPremiumId = tabItems[0].chibiId;
     }
 
-    const cards = PREMIUM_SHOP_ITEMS.map((item) => {
+    const cards = tabItems.map((item) => {
       const chibi = getChibiById(item.chibiId);
       if (!chibi) return '';
       const owned = this.state.miners[item.chibiId] || 0;
-      const canBuy = this.state.towerCoins >= item.coinCost;
+      const cost = this.getPremiumItemCost(item);
+      const canBuy = this.canAffordPremiumItem(item);
       const isInspected = this.shopInspectPremiumId === item.chibiId;
       const subTextCls = 'text-[#5b526e]';
       const ownedTextCls = 'text-[#0284c7]';
@@ -314,8 +340,8 @@ export class ShopModalsUi {
             </div>
           </div>
           <button class="${TW_SHOP_BUY_BTN} inline-flex items-center justify-center gap-1.5 ${canBuy ? '' : 'disabled'}" data-buy-premium-item="${item.chibiId}">
-            ${spireCoinIconHtml(16)}
-            <span>${fmtInt(item.coinCost)}</span>
+            ${this.renderPremiumCurrencyIcon(item, 16)}
+            <span>${fmtInt(cost)}</span>
           </button>
         </div>
       `;
@@ -323,14 +349,31 @@ export class ShopModalsUi {
 
     const inspHtml = this.buildPremiumShopInspectorHtml();
     this.lastShopInspectorHtml = inspHtml;
+    const isNovelTab = this.premiumShopTab === 'novel';
+    const tabsHtml = `
+      <div class="flex items-center gap-2 shrink-0 flex-wrap">
+        <button type="button" class="${TW_TAB_BTN} ${!isNovelTab ? 'is-active' : ''}" data-premium-tab="twin">
+          ${spireCoinIconHtml(15)}
+          <span>Twin</span>
+        </button>
+        <button type="button" class="${TW_TAB_BTN} ${isNovelTab ? 'is-active' : ''}" data-premium-tab="novel">
+          ${hudIconHtml('gem', 15, 'Gems')}
+          <span>Novel</span>
+        </button>
+      </div>
+    `;
+    const headerCurrencyHtml = isNovelTab
+      ? `<div class="ml-auto mr-1 mam-pill-lg rounded-full bg-[#e0f2fe] border-2 border-[#14111d] text-[13.5px] font-black tabular-nums text-[#14111d] inline-flex items-center gap-1.5 whitespace-nowrap @max-[720px]:text-[12px]" title="Gems">${hudIconHtml('gem', 18, 'Gems')}<span data-premium-shop-gems="true">${fmtInt(this.state.gems)}</span></div>`
+      : `<div class="ml-auto mr-1 mam-pill-lg rounded-full bg-[#fef08a] border-2 border-[#14111d] text-[13.5px] font-black tabular-nums text-[#14111d] inline-flex items-center gap-1.5 whitespace-nowrap @max-[720px]:text-[12px]" title="Spire Coins (Battle Tower)">${spireCoinIconHtml(18)}<span data-premium-shop-coins="true">${fmtInt(this.state.towerCoins)}</span></div>`;
 
     return renderModalShell({
       title: 'Shop',
       theme: 'premium-shop',
       iconHtml: hudIconHtml('shopBasket', 26, 'Shop'),
       boxClass: `w-[min(960px,calc(100%-16px))] ${TW_SHOP_MODAL_RESP}`,
-      headerExtraHtml: `<div class="ml-auto mr-1 mam-pill-lg rounded-full bg-[#fef08a] border-2 border-[#14111d] text-[13.5px] font-black tabular-nums text-[#14111d] inline-flex items-center gap-1.5 whitespace-nowrap @max-[720px]:text-[12px]" title="Spire Coins (Battle Tower)">${spireCoinIconHtml(18)}<span data-premium-shop-coins="true">${fmtInt(this.state.towerCoins)}</span></div>`,
+      headerExtraHtml: headerCurrencyHtml,
       bodyHtml: `
+        ${tabsHtml}
         <div class="flex items-stretch gap-3 flex-1 min-h-0 @max-[920px]:flex-col @max-[920px]:overflow-y-auto mam-no-scrollbar" data-premium-shop="true">
           <div class="${TW_MODAL_GRID_BASE} grid-cols-3 gap-2.5 flex-1 min-h-[240px] @max-[920px]:flex-none @max-[920px]:max-h-[360px] p-0.5 @max-[720px]:grid-cols-2">
             ${cards}
@@ -584,6 +627,19 @@ export class ShopModalsUi {
       });
     });
 
+    root.querySelectorAll('[data-premium-tab]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const nextTab = (el as HTMLElement).dataset.premiumTab;
+        if (nextTab !== 'twin' && nextTab !== 'novel') return;
+        if (this.premiumShopTab === nextTab) return;
+        audio.playSfx('ui-tab');
+        this.premiumShopTab = nextTab;
+        const first = getPremiumShopItemsByRarity(nextTab)[0];
+        if (first) this.shopInspectPremiumId = first.chibiId;
+        this.onRequestRender?.();
+      });
+    });
+
     root.querySelectorAll('[data-inspect-premium]').forEach((el) => {
       el.addEventListener('click', () => {
         const id = (el as HTMLElement).dataset.inspectPremium;
@@ -664,14 +720,18 @@ export class ShopModalsUi {
             ownedCount,
             () => {
               audio.playSfx('ui-click');
-              this.pushToast(`✨ ${chibi?.name ?? 'Twin Chibi'} unlocked!`);
+              const label = chibi?.rarity === 'novel' ? 'Novel Chibi' : 'Twin Chibi';
+              this.pushToast(`✨ ${chibi?.name ?? label} unlocked!`);
               this.onRequestRender?.();
             },
             this.state.getEffectiveChibiDps(chibiId)
           );
           return;
         }
-        if (res === 'no_coins') {
+        if (res === 'no_gems') {
+          audio.playSfx('ui-error');
+          this.pushToast('Not enough Gems!');
+        } else if (res === 'no_coins') {
           audio.playSfx('ui-error');
           this.pushToast('Not enough Spire Coins!');
         }
@@ -819,9 +879,11 @@ export class ShopModalsUi {
   public updatePremiumShopLive(root: HTMLElement): void {
     const coinsEl = root.querySelector<HTMLElement>('[data-premium-shop-coins="true"]');
     if (coinsEl) coinsEl.textContent = fmtInt(this.state.towerCoins);
-    for (const item of PREMIUM_SHOP_ITEMS) {
+    const gemsEl = root.querySelector<HTMLElement>('[data-premium-shop-gems="true"]');
+    if (gemsEl) gemsEl.textContent = fmtInt(this.state.gems);
+    for (const item of ALL_PREMIUM_SHOP_ITEMS) {
       const owned = this.state.miners[item.chibiId] || 0;
-      const canBuy = this.state.towerCoins >= item.coinCost;
+      const canBuy = this.canAffordPremiumItem(item);
       const btn = root.querySelector<HTMLElement>(`[data-buy-premium-item="${item.chibiId}"]`);
       if (btn) btn.classList.toggle('disabled', !canBuy);
       const ownedEl = root.querySelector<HTMLElement>(`[data-premium-owned="${item.chibiId}"]`);
