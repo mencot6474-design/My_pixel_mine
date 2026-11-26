@@ -350,13 +350,16 @@ export class ShopModalsUi {
     const inspHtml = this.buildPremiumShopInspectorHtml();
     this.lastShopInspectorHtml = inspHtml;
     const isNovelTab = this.premiumShopTab === 'novel';
+    const novelTabCls = isNovelTab
+      ? 'active !bg-[linear-gradient(135deg,#191d30_0%,#2b223d_55%,#14111d_100%)] !text-[#fef3c7] !border-[#c69138] ring-[1.5px] ring-[#14111d]'
+      : '!bg-[linear-gradient(135deg,#fef3c7_0%,#f3d184_58%,#e2b866_100%)] !text-[#14111d] hover:!brightness-105';
     const tabsHtml = `
       <div class="flex items-center gap-2 shrink-0 flex-wrap">
-        <button type="button" class="${TW_TAB_BTN} ${!isNovelTab ? 'is-active' : ''}" data-premium-tab="twin">
+        <button type="button" class="${TW_TAB_BTN} ${!isNovelTab ? 'active' : ''}" data-premium-tab="twin">
           ${spireCoinIconHtml(15)}
           <span>Twin</span>
         </button>
-        <button type="button" class="${TW_TAB_BTN} ${isNovelTab ? 'is-active' : ''}" data-premium-tab="novel">
+        <button type="button" class="${TW_TAB_BTN} ${novelTabCls}" data-premium-tab="novel">
           ${hudIconHtml('gem', 15, 'Gems')}
           <span>Novel</span>
         </button>

@@ -107,6 +107,11 @@
     margin-bottom: -20px;
   }
 
+  #plotOverlayLayer .mam-rarity-badge.mam-rarity-novel.is-crest {
+    height: 30px;
+    margin-bottom: -2px;
+  }
+
   #shopOverlayLayer > [data-altar-lbl],
   #shopOverlayLayer > [data-shop-station] {
     transform: scale(var(--mam-float-scale, 1));

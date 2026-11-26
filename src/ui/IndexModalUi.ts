@@ -408,29 +408,42 @@ export class IndexModalUi {
     countAttrName: 'data-index-world-count' | 'data-index-tab-count';
   }): string {
     const active = this.indexWorldId === opts.tabId;
+    const isNovel = opts.tabId === 'novel';
     const maxed = opts.total > 0 && opts.found >= opts.total;
     const pct = opts.total > 0 ? Math.min(100, Math.round((opts.found / opts.total) * 100)) : 0;
     const readyDot = this.buildTabReadyDotHtml(opts.tabId);
-    const btnBg = active
-      ? 'bg-[#fef08a] ring-[2px] ring-inset ring-[#38bdf8]'
-      : 'bg-[#ffffff] hover:bg-[#fcecc8]';
+    const btnBg = isNovel
+      ? active
+        ? 'bg-[linear-gradient(135deg,#191d30_0%,#2b223d_55%,#14111d_100%)] ring-[2px] ring-inset ring-[#f3d184]'
+        : 'bg-[linear-gradient(135deg,#fef3c7_0%,#f3d184_58%,#e2b866_100%)] hover:brightness-105'
+      : active
+        ? 'bg-[#fef08a] ring-[2px] ring-inset ring-[#38bdf8]'
+        : 'bg-[#ffffff] hover:bg-[#fcecc8]';
+    const labelTextCls = isNovel && active ? 'text-[#fef3c7]' : 'text-[#14111d]';
+    const countTextCls = isNovel ? (active ? 'text-[#f3d184]' : 'text-[#5b3f12]') : 'text-[#5b526e]';
+    const trackCls =
+      isNovel && active
+        ? 'bg-[#0d101b] border-[#f3d184]/45'
+        : isNovel
+          ? 'bg-[#fff8e7]/80 border-[#14111d]/35'
+          : 'bg-[#fcecc8] border-[#14111d]/35';
     const barColor = maxed ? '#2ee59d' : opts.accentColor;
 
     return `
       <button
         type="button"
-        class="group relative w-full @max-[920px]:w-auto shrink-0 rounded-xl border-2 border-[#14111d] ${btnBg} px-2.5 py-1.5 @max-[920px]:py-1 flex flex-col gap-1 text-left cursor-pointer transition-[transform,background-color] duration-150 ease-out active:scale-[0.97] ${active ? 'active' : ''}"
+        class="group relative w-full @max-[920px]:w-auto shrink-0 rounded-xl border-2 border-[#14111d] ${btnBg} px-2.5 py-1.5 @max-[920px]:py-1 flex flex-col gap-1 text-left cursor-pointer transition-[transform,background-color,filter] duration-150 ease-out active:scale-[0.97] ${active ? 'active' : ''}"
         data-index-world="${opts.tabId}"
       >
         <div class="flex items-center justify-between gap-1.5 w-full whitespace-nowrap">
-          <span class="inline-flex items-center gap-1.5 min-w-0 text-[12px] font-black text-[#14111d] truncate">${opts.labelHtml}</span>
+          <span class="inline-flex items-center gap-1.5 min-w-0 text-[12px] font-black ${labelTextCls} truncate">${opts.labelHtml}</span>
           <span class="inline-flex items-center gap-1 shrink-0">
-            <span class="text-[10.5px] font-extrabold text-[#5b526e] tabular-nums" ${opts.countAttrName}="${opts.tabId}">(${opts.found}/${opts.total})</span>
+            <span class="text-[10.5px] font-extrabold ${countTextCls} tabular-nums" ${opts.countAttrName}="${opts.tabId}">(${opts.found}/${opts.total})</span>
             ${maxed ? '<span class="mam-pill-xs !px-1 rounded bg-[#fde047] border border-[#14111d] text-[#14111d] text-[9px]" data-index-tab-maxed="true">MAX</span>' : ''}
             ${readyDot}
           </span>
         </div>
-        <div class="w-full h-[4px] rounded-full bg-[#fcecc8] border border-[#14111d]/35 overflow-hidden @max-[920px]:hidden">
+        <div class="w-full h-[4px] rounded-full ${trackCls} border overflow-hidden @max-[920px]:hidden">
           <div class="h-full rounded-full transition-[width] duration-250" data-index-tab-bar="${opts.tabId}" style="width:${pct}%;background:${barColor}"></div>
         </div>
       </button>

@@ -304,11 +304,13 @@ export function renderInspectorPanel(opts: {
                 ? 'border-[3px] border-[#14111d] bg-[linear-gradient(155deg,#fef08a_0%,#fbbf24_55%,#fb923c_100%)]'
                 : opts.rarity === 'twin'
                   ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#38bdf8_0%,#fde047_50%,#fb7185_100%)]'
-                  : opts.rarity === 'omega'
-                    ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#f43f5e_0%,#fde047_50%,#64748b_100%)]'
-                    : opts.rarity === 'anomaly'
-                      ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#22d3ee_0%,#a855f7_50%,#f43f5e_100%)]'
-                      : 'border-[3px] border-[#14111d]';
+                  : opts.rarity === 'novel'
+                    ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#fffbeb_0%,#f5d07a_42%,#c69138_78%,#4a2c40_100%)]'
+                    : opts.rarity === 'omega'
+                      ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#f43f5e_0%,#fde047_50%,#64748b_100%)]'
+                      : opts.rarity === 'anomaly'
+                        ? 'border-[3px] border-[#14111d] bg-[linear-gradient(135deg,#22d3ee_0%,#a855f7_50%,#f43f5e_100%)]'
+                        : 'border-[3px] border-[#14111d]';
   const showcaseStyle =
     opts.rarity === 'rainbow' ||
     opts.rarity === 'mythic' ||
@@ -317,6 +319,7 @@ export function renderInspectorPanel(opts: {
     opts.rarity === 'fusion' ||
     opts.rarity === 'limited' ||
     opts.rarity === 'twin' ||
+    opts.rarity === 'novel' ||
     opts.rarity === 'omega' ||
     opts.rarity === 'anomaly'
       ? ''
