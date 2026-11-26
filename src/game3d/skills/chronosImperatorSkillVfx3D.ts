@@ -424,8 +424,9 @@ function createChronoSparkMaterial(): THREE.ShaderMaterial {
 }
 
 /**
- * Climax straight diagonal slash line that slices cleanly across space, briefly splits a razor-straight
- * spatial seam, and vanishes as 24 flat glass shards burst from the cut (zero crack overlay).
+ * Climax straight horizontal dimension-cut slash: sweeps cleanly left-to-right high above the pit
+ * floor (zero ground clipping), flares with a sleek crimson-violet-gold astral slit & center star gleam,
+ * then snaps cleanly as 24 flat glass shards burst outward.
  */
 function createDimensionalTearSlashMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
@@ -446,50 +447,57 @@ function createDimensionalTearSlashMaterial(): THREE.ShaderMaterial {
       uniform float uProgress;
       uniform float uOpacity;
       varying vec2 vUv;
+      ${CHRONOS_NOISE_GLSL}
 
       void main() {
         vec2 p = vUv * 2.0 - 1.0;
         float absX = abs(p.x);
         if (absX > 0.99) discard;
 
-        // Straight diagonal cut sweeping across -1 -> +1 (0.0 -> 0.22)
-        float sweepX = mix(-1.05, 1.08, smoothstep(0.0, 0.22, uProgress));
-        float cutReveal = 1.0 - smoothstep(sweepX - 0.06, sweepX + 0.02, p.x);
+        // Straight horizontal razor cut sweeping left -> right (0.0 -> 0.20)
+        float sweepX = mix(-1.05, 1.08, smoothstep(0.0, 0.20, uProgress));
+        float cutReveal = 1.0 - smoothstep(sweepX - 0.07, sweepX + 0.02, p.x);
         if (cutReveal < 0.01) discard;
 
-        float taperX = pow(max(0.0, 1.0 - absX * absX), 0.5);
-        // Opens straight spatial seam (0.16 -> 0.60) then snaps away cleanly as glass shards fly out
-        float splitOpen = smoothstep(0.16, 0.42, uProgress) * (1.0 - smoothstep(0.68, 1.0, uProgress));
-        float halfSeam = mix(0.010, 0.16, splitOpen) * taperX;
+        // Sleek tapered needle profile (razor-sharp tips at both ends)
+        float taperX = pow(max(0.0, 1.0 - absX * absX), 1.25);
+        float splitOpen = smoothstep(0.14, 0.40, uProgress) * (1.0 - smoothstep(0.68, 1.0, uProgress));
+        float halfSeam = mix(0.008, 0.115, splitOpen) * taperX;
 
         float distY = abs(p.y);
-        float insideSpace = (1.0 - smoothstep(halfSeam - 0.015, halfSeam + 0.008, distY)) * step(0.16, uProgress);
+        float insideSlit = (1.0 - smoothstep(halfSeam - 0.015, halfSeam + 0.01, distY)) * splitOpen;
         float rimDist = abs(distY - halfSeam);
 
-        float needle = (0.0065 / (rimDist + 0.0022)) * taperX;
-        float aura = (0.032 / (rimDist + 0.014)) * taperX;
-        float initialFlash = (0.0085 / (distY + 0.0025)) * taperX * (1.0 - smoothstep(0.18, 0.36, uProgress));
+        float needle = (0.0075 / (rimDist + 0.0022)) * taperX;
+        float aura = (0.036 / (rimDist + 0.015)) * taperX;
+        float initialFlash = (0.011 / (distY + 0.0022)) * taperX * (1.0 - smoothstep(0.16, 0.34, uProgress));
 
-        float fadeOut = 1.0 - smoothstep(0.68, 1.0, uProgress);
-        float pulse = 0.92 + 0.08 * sin(p.x * 16.0 - uTime * 22.0);
+        // Astral shimmer inside the horizontal slit + crisp 4-point center lens flare
+        float astralFlow = ciFbm(vec2(p.x * 6.0 - uTime * 2.4, p.y * 8.0));
+        float starH = exp(-abs(p.x) * 4.5 - abs(p.y) * 26.0);
+        float starV = exp(-abs(p.x) * 26.0 - abs(p.y) * 5.5);
+        float centerStar = (starH + starV) * smoothstep(0.08, 0.26, uProgress);
 
-        vec3 spaceAbyss = vec3(0.03, 0.01, 0.09);
-        vec3 crimson = vec3(1.0, 0.12, 0.38) * 1.9;
+        float fadeOut = 1.0 - smoothstep(0.66, 1.0, uProgress);
+        float pulse = 0.92 + 0.08 * sin(p.x * 16.0 - uTime * 24.0);
+
         vec3 violet = vec3(0.74, 0.34, 1.0) * 1.65;
-        vec3 whiteHot = vec3(1.0, 0.98, 0.98) * 2.3;
+        vec3 crimson = vec3(1.0, 0.12, 0.38) * 1.95;
+        vec3 champGold = vec3(1.0, 0.88, 0.56) * 1.85;
+        vec3 whiteHot = vec3(1.0, 0.98, 0.98) * 2.35;
 
-        vec3 rimCol = mix(violet, crimson, clamp(aura * 0.85, 0.0, 1.0));
-        rimCol = mix(rimCol, whiteHot, clamp(needle * 0.75 + initialFlash * 0.9, 0.0, 1.0));
+        vec3 slitGlow = mix(violet, champGold, astralFlow * 0.85) * insideSlit * 1.15;
+        vec3 col = mix(violet, crimson, clamp(aura * 0.85, 0.0, 1.0));
+        col = mix(col, whiteHot, clamp(needle * 0.78 + initialFlash * 0.92 + centerStar * 0.9, 0.0, 1.0));
+        col += slitGlow;
 
-        float rimMask = clamp((needle + aura * 0.72 + initialFlash) * pulse, 0.0, 1.0);
-        vec3 col = mix(spaceAbyss, rimCol, rimMask);
-        float alpha = clamp(max(insideSpace * 0.92, rimMask) * cutReveal * fadeOut * uOpacity, 0.0, 0.98);
+        float alpha = clamp((needle + aura * 0.72 + initialFlash + insideSlit * 0.75 + centerStar * 0.9) * pulse * cutReveal * fadeOut * uOpacity, 0.0, 1.0);
         if (alpha < 0.015) discard;
-        gl_FragColor = vec4(col, alpha);
+        gl_FragColor = vec4(col * alpha, alpha);
       }
     `,
     transparent: true,
-    blending: THREE.NormalBlending,
+    blending: THREE.AdditiveBlending,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
@@ -586,7 +594,7 @@ export class ChronosImperatorSkillVfxPool {
     const carveGeo = new THREE.PlaneGeometry(4.4, 0.34);
     const celGeo = new THREE.PlaneGeometry(2.75, 3.25);
     const latticeGeo = new THREE.PlaneGeometry(1, 1);
-    const tearGeo = new THREE.PlaneGeometry(18.0, 2.4);
+    const tearGeo = new THREE.PlaneGeometry(13.2, 2.2);
     const shardGeo = createChronoShardGeometry();
     const sparkGeo = new THREE.PlaneGeometry(0.36, 1.05);
     this.sharedGeos.push(floorGeo, carveGeo, celGeo, latticeGeo, tearGeo, shardGeo, sparkGeo);
@@ -804,8 +812,8 @@ export class ChronosImperatorSkillVfxPool {
     inst.latticeTiltMesh.scale.setScalar(12.2 * opts.areaScale);
     inst.latticeTiltMesh.visible = false;
 
-    inst.dimensionTearMesh.position.set(opts.cx, opts.cy + 1.85 * opts.areaScale, opts.cz);
-    inst.dimensionTearMesh.rotation.set(-0.18, 0.0, 0.56);
+    inst.dimensionTearMesh.position.set(opts.cx, opts.cy + 1.95 * opts.areaScale, opts.cz);
+    inst.dimensionTearMesh.rotation.set(-0.18, 0.0, 0.0);
     inst.dimensionTearMesh.scale.setScalar(opts.areaScale);
     inst.dimensionTearMesh.visible = false;
 
@@ -939,10 +947,10 @@ export class ChronosImperatorSkillVfxPool {
             continue;
           }
           sh.mesh.visible = true;
-          const lineFrac = ((s / Math.max(1, shardCap - 1)) - 0.5) * 11.5;
-          const baseX = lineFrac * 0.85;
-          const baseY = 1.85 + lineFrac * 0.52;
-          const baseZ = -lineFrac * 0.10;
+          const lineFrac = ((s / Math.max(1, shardCap - 1)) - 0.5) * 9.8;
+          const baseX = lineFrac;
+          const baseY = 1.95 + ((s % 3) - 1) * 0.16;
+          const baseZ = ((s % 2) - 0.5) * 0.25;
           const r = dtGlass * sh.speed;
           const x = inst.cx + (baseX + Math.cos(sh.angle) * r) * as;
           const y = Math.max(inst.cy + 0.16, inst.cy + (baseY + dtGlass * sh.ySpeed - 2.4 * dtGlass * dtGlass) * as);
