@@ -5663,6 +5663,21 @@ describe('Pure 3D Mine World', () => {
     pool.fire({ cx: 0, cy: -0.42, cz: 1.65, areaScale: 0.8 });
     pool.fire({ cx: 1, cy: -0.42, cz: 1.65, areaScale: 0.8 });
     pool.update(10, 5.0);
+
+    // Every chronoShard mesh must carry valid non-zero UV coordinates for its gradient shader
+    const shardMesh = instRoot.children.find((c): c is THREE.Mesh => c.name === 'chronoShard' && c instanceof THREE.Mesh);
+    expect(shardMesh).toBeDefined();
+    const shardUv = shardMesh!.geometry.getAttribute('uv');
+    expect(shardUv).toBeDefined();
+    let maxU = 0;
+    let maxV = 0;
+    for (let i = 0; i < shardUv.count; i++) {
+      maxU = Math.max(maxU, shardUv.getX(i));
+      maxV = Math.max(maxV, shardUv.getY(i));
+    }
+    expect(maxU).toBeGreaterThan(0.5);
+    expect(maxV).toBeGreaterThan(0.5);
+
     pool.dispose();
   });
 

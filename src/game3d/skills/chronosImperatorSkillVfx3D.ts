@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { mergeSimpleGeos } from '../MeshHelpers3D';
 import type { TierVfxHooks, WorldPoint3 } from '../TierMotionPath3D';
 
 const SKILL_DURATION_SEC = 2.5;
@@ -458,15 +457,40 @@ function createGrandSeveranceSlashMaterial(): THREE.ShaderMaterial {
 }
 
 function createChronoShardGeometry(): THREE.BufferGeometry {
-  const parts: THREE.BufferGeometry[] = [];
-  const main = new THREE.ConeGeometry(0.18, 0.64, 4);
-  main.translate(0, 0.16, 0);
-  parts.push(main);
-  const tail = new THREE.ConeGeometry(0.14, 0.34, 4);
-  tail.rotateX(Math.PI);
-  tail.translate(0, -0.14, 0);
-  parts.push(tail);
-  return mergeSimpleGeos(parts);
+  // Asymmetric 4-sided faceted crystal bipyramid built directly with UVs (zero temporary ConeGeometry leaks)
+  const r = 0.18;
+  const topY = 0.48;
+  const botY = -0.31;
+  const ring: Array<[number, number, number]> = [
+    [r, 0, 0],
+    [0, 0, r],
+    [-r, 0, 0],
+    [0, 0, -r],
+  ];
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const pushTri = (
+    a: [number, number, number],
+    b: [number, number, number],
+    c: [number, number, number],
+    uva: [number, number],
+    uvb: [number, number],
+    uvc: [number, number]
+  ): void => {
+    positions.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+    uvs.push(uva[0], uva[1], uvb[0], uvb[1], uvc[0], uvc[1]);
+  };
+  for (let i = 0; i < 4; i++) {
+    const p0 = ring[i];
+    const p1 = ring[(i + 1) % 4];
+    pushTri(p0, p1, [0, topY, 0], [0, 0.4], [1, 0.4], [0.5, 1.0]);
+    pushTri(p1, p0, [0, botY, 0], [1, 0.4], [0, 0.4], [0.5, 0.0]);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.computeVertexNormals();
+  return geo;
 }
 
 function createChronoShardMaterial(): THREE.ShaderMaterial {
