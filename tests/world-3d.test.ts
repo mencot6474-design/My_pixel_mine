@@ -5656,6 +5656,7 @@ describe('Pure 3D Mine World', () => {
     expect(instRoot.getObjectByName('chronoSpire')).toBeUndefined();
     expect(instRoot.getObjectByName('severanceSlash')).toBeUndefined();
     expect(instRoot.getObjectByName('razorLattice')).toBeDefined();
+    expect(instRoot.getObjectByName('dimensionTear')).toBeDefined();
     expect(instRoot.children.some((c) => c.name === 'carveSlash' && c.visible)).toBe(true);
     for (let i = 4; i < 8; i++) pool.update(0.05, i * 0.05);
     expect(instRoot.children.filter((c) => c.name === 'celFrame' && c.visible).length).toBeLessThanOrEqual(3);

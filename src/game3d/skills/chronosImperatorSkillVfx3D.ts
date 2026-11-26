@@ -597,6 +597,90 @@ function createChronoSparkMaterial(): THREE.ShaderMaterial {
   });
 }
 
+/**
+ * Climax straight diagonal slash that slices cleanly across the arena, tears open a jagged
+ * dark-void dimensional rift, and shatters via Voronoi fractures.
+ */
+function createDimensionalTearSlashMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uProgress: { value: 0 },
+      uOpacity: { value: 1 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uTime;
+      uniform float uProgress;
+      uniform float uOpacity;
+      varying vec2 vUv;
+      ${CHRONOS_NOISE_GLSL}
+
+      void main() {
+        vec2 p = vUv * 2.0 - 1.0;
+        float absX = abs(p.x);
+        if (absX > 0.98) discard;
+
+        // Straight diagonal slash sweep from -1 -> +1 (0.0 -> 0.16)
+        float sweepX = mix(-1.05, 1.08, smoothstep(0.0, 0.16, uProgress));
+        float cutReveal = 1.0 - smoothstep(sweepX - 0.06, sweepX + 0.02, p.x);
+        if (cutReveal < 0.01) discard;
+
+        // Tapered straight razor profile (sharp tips at both ends)
+        float taperX = pow(max(0.0, 1.0 - absX * absX), 0.65);
+        float openAmt = smoothstep(0.10, 0.38, uProgress) * (1.0 - smoothstep(0.84, 1.0, uProgress) * 0.25);
+        float jag = (ciVnoise(vec2(p.x * 11.0, 3.7)) - 0.5) * 0.16 * openAmt;
+        float distFromCenter = abs(p.y - jag);
+
+        float halfTear = mix(0.014, 0.36, openAmt) * taperX;
+        float insideVoid = 1.0 - smoothstep(halfTear - 0.025, halfTear + 0.01, distFromCenter);
+        float rimDist = abs(distFromCenter - halfTear);
+        float rimNeedle = 0.0055 / (rimDist + 0.003);
+        float rimGlow = exp(-rimDist * 14.0) * taperX;
+
+        // Initial straight razor flash before tearing open
+        float initialSlash = (0.0045 / (abs(p.y) + 0.0022)) * taperX * (1.0 - smoothstep(0.14, 0.32, uProgress));
+
+        // Cosmic abyss veins inside torn dimension
+        float voidFbm = ciFbm(vec2(p.x * 6.5 - uTime * 0.9, p.y * 8.0 + uTime * 0.6));
+        float voidCrack = smoothstep(0.62, 0.84, voidFbm);
+        float voidSpecks = step(0.88, ciHash21(floor(vec2(p.x * 42.0, p.y * 18.0))));
+
+        // Voronoi shatter phase (0.52 -> 1.0)
+        float shatterT = smoothstep(0.50, 1.0, uProgress);
+        float vEdge = ciVoronoiEdge(vUv * vec2(14.0, 5.5) + vec2(1.4, 2.9));
+        float shatterCrack = (1.0 - smoothstep(0.0, 0.09 + shatterT * 0.14, vEdge)) * step(0.48, uProgress) * taperX;
+        float shatterDissolve = mix(1.0, smoothstep(shatterT * 0.95, shatterT * 0.95 + 0.18, ciVnoise(vUv * vec2(16.0, 6.0))), shatterT);
+
+        vec3 abyssVoid = vec3(0.02, 0.008, 0.06) + vec3(0.56, 0.22, 0.94) * voidCrack * 0.85 + vec3(1.0, 0.86, 0.56) * voidSpecks * 0.9;
+        vec3 crimsonRim = vec3(1.0, 0.12, 0.38) * 1.95;
+        vec3 violetRim = vec3(0.74, 0.34, 1.0) * 1.6;
+        vec3 whiteHot = vec3(1.0, 0.98, 0.98) * 2.3;
+
+        vec3 rimCol = mix(violetRim, crimsonRim, clamp(rimGlow * 1.2, 0.0, 1.0));
+        rimCol = mix(rimCol, whiteHot, clamp(rimNeedle * 0.75 + initialSlash * 0.85 + shatterCrack * 1.1, 0.0, 1.0));
+
+        float rimStrength = clamp((rimGlow * 1.1 + rimNeedle * 0.5 + initialSlash * 0.9 + shatterCrack * 1.4) * taperX, 0.0, 1.0);
+        vec3 col = mix(abyssVoid, rimCol, rimStrength);
+
+        float alpha = clamp(max(insideVoid * 0.96, rimStrength) * cutReveal * shatterDissolve * uOpacity, 0.0, 0.98);
+        if (alpha < 0.015) discard;
+        gl_FragColor = vec4(col, alpha);
+      }
+    `,
+    transparent: true,
+    blending: THREE.NormalBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}
+
 interface FilmCarveSlashSlot {
   mesh: THREE.Mesh;
   mat: THREE.ShaderMaterial;
@@ -669,6 +753,8 @@ interface ChronosImperatorInstance {
   latticeTiltMesh: THREE.Mesh;
   latticeMats: THREE.ShaderMaterial[];
   smears: RazorSmearSlot[];
+  dimensionTearMesh: THREE.Mesh;
+  dimensionTearMat: THREE.ShaderMaterial;
   shards: ChronoShardSlot[];
   rings: Array<{ mesh: THREE.Mesh; mat: THREE.ShaderMaterial; delay: number }>;
   sparks: ChronoSparkSlot[];
@@ -697,11 +783,12 @@ export class ChronosImperatorSkillVfxPool {
     const celGeo = new THREE.PlaneGeometry(2.75, 3.25);
     const latticeGeo = new THREE.PlaneGeometry(1, 1);
     const smearGeo = createThinRazorSmearGeometry(0.84, 1.0, Math.PI * 1.15, 32);
+    const tearGeo = new THREE.PlaneGeometry(14.0, 3.0);
     const shardGeo = createChronoShardGeometry();
     const ringGeo = new THREE.PlaneGeometry(1, 1);
     ringGeo.rotateX(-Math.PI / 2);
     const sparkGeo = new THREE.PlaneGeometry(0.36, 1.05);
-    this.sharedGeos.push(floorGeo, carveGeo, celGeo, latticeGeo, smearGeo, shardGeo, ringGeo, sparkGeo);
+    this.sharedGeos.push(floorGeo, carveGeo, celGeo, latticeGeo, smearGeo, tearGeo, shardGeo, ringGeo, sparkGeo);
 
     for (let i = 0; i < POOL_SIZE; i++) {
       const root = new THREE.Group();
@@ -790,6 +877,13 @@ export class ChronosImperatorSkillVfxPool {
         smears.push({ mesh, mat, delay: 0.44 + k * 0.04, baseScale: 4.5, spinSpeed: 10.5 });
       }
 
+      const dimensionTearMat = createDimensionalTearSlashMaterial();
+      const dimensionTearMesh = new THREE.Mesh(tearGeo, dimensionTearMat);
+      dimensionTearMesh.name = 'dimensionTear';
+      dimensionTearMesh.visible = false;
+      root.add(dimensionTearMesh);
+      this.allMats.push(dimensionTearMat);
+
       const shards: ChronoShardSlot[] = [];
       for (let s = 0; s < SHARD_COUNT; s++) {
         const mat = createChronoShardMaterial();
@@ -857,6 +951,8 @@ export class ChronosImperatorSkillVfxPool {
         latticeTiltMesh,
         latticeMats: [latticeMatA, latticeMatB],
         smears,
+        dimensionTearMesh,
+        dimensionTearMat,
         shards,
         rings,
         sparks,
@@ -953,6 +1049,11 @@ export class ChronosImperatorSkillVfxPool {
       sm.mat.uniforms.uProgress.value = 0;
       sm.mat.uniforms.uLocalT.value = 0;
     }
+
+    inst.dimensionTearMesh.position.set(opts.cx, opts.cy + 1.65 * opts.areaScale, opts.cz);
+    inst.dimensionTearMesh.rotation.set(0.18, 0.22, 0.44);
+    inst.dimensionTearMesh.scale.setScalar(opts.areaScale);
+    inst.dimensionTearMesh.visible = false;
 
     for (let s = 0; s < SHARD_COUNT; s++) inst.shards[s].mesh.visible = false;
     for (let r = 0; r < SHUTTER_RING_COUNT; r++) inst.rings[r].mesh.visible = false;
@@ -1070,6 +1171,17 @@ export class ChronosImperatorSkillVfxPool {
         this.hooks.onSpeedLines?.(1.0, 0.55);
         this.hooks.onFlash?.('#f3e8ff', 0.72);
         inst.onImpactCallback?.();
+      }
+
+      // Climax: straight diagonal slash tearing open dimension & shattering via Voronoi (0.92s -> 1.92s)
+      if (inst.elapsed >= SEVERANCE_TIME_SEC && inst.elapsed < 1.92) {
+        const dtTear = (inst.elapsed - SEVERANCE_TIME_SEC) / 1.00;
+        inst.dimensionTearMesh.visible = true;
+        inst.dimensionTearMat.uniforms.uTime.value = timeSec;
+        inst.dimensionTearMat.uniforms.uProgress.value = dtTear;
+        inst.dimensionTearMat.uniforms.uOpacity.value = 1;
+      } else {
+        inst.dimensionTearMesh.visible = false;
       }
 
       // Low-arcing outward Voronoi shatter shards, horizontal shutter rings & sparks (>= 0.92s)
