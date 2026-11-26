@@ -493,12 +493,13 @@ export class GameHud {
     applyHudViewportScale(this.root);
   }
 
-  private renderAudioToggleBtn(floating = true): string {
+  private renderAudioToggleBtn(floating = true, quickButtonsHtml?: string): string {
     return renderAudioControlsHtml({
       floating,
       muted: audio.isMuted(),
       cameraLocked: gameSettings.get().cameraLocked,
       fps: this.currentFps,
+      quickButtonsHtml,
       twinTrial: {
         visible: shouldShowTwinTrialHudButton(this.sceneMode, this.state.isTwinTrialVisible()),
         active: this.state.isTwinTrialActive(),
@@ -613,8 +614,8 @@ export class GameHud {
         activeWorldNum,
         upgradeCount: this.state.getAffordableResearchCount(),
         readyIndexCount: this.state.getReadyIndexRewardCount(),
-        audioHtml: this.renderAudioToggleBtn(),
-        currencyRailHtml: this.renderCurrencyRail({ showGemsPlus: true, showCash: true, showDpsAbove: true, quickButtonsHtml }),
+        audioHtml: this.renderAudioToggleBtn(true, quickButtonsHtml),
+        currencyRailHtml: this.renderCurrencyRail({ showGemsPlus: true, showCash: true, showDpsAbove: true }),
         hotbarHtml: this.hotbarUi.renderHotbarSection(),
         potionsHtml: this.weatherDpsUi.renderActivePotionsDock(),
         feverFxHtml: this.renderFeverScreenFx(),

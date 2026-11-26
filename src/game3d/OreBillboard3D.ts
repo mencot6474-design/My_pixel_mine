@@ -380,10 +380,10 @@ export class OreBillboard2D {
 
     const { rockGeo, crystalGeo } = getSharedCollarGeometries();
     const rockSkirtMesh = new THREE.Mesh(rockGeo, rockMat);
-    rockSkirtMesh.castShadow = true;
+    rockSkirtMesh.castShadow = false;
     rockSkirtMesh.receiveShadow = true;
     const collarCrystalMesh = new THREE.Mesh(crystalGeo, this.collarCrystalMat);
-    collarCrystalMesh.castShadow = true;
+    collarCrystalMesh.castShadow = false;
     this.rockSkirtGroup.add(rockSkirtMesh, collarCrystalMesh);
 
     this.root.add(this.rockSkirtGroup);
@@ -428,7 +428,7 @@ export class OreBillboard2D {
         const firstDepthMap = !this.depthMat.map;
         this.depthMat.map = tex;
         if (firstDepthMap) this.depthMat.needsUpdate = true;
-        this.spriteMesh.castShadow = true;
+        this.spriteMesh.castShadow = false;
       })
       .catch(() => {
         // Safe no-op in headless tests

@@ -30,6 +30,7 @@ export function renderAudioControlsHtml(opts: {
   muted: boolean;
   cameraLocked: boolean;
   fps?: number;
+  quickButtonsHtml?: string;
   twinTrial?: {
     visible: boolean;
     active: boolean;
@@ -119,6 +120,8 @@ export function renderAudioControlsHtml(opts: {
     `
     : '';
 
+  const quickRowHtml = opts.quickButtonsHtml ?? '';
+
   return `
     <div class="${placementCls} flex flex-col items-end gap-2 @max-[720px]:gap-1.5 pointer-events-none">
       <div class="flex items-center gap-2 @max-[720px]:gap-1.5 pointer-events-none">
@@ -163,6 +166,7 @@ export function renderAudioControlsHtml(opts: {
           ${audioIcon}
         </button>
       </div>
+      ${quickRowHtml}
       ${trialBtnHtml}
     </div>
   `;
@@ -180,7 +184,7 @@ export function renderCurrencyRailHtml(opts: {
 }): string {
   const posCls = opts.topAlign
     ? 'top-[14px] right-4'
-    : 'top-[42%] right-4 -translate-y-1/2 [[data-hud-compact=true]_&]:top-[72px] [[data-hud-compact=true][data-hud-trial=true]_&]:top-[128px] [[data-hud-compact=true]_&]:translate-y-0 [[data-hud-short=true]_&]:top-[36%]';
+    : 'top-[42%] right-4 -translate-y-1/2 [[data-hud-compact=true]_&]:top-[154px] [[data-hud-compact=true][data-hud-trial=true]_&]:top-[128px] [[data-hud-compact=true]_&]:translate-y-0 [[data-hud-short=true]_&]:top-[36%]';
   const plusBtn = opts.showGemsPlus
     ? `<button class="${TW_PLUS_BTN} absolute right-2 top-1/2 -translate-y-1/2" data-action="gems-plus" aria-label="Buy Gems"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true"><path d="M8 2.8v10.4M2.8 8h10.4" stroke="#14111d" stroke-width="2.8" stroke-linecap="round"/></svg></button>`
     : '';
@@ -488,27 +492,33 @@ export function renderMineQuickButtonsHtml(opts: {
     ? 'relative h-[36px] min-w-[36px] px-2.5 rounded-xl border-[2.5px] border-[#14111d] bg-[linear-gradient(135deg,#67e8f9,#e879f9)] shadow-none text-[#14111d] text-[12px] font-black inline-flex items-center justify-center gap-1 cursor-pointer touch-manipulation transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] active:scale-95'
     : 'relative h-[36px] min-w-[36px] px-2.5 rounded-xl border-[2.5px] border-[#14111d] bg-[#e9d5ff] shadow-none text-[#14111d] text-[12px] font-black inline-flex items-center justify-center gap-1 cursor-pointer touch-manipulation transition-[transform,filter] duration-150 ease-out hover:scale-[0.96] active:scale-95';
   return `
-    <button class="${riftBtnCls}" title="Dimensional Rift (:00–:15)" data-action="open-rift">
-      <span class="${TW_BADGE_BASE} min-w-[16px] h-4 px-1 text-[9px] ${opts.riftOpen ? '' : 'hidden'}" data-rift-badge="true">!</span>
-      ${riftShardIconHtml(18, 'Rift')}
-      <span>RIFT</span>
-    </button>
-    <button class="${TW_QUICK_BTN_DAILY}" title="Daily Login" data-action="open-daily-login">
-      <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] ${opts.dailyReady ? '' : 'hidden'}" data-daily-badge="true">1</span>
-      <span class="text-[#b45309] text-[15px] leading-none" aria-hidden="true">✦</span>
-      <span>Daily</span>
-    </button>
-    <button class="${TW_QUICK_BTN_QUEST} !px-2" title="Mining Bounties" data-action="open-bounties">
-      <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] ${opts.readyBounties > 0 ? '' : 'hidden'}" data-bounties-badge="true">${opts.readyBounties}</span>
-      ${hudIconHtml('quest', 22, 'Bounties')}
-    </button>
-    <button class="${TW_QUICK_BTN_QUEST} !px-2" title="Achievements & Career Stats" data-action="open-achievements">
-      <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] ${opts.readyAchievements > 0 ? '' : 'hidden'}" data-achievements-badge="true">${opts.readyAchievements}</span>
-      <svg class="w-[21px] h-[21px] text-[#14111d]" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4H17V10C17 12.8 14.8 15 12 15C9.2 15 7 12.8 7 10V4Z" fill="#fde047" stroke="currentColor" stroke-width="2"/><path d="M7 6H4V8.5C4 10.2 5.3 11.5 7 11.5M17 6H20V8.5C20 10.2 18.7 11.5 17 11.5M12 15V19M8.5 19H15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    </button>
-    <button class="${TW_QUICK_BTN_CHEST}" title="Chest (${fmtInt(opts.chestCount)})" data-action="open-chest">
-      ${hudIconHtml('chest', 22, 'Chest')}
-    </button>
+    <div class="flex flex-col items-end gap-1.5 pointer-events-none">
+      <div class="flex items-center justify-end gap-1.5 pointer-events-none">
+        <button class="${TW_QUICK_BTN_QUEST} !px-2" title="Mining Bounties" data-action="open-bounties">
+          <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] ${opts.readyBounties > 0 ? '' : 'hidden'}" data-bounties-badge="true">${opts.readyBounties}</span>
+          ${hudIconHtml('quest', 22, 'Bounties')}
+        </button>
+        <button class="${TW_QUICK_BTN_QUEST} !px-2" title="Achievements & Career Stats" data-action="open-achievements">
+          <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] ${opts.readyAchievements > 0 ? '' : 'hidden'}" data-achievements-badge="true">${opts.readyAchievements}</span>
+          <svg class="w-[21px] h-[21px] text-[#14111d]" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4H17V10C17 12.8 14.8 15 12 15C9.2 15 7 12.8 7 10V4Z" fill="#fde047" stroke="currentColor" stroke-width="2"/><path d="M7 6H4V8.5C4 10.2 5.3 11.5 7 11.5M17 6H20V8.5C20 10.2 18.7 11.5 17 11.5M12 15V19M8.5 19H15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="${TW_QUICK_BTN_CHEST}" title="Chest (${fmtInt(opts.chestCount)})" data-action="open-chest">
+          ${hudIconHtml('chest', 22, 'Chest')}
+        </button>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 pointer-events-none">
+        <button class="${riftBtnCls} w-full" title="Dimensional Rift (:00–:15)" data-action="open-rift">
+          <span class="${TW_BADGE_BASE} min-w-[16px] h-4 px-1 text-[9px] ${opts.riftOpen ? '' : 'hidden'}" data-rift-badge="true">!</span>
+          ${riftShardIconHtml(18, 'Rift')}
+          <span>RIFT</span>
+        </button>
+        <button class="${TW_QUICK_BTN_DAILY} w-full" title="Daily Login" data-action="open-daily-login">
+          <span class="${TW_BADGE_BASE} min-w-[20px] h-5 px-1 text-[11px] ${opts.dailyReady ? '' : 'hidden'}" data-daily-badge="true">1</span>
+          <span class="text-[#b45309] text-[15px] leading-none" aria-hidden="true">✦</span>
+          <span>Daily</span>
+        </button>
+      </div>
+    </div>
   `;
 }
 
