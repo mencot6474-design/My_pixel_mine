@@ -3,6 +3,9 @@ import type { TierVfxHooks, WorldPoint3 } from '../TierMotionPath3D';
 
 const SKILL_DURATION_SEC = 2.5;
 const POOL_SIZE = 2;
+const FILM_FLOOR_SIZE = 16.5;
+const FILM_REVEAL_ANG = 0.42;
+const FILM_CARVE_SLASH_COUNT = 12;
 const CEL_FRAME_MAX = 6;
 const DELAYED_CUT_COUNT = 6;
 const SEVERANCE_ARC_COUNT = 3;
@@ -51,18 +54,6 @@ const CHRONOS_NOISE_GLSL = `
     return v;
   }
 
-  float ciRidged(vec2 p) {
-    float v = 0.0;
-    float a = 0.55;
-    for (int i = 0; i < 2; i++) {
-      float n = 1.0 - abs(ciVnoise(p) * 2.0 - 1.0);
-      v += (n * n * n) * a;
-      p *= 2.18;
-      a *= 0.5;
-    }
-    return v;
-  }
-
   float ciVoronoiEdge(vec2 p) {
     vec2 n = floor(p);
     vec2 f = fract(p);
@@ -91,6 +82,7 @@ function createChronoFilmFloorMaterial(): THREE.ShaderMaterial {
     uniforms: {
       uTime: { value: 0 },
       uProgress: { value: 0 },
+      uRevealHead: { value: 0 },
       uCutGlow: { value: 0 },
       uOpacity: { value: 1 },
     },
@@ -104,6 +96,7 @@ function createChronoFilmFloorMaterial(): THREE.ShaderMaterial {
     fragmentShader: `
       uniform float uTime;
       uniform float uProgress;
+      uniform float uRevealHead;
       uniform float uCutGlow;
       uniform float uOpacity;
       varying vec2 vUv;
@@ -112,15 +105,22 @@ function createChronoFilmFloorMaterial(): THREE.ShaderMaterial {
       void main() {
         vec2 p = vUv * 2.0 - 1.0;
         float r = length(p);
-        float openT = smoothstep(0.0, 0.12, uProgress);
-        float maxR = mix(0.25, 0.99, 1.0 - pow(1.0 - openT, 3.0));
-        float circleMask = 1.0 - smoothstep(maxR - 0.12, maxR, r);
+        float circleMask = 1.0 - smoothstep(0.86, 0.99, r);
         if (circleMask < 0.01) discard;
 
-        // Dark obsidian film domain plate for bold contrast against bright arena floors
-        float ang = 0.42;
+        // 35mm film-strip track revealed directly behind sweeping slash cuts
+        float ang = ${FILM_REVEAL_ANG.toFixed(2)};
         mat2 rot = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
         vec2 fp = rot * p;
+
+        float revealX = mix(-1.12, 1.12, uRevealHead);
+        float slashNoise = (ciVnoise(vec2(fp.y * 6.0, uRevealHead * 4.0)) - 0.5) * 0.14;
+        float carvedReveal = 1.0 - smoothstep(revealX - 0.16 + slashNoise, revealX + 0.02 + slashNoise, fp.x);
+        if (carvedReveal < 0.01) discard;
+
+        float leadingCut = exp(-abs(fp.x - revealX - slashNoise) * 20.0)
+          * smoothstep(0.01, 0.08, uRevealHead)
+          * (1.0 - smoothstep(0.90, 1.0, uRevealHead));
 
         float stripBand = smoothstep(0.68, 0.56, abs(fp.y));
         float railTop = smoothstep(0.042, 0.010, abs(abs(fp.y) - 0.54));
@@ -135,41 +135,84 @@ function createChronoFilmFloorMaterial(): THREE.ShaderMaterial {
         float frameBar = smoothstep(0.055, 0.015, abs(fract(fp.x * 4.5 - uProgress * 1.1) - 0.5)) * smoothstep(0.36, 0.30, abs(fp.y));
         float shutterTicks = smoothstep(0.06, 0.02, abs(fract(fp.x * 18.0) - 0.5)) * smoothstep(0.34, 0.28, abs(fp.y)) * 0.65;
 
-        // Wide sweeping shutter scanline
-        float scanX = mix(-1.05, 1.05, clamp(uProgress * 2.1, 0.0, 1.0));
-        float scanLine = exp(-abs(fp.x - scanX) * 9.5) * stripBand;
-
         // Blazing crimson-white diagonal severance fissure at 0.92s impact
         float sevDist = abs(fp.y - fp.x * 0.14);
         float sevCrack = exp(-sevDist * 7.5) * uCutGlow;
         float sevCore = exp(-sevDist * 22.0) * uCutGlow;
         float noiseDetail = ciFbm(fp * 4.5 + vec2(uTime * 0.8, 0.0));
 
-        float envFade = smoothstep(0.0, 0.08, uProgress) * (1.0 - smoothstep(0.76, 1.0, uProgress));
+        float envFade = 1.0 - smoothstep(0.76, 1.0, uProgress);
         vec3 obsidianBase = vec3(0.03, 0.015, 0.07);
         vec3 neonViolet = vec3(0.74, 0.34, 1.0) * 1.55;
         vec3 champGold = vec3(1.0, 0.86, 0.48) * 1.65;
         vec3 crimsonHot = vec3(1.0, 0.14, 0.38) * 1.95;
 
         float detailMask = clamp(
-          railTop * 1.1 + railInner * 0.8 + sprocketBand * 1.15 + frameBar * 0.95 + shutterTicks + scanLine * 1.2 + sevCrack * 1.4,
+          railTop * 1.1 + railInner * 0.8 + sprocketBand * 1.15 + frameBar * 0.95 + shutterTicks + leadingCut * 1.35 + sevCrack * 1.4,
           0.0,
           1.4
         );
 
-        vec3 lineCol = mix(neonViolet, champGold, clamp(sprocketBand * 0.9 + frameBar * 0.65 + scanLine * 0.75, 0.0, 1.0));
-        lineCol = mix(lineCol, crimsonHot, clamp(sevCrack * 1.25, 0.0, 1.0));
-        lineCol += vec3(1.0, 0.96, 0.98) * (sevCore * 1.4 + scanLine * 0.45);
+        vec3 lineCol = mix(neonViolet, champGold, clamp(sprocketBand * 0.9 + frameBar * 0.65, 0.0, 1.0));
+        lineCol = mix(lineCol, crimsonHot, clamp(sevCrack * 1.25 + leadingCut * 1.1, 0.0, 1.0));
+        lineCol += vec3(1.0, 0.96, 0.98) * (sevCore * 1.4 + leadingCut * 0.75);
 
         vec3 col = mix(obsidianBase + neonViolet * noiseDetail * 0.14, lineCol, clamp(detailMask, 0.0, 1.0));
-        float basePlateAlpha = max(stripBand * 0.82, smoothstep(maxR, maxR - 0.25, r) * 0.46);
-        float alpha = clamp(max(basePlateAlpha, detailMask * 0.95) * circleMask * envFade * uOpacity, 0.0, 0.94);
+        float basePlateAlpha = max(stripBand * 0.82, smoothstep(0.95, 0.65, r) * 0.42);
+        float alpha = clamp(max(basePlateAlpha, detailMask * 0.95) * carvedReveal * circleMask * envFade * uOpacity, 0.0, 0.94);
         if (alpha < 0.015) discard;
         gl_FragColor = vec4(col, alpha);
       }
     `,
     transparent: true,
     blending: THREE.NormalBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}
+
+function createCarveSlashLineMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uProgress: { value: 0 },
+      uTint: { value: 0 },
+      uOpacity: { value: 1 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uProgress;
+      uniform float uTint;
+      uniform float uOpacity;
+      varying vec2 vUv;
+
+      void main() {
+        float head = mix(0.05, 1.25, uProgress);
+        float tail = max(0.0, head - 0.62);
+        float segMask = smoothstep(tail, tail + 0.12, vUv.x) * (1.0 - smoothstep(head - 0.08, head, vUv.x));
+        float distY = abs(vUv.y * 2.0 - 1.0);
+        float core = exp(-distY * 11.0);
+        float rim = exp(-distY * 3.8) * 0.82;
+
+        vec3 violet = vec3(0.74, 0.34, 1.0) * 1.7;
+        vec3 crimson = vec3(1.0, 0.12, 0.38) * 1.95;
+        vec3 goldWhite = vec3(1.0, 0.94, 0.82) * 2.2;
+
+        vec3 col = mix(violet, crimson, uTint);
+        col = mix(col, goldWhite, clamp(core * 1.15, 0.0, 1.0));
+        float fadeOut = 1.0 - smoothstep(0.65, 1.0, uProgress);
+        float alpha = clamp((core + rim) * segMask * fadeOut * uOpacity, 0.0, 1.0);
+        if (alpha < 0.015) discard;
+        gl_FragColor = vec4(col, alpha);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
@@ -264,7 +307,7 @@ function createOnionSkinRibbonGeometry(): THREE.BufferGeometry {
     const rad = 3.2 + Math.sin(u * Math.PI * 2.0) * 1.75;
     const x = Math.cos(theta) * rad;
     const z = Math.sin(theta) * rad * 0.82;
-    const y = 0.85 + Math.sin(u * Math.PI) * 2.1;
+    const y = 0.85 + Math.sin(u * Math.PI) * 1.85;
     const halfW = 0.52 + Math.sin(u * Math.PI) * 0.65;
 
     for (let j = 0; j < rows; j++) {
@@ -490,56 +533,6 @@ function createGrandSeveranceSlashMaterial(): THREE.ShaderMaterial {
   });
 }
 
-function createChronoSeveranceSpireMaterial(): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    uniforms: {
-      uTime: { value: 0 },
-      uProgress: { value: 0 },
-      uOpacity: { value: 1 },
-    },
-    vertexShader: `
-      uniform float uTime;
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        vec3 pos = position;
-        float flare = 1.0 + sin(uv.y * 9.0 - uTime * 12.0) * 0.20 * (1.0 - uv.y * 0.35);
-        pos.xz *= flare;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform float uTime;
-      uniform float uProgress;
-      uniform float uOpacity;
-      varying vec2 vUv;
-      ${CHRONOS_NOISE_GLSL}
-
-      void main() {
-        float streak = ciRidged(vec2(vUv.x * 7.0, vUv.y * 4.5 - uTime * 6.5));
-        // Horizontal 24-FPS film-strip bands climbing the spire
-        float filmSlices = 0.65 + 0.35 * step(0.28, fract(vUv.y * 12.0 - uTime * 2.4));
-        float vFade = smoothstep(0.0, 0.10, vUv.y) * (1.0 - smoothstep(0.65, 1.0, vUv.y));
-
-        vec3 violet = vec3(0.68, 0.28, 1.0) * 1.5;
-        vec3 crimson = vec3(0.98, 0.12, 0.38) * 1.85;
-        vec3 whiteGold = vec3(1.0, 0.95, 0.86) * 2.1;
-
-        vec3 col = mix(violet, crimson, smoothstep(0.22, 0.72, streak));
-        col = mix(col, whiteGold, clamp(streak * 0.9 + (1.0 - vUv.y) * 0.35, 0.0, 1.0));
-
-        float alpha = clamp(vFade * filmSlices * (0.62 + streak * 0.72) * uOpacity, 0.0, 1.0);
-        if (alpha < 0.015) discard;
-        gl_FragColor = vec4(col, alpha);
-      }
-    `,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-}
-
 function createChronoShardGeometry(): THREE.BufferGeometry {
   // Asymmetric 4-sided faceted crystal bipyramid built directly with UVs (zero temporary ConeGeometry leaks)
   const r = 0.26;
@@ -677,6 +670,21 @@ function createChronoSparkMaterial(): THREE.ShaderMaterial {
   });
 }
 
+interface FilmCarveSlashSlot {
+  mesh: THREE.Mesh;
+  mat: THREE.ShaderMaterial;
+  delay: number;
+  dur: number;
+  fxStart: number;
+  fxEnd: number;
+  fyOffset: number;
+  yHeight: number;
+  rotX: number;
+  rotY: number;
+  rotZ: number;
+  scaleLen: number;
+}
+
 interface CelFrameSlot {
   mesh: THREE.Mesh;
   mat: THREE.ShaderMaterial;
@@ -741,13 +749,12 @@ interface ChronosImperatorInstance {
   root: THREE.Group;
   floorMesh: THREE.Mesh;
   floorMat: THREE.ShaderMaterial;
+  carveSlashes: FilmCarveSlashSlot[];
   celFrames: CelFrameSlot[];
   ribbonMesh: THREE.Mesh;
   ribbonMat: THREE.ShaderMaterial;
   delayedCuts: DelayedCutSlot[];
   severanceArcs: SeveranceArcSlot[];
-  spireMesh: THREE.Mesh;
-  spireMat: THREE.ShaderMaterial;
   shards: ChronoShardSlot[];
   rings: Array<{ mesh: THREE.Mesh; mat: THREE.ShaderMaterial; delay: number }>;
   sparks: ChronoSparkSlot[];
@@ -755,9 +762,9 @@ interface ChronosImperatorInstance {
 
 /**
  * Pooled 2.5s Sakuga 3D GLSL VFX for Chronos Imperator (`crimson-clock-marshal`, tier `novel`):
- * 24-FPS Chrono-Cell Projection & Shatter (dark-backed 35mm film runway, bold cel-frame prisons,
- * onion-skin velocity ribbon, crimson flame katana cuts, 3-arc severance + 12.5m Chrono-Spire + Hit-Stop,
- * and Voronoi crystal shatter).
+ * 24-FPS Chrono-Cell Projection & Shatter (12 trailing katana slashes carving open the dark-backed
+ * 35mm film runway, bold cel-frame prisons, onion-skin velocity ribbon, crimson flame katana cuts,
+ * 3-arc horizontal/diagonal severance + Hit-Stop, and outward Voronoi crystal shatter with zero upward spire).
  */
 export class ChronosImperatorSkillVfxPool {
   public readonly group = new THREE.Group();
@@ -771,17 +778,16 @@ export class ChronosImperatorSkillVfxPool {
     this.hooks = hooks;
     const floorGeo = new THREE.PlaneGeometry(1, 1);
     floorGeo.rotateX(-Math.PI / 2);
+    const carveGeo = new THREE.PlaneGeometry(4.2, 0.56);
     const celGeo = new THREE.PlaneGeometry(2.85, 3.4);
     const ribbonGeo = createOnionSkinRibbonGeometry();
     const cutGeo = new THREE.PlaneGeometry(5.2, 1.05);
     const severanceGeo = createSeveranceArcGeometry();
-    const spireGeo = new THREE.CylinderGeometry(1.9, 3.4, 12.5, 22, 10, true);
-    spireGeo.translate(0, 6.25, 0);
     const shardGeo = createChronoShardGeometry();
     const ringGeo = new THREE.PlaneGeometry(1, 1);
     ringGeo.rotateX(-Math.PI / 2);
-    const sparkGeo = new THREE.PlaneGeometry(0.46, 1.35);
-    this.sharedGeos.push(floorGeo, celGeo, ribbonGeo, cutGeo, severanceGeo, spireGeo, shardGeo, ringGeo, sparkGeo);
+    const sparkGeo = new THREE.PlaneGeometry(0.42, 1.15);
+    this.sharedGeos.push(floorGeo, carveGeo, celGeo, ribbonGeo, cutGeo, severanceGeo, shardGeo, ringGeo, sparkGeo);
 
     for (let i = 0; i < POOL_SIZE; i++) {
       const root = new THREE.Group();
@@ -793,6 +799,34 @@ export class ChronosImperatorSkillVfxPool {
       floorMesh.name = 'filmFloor';
       root.add(floorMesh);
       this.allMats.push(floorMat);
+
+      const carveSlashes: FilmCarveSlashSlot[] = [];
+      for (let s = 0; s < FILM_CARVE_SLASH_COUNT; s++) {
+        const mat = createCarveSlashLineMaterial();
+        mat.uniforms.uTint.value = s % 2 === 0 ? 1.0 : 0.15;
+        const mesh = new THREE.Mesh(carveGeo, mat);
+        mesh.name = 'carveSlash';
+        mesh.visible = false;
+        root.add(mesh);
+        this.allMats.push(mat);
+
+        const lane = ((s % 5) - 2) * 0.22;
+        const frac = s / Math.max(1, FILM_CARVE_SLASH_COUNT - 1);
+        carveSlashes.push({
+          mesh,
+          mat,
+          delay: frac * 0.30,
+          dur: 0.22,
+          fxStart: -0.95 + frac * 1.05,
+          fxEnd: -0.15 + frac * 1.10,
+          fyOffset: lane,
+          yHeight: 0.28 + (s % 3) * 0.24,
+          rotX: ((s % 3) - 1) * 0.22,
+          rotY: -FILM_REVEAL_ANG + ((s % 4) - 1.5) * 0.24,
+          rotZ: (s % 2 === 0 ? 1 : -1) * (0.28 + (s % 3) * 0.16),
+          scaleLen: 0.95 + (s % 3) * 0.22,
+        });
+      }
 
       const celFrames: CelFrameSlot[] = [];
       for (let f = 0; f < CEL_FRAME_MAX; f++) {
@@ -810,7 +844,7 @@ export class ChronosImperatorSkillVfxPool {
           z: 0,
           yaw: ((f % 3) - 1) * 0.24,
           tilt: (f % 2 === 0 ? 1 : -1) * 0.08,
-          lockDelay: 0.04 + f * 0.055,
+          lockDelay: 0.08 + f * 0.06,
         });
       }
 
@@ -837,7 +871,7 @@ export class ChronosImperatorSkillVfxPool {
           z: 0,
           rotY: (c - 2.5) * 0.3,
           rotZ: (c % 2 === 0 ? 1 : -1) * (0.44 + (c % 3) * 0.14),
-          delay: 0.42 + c * 0.065,
+          delay: 0.44 + c * 0.065,
         });
       }
 
@@ -857,13 +891,6 @@ export class ChronosImperatorSkillVfxPool {
         severanceArcs.push({ mesh, mat, ...arcConfigs[a] });
       }
 
-      const spireMat = createChronoSeveranceSpireMaterial();
-      const spireMesh = new THREE.Mesh(spireGeo, spireMat);
-      spireMesh.name = 'chronoSpire';
-      spireMesh.visible = false;
-      root.add(spireMesh);
-      this.allMats.push(spireMat);
-
       const shards: ChronoShardSlot[] = [];
       for (let s = 0; s < SHARD_COUNT; s++) {
         const mat = createChronoShardMaterial();
@@ -876,8 +903,8 @@ export class ChronosImperatorSkillVfxPool {
           mesh,
           mat,
           angle: (s / SHARD_COUNT) * Math.PI * 2 + (s % 3) * 0.12,
-          speed: 3.6 + (s % 5) * 1.2,
-          ySpeed: 4.2 + (s % 4) * 1.45,
+          speed: 4.2 + (s % 5) * 1.25,
+          ySpeed: 1.8 + (s % 4) * 0.65,
           spinX: (s % 2 === 0 ? 1 : -1) * (6.5 + (s % 4) * 1.5),
           spinZ: (s % 3 === 0 ? 1 : -1) * 7.2,
         });
@@ -906,8 +933,8 @@ export class ChronosImperatorSkillVfxPool {
           mesh,
           mat,
           angle: (p / SPARK_COUNT) * Math.PI * 2,
-          speed: 3.5 + (p % 5) * 1.15,
-          ySpeed: 4.2 + (p % 4) * 1.4,
+          speed: 4.2 + (p % 5) * 1.25,
+          ySpeed: 1.6 + (p % 4) * 0.65,
         });
       }
 
@@ -925,13 +952,12 @@ export class ChronosImperatorSkillVfxPool {
         root,
         floorMesh,
         floorMat,
+        carveSlashes,
         celFrames,
         ribbonMesh,
         ribbonMat,
         delayedCuts,
         severanceArcs,
-        spireMesh,
-        spireMat,
         shards,
         rings,
         sparks,
@@ -1002,10 +1028,13 @@ export class ChronosImperatorSkillVfxPool {
 
     inst.root.visible = true;
     inst.floorMesh.position.set(opts.cx, opts.cy + 0.06, opts.cz);
-    inst.floorMesh.scale.setScalar(16.5 * opts.areaScale);
+    inst.floorMesh.scale.setScalar(FILM_FLOOR_SIZE * opts.areaScale);
     inst.floorMat.uniforms.uProgress.value = 0;
+    inst.floorMat.uniforms.uRevealHead.value = 0;
     inst.floorMat.uniforms.uCutGlow.value = 0;
     inst.floorMat.uniforms.uOpacity.value = 1;
+
+    for (let s = 0; s < FILM_CARVE_SLASH_COUNT; s++) inst.carveSlashes[s].mesh.visible = false;
 
     inst.ribbonMesh.position.set(opts.cx, opts.cy + 0.14, opts.cz);
     inst.ribbonMesh.scale.setScalar(opts.areaScale);
@@ -1016,9 +1045,6 @@ export class ChronosImperatorSkillVfxPool {
       inst.severanceArcs[a].mesh.visible = false;
     }
 
-    inst.spireMesh.position.set(opts.cx, opts.cy + 0.05, opts.cz);
-    inst.spireMesh.visible = false;
-
     for (let s = 0; s < SHARD_COUNT; s++) inst.shards[s].mesh.visible = false;
     for (let r = 0; r < SHUTTER_RING_COUNT; r++) inst.rings[r].mesh.visible = false;
     for (let p = 0; p < SPARK_COUNT; p++) inst.sparks[p].mesh.visible = false;
@@ -1027,6 +1053,9 @@ export class ChronosImperatorSkillVfxPool {
   }
 
   public update(dtSec: number, timeSec: number): void {
+    const cosAng = Math.cos(FILM_REVEAL_ANG);
+    const sinAng = Math.sin(FILM_REVEAL_ANG);
+
     for (let idx = 0; idx < this.instances.length; idx++) {
       const inst = this.instances[idx];
       if (!inst.active) continue;
@@ -1040,13 +1069,41 @@ export class ChronosImperatorSkillVfxPool {
       inst.elapsed += dt;
       const uProgress = Math.min(1, inst.elapsed / SKILL_DURATION_SEC);
       const as = inst.areaScale;
+      const halfFloor = FILM_FLOOR_SIZE * as * 0.5;
 
-      // Floor 35mm film-strip & 24-FPS shutter track
+      // Phase 1 (0.00s -> 0.48s): Sweeping slash lines carve the 35mm film floor open behind them
+      const revealHead = Math.min(1, inst.elapsed / 0.48);
       const cutWindow = Math.max(0, 1 - Math.abs(inst.elapsed - SEVERANCE_TIME_SEC) / 0.5);
       inst.floorMat.uniforms.uTime.value = timeSec;
       inst.floorMat.uniforms.uProgress.value = uProgress;
+      inst.floorMat.uniforms.uRevealHead.value = revealHead;
       inst.floorMat.uniforms.uCutGlow.value = cutWindow;
       inst.floorMat.uniforms.uOpacity.value = 1;
+
+      const carveCap = this.lowQuality ? 6 : FILM_CARVE_SLASH_COUNT;
+      for (let s = 0; s < FILM_CARVE_SLASH_COUNT; s++) {
+        const cs = inst.carveSlashes[s];
+        if (s >= carveCap) {
+          cs.mesh.visible = false;
+          continue;
+        }
+        const st = (inst.elapsed - cs.delay) / cs.dur;
+        if (st < 0 || st >= 1) {
+          cs.mesh.visible = false;
+          continue;
+        }
+        const fx = cs.fxStart + (cs.fxEnd - cs.fxStart) * st;
+        const fy = cs.fyOffset;
+        // Inverse-rotate fp=(fx,fy) to plane-local p=(px,py), then map to world (cx + px*half, cz - py*half)
+        const px = cosAng * fx + sinAng * fy;
+        const py = -sinAng * fx + cosAng * fy;
+        cs.mesh.visible = true;
+        cs.mesh.position.set(inst.cx + px * halfFloor, inst.cy + cs.yHeight * as, inst.cz - py * halfFloor);
+        cs.mesh.rotation.set(cs.rotX, cs.rotY, cs.rotZ);
+        cs.mesh.scale.setScalar(cs.scaleLen * as);
+        cs.mat.uniforms.uProgress.value = st;
+        cs.mat.uniforms.uOpacity.value = 1;
+      }
 
       // Phase 1 -> 3: Staggered Cel-Frame Prisons
       const shatterRaw = Math.max(0, (inst.elapsed - SEVERANCE_TIME_SEC) / 0.56);
@@ -1098,7 +1155,7 @@ export class ChronosImperatorSkillVfxPool {
         dc.mat.uniforms.uOpacity.value = fade;
       }
 
-      // Phase 3 Trigger: Grand Severance Cut + 0.085s Hit-Stop
+      // Phase 3 Trigger: Grand Severance Cut + 0.085s Hit-Stop (NO upward explosion/spire)
       if (!inst.impactFired && inst.elapsed >= SEVERANCE_TIME_SEC) {
         inst.impactFired = true;
         inst.hitStopTimer = HIT_STOP_DURATION_SEC;
@@ -1124,20 +1181,10 @@ export class ChronosImperatorSkillVfxPool {
         arc.mat.uniforms.uOpacity.value = 1;
       }
 
-      // Towering 12.5m Chrono-Severance Vortex Spire (>= 0.92s)
+      // Low-arcing outward Voronoi shatter shards, horizontal shutter rings & sparks (>= 0.92s)
       if (inst.elapsed >= SEVERANCE_TIME_SEC) {
         const dtBoom = inst.elapsed - SEVERANCE_TIME_SEC;
-        const spireRise = Math.min(1, dtBoom / 0.24);
-        const spireEase = 1 - Math.pow(1 - spireRise, 3);
-        const spireFade = Math.max(0, 1 - Math.max(0, dtBoom - 0.55) / 0.95);
-        inst.spireMesh.visible = spireFade > 0.02;
-        inst.spireMesh.scale.set((0.88 + 0.65 * spireEase) * as, Math.max(0.12, spireEase * 1.15), (0.88 + 0.65 * spireEase) * as);
-        inst.spireMesh.rotation.y += dt * 4.4;
-        inst.spireMat.uniforms.uTime.value = timeSec;
-        inst.spireMat.uniforms.uProgress.value = uProgress;
-        inst.spireMat.uniforms.uOpacity.value = spireFade;
-
-        const boomFade = Math.max(0, 1 - dtBoom / 1.25);
+        const boomFade = Math.max(0, 1 - dtBoom / 1.15);
 
         const shardCap = this.lowQuality ? 10 : SHARD_COUNT;
         for (let s = 0; s < shardCap; s++) {
@@ -1148,10 +1195,10 @@ export class ChronosImperatorSkillVfxPool {
           }
           sh.mesh.visible = true;
           const r = (0.45 + dtBoom * sh.speed) * as;
-          const y = Math.max(0.18, 1.15 + dtBoom * sh.ySpeed - 3.6 * dtBoom * dtBoom);
+          const y = Math.max(0.16, 0.95 + dtBoom * sh.ySpeed - 3.6 * dtBoom * dtBoom);
           sh.mesh.position.set(inst.cx + Math.cos(sh.angle) * r, inst.cy + y, inst.cz + Math.sin(sh.angle) * r);
           sh.mesh.rotation.set(dtBoom * sh.spinX, sh.angle, dtBoom * sh.spinZ);
-          sh.mesh.scale.setScalar((0.92 + 0.38 * boomFade) * as);
+          sh.mesh.scale.setScalar((0.92 + 0.36 * boomFade) * as);
           sh.mat.uniforms.uOpacity.value = boomFade;
         }
 
@@ -1178,14 +1225,12 @@ export class ChronosImperatorSkillVfxPool {
           }
           sp.mesh.visible = true;
           const r = dtBoom * sp.speed * as;
-          const y = Math.max(0.18, 0.7 + dtBoom * sp.ySpeed - 2.3 * dtBoom * dtBoom);
+          const y = Math.max(0.16, 0.55 + dtBoom * sp.ySpeed - 2.6 * dtBoom * dtBoom);
           sp.mesh.position.set(inst.cx + Math.cos(sp.angle) * r, inst.cy + y, inst.cz + Math.sin(sp.angle) * r);
           sp.mesh.rotation.y = -sp.angle;
-          sp.mesh.scale.setScalar(1.18 * boomFade * as);
+          sp.mesh.scale.setScalar(1.05 * boomFade * as);
           sp.mat.uniforms.uOpacity.value = boomFade;
         }
-      } else {
-        inst.spireMesh.visible = false;
       }
 
       if (inst.elapsed >= SKILL_DURATION_SEC) {

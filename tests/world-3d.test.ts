@@ -5650,9 +5650,12 @@ describe('Pure 3D Mine World', () => {
         { x: 0, y: -0.42, z: 0.7 },
       ],
     });
-    for (let i = 0; i < 8; i++) pool.update(0.05, i * 0.05);
+    for (let i = 0; i < 4; i++) pool.update(0.05, i * 0.05);
     const instRoot = pool.group.children.find((c) => c.visible)!;
     expect(instRoot).toBeDefined();
+    expect(instRoot.getObjectByName('chronoSpire')).toBeUndefined();
+    expect(instRoot.children.some((c) => c.name === 'carveSlash' && c.visible)).toBe(true);
+    for (let i = 4; i < 8; i++) pool.update(0.05, i * 0.05);
     expect(instRoot.children.filter((c) => c.name === 'celFrame' && c.visible).length).toBeLessThanOrEqual(3);
 
     for (let i = 0; i < 14; i++) pool.update(0.05, (8 + i) * 0.05);
