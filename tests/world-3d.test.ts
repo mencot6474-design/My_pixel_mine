@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { RiftArena3D } from '../src/game3d/RiftArena3D';
+import { ChronosImperatorSkillVfxPool } from '../src/game3d/skills/chronosImperatorSkillVfx3D';
 import { createChibiBackAttachments } from '../src/game3d/ChibiBackAttachments3D';
 import {
   PIT_EVENT_COOLDOWN_MAX_SEC,
@@ -5602,6 +5603,66 @@ describe('Pure 3D Mine World', () => {
       areaScale: 1,
     });
     pool.update(0.05, cam);
+    pool.dispose();
+  });
+
+  it('fires 24-FPS Chrono-Cell Projection & Shatter shader pool cleanly for ChronosImperatorSkillVfxPool', () => {
+    let impactCalls = 0;
+    let impactCallbackCalls = 0;
+    const pool = new ChronosImperatorSkillVfxPool({
+      onImpactFrame: () => {
+        impactCalls += 1;
+      },
+    });
+    expect(pool.getMaterials().length).toBeGreaterThanOrEqual(5);
+
+    // Edge case: empty pts array falls back cleanly around (cx, cy, cz) and finishes by 2.5s
+    pool.fire({
+      cx: 0,
+      cy: -0.42,
+      cz: 1.65,
+      areaScale: 0.72,
+      pts: [],
+      onImpact: () => {
+        impactCallbackCalls += 1;
+      },
+    });
+    for (let i = 0; i < 60; i++) {
+      pool.update(0.05, i * 0.05);
+    }
+    expect(impactCalls).toBe(1);
+    expect(impactCallbackCalls).toBe(1);
+    expect(pool.group.children.every((c) => !c.visible)).toBe(true);
+
+    // Low quality caps active cel-frames <= 3, shards <= 10, sparks <= 14
+    pool.setLowQuality(true);
+    pool.fire({
+      cx: 0,
+      cy: -0.42,
+      cz: 1.65,
+      areaScale: 0.72,
+      pts: [
+        { x: -2, y: -0.42, z: 1.2 },
+        { x: 0, y: -0.42, z: 1.5 },
+        { x: 2, y: -0.42, z: 1.8 },
+        { x: -1.5, y: -0.42, z: 2.3 },
+        { x: 1.5, y: -0.42, z: 2.3 },
+        { x: 0, y: -0.42, z: 0.7 },
+      ],
+    });
+    for (let i = 0; i < 8; i++) pool.update(0.05, i * 0.05);
+    const instRoot = pool.group.children.find((c) => c.visible)!;
+    expect(instRoot).toBeDefined();
+    expect(instRoot.children.filter((c) => c.name === 'celFrame' && c.visible).length).toBeLessThanOrEqual(3);
+
+    for (let i = 0; i < 14; i++) pool.update(0.05, (8 + i) * 0.05);
+    expect(instRoot.children.filter((c) => c.name === 'chronoShard' && c.visible).length).toBeLessThanOrEqual(10);
+    expect(instRoot.children.filter((c) => c.name === 'chronoSpark' && c.visible).length).toBeLessThanOrEqual(14);
+
+    // Pool overwrite (>2 fires) & huge dtSec clamp safety
+    pool.fire({ cx: 0, cy: -0.42, cz: 1.65, areaScale: 0.8 });
+    pool.fire({ cx: 1, cy: -0.42, cz: 1.65, areaScale: 0.8 });
+    pool.update(10, 5.0);
     pool.dispose();
   });
 });
